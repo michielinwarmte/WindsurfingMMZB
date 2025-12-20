@@ -347,6 +347,8 @@ namespace WindsurfingGame.Physics.Board
             _sheetPosition = Mathf.Clamp01(position);
         }
 
+#je moeder is een plopkoek
+
         /// <summary>
         /// Rake mast forward (turn downwind / bear away).
         /// </summary>
