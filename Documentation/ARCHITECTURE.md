@@ -29,7 +29,7 @@ WindsurfingGame
 │   ├── Water      → IWaterSurface, WaterSurface
 │   ├── Wind       → IWindProvider, WindManager
 │   ├── Buoyancy   → BuoyancyBody
-│   └── Board      → Sail, FinPhysics, WaterDrag, ApparentWindCalculator
+│   └── Board      → WindsurfRig, Sail, FinPhysics, WaterDrag, ApparentWindCalculator
 ├── Player         → WindsurferController, WindsurferControllerV2
 ├── CameraSystem   → ThirdPersonCamera
 ├── UI             → TelemetryHUD, SailPositionIndicator, WindIndicator3D
@@ -50,7 +50,8 @@ WindsurfingGame
 | [IWindProvider.cs](../WindsurfingGame/Assets/Scripts/Physics/Wind/IWindProvider.cs) | Physics.Wind | Interface for wind queries | - |
 | [WindManager.cs](../WindsurfingGame/Assets/Scripts/Physics/Wind/WindManager.cs) | Physics.Wind | Global wind control | IWindProvider |
 | [BuoyancyBody.cs](../WindsurfingGame/Assets/Scripts/Physics/Buoyancy/BuoyancyBody.cs) | Physics.Buoyancy | Multi-point buoyancy | IWaterSurface, Rigidbody |
-| [Sail.cs](../WindsurfingGame/Assets/Scripts/Physics/Board/Sail.cs) | Physics.Board | Sail aerodynamics & forces | ApparentWindCalculator, Rigidbody |
+| **[WindsurfRig.cs](../WindsurfingGame/Assets/Scripts/Physics/Board/WindsurfRig.cs)** | Physics.Board | **Parent component tying Board + Sail together** | Rigidbody, Sail, BuoyancyBody |
+| [Sail.cs](../WindsurfingGame/Assets/Scripts/Physics/Board/Sail.cs) | Physics.Board | Sail aerodynamics & forces | ApparentWindCalculator, WindsurfRig |
 | [ApparentWindCalculator.cs](../WindsurfingGame/Assets/Scripts/Physics/Board/ApparentWindCalculator.cs) | Physics.Board | True wind → apparent wind | IWindProvider, Rigidbody |
 | [WaterDrag.cs](../WindsurfingGame/Assets/Scripts/Physics/Board/WaterDrag.cs) | Physics.Board | Hydrodynamic resistance | IWaterSurface, Rigidbody |
 | [FinPhysics.cs](../WindsurfingGame/Assets/Scripts/Physics/Board/FinPhysics.cs) | Physics.Board | Fin grip & lateral resistance | Rigidbody |
@@ -93,27 +94,43 @@ WindsurfingGame
 
 ## Component Dependencies
 
-### Windsurfer GameObject Setup
+### WindsurfRig GameObject Setup (Board + Sail as Separate Parts)
 
-The main windsurfer requires these components:
+The windsurf rig uses a **parent-child hierarchy** with board and sail as separate visual objects:
 
 ```
-Windsurfer (GameObject)
-├── Rigidbody (Required)
-│   └── Used by: All physics scripts
-├── BuoyancyBody
-│   └── Requires: IWaterSurface in scene
-├── ApparentWindCalculator
-│   └── Requires: IWindProvider (WindManager) in scene
-├── Sail
-│   └── Requires: ApparentWindCalculator, Rigidbody
-├── WaterDrag
-│   └── Requires: IWaterSurface, Rigidbody
-├── FinPhysics
-│   └── Requires: Rigidbody
-└── WindsurferControllerV2 (or WindsurferController)
-    └── Requires: Sail
+WindsurfRig (Parent GameObject)
+├── Components on Parent:
+│   ├── Rigidbody (shared physics body for entire rig)
+│   ├── WindsurfRig (ties board + sail together)
+│   ├── BuoyancyBody (requires IWaterSurface in scene)
+│   ├── WaterDrag (requires IWaterSurface, Rigidbody)
+│   ├── FinPhysics (requires Rigidbody)
+│   └── WindsurferController (requires WindsurfRig, Sail)
+│
+├── Board (Child - Visual Model from Blender)
+│   │   Pivot Point: Underside of board, behind mast base
+│   │   Local Position: (0, 0, 0)
+│   │
+│   └── Colliders (child)
+│       ├── BoardCollider (Box Collider)
+│       └── FinCollider (Box/Mesh Collider)
+│
+└── Sail (Child - Visual Model from Blender)
+    │   Pivot Point: Base of mast (where mast meets board)
+    │   Local Position: At mast base (e.g., 0.85, 0.15, 0)
+    │
+    └── Components:
+        ├── Sail (aerodynamics, applies force to parent Rigidbody)
+        └── ApparentWindCalculator (wind calculations)
 ```
+
+### Why Separate Board and Sail?
+
+1. **Accurate Pivot Points**: Sail rotates around mast base (realistic)
+2. **Visual Rotation**: Sail can visually rotate based on wind direction
+3. **Modular Design**: Easy to swap board/sail models independently
+4. **Blender Workflow**: Each model exported with correct origin point
 
 ### Scene Singletons
 

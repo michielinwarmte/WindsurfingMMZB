@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using WindsurfingGame.Physics.Wind;
 using WindsurfingGame.Physics.Board;
+using WindsurfingGame.Physics.Buoyancy;
 using WindsurfingGame.Player;
 
 namespace WindsurfingGame.UI
@@ -56,6 +57,9 @@ namespace WindsurfingGame.UI
             if (_windManager == null)
                 _windManager = FindFirstObjectByType<WindManager>();
             
+            // Try to find WindsurfRig first (new architecture)
+            WindsurfRig rig = FindFirstObjectByType<WindsurfRig>();
+            
             // Try V2 controller first, then fall back to V1
             if (_controllerV2 == null)
                 _controllerV2 = FindFirstObjectByType<WindsurferControllerV2>();
@@ -63,25 +67,42 @@ namespace WindsurfingGame.UI
             if (_controller == null)
                 _controller = FindFirstObjectByType<WindsurferController>();
             
-            // Get board reference from whichever controller is present
-            Transform boardTransform = null;
-            if (_controllerV2 != null)
-                boardTransform = _controllerV2.transform;
-            else if (_controller != null)
-                boardTransform = _controller.transform;
-            
-            if (boardTransform != null)
+            // Get references from WindsurfRig if available (preferred)
+            if (rig != null)
             {
                 if (_boardRigidbody == null)
-                    _boardRigidbody = boardTransform.GetComponent<Rigidbody>();
-                if (_apparentWind == null)
-                    _apparentWind = boardTransform.GetComponent<ApparentWindCalculator>();
+                    _boardRigidbody = rig.Rigidbody;
                 if (_sail == null)
-                    _sail = boardTransform.GetComponent<Sail>();
+                    _sail = rig.Sail;
+                if (_apparentWind == null && _sail != null)
+                    _apparentWind = _sail.GetComponent<ApparentWindCalculator>();
                 if (_waterDrag == null)
-                    _waterDrag = boardTransform.GetComponent<WaterDrag>();
+                    _waterDrag = rig.GetComponent<WaterDrag>();
                 if (_finPhysics == null)
-                    _finPhysics = boardTransform.GetComponent<FinPhysics>();
+                    _finPhysics = rig.GetComponent<FinPhysics>();
+            }
+            else
+            {
+                // Fallback: Get board reference from whichever controller is present
+                Transform boardTransform = null;
+                if (_controllerV2 != null)
+                    boardTransform = _controllerV2.transform;
+                else if (_controller != null)
+                    boardTransform = _controller.transform;
+                
+                if (boardTransform != null)
+                {
+                    if (_boardRigidbody == null)
+                        _boardRigidbody = boardTransform.GetComponent<Rigidbody>();
+                    if (_apparentWind == null)
+                        _apparentWind = boardTransform.GetComponentInChildren<ApparentWindCalculator>();
+                    if (_sail == null)
+                        _sail = boardTransform.GetComponentInChildren<Sail>();
+                    if (_waterDrag == null)
+                        _waterDrag = boardTransform.GetComponent<WaterDrag>();
+                    if (_finPhysics == null)
+                        _finPhysics = boardTransform.GetComponent<FinPhysics>();
+                }
             }
         }
 

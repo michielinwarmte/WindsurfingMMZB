@@ -6,17 +6,17 @@ This document tracks our development progress, decisions made, and lessons learn
 
 ## 📌 Quick Status Summary
 
-**Last Session**: December 20, 2025 - Session 11 (Documentation & Team Prep)  
-**Current Phase**: Core Physics (Phases 1-5 mostly complete)
+**Last Session**: December 26, 2025 - Session 12 (Graphics & Model Import - COMPLETE)  
+**Current Phase**: Model Import Complete ✅ | Physics Needs Tuning ⚠️
 
-### Scripts Completed (17 total)
+### Scripts Completed (18 total)
 
 | Category | Scripts |
 |----------|---------|
 | Water | `IWaterSurface`, `WaterSurface` |
 | Wind | `IWindProvider`, `WindManager` |
 | Buoyancy | `BuoyancyBody` |
-| Board | `Sail`, `ApparentWindCalculator`, `WaterDrag`, `FinPhysics` |
+| Board | **`WindsurfRig`**, `Sail`, `ApparentWindCalculator`, `WaterDrag`, `FinPhysics` |
 | Player | `WindsurferController`, `WindsurferControllerV2` |
 | Camera | `ThirdPersonCamera` |
 | UI | `TelemetryHUD`, `SailPositionIndicator`, `WindIndicator3D` |
@@ -29,13 +29,21 @@ This document tracks our development progress, decisions made, and lessons learn
 - ✅ Namespace: `WindsurfingGame.*`
 - ✅ Simulation drives visualization (not vice versa)
 - ✅ Two control modes: Beginner (auto-sheet) / Advanced (manual)
+- ✅ **Board + Sail as separate child objects under WindsurfRig parent**
+- ✅ **Blender coordinate system: Z+ up, X+ forward**
 
 ### Ready for Next Session
-- [ ] Test simulation in Unity
-- [ ] Verify sail forces feel correct
-- [ ] Test steering with mast rake
-- [ ] Begin board planing behavior
-- [ ] Consider water visual improvements
+- [x] Import Blender models (Board + Sail) ✅
+- [x] Set up WindsurfRig prefab in Unity ✅
+- [x] Test physics with new model hierarchy ✅
+- [ ] **FIX: Sail physics - sail falls over without player force**
+- [ ] Add sailor/player body to hold sail upright
+- [ ] Update water graphics
+- [ ] Tune buoyancy for correct float height
+
+### Known Issues ⚠️
+- **Sail falls over**: The sail needs a counterbalancing force (normally provided by a person holding the boom). Currently no player body/force is simulated, causing the sail to collapse.
+- **Buoyancy tuning needed**: Board may float too high/low depending on settings
 
 ### For New Team Members
 See [CONTRIBUTING.md](../CONTRIBUTING.md) and [ARCHITECTURE.md](ARCHITECTURE.md)
@@ -43,6 +51,142 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md) and [ARCHITECTURE.md](ARCHITECTURE.md)
 ---
 
 ## Session Log
+
+---
+
+## December 26, 2025 - Session 12: Graphics Update & Board/Sail Architecture
+
+### Summary
+Imported custom Blender models and refactored architecture to support board and sail as separate parts.
+
+### Changes Made
+
+#### New Script: WindsurfRig.cs
+- **Location**: `Assets/Scripts/Physics/Board/WindsurfRig.cs`
+- **Purpose**: Parent component that ties board visual + sail together
+- **Key Features**:
+  - Holds the shared Rigidbody for physics
+  - References board visual (child) and sail (child)
+  - Configurable mast base position
+  - Enables sail visual rotation based on wind
+
+#### Updated Scripts:
+1. **Sail.cs**
+   - Now uses transform.position as mast foot (pivot point is the origin)
+   - Removed `_mastFootPosition` field (no longer needed)
+   - Added `_parentRig` reference to WindsurfRig
+   - Finds parent Rigidbody through WindsurfRig
+
+2. **ApparentWindCalculator.cs**
+   - Updated Awake() to find Rigidbody from parent WindsurfRig
+
+3. **WindsurferController.cs**
+   - Added `_rig` reference to WindsurfRig
+   - Gets references from rig (Rigidbody, Sail)
+
+#### New Documentation:
+- **GRAPHICS_UPDATE_GUIDE.md** - Complete guide for importing Blender models
+
+#### Updated Documentation:
+- **ARCHITECTURE.md** - New hierarchy diagram with Board + Sail as children
+
+### New Hierarchy Structure
+```
+WindsurfRig (Parent)
+│   Rigidbody, WindsurfRig, BuoyancyBody, WindsurferController
+├── Board (visual from Blender)
+│   Pivot: underside, behind mast base
+└── Sail (visual from Blender + Sail script)
+    Pivot: base of mast
+```
+
+### Blender Export Settings
+- Forward: X Forward
+- Up: Z Up
+- Scale: 1.0
+- Apply Transform: ✓
+
+### Pivot Points (as set in Blender)
+- **Board**: Underside of board, slightly behind where mast connects
+- **Sail**: Base of mast (where mast meets board)
+
+### Next Steps
+1. ~~Create WindsurfRig prefab in Unity following GRAPHICS_UPDATE_GUIDE.md~~
+2. ~~Set sail local position to mast base location on board~~
+3. ~~Add colliders to board~~
+4. ~~Test physics simulation~~
+5. Update water graphics
+
+### Session 12 Continued: Fix Script References
+
+**Problem:** Telemetry not showing data, controls not working, scripts couldn't find components.
+
+**Root Cause:** Scripts were looking for components on the wrong objects after the hierarchy change:
+- `Sail` and `ApparentWindCalculator` are on the **Sail child**
+- `Rigidbody`, `WaterDrag`, `FinPhysics` are on the **WindsurfRig parent**
+
+**Scripts Updated:**
+
+1. **TelemetryHUD.cs**
+   - Now finds `WindsurfRig` first and gets references from it
+   - Finds `Sail` from `rig.Sail`
+   - Finds `ApparentWindCalculator` from Sail's GameObject
+   - Finds `WaterDrag` and `FinPhysics` from rig
+
+2. **FinPhysics.cs**
+   - Removed `[RequireComponent(typeof(Rigidbody))]` (Rigidbody is on parent)
+   - Now searches parent for WindsurfRig/Rigidbody
+
+3. **WaterDrag.cs**
+   - Removed `[RequireComponent(typeof(Rigidbody))]`
+   - Now searches parent for WindsurfRig/Rigidbody and BuoyancyBody
+
+4. **WindsurferControllerV2.cs**
+   - Now finds references through WindsurfRig
+
+5. **SailVisualizer.cs**
+   - Now searches children and parent hierarchy for Sail/ApparentWindCalculator
+
+**Guide Updated:**
+- Added WaterDrag and FinPhysics to component list
+- Added water setup section (was missing - caused falling through water bug)
+- Added troubleshooting section
+
+---
+
+### Session 12 Final: Model Import Complete
+
+**Date:** December 26, 2025
+
+**Summary:** Successfully imported Blender models (Board.fbx, Sail.fbx) into Unity. The WindsurfRig architecture is working with correct hierarchy. However, physics simulation is incomplete - the sail falls over because there's no player/sailor body providing the counterbalancing force that holds the sail upright in real windsurfing.
+
+**What Was Accomplished:**
+- ✅ Board.fbx and Sail.fbx imported with correct pivot points
+- ✅ WindsurfRig hierarchy established (parent with children)
+- ✅ All scripts updated to work with new hierarchy
+- ✅ Buoyancy system adjusted for board with underside pivot
+- ✅ TelemetryHUD, SailVisualizer working with real models
+- ✅ Water surface setup documented
+
+**Known Issues (For Future Session):**
+- ⚠️ **Sail falls over**: No player/sailor body to provide counterbalancing force
+  - In real windsurfing, the sailor holds the boom and leans back to counteract sail forces
+  - Current simulation has no player body or hand forces
+  - Sail will topple without this counterforce
+  
+- ⚠️ **Buoyancy may need tuning**: Adjusted defaults but may need per-setup tweaking
+
+**Files Changed:**
+- `WindsurfRig.cs` - New parent component (created)
+- `Sail.cs` - Updated for new hierarchy
+- `BuoyancyBody.cs` - Adjusted sample points and strength for board pivot
+- `TelemetryHUD.cs` - Updated reference finding
+- `FinPhysics.cs` - Finds Rigidbody from parent
+- `WaterDrag.cs` - Finds Rigidbody from parent
+- `SailVisualizer.cs` - Works with real sail model
+- Model files: `Board.fbx`, `Sail.fbx` imported
+
+**Branch Status:** Model import successful. Ready to commit and push.
 
 ---
 

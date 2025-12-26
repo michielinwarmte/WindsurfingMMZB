@@ -9,7 +9,6 @@ namespace WindsurfingGame.Physics.Board
     /// Note: Lateral resistance is now primarily handled by FinPhysics.
     /// This component handles hull drag (forward resistance).
     /// </summary>
-    [RequireComponent(typeof(Rigidbody))]
     public class WaterDrag : MonoBehaviour
     {
         [Header("Drag Coefficients")]
@@ -39,11 +38,30 @@ namespace WindsurfingGame.Physics.Board
 
         private void Awake()
         {
+            // Try to get Rigidbody from this object first
             _rigidbody = GetComponent<Rigidbody>();
+            
+            // If not found, check for WindsurfRig parent
+            if (_rigidbody == null)
+            {
+                var rig = GetComponentInParent<WindsurfRig>();
+                if (rig != null)
+                {
+                    _rigidbody = rig.Rigidbody;
+                }
+                else
+                {
+                    _rigidbody = GetComponentInParent<Rigidbody>();
+                }
+            }
             
             if (_buoyancy == null)
             {
                 _buoyancy = GetComponent<Buoyancy.BuoyancyBody>();
+                if (_buoyancy == null)
+                {
+                    _buoyancy = GetComponentInParent<Buoyancy.BuoyancyBody>();
+                }
             }
         }
 

@@ -6,12 +6,16 @@ namespace WindsurfingGame.Physics.Board
     /// <summary>
     /// Simulates sail physics - converts wind into forward thrust.
     /// 
+    /// ARCHITECTURE: This script goes on the Sail child object.
+    /// The sail's pivot point (Transform origin) should be at the mast base.
+    /// The parent WindsurfRig holds the shared Rigidbody.
+    /// 
     /// Sail Geometry:
-    /// - Leading edge (luff) is attached to the mast - this is the ROTATION POINT
+    /// - Leading edge (luff) is attached to the mast - this is the PIVOT POINT
     /// - Trailing edge (leech) extends BACKWARD toward the tail
     /// - Sail rotates around the mast based on sheet position
-    /// - Mast foot is FIXED on the board (typically 1.2m from tail)
-    /// - Mast rake tilts the mast forward/back around the fixed foot
+    /// - The sail GameObject's origin IS the mast foot (set in Blender)
+    /// - Mast rake tilts the mast forward/back around the mast foot
     /// 
     /// The sail acts like an airfoil, generating lift (perpendicular to wind)
     /// and drag (parallel to wind). The combination propels the board.
@@ -37,11 +41,8 @@ namespace WindsurfingGame.Physics.Board
         [Tooltip("How quickly the sailor can sheet in/out")]
         [SerializeField] private float _sheetSpeed = 2f;
 
-        [Header("Mast Position (Fixed)")]
-        [Tooltip("Fixed mast foot position on board (typically 1.2m from tail)")]
-        [SerializeField] private Vector3 _mastFootPosition = new Vector3(0, 0.1f, -0.05f);
-        
-        [Tooltip("Height of mast")]
+        [Header("Mast Geometry")]
+        [Tooltip("Height of mast from mast foot (the sail's pivot point)")]
         [SerializeField] private float _mastHeight = 4.5f;
         
         [Tooltip("Boom length (how far CE is from mast)")]
@@ -49,6 +50,10 @@ namespace WindsurfingGame.Physics.Board
         
         [Tooltip("Height of boom/CE on mast")]
         [SerializeField] private float _boomHeight = 1.8f;
+        
+        [Header("Parent Rig Reference")]
+        [Tooltip("Reference to parent WindsurfRig (auto-found if empty)")]
+        [SerializeField] private WindsurfRig _parentRig;
 
         [Header("Mast Rake (Steering)")]
         [Tooltip("Current mast rake position (-1 = forward/downwind, +1 = back/upwind)")]
@@ -89,8 +94,12 @@ namespace WindsurfingGame.Physics.Board
         public float AngleOfAttack => _currentAngleOfAttack;
         public float MastRake => _mastRake;
         public float CurrentSailAngle => _currentSailAngle;
-        public Vector3 MastFootPosition => _mastFootPosition;
+        /// <summary>
+        /// Mast foot position is now the transform.position of this object (pivot point).
+        /// </summary>
+        public Vector3 MastFootPosition => transform.position;
         public Vector3 CurrentCenterOfEffort => _currentCE;
+        public WindsurfRig ParentRig => _parentRig;
 
         // Current calculated sail angle (for visualization)
         private float _currentSailAngle;
@@ -101,9 +110,23 @@ namespace WindsurfingGame.Physics.Board
         {
             _apparentWind = GetComponent<ApparentWindCalculator>();
             
+            // Find parent rig
+            if (_parentRig == null)
+            {
+                _parentRig = GetComponentInParent<WindsurfRig>();
+            }
+            
+            // Get rigidbody from parent rig or search up hierarchy
             if (_targetRigidbody == null)
             {
-                _targetRigidbody = GetComponentInParent<Rigidbody>();
+                if (_parentRig != null)
+                {
+                    _targetRigidbody = _parentRig.Rigidbody;
+                }
+                else
+                {
+                    _targetRigidbody = GetComponentInParent<Rigidbody>();
+                }
             }
         }
 
@@ -176,31 +199,32 @@ namespace WindsurfingGame.Physics.Board
             if (_targetRigidbody == null || _totalForce.sqrMagnitude < 0.01f) return;
 
             // Calculate Center of Effort position:
-            // - Start at mast foot (fixed position)
+            // - Mast foot is now at transform.position (the pivot point set in Blender)
             // - Go up to boom height
             // - Extend backward along the sail at current sail angle
             // - Apply mast rake (tilts the whole mast fore/aft)
             
-            // Mast rake tilts the mast around the fixed foot
+            // Mast rake tilts the mast around the pivot (mast foot)
             float rakeAngle = _mastRake * _maxRakeAngle * Mathf.Deg2Rad;
-            float rakeOffsetZ = Mathf.Sin(rakeAngle) * _boomHeight; // How far the boom moves fore/aft
+            float rakeOffsetForward = Mathf.Sin(rakeAngle) * _boomHeight; // How far the boom moves fore/aft
             float rakeOffsetY = Mathf.Cos(rakeAngle) * _boomHeight; // Adjusted height
             
             // Position at boom height on mast (with rake applied)
-            Vector3 boomAttachment = _mastFootPosition + new Vector3(0, rakeOffsetY, rakeOffsetZ);
+            // Start from local origin (0,0,0) since the pivot IS the mast foot
+            Vector3 boomAttachment = new Vector3(0, rakeOffsetY, rakeOffsetForward);
             
             // CE is along the boom, which extends BACKWARD from mast at the current sail angle
             // Sail angle determines how far to the side the boom swings
-            // Sail extends backward (-Z local) and to the side (+/- X local)
+            // In our coord system: X+ is forward on the board, Z is sideways
             float sailAngleRad = _currentSailAngle * Mathf.Deg2Rad;
             float ceDistance = _boomLength * 0.6f; // CE is about 60% along the boom
             
-            // Boom direction: backward and to the side
-            // Negative X = port, Positive X = starboard
+            // Boom direction: backward (-X local to sail) and to the side (Z local)
+            // Since sail is a child of the rig, its local X should align with board forward
             Vector3 boomDirection = new Vector3(
-                Mathf.Sin(sailAngleRad),  // Side component
+                -Mathf.Cos(sailAngleRad),  // Backward component (-X in local)
                 0,
-                -Mathf.Cos(sailAngleRad)  // Backward component (negative Z)
+                Mathf.Sin(sailAngleRad)   // Side component (Z in local)
             );
             
             Vector3 localCE = boomAttachment + boomDirection * ceDistance;

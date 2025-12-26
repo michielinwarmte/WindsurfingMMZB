@@ -88,10 +88,25 @@ namespace WindsurfingGame.Player
 
         private void Awake()
         {
+            // Try to find WindsurfRig first (new architecture)
+            var rig = GetComponent<WindsurfRig>();
+            
             if (_rigidbody == null)
-                _rigidbody = GetComponent<Rigidbody>();
+            {
+                if (rig != null)
+                    _rigidbody = rig.Rigidbody;
+                else
+                    _rigidbody = GetComponent<Rigidbody>();
+            }
+            
             if (_sail == null)
-                _sail = GetComponent<Sail>();
+            {
+                if (rig != null)
+                    _sail = rig.Sail;
+                else
+                    _sail = GetComponentInChildren<Sail>();
+            }
+            
             if (_finPhysics == null)
                 _finPhysics = GetComponent<FinPhysics>();
             

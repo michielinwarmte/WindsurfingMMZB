@@ -11,7 +11,6 @@ namespace WindsurfingGame.Physics.Board
     /// 
     /// Without a fin, the board would just drift downwind.
     /// </summary>
-    [RequireComponent(typeof(Rigidbody))]
     public class FinPhysics : MonoBehaviour
     {
         [Header("Fin Properties")]
@@ -68,7 +67,22 @@ namespace WindsurfingGame.Physics.Board
 
         private void Awake()
         {
+            // Try to get Rigidbody from this object first
             _rigidbody = GetComponent<Rigidbody>();
+            
+            // If not found, check for WindsurfRig parent
+            if (_rigidbody == null)
+            {
+                var rig = GetComponentInParent<WindsurfRig>();
+                if (rig != null)
+                {
+                    _rigidbody = rig.Rigidbody;
+                }
+                else
+                {
+                    _rigidbody = GetComponentInParent<Rigidbody>();
+                }
+            }
         }
 
         private void FixedUpdate()

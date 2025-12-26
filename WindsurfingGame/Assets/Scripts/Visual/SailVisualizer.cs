@@ -10,15 +10,20 @@ namespace WindsurfingGame.Visual
     /// - Boom/sail angle (sheet position)
     /// - Sail power (billowing based on wind force)
     /// 
-    /// Mast base is FIXED at realistic position (1.2m from tail).
-    /// Rake rotates the mast around this fixed point.
-    /// Sail extends BACKWARD from mast, angled to the side.
+    /// NEW: Can work with either:
+    /// 1. Real 3D sail model (reads transform from actual Sail GameObject)
+    /// 2. Generated visual (creates simple geometry if no model exists)
     /// </summary>
     public class SailVisualizer : MonoBehaviour
     {
         [Header("References")]
         [SerializeField] private Sail _sail;
         [SerializeField] private ApparentWindCalculator _apparentWind;
+        [SerializeField] private Transform _sailTransform; // NEW: Reference to actual sail model
+
+        [Header("Visualization Mode")]
+        [Tooltip("Use the real 3D sail model transform (recommended) or generate simple geometry")]
+        [SerializeField] private bool _useRealSailModel = true;
 
         [Header("Mast Settings")]
         [Tooltip("Height of the mast")]
@@ -71,15 +76,40 @@ namespace WindsurfingGame.Visual
 
         private void Awake()
         {
+            // Try to find Sail - check this object, children, and parent hierarchy
             if (_sail == null)
                 _sail = GetComponent<Sail>();
+            if (_sail == null)
+                _sail = GetComponentInChildren<Sail>();
+            if (_sail == null)
+            {
+                var rig = GetComponentInParent<WindsurfRig>();
+                if (rig != null)
+                    _sail = rig.Sail;
+            }
+            
+            // Find ApparentWindCalculator on same object as Sail
+            if (_apparentWind == null && _sail != null)
+                _apparentWind = _sail.GetComponent<ApparentWindCalculator>();
             if (_apparentWind == null)
                 _apparentWind = GetComponent<ApparentWindCalculator>();
+            if (_apparentWind == null)
+                _apparentWind = GetComponentInChildren<ApparentWindCalculator>();
+            
+            // Find the real sail transform (if using real model)
+            if (_useRealSailModel && _sailTransform == null && _sail != null)
+            {
+                _sailTransform = _sail.transform;
+            }
         }
 
         private void Start()
         {
-            CreateRig();
+            // Only create visual geometry if we're not using the real sail model
+            if (!_useRealSailModel)
+            {
+                CreateRig();
+            }
         }
 
         private void Update()
@@ -228,7 +258,19 @@ namespace WindsurfingGame.Visual
 
         private void UpdateRigPosition()
         {
-            if (_sail == null || _rigPivot == null) return;
+            if (_sail == null) return;
+
+            // If using real sail model, the rotation is handled by WindsurfRig script
+            // We just need to visualize power/state if needed
+            if (_useRealSailModel && _sailTransform != null)
+            {
+                // The real sail is already being rotated by WindsurfRig.UpdateSailVisualRotation()
+                // We can add visual effects here later (like changing material based on power)
+                return;
+            }
+
+            // Original visualization code for generated geometry
+            if (_rigPivot == null) return;
 
             // Get target values from sail simulation
             float targetRake = _sail.MastRake * _maxRakeAngle;

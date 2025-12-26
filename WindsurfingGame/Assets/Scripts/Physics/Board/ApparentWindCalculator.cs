@@ -43,9 +43,23 @@ namespace WindsurfingGame.Physics.Board
 
         private void Awake()
         {
+            // Try to find rigidbody - check this object, then parent rig, then any parent
             if (_rigidbody == null)
             {
                 _rigidbody = GetComponent<Rigidbody>();
+            }
+            if (_rigidbody == null)
+            {
+                // Check for parent WindsurfRig
+                var parentRig = GetComponentInParent<WindsurfRig>();
+                if (parentRig != null)
+                {
+                    _rigidbody = parentRig.Rigidbody;
+                }
+            }
+            if (_rigidbody == null)
+            {
+                _rigidbody = GetComponentInParent<Rigidbody>();
             }
         }
 

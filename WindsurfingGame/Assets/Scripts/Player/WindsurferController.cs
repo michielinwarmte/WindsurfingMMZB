@@ -8,10 +8,14 @@ namespace WindsurfingGame.Player
     /// Handles player input and applies it to the windsurf board.
     /// Designed for simplicity first, with room for advanced controls later.
     /// Uses Unity's new Input System.
+    /// 
+    /// SETUP: Attach to the WindsurfRig parent object (same as WindsurfRig script).
     /// </summary>
     public class WindsurferController : MonoBehaviour
     {
         [Header("References")]
+        [Tooltip("WindsurfRig component (auto-found if empty)")]
+        [SerializeField] private WindsurfRig _rig;
         [SerializeField] private Rigidbody _rigidbody;
         [SerializeField] private Sail _sail;
 
@@ -53,13 +57,35 @@ namespace WindsurfingGame.Player
 
         private void Awake()
         {
+            // Find WindsurfRig first
+            if (_rig == null)
+            {
+                _rig = GetComponent<WindsurfRig>();
+            }
+            
+            // Get references from rig or search
             if (_rigidbody == null)
             {
-                _rigidbody = GetComponent<Rigidbody>();
+                if (_rig != null)
+                {
+                    _rigidbody = _rig.Rigidbody;
+                }
+                else
+                {
+                    _rigidbody = GetComponent<Rigidbody>();
+                }
             }
+            
             if (_sail == null)
             {
-                _sail = GetComponentInChildren<Sail>();
+                if (_rig != null)
+                {
+                    _sail = _rig.Sail;
+                }
+                else
+                {
+                    _sail = GetComponentInChildren<Sail>();
+                }
             }
             
             _keyboard = Keyboard.current;

@@ -16,10 +16,10 @@ namespace WindsurfingGame.Physics.Buoyancy
 
         [Header("Buoyancy Settings")]
         [Tooltip("Strength of the buoyancy force")]
-        [SerializeField] private float _buoyancyStrength = 10f;
+        [SerializeField] private float _buoyancyStrength = 30f;
         
         [Tooltip("How deep the object sinks before reaching equilibrium (meters)")]
-        [SerializeField] private float _floatHeight = 0.1f;
+        [SerializeField] private float _floatHeight = 0.15f;
         
         [Tooltip("Damping applied when underwater (reduces bobbing)")]
         [SerializeField] private float _waterDamping = 1f;
@@ -101,7 +101,9 @@ namespace WindsurfingGame.Physics.Buoyancy
                 Vector3 localCenter = transform.InverseTransformPoint(bounds.center);
                 Vector3 localSize = bounds.size;
                 
-                // Generate points at corners (bottom half only for buoyancy)
+                // Generate points at corners
+                // For a board with pivot at underside, we want points slightly ABOVE the pivot
+                // so the board floats with its deck above water, not below
                 _samplePositions = new Vector3[_autoGeneratePoints];
                 _sampleDepths = new float[_autoGeneratePoints];
 
@@ -109,29 +111,31 @@ namespace WindsurfingGame.Physics.Buoyancy
                 {
                     float halfX = localSize.x * 0.4f;
                     float halfZ = localSize.z * 0.4f;
-                    float bottomY = localCenter.y - localSize.y * 0.3f;
+                    // For boards with pivot at bottom, sample at roughly waterline height
+                    // This is typically near the pivot (Y=0) or slightly above
+                    float sampleY = localSize.y * 0.1f; // 10% up from bottom = near waterline
                     
-                    _samplePositions[0] = new Vector3(-halfX, bottomY, halfZ);   // Front-left
-                    _samplePositions[1] = new Vector3(halfX, bottomY, halfZ);    // Front-right
-                    _samplePositions[2] = new Vector3(-halfX, bottomY, -halfZ);  // Back-left
-                    _samplePositions[3] = new Vector3(halfX, bottomY, -halfZ);   // Back-right
+                    _samplePositions[0] = new Vector3(halfX, sampleY, halfZ);    // Front-right (nose)
+                    _samplePositions[1] = new Vector3(-halfX, sampleY, halfZ);   // Front-left
+                    _samplePositions[2] = new Vector3(halfX, sampleY, -halfZ);   // Back-right
+                    _samplePositions[3] = new Vector3(-halfX, sampleY, -halfZ);  // Back-left (tail)
                     
                     // Add center points if more requested
                     for (int i = 4; i < _autoGeneratePoints; i++)
                     {
-                        _samplePositions[i] = new Vector3(0, bottomY, 0);
+                        _samplePositions[i] = new Vector3(0, sampleY, 0);
                     }
                 }
                 else
                 {
-                    // Just use center
-                    _samplePositions[0] = Vector3.zero;
+                    // Just use center at appropriate height
+                    _samplePositions[0] = new Vector3(0, localSize.y * 0.1f, 0);
                 }
             }
             else
             {
-                // No collider, use single point at center
-                _samplePositions = new Vector3[] { Vector3.zero };
+                // No collider, use single point slightly above origin
+                _samplePositions = new Vector3[] { new Vector3(0, 0.05f, 0) };
                 _sampleDepths = new float[1];
             }
         }
