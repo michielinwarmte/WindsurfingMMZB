@@ -21,6 +21,7 @@ namespace WindsurfingGame.Player
         [SerializeField] private Rigidbody _rigidbody;
         [SerializeField] private Sail _sail;
         [SerializeField] private FinPhysics _finPhysics;
+        [SerializeField] private ApparentWindCalculator _apparentWind;
 
         [Header("Control Mode")]
         [Tooltip("Beginner: Simplified controls with assists\nAdvanced: Full realistic control")]
@@ -28,13 +29,13 @@ namespace WindsurfingGame.Player
 
         [Header("Weight Shift (A/D)")]
         [Tooltip("How much weight shift affects turning (body lean)")]
-        [SerializeField] private float _weightShiftStrength = 15f;
+        [SerializeField] private float _weightShiftStrength = 12f;
         
         [Tooltip("Maximum lean angle in degrees")]
-        [SerializeField] private float _maxLeanAngle = 20f;
+        [SerializeField] private float _maxLeanAngle = 30f;
         
         [Tooltip("How quickly body weight shifts")]
-        [SerializeField] private float _weightShiftSpeed = 4f;
+        [SerializeField] private float _weightShiftSpeed = 6f;
 
         [Header("Edge Control")]
         [Tooltip("Edging the board increases fin effectiveness")]
@@ -44,14 +45,20 @@ namespace WindsurfingGame.Player
         [SerializeField] private float _maxRollAngle = 15f;
 
         [Header("Beginner Assists")]
-        [Tooltip("Auto-sheet to maintain optimal power")]
-        [SerializeField] private bool _autoSheet = false;
+        [Tooltip("Auto-sheet to maintain optimal power and straight course")]
+        [SerializeField] private bool _autoSheet = true;
         
         [Tooltip("Prevent capsizing (keep upright)")]
         [SerializeField] private bool _antiCapsize = true;
         
         [Tooltip("Steering assist - combines rake + weight automatically")]
         [SerializeField] private bool _combinedSteering = true;
+        
+        [Tooltip("Auto-stabilization - keeps board going straight when no input")]
+        [SerializeField] private bool _autoStabilize = true;
+        
+        [Tooltip("Strength of auto-stabilization (higher = straighter)")]
+        [SerializeField] private float _stabilizationStrength = 5f;
 
         [Header("Input Response")]
         [Tooltip("Input smoothing (higher = snappier, lower = smoother)")]
@@ -94,6 +101,8 @@ namespace WindsurfingGame.Player
                 _sail = GetComponent<Sail>();
             if (_finPhysics == null)
                 _finPhysics = GetComponent<FinPhysics>();
+            if (_apparentWind == null)
+                _apparentWind = GetComponent<ApparentWindCalculator>();
             
             _keyboard = Keyboard.current;
         }
@@ -109,6 +118,8 @@ namespace WindsurfingGame.Player
             if (_controlMode == ControlMode.Beginner)
             {
                 ApplyBeginnerControls();
+                // Auto-stabilization in beginner mode - keeps board going straight
+                ApplyBeginnerStabilization();
             }
             else
             {
@@ -172,7 +183,8 @@ namespace WindsurfingGame.Player
 
         /// <summary>
         /// Beginner mode: A/D does combined steering (auto rake + weight shift).
-        /// Much easier to control - just press A or D to turn!
+        /// Rake direction automatically adjusts based on wind side for intuitive control.
+        /// A = turn left, D = turn right, regardless of tack.
         /// </summary>
         private void ApplyBeginnerControls()
         {
@@ -182,22 +194,44 @@ namespace WindsurfingGame.Player
 
             if (_combinedSteering && Mathf.Abs(steer) > 0.1f)
             {
-                // A/D combines mast rake and weight shift for easier turning
-                // Turning right (D): rake mast back + lean right
-                // Turning left (A): rake mast forward + lean left
+                // Determine which side the wind is coming from (in local space)
+                Vector3 localWind = Vector3.zero;
+                if (_apparentWind != null)
+                {
+                    localWind = transform.InverseTransformDirection(_apparentWind.ApparentWind);
+                }
                 
-                // Apply mast rake (main steering)
-                // Right turn = positive rake = upwind tendency
-                // But we want D to turn right, so we use the steering input directly
-                // to create a turning torque
-                float rakeAmount = steer * 0.7f; // 70% rake
-                if (steer > 0)
-                    _sail.RakeBack(Mathf.Abs(steer));
+                // Wind from right side (+X) or left side (-X)?
+                bool windFromStarboard = localWind.x > 0;
+                
+                // Smart rake calculation:
+                // When wind is from starboard (right):
+                //   - Turn right (D, steer > 0): rake BACK (heads you into wind = turns right)
+                //   - Turn left (A, steer < 0): rake FORWARD (bears you away = turns left)
+                // When wind is from port (left):
+                //   - Turn right (D, steer > 0): rake FORWARD (bears you away = turns right)
+                //   - Turn left (A, steer < 0): rake BACK (heads you into wind = turns left)
+                
+                bool shouldRakeBack;
+                if (windFromStarboard)
+                {
+                    // Wind from right: rake back to turn right, forward to turn left
+                    shouldRakeBack = steer > 0;
+                }
                 else
-                    _sail.RakeForward(Mathf.Abs(steer));
+                {
+                    // Wind from left: rake back to turn left, forward to turn right
+                    shouldRakeBack = steer < 0;
+                }
+                
+                // Apply the correct rake direction
+                if (shouldRakeBack)
+                    _sail.RakeBack(Mathf.Abs(steer) * 0.25f);  // Further reduced for smoother control
+                else
+                    _sail.RakeForward(Mathf.Abs(steer) * 0.25f);
 
                 // Apply weight shift for additional turning
-                ApplyWeightShift(steer * 0.5f);
+                ApplyWeightShift(steer * 0.15f);  // Further reduced for gentler turns
                 
                 // Apply body lean for edge control
                 ApplyEdging(steer);
@@ -209,14 +243,8 @@ namespace WindsurfingGame.Player
                 ApplyEdging(0);
             }
 
-            // Also allow direct Q/E for mast rake in beginner mode
-            if (Mathf.Abs(_rakeInput) > 0.1f)
-            {
-                if (_rakeInput > 0)
-                    _sail.RakeBack(Mathf.Abs(_rakeInput));
-                else
-                    _sail.RakeForward(Mathf.Abs(_rakeInput));
-            }
+            // Q/E disabled in beginner mode - use A/D to steer!
+            // (Beginner mode auto-determines rake direction based on wind)
         }
 
         /// <summary>
@@ -243,6 +271,59 @@ namespace WindsurfingGame.Player
             // A/D = Weight shift and edge control (secondary steering)
             ApplyWeightShift(_steerInput);
             ApplyEdging(_steerInput);
+        }
+
+        /// <summary>
+        /// Beginner mode stabilization - keeps the board going straight when no input.
+        /// Uses rake, weight shift, and angular damping to maintain course.
+        /// </summary>
+        private void ApplyBeginnerStabilization()
+        {
+            if (!_autoStabilize) return;
+            
+            // Only stabilize when there's no steering input
+            bool noInput = Mathf.Abs(_steerInput) < 0.05f && Mathf.Abs(_rakeInput) < 0.05f;
+            
+            if (noInput)
+            {
+                // 1. CENTER THE MAST - critical for straight sailing
+                if (_sail != null)
+                {
+                    _sail.CenterMast();
+                }
+                
+                // 2. NEUTRALIZE WEIGHT SHIFT - return to center
+                ApplyWeightShift(0);
+                ApplyEdging(0);
+                
+                // 3. STRONG ANGULAR DAMPING - stop any rotation
+                Vector3 angularVel = _rigidbody.angularVelocity;
+                float yawVelocity = angularVel.y;
+                
+                // Apply counter-torque to stop rotation
+                float dampingTorque = -yawVelocity * _stabilizationStrength * 15f;  // Increased from 10
+                _rigidbody.AddTorque(Vector3.up * dampingTorque, ForceMode.Force);
+                
+                // 4. DIRECT ANGULAR VELOCITY REDUCTION for immediate effect
+                _rigidbody.angularVelocity = new Vector3(
+                    angularVel.x,
+                    angularVel.y * 0.85f,  // 15% reduction per frame (increased from 10%)
+                    angularVel.z
+                );
+                
+                // 5. RAKE-BASED STABILIZATION - use rake to counter rotation
+                if (_sail != null && Mathf.Abs(yawVelocity) > 0.01f)
+                {
+                    // If rotating right (positive), rake forward slightly to counter
+                    // If rotating left (negative), rake back slightly to counter
+                    float correctionRake = -yawVelocity * 0.3f;
+                    
+                    if (correctionRake > 0.05f)
+                        _sail.RakeBack(correctionRake);
+                    else if (correctionRake < -0.05f)
+                        _sail.RakeForward(-correctionRake);
+                }
+            }
         }
 
         /// <summary>
@@ -293,13 +374,51 @@ namespace WindsurfingGame.Player
         {
             if (_sail == null) return;
 
-            if (_autoSheet)
+            if (_autoSheet && _controlMode == ControlMode.Beginner)
             {
-                // TODO: Auto-sheet based on apparent wind angle
-                // For now, just maintain current sheet
+                // Intelligent auto-sheet for beginner mode
+                // Adjusts sail angle to help maintain straight course
+                
+                // Get optimal sheet position based on apparent wind angle
+                float optimalSheet = 0.5f; // Default mid position
+                
+                if (_apparentWind != null)
+                {
+                    float windAngle = _apparentWind.ApparentWindAngle;
+                    
+                    // Sheet in more when close to wind, out more when running
+                    if (windAngle < 60)
+                        optimalSheet = 0.2f;  // Close-hauled: sheet in tight
+                    else if (windAngle < 90)
+                        optimalSheet = 0.35f; // Close reach: partly sheeted
+                    else if (windAngle < 120)
+                        optimalSheet = 0.5f;  // Beam reach: mid position
+                    else if (windAngle < 150)
+                        optimalSheet = 0.65f; // Broad reach: let out
+                    else
+                        optimalSheet = 0.75f; // Running: sheet out
+                }
+                
+                // Adjust sheet to help counter unwanted rotation
+                float angularVel = _rigidbody.angularVelocity.y;
+                float rotationCorrection = -angularVel * 0.05f; // Small adjustment
+                optimalSheet = Mathf.Clamp01(optimalSheet + rotationCorrection);
+                
+                // Smoothly adjust to optimal position
+                float currentSheet = _sail.SheetPosition;
+                float sheetDiff = optimalSheet - currentSheet;
+                
+                if (Mathf.Abs(sheetDiff) > 0.02f)
+                {
+                    if (sheetDiff > 0)
+                        _sail.SheetOut(Mathf.Abs(sheetDiff) * 2f);
+                    else
+                        _sail.SheetIn(Mathf.Abs(sheetDiff) * 2f);
+                }
             }
             else
             {
+                // Manual sheet control
                 if (_sheetInput > 0.1f)
                     _sail.SheetIn(_sheetInput);
                 else if (_sheetInput < -0.1f)

@@ -221,7 +221,19 @@ namespace WindsurfingGame.UI
 
             // Header
             GUI.Label(new Rect(x, y, panelWidth - 20, lineHeight), "⛵ TELEMETRY", _headerStyle);
-            y += lineHeight + 5;
+            y += lineHeight;
+            
+            // Control Mode Display - PROMINENT
+            if (_controllerV2 != null)
+            {
+                string mode = _controllerV2.CurrentControlMode.ToString().ToUpper();
+                GUIStyle modeStyle = new GUIStyle(_headerStyle);
+                modeStyle.fontSize = _fontSize + 4;
+                modeStyle.normal.textColor = Color.cyan;
+                GUI.Label(new Rect(x, y, panelWidth - 20, lineHeight), $"[{mode} MODE]", modeStyle);
+                y += lineHeight;
+            }
+            y += 5;
 
             // Speed section
             GUI.Label(new Rect(x, y, panelWidth - 20, lineHeight), "── SPEED ──", _headerStyle);

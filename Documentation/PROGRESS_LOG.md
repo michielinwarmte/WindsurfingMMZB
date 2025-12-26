@@ -6,8 +6,8 @@ This document tracks our development progress, decisions made, and lessons learn
 
 ## 📌 Quick Status Summary
 
-**Last Session**: December 20, 2025 - Session 11 (Documentation & Team Prep)  
-**Current Phase**: Core Physics (Phases 1-5 mostly complete)
+**Last Session**: December 26, 2025 - Session 12 (Validation, Controls & Physics Tuning)  
+**Current Phase**: Core Physics Complete + Playability Improvements
 
 ### Scripts Completed (17 total)
 
@@ -28,21 +28,145 @@ This document tracks our development progress, decisions made, and lessons learn
 - ✅ New Input System (not legacy)
 - ✅ Namespace: `WindsurfingGame.*`
 - ✅ Simulation drives visualization (not vice versa)
-- ✅ Two control modes: Beginner (auto-sheet) / Advanced (manual)
+- ✅ Two control modes: Beginner (context-aware, auto-stabilize) / Advanced (manual)
+- ✅ Beginner mode is default with auto-sheet and stabilization
+- ✅ No-go zone physics prevents unrealistic backward sailing
+
+### Current Status
+- ✅ Core physics validated and working
+- ✅ Steering properly tuned (smooth and controllable)
+- ✅ Planing behavior implemented with proper drag reduction
+- ✅ No-go zone prevents sailing directly into wind
+- ✅ Auto-stabilization keeps board going straight
+- ✅ Visual sail representation shows mast rake and power
 
 ### Ready for Next Session
-- [ ] Test simulation in Unity
-- [ ] Verify sail forces feel correct
-- [ ] Test steering with mast rake
-- [ ] Begin board planing behavior
-- [ ] Consider water visual improvements
+- [ ] Add water visual improvements (shader, foam, reflections)
+- [ ] Add sound effects (wind, water, sail)
+- [ ] Create basic environment (skybox, islands, buoys)
+- [ ] Improve planing visual feedback
+- [ ] Consider adding spray/splash particle effects
 
 ### For New Team Members
 See [CONTRIBUTING.md](../CONTRIBUTING.md) and [ARCHITECTURE.md](ARCHITECTURE.md)
 
 ---
 
-## Session Log
+## December 26, 2025 - Session 12
+
+### Session: Validation, Controls & Physics Tuning
+
+**What we did:**
+- ✅ Validated core physics simulation in Unity (first full playtest!)
+- ✅ Fixed steering sensitivity issues through multiple iterations
+- ✅ Implemented context-aware beginner controls (auto-adjusts rake based on wind side)
+- ✅ Added prominent control mode display in HUD (cyan text at top)
+- ✅ Implemented 5-point auto-stabilization system for straight-line sailing
+- ✅ Added intelligent auto-sheet functionality with rotation correction
+- ✅ Implemented no-go zone physics (0-45° from wind = stall, no backward motion)
+- ✅ Fixed planing drag reduction (85% less drag when planing)
+- ✅ Enabled sail visualization for real-time feedback
+
+**Control System Evolution:**
+
+| Iteration | Issue | Fix Applied |
+|-----------|-------|-------------|
+| Initial | Barely any steering (120-130° range only) | Increased rake torque to 3.5, added base torque |
+| Second | Too sensitive, twitchy | Reduced to 2.0, lowered weight shift to 20 |
+| Third | Still too sensitive | Reduced to 1.2, lowered weight shift to 12 |
+| Final | Smooth control achieved | Reduced to 0.6, removed base torque |
+
+**Beginner Mode Features:**
+- **Context-aware steering**: A/D automatically chooses correct rake direction based on wind side
+  - Wind from starboard: D rakes back (turn right), A rakes forward (turn left)
+  - Wind from port: D rakes forward (turn right), A rakes back (turn left)
+  - Result: Intuitive "left/right" controls regardless of tack
+- **5-Point Stabilization**: Centers mast, neutralizes weight/edge, damps rotation, corrects with rake
+- **Auto-sheet**: Optimizes sail angle for point of sail + counters rotation
+- **Q/E disabled**: Prevents confusion with automatic rake control
+
+**Physics Improvements:**
+
+| System | Before | After | Impact |
+|--------|--------|-------|--------|
+| Rake Torque | 0.5 → 3.5 → 2.0 → 1.2 → 0.6 | Final: 0.6 | Smooth, controllable steering |
+| Base Torque | 50N constant | Removed | Eliminated twitchiness |
+| Weight Shift | 15 → 35 → 20 → 12 | Final: 12 | Gentle turning assistance |
+| Forward Drag | 0.15 | 0.08 | Higher top speed |
+| Planing Multiplier | 0.4 | 0.15 | 85% drag reduction when planing |
+| No-Go Zone | None | < 45° = stall | Realistic sailing constraints |
+
+**Auto-Stabilization System:**
+1. **Mast centering**: Returns rake to neutral
+2. **Weight neutralization**: Returns body to center
+3. **Edge flattening**: Removes board tilt
+4. **Angular damping**: 15x counter-torque + 15% velocity reduction
+5. **Active rake correction**: Dynamic corrections based on rotation direction
+
+**New Physics Behaviors:**
+- **No-go zone** (< 45° from wind): Board stalls, no propulsive force, light backward drag
+- **Stall prevention**: Forces that would push backward are zeroed out
+- **Planing breakthrough**: Dramatic speed increase above 4 m/s (~8 knots)
+- **Realistic sailing**: Can't point directly into wind, must tack at angles
+
+**Files Modified:**
+
+| File | Changes |
+|------|---------|
+| `Sail.cs` | Rake torque tuning, no-go zone implementation, backward force prevention |
+| `WindsurferControllerV2.cs` | Context-aware steering, 5-point stabilization, auto-sheet |
+| `TelemetryHUD.cs` | Prominent control mode display |
+| `WaterDrag.cs` | Improved planing effectiveness (0.08 drag, 0.15 multiplier) |
+
+**Parameters - Final Tuning:**
+
+**Sail.cs:**
+- Rake Speed: 5.0 (fast response)
+- Rake Torque Multiplier: 0.6 (gentle steering)
+- Max Rake Angle: 15°
+
+**WindsurferControllerV2.cs:**
+- Weight Shift Strength: 12
+- Max Lean Angle: 30°
+- Stabilization Strength: 5.0
+- Auto-Sheet: ON (default)
+- Auto-Stabilize: ON (default)
+- Beginner rake multiplier: 0.25
+- Beginner weight multiplier: 0.15
+
+**WaterDrag.cs:**
+- Forward Drag: 0.08
+- Planing Speed: 4 m/s
+- Planing Drag Multiplier: 0.15
+
+**Testing Results:**
+- ✅ Board goes straight with no input
+- ✅ Smooth, predictable turning with A/D
+- ✅ Auto-stabilization returns to course after turns
+- ✅ Can sail upwind at 45-60° angles
+- ✅ Stalls realistically in no-go zone
+- ✅ Planing provides dramatic speed increase
+- ✅ Top speeds of 15-25 knots achievable
+- ✅ Intuitive controls work on both tacks
+
+**Lessons Learned:**
+- ⚠️ Rake-based steering is very powerful - needs careful tuning
+- ⚠️ Base torque components add twitchiness - removed for smoother feel
+- ⚠️ Context-aware controls make tacking much more intuitive
+- ⚠️ Auto-stabilization needs multiple systems working together (not just damping)
+- ⚠️ No-go zone is critical for realistic sailing behavior
+- ⚠️ Planing needs significant drag reduction to feel impactful (85%+ reduction)
+
+**Next steps:**
+- [ ] Add visual polish (water shader, foam, spray effects)
+- [ ] Implement sound system (wind, water, sail flapping)
+- [ ] Create environment (skybox, islands, course markers)
+- [ ] Add planing visual feedback (board angle, spray)
+- [ ] Consider AI opponents for racing
+
+---
+
+*End of December 26, 2025 session*
 
 ---
 

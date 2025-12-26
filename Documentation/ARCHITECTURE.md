@@ -287,7 +287,8 @@ Documentation/PHYSICS_VALIDATION.md   → Physics testing checklist
 | Dec 19 | 9 | Mast rake direction fix, SailVisualizer, SailPositionIndicator |
 | Dec 20 | 10 | Physics validation, WindsurferControllerV2 |
 | Dec 20 | 11 | Sail simulation fix (geometry, CE, visualizer sync) |
+| Dec 26 | 12 | Full validation, control tuning, stabilization, no-go zone, planing fix |
 
 ---
 
-*Last Updated: December 20, 2025*
+*Last Updated: December 26, 2025*

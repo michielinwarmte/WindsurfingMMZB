@@ -91,8 +91,8 @@ See [DEVELOPMENT_PLAN.md](Documentation/DEVELOPMENT_PLAN.md) for detailed develo
 
 ## 🎯 Current Status
 
-**Phase**: Core Physics Implementation (Phases 1-5 mostly complete)  
-**Last Updated**: December 20, 2025
+**Phase**: Core Physics Complete + Playability Polish  
+**Last Updated**: December 26, 2025
 
 ### Completed Features
 - ✅ Water surface with wave support
@@ -101,19 +101,26 @@ See [DEVELOPMENT_PLAN.md](Documentation/DEVELOPMENT_PLAN.md) for detailed develo
 - ✅ Apparent wind calculation
 - ✅ Sail physics (lift/drag, center of effort)
 - ✅ Fin physics (lateral resistance, stall)
-- ✅ Water drag
+- ✅ Water drag with planing behavior
 - ✅ Player controls (Beginner/Advanced modes)
-- ✅ Telemetry HUD
+- ✅ Context-aware beginner controls (auto-adjusts for tack)
+- ✅ Auto-stabilization system (5-point stabilization)
+- ✅ Auto-sheet functionality
+- ✅ No-go zone physics (realistic sailing constraints)
+- ✅ Telemetry HUD with control mode display
 - ✅ Sail visualization (3D and 2D)
 - ✅ Third-person camera
 
-### In Progress
-- 🔄 Physics tuning and validation
-- 🔄 Board planing behavior
+### Validated & Tuned
+- ✅ Steering sensitivity (smooth and controllable)
+- ✅ Planing drag reduction (85% less drag)
+- ✅ Straight-line stability
+- ✅ Realistic sailing behavior
 
 ### Next Up
-- ⏳ Environment (water visuals, islands, buoys)
-- ⏳ Sound effects
+- ⏳ Visual polish (water shader, foam, spray)
+- ⏳ Sound effects (wind, water, sail)
+- ⏳ Environment (skybox, islands, course markers)
 - ⏳ AI opponents
 - ⏳ Racing mode
 

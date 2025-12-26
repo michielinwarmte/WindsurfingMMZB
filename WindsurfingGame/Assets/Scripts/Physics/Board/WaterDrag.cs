@@ -14,7 +14,7 @@ namespace WindsurfingGame.Physics.Board
     {
         [Header("Drag Coefficients")]
         [Tooltip("Forward/backward drag (lower = faster top speed)")]
-        [SerializeField] private float _forwardDrag = 0.15f;
+        [SerializeField] private float _forwardDrag = 0.08f;
         
         [Tooltip("Sideways drag from hull (fin handles most lateral resistance)")]
         [SerializeField] private float _lateralDrag = 0.5f;
@@ -26,8 +26,8 @@ namespace WindsurfingGame.Physics.Board
         [Tooltip("Speed at which board starts planing (reduces drag)")]
         [SerializeField] private float _planingSpeed = 4f;
         
-        [Tooltip("Drag reduction when planing (0.5 = half drag)")]
-        [SerializeField] private float _planingDragMultiplier = 0.4f;
+        [Tooltip("Drag reduction when planing (0.15 = 85% less drag)")]
+        [SerializeField] private float _planingDragMultiplier = 0.15f;
 
         [Header("References")]
         [SerializeField] private Buoyancy.BuoyancyBody _buoyancy;

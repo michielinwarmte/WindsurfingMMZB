@@ -59,10 +59,10 @@ namespace WindsurfingGame.Physics.Board
         [SerializeField] private float _maxRakeAngle = 15f;
         
         [Tooltip("How quickly the sailor can rake the mast")]
-        [SerializeField] private float _rakeSpeed = 2f;
+        [SerializeField] private float _rakeSpeed = 5f;
         
         [Tooltip("Steering torque multiplier from rake")]
-        [SerializeField] private float _rakeTorqueMultiplier = 0.5f;
+        [SerializeField] private float _rakeTorqueMultiplier = 0.6f;
 
         [Header("References")]
         [Tooltip("Rigidbody to apply forces to")]
@@ -128,6 +128,25 @@ namespace WindsurfingGame.Physics.Board
                 return;
             }
 
+            // Check if we're in the no-go zone (too close to wind)
+            // Wind angle from board heading
+            Vector3 windDirection = apparentWind.normalized;
+            Vector3 forwardDirection = transform.forward;
+            float windAngleFromBow = Vector3.Angle(forwardDirection, -windDirection); // Angle to where wind comes FROM
+            
+            // No-go zone: within 45 degrees of wind direction
+            if (windAngleFromBow < 45f)
+            {
+                // In no-go zone - no propulsive force, only drag
+                // Apply backward drag to stall the board
+                float stallDrag = 0.5f * AIR_DENSITY * windSpeed * windSpeed * _sailArea * 0.5f;
+                _dragForce = -forwardDirection * stallDrag * 0.3f; // Light backward force
+                _liftForce = Vector3.zero;
+                _totalForce = _dragForce;
+                _currentSailAngle = 0f;
+                return;
+            }
+
             // Sail rotates around the mast (leading edge is at mast, trailing edge extends backward)
             // Sheet position controls how far the sail swings out from centerline
             // Sheet in (0) = sail close to centerline (for upwind)
@@ -139,7 +158,6 @@ namespace WindsurfingGame.Physics.Board
             Vector3 sailNormal = CalculateSailNormal(_currentSailAngle);
             
             // Calculate angle of attack (angle between apparent wind and sail plane)
-            Vector3 windDirection = apparentWind.normalized;
             _currentAngleOfAttack = 90f - Vector3.Angle(windDirection, sailNormal);
 
             // Calculate lift and drag coefficients based on angle of attack
@@ -167,8 +185,18 @@ namespace WindsurfingGame.Physics.Board
             _liftForce = liftDirection * liftMagnitude;
             _dragForce = dragDirection * dragMagnitude;
             
-            // Total force
+            // Total force - ensure it has a forward component
             _totalForce = _liftForce + _dragForce;
+            
+            // Safety check: if total force would push us backward, zero it out
+            float forwardComponent = Vector3.Dot(_totalForce, forwardDirection);
+            if (forwardComponent < 0)
+            {
+                // Force is pushing backward - this shouldn't happen in normal sailing
+                // Apply only the sideways component (drift) and a small drag
+                Vector3 sidewaysComponent = _totalForce - (forwardDirection * forwardComponent);
+                _totalForce = sidewaysComponent * 0.5f - forwardDirection * 10f; // Small backward drag
+            }
         }
 
         private void ApplyForces()
@@ -218,9 +246,9 @@ namespace WindsurfingGame.Physics.Board
         {
             if (_targetRigidbody == null) return;
 
-            // Only apply if we have sail force (need power to steer)
+            // Apply steering torque even with minimal force for better control
             float forceMagnitude = _totalForce.magnitude;
-            if (forceMagnitude < 1f) return;
+            if (forceMagnitude < 0.1f) return;
 
             // Steering torque proportional to:
             // - Mast rake amount (positive = back = upwind, negative = forward = downwind)
