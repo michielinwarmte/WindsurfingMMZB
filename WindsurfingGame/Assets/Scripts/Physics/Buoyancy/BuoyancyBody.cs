@@ -16,16 +16,16 @@ namespace WindsurfingGame.Physics.Buoyancy
 
         [Header("Buoyancy Settings")]
         [Tooltip("Strength of the buoyancy force")]
-        [SerializeField] private float _buoyancyStrength = 10f;
+        [SerializeField] private float _buoyancyStrength = 1500f;
         
         [Tooltip("How deep the object sinks before reaching equilibrium (meters)")]
-        [SerializeField] private float _floatHeight = 0.1f;
+        [SerializeField] private float _floatHeight = 0.2f;
         
         [Tooltip("Damping applied when underwater (reduces bobbing)")]
-        [SerializeField] private float _waterDamping = 1f;
+        [SerializeField] private float _waterDamping = 100f;
         
         [Tooltip("Angular damping when in water (reduces spinning)")]
-        [SerializeField] private float _angularWaterDamping = 0.5f;
+        [SerializeField] private float _angularWaterDamping = 1.5f;
 
         [Header("Buoyancy Points")]
         [Tooltip("Points where buoyancy is sampled. If empty, uses object center.")]

@@ -16,10 +16,10 @@ namespace WindsurfingGame.Physics.Board
     {
         [Header("Fin Properties")]
         [Tooltip("Fin area in square meters (typical: 0.02-0.05 m²)")]
-        [SerializeField] private float _finArea = 0.04f;
+        [SerializeField] private float _finArea = 0.08f;
         
         [Tooltip("Fin efficiency/lift coefficient (higher = more grip)")]
-        [SerializeField] private float _liftCoefficient = 4f;
+        [SerializeField] private float _liftCoefficient = 8f;
         
         [Tooltip("Position of fin relative to board center")]
         [SerializeField] private Vector3 _finPosition = new Vector3(0, -0.1f, -0.8f);
@@ -33,7 +33,7 @@ namespace WindsurfingGame.Physics.Board
 
         [Header("Tracking Force")]
         [Tooltip("How strongly the board tries to align with its velocity")]
-        [SerializeField] private float _trackingStrength = 2f;
+        [SerializeField] private float _trackingStrength = 8f;
         
         [Tooltip("Apply tracking torque to straighten the board")]
         [SerializeField] private bool _enableTracking = true;
@@ -168,17 +168,25 @@ namespace WindsurfingGame.Physics.Board
 
         /// <summary>
         /// Calculates lift coefficient based on slip angle.
-        /// Increases linearly up to stall angle, then drops.
+        /// Uses a more aggressive curve for better grip at small slip angles.
         /// </summary>
         private float CalculateLiftCoefficient(float slipAngle)
         {
             float absAngle = Mathf.Abs(slipAngle);
 
-            if (absAngle < _stallAngle)
+            if (absAngle < 1f)
             {
-                // Linear increase up to stall
-                // Normalized so that at stall angle, we get full lift coefficient
-                return _liftCoefficient * (absAngle / _stallAngle);
+                // Very small slip - still provide strong resistance
+                // This prevents initial drift
+                return _liftCoefficient * 0.5f * absAngle;
+            }
+            else if (absAngle < _stallAngle)
+            {
+                // Aggressive curve - rises quickly then plateaus
+                // Using sqrt for faster rise at small angles
+                float normalized = absAngle / _stallAngle;
+                float curve = Mathf.Sqrt(normalized); // Faster rise at low angles
+                return _liftCoefficient * curve;
             }
             else
             {

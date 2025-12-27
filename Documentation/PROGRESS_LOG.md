@@ -6,49 +6,124 @@ This document tracks our development progress, decisions made, and lessons learn
 
 ## 📌 Quick Status Summary
 
-**Last Session**: December 26, 2025 - Session 12 (Validation, Controls & Physics Tuning)  
-**Current Phase**: Core Physics Complete + Playability Improvements
+**Last Session**: December 27, 2025 - Session 13 (Advanced Physics Overhaul)  
+**Current Phase**: Advanced Physics System Complete
 
-### Scripts Completed (17 total)
+### Scripts Completed (28 total)
 
 | Category | Scripts |
 |----------|---------|
+| Physics Core | `PhysicsConstants`, `Aerodynamics`, `Hydrodynamics`, `SailingState` |
 | Water | `IWaterSurface`, `WaterSurface` |
-| Wind | `IWindProvider`, `WindManager` |
-| Buoyancy | `BuoyancyBody` |
-| Board | `Sail`, `ApparentWindCalculator`, `WaterDrag`, `FinPhysics` |
-| Player | `WindsurferController`, `WindsurferControllerV2` |
+| Wind | `IWindProvider`, `WindManager`, `WindSystem` |
+| Buoyancy | `BuoyancyBody`, `AdvancedBuoyancy` |
+| Board | `Sail`, `ApparentWindCalculator`, `WaterDrag`, `FinPhysics`, `AdvancedSail`, `AdvancedFin`, `AdvancedHullDrag` |
+| Player | `WindsurferController`, `WindsurferControllerV2`, `AdvancedWindsurferController` |
 | Camera | `ThirdPersonCamera` |
-| UI | `TelemetryHUD`, `SailPositionIndicator`, `WindIndicator3D` |
+| UI | `TelemetryHUD`, `SailPositionIndicator`, `WindIndicator3D`, `AdvancedTelemetryHUD` |
 | Visual | `SailVisualizer` |
 | Utilities | `PhysicsHelpers`, `WaterGridMarkers` |
+| Shaders | `StylizedWater` |
 
 ### Key Decisions Made
 - ✅ Unity 6.3 LTS with URP
 - ✅ New Input System (not legacy)
 - ✅ Namespace: `WindsurfingGame.*`
 - ✅ Simulation drives visualization (not vice versa)
-- ✅ Two control modes: Beginner (context-aware, auto-stabilize) / Advanced (manual)
-- ✅ Beginner mode is default with auto-sheet and stabilization
-- ✅ No-go zone physics prevents unrealistic backward sailing
+- ✅ Three control modes: Beginner / Intermediate / Advanced
+- ✅ Physics based on yacht design literature (Marchaj, Larsson & Eliasson)
+- ✅ Proper aerodynamic/hydrodynamic force calculations
 
 ### Current Status
-- ✅ Core physics validated and working
-- ✅ Steering properly tuned (smooth and controllable)
-- ✅ Planing behavior implemented with proper drag reduction
-- ✅ No-go zone prevents sailing directly into wind
-- ✅ Auto-stabilization keeps board going straight
-- ✅ Visual sail representation shows mast rake and power
+- ✅ **Complete physics overhaul with realistic modeling**
+- ✅ Thin airfoil theory for sail lift/drag
+- ✅ NACA foil characteristics for fin hydrodynamics
+- ✅ Froude number based hull resistance with planing transition
+- ✅ Multi-point buoyancy system
+- ✅ Wind system with gusts, shifts, and height gradient
+- ✅ Custom stylized water shader with grid overlay
 
 ### Ready for Next Session
-- [ ] Add water visual improvements (shader, foam, reflections)
+- [ ] Test and tune the new physics system in-game
+- [ ] Adjust physics parameters based on feel
 - [ ] Add sound effects (wind, water, sail)
 - [ ] Create basic environment (skybox, islands, buoys)
-- [ ] Improve planing visual feedback
-- [ ] Consider adding spray/splash particle effects
+- [ ] Add spray/splash particle effects
 
 ### For New Team Members
 See [CONTRIBUTING.md](../CONTRIBUTING.md) and [ARCHITECTURE.md](ARCHITECTURE.md)
+
+---
+
+## December 27, 2025 - Session 13
+
+### Session: Advanced Physics System Overhaul
+
+**What we did:**
+- ✅ Complete overhaul of the physics system with realistic aerodynamic/hydrodynamic modeling
+- ✅ Created physics core modules (PhysicsConstants, Aerodynamics, Hydrodynamics, SailingState)
+- ✅ Created advanced board components (AdvancedSail, AdvancedFin, AdvancedHullDrag, AdvancedBuoyancy)
+- ✅ Created new WindSystem with gusts, shifts, and height gradient
+- ✅ Created AdvancedWindsurferController with three control modes
+- ✅ Created AdvancedTelemetryHUD for comprehensive physics display
+- ✅ Created custom StylizedWater shader for better visual feedback
+- ✅ Updated MainScene.unity to use new Advanced* components
+
+**Physics Theory Implemented:**
+
+| Component | Theory/Source |
+|-----------|---------------|
+| Sail Lift | Thin airfoil theory: Cl = 2π * AR/(AR+2) * α |
+| Sail Drag | Induced drag + parasitic: Cd = Cd0 + Cl²/(π*e*AR) |
+| Fin Lift | NACA foil characteristics with stall modeling |
+| Hull Resistance | ITTC friction + Froude number wave resistance |
+| Planing | Savitsky method with wetted area reduction |
+| Buoyancy | Multi-point sampling with damping |
+| Wind Gradient | Power law: V = V_ref * (z/z_ref)^α |
+
+**New File Structure:**
+```
+Assets/Scripts/
+├── Physics/
+│   ├── Core/
+│   │   ├── PhysicsConstants.cs    # Air/water density, gravity, conversions
+│   │   ├── Aerodynamics.cs        # Sail lift/drag calculations
+│   │   ├── Hydrodynamics.cs       # Fin/hull force calculations
+│   │   └── SailingState.cs        # State classes, configurations
+│   ├── Board/
+│   │   ├── AdvancedSail.cs        # Realistic sail aerodynamics
+│   │   ├── AdvancedFin.cs         # Hydrodynamic fin with leeway
+│   │   └── AdvancedHullDrag.cs    # Displacement/planing hull model
+│   └── Buoyancy/
+│       └── AdvancedBuoyancy.cs    # Multi-point buoyancy system
+├── Environment/
+│   └── WindSystem.cs              # Global wind with variability
+├── Player/
+│   └── AdvancedWindsurferController.cs  # New control system
+└── UI/
+    └── AdvancedTelemetryHUD.cs    # Physics data display
+```
+
+**Key Physics Improvements:**
+1. **Proper fin grip** - Fin generates realistic lift force opposing leeway
+2. **Leeway angle calculation** - Slip angle from velocity vector, not arbitrary
+3. **Center of pressure** - Forces applied at correct positions
+4. **Tracking torque** - Fin actively corrects course deviations
+5. **Apparent wind** - Proper vector calculation for VMG sailing
+6. **Froude number** - Realistic transition from displacement to planing
+7. **Multi-point buoyancy** - Natural pitch/roll behavior
+
+**Control Modes:**
+| Mode | Sheet | Rake | Weight | Assists |
+|------|-------|------|--------|---------|
+| Beginner | Auto | A/D combined | A/D combined | Anti-capsize, auto-center |
+| Intermediate | Manual W/S | Q/E | A/D | Anti-capsize, auto-center |
+| Advanced | Manual W/S | Q/E | A/D | None |
+
+**What's Next:**
+- Test the physics in Unity and tune parameters
+- Adjust sail area, fin size, hull resistance for good feel
+- May need to balance power vs. stability
 
 ---
 

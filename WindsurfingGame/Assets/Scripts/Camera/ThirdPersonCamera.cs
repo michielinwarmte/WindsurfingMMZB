@@ -14,7 +14,7 @@ namespace WindsurfingGame.CameraSystem
 
         [Header("Position Settings")]
         [Tooltip("Offset from target in target's local space")]
-        [SerializeField] private Vector3 _offset = new Vector3(0, 3f, -8f);
+        [SerializeField] private Vector3 _offset = new Vector3(0, 8f, -1.46f);
         
         [Tooltip("How quickly the camera follows position")]
         [SerializeField] private float _followSpeed = 5f;

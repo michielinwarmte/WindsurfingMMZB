@@ -21,13 +21,13 @@ namespace WindsurfingGame.Physics.Board
     {
         [Header("Sail Properties")]
         [Tooltip("Sail area in square meters (typical: 4-10 m²)")]
-        [SerializeField] private float _sailArea = 6f;
+        [SerializeField] private float _sailArea = 7.5f;
         
         [Tooltip("Maximum lift coefficient (how efficient the sail is)")]
-        [SerializeField] private float _maxLiftCoefficient = 1.2f;
+        [SerializeField] private float _maxLiftCoefficient = 1.6f;
         
         [Tooltip("Drag coefficient at optimal angle")]
-        [SerializeField] private float _baseDragCoefficient = 0.1f;
+        [SerializeField] private float _baseDragCoefficient = 0.5f;
 
         [Header("Sail Control")]
         [Tooltip("Current sheet angle (0 = sheeted in tight, 1 = fully released)")]

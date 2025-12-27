@@ -128,6 +128,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 110243872}
+  - component: {fileID: 110243873}
   m_Layer: 0
   m_Name: TelemetryHUD
   m_TagString: Untagged
@@ -452,6 +453,14 @@ GameObject:
   - component: {fileID: 1428871600}
   - component: {fileID: 1428871599}
   - component: {fileID: 1428871598}
+  - component: {fileID: 1428871603}
+  - component: {fileID: 1428871604}
+  - component: {fileID: 1428871605}
+  - component: {fileID: 1428871606}
+  - component: {fileID: 1428871607}
+  - component: {fileID: 1428871608}
+  - component: {fileID: 1428871609}
+  - component: {fileID: 1428871610}
   m_Layer: 0
   m_Name: WindsurfBoard
   m_TagString: Untagged
@@ -610,8 +619,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4575c3ddbf46fda48915bd3372bf7f0d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Physics.Board.Sail
-  _sailArea: 6
-  _maxLiftCoefficient: 1.2
+  _sailArea: 7.5
+  _maxLiftCoefficient: 1.6
   _baseDragCoefficient: 0.5
   _sheetPosition: 0.5
   _sheetSpeed: 2
@@ -646,8 +655,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eaf8284f5297bff449bcfa34c40509de, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Physics.Board.WaterDrag
-  _forwardDrag: 0.15
-  _lateralDrag: 3
+  _forwardDrag: 0.08
+  _lateralDrag: 1.5
   _verticalDrag: 4
   _planingSpeed: 4
   _planingDragMultiplier: 0.5
@@ -664,7 +673,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aaeaaf407e00503488a5eadb2f40adbc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Physics.Buoyancy.BuoyancyBody
-  _waterSurface: {fileID: 0}
+  _waterSurface: {fileID: 1751557248}
   _buoyancyStrength: 1500
   _floatHeight: 0.2
   _waterDamping: 100
@@ -833,6 +842,290 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1428871603
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1428871592}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 34972a2aa6f371b44bbf08fa18864235, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Physics.Board.FinPhysics
+  _finArea: 0.08
+  _liftCoefficient: 8
+  _finPosition: {x: 0, y: -0.1, z: -0.8}
+  _minEffectiveSpeed: 0.5
+  _fullEffectSpeed: 3
+  _trackingStrength: 8
+  _enableTracking: 1
+  _stallAngle: 25
+  _stallFalloff: 0.5
+  _showDebugVectors: 1
+--- !u!114 &1428871604
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1428871592}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e172e8b2311d5442836c0bb84cf9f08, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Player.WindsurferControllerV2
+  _rigidbody: {fileID: 0}
+  _sail: {fileID: 0}
+  _finPhysics: {fileID: 0}
+  _apparentWind: {fileID: 0}
+  _controlMode: 0
+  _weightShiftStrength: 12
+  _maxLeanAngle: 30
+  _weightShiftSpeed: 6
+  _edgeFinBonus: 1.5
+  _maxRollAngle: 15
+  _autoSheet: 1
+  _antiCapsize: 1
+  _combinedSteering: 1
+  _autoStabilize: 1
+  _stabilizationStrength: 5
+  _inputResponsiveness: 6
+  _autoCenterMast: 1
+--- !u!114 &1428871605
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1428871592}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9e85a18a050d39f4a93ba25ece5167d9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Visual.SailVisualizer
+  _sail: {fileID: 0}
+  _apparentWind: {fileID: 0}
+  _mastHeight: 4.5
+  _mastRadius: 0.04
+  _maxRakeAngle: 15
+  _mastBasePosition: {x: 0, y: 0.1, z: -0.05}
+  _boomLength: 2.5
+  _boomHeight: 1.5
+  _boomRadius: 0.03
+  _mastColor: {r: 0.3, g: 0.3, b: 0.3, a: 1}
+  _boomColor: {r: 0.4, g: 0.4, b: 0.4, a: 1}
+  _sailColor: {r: 1, g: 0.3, b: 0.1, a: 0.8}
+  _sailPoweredColor: {r: 1, g: 0.5, b: 0.2, a: 0.9}
+  _smoothSpeed: 8
+--- !u!114 &110243873
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 110243871}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 66721f7219dfc19468025e4c7d2d3b05, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.UI.TelemetryHUD
+  _controller: {fileID: 0}
+  _controllerV2: {fileID: 0}
+  _boardRigidbody: {fileID: 0}
+  _windManager: {fileID: 0}
+  _apparentWind: {fileID: 0}
+  _sail: {fileID: 0}
+  _waterDrag: {fileID: 0}
+  _finPhysics: {fileID: 0}
+  _showTelemetry: 1
+  _showWindIndicator: 1
+  _showControls: 1
+  _fontSize: 18
+  _backgroundColor: {r: 0, g: 0, b: 0, a: 0.7}
+  _textColor: {r: 1, g: 1, b: 1, a: 1}
+  _highlightColor: {r: 0, g: 1, b: 1, a: 1}
+--- !u!114 &1428871606
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1428871592}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Physics.Board.AdvancedSail
+  _sailConfig:
+    Area: 7.5
+    Camber: 0.12
+    AspectRatio: 3.0
+    MastHeight: 4.7
+    BoomLength: 2.4
+    CenterOfEffortHeight: 2.5
+    MastFootPosition: {x: 0, y: 0.1, z: 0.5}
+  _sheetPosition: 0.5
+  _sheetSpeed: 1.5
+  _mastRake: 0
+  _maxRakeAngle: 15
+  _rakeSpeed: 3
+  _windSystem: {fileID: 0}
+  _showDebug: 1
+  _showForceVectors: 1
+  _forceVectorScale: 0.002
+--- !u!114 &1428871607
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1428871592}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Physics.Board.AdvancedFin
+  _finConfig:
+    Area: 0.06
+    Span: 0.40
+    Chord: 0.15
+    Sweep: 35
+    AspectRatio: 2.67
+    Position: {x: 0, y: -0.15, z: -0.9}
+  _waterSurface: {fileID: 1751557248}
+  _showDebug: 1
+  _forceVectorScale: 0.002
+--- !u!114 &1428871608
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1428871592}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Physics.Board.AdvancedHullDrag
+  _hullConfig:
+    Length: 2.5
+    BeamMax: 0.6
+    WettedArea: 1.5
+    DisplacementVolume: 0.25
+    BoardMass: 12
+  _waterSurface: {fileID: 1751557248}
+  _showDebug: 1
+  _forceVectorScale: 0.002
+--- !u!114 &1428871609
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1428871592}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Physics.Buoyancy.AdvancedBuoyancy
+  _waterSurface: {fileID: 1751557248}
+  _boardLength: 2.5
+  _boardWidth: 0.6
+  _boardThickness: 0.15
+  _sampleGridX: 3
+  _sampleGridZ: 5
+  _buoyancyStrength: 1
+  _linearDamping: 100
+  _angularDamping: 15
+  _showDebug: 1
+--- !u!114 &1428871610
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1428871592}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Player.AdvancedWindsurferController
+  _sail: {fileID: 1428871606}
+  _fin: {fileID: 1428871607}
+  _hull: {fileID: 1428871608}
+  _rigidbody: {fileID: 1428871593}
+  _controlMode: 1
+  _sheetControlSpeed: 0.8
+  _autoSheet: 0
+  _autoSheetSpeed: 0.3
+  _rakeControlSpeed: 2
+  _autoCenterRake: 1
+  _rakeCenterSpeed: 1
+  _maxWeightShift: 20
+  _weightShiftSpeed: 4
+  _weightShiftTorque: 30
+  _antiCapsize: 1
+  _maxHeelAngle: 45
+  _anticapsizeStrength: 50
+  _inputSmoothing: 8
+--- !u!1 &2021339461
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2021339463}
+  - component: {fileID: 2021339462}
+  m_Layer: 0
+  m_Name: WindSystem
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2021339462
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2021339461}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Environment.WindSystem
+  _windDirection: 270
+  _windSpeedKnots: 15
+  _enableGusts: 1
+  _gustIntensity: 0.2
+  _gustPeriod: 8
+  _enableShifts: 0
+  _maxShiftAngle: 15
+  _shiftPeriod: 60
+  _enableHeightGradient: 1
+  _referenceHeight: 1
+  _shearExponent: 0.14
+  _showGizmos: 1
+--- !u!4 &2021339463
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2021339461}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -843,3 +1136,4 @@ SceneRoots:
   - {fileID: 1428871597}
   - {fileID: 1921339463}
   - {fileID: 110243872}
+  - {fileID: 2021339463}
