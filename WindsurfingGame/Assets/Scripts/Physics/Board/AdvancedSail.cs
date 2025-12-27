@@ -1,5 +1,6 @@
 using UnityEngine;
 using WindsurfingGame.Physics.Core;
+using WindsurfingGame.Physics.Wind;
 using WindsurfingGame.Environment;
 
 namespace WindsurfingGame.Physics.Board
@@ -25,10 +26,13 @@ namespace WindsurfingGame.Physics.Board
         [Header("Sail Control")]
         [Tooltip("Current sheet position (0 = sheeted in, 1 = fully eased)")]
         [Range(0f, 1f)]
-        [SerializeField] private float _sheetPosition = 0.5f;
+        [SerializeField] private float _sheetPosition = 0.65f;
         
         [Tooltip("Sheet control speed")]
         [SerializeField] private float _sheetSpeed = 1.5f;
+        
+        [Tooltip("Enable automatic sail trim for optimal angle of attack")]
+        [SerializeField] private bool _autoTrim = false;
         
         [Tooltip("Mast rake angle (-1 = forward, +1 = back)")]
         [Range(-1f, 1f)]
@@ -42,6 +46,7 @@ namespace WindsurfingGame.Physics.Board
         
         [Header("Wind Reference")]
         [SerializeField] private WindSystem _windSystem;
+        [SerializeField] private WindManager _legacyWindManager;
         
         [Header("Debug Visualization")]
         [SerializeField] private bool _showDebug = true;
@@ -50,12 +55,14 @@ namespace WindsurfingGame.Physics.Board
         
         // Components
         private Rigidbody _rigidbody;
+        private IWindProvider _windProvider; // Fallback interface
         
         // State
         private SailingState _state = new SailingState();
         private float _currentSailAngle;
         private Vector3 _sailNormal;
         private Vector3 _centerOfEffort;
+        private float _lastSailSide = 1f; // For hysteresis during tacks
         
         // Cached values
         private float _targetSheetPosition;
@@ -79,6 +86,7 @@ namespace WindsurfingGame.Physics.Board
         
         private void Start()
         {
+            // Try to find WindSystem (preferred)
             if (_windSystem == null)
             {
                 _windSystem = WindSystem.Instance;
@@ -86,6 +94,28 @@ namespace WindsurfingGame.Physics.Board
                 {
                     _windSystem = FindFirstObjectByType<WindSystem>();
                 }
+            }
+            
+            // Fallback to legacy WindManager if no WindSystem
+            if (_windSystem == null)
+            {
+                if (_legacyWindManager == null)
+                {
+                    _legacyWindManager = FindFirstObjectByType<WindManager>();
+                }
+                
+                if (_legacyWindManager != null)
+                {
+                    _windProvider = _legacyWindManager;
+                    Debug.Log($"AdvancedSail on {gameObject.name}: Using legacy WindManager as wind source.");
+                }
+            }
+            
+            // Log error if no wind source found
+            if (_windSystem == null && _windProvider == null)
+            {
+                Debug.LogError($"AdvancedSail on {gameObject.name}: NO WIND SOURCE FOUND! " +
+                    "Add a WindSystem or WindManager to the scene. Sail forces will be ZERO!");
             }
         }
         
@@ -103,6 +133,13 @@ namespace WindsurfingGame.Physics.Board
         /// </summary>
         private void UpdateSailControls()
         {
+            // Auto-trim: automatically set optimal sheet position for current wind angle
+            if (_autoTrim && _state.ApparentWindSpeed > 1f)
+            {
+                float optimalSheetPosition = CalculateOptimalSheetPosition();
+                _targetSheetPosition = optimalSheetPosition;
+            }
+            
             // Smooth sheet position changes
             _sheetPosition = Mathf.MoveTowards(_sheetPosition, _targetSheetPosition, 
                 _sheetSpeed * Time.fixedDeltaTime);
@@ -117,10 +154,15 @@ namespace WindsurfingGame.Physics.Board
         /// </summary>
         private void UpdateWindState()
         {
-            // Get true wind
+            // Get true wind from available source
             if (_windSystem != null)
             {
                 _state.TrueWind = _windSystem.GetWindAtPosition(transform.position);
+            }
+            else if (_windProvider != null)
+            {
+                // Fallback to legacy IWindProvider
+                _state.TrueWind = _windProvider.GetWindAtPosition(transform.position);
             }
             else
             {
@@ -151,35 +193,96 @@ namespace WindsurfingGame.Physics.Board
         /// </summary>
         private void CalculateSailGeometry()
         {
-            // Determine which side the sail should be on
-            // Sail goes to leeward (opposite side from wind)
-            float windSide = Mathf.Sign(_state.ApparentWindAngle);
-            if (Mathf.Abs(_state.ApparentWindAngle) < 5f)
-                windSide = 1f; // Default to starboard if wind is dead ahead/astern
+            // ============================================
+            // SAIL SIDE DETERMINATION
+            // ============================================
+            // The sail always goes to the LEEWARD side (away from wind)
+            // 
+            // Unity SignedAngle convention:
+            // - Wind from port (left) → AWA is POSITIVE
+            // - Wind from starboard (right) → AWA is NEGATIVE
+            //
+            // Sail should go to OPPOSITE side of wind:
+            // - Wind from port (AWA > 0) → sail on starboard → sailSide = -1
+            // - Wind from starboard (AWA < 0) → sail on port → sailSide = +1
+            //
+            // Therefore: sailSide = -Sign(AWA) gives the correct side
             
-            // Sheet position determines how far the sail opens from centerline
-            // Sheeted in (0) = sail close to centerline (~15°) for upwind
-            // Eased out (1) = sail far from centerline (~85°) for downwind
+            float absAWA = Mathf.Abs(_state.ApparentWindAngle);
+            
+            // Determine which side the sail is on
+            // sailSide: +1 = sail on starboard (right), -1 = sail on port (left)
+            float sailSide;
+            
+            if (absAWA < 5f)
+            {
+                // In irons or running dead downwind - maintain current side
+                sailSide = _lastSailSide;
+            }
+            else
+            {
+                // Sail goes to leeward (opposite of wind direction)
+                // -Sign(AWA) because Unity's SignedAngle gives negative for starboard wind
+                // so we negate to get sail on opposite side from wind
+                sailSide = -Mathf.Sign(_state.ApparentWindAngle);
+                _lastSailSide = sailSide;
+            }
+            
+            // ============================================
+            // SAIL ANGLE FROM CENTERLINE
+            // ============================================
+            // Sheet position: 0 = sheeted in (close to centerline), 1 = eased out (far from centerline)
+            // Upwind sailing: sheet in tight (~12° from centerline)
+            // Downwind sailing: ease out (~85° from centerline)
             float minAngle = 12f;
             float maxAngle = 85f;
-            _currentSailAngle = Mathf.Lerp(minAngle, maxAngle, _sheetPosition) * windSide;
+            float angleFromCenterline = Mathf.Lerp(minAngle, maxAngle, _sheetPosition);
             
-            // Store in state
+            // Full sail angle (signed)
+            _currentSailAngle = angleFromCenterline * sailSide;
             _state.SailAngle = _currentSailAngle;
             _state.SailCamber = _sailConfig.Camber;
             
-            // Calculate sail normal
-            // Sail extends backward from mast at the sail angle
+            // ============================================
+            // SAIL CHORD DIRECTION (boom direction in local space)
+            // ============================================
+            // At 0° angle: boom points BACKWARD along centerline (-Z in local space)
+            // Positive angle: boom rotates to starboard (towards +X)
+            // Negative angle: boom rotates to port (towards -X)
             float sailAngleRad = _currentSailAngle * Mathf.Deg2Rad;
-            Vector3 sailChord = new Vector3(
-                Mathf.Sin(sailAngleRad),
+            Vector3 localSailChord = new Vector3(
+                Mathf.Sin(sailAngleRad),   // X: positive = starboard
                 0,
-                -Mathf.Cos(sailAngleRad)
+                -Mathf.Cos(sailAngleRad)   // Z: negative = backward (sail trails behind mast)
             ).normalized;
             
-            // Normal is perpendicular to sail chord (in horizontal plane)
-            Vector3 localNormal = Vector3.Cross(Vector3.up, sailChord).normalized;
-            _sailNormal = transform.TransformDirection(localNormal);
+            // ============================================
+            // SAIL NORMAL (perpendicular to sail surface)
+            // ============================================
+            // The sail normal should point towards the WINDWARD side (where wind comes from)
+            // This is the "pressure" side of the sail where camber faces
+            // Cross product of chord and up gives perpendicular direction
+            Vector3 localSailNormal = Vector3.Cross(localSailChord, Vector3.up).normalized;
+            
+            // Ensure normal points towards the wind
+            Vector3 localWindDir = transform.InverseTransformDirection(_state.ApparentWind).normalized;
+            localWindDir.y = 0;
+            
+            if (localWindDir.sqrMagnitude > 0.01f)
+            {
+                localWindDir.Normalize();
+                // Normal should point INTO the wind (opposite to wind direction)
+                // Wind blows in direction of ApparentWind vector, so we want normal to face -ApparentWind
+                if (Vector3.Dot(localSailNormal, -localWindDir) < 0)
+                {
+                    localSailNormal = -localSailNormal;
+                }
+            }
+            
+            _sailNormal = transform.TransformDirection(localSailNormal);
+            
+            // Store sail side for other calculations
+            _state.SailSide = sailSide;
             
             // Calculate center of effort position
             CalculateCenterOfEffort();
@@ -187,6 +290,7 @@ namespace WindsurfingGame.Physics.Board
         
         /// <summary>
         /// Calculate the Center of Effort position based on sail geometry and mast rake.
+        /// For stability, we apply forces at a low point to prevent excessive rotation.
         /// </summary>
         private void CalculateCenterOfEffort()
         {
@@ -196,23 +300,24 @@ namespace WindsurfingGame.Physics.Board
             // Apply mast rake - rotates the whole rig fore/aft around the mast foot
             float rakeAngle = _mastRake * _maxRakeAngle * Mathf.Deg2Rad;
             
-            // CE height on the mast (approximately 40% up from boom)
-            float ceHeight = _sailConfig.CenterOfEffortHeight;
+            // Keep CE height low for stability (just above deck)
+            // Real sails have high CE which causes heeling - we reduce this for gameplay
+            float ceHeight = 0.3f; // Low CE for stable gameplay
             
-            // With rake, the CE moves fore/aft
+            // With rake, the CE moves slightly fore/aft
             float ceForwardOffset = -Mathf.Sin(rakeAngle) * ceHeight;
             float ceHeightAdjusted = Mathf.Cos(rakeAngle) * ceHeight;
             
             localCE += new Vector3(0, ceHeightAdjusted, ceForwardOffset);
             
-            // Add lateral offset based on sail angle
-            // CE moves to leeward as sail opens
+            // Minimal lateral offset - don't move CE too far to side
+            // This reduces the heeling moment
             float sailAngleRad = _currentSailAngle * Mathf.Deg2Rad;
-            float ceDistance = _sailConfig.BoomLength * 0.5f;
+            float ceDistance = 0.1f; // Reduced from BoomLength * 0.5
             localCE += new Vector3(
                 Mathf.Sin(sailAngleRad) * ceDistance,
                 0,
-                -Mathf.Cos(sailAngleRad) * ceDistance
+                0 // No fore-aft shift from sail angle
             );
             
             _centerOfEffort = transform.TransformPoint(localCE);
@@ -248,6 +353,7 @@ namespace WindsurfingGame.Physics.Board
             Aerodynamics.CalculateSailForces(
                 _state.ApparentWind,
                 _sailNormal,
+                transform.forward,
                 _sailConfig.Area,
                 _sailConfig.Camber,
                 _sailConfig.AspectRatio,
@@ -283,17 +389,45 @@ namespace WindsurfingGame.Physics.Board
         /// </summary>
         private void ApplyRakeSteering()
         {
-            // Mast rake creates a turning moment because it moves the CE
-            // Rake back (positive) = CE moves aft = bow turns upwind
-            // Rake forward (negative) = CE moves forward = bow turns downwind
+            // Mast rake creates a turning moment because it moves the CE fore/aft relative to CLR
+            // In real windsurfing:
+            // - Rake BACK (positive _mastRake) = CE moves aft = bow turns DOWNWIND (bear away)
+            // - Rake FORWARD (negative _mastRake) = CE moves forward = bow turns UPWIND (head up)
+            //
+            // The turning direction depends on which tack we're on:
+            // - Starboard tack (AWA > 0, wind from right, sail on left): bear away = turn LEFT (negative Y torque)
+            // - Port tack (AWA < 0, wind from left, sail on right): bear away = turn RIGHT (positive Y torque)
+            //
+            // So the torque sign should match the WIND side, not the sail side.
+            // Wind side = Sign(AWA): +1 if wind from starboard, -1 if wind from port
+            // Bear away = turn TOWARD the sail (away from wind) = OPPOSITE to wind side
+            // So: torque = rake * (-Sign(AWA)) = rake * sailSide
             
             float forceMag = _state.SailForce.magnitude;
-            if (forceMag < 1f) return;
+            
+            // SailSide = -Sign(AWA), so sailSide gives us the correct turn direction for bear away
+            // When raking back (positive rake), multiply by sailSide to turn toward the sail
+            float tack = _state.SailSide != 0 ? _state.SailSide : 1f;
+            
+            // HIGH-SPEED STABILITY: Reduce steering sensitivity at high speeds
+            float speedKnots = _state.BoatSpeed * PhysicsConstants.MS_TO_KNOTS;
+            float steeringScale = 1f;
+            if (speedKnots > 15f)
+            {
+                steeringScale = Mathf.Lerp(1f, 0.3f, (speedKnots - 15f) / 10f);
+                steeringScale = Mathf.Max(steeringScale, 0.3f);
+            }
             
             // Torque proportional to force and rake amount
-            float steeringTorque = _mastRake * forceMag * 0.3f;
+            float steeringTorque = _mastRake * tack * forceMag * 0.5f * steeringScale;
             
-            _rigidbody.AddTorque(Vector3.up * steeringTorque, ForceMode.Force);
+            // Base steering torque that works even without sail force
+            float baseSteeringTorque = _mastRake * tack * 150f * steeringScale;
+            
+            // Additional speed-based steering (faster = more responsive, but capped at high speed)
+            float speedTorque = _mastRake * tack * Mathf.Min(_state.BoatSpeed, 10f) * 30f * steeringScale;
+            
+            _rigidbody.AddTorque(Vector3.up * (steeringTorque + baseSteeringTorque + speedTorque), ForceMode.Force);
         }
         
         // Public control methods
@@ -313,6 +447,54 @@ namespace WindsurfingGame.Physics.Board
         {
             _targetSheetPosition = Mathf.Clamp01(_targetSheetPosition + delta);
         }
+        
+        /// <summary>
+        /// Enable or disable automatic sail trim.
+        /// </summary>
+        public void SetAutoTrim(bool enabled)
+        {
+            _autoTrim = enabled;
+        }
+        
+        /// <summary>
+        /// Toggle auto-trim mode.
+        /// </summary>
+        public void ToggleAutoTrim()
+        {
+            _autoTrim = !_autoTrim;
+        }
+        
+        /// <summary>
+        /// Calculate optimal sheet position for current apparent wind angle.
+        /// Goal: Set sail at ~15-17° angle of attack for best L/D ratio.
+        /// </summary>
+        private float CalculateOptimalSheetPosition()
+        {
+            float absAWA = Mathf.Abs(_state.ApparentWindAngle);
+            
+            // Optimal angle of attack is ~15-17° for upwind, increasing for downwind
+            float optimalAoA = 17f;
+            
+            // Sail angle from centerline = AWA - AoA
+            // This puts the sail at the correct angle to the wind
+            float optimalSailAngle = absAWA - optimalAoA;
+            
+            // Clamp to physical limits
+            optimalSailAngle = Mathf.Clamp(optimalSailAngle, 12f, 85f);
+            
+            // Convert sail angle to sheet position (inverse of the Lerp in CalculateSailGeometry)
+            // Sheet position = (sailAngle - minAngle) / (maxAngle - minAngle)
+            float minAngle = 12f;
+            float maxAngle = 85f;
+            float sheetPosition = (optimalSailAngle - minAngle) / (maxAngle - minAngle);
+            
+            return Mathf.Clamp01(sheetPosition);
+        }
+        
+        /// <summary>
+        /// Get whether auto-trim is enabled.
+        /// </summary>
+        public bool IsAutoTrimEnabled => _autoTrim;
         
         /// <summary>
         /// Set target mast rake (-1 to +1).
@@ -340,6 +522,116 @@ namespace WindsurfingGame.Physics.Board
         }
 
 #if UNITY_EDITOR
+        /// <summary>
+        /// Always draw force vectors in Scene view (not just when selected)
+        /// </summary>
+        private void OnDrawGizmos()
+        {
+            if (!_showDebug || !_showForceVectors) return;
+            if (!Application.isPlaying || _state == null) return;
+            
+            // Draw sail force (cyan - total)
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawRay(_centerOfEffort, _state.SailForce * _forceVectorScale);
+            DrawArrowHead(_centerOfEffort + _state.SailForce * _forceVectorScale, _state.SailForce.normalized, 0.3f);
+            
+            // Draw lift (green) and drag (red)
+            Gizmos.color = Color.green;
+            Gizmos.DrawRay(_centerOfEffort, _state.SailLift * _forceVectorScale);
+            
+            Gizmos.color = Color.red;
+            Gizmos.DrawRay(_centerOfEffort, _state.SailDrag * _forceVectorScale);
+            
+            // Draw apparent wind (blue)
+            Gizmos.color = new Color(0.3f, 0.5f, 1f);
+            Vector3 windStart = transform.position + Vector3.up * 2f;
+            Gizmos.DrawRay(windStart, _state.ApparentWind * 0.5f);
+            DrawArrowHead(windStart + _state.ApparentWind * 0.5f, _state.ApparentWind.normalized, 0.2f);
+            
+            // Draw CE marker
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawWireSphere(_centerOfEffort, 0.1f);
+            
+            // ========================================
+            // SAIL ORIENTATION DEBUG
+            // ========================================
+            DrawSailDebug();
+        }
+        
+        /// <summary>
+        /// Draw detailed sail orientation for debugging camber and flip direction.
+        /// </summary>
+        private void DrawSailDebug()
+        {
+            Vector3 mastBase = transform.TransformPoint(_sailConfig.MastFootPosition);
+            float boomLen = _sailConfig.BoomLength;
+            
+            // Calculate sail chord direction in world space
+            float sailAngleRad = _currentSailAngle * Mathf.Deg2Rad;
+            Vector3 localChord = new Vector3(
+                Mathf.Sin(sailAngleRad),
+                0,
+                -Mathf.Cos(sailAngleRad)
+            ).normalized;
+            Vector3 worldChord = transform.TransformDirection(localChord);
+            
+            // Boom end point
+            Vector3 boomStart = mastBase + Vector3.up * _sailConfig.BoomHeight;
+            Vector3 boomEnd = boomStart + worldChord * boomLen;
+            
+            // Draw boom (sail chord line) - WHITE
+            Gizmos.color = Color.white;
+            Gizmos.DrawLine(boomStart, boomEnd);
+            
+            // Draw sail normal (perpendicular to chord) - MAGENTA
+            // This shows which way the "camber" side of the sail faces (towards wind)
+            Gizmos.color = Color.magenta;
+            Vector3 normalStart = (boomStart + boomEnd) * 0.5f;
+            Gizmos.DrawRay(normalStart, _sailNormal * 1.5f);
+            DrawArrowHead(normalStart + _sailNormal * 1.5f, _sailNormal, 0.2f);
+            
+            // CAMBER INDICATOR - Draw curved line to show sail shape
+            // Camber faces the wind (convex side towards wind)
+            // The sail normal should point towards wind, so camber bulges in normal direction
+            Gizmos.color = new Color(1f, 0.5f, 0f); // Orange for camber
+            float camberDepth = boomLen * _sailConfig.Camber * 0.5f;
+            Vector3 mid = (boomStart + boomEnd) * 0.5f;
+            Vector3 camberPeak = mid + _sailNormal * camberDepth;
+            
+            // Draw simplified sail outline (curved shape: luff -> camber peak -> leech)
+            Gizmos.DrawLine(boomStart, camberPeak);
+            Gizmos.DrawLine(camberPeak, boomEnd);
+            
+            // Draw marker at camber peak
+            Gizmos.DrawWireSphere(camberPeak, 0.1f);
+            
+            // Draw apparent wind direction at sail position - BLUE
+            Gizmos.color = new Color(0.3f, 0.7f, 1f);
+            Vector3 awDir = _state.ApparentWind.normalized;
+            Gizmos.DrawRay(normalStart, awDir * 2f);
+            DrawArrowHead(normalStart + awDir * 2f, awDir, 0.15f);
+            
+            // TACK INDICATOR
+            // Positive sail angle = sail on starboard side = Port tack (wind from port)
+            // Negative sail angle = sail on port side = Starboard tack (wind from starboard)
+            bool isStarboardTack = _currentSailAngle < 0;
+            string tackName = isStarboardTack ? "STARBOARD TACK" : "PORT TACK";
+            Gizmos.color = isStarboardTack ? Color.green : Color.red;
+            Vector3 tackIndicatorPos = transform.position + Vector3.up * 0.5f;
+            Gizmos.DrawWireCube(tackIndicatorPos + transform.right * (isStarboardTack ? -1f : 1f) * 0.3f, Vector3.one * 0.15f);
+            
+            // LABEL: Show sail state
+            string sheeting = $"Sheet: {_sheetPosition * 100:F0}% (Angle: {_currentSailAngle:F0}°)";
+            string aoa = $"AoA: {_state.AngleOfAttack:F1}°";
+            string awaInfo = $"AWA: {_state.ApparentWindAngle:F0}°";
+            string camberInfo = $"Camber: {_sailConfig.Camber * 100:F0}%";
+            string normalCheck = Vector3.Dot(_sailNormal, -awDir) > 0 ? "✓ Normal faces wind" : "✗ Normal WRONG";
+            
+            UnityEditor.Handles.color = Color.white;
+            UnityEditor.Handles.Label(boomEnd + Vector3.up * 0.5f,
+                $"{tackName}\n{sheeting}\n{aoa}\n{awaInfo}\n{camberInfo}\n{normalCheck}");
+        }
+        
         private void OnDrawGizmosSelected()
         {
             if (!_showDebug) return;
@@ -358,21 +650,6 @@ namespace WindsurfingGame.Physics.Board
                 
                 if (_showForceVectors && _state != null)
                 {
-                    // Draw sail force
-                    Gizmos.color = Color.cyan;
-                    Gizmos.DrawRay(_centerOfEffort, _state.SailForce * _forceVectorScale);
-                    
-                    // Draw lift (green) and drag (red)
-                    Gizmos.color = Color.green;
-                    Gizmos.DrawRay(_centerOfEffort, _state.SailLift * _forceVectorScale);
-                    
-                    Gizmos.color = Color.red;
-                    Gizmos.DrawRay(_centerOfEffort, _state.SailDrag * _forceVectorScale);
-                    
-                    // Draw apparent wind
-                    Gizmos.color = Color.blue;
-                    Gizmos.DrawRay(_centerOfEffort + Vector3.up, _state.ApparentWind * 0.3f);
-                    
                     // Draw sail normal
                     Gizmos.color = Color.magenta;
                     Gizmos.DrawRay(_centerOfEffort, _sailNormal * 2f);
@@ -383,9 +660,19 @@ namespace WindsurfingGame.Physics.Board
                         $"AWA: {_state.ApparentWindAngle:F1}°\n" +
                         $"AWS: {_state.ApparentWindSpeed:F1} m/s\n" +
                         $"Drive: {_state.DriveForce:F0} N\n" +
-                        $"Side: {_state.SideForce:F0} N");
+                        $"Side: {_state.SideForce:F0} N\n" +
+                        $"Rake: {_mastRake:F2}");
                 }
             }
+        }
+        
+        private void DrawArrowHead(Vector3 pos, Vector3 direction, float size)
+        {
+            if (direction.sqrMagnitude < 0.001f) return;
+            Vector3 right = Vector3.Cross(Vector3.up, direction).normalized;
+            Vector3 back = -direction.normalized;
+            Gizmos.DrawRay(pos, (back + right) * size);
+            Gizmos.DrawRay(pos, (back - right) * size);
         }
 #endif
     }

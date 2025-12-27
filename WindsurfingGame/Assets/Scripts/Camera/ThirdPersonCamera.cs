@@ -1,10 +1,12 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace WindsurfingGame.CameraSystem
 {
     /// <summary>
     /// Third-person camera that follows a target with smooth movement.
     /// Designed for windsurfing - stays behind the board with adjustable offset.
+    /// Uses Unity's New Input System.
     /// </summary>
     public class ThirdPersonCamera : MonoBehaviour
     {
@@ -12,36 +14,78 @@ namespace WindsurfingGame.CameraSystem
         [Tooltip("The transform to follow (the windsurf board)")]
         [SerializeField] private Transform _target;
 
-        [Header("Position Settings")]
-        [Tooltip("Offset from target in target's local space")]
-        [SerializeField] private Vector3 _offset = new Vector3(0, 8f, -1.46f);
+        [Header("Orbit Settings")]
+        [Tooltip("Distance from target")]
+        [SerializeField] private float _distance = 10f;
         
+        [Tooltip("Vertical angle (pitch) in degrees")]
+        [SerializeField] private float _pitch = 30f;
+        
+        [Tooltip("Horizontal angle (yaw) offset from target forward")]
+        [SerializeField] private float _yawOffset = 0f;
+        
+        [Tooltip("Follow the target's rotation (stay behind)")]
+        [SerializeField] private bool _followTargetRotation = true;
+
+        [Header("Smoothing")]
         [Tooltip("How quickly the camera follows position")]
-        [SerializeField] private float _followSpeed = 5f;
+        [SerializeField] private float _positionSmoothTime = 0.1f;
         
-        [Tooltip("How quickly the camera rotates to match target")]
-        [SerializeField] private float _rotationSpeed = 3f;
+        [Tooltip("How quickly the camera rotates")]
+        [SerializeField] private float _rotationSmoothTime = 0.1f;
 
-        [Header("Look Settings")]
-        [Tooltip("Point to look at relative to target (0 = target center)")]
-        [SerializeField] private Vector3 _lookOffset = new Vector3(0, 1f, 2f);
+        [Header("Input Settings")]
+        [Tooltip("Enable camera control with mouse")]
+        [SerializeField] private bool _enableInput = true;
+        
+        [Tooltip("Mouse sensitivity")]
+        [SerializeField] private float _lookSensitivity = 0.3f;
+        
+        [Tooltip("Zoom sensitivity")]
+        [SerializeField] private float _zoomSensitivity = 2f;
+        
+        [Tooltip("Invert Y axis")]
+        [SerializeField] private bool _invertY = false;
 
-        [Header("Constraints")]
+        [Header("Limits")]
+        [Tooltip("Pitch limits (min, max)")]
+        [SerializeField] private Vector2 _pitchLimits = new Vector2(5f, 80f);
+        
+        [Tooltip("Distance limits (min, max)")]
+        [SerializeField] private Vector2 _distanceLimits = new Vector2(3f, 20f);
+        
         [Tooltip("Minimum height above water")]
         [SerializeField] private float _minHeight = 1f;
-        
+
+        [Header("Look Target")]
+        [Tooltip("Offset for where camera looks relative to target")]
+        [SerializeField] private Vector3 _lookOffset = new Vector3(0, 1f, 2f);
+
+        [Header("Water Reference")]
         [Tooltip("Reference to water surface for height check")]
         [SerializeField] private MonoBehaviour _waterSurface;
+
+        // Input System
+        private Mouse _mouse;
+        private Keyboard _keyboard;
         
-        // Interface reference for water
-        private Physics.Water.IWaterSurface _water;
-        
-        // Smoothing
+        // State
         private Vector3 _currentVelocity;
+        private float _currentYaw;
+        private float _smoothYaw;
+        private float _smoothPitch;
+        private float _yawVelocity;
+        private float _pitchVelocity;
+        
+        // Water interface
+        private Physics.Water.IWaterSurface _water;
 
         private void Start()
         {
-            // Get water interface if assigned
+            _mouse = Mouse.current;
+            _keyboard = Keyboard.current;
+            
+            // Get water interface
             if (_waterSurface != null)
             {
                 _water = _waterSurface as Physics.Water.IWaterSurface;
@@ -51,17 +95,26 @@ namespace WindsurfingGame.CameraSystem
             if (_target == null)
             {
                 var board = FindFirstObjectByType<Physics.Buoyancy.BuoyancyBody>();
-                if (board != null)
+                if (board == null)
+                {
+                    var advBoard = FindFirstObjectByType<Physics.Buoyancy.AdvancedBuoyancy>();
+                    if (advBoard != null) _target = advBoard.transform;
+                }
+                else
                 {
                     _target = board.transform;
                 }
             }
 
-            // Initialize position
+            // Initialize angles
             if (_target != null)
             {
-                transform.position = GetDesiredPosition();
-                transform.LookAt(GetLookTarget());
+                _currentYaw = _target.eulerAngles.y + _yawOffset;
+                _smoothYaw = _currentYaw;
+                _smoothPitch = _pitch;
+                
+                // Set initial position
+                UpdateCameraPosition(true);
             }
         }
 
@@ -69,67 +122,109 @@ namespace WindsurfingGame.CameraSystem
         {
             if (_target == null) return;
 
-            UpdatePosition();
-            UpdateRotation();
+            HandleInput();
+            UpdateCameraPosition(false);
         }
 
-        private void UpdatePosition()
+        private void HandleInput()
         {
-            Vector3 desiredPosition = GetDesiredPosition();
-            
-            // Ensure camera stays above water
-            if (_water != null)
+            if (!_enableInput || _mouse == null) return;
+
+            // Right mouse button to rotate camera
+            if (_mouse.rightButton.isPressed)
             {
-                float waterHeight = _water.GetWaterHeight(desiredPosition);
-                if (desiredPosition.y < waterHeight + _minHeight)
-                {
-                    desiredPosition.y = waterHeight + _minHeight;
-                }
+                Vector2 mouseDelta = _mouse.delta.ReadValue();
+                
+                // Horizontal rotation
+                _yawOffset += mouseDelta.x * _lookSensitivity;
+                
+                // Vertical rotation (pitch)
+                float pitchDelta = mouseDelta.y * _lookSensitivity;
+                if (_invertY) pitchDelta = -pitchDelta;
+                _pitch = Mathf.Clamp(_pitch - pitchDelta, _pitchLimits.x, _pitchLimits.y);
+            }
+            
+            // Scroll to zoom
+            float scrollDelta = _mouse.scroll.ReadValue().y;
+            if (Mathf.Abs(scrollDelta) > 0.01f)
+            {
+                _distance = Mathf.Clamp(
+                    _distance - scrollDelta * _zoomSensitivity * 0.01f,
+                    _distanceLimits.x,
+                    _distanceLimits.y
+                );
+            }
+            
+            // Reset camera with middle mouse
+            if (_mouse.middleButton.wasPressedThisFrame)
+            {
+                _yawOffset = 0f;
+                _pitch = 30f;
+                _distance = 10f;
+            }
+        }
+
+        private void UpdateCameraPosition(bool immediate)
+        {
+            // Calculate target yaw (follow target rotation if enabled)
+            float targetYaw = _followTargetRotation ? _target.eulerAngles.y + _yawOffset : _yawOffset;
+            
+            // Smooth yaw and pitch
+            if (immediate)
+            {
+                _smoothYaw = targetYaw;
+                _smoothPitch = _pitch;
             }
             else
             {
-                // Fallback: use minimum absolute height
-                if (desiredPosition.y < _minHeight)
-                {
-                    desiredPosition.y = _minHeight;
-                }
+                _smoothYaw = Mathf.SmoothDampAngle(_smoothYaw, targetYaw, ref _yawVelocity, _rotationSmoothTime);
+                _smoothPitch = Mathf.SmoothDamp(_smoothPitch, _pitch, ref _pitchVelocity, _rotationSmoothTime);
             }
-
-            // Smooth follow
-            transform.position = Vector3.SmoothDamp(
-                transform.position, 
-                desiredPosition, 
-                ref _currentVelocity, 
-                1f / _followSpeed
-            );
-        }
-
-        private void UpdateRotation()
-        {
-            Vector3 lookTarget = GetLookTarget();
-            Vector3 lookDirection = lookTarget - transform.position;
             
-            if (lookDirection.sqrMagnitude > 0.01f)
+            // Calculate camera position in spherical coordinates
+            float pitchRad = _smoothPitch * Mathf.Deg2Rad;
+            float yawRad = _smoothYaw * Mathf.Deg2Rad;
+            
+            Vector3 offset = new Vector3(
+                Mathf.Sin(yawRad) * Mathf.Cos(pitchRad),
+                Mathf.Sin(pitchRad),
+                Mathf.Cos(yawRad) * Mathf.Cos(pitchRad)
+            ) * _distance;
+            
+            // Invert to position camera behind
+            offset = -offset;
+            
+            Vector3 desiredPosition = _target.position + offset;
+            
+            // Ensure camera stays above water
+            float minY = _minHeight;
+            if (_water != null)
             {
-                Quaternion targetRotation = Quaternion.LookRotation(lookDirection);
-                transform.rotation = Quaternion.Slerp(
-                    transform.rotation, 
-                    targetRotation, 
-                    _rotationSpeed * Time.deltaTime
+                minY = _water.GetWaterHeight(desiredPosition) + _minHeight;
+            }
+            if (desiredPosition.y < minY)
+            {
+                desiredPosition.y = minY;
+            }
+            
+            // Apply position
+            if (immediate)
+            {
+                transform.position = desiredPosition;
+            }
+            else
+            {
+                transform.position = Vector3.SmoothDamp(
+                    transform.position,
+                    desiredPosition,
+                    ref _currentVelocity,
+                    _positionSmoothTime
                 );
             }
-        }
-
-        private Vector3 GetDesiredPosition()
-        {
-            // Calculate position behind and above target
-            return _target.TransformPoint(_offset);
-        }
-
-        private Vector3 GetLookTarget()
-        {
-            // Point slightly ahead of target
-            return _target.TransformPoint(_lookOffset);
+            
+            // Look at target
+            Vector3 lookTarget = _target.TransformPoint(_lookOffset);
+            transform.LookAt(lookTarget);
         }
 
         /// <summary>
@@ -138,14 +233,29 @@ namespace WindsurfingGame.CameraSystem
         public void SetTarget(Transform newTarget)
         {
             _target = newTarget;
+            if (_target != null)
+            {
+                _currentYaw = _target.eulerAngles.y + _yawOffset;
+                UpdateCameraPosition(true);
+            }
         }
 
         /// <summary>
-        /// Set camera offset (useful for zoom).
+        /// Set camera distance (zoom level).
         /// </summary>
-        public void SetOffset(Vector3 newOffset)
+        public void SetDistance(float distance)
         {
-            _offset = newOffset;
+            _distance = Mathf.Clamp(distance, _distanceLimits.x, _distanceLimits.y);
+        }
+
+        /// <summary>
+        /// Reset camera to default position behind target.
+        /// </summary>
+        public void ResetCamera()
+        {
+            _yawOffset = 0f;
+            _pitch = 30f;
+            _distance = 10f;
         }
 
 #if UNITY_EDITOR
@@ -159,11 +269,12 @@ namespace WindsurfingGame.CameraSystem
             
             // Draw look target
             Gizmos.color = Color.yellow;
-            Gizmos.DrawWireSphere(GetLookTarget(), 0.3f);
+            Vector3 lookTarget = _target.TransformPoint(_lookOffset);
+            Gizmos.DrawWireSphere(lookTarget, 0.3f);
             
-            // Draw desired position
-            Gizmos.color = Color.cyan;
-            Gizmos.DrawWireSphere(GetDesiredPosition(), 0.5f);
+            // Draw orbit sphere
+            Gizmos.color = new Color(0, 1, 1, 0.2f);
+            Gizmos.DrawWireSphere(_target.position, _distance);
         }
 #endif
     }

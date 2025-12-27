@@ -27,6 +27,7 @@ namespace WindsurfingGame.Physics.Core
         public float SailAngle;                 // degrees from centerline
         public float AngleOfAttack;             // degrees
         public float SailCamber;                // ratio (0-0.2)
+        public float SailSide;                  // +1 = starboard, -1 = port
         public Vector3 CenterOfEffort;          // world position
         
         // Forces
@@ -85,7 +86,7 @@ namespace WindsurfingGame.Physics.Core
             TotalDrag = SailDrag.magnitude + FinDrag.magnitude + HullDrag.magnitude;
             
             // State flags
-            IsInIrons = ApparentWindAngle < 30f && BoatSpeed < 1f;
+            IsInIrons = Mathf.Abs(ApparentWindAngle) < 30f && BoatSpeed < 1f;
             IsSailStalled = Mathf.Abs(AngleOfAttack) > 25f;
             IsFinStalled = Mathf.Abs(LeewayAngle) > 15f;
         }
@@ -102,9 +103,14 @@ namespace WindsurfingGame.Physics.Core
             if (ApparentWindSpeed > 0.1f)
             {
                 // Angle from bow
+                // SignedAngle gives angle from first vector to second, around axis
+                // We want the angle from boat forward to where wind is coming FROM
                 Vector3 awHorizontal = new Vector3(ApparentWind.x, 0, ApparentWind.z);
                 Vector3 fwdHorizontal = new Vector3(boatForward.x, 0, boatForward.z).normalized;
-                ApparentWindAngle = Vector3.SignedAngle(-awHorizontal.normalized, fwdHorizontal, Vector3.up);
+                
+                // Wind FROM direction = opposite of apparent wind vector
+                // SignedAngle(forward, windFrom, up) gives positive when wind is from right (starboard)
+                ApparentWindAngle = Vector3.SignedAngle(fwdHorizontal, -awHorizontal.normalized, Vector3.up);
             }
             else
             {
@@ -155,8 +161,9 @@ namespace WindsurfingGame.Physics.Core
         
         /// <summary>
         /// Approximate center of effort height above deck.
+        /// Kept low for stability - real CE is higher but we want stable gameplay.
         /// </summary>
-        public float CenterOfEffortHeight => MastFootPosition.y + BoomHeight + (LuffLength - BoomHeight) * 0.4f;
+        public float CenterOfEffortHeight => MastFootPosition.y + BoomHeight * 0.5f;
     }
     
     /// <summary>
@@ -167,10 +174,10 @@ namespace WindsurfingGame.Physics.Core
     {
         [Header("Fin Dimensions")]
         [Tooltip("Fin projected area in square meters")]
-        public float Area = 0.035f;
+        public float Area = 0.06f;  // Increased from 0.035 for more lateral grip
         
         [Tooltip("Fin depth (span) in meters")]
-        public float Depth = 0.40f;
+        public float Depth = 0.45f;  // Slightly deeper fin
         
         [Tooltip("Average chord length in meters")]
         public float Chord = 0.10f;

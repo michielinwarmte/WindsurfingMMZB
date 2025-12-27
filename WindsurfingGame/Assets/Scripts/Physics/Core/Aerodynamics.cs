@@ -108,10 +108,18 @@ namespace WindsurfingGame.Physics.Core
         /// <summary>
         /// Calculates the aerodynamic forces on a sail.
         /// Returns lift and drag in the wind reference frame.
+        /// 
+        /// Based on real sailing physics:
+        /// - Lift acts perpendicular to the apparent wind direction
+        /// - Drag acts along the apparent wind direction (with the wind)
+        /// - Lift must have a forward component for drive
+        /// 
+        /// Reference: Wikipedia "Forces on sails"
         /// </summary>
         public static void CalculateSailForces(
             Vector3 apparentWind,
             Vector3 sailNormal,
+            Vector3 boatForward,
             float sailArea,
             float camber,
             float aspectRatio,
@@ -127,16 +135,24 @@ namespace WindsurfingGame.Physics.Core
                 return;
             }
             
+            // Wind direction: the direction the wind is BLOWING TO (not from)
             Vector3 windDir = apparentWind.normalized;
             
-            // Angle of attack: angle between wind direction and sail plane
-            // Sail normal is perpendicular to sail surface
-            float dotProduct = Vector3.Dot(-windDir, sailNormal);
-            float angleOfAttack = 90f - Mathf.Acos(Mathf.Clamp(dotProduct, -1f, 1f)) * PhysicsConstants.RAD_TO_DEG;
+            // The direction wind is coming FROM (opposite of wind velocity vector)
+            Vector3 windFromDir = -windDir;
             
-            // Calculate coefficients
-            float Cl = CalculateSailLiftCoefficient(angleOfAttack, camber, aspectRatio);
-            float Cd = CalculateSailDragCoefficient(Cl, angleOfAttack, aspectRatio);
+            // Angle of attack: angle between the wind direction and the sail plane
+            // The sail plane is perpendicular to the sail normal
+            // AoA = angle between (wind from direction) and (sail plane)
+            // If normal is perpendicular to sail, then:
+            // cos(90° - AoA) = dot(windFromDir, sailNormal)
+            // sin(AoA) = dot(windFromDir, sailNormal)
+            float sinAoA = Vector3.Dot(windFromDir, sailNormal);
+            float angleOfAttack = Mathf.Asin(Mathf.Clamp(sinAoA, -1f, 1f)) * PhysicsConstants.RAD_TO_DEG;
+            
+            // Calculate coefficients (use absolute AoA for coefficient lookup)
+            float Cl = CalculateSailLiftCoefficient(Mathf.Abs(angleOfAttack), camber, aspectRatio);
+            float Cd = CalculateSailDragCoefficient(Cl, Mathf.Abs(angleOfAttack), aspectRatio);
             
             // Dynamic pressure: q = 0.5 * ρ * V²
             float dynamicPressure = 0.5f * PhysicsConstants.AIR_DENSITY * windSpeed * windSpeed;
@@ -145,17 +161,91 @@ namespace WindsurfingGame.Physics.Core
             float liftMag = dynamicPressure * sailArea * Cl;
             float dragMag = dynamicPressure * sailArea * Cd;
             
-            // Lift direction: perpendicular to wind, in horizontal plane
-            Vector3 liftDir = Vector3.Cross(Vector3.up, windDir).normalized;
+            // LIFT DIRECTION: Perpendicular to the apparent wind, in the horizontal plane
+            // 
+            // Key physics:
+            // - Lift is ALWAYS perpendicular to the apparent wind direction
+            // - Lift points from the windward side (high pressure) to leeward side (low pressure)
+            // - This means lift opposes the sail normal (which points toward windward)
+            //
+            // For upwind sailing to work:
+            // - Wind comes from ahead-and-to-the-side
+            // - Lift must have a forward component to create drive
+            // - The perpendicular to wind that points forward is the correct lift direction
             
-            // Determine which side based on sail orientation
-            if (Vector3.Dot(liftDir, sailNormal) < 0)
-                liftDir = -liftDir;
+            // Get horizontal component of wind direction (wind is BLOWING in this direction)
+            Vector3 windHoriz = new Vector3(windDir.x, 0, windDir.z);
+            if (windHoriz.sqrMagnitude < 0.01f)
+            {
+                liftForce = Vector3.zero;
+                dragForce = windDir * dragMag;
+                return;
+            }
+            windHoriz.Normalize();
             
-            // Drag direction: along wind direction
+            // Two perpendicular options to wind in horizontal plane
+            // Using right-hand rule: perpA = Cross(up, windDir) points 90° left of wind
+            Vector3 perpA = Vector3.Cross(Vector3.up, windHoriz).normalized;
+            Vector3 perpB = -perpA; // 90° right of wind
+            
+            // LIFT DIRECTION PHYSICS:
+            // 
+            // The aerodynamic force on a sail comes from pressure difference:
+            // - High pressure on windward side (where sail normal points)
+            // - Low pressure on leeward side (opposite to sail normal)
+            // 
+            // This creates a force PERPENDICULAR to the sail, pointing from windward to leeward.
+            // In other words: the force direction is -sailNormal (opposite to sail normal).
+            //
+            // However, we decompose this into:
+            // - LIFT: component perpendicular to wind (what we're calculating)
+            // - DRAG: component parallel to wind (handled separately)
+            //
+            // The lift direction is the component of (-sailNormal) that is perpendicular to wind.
+            // This is equivalent to: the wind-perpendicular that best aligns with (-sailNormal).
+            
+            Vector3 sailNormalHoriz = new Vector3(sailNormal.x, 0, sailNormal.z);
+            if (sailNormalHoriz.sqrMagnitude > 0.01f)
+            {
+                sailNormalHoriz.Normalize();
+            }
+            else
+            {
+                // Fallback if sail normal is vertical
+                sailNormalHoriz = new Vector3(boatForward.x, 0, boatForward.z).normalized;
+            }
+            
+            // The desired force direction is OPPOSITE to sail normal (from windward to leeward)
+            Vector3 forceDir = -sailNormalHoriz;
+            
+            // Project this onto the perpendicular-to-wind plane
+            // liftDir = forceDir - (forceDir · windDir) * windDir
+            float forceDotWind = Vector3.Dot(forceDir, windHoriz);
+            Vector3 liftDir = forceDir - forceDotWind * windHoriz;
+            
+            if (liftDir.sqrMagnitude > 0.01f)
+            {
+                liftDir.Normalize();
+            }
+            else
+            {
+                // Edge case: sail is edge-on to wind, use boat forward perpendicular
+                Vector3 boatForwardHoriz = new Vector3(boatForward.x, 0, boatForward.z).normalized;
+                float fwdDotWind = Vector3.Dot(boatForwardHoriz, windHoriz);
+                liftDir = (boatForwardHoriz - fwdDotWind * windHoriz);
+                if (liftDir.sqrMagnitude > 0.01f) liftDir.Normalize();
+                else liftDir = perpA; // Ultimate fallback
+            }
+            
+            // Drag direction: along the wind direction (wind pushes the sail)
             Vector3 dragDir = windDir;
             
-            liftForce = liftDir * liftMag;
+            // Apply sign of AoA to lift magnitude (negative AoA = negative lift)
+            // This handles both tacks correctly
+            float liftSign = Mathf.Sign(angleOfAttack);
+            if (Mathf.Abs(angleOfAttack) < 1f) liftSign = 1f; // Avoid sign flip at zero
+            
+            liftForce = liftDir * liftMag * liftSign;
             dragForce = dragDir * dragMag;
         }
         

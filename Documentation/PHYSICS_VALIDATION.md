@@ -1,262 +1,322 @@
-# ⚖️ Physics Validation Report
+# 🎯 Physics Validation Document
 
-This document reviews all physics systems implemented so far.
+**Status: ✅ WORKING** (as of December 27, 2025)
+
+This document records the validated physics formulas and sign conventions that make the windsurfing simulation work correctly. **DO NOT CHANGE THESE FORMULAS** without understanding the complete system.
 
 ---
 
-## 1. Physics Systems Overview
+## ⚠️ CRITICAL: Working Physics Configuration
 
-### 1.1 Buoyancy (`BuoyancyBody.cs`) ✅ VALIDATED
-**Purpose**: Makes objects float realistically on water.
+The physics system is interconnected. Changing any single formula without understanding the whole chain will break the simulation.
 
-**Implementation**:
-- Multi-point sampling (4 points at hull corners)
+### Validated Behaviors
+- ✅ Upwind sailing (can sail ~45° to wind)
+- ✅ Planing at high speeds
+- ✅ Correct sail side switching when tacking
+- ✅ Rake steering works on both tacks
+- ✅ Stable at high speeds (20+ knots)
+
+---
+
+## 1. Sign Conventions (Unity Coordinate System)
+
+```
+Unity Left-Handed Coordinate System:
+
+        Y (up)
+        │
+        │    Board heading this way
+        │         ↓
+        └──────────── X (starboard/right)
+       ╱
+      ╱
+     Z (forward/bow)
+```
+
+### Apparent Wind Angle (AWA) Convention
+
+**File:** `SailingState.cs` → `CalculateApparentWind()`
+
+```csharp
+ApparentWindAngle = Vector3.SignedAngle(fwdHorizontal, -awHorizontal.normalized, Vector3.up);
+```
+
+| Wind Coming From | AWA Sign |
+|-----------------|----------|
+| Port (left)     | POSITIVE |
+| Starboard (right) | NEGATIVE |
+| Dead ahead      | ~0°      |
+| Dead astern     | ~±180°   |
+
+**IMPORTANT:** The negative sign on `awHorizontal` converts wind velocity direction TO wind source direction.
+
+---
+
+## 2. Sail Side Determination
+
+**File:** `AdvancedSail.cs` → `CalculateSailGeometry()`
+
+The sail always goes to the **LEEWARD** side (away from wind).
+
+```csharp
+sailSide = -Mathf.Sign(_state.ApparentWindAngle);
+```
+
+| AWA | sailSide | Meaning |
+|-----|----------|---------|
+| > 0 (wind from port) | -1 | Sail on starboard (right) |
+| < 0 (wind from starboard) | +1 | Sail on port (left) |
+
+### Why the Negative Sign?
+
+- `Sign(AWA)` tells us which side the wind is FROM
+- Sail goes to OPPOSITE side (leeward)
+- Therefore: `sailSide = -Sign(AWA)`
+
+### Hysteresis
+
+When `|AWA| < 5°`, the sail maintains its previous side to prevent oscillation during tacks:
+
+```csharp
+if (absAWA < 5f)
+{
+    sailSide = _lastSailSide;  // Maintain current side
+}
+```
+
+---
+
+## 3. Sail Normal Direction
+
+**File:** `AdvancedSail.cs` → `CalculateSailGeometry()`
+
+The sail normal points toward the **WINDWARD** side (where wind comes from).
+
+```csharp
+// Cross product gives perpendicular to sail chord
+Vector3 localSailNormal = Vector3.Cross(localSailChord, Vector3.up).normalized;
+
+// Ensure normal points INTO the wind
+if (Vector3.Dot(localSailNormal, -localWindDir) < 0)
+{
+    localSailNormal = -localSailNormal;
+}
+```
+
+This is critical because the lift force direction depends on sail normal orientation.
+
+---
+
+## 4. Lift Force Direction (THE KEY FORMULA)
+
+**File:** `Aerodynamics.cs` → `CalculateSailForces()`
+
+Lift force is perpendicular to wind direction. The direction is determined by projecting **-sailNormal** onto the wind-perpendicular plane:
+
+```csharp
+// Force direction is OPPOSITE to sail normal (from high to low pressure)
+Vector3 forceDir = -sailNormalHoriz;
+
+// Project onto perpendicular-to-wind plane
+float forceDotWind = Vector3.Dot(forceDir, windHoriz);
+Vector3 liftDir = forceDir - forceDotWind * windHoriz;
+liftDir.Normalize();
+
+// Final lift force
+liftForce = liftDir * liftMag * liftSign;
+```
+
+### Physics Explanation
+
+```
+Wind Flow and Pressure:
+
+    High Pressure          Low Pressure
+    (windward side)        (leeward side)
+         │                      │
+         │    ┌─────────┐      │
+         │    │         │      │
+         └───▶│  SAIL   │◀─────┘
+              │         │
+              └─────────┘
+                  │
+                  ▼
+            Force Direction
+         (from high to low pressure)
+         (opposite to sail normal)
+```
+
+### Why -sailNormal?
+
+1. `sailNormal` points toward the windward (high pressure) side
+2. Pressure difference creates force FROM high TO low pressure
+3. Therefore force direction = `-sailNormal`
+4. We project this onto the wind-perpendicular plane to get lift direction
+
+---
+
+## 5. Rake Steering
+
+**File:** `AdvancedSail.cs` → `ApplyRakeSteering()`
+
+Mast rake creates steering torque by moving the Center of Effort (CE) fore/aft.
+
+```csharp
+float tack = _state.SailSide;  // = -Sign(AWA)
+float steeringTorque = _mastRake * tack * forceMag * 0.5f;
+```
+
+### Behavior
+
+| Rake | Tack | Effect |
+|------|------|--------|
+| Back (+) | Starboard (sailSide=-1) | Turn left (bear away) |
+| Back (+) | Port (sailSide=+1) | Turn right (bear away) |
+| Forward (-) | Starboard (sailSide=-1) | Turn right (head up) |
+| Forward (-) | Port (sailSide=+1) | Turn left (head up) |
+
+### High-Speed Damping
+
+Steering sensitivity reduces at high speeds to prevent instability:
+
+```csharp
+if (speedKnots > 15f)
+{
+    steeringScale = Mathf.Lerp(1f, 0.3f, (speedKnots - 15f) / 10f);
+}
+```
+
+---
+
+## 6. High-Speed Stability
+
+**File:** `AdvancedHullDrag.cs`
+
+Angular damping increases at high speeds:
+
+```csharp
+// Speed-dependent angular damping
+float speedKnots = boatSpeed * PhysicsConstants.MS_TO_KNOTS;
+float dampingMultiplier = 1f;
+if (speedKnots > 15f)
+{
+    dampingMultiplier = Mathf.Lerp(1f, 5f, (speedKnots - 15f) / 15f);
+}
+Vector3 angularDamping = -angularVelocity * baseAngularDamping * dampingMultiplier;
+```
+
+---
+
+## 7. The Complete Force Chain
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    PHYSICS CALCULATION CHAIN                     │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. TRUE WIND                                                    │
+│     │                                                            │
+│     ▼                                                            │
+│  2. APPARENT WIND = TrueWind - BoatVelocity                     │
+│     │                                                            │
+│     ▼                                                            │
+│  3. APPARENT WIND ANGLE (AWA)                                    │
+│     SignedAngle(forward, -apparentWind, up)                     │
+│     │                                                            │
+│     ▼                                                            │
+│  4. SAIL SIDE = -Sign(AWA)                                      │
+│     │                                                            │
+│     ▼                                                            │
+│  5. SAIL ANGLE = sheetPosition * sailSide                       │
+│     │                                                            │
+│     ▼                                                            │
+│  6. SAIL CHORD = (sin(angle), 0, -cos(angle))                   │
+│     │                                                            │
+│     ▼                                                            │
+│  7. SAIL NORMAL = Cross(chord, up), oriented toward wind        │
+│     │                                                            │
+│     ▼                                                            │
+│  8. LIFT DIRECTION = project(-sailNormal) onto wind-perp plane  │
+│     │                                                            │
+│     ▼                                                            │
+│  9. LIFT FORCE = liftDir * Cl * 0.5 * ρ * V² * A                │
+│     │                                                            │
+│     ▼                                                            │
+│  10. FORWARD DRIVE = Lift · boatForward (positive = go forward) │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 8. Files and Their Responsibilities
+
+| File | Purpose | Key Formulas |
+|------|---------|--------------|
+| `SailingState.cs` | Wind calculations | AWA = SignedAngle(fwd, -AW, up) |
+| `AdvancedSail.cs` | Sail geometry | sailSide = -Sign(AWA) |
+| `Aerodynamics.cs` | Force calculation | liftDir = project(-sailNormal) |
+| `AdvancedHullDrag.cs` | Stability | Speed-dependent damping |
+| `AdvancedFin.cs` | Lateral resistance | Prevents sideslip |
+
+---
+
+## 9. Common Mistakes to Avoid
+
+### ❌ DON'T: Change sign conventions independently
+
+Each sign is carefully coordinated with others. Changing one without updating all related formulas will break physics.
+
+### ❌ DON'T: Use `sailNormal` directly for lift
+
+The lift direction is `-sailNormal` (opposite to normal), not `sailNormal`.
+
+### ❌ DON'T: Flip AWA sign
+
+The AWA sign convention propagates through sailSide, rake steering, and more. Flipping it requires updating many formulas.
+
+### ❌ DON'T: Change sailSide without updating rake steering
+
+`sailSide` is used in rake steering. If you change how sailSide is calculated, you may need to adjust rake steering too.
+
+---
+
+## 10. Testing Checklist
+
+When making physics changes, verify ALL of these:
+
+- [ ] Can sail ~45° upwind on starboard tack
+- [ ] Can sail ~45° upwind on port tack  
+- [ ] Tacking works (sail switches sides)
+- [ ] Rake back = bear away on both tacks
+- [ ] Rake forward = head up on both tacks
+- [ ] Stable at 20+ knots
+- [ ] Planing works
+- [ ] No oscillation when switching sides
+
+---
+
+## 11. Legacy Physics Systems (Reference Only)
+
+These systems still exist but the core validated physics is documented above.
+
+### Buoyancy (`BuoyancyBody.cs` / `AdvancedBuoyancy.cs`)
+- Multi-point sampling
 - Force proportional to submersion depth
-- Damping to reduce oscillation
 - Angular damping to prevent spinning
 
-**Formula**:
-```
-Buoyancy Force = ρ × g × V_submerged × strength_multiplier
-```
-
-**Status**: Working correctly. Board floats and responds to waves.
-
----
-
-### 1.2 Wind System (`WindManager.cs` + `ApparentWindCalculator.cs`) ✅ VALIDATED
-**Purpose**: Provides realistic wind with gusts.
-
-**Implementation**:
-- Base wind speed + direction
-- Perlin noise for natural variation
-- Apparent wind calculation: `Apparent = True Wind - Velocity`
-- Wind angle calculation for point of sail
-
-**Key Physics**:
-```
-Apparent Wind = True Wind Vector - Board Velocity Vector
-Apparent Angle = angle between forward direction and apparent wind
-```
-
-**Status**: Working correctly. Apparent wind shifts as expected.
-
----
-
-### 1.3 Sail Physics (`Sail.cs`) ✅ VALIDATED
-**Purpose**: Converts wind into propulsion.
-
-**Implementation**:
-- Lift and drag forces based on airfoil physics
-- Sheet position affects sail angle of attack
-- Mast rake shifts center of effort for steering
-- Force applied at center of effort
-
-**Formulas**:
-```
-Lift = 0.5 × ρ_air × V² × A × Cl(angle)
-Drag = 0.5 × ρ_air × V² × A × Cd(angle)
-
-Where:
-  ρ_air = 1.225 kg/m³
-  V = apparent wind speed
-  A = sail area (default 6 m²)
-  Cl = lift coefficient (varies with angle of attack)
-  Cd = drag coefficient
-```
-
-**Lift Coefficient Curve**:
-- 0-15°: Linear increase
-- 15-25°: Maximum (~1.2)
-- 25-45°: Stall (decreases)
-- 45°+: Minimal lift
-
-**Mast Rake Steering**:
-```
-Steering Torque = mastRake × sailForce × multiplier
-
-Rake back (+1) → Upwind turn
-Rake forward (-1) → Downwind turn
-```
-
-**Status**: Working correctly. Confirmed physics direction.
-
----
-
-### 1.4 Water Drag (`WaterDrag.cs`) ✅ VALIDATED
-**Purpose**: Slows the board through water resistance.
-
-**Implementation**:
-- Directional drag (forward, lateral, vertical)
-- Quadratic relationship with speed
-- Planing mode reduces forward drag at high speeds
-
-**Formula**:
-```
-Drag Force = Cd × V × |V|  (quadratic)
-
-Planing threshold: 4 m/s (default)
-Planing reduction: 40% of normal drag
-```
-
-**Status**: Working correctly. Board accelerates to terminal velocity.
-
----
-
-### 1.5 Fin Physics (`FinPhysics.cs`) ✅ VALIDATED
-**Purpose**: Prevents sideways drift, enables tracking.
-
-**Implementation**:
-- Slip angle calculation (heading vs velocity)
+### Fin Physics (`AdvancedFin.cs`)
+- Slip angle calculation
 - Hydrodynamic lift generation
-- Tracking torque to align with velocity
 - Stall behavior at high slip angles
 
-**Formulas**:
-```
-Slip Angle = atan2(lateral_velocity, forward_velocity)
-
-Fin Lift = 0.5 × ρ_water × V² × A_fin × Cl(slip_angle)
-
-Where:
-  ρ_water = 1025 kg/m³
-  A_fin = 0.04 m² (default)
-  Cl = varies with slip angle, stalls above 25°
-```
-
-**Status**: Working correctly. Board tracks when moving.
+### Water Drag (`AdvancedHullDrag.cs`)
+- Directional drag (forward, lateral, vertical)
+- Planing mode reduces forward drag at high speeds
+- Speed-dependent angular damping for stability
 
 ---
 
-## 2. Control System Issues (FIXED)
-
-### 2.1 Original Problem
-The original `WindsurferController.cs` had conflicting systems:
-
-| System | Method | Issue |
-|--------|--------|-------|
-| Direct torque | `ApplySteering()` | Adds raw torque from A/D |
-| MoveRotation | `ApplyEdging()` | Overrides physics rotation |
-| Rake torque | Sail `ApplyRakeTorque()` | Additional torque from Q/E |
-
-**Result**: Unpredictable, fighting forces, hard to control.
-
-### 2.2 New Controller (`WindsurferControllerV2.cs`)
-
-**Two Control Modes**:
-
-#### Beginner Mode (Default)
-- **A/D**: Combined steering (auto mast rake + weight shift)
-- **W/S**: Sheet in/out
-- **Tab**: Toggle to Advanced mode
-- **Assists**: Anti-capsize, smooth response
-
-#### Advanced Mode
-- **Q/E**: Mast rake (primary steering)
-- **A/D**: Weight shift (secondary steering)
-- **W/S**: Sheet in/out
-- **Tab**: Toggle to Beginner mode
-
-**Key Improvements**:
-1. Uses `AddTorque` instead of `MoveRotation` (works WITH physics)
-2. Weight shift creates gentle turning moment
-3. Edging uses torque, not direct rotation
-4. Anti-capsize prevents flipping
-5. All forces work together, not against each other
-
----
-
-## 3. Physics Realism Checklist
-
-### What We Have ✅
-- [x] Buoyancy with multi-point sampling
-- [x] True wind with gusts
-- [x] Apparent wind calculation
-- [x] Sail lift/drag aerodynamics
-- [x] Mast rake steering
-- [x] Water drag with planing
-- [x] Fin hydrodynamics with slip/stall
-- [x] Anti-capsize stabilization
-
-### What We Could Add 📋
-- [ ] Wave forces on hull (currently just height)
-- [ ] Board pitch from sail force (nose up/down)
-- [ ] Sailor weight position (more detailed)
-- [ ] Catapult / nosedive physics
-- [ ] Harness line mechanics
-- [ ] Footstrap engagement
-
----
-
-## 4. Recommended Parameter Tuning
-
-### For Easy Control (Beginner-Friendly)
-```
-Sail:
-  - Rake Torque Multiplier: 0.8-1.0 (stronger steering)
-  - Rake Speed: 3.0 (quicker response)
-
-Fin:
-  - Lift Coefficient: 5-6 (more grip)
-  - Stall Angle: 30° (more forgiving)
-  - Tracking Strength: 3.0 (more stable)
-
-Controller V2:
-  - Weight Shift Strength: 20-25
-  - Anti-Capsize: ON
-  - Combined Steering: ON
-```
-
-### For Realistic Feel (Advanced)
-```
-Sail:
-  - Rake Torque Multiplier: 0.3-0.5
-  - Rake Speed: 2.0
-
-Fin:
-  - Lift Coefficient: 4
-  - Stall Angle: 25°
-  - Tracking Strength: 2.0
-
-Controller V2:
-  - Weight Shift Strength: 10-15
-  - Anti-Capsize: OFF (realistic capsizing)
-  - Combined Steering: OFF
-```
-
----
-
-## 5. Testing Procedures
-
-### Test 1: Basic Floating
-1. Place board on water
-2. Should float at equilibrium
-3. Should stabilize after disturbance
-
-### Test 2: Sailing Straight
-1. Position board perpendicular to wind
-2. Sheet in (W)
-3. Should accelerate forward
-4. Should reach terminal velocity (~15-20 knots in 15 knot wind)
-
-### Test 3: Upwind Sailing
-1. Point ~45° to wind
-2. Rake mast back (E) or steer with A/D
-3. Should be able to sail upwind
-4. Board should track, not slide sideways
-
-### Test 4: Downwind Sailing
-1. Point away from wind
-2. Rake mast forward (Q) or steer with A/D
-3. Should be able to bear away
-4. Speed should increase (true wind + boat speed)
-
-### Test 5: Tacking/Gybing
-1. Execute a turn through the wind
-2. Board should maintain momentum
-3. Sail force should reverse sides
-4. Should complete turn smoothly
-
----
-
-*Last Updated: December 20, 2025*
+*Last Updated: December 27, 2025*
+*Status: VALIDATED AND WORKING*

@@ -4,120 +4,90 @@
 
 Use this checklist when setting up the scene on a new PC. For detailed parameter values, see [SCENE_CONFIGURATION.md](SCENE_CONFIGURATION.md).
 
+**Last Updated:** December 27, 2025
+
 ---
 
-## ☐ 1. WindsurfBoard GameObject
+## ⚠️ RECOMMENDED: Advanced Physics Stack
 
-### Transform
+For working upwind sailing and realistic physics, use the **Advanced** components:
+
+### ☐ 1. WindsurfBoard GameObject (Advanced)
+
+#### Transform
 - [ ] Position: `(0, 0.5, 0)`
-- [ ] Scale: `(0.6, 0.1, 2.5)`
 
-### Components (Add in this order)
-- [ ] Rigidbody (Mass: 50, Angular Damping: 0.5, Interpolate: checked)
+#### Components (Add in this order)
+- [ ] Rigidbody (Mass: 90, Drag: 0.5, Angular Drag: 2.0, Interpolate: checked)
 - [ ] BoxCollider
-- [ ] MeshFilter (Cube)
-- [ ] MeshRenderer (with BoardMaterial)
-- [ ] **BuoyancyBody** - Strength: 1500, Float Height: 0.2
-- [ ] **WaterDrag** - Forward: 0.15, Lateral: 3, Vertical: 4
-- [ ] **ApparentWindCalculator** - Vector Scale: 0.5
-- [ ] **Sail** - Area: 6, Lift: 1.2, Sheet: 0.5
-- [ ] **FinPhysics** - Area: 0.04, Lift Coeff: 4, Tracking: 2
-- [ ] **WindsurferControllerV2** - Mode: Beginner, Weight Shift: 12
+- [ ] MeshFilter + MeshRenderer
+- [ ] **AdvancedBuoyancy** - Multi-point flotation
+- [ ] **AdvancedHullDrag** - Drag + high-speed stability
+- [ ] **AdvancedSail** - Realistic aerodynamics, rake steering
+- [ ] **AdvancedFin** - Lateral resistance
+- [ ] **AdvancedWindsurferController** - Beginner/Intermediate/Advanced modes
 
-### Critical Manual Assignments
-- [ ] BuoyancyBody._waterSurface → Drag **WaterSurface** GameObject here
+#### Critical Manual Assignment
+- [ ] AdvancedBuoyancy._waterSurface → Drag **WaterSurface** here
 
 ---
 
-## ☐ 2. WaterSurface GameObject
+### ☐ 2. WindSystem GameObject (Preferred)
 
-### Transform
+#### Components
+- [ ] **WindSystem** - True wind with gusts, shifts, height gradient
+
+---
+
+### ☐ 3. WaterSurface GameObject
+
+#### Transform
 - [ ] Position: `(0, 0, 0)`
 - [ ] Scale: `(100, 1, 100)`
 
-### Components
+#### Components
 - [ ] MeshFilter (Plane)
 - [ ] MeshRenderer (with WaterMaterial)
-- [ ] **WaterSurface** - Base Height: 0, Waves: unchecked
+- [ ] **WaterSurface** - Base Height: 0
 
 ---
 
-## ☐ 3. WindManager GameObject
+### ☐ 4. Main Camera
 
-### Transform
-- [ ] Position: `(0, 0, 0)`
-
-### Components
-- [ ] **WindManager** - Speed: 8, Direction: 45°, Variation: checked
-
----
-
-## ☐ 4. Main Camera
-
-### Transform
-- [ ] Position: `(0, 5, -10)`
-- [ ] Rotation: `(20, 0, 0)`
-
-### Components
+#### Components
 - [ ] Camera (FOV: 60)
-- [ ] **ThirdPersonCamera** - Offset: (0, 8, -1.46), Follow Speed: 5
+- [ ] **ThirdPersonCamera**
 
-### Critical Manual Assignments
+#### Critical Manual Assignment
 - [ ] ThirdPersonCamera._target → Drag **WindsurfBoard** Transform here
 
 ---
 
-## ☐ 5. Directional Light
-
-### Transform
-- [ ] Position: `(0, 3, 0)`
-- [ ] Rotation: `(50, -30, 0)`
-
-### Components
-- [ ] Light (Type: Directional, Intensity: 1, Shadows: Soft)
+### ☐ 5. Directional Light
+- [ ] Type: Directional, Intensity: 1, Shadows: Soft
 
 ---
 
-## ☐ 6. TelemetryHUD GameObject
-
-### Transform
-- [ ] Position: `(0, 0, 0)`
-
-### Components
-- [ ] **TelemetryHUD** - Show Telemetry: checked, Font Size: 18
+### ☐ 6. AdvancedTelemetryHUD (Optional)
+- [ ] **AdvancedTelemetryHUD** - Shows physics debug info
 
 ---
 
 ## Critical Connections Summary
 
-Only TWO manual assignments needed:
-1. **WindsurfBoard.BuoyancyBody._waterSurface** → WaterSurface GameObject
-2. **Main Camera.ThirdPersonCamera._target** → WindsurfBoard Transform
+Only **TWO** manual assignments needed:
+1. **AdvancedBuoyancy._waterSurface** → WaterSurface GameObject
+2. **ThirdPersonCamera._target** → WindsurfBoard Transform
 
 Everything else auto-finds!
 
 ---
 
-## Materials Needed
+## 📋 Legacy Setup (Basic Physics)
 
-### BoardMaterial
-- [ ] Shader: URP/Lit or Standard
-- [ ] Color: Any (white, yellow, etc.)
-- [ ] Assign to WindsurfBoard MeshRenderer
+For simpler physics (prototyping only):
 
-### WaterMaterial
-- [ ] Shader: URP/Lit or Standard
-- [ ] Color: Cyan/Blue (0, 180, 255)
-- [ ] Smoothness: 0.8
-- [ ] Assign to WaterSurface MeshRenderer
-
----
-
-## Scripts Checklist
-
-### Physics Scripts (on WindsurfBoard)
-- [ ] BuoyancyBody.cs
-- [ ] WaterDrag.cs
+### ☐ 1. WindsurfBoard GameObject (Legacy)
 - [ ] Sail.cs
 - [ ] FinPhysics.cs
 - [ ] ApparentWindCalculator.cs
@@ -234,9 +204,11 @@ Assets/Scripts/
 ---
 
 ## Version Info
-Unity Version: 2022.3 LTS or higher
-Render Pipeline: Universal RP (recommended) or Built-in
+- **Unity Version**: 6.3 LTS
+- **Render Pipeline**: Universal RP (URP)
 
 ---
 
 **Need more details?** See [SCENE_CONFIGURATION.md](SCENE_CONFIGURATION.md) for complete parameter values.
+
+**Physics documentation:** See [PHYSICS_VALIDATION.md](PHYSICS_VALIDATION.md) for validated formulas.

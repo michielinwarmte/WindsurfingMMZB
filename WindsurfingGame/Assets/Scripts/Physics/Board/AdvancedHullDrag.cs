@@ -37,13 +37,18 @@ namespace WindsurfingGame.Physics.Board
         [SerializeField] private float _planingWettedAreaRatio = 0.35f;
         
         [Header("Buoyancy Reference")]
-        [SerializeField] private BuoyancyBody _buoyancy;
+        [SerializeField] private AdvancedBuoyancy _advancedBuoyancy;
+        [SerializeField] private BuoyancyBody _legacyBuoyancy;
         
         [Header("Debug")]
         [SerializeField] private bool _showDebug = true;
         
         // Components
         private Rigidbody _rigidbody;
+        
+        // Buoyancy interface
+        private bool IsFloating => _advancedBuoyancy != null ? _advancedBuoyancy.IsFloating : 
+                                   (_legacyBuoyancy != null ? _legacyBuoyancy.IsFloating : true);
         
         // State
         private float _totalResistance;
@@ -64,16 +69,28 @@ namespace WindsurfingGame.Physics.Board
         {
             _rigidbody = GetComponent<Rigidbody>();
             
-            if (_buoyancy == null)
+            // Try to find advanced buoyancy first, then fall back to legacy
+            if (_advancedBuoyancy == null)
             {
-                _buoyancy = GetComponent<BuoyancyBody>();
+                _advancedBuoyancy = GetComponent<AdvancedBuoyancy>();
+            }
+            if (_advancedBuoyancy == null && _legacyBuoyancy == null)
+            {
+                _legacyBuoyancy = GetComponent<BuoyancyBody>();
+            }
+            
+            // Log warning if no buoyancy component found
+            if (_advancedBuoyancy == null && _legacyBuoyancy == null)
+            {
+                Debug.LogWarning($"AdvancedHullDrag on {gameObject.name}: No buoyancy component found. " +
+                    "Add AdvancedBuoyancy or BuoyancyBody for proper behavior.");
             }
         }
         
         private void FixedUpdate()
         {
             // Only apply drag when in water
-            if (_buoyancy != null && !_buoyancy.IsFloating)
+            if (!IsFloating)
             {
                 _resistanceForce = Vector3.zero;
                 _totalResistance = 0f;
@@ -194,11 +211,26 @@ namespace WindsurfingGame.Physics.Board
             _rigidbody.AddForceAtPosition(_resistanceForce, clrPosition, ForceMode.Force);
             
             // Apply angular damping to resist rotation
+            // CRITICAL: Increase damping at high speeds to prevent instability
             Vector3 angularVelocity = _rigidbody.angularVelocity;
-            if (angularVelocity.sqrMagnitude > 0.01f)
+            float speedKnots = _rigidbody.linearVelocity.magnitude * PhysicsConstants.MS_TO_KNOTS;
+            
+            if (angularVelocity.sqrMagnitude > 0.001f)
             {
-                // Damping increases with submersion
-                float dampingCoeff = _isPlaning ? 0.5f : 1.5f;
+                // Base damping - higher when not planing (displacement mode)
+                float baseDampingCoeff = _isPlaning ? 0.8f : 1.5f;
+                
+                // HIGH-SPEED STABILITY: Dramatically increase damping above 15 knots
+                // This prevents the violent oscillations at planing speeds
+                float highSpeedFactor = 1f;
+                if (speedKnots > 15f)
+                {
+                    // Ramps from 1.0 at 15kn to 4.0 at 30kn
+                    highSpeedFactor = 1f + (speedKnots - 15f) / 5f;
+                    highSpeedFactor = Mathf.Min(highSpeedFactor, 5f); // Cap at 5x
+                }
+                
+                float dampingCoeff = baseDampingCoeff * highSpeedFactor;
                 Vector3 angularDamping = -angularVelocity * dampingCoeff * _hullConfig.TotalMass * 0.1f;
                 _rigidbody.AddTorque(angularDamping, ForceMode.Force);
             }

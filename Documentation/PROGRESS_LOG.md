@@ -6,10 +6,21 @@ This document tracks our development progress, decisions made, and lessons learn
 
 ## 📌 Quick Status Summary
 
-**Last Session**: December 27, 2025 - Session 13 (Advanced Physics Overhaul)  
-**Current Phase**: Advanced Physics System Complete
+**Last Session**: December 27, 2025 - Session 18 (Physics Validation & Documentation)  
+**Current Phase**: Core Physics Complete ✅
 
-### Scripts Completed (28 total)
+### Physics Status: VALIDATED ✅
+
+The core physics are working correctly:
+- ✅ Upwind sailing on both tacks
+- ✅ Planing at high speeds
+- ✅ Rake steering works correctly
+- ✅ High-speed stability (20+ knots)
+- ✅ Tacking/side switching
+
+**Critical formulas documented in:** [PHYSICS_VALIDATION.md](PHYSICS_VALIDATION.md)
+
+### Scripts Completed (32+ total)
 
 | Category | Scripts |
 |----------|---------|
@@ -21,8 +32,9 @@ This document tracks our development progress, decisions made, and lessons learn
 | Player | `WindsurferController`, `WindsurferControllerV2`, `AdvancedWindsurferController` |
 | Camera | `ThirdPersonCamera` |
 | UI | `TelemetryHUD`, `SailPositionIndicator`, `WindIndicator3D`, `AdvancedTelemetryHUD` |
-| Visual | `SailVisualizer` |
+| Visual | `SailVisualizer`, `EquipmentVisualizer`, `ForceVectorVisualizer`, `WindDirectionIndicator` |
 | Utilities | `PhysicsHelpers`, `WaterGridMarkers` |
+| Editor | `WindsurferSetup` |
 | Shaders | `StylizedWater` |
 
 ### Key Decisions Made
@@ -32,20 +44,21 @@ This document tracks our development progress, decisions made, and lessons learn
 - ✅ Simulation drives visualization (not vice versa)
 - ✅ Three control modes: Beginner / Intermediate / Advanced
 - ✅ Physics based on yacht design literature (Marchaj, Larsson & Eliasson)
-- ✅ Proper aerodynamic/hydrodynamic force calculations
+- ✅ Low center of effort for gameplay stability
+- ✅ Fallback wind support (WindSystem → WindManager)
 
-### Current Status
-- ✅ **Complete physics overhaul with realistic modeling**
-- ✅ Thin airfoil theory for sail lift/drag
-- ✅ NACA foil characteristics for fin hydrodynamics
-- ✅ Froude number based hull resistance with planing transition
-- ✅ Multi-point buoyancy system
-- ✅ Wind system with gusts, shifts, and height gradient
-- ✅ Custom stylized water shader with grid overlay
+### ⚠️ Critical Physics Formulas (DO NOT CHANGE)
+
+| Formula | File | Value |
+|---------|------|-------|
+| AWA | `SailingState.cs` | `SignedAngle(fwd, -AW, up)` |
+| Sail Side | `AdvancedSail.cs` | `sailSide = -Sign(AWA)` |
+| Lift Direction | `Aerodynamics.cs` | `project(-sailNormal)` onto wind-perp |
+| Rake Tack | `AdvancedSail.cs` | `tack = sailSide` |
 
 ### Ready for Next Session
-- [ ] Test and tune the new physics system in-game
-- [ ] Adjust physics parameters based on feel
+- [ ] Improve sail visual representation
+- [ ] Fix boom/mast rotation visuals
 - [ ] Add sound effects (wind, water, sail)
 - [ ] Create basic environment (skybox, islands, buoys)
 - [ ] Add spray/splash particle effects
@@ -55,7 +68,65 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md) and [ARCHITECTURE.md](ARCHITECTURE.md)
 
 ---
 
-## December 27, 2025 - Session 13
+## December 27, 2025 - Session 18
+
+### Session: Physics Validation & Documentation
+
+**What we did:**
+- ✅ Fixed upwind sailing (had been broken by previous sign convention changes)
+- ✅ Reverted `sailSide` formula back to `-Sign(AWA)` which was working
+- ✅ Documented all critical physics formulas in PHYSICS_VALIDATION.md
+- ✅ Updated COMPONENT_DEPENDENCIES.md with Advanced physics stack
+- ✅ Updated ARCHITECTURE.md with critical formula reference
+- ✅ Updated README.md with current status
+- ✅ Updated PROGRESS_LOG.md
+
+**Root Cause of Previous Breakage:**
+Multiple sign convention changes were made independently without understanding the full chain. The formulas are interconnected:
+1. AWA sign → determines sailSide
+2. sailSide → determines sail angle and normal orientation
+3. sailNormal → determines lift direction
+4. sailSide → also used in rake steering
+
+Changing any one of these without updating the others breaks the physics.
+
+**Working Physics Configuration:**
+```
+AWA = SignedAngle(forward, -apparentWind, up)
+  → Port wind = positive, Starboard wind = negative
+
+sailSide = -Sign(AWA)
+  → Port wind (AWA > 0) → sailSide = -1 → sail on starboard
+  → Starboard wind (AWA < 0) → sailSide = +1 → sail on port
+
+liftDir = project(-sailNormal) onto wind-perpendicular plane
+  → Force from high pressure (windward) to low pressure (leeward)
+
+rakeSteeringTack = sailSide
+  → Rake back with sailSide=-1 → turn left (bear away)
+  → Rake back with sailSide=+1 → turn right (bear away)
+```
+
+**Key Lessons Learned:**
+1. **Document sign conventions clearly** - They're easy to confuse
+2. **Don't change formulas independently** - The physics chain is interconnected
+3. **Test ALL behaviors after changes** - Upwind, tacking, both tacks, steering
+4. **Create a validation checklist** - Use it after every physics change
+
+**Files Modified:**
+
+| File | Changes |
+|------|---------|
+| `AdvancedSail.cs` | Reverted sailSide to `-Sign(AWA)` |
+| `PHYSICS_VALIDATION.md` | Complete rewrite with validated formulas |
+| `COMPONENT_DEPENDENCIES.md` | Added Advanced physics stack, data flow |
+| `ARCHITECTURE.md` | Added critical formula reference table |
+| `README.md` | Updated current status |
+| `PROGRESS_LOG.md` | Added this session |
+
+---
+
+## December 27, 2025 - Session 17 (Earlier)
 
 ### Session: Advanced Physics System Overhaul
 
@@ -896,7 +967,147 @@ Utilities (2):   PhysicsHelpers, WaterGridMarkers
 
 ---
 
+## Session 14-16: December 27, 2025 - FBX Models, Physics Stability & Telemetry
+
+**Goal:** Add real FBX models, fix physics instability, and update telemetry
+
+### Changes Made
+
+**Session 14 - EquipmentVisualizer & Editor Wizard:**
+- ✅ Created `EquipmentVisualizer.cs` for loading FBX board/sail models
+- ✅ Sail model rotates based on `AdvancedSail.CurrentSailAngle` and `MastRake`
+- ✅ Created `WindsurferSetup.cs` editor wizard for complete windsurfer setup
+- ✅ Wizard creates all advanced physics components with proper references
+
+**Session 15 - Wind Fallback & Error Logging:**
+- ✅ `AdvancedSail` now falls back to `WindManager` if `WindSystem` not found
+- ✅ Added error logging: `"NO WIND SOURCE FOUND!"` if no wind in scene
+- ✅ Added warnings to `AdvancedHullDrag` and `AdvancedWindsurferController`
+- ✅ Updated `AdvancedSail` to use `IWindProvider` interface for legacy support
+
+**Session 16 - Physics Stability & Telemetry:**
+- ✅ Changed default sheet position from 0.5 to **0.65** (more eased out)
+- ✅ Reduced Center of Effort height to **0.3m** (was ~3m causing wild rotations)
+- ✅ Reduced steering torque multiplier from 0.3 to **0.05** (prevents spinning)
+- ✅ Minimized lateral CE offset to **0.1m** (reduces heeling moment)
+- ✅ Fixed `AdvancedTelemetryHUD` component finding with better fallbacks
+- ✅ Updated `SailingState.CenterOfEffortHeight` formula for stability
+
+### Physics Stability Fixes Explained
+
+The original physics had:
+1. **Center of Effort ~3+ meters high** → Large moment arm → Wild rotation
+2. **Lateral CE offset based on boom length** → More heeling → Instability
+3. **Strong steering torque (0.3×)** → Over-correction → Spinning
+
+Fixed by:
+1. **CE height = 0.3m** → Small moment arm → Stable forces
+2. **Lateral CE offset = 0.1m** → Minimal heeling → Stays upright
+3. **Steering torque = 0.05×** → Gentle turns → No spinning
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `AdvancedSail.cs` | Default sheet 0.65, low CE height, reduced steering |
+| `SailingState.cs` | Simplified CenterOfEffortHeight formula |
+| `AdvancedTelemetryHUD.cs` | Better component finding with fallbacks |
+| `ARCHITECTURE.md` | Added troubleshooting section, updated version history |
+| `PROGRESS_LOG.md` | Updated status summary and session log |
+
+### Scripts Status (30 scripts, all compiling)
+
+```
+Physics Core (4):  PhysicsConstants, Aerodynamics, Hydrodynamics, SailingState
+Water (2):         IWaterSurface, WaterSurface  
+Wind (3):          IWindProvider, WindManager, WindSystem
+Buoyancy (2):      BuoyancyBody, AdvancedBuoyancy
+Board (7):         Sail, ApparentWindCalculator, WaterDrag, FinPhysics,
+                   AdvancedSail, AdvancedFin, AdvancedHullDrag
+Player (3):        WindsurferController, WindsurferControllerV2, AdvancedWindsurferController
+Camera (1):        ThirdPersonCamera
+UI (4):            TelemetryHUD, AdvancedTelemetryHUD, SailPositionIndicator, WindIndicator3D
+Visual (2):        SailVisualizer, EquipmentVisualizer
+Editor (1):        WindsurferSetup
+Utilities (2):     PhysicsHelpers, WaterGridMarkers
+```
+
+### Testing Checklist
+
+- [ ] Board floats and doesn't sink
+- [ ] Board moves forward when wind is from side/behind
+- [ ] Board doesn't spin wildly
+- [ ] Telemetry shows wind speed, boat speed, sail force
+- [ ] Sheet in/out (W/S) affects sail angle
+- [ ] Mast rake (A/D) causes gentle turns
+
+---
+
 *End of December 20, 2025 sessions*
+
+---
+
+## Session 17 - Runtime Visualizers (December 27, 2025)
+
+**Goal**: Add visible force vectors and wind direction indicators that work in Game view
+
+**Problem**: Gizmos (OnDrawGizmos) only show in Scene view when object is selected - not useful for runtime debugging.
+
+**Solution**: Created LineRenderer-based visualizers that work in both Scene and Game views.
+
+### New Scripts Created
+
+**1. ForceVectorVisualizer.cs** (`Visual/`)
+- Purpose: Runtime force vector display using LineRenderers
+- Shows: Sail force (cyan), lift (green), drag (red), wind (blue), velocity (yellow), fin lift (teal)
+- Features: Arrow heads, color-coded, auto-scaling, toggle on/off
+- Location: Attached to windsurfer automatically by wizard
+
+**2. WindDirectionIndicator.cs** (`Visual/`)
+- Purpose: Animated wind direction arrows on water surface
+- Shows: 12 arrows in grid around player, moving with wind direction
+- Features: Animated movement, follows player, spawns at water height
+- Location: Scene singleton (one per scene)
+
+### Other Changes
+
+- **WindsurferSetup.cs**: Updated wizard to add ForceVectorVisualizer and WindDirectionIndicator automatically
+- **AdvancedSail.cs**: Increased steering torque formula: `0.5 × force + 150 base + 30 × speed`
+- **ARCHITECTURE.md**: Added new visualizers to namespace tree and script table
+
+### Steering Formula (Current)
+
+```csharp
+private void ApplyRakeSteering()
+{
+    float forceMag = _state.SailForce.magnitude;
+    float steeringTorque = _mastRake * forceMag * 0.5f;      // 50% of sail force
+    float baseSteeringTorque = _mastRake * 150f;             // Base torque
+    float speedTorque = _mastRake * _state.BoatSpeed * 30f;  // Speed-dependent
+    _rigidbody.AddTorque(Vector3.up * (steeringTorque + baseSteeringTorque + speedTorque), ForceMode.Force);
+}
+```
+
+### Scripts Status (32 scripts, all compiling)
+
+```
+Physics Core (4):  PhysicsConstants, Aerodynamics, Hydrodynamics, SailingState
+Water (2):         IWaterSurface, WaterSurface  
+Wind (3):          IWindProvider, WindManager, WindSystem
+Buoyancy (2):      BuoyancyBody, AdvancedBuoyancy
+Board (7):         Sail, ApparentWindCalculator, WaterDrag, FinPhysics,
+                   AdvancedSail, AdvancedFin, AdvancedHullDrag
+Player (3):        WindsurferController, WindsurferControllerV2, AdvancedWindsurferController
+Camera (1):        ThirdPersonCamera
+UI (4):            TelemetryHUD, AdvancedTelemetryHUD, SailPositionIndicator, WindIndicator3D
+Visual (4):        SailVisualizer, EquipmentVisualizer, ForceVectorVisualizer, WindDirectionIndicator
+Editor (1):        WindsurferSetup
+Utilities (2):     PhysicsHelpers, WaterGridMarkers
+```
+
+---
+
+*End of Session 17*
 
 ---
 

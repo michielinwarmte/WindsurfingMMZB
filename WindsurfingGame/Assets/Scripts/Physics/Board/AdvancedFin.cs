@@ -37,7 +37,7 @@ namespace WindsurfingGame.Physics.Board
         [SerializeField] private bool _enableTracking = true;
         
         [Tooltip("Tracking torque strength")]
-        [SerializeField] private float _trackingStrength = 15f;
+        [SerializeField] private float _trackingStrength = 40f;
         
         [Header("Debug")]
         [SerializeField] private bool _showDebug = true;
@@ -181,7 +181,7 @@ namespace WindsurfingGame.Physics.Board
             float torqueMagnitude = angleError * _trackingStrength * speedFactor * stallFactor * _effectivenessRatio;
             
             // Limit torque to prevent over-correction
-            torqueMagnitude = Mathf.Clamp(torqueMagnitude, -100f, 100f);
+            torqueMagnitude = Mathf.Clamp(torqueMagnitude, -300f, 300f);
             
             _rigidbody.AddTorque(Vector3.up * torqueMagnitude, ForceMode.Force);
         }
@@ -202,18 +202,65 @@ namespace WindsurfingGame.Physics.Board
         }
 
 #if UNITY_EDITOR
+        /// <summary>
+        /// Always draw force vectors in Scene view
+        /// </summary>
+        private void OnDrawGizmos()
+        {
+            if (!_showDebug) return;
+            if (!Application.isPlaying) return;
+            
+            Vector3 finPos = transform.TransformPoint(_finConfig.Position);
+            
+            // Draw lift (green) and drag (red)
+            if (_liftForce.sqrMagnitude > 0.1f)
+            {
+                Gizmos.color = Color.green;
+                Gizmos.DrawRay(finPos, _liftForce * _forceVectorScale);
+            }
+            
+            if (_dragForce.sqrMagnitude > 0.1f)
+            {
+                Gizmos.color = Color.red;
+                Gizmos.DrawRay(finPos, _dragForce * _forceVectorScale);
+            }
+        }
+        
         private void OnDrawGizmosSelected()
         {
             if (!_showDebug) return;
             
             // Draw fin position and shape
+            // Fin is oriented with:
+            // - Chord along board's FORWARD axis (Z)
+            // - Depth going DOWN (-Y)
+            // - Thickness along board's RIGHT axis (X) - thin side
             Vector3 finPos = transform.TransformPoint(_finConfig.Position);
             Vector3 finBottom = finPos - transform.up * _finConfig.Depth;
             
+            // Draw fin outline - correct orientation
+            // The fin extends DOWN and its chord runs FORE-AFT
             Gizmos.color = Color.blue;
             Gizmos.DrawLine(finPos, finBottom);
-            Gizmos.DrawWireCube(finPos - transform.up * _finConfig.Depth * 0.5f,
-                new Vector3(_finConfig.Chord, _finConfig.Depth, 0.02f));
+            
+            // Draw fin as a thin box: chord along Z, depth along Y, thin along X
+            Matrix4x4 oldMatrix = Gizmos.matrix;
+            Gizmos.matrix = Matrix4x4.TRS(
+                finPos - transform.up * _finConfig.Depth * 0.5f,
+                transform.rotation,
+                Vector3.one
+            );
+            // Size: (thickness, depth, chord) = (0.02, depth, chord)
+            Gizmos.DrawWireCube(Vector3.zero, new Vector3(0.02f, _finConfig.Depth, _finConfig.Chord));
+            Gizmos.matrix = oldMatrix;
+            
+            // Draw fin FORWARD direction (should be parallel to board forward)
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawRay(finPos, transform.forward * 1.5f);
+            
+            // Draw fin RIGHT direction (lift acts perpendicular to this)
+            Gizmos.color = Color.magenta;
+            Gizmos.DrawRay(finPos, transform.right * 0.5f);
             
             if (!Application.isPlaying) return;
             
@@ -233,9 +280,6 @@ namespace WindsurfingGame.Physics.Board
                     Gizmos.color = Color.yellow;
                     Gizmos.DrawRay(finPos, vel.normalized * 2f);
                 }
-                
-                Gizmos.color = Color.cyan;
-                Gizmos.DrawRay(finPos, transform.forward * 2f);
             }
             
             // Labels
@@ -244,7 +288,8 @@ namespace WindsurfingGame.Physics.Board
                 $"CL: {_liftCoefficient:F2}\n" +
                 $"Lift: {_liftForce.magnitude:F0} N\n" +
                 $"Eff: {_effectivenessRatio * 100:F0}%\n" +
-                $"{(_isStalled ? "⚠ STALLED" : "OK")}");
+                $"{(_isStalled ? "⚠ STALLED" : "OK")}\n" +
+                $"(Cyan=Fwd, Mag=Right, Yel=Vel)");
         }
 #endif
     }

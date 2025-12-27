@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 using WindsurfingGame.Physics.Core;
 using WindsurfingGame.Physics.Board;
 using WindsurfingGame.Physics.Buoyancy;
@@ -39,34 +40,62 @@ namespace WindsurfingGame.UI
         
         private bool _stylesInitialized = false;
         
+        // Input System
+        private Keyboard _keyboard;
+        
         private void Start()
         {
+            _keyboard = Keyboard.current;
             FindComponents();
         }
         
         private void FindComponents()
         {
+            // Try to find controller first
             if (_controller == null)
                 _controller = FindAnyObjectByType<AdvancedWindsurferController>();
             
+            // Get components from controller's GameObject
             if (_controller != null)
             {
-                _sail = _sail ?? _controller.GetComponent<AdvancedSail>();
-                _fin = _fin ?? _controller.GetComponent<AdvancedFin>();
-                _hull = _hull ?? _controller.GetComponent<AdvancedHullDrag>();
-                _buoyancy = _buoyancy ?? _controller.GetComponent<AdvancedBuoyancy>();
-                _boardRigidbody = _boardRigidbody ?? _controller.GetComponent<Rigidbody>();
+                GameObject target = _controller.gameObject;
+                _sail = _sail ?? target.GetComponent<AdvancedSail>();
+                _fin = _fin ?? target.GetComponent<AdvancedFin>();
+                _hull = _hull ?? target.GetComponent<AdvancedHullDrag>();
+                _buoyancy = _buoyancy ?? target.GetComponent<AdvancedBuoyancy>();
+                _boardRigidbody = _boardRigidbody ?? target.GetComponent<Rigidbody>();
+            }
+            
+            // Fallback: find components directly if no controller
+            if (_sail == null)
+                _sail = FindAnyObjectByType<AdvancedSail>();
+            if (_fin == null)
+                _fin = FindAnyObjectByType<AdvancedFin>();
+            if (_hull == null)
+                _hull = FindAnyObjectByType<AdvancedHullDrag>();
+            if (_buoyancy == null)
+                _buoyancy = FindAnyObjectByType<AdvancedBuoyancy>();
+            
+            // Get rigidbody from sail if found
+            if (_boardRigidbody == null && _sail != null)
+                _boardRigidbody = _sail.GetComponent<Rigidbody>();
+                
+            if (_sail == null)
+            {
+                Debug.LogWarning("AdvancedTelemetryHUD: No AdvancedSail found in scene!");
             }
         }
         
         private void Update()
         {
+            if (_keyboard == null) return;
+            
             // Toggle displays
-            if (Input.GetKeyDown(KeyCode.F1))
+            if (_keyboard.f1Key.wasPressedThisFrame)
                 _showDetailed = !_showDetailed;
-            if (Input.GetKeyDown(KeyCode.F2))
+            if (_keyboard.f2Key.wasPressedThisFrame)
                 _showForceVectors = !_showForceVectors;
-            if (Input.GetKeyDown(KeyCode.F3))
+            if (_keyboard.f3Key.wasPressedThisFrame)
                 _showPolar = !_showPolar;
         }
         

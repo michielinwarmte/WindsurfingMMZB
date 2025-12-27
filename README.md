@@ -97,34 +97,30 @@ See [DEVELOPMENT_PLAN.md](Documentation/DEVELOPMENT_PLAN.md) for detailed develo
 
 ## 🎯 Current Status
 
-**Phase**: Core Physics Complete + Playability Polish  
-**Last Updated**: December 26, 2025
+**Phase**: Core Physics Complete ✅  
+**Last Updated**: December 27, 2025
 
-### Completed Features
-- ✅ Water surface with wave support
-- ✅ Multi-point buoyancy system
-- ✅ Wind system (global wind, gusts)
-- ✅ Apparent wind calculation
-- ✅ Sail physics (lift/drag, center of effort)
-- ✅ Fin physics (lateral resistance, stall)
-- ✅ Water drag with planing behavior
-- ✅ Player controls (Beginner/Advanced modes)
-- ✅ Context-aware beginner controls (auto-adjusts for tack)
-- ✅ Auto-stabilization system (5-point stabilization)
-- ✅ Auto-sheet functionality
-- ✅ No-go zone physics (realistic sailing constraints)
-- ✅ Telemetry HUD with control mode display
-- ✅ Sail visualization (3D and 2D)
-- ✅ Third-person camera
+### ✅ Working Features
+- **Upwind sailing** - Can sail ~45° to wind on both tacks
+- **Planing** - Board lifts and accelerates at high speeds
+- **Tacking** - Sail switches sides correctly
+- **Rake steering** - Works on both tacks (bear away/head up)
+- **High-speed stability** - No wobble at 20+ knots
+- **Beginner controls** - Context-aware A/D steering
+- **Advanced controls** - Manual Q/E rake + A/D weight shift
 
-### Validated & Tuned
-- ✅ Steering sensitivity (smooth and controllable)
-- ✅ Planing drag reduction (85% less drag)
-- ✅ Straight-line stability
-- ✅ Realistic sailing behavior
+### 🔧 Needs Work
+- Sail visuals (boom rotation, mesh deformation)
+- Sheet control feedback
+- Sound effects
+- Environment polish
+
+### Physics Validation
+Core physics formulas are **validated and documented** in [PHYSICS_VALIDATION.md](Documentation/PHYSICS_VALIDATION.md).  
+⚠️ Do not modify physics sign conventions without reading that document.
 
 ### Next Up
-- ⏳ Visual polish (water shader, foam, spray)
+- ⏳ Sail visual improvements
 - ⏳ Sound effects (wind, water, sail)
 - ⏳ Environment (skybox, islands, course markers)
 - ⏳ AI opponents

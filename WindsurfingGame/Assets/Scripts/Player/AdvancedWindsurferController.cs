@@ -114,6 +114,21 @@ namespace WindsurfingGame.Player
             _keyboard = Keyboard.current;
         }
         
+        private void Start()
+        {
+            // Validate required components
+            if (_sail == null)
+            {
+                Debug.LogError($"AdvancedWindsurferController on {gameObject.name}: No AdvancedSail found! " +
+                    "Sail controls will not work.");
+            }
+            if (_rigidbody == null)
+            {
+                Debug.LogError($"AdvancedWindsurferController on {gameObject.name}: No Rigidbody found!");
+                enabled = false;
+            }
+        }
+        
         private void Update()
         {
             ReadInput();
@@ -189,6 +204,13 @@ namespace WindsurfingGame.Player
                     else if (_keyboard.aKey.isPressed || _keyboard.leftArrowKey.isPressed)
                         _weightInput = -1f; // Weight left
                     break;
+            }
+            
+            // T key toggles auto-sheet
+            if (_keyboard.tKey.wasPressedThisFrame)
+            {
+                _autoSheet = !_autoSheet;
+                UnityEngine.Debug.Log($"Auto-sheet: {(_autoSheet ? "ENABLED" : "DISABLED")}");
             }
         }
         
@@ -266,21 +288,37 @@ namespace WindsurfingGame.Player
         }
         
         /// <summary>
-        /// Prevent the board from capsizing.
+        /// Prevent the board from capsizing by simulating sailor weight shift.
+        /// The sailor automatically leans out to counter heeling moments.
         /// </summary>
         private void ApplyAnticapsize()
         {
-            // Get current heel angle
+            // Get current heel angle (roll around forward axis)
             Vector3 right = transform.right;
             float heelAngle = Vector3.SignedAngle(Vector3.up, 
                 Vector3.ProjectOnPlane(transform.up, transform.forward).normalized, 
                 transform.forward);
             
+            // AUTOMATIC COUNTER-HEELING: Sailor leans out proportionally to heel
+            // This simulates the sailor's natural balance response
+            // Even before hitting max heel, apply counter-force
+            if (Mathf.Abs(heelAngle) > 5f) // Dead zone for small angles
+            {
+                // Counter-torque proportional to heel angle
+                // Stronger as heel increases (sailor leans out more)
+                float counterFactor = Mathf.Clamp01(Mathf.Abs(heelAngle) / _maxHeelAngle);
+                float counterTorque = heelAngle * _anticapsizeStrength * 0.5f * counterFactor;
+                
+                // Apply counter-torque (opposite to heel direction)
+                _rigidbody.AddTorque(transform.forward * -counterTorque, ForceMode.Force);
+            }
+            
+            // HARD LIMIT: Strong correction if exceeding max heel
             if (Mathf.Abs(heelAngle) > _maxHeelAngle)
             {
-                // Apply corrective torque
+                // Apply strong corrective torque
                 float excess = Mathf.Abs(heelAngle) - _maxHeelAngle;
-                float correctionTorque = excess * _anticapsizeStrength * -Mathf.Sign(heelAngle);
+                float correctionTorque = excess * _anticapsizeStrength * 2f * -Mathf.Sign(heelAngle);
                 
                 _rigidbody.AddTorque(transform.forward * correctionTorque, ForceMode.Force);
             }
@@ -342,16 +380,57 @@ namespace WindsurfingGame.Player
 #if UNITY_EDITOR
         private void OnDrawGizmosSelected()
         {
+            // ========================================
+            // COORDINATE SYSTEM DEBUG
+            // ========================================
+            Vector3 pos = transform.position;
+            
+            // Draw board coordinate axes
+            // FORWARD (Z) = BLUE - direction board travels
+            Gizmos.color = Color.blue;
+            Gizmos.DrawRay(pos, transform.forward * 3f);
+            UnityEditor.Handles.Label(pos + transform.forward * 3.2f, "FORWARD (Z)");
+            
+            // RIGHT (X) = RED - starboard side
+            Gizmos.color = Color.red;
+            Gizmos.DrawRay(pos, transform.right * 1.5f);
+            UnityEditor.Handles.Label(pos + transform.right * 1.7f, "RIGHT (X)");
+            
+            // UP (Y) = GREEN
+            Gizmos.color = Color.green;
+            Gizmos.DrawRay(pos, transform.up * 1f);
+            UnityEditor.Handles.Label(pos + transform.up * 1.2f, "UP (Y)");
+            
+            // Draw velocity direction
+            if (Application.isPlaying && _rigidbody != null)
+            {
+                Vector3 vel = _rigidbody.linearVelocity;
+                if (vel.magnitude > 0.3f)
+                {
+                    Gizmos.color = Color.yellow;
+                    Gizmos.DrawRay(pos + Vector3.up * 0.2f, vel.normalized * 2f);
+                    UnityEditor.Handles.Label(pos + Vector3.up * 0.2f + vel.normalized * 2.2f, 
+                        $"VEL ({vel.magnitude:F1} m/s)");
+                }
+            }
+            
             // Draw weight shift indicator
             if (Application.isPlaying && Mathf.Abs(_currentWeightShift) > 0.5f)
             {
-                Vector3 pos = transform.position + Vector3.up * 1.5f;
+                Vector3 shiftPos = transform.position + Vector3.up * 1.5f;
                 Vector3 shiftDir = transform.right * (_currentWeightShift / _maxWeightShift);
                 
-                Gizmos.color = Color.yellow;
-                Gizmos.DrawRay(pos, shiftDir);
-                Gizmos.DrawWireSphere(pos + shiftDir, 0.1f);
+                Gizmos.color = Color.magenta;
+                Gizmos.DrawRay(shiftPos, shiftDir);
+                Gizmos.DrawWireSphere(shiftPos + shiftDir, 0.1f);
             }
+            
+            // Labels
+            UnityEditor.Handles.Label(pos + Vector3.up * 2f,
+                $"Board axes check:\n" +
+                $"Blue = Forward (+Z) = bow direction\n" +
+                $"Red = Right (+X) = starboard\n" +
+                $"Yellow = Velocity direction");
         }
 #endif
     }

@@ -124,6 +124,7 @@ git push origin feature/improved-wave-physics
 - Update PROGRESS_LOG.md after each session
 - Test your changes in the TestScene
 - Commit .meta files with their assets
+- **Read [PHYSICS_VALIDATION.md](Documentation/PHYSICS_VALIDATION.md) before changing physics**
 
 ### DON'T ❌
 - Commit the `Library/` folder (it's gitignored)
@@ -131,6 +132,29 @@ git push origin feature/improved-wave-physics
 - Calculate physics values in visualization scripts
 - Use magic numbers (use constants in PhysicsHelpers)
 - Push directly to `main` or `develop`
+- **Change physics sign conventions without understanding the full chain**
+
+---
+
+## 🎯 CRITICAL: Physics Sign Conventions
+
+The physics formulas are **interconnected**. Changing one without updating others will break the simulation.
+
+**Before modifying ANY of these files:**
+- `SailingState.cs` (AWA calculation)
+- `AdvancedSail.cs` (sailSide, sail geometry)
+- `Aerodynamics.cs` (lift direction)
+
+**You MUST read:** [PHYSICS_VALIDATION.md](Documentation/PHYSICS_VALIDATION.md)
+
+**Key formulas that work together:**
+```
+AWA = SignedAngle(forward, -apparentWind, up)
+sailSide = -Sign(AWA)
+liftDir = project(-sailNormal) onto wind-perpendicular
+```
+
+Changing ANY of these independently will break upwind sailing, tacking, or steering!
 
 ---
 
@@ -219,4 +243,4 @@ When you make changes, update:
 
 ---
 
-*Last Updated: December 20, 2025*
+*Last Updated: December 27, 2025*

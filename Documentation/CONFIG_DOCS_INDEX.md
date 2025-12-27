@@ -10,6 +10,8 @@
 
 **Visual person?** → Check [SCENE_STRUCTURE_VISUAL.md](SCENE_STRUCTURE_VISUAL.md)
 
+**⚠️ Modifying physics?** → **MUST READ** [PHYSICS_VALIDATION.md](PHYSICS_VALIDATION.md)
+
 ---
 
 ## 📖 All Configuration Documents
@@ -28,6 +30,7 @@
 |----------|---------|-------------|
 | [**COMPONENT_DEPENDENCIES.md**](COMPONENT_DEPENDENCIES.md) | How components connect | Troubleshooting |
 | [**SCENE_STRUCTURE_VISUAL.md**](SCENE_STRUCTURE_VISUAL.md) | Visual diagrams | Understanding architecture |
+| [**PHYSICS_VALIDATION.md**](PHYSICS_VALIDATION.md) | Critical physics formulas | Before modifying physics |
 
 ### 📊 Data Formats
 
