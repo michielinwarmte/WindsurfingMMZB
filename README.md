@@ -80,12 +80,18 @@ See [DEVELOPMENT_PLAN.md](Documentation/DEVELOPMENT_PLAN.md) for detailed develo
 
 ## 📖 Documentation
 
-- [Architecture & Codebase Reference](Documentation/ARCHITECTURE.md) ⭐ **Start here for code overview**
+### Getting Started
+- [Quick Setup Checklist](Documentation/QUICK_SETUP_CHECKLIST.md) ⭐ **Use this to set up on a new PC**
+- [Scene Configuration Guide](Documentation/SCENE_CONFIGURATION.md) 📋 **Complete parameter reference**
+- [Component Dependencies](Documentation/COMPONENT_DEPENDENCIES.md) 🔗 **How components connect**
+- [Unity Setup Guide](Documentation/UNITY_SETUP_GUIDE.md)
+
+### Development Reference
+- [Architecture & Codebase Reference](Documentation/ARCHITECTURE.md) 📚 **Code overview**
 - [Development Plan](Documentation/DEVELOPMENT_PLAN.md)
 - [Physics Design](Documentation/PHYSICS_DESIGN.md)
 - [Code Style Guide](Documentation/CODE_STYLE.md)
 - [Progress Log](Documentation/PROGRESS_LOG.md)
-- [Unity Setup Guide](Documentation/UNITY_SETUP_GUIDE.md)
 - [Test Scene Setup](Documentation/TEST_SCENE_SETUP.md)
 - [Physics Validation](Documentation/PHYSICS_VALIDATION.md)
 

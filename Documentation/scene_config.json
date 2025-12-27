@@ -1,0 +1,381 @@
+{
+  "sceneConfiguration": {
+    "sceneName": "MainScene",
+    "unityVersion": "2022.3 LTS or higher",
+    "renderPipeline": "Universal RP",
+    "lastUpdated": "2025-12-27"
+  },
+  "gameObjects": [
+    {
+      "name": "WindsurfBoard",
+      "tag": "Untagged",
+      "layer": "Default",
+      "transform": {
+        "position": { "x": 0, "y": 0.5, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 0.6, "y": 0.1, "z": 2.5 }
+      },
+      "components": [
+        {
+          "type": "Rigidbody",
+          "mass": 50,
+          "linearDamping": 0,
+          "angularDamping": 0.5,
+          "useGravity": true,
+          "isKinematic": false,
+          "interpolate": "Interpolate",
+          "collisionDetection": "Discrete"
+        },
+        {
+          "type": "BoxCollider",
+          "size": { "x": 1, "y": 1, "z": 1 },
+          "center": { "x": 0, "y": 0, "z": 0 },
+          "isTrigger": false
+        },
+        {
+          "type": "BuoyancyBody",
+          "script": "WindsurfingGame.Physics.Buoyancy.BuoyancyBody",
+          "parameters": {
+            "_waterSurface": "ASSIGN_MANUALLY:WaterSurface",
+            "_buoyancyStrength": 1500,
+            "_floatHeight": 0.2,
+            "_waterDamping": 100,
+            "_angularWaterDamping": 1.5,
+            "_buoyancyPoints": [],
+            "_autoGeneratePoints": 4,
+            "_showDebugGizmos": true
+          }
+        },
+        {
+          "type": "WaterDrag",
+          "script": "WindsurfingGame.Physics.Board.WaterDrag",
+          "parameters": {
+            "_forwardDrag": 0.15,
+            "_lateralDrag": 3,
+            "_verticalDrag": 4,
+            "_planingSpeed": 4,
+            "_planingDragMultiplier": 0.5,
+            "_buoyancy": "AUTO_FIND"
+          }
+        },
+        {
+          "type": "ApparentWindCalculator",
+          "script": "WindsurfingGame.Physics.Board.ApparentWindCalculator",
+          "parameters": {
+            "_rigidbody": "AUTO_FIND",
+            "_windManager": "AUTO_FIND",
+            "_showDebugVectors": true,
+            "_vectorScale": 0.5
+          }
+        },
+        {
+          "type": "Sail",
+          "script": "WindsurfingGame.Physics.Board.Sail",
+          "parameters": {
+            "_sailArea": 6,
+            "_maxLiftCoefficient": 1.2,
+            "_baseDragCoefficient": 0.5,
+            "_sheetPosition": 0.5,
+            "_sheetSpeed": 2,
+            "_mastFootPosition": { "x": 0, "y": 0.1, "z": -0.05 },
+            "_mastHeight": 4.5,
+            "_boomLength": 2.0,
+            "_boomHeight": 1.8,
+            "_mastRake": 0,
+            "_maxRakeAngle": 15,
+            "_rakeSpeed": 5,
+            "_rakeTorqueMultiplier": 0.6,
+            "_targetRigidbody": "AUTO_FIND",
+            "_showForceVectors": true
+          },
+          "note": "Old version may have _centerOfEffort instead of mast position properties"
+        },
+        {
+          "type": "FinPhysics",
+          "script": "WindsurfingGame.Physics.Board.FinPhysics",
+          "parameters": {
+            "_finArea": 0.04,
+            "_liftCoefficient": 4,
+            "_finPosition": { "x": 0, "y": -0.1, "z": -0.8 },
+            "_minEffectiveSpeed": 0.5,
+            "_fullEffectSpeed": 3,
+            "_trackingStrength": 2,
+            "_enableTracking": true,
+            "_stallAngle": 25,
+            "_stallFalloff": 0.5,
+            "_showDebugVectors": true
+          }
+        },
+        {
+          "type": "WindsurferControllerV2",
+          "script": "WindsurfingGame.Player.WindsurferControllerV2",
+          "parameters": {
+            "_rigidbody": "AUTO_FIND",
+            "_sail": "AUTO_FIND",
+            "_finPhysics": "AUTO_FIND",
+            "_apparentWind": "AUTO_FIND",
+            "_controlMode": "Beginner",
+            "_weightShiftStrength": 12,
+            "_maxLeanAngle": 30,
+            "_weightShiftSpeed": 6,
+            "_edgeFinBonus": 1.5,
+            "_maxRollAngle": 15,
+            "_autoSheet": true,
+            "_antiCapsize": true,
+            "_combinedSteering": true,
+            "_autoStabilize": true,
+            "_stabilizationStrength": 5,
+            "_inputResponsiveness": 6,
+            "_autoCenterMast": true
+          },
+          "note": "Use EITHER WindsurferControllerV2 OR WindsurferController, not both"
+        },
+        {
+          "type": "SailVisualizer",
+          "script": "WindsurfingGame.Visual.SailVisualizer",
+          "optional": true,
+          "parameters": {
+            "_sail": "AUTO_FIND",
+            "_apparentWind": "AUTO_FIND",
+            "_mastHeight": 4.5,
+            "_mastRadius": 0.04,
+            "_maxRakeAngle": 15,
+            "_mastBasePosition": { "x": 0, "y": 0.1, "z": -0.05 },
+            "_boomLength": 2.5,
+            "_boomHeight": 1.5,
+            "_boomRadius": 0.03,
+            "_smoothSpeed": 8
+          }
+        }
+      ]
+    },
+    {
+      "name": "WaterSurface",
+      "tag": "Untagged",
+      "layer": "Default",
+      "transform": {
+        "position": { "x": 0, "y": 0, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 100, "y": 1, "z": 100 }
+      },
+      "components": [
+        {
+          "type": "MeshFilter",
+          "mesh": "Plane (built-in)"
+        },
+        {
+          "type": "MeshRenderer",
+          "material": "WaterMaterial"
+        },
+        {
+          "type": "WaterSurface",
+          "script": "WindsurfingGame.Physics.Water.WaterSurface",
+          "parameters": {
+            "_baseHeight": 0,
+            "_enableWaves": false,
+            "_waveHeight": 0.5,
+            "_waveLength": 10,
+            "_waveSpeed": 1,
+            "_waveDirection": 0
+          }
+        }
+      ]
+    },
+    {
+      "name": "WindManager",
+      "tag": "Untagged",
+      "layer": "Default",
+      "transform": {
+        "position": { "x": 0, "y": 0, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "components": [
+        {
+          "type": "WindManager",
+          "script": "WindsurfingGame.Physics.Wind.WindManager",
+          "parameters": {
+            "_baseWindSpeed": 8,
+            "_windDirectionDegrees": 45,
+            "_enableVariation": true,
+            "_speedVariation": 0.2,
+            "_directionVariation": 10,
+            "_gustFrequency": 0.1,
+            "_showWindGizmo": true,
+            "_gizmoScale": 5
+          }
+        }
+      ]
+    },
+    {
+      "name": "Main Camera",
+      "tag": "MainCamera",
+      "layer": "Default",
+      "transform": {
+        "position": { "x": 0, "y": 5, "z": -10 },
+        "rotation": { "x": 20, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "components": [
+        {
+          "type": "Camera",
+          "clearFlags": "Skybox",
+          "projection": "Perspective",
+          "fieldOfView": 60,
+          "nearClipPlane": 0.3,
+          "farClipPlane": 1000
+        },
+        {
+          "type": "ThirdPersonCamera",
+          "script": "WindsurfingGame.CameraSystem.ThirdPersonCamera",
+          "parameters": {
+            "_target": "ASSIGN_MANUALLY:WindsurfBoard_Transform",
+            "_offset": { "x": 0, "y": 8, "z": -1.46 },
+            "_followSpeed": 5,
+            "_rotationSpeed": 3,
+            "_lookOffset": { "x": 0, "y": 1, "z": 2 },
+            "_minHeight": 1,
+            "_waterSurface": "AUTO_FIND_OPTIONAL"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Directional Light",
+      "tag": "Untagged",
+      "layer": "Default",
+      "transform": {
+        "position": { "x": 0, "y": 3, "z": 0 },
+        "rotation": { "x": 50, "y": -30, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "components": [
+        {
+          "type": "Light",
+          "lightType": "Directional",
+          "color": { "r": 1, "g": 1, "b": 1, "a": 1 },
+          "intensity": 1,
+          "shadowType": "Soft"
+        }
+      ]
+    },
+    {
+      "name": "TelemetryHUD",
+      "tag": "Untagged",
+      "layer": "Default",
+      "transform": {
+        "position": { "x": 0, "y": 0, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "scale": { "x": 1, "y": 1, "z": 1 }
+      },
+      "components": [
+        {
+          "type": "TelemetryHUD",
+          "script": "WindsurfingGame.UI.TelemetryHUD",
+          "parameters": {
+            "_controller": "AUTO_FIND",
+            "_controllerV2": "AUTO_FIND",
+            "_boardRigidbody": "AUTO_FIND",
+            "_windManager": "AUTO_FIND",
+            "_apparentWind": "AUTO_FIND",
+            "_sail": "AUTO_FIND",
+            "_waterDrag": "AUTO_FIND",
+            "_finPhysics": "AUTO_FIND",
+            "_showTelemetry": true,
+            "_showWindIndicator": true,
+            "_showControls": true,
+            "_fontSize": 18,
+            "_backgroundColor": { "r": 0, "g": 0, "b": 0, "a": 0.7 },
+            "_textColor": { "r": 1, "g": 1, "b": 1, "a": 1 },
+            "_highlightColor": { "r": 0, "g": 1, "b": 1, "a": 1 }
+          }
+        },
+        {
+          "type": "WindIndicator3D",
+          "script": "WindsurfingGame.UI.WindIndicator3D",
+          "optional": true,
+          "parameters": {
+            "_boardTransform": "ASSIGN_MANUALLY:WindsurfBoard_Transform",
+            "_windManager": "AUTO_FIND",
+            "_apparentWind": "AUTO_FIND",
+            "_showTrueWind": true,
+            "_trueWindColor": { "r": 0, "g": 0.8, "b": 1, "a": 0.8 },
+            "_trueWindScale": 0.3,
+            "_showApparentWind": true,
+            "_apparentWindColor": { "r": 1, "g": 0.9, "b": 0, "a": 0.8 },
+            "_apparentWindScale": 0.3,
+            "_indicatorOffset": { "x": 0, "y": 3, "z": 0 }
+          }
+        }
+      ]
+    }
+  ],
+  "materials": {
+    "BoardMaterial": {
+      "shader": "Universal Render Pipeline/Lit",
+      "color": { "r": 1, "g": 1, "b": 1, "a": 1 },
+      "smoothness": 0.4,
+      "metallic": 0
+    },
+    "WaterMaterial": {
+      "shader": "Universal Render Pipeline/Lit",
+      "color": { "r": 0, "g": 0.7, "b": 1, "a": 0.8 },
+      "smoothness": 0.8,
+      "metallic": 0
+    }
+  },
+  "projectSettings": {
+    "physics": {
+      "gravity": { "x": 0, "y": -9.81, "z": 0 },
+      "defaultSolverIterations": 6,
+      "defaultSolverVelocityIterations": 1,
+      "bounceThreshold": 2,
+      "sleepThreshold": 0.005
+    },
+    "time": {
+      "fixedTimestep": 0.02,
+      "maximumAllowedTimestep": 0.1,
+      "timeScale": 1
+    }
+  },
+  "manualAssignments": {
+    "critical": [
+      {
+        "object": "WindsurfBoard",
+        "component": "BuoyancyBody",
+        "field": "_waterSurface",
+        "assignTo": "WaterSurface GameObject",
+        "reason": "Cannot auto-find interface reference"
+      },
+      {
+        "object": "Main Camera",
+        "component": "ThirdPersonCamera",
+        "field": "_target",
+        "assignTo": "WindsurfBoard Transform",
+        "reason": "Needs to know what to follow"
+      }
+    ],
+    "optional": [
+      {
+        "object": "TelemetryHUD",
+        "component": "WindIndicator3D",
+        "field": "_boardTransform",
+        "assignTo": "WindsurfBoard Transform",
+        "reason": "Works better with explicit assignment"
+      }
+    ]
+  },
+  "controls": {
+    "beginnerMode": {
+      "A_D": "Combined steering (turn left/right)",
+      "W_S": "Sheet control (pull in/let out sail)",
+      "Tab": "Toggle to Advanced mode"
+    },
+    "advancedMode": {
+      "Q_E": "Mast rake (tilt forward/back)",
+      "A_D": "Weight shift (lean left/right)",
+      "W_S": "Sheet control (pull in/let out sail)",
+      "Tab": "Toggle to Beginner mode"
+    }
+  }
+}
