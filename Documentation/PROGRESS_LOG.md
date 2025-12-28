@@ -6,31 +6,42 @@ This document tracks our development progress, decisions made, and lessons learn
 
 ## 📌 Quick Status Summary
 
-**Last Session**: December 27, 2025 - Session 18 (Physics Validation & Documentation)  
-**Current Phase**: Core Physics Complete ✅
+**Last Session**: December 28, 2025 - Session 22 (Buoyancy & Physics Complete + Documentation)  
+**Current Phase**: Core Physics Complete ✅ | Ready for GitHub Handoff
 
 ### Physics Status: VALIDATED ✅
 
 The core physics are working correctly:
 - ✅ Upwind sailing on both tacks
-- ✅ Planing at high speeds
+- ✅ Planing at high speeds (~17+ km/h onset)
 - ✅ Rake steering works correctly
 - ✅ High-speed stability (20+ knots)
 - ✅ Tacking/side switching
+- ✅ Realistic buoyancy (Archimedes' principle)
+- ✅ Displacement lift (pre-planing support)
+- ✅ Sailor COM shifts AFT when planing
+
+### ⚠️ Known Issues (See [KNOWN_ISSUES.md](KNOWN_ISSUES.md))
+
+| Issue | Severity | Workaround |
+|-------|----------|------------|
+| Camera only works after changing FOV | 🔴 Critical | Change FOV in Inspector during play |
+| Board oscillates 0-100% submersion when planing | 🔴 Critical | None - needs stability fix |
+| Steering is inverted | 🔴 Critical | None - needs sign fix |
 
 **Critical formulas documented in:** [PHYSICS_VALIDATION.md](PHYSICS_VALIDATION.md)
 
-### Scripts Completed (32+ total)
+### Scripts Completed (34+ total)
 
 | Category | Scripts |
 |----------|---------|
 | Physics Core | `PhysicsConstants`, `Aerodynamics`, `Hydrodynamics`, `SailingState` |
 | Water | `IWaterSurface`, `WaterSurface` |
 | Wind | `IWindProvider`, `WindManager`, `WindSystem` |
-| Buoyancy | `BuoyancyBody`, `AdvancedBuoyancy` |
+| Buoyancy | `BuoyancyBody`, `AdvancedBuoyancy`, `BoardMassConfiguration` |
 | Board | `Sail`, `ApparentWindCalculator`, `WaterDrag`, `FinPhysics`, `AdvancedSail`, `AdvancedFin`, `AdvancedHullDrag` |
 | Player | `WindsurferController`, `WindsurferControllerV2`, `AdvancedWindsurferController` |
-| Camera | `ThirdPersonCamera` |
+| Camera | `ThirdPersonCamera`, `SimpleFollowCamera` |
 | UI | `TelemetryHUD`, `SailPositionIndicator`, `WindIndicator3D`, `AdvancedTelemetryHUD` |
 | Visual | `SailVisualizer`, `EquipmentVisualizer`, `ForceVectorVisualizer`, `WindDirectionIndicator` |
 | Utilities | `PhysicsHelpers`, `WaterGridMarkers` |
@@ -46,6 +57,8 @@ The core physics are working correctly:
 - ✅ Physics based on yacht design literature (Marchaj, Larsson & Eliasson)
 - ✅ Low center of effort for gameplay stability
 - ✅ Fallback wind support (WindSystem → WindManager)
+- ✅ Speed-based planing (not Froude number)
+- ✅ Sailor moves AFT (backward) when planing
 
 ### ⚠️ Critical Physics Formulas (DO NOT CHANGE)
 
@@ -55,16 +68,21 @@ The core physics are working correctly:
 | Sail Side | `AdvancedSail.cs` | `sailSide = -Sign(AWA)` |
 | Lift Direction | `Aerodynamics.cs` | `project(-sailNormal)` onto wind-perp |
 | Rake Tack | `AdvancedSail.cs` | `tack = sailSide` |
+| Buoyancy | `AdvancedBuoyancy.cs` | `F = ρ × g × V_submerged` |
+| Planing Onset | `AdvancedHullDrag.cs` | `4.0 m/s (~14 km/h)` |
+| Full Planing | `AdvancedHullDrag.cs` | `6.0 m/s (~22 km/h)` |
 
-### Ready for Next Session
+### Priority Fixes for Next Session
+- [ ] 🔴 Fix camera initialization (FOV workaround)
+- [ ] 🔴 Stabilize planing submersion oscillation
+- [ ] 🔴 Fix inverted steering
 - [ ] Improve sail visual representation
-- [ ] Fix boom/mast rotation visuals
 - [ ] Add sound effects (wind, water, sail)
-- [ ] Create basic environment (skybox, islands, buoys)
-- [ ] Add spray/splash particle effects
 
 ### For New Team Members
-See [CONTRIBUTING.md](../CONTRIBUTING.md) and [ARCHITECTURE.md](ARCHITECTURE.md)
+1. Read [KNOWN_ISSUES.md](KNOWN_ISSUES.md) first!
+2. See [CONTRIBUTING.md](../CONTRIBUTING.md) for setup
+3. See [ARCHITECTURE.md](ARCHITECTURE.md) for code overview
 
 ---
 
@@ -102,9 +120,11 @@ sailSide = -Sign(AWA)
 liftDir = project(-sailNormal) onto wind-perpendicular plane
   → Force from high pressure (windward) to low pressure (leeward)
 
-rakeSteeringTack = sailSide
-  → Rake back with sailSide=-1 → turn left (bear away)
-  → Rake back with sailSide=+1 → turn right (bear away)
+rakeSteeringTack = -sailSide  (NEGATED for correct behavior)
+  → Rake BACK (+) always heads UP (into wind)
+  → Rake FORWARD (-) always bears AWAY (downwind)
+  → Rake back with sailSide=-1 → tack=+1 → turn right (head up into port wind)
+  → Rake back with sailSide=+1 → tack=-1 → turn left (head up into starboard wind)
 ```
 
 **Key Lessons Learned:**
@@ -126,7 +146,272 @@ rakeSteeringTack = sailSide
 
 ---
 
-## December 27, 2025 - Session 17 (Earlier)
+## December 28, 2025 - Session 22
+
+### Session: Buoyancy & Physics Complete + Documentation for Handoff
+
+**Major Physics Improvements:**
+
+This session completed the realistic physics system with proper buoyancy and hydrodynamic lift.
+
+#### 1. Buoyancy System Rewrite (`AdvancedBuoyancy.cs`)
+
+Complete rewrite using proper Archimedes' principle:
+
+```csharp
+// Proper buoyancy formula
+F_buoyancy = ρ × g × V_submerged
+
+Where:
+  ρ = 1025 kg/m³ (seawater density)
+  g = 9.81 m/s² (gravity)
+  V = submerged volume in m³
+```
+
+**New Features:**
+- 7×3 sample point grid for accurate pitch/roll moments
+- Hull shape modeling with rocker (nose/tail curvature)
+- Taper factor (less volume at ends)
+- Separate damping for roll/pitch/yaw
+- Volume-based calculation (liters → displaced volume)
+
+#### 2. Displacement Lift System (`AdvancedHullDrag.cs`)
+
+New hydrodynamic lift for pre-planing speeds:
+
+```csharp
+// Displacement lift (only when submerged)
+_displacementLift = liftCoeff * dynamicPressure * wettedArea * submersionRatio;
+_displacementLift *= (1f - _planingRatio);  // Fades as planing takes over
+```
+
+**Key Physics:**
+- Lift only applies to SUBMERGED portions
+- Creates self-regulating feedback (more submerged = more lift)
+- Fades out as planing lift takes over
+- Minimum speed threshold (0.5 m/s)
+
+#### 3. Speed-Based Planing Thresholds
+
+Changed from Froude number to direct speed thresholds:
+
+| Parameter | Value | Real-World |
+|-----------|-------|------------|
+| Planing Onset | 4.0 m/s | ~14 km/h |
+| Full Planing | 6.0 m/s | ~22 km/h |
+
+This matches real-world windsurfing where planing starts around 17 km/h.
+
+#### 4. Sailor Center of Mass Shift (`BoardMassConfiguration.cs`)
+
+Fixed sailor COM movement - now moves AFT (backward) when planing:
+
+```csharp
+// Sailor moves BACK when planing (foot pressure on tail)
+Vector3 planingShift = new Vector3(0f, -0.1f, -_planingCOMShift * planingRatio);
+```
+
+#### 5. Other Fixes
+
+- Reverted to simple board-relative sheeting (12°-85° boom angle)
+- Added base steering torque (80 N·m) for control at zero speed
+- Reduced upwind dead zone from 25° to 10°
+- Added progressive force penalty instead of zero at extreme angles
+
+**Known Issues Documented:**
+
+Three critical issues remain for next contributor:
+1. 🔴 Camera only works after changing FOV in Inspector
+2. 🔴 Board oscillates 0-100% submersion when planing (needs stability fix)
+3. 🔴 Steering is inverted
+
+**Documentation Updated:**
+
+| File | Changes |
+|------|---------|
+| `KNOWN_ISSUES.md` | **NEW** - Complete known issues with workarounds |
+| `PROGRESS_LOG.md` | Added Session 22, updated status summary |
+| `README.md` | Updated status, added known issues section |
+| `CONTRIBUTING.md` | Added handoff info, known issues, priority fixes |
+| `PHYSICS_DESIGN.md` | Added displacement lift, planing physics |
+| `QUICK_SETUP_CHECKLIST.md` | Added camera workaround, new components |
+| `WindsurferSetup.cs` | Added known issues help text |
+
+**Files Modified (Code):**
+
+| File | Changes |
+|------|---------|
+| `AdvancedBuoyancy.cs` | Complete rewrite with Archimedes' principle |
+| `AdvancedHullDrag.cs` | Displacement lift, speed thresholds, submersion resistance |
+| `BoardMassConfiguration.cs` | **NEW** - Mass/inertia config, COM shifts AFT |
+| `AdvancedSail.cs` | Simple sheeting, extreme angle handling |
+| `AdvancedWindsurferController.cs` | Base steering torque |
+| `AdvancedTelemetryHUD.cs` | Speed in km/h, submersion % |
+
+**Physics Parameters Reference:**
+
+| Component | Parameter | Default | Description |
+|-----------|-----------|---------|-------------|
+| AdvancedBuoyancy | Board Volume | 120 L | Determines max buoyancy |
+| AdvancedBuoyancy | Board Length | 2.5 m | For sample point placement |
+| AdvancedBuoyancy | Nose Rocker | 0.08 m | Bottom curve at nose |
+| AdvancedHullDrag | Planing Onset Speed | 4.0 m/s | ~14 km/h |
+| AdvancedHullDrag | Full Planing Speed | 6.0 m/s | ~22 km/h |
+| AdvancedHullDrag | Displacement Lift Coeff | 0.12 | Pre-planing lift |
+| AdvancedHullDrag | Planing Lift Coeff | 0.15 | At planing speeds |
+| BoardMassConfiguration | Total Mass | 90 kg | Board + sailor |
+| BoardMassConfiguration | Planing COM Shift | 0.3 m | AFT shift when planing |
+
+---
+
+## December 28, 2025 - Session 21
+
+### Session: Camera/Water/Telemetry Fix
+
+**Issues Reported:**
+1. Camera doesn't work (tried 4 times without success)
+2. Water has no texture
+3. Telemetry HUD not created by wizard
+
+**Root Cause Analysis:**
+
+1. **Camera Issue**: The existing MainScene.unity had a broken component reference. The scene was looking for `WindsurfingGame.Camera.ThirdPersonCamera` but the actual namespace is `WindsurfingGame.CameraSystem.ThirdPersonCamera`. The old camera component in the scene was invalid/missing script.
+
+2. **Water Issue**: Material not being properly assigned when water plane created.
+
+3. **Telemetry Issue**: Wizard didn't include telemetry creation.
+
+**Solution: Complete Overhaul of Scene Setup**
+
+1. **Camera Fix - SetupCamera() Method:**
+   - Now **removes** any existing ThirdPersonCamera component first (to clear broken references)
+   - Creates a **fresh** ThirdPersonCamera with all properties set
+   - Uses direct property assignment via SerializedObject for reliability
+
+2. **Water Fix - EnsureWaterMaterial() Method:**
+   - Searches multiple material paths (`WaterMaterial.mat`, `Water.mat`, etc.)
+   - Falls back to asset database search by GUID pattern
+   - Creates new material with proper shader if not found
+   - Forces material assignment on existing water surfaces
+
+3. **Telemetry Added - EnsureTelemetryHUD() Method:**
+   - Creates AdvancedTelemetryHUD component
+   - Auto-wires all references (controller, sail, fin, hull, buoyancy, rigidbody)
+   - Press F1 to toggle in-game
+
+**Files Modified:**
+
+| File | Changes |
+|------|---------|
+| `WindsurferSetup.cs` | Added `SetupCamera()`, `EnsureWaterMaterial()`, `EnsureTelemetryHUD()` |
+| `PROGRESS_LOG.md` | Added Session 21 |
+
+**Key Learning:**
+Unity scene files store component references by namespace. If a namespace changes (e.g., from `Camera` to `CameraSystem`), existing scenes will have broken "Missing Script" components. The fix is to:
+1. Delete the old component
+2. Add a fresh component with correct type
+3. Re-configure all properties
+
+---
+
+## December 28, 2025 - Session 20
+
+### Session: Complete Scene Setup Wizard
+
+**Issue Fixed:**
+- The wizard's "Configure Camera for Selected Windsurfer" button would fail if no windsurfer existed yet
+- Users couldn't start from an empty scene - the wizard required WaterSurface and WindSystem to exist first
+
+**Solution: Complete Scene Creation from Scratch**
+
+The setup wizard now has a **"🌟 Create Complete Scene"** button that creates EVERYTHING:
+- WaterSurface (100m x 100m water plane with physics)
+- WindSystem (configurable speed and direction)
+- ThirdPersonCamera (with all settings properly configured)
+- Directional Light (sunlight)
+- Windsurfer (with all physics components)
+- WindDirectionIndicator
+
+**New Methods Added:**
+- `EnsureWaterSurface()` - Creates water plane if not exists
+- `EnsureWindSystem()` - Creates wind system if not exists
+- `EnsureCamera()` - Creates camera with ThirdPersonCamera if not exists
+- `EnsureLighting()` - Creates directional light if not exists
+- `CreateCompleteScene()` - Orchestrates full scene creation
+- `CreateWindsurferObject()` - Refactored windsurfer creation into reusable method
+
+**Improved UX:**
+- "Configure Camera" now auto-finds existing windsurfer if nothing selected
+- If no windsurfer exists, offers to create complete scene
+- Scene settings foldout for configuring wind speed/direction before creation
+- Both buttons now offer to create complete scene if missing dependencies
+
+**How to use (from empty scene):**
+1. Menu: `Windsurfing → Complete Windsurfer Setup Wizard`
+2. Assign Board and Sail FBX models
+3. (Optional) Expand Scene Settings to configure wind
+4. (Optional) Expand Camera Settings to configure camera
+5. Click **"🌟 Create Complete Scene"**
+6. Press Play!
+
+**Files Modified:**
+
+| File | Changes |
+|------|---------|
+| `WindsurferSetup.cs` | Major refactor - complete scene creation from scratch |
+| `PROGRESS_LOG.md` | Added this session |
+
+---
+
+## December 28, 2025 - Session 19
+
+### Session: Mast Rake Fix & Setup Wizard Enhancement
+
+**Issues Fixed:**
+1. **Mast rake direction was inverted** - The AdvancedSail had rake steering backwards:
+   - OLD (wrong): Rake back → bear away (downwind)
+   - NEW (correct): Rake back → head up (upwind)
+   
+2. **Camera settings not applying** - The setup wizard only set the camera target, not all the other settings
+
+**Changes Made:**
+
+**AdvancedSail.cs - ApplyRakeSteering():**
+```csharp
+// OLD: float tack = _state.SailSide;
+// NEW: Negate sailSide so rake back = head up (into wind)
+float tack = _state.SailSide != 0 ? -_state.SailSide : 1f;
+```
+
+**WindsurferSetup.cs - Complete Enhancement:**
+- Added camera settings panel with adjustable:
+  - Distance, Pitch, Position/Rotation smoothing
+  - Look offset (where camera looks relative to board)
+- New `ConfigureCameraForSelected()` method that sets ALL camera properties
+- New `ValidateAllComponents()` method that:
+  - Checks for WindSystem, WaterSurface, ThirdPersonCamera
+  - Validates AdvancedSail, AdvancedBuoyancy, EquipmentVisualizer references
+  - Auto-fixes missing references when possible
+- Added scrollable UI for the expanded wizard
+
+**Files Modified:**
+
+| File | Changes |
+|------|---------|
+| `AdvancedSail.cs` | Fixed rake steering direction (negated tack) |
+| `WindsurferSetup.cs` | Enhanced wizard with camera config & validation |
+| `PHYSICS_VALIDATION.md` | Updated rake steering documentation |
+| `PROGRESS_LOG.md` | Added this session |
+
+**How to use the enhanced wizard:**
+1. Menu: `Windsurfing → Complete Windsurfer Setup Wizard`
+2. Configure camera settings in the foldout panel
+3. Create windsurfer or use "Configure Camera for Selected Windsurfer"
+4. Use "Validate All Components" to check & auto-fix references
+
+---
+
+## December 27, 2025 - Session 18
 
 ### Session: Advanced Physics System Overhaul
 

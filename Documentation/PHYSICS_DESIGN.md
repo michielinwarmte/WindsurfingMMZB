@@ -2,6 +2,8 @@
 
 This document explains the physics systems in our windsurfing simulator.
 
+**Last Updated:** December 28, 2025
+
 ## Overview
 
 Our simulation combines several physics systems:
@@ -16,10 +18,10 @@ Our simulation combines several physics systems:
 │   │ SYSTEM  │     │ FORCES  │     │   PHYSICS    │         │
 │   └─────────┘     └─────────┘     └──────┬───────┘         │
 │                                          │                  │
-│   ┌─────────┐     ┌─────────┐            ▼                  │
-│   │  WAVE   │────▶│BUOYANCY │◀───────────┘                  │
-│   │ SYSTEM  │     │ FORCES  │                               │
-│   └─────────┘     └─────────┘                               │
+│   ┌─────────┐     ┌─────────┐     ┌──────┴───────┐         │
+│   │  WAVE   │────▶│BUOYANCY │◀───▶│ HYDRODYNAMIC │         │
+│   │ SYSTEM  │     │ FORCES  │     │    LIFT      │         │
+│   └─────────┘     └─────────┘     └──────────────┘         │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -84,20 +86,52 @@ Where:
 For realistic behavior, we sample buoyancy at multiple points:
 
 ```
-Board Top View:
+Board Top View (7x3 = 21 sample points):
     ┌───────────────────┐
-    │ ●               ● │  ← Front buoyancy points
+    │ ●       ●       ● │  ← Front points (less volume due to taper)
     │                   │
-    │ ●       ●       ● │  ← Middle points
+    │ ●       ●       ● │  ← Front-mid points
     │                   │
-    │ ●               ● │  ← Rear points
+    │ ●       ●       ● │  ← Center points (most volume)
+    │                   │
+    │ ●       ●       ● │  ← Rear-mid points
+    │                   │
+    │ ●       ●       ● │  ← Rear points
+    │                   │
+    │ ●       ●       ● │  ← Tail points (less volume, tail rocker)
+    │                   │
+    │ ●               ● │  ← Tail tip
     └───────────────────┘
 ```
 
 Each point:
 1. Samples water height at its position
 2. Calculates depth below/above water
-3. Applies proportional force
+3. Applies proportional force based on local volume
+
+### Hull Shape Modeling
+
+The buoyancy system accounts for realistic hull geometry:
+
+```csharp
+// Rocker (bottom curvature)
+noseRocker = 0.08m;   // 8cm rise at nose
+tailRocker = 0.02m;   // 2cm rise at tail
+
+// Taper (width reduction at ends)
+taperFactor = 0.5;    // Ends are 50% as wide as center
+
+// Volume distribution
+volumeWeights = {0.6, 0.8, 1.0, 1.0, 0.9, 0.7, 0.5}  // Nose to tail
+```
+
+### Damping
+
+Separate damping coefficients for stable behavior:
+- **Vertical damping**: 800 N·s/m (prevents vertical oscillation)
+- **Roll damping**: 150 N·m·s/rad (prevents tipping)
+- **Pitch damping**: 150 N·m·s/rad (prevents porpoising)
+- **Yaw damping**: Lower (allows turning)
 
 ### Water Resistance
 
@@ -111,6 +145,94 @@ Where:
   v = velocity through water
   Cd = drag coefficient
   A = cross-sectional area
+```
+
+---
+
+## 3. Hydrodynamic Lift System
+
+⚠️ **NEW in Session 22** - Two-stage lift system for realistic behavior.
+
+### The Problem
+
+Without hydrodynamic lift:
+- Board sinks 75%+ even when moving
+- No transition to planing mode
+- Unrealistic heavy feel
+
+### Two-Stage Solution
+
+#### Stage 1: Displacement Lift (Pre-Planing)
+
+At low speeds, forward motion creates dynamic pressure that provides lift:
+
+```csharp
+// Displacement lift formula
+q = 0.5 × ρ_water × v²;           // Dynamic pressure
+wettedArea = boardLength × boardWidth × 0.7;
+submersionRatio = submergedVolume / totalVolume;  // 0-1
+
+// KEY: Lift only on submerged portions
+liftCoeff = _displacementLiftCoefficient × submersionRatio;
+displacementLift = liftCoeff × q × wettedArea;
+
+// Fades out as planing takes over
+displacementLift *= (1 - planingRatio);
+```
+
+**Self-Regulating Behavior:**
+- More submerged → more lift → board rises
+- Less submerged → less lift → board sinks
+- System naturally finds equilibrium
+
+**Parameters:**
+- `displacementLiftCoefficient`: 0.12
+- `displacementLiftMinSpeed`: 0.5 m/s (~2 km/h)
+
+#### Stage 2: Planing Lift (High Speed)
+
+At planing speeds, the board rises onto the surface:
+
+```csharp
+// Speed-based planing detection
+planingOnsetSpeed = 4.0 m/s;   // ~14 km/h
+fullPlaningSpeed = 6.0 m/s;    // ~22 km/h
+
+planingRatio = Mathf.Clamp01((speed - onset) / (full - onset));
+
+// Trim-dependent lift
+trimFactor = 1 - Mathf.Abs(pitch - optimalTrim) / 20f;
+planingLift = planingLiftCoefficient × q × wettedArea × planingRatio × trimFactor;
+```
+
+**Parameters:**
+- `planingLiftCoefficient`: 0.15
+- `optimalTrimAngle`: 2° (slight bow-up)
+- `maxLiftFraction`: 0.4 (prevents flying)
+
+### Combined Lift Application
+
+```csharp
+void ApplyHydrodynamicLift()
+{
+    float totalLift = _displacementLift + _planingLift;
+    
+    if (submersionRatio < 0.05f)
+        return;  // Don't apply when above water
+    
+    // Different application points
+    if (_planingRatio > 0.5f)
+    {
+        // Planing: apply at center + rear (trim control)
+        Vector3 liftPoint = transform.position - transform.forward * 0.3f;
+        _rigidbody.AddForceAtPosition(Vector3.up * totalLift, liftPoint);
+    }
+    else
+    {
+        // Displacement: apply at center
+        _rigidbody.AddForce(Vector3.up * totalLift);
+    }
+}
 ```
 
 ---
@@ -232,15 +354,61 @@ Side View:
 ### States of Sailing
 
 #### Displacement Mode (Low Speed)
-- Board sits in water
-- High drag from hull
-- Limited speed potential
+- Board sits in water (30-50% submerged)
+- Buoyancy dominates
+- Displacement lift helps support weight
+- High drag from hull wetted area
+- Limited speed potential (~5-15 km/h)
 
 #### Planing Mode (High Speed)
-- Board rises onto surface
-- Much lower drag
-- Higher speed potential
-- Occurs above ~10-15 km/h
+- Board rises onto surface (~5% submerged)
+- Hydrodynamic lift dominates
+- Much lower drag (reduced wetted area)
+- Higher speed potential (20+ km/h)
+- **Onset speed**: ~14 km/h (4 m/s)
+- **Full planing**: ~22 km/h (6 m/s)
+
+### Planing Transition
+
+```
+Submersion vs Speed:
+
+100% ──┬────────╮
+       │        │╲
+ 75% ──┼────────┼─╲───────────────
+       │        │  ╲
+ 50% ──┼────────┼───╲─────────────
+       │        │    ╲
+ 25% ──┼────────┼─────╲───────────
+       │        │      ╲
+  5% ──┼────────┼───────╲─────────  ← Target when planing
+       │        │        ╲________
+  0% ──┴────────┴─────────────────
+       0   5   10   15   20   25 km/h
+              ↑         ↑
+          Onset     Full Planing
+```
+
+### Sailor Center of Mass
+
+The sailor's position affects trim and balance:
+
+```csharp
+// At rest: sailor centered
+baseCOM = (0, 0.4, 0);  // Above center of board
+
+// When planing: sailor moves AFT (backward)
+planingCOMShift = 0.3m;  // Shifts toward tail
+planingShift = new Vector3(0, -0.1, -0.3 * planingRatio);
+
+// Total effect: Lower and further back when planing
+// This matches real windsurfing technique
+```
+
+**Why AFT?** Real windsurfers move their feet back onto the tail when planing. This:
+- Lifts the nose for better trim
+- Reduces wetted area (less drag)
+- Provides control at high speed
 
 ### Board Forces
 
@@ -345,23 +513,61 @@ These values will need adjustment through playtesting:
 
 ```csharp
 // Water
-float waterDensity = 1025f;      // kg/m³
+float waterDensity = 1025f;      // kg/m³ (seawater)
 float waterDrag = 0.5f;          // coefficient
 
 // Air
 float airDensity = 1.225f;       // kg/m³
 float sailArea = 6.0f;           // m²
 
-// Board
+// Board (AdvancedBuoyancy)
+float boardVolume = 120f;        // liters
+float boardLength = 2.5f;        // m
+float boardWidth = 0.6f;         // m
+float noseRocker = 0.08f;        // m
+float tailRocker = 0.02f;        // m
+
+// Mass (BoardMassConfiguration)
+float totalMass = 90f;           // kg (board + sailor)
 float boardMass = 15f;           // kg
-float riderMass = 75f;           // kg
+float sailorMass = 75f;          // kg
+float planingCOMShift = 0.3f;    // m (AFT when planing)
+
+// Fin
 float finArea = 0.04f;           // m²
 
-// Buoyancy
-float buoyancyMultiplier = 1.0f; // tweak for feel
-int buoyancyPoints = 8;          // sample count
+// Planing (AdvancedHullDrag)
+float planingOnsetSpeed = 4.0f;  // m/s (~14 km/h)
+float fullPlaningSpeed = 6.0f;   // m/s (~22 km/h)
+float displacementLiftCoeff = 0.12f;
+float planingLiftCoeff = 0.15f;
+
+// Damping (AdvancedBuoyancy)
+float verticalDamping = 800f;    // N·s/m
+float rotationalDamping = 150f;  // N·m·s/rad
+float horizontalDamping = 20f;   // N·s/m
 ```
 
 ---
 
-*Last Updated: December 19, 2025*
+## 9. Known Physics Issues
+
+⚠️ See [KNOWN_ISSUES.md](KNOWN_ISSUES.md) for current bugs.
+
+### Planing Oscillation Problem
+
+**Symptom:** Board oscillates between 0% and 100% submersion at planing speeds.
+
+**Cause:** Feedback loop between lift and submersion:
+1. Board sinks → more submersion → more lift
+2. Board rises → less submersion → less lift
+3. Board falls → repeat
+
+**Potential Fix:**
+- Add smoothing/hysteresis to lift calculations
+- Use PID controller for height stabilization
+- Add deadband around target submersion
+
+---
+
+*Last Updated: December 28, 2025*

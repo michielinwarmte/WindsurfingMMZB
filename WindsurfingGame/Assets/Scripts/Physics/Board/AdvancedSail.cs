@@ -63,6 +63,7 @@ namespace WindsurfingGame.Physics.Board
         private Vector3 _sailNormal;
         private Vector3 _centerOfEffort;
         private float _lastSailSide = 1f; // For hysteresis during tacks
+        private int _manualTack = 1; // +1 = starboard tack (sail on port), -1 = port tack (sail on starboard)
         
         // Cached values
         private float _targetSheetPosition;
@@ -76,6 +77,8 @@ namespace WindsurfingGame.Physics.Board
         public float CurrentSailAngle => _currentSailAngle;
         public Vector3 CenterOfEffort => _centerOfEffort;
         public Vector3 SailNormal => _sailNormal;
+        public int CurrentTack => _manualTack; // +1 = starboard, -1 = port
+        public bool IsStarboardTack => _manualTack > 0;
         
         private void Awake()
         {
@@ -194,51 +197,35 @@ namespace WindsurfingGame.Physics.Board
         private void CalculateSailGeometry()
         {
             // ============================================
-            // SAIL SIDE DETERMINATION
+            // MANUAL TACK CONTROL
             // ============================================
-            // The sail always goes to the LEEWARD side (away from wind)
-            // 
-            // Unity SignedAngle convention:
-            // - Wind from port (left) → AWA is POSITIVE
-            // - Wind from starboard (right) → AWA is NEGATIVE
+            // The player controls which tack they're on with Space key
+            // _manualTack: +1 = starboard tack (sail on port/left side)
+            //              -1 = port tack (sail on starboard/right side)
+            
+            float sailSide = -_manualTack; // Sail goes opposite side of tack
+            _lastSailSide = sailSide;
+            _state.SailSide = (int)sailSide;
+            
+            // ============================================
+            // SIMPLE SHEET CONTROL
+            // ============================================
+            // Sheet position directly controls the boom angle from centerline:
+            // - Sheet IN (0) = boom close to centerline (12° from center)
+            // - Sheet OUT (1) = boom far from centerline (85° from center)
             //
-            // Sail should go to OPPOSITE side of wind:
-            // - Wind from port (AWA > 0) → sail on starboard → sailSide = -1
-            // - Wind from starboard (AWA < 0) → sail on port → sailSide = +1
+            // This is simple and intuitive:
+            // - Press W to sheet in (pull boom towards center)
+            // - Press S to sheet out (let boom go out)
             //
-            // Therefore: sailSide = -Sign(AWA) gives the correct side
+            // The physics system then calculates actual angle of attack
+            // based on where the wind is coming from.
             
-            float absAWA = Mathf.Abs(_state.ApparentWindAngle);
+            float minSheetAngle = 12f;  // Sheeted in tight
+            float maxSheetAngle = 85f;  // Fully eased
+            float angleFromCenterline = Mathf.Lerp(minSheetAngle, maxSheetAngle, _sheetPosition);
             
-            // Determine which side the sail is on
-            // sailSide: +1 = sail on starboard (right), -1 = sail on port (left)
-            float sailSide;
-            
-            if (absAWA < 5f)
-            {
-                // In irons or running dead downwind - maintain current side
-                sailSide = _lastSailSide;
-            }
-            else
-            {
-                // Sail goes to leeward (opposite of wind direction)
-                // -Sign(AWA) because Unity's SignedAngle gives negative for starboard wind
-                // so we negate to get sail on opposite side from wind
-                sailSide = -Mathf.Sign(_state.ApparentWindAngle);
-                _lastSailSide = sailSide;
-            }
-            
-            // ============================================
-            // SAIL ANGLE FROM CENTERLINE
-            // ============================================
-            // Sheet position: 0 = sheeted in (close to centerline), 1 = eased out (far from centerline)
-            // Upwind sailing: sheet in tight (~12° from centerline)
-            // Downwind sailing: ease out (~85° from centerline)
-            float minAngle = 12f;
-            float maxAngle = 85f;
-            float angleFromCenterline = Mathf.Lerp(minAngle, maxAngle, _sheetPosition);
-            
-            // Full sail angle (signed)
+            // Full sail angle (signed based on which side sail is on)
             _currentSailAngle = angleFromCenterline * sailSide;
             _state.SailAngle = _currentSailAngle;
             _state.SailCamber = _sailConfig.Camber;
@@ -329,18 +316,32 @@ namespace WindsurfingGame.Physics.Board
         /// </summary>
         private void CalculateSailForces()
         {
-            // Check for no-sail zone (in irons)
+            // Check for no-sail zone (in irons) - but use a smaller dead zone
             float absAWA = Mathf.Abs(_state.ApparentWindAngle);
             
-            if (_state.ApparentWindSpeed < 0.5f || absAWA < 25f)
+            // Very small dead zone - only truly dead upwind (within 15°)
+            // Even close-hauled sailing works at 30-45°
+            if (_state.ApparentWindSpeed < 0.5f)
             {
-                // No effective sail force - in irons or no wind
+                // No wind at all
                 _state.SailLift = Vector3.zero;
                 _state.SailDrag = Vector3.zero;
                 _state.SailForce = Vector3.zero;
                 _state.AngleOfAttack = 0f;
-                _state.IsInIrons = absAWA < 25f && _state.BoatSpeed < 1f;
+                _state.IsInIrons = false;
                 return;
+            }
+            
+            // In irons: pointing too close to wind, but still allow SOME force
+            // Real windsurfers can make some progress at 30° to wind
+            _state.IsInIrons = absAWA < 20f && _state.BoatSpeed < 1f;
+            
+            // Scale force down when very close to wind, but don't zero it
+            float upwindPenalty = 1f;
+            if (absAWA < 30f)
+            {
+                // Progressive reduction from 30° down to 0°
+                upwindPenalty = Mathf.Clamp01((absAWA - 10f) / 20f);
             }
             
             // Calculate angle of attack
@@ -363,7 +364,9 @@ namespace WindsurfingGame.Physics.Board
             
             _state.SailLift = liftForce;
             _state.SailDrag = dragForce;
-            _state.SailForce = liftForce + dragForce;
+            
+            // Apply the upwind penalty calculated earlier
+            _state.SailForce = (liftForce + dragForce) * upwindPenalty;
             
             // Update derived state values
             _state.UpdateDerivedValues(transform.forward, transform.right);
@@ -376,12 +379,65 @@ namespace WindsurfingGame.Physics.Board
         {
             if (_state.SailForce.sqrMagnitude < 0.01f) return;
             
+            // Get sail force and remove any vertical component
+            // Real sails generate mostly horizontal forces - vertical component causes instability
+            Vector3 horizontalForce = _state.SailForce;
+            horizontalForce.y = 0f;
+            
+            // HIGH SPEED STABILITY: Reduce force magnitude at very high speeds
+            // to prevent nose-diving and flipping
+            float speedKnots = _state.BoatSpeed * PhysicsConstants.MS_TO_KNOTS;
+            if (speedKnots > 20f)
+            {
+                // Reduce force progressively above 20 knots
+                float reduction = Mathf.Lerp(1f, 0.6f, (speedKnots - 20f) / 15f);
+                horizontalForce *= reduction;
+            }
+            
             // Apply force at center of effort
-            _rigidbody.AddForceAtPosition(_state.SailForce, _centerOfEffort, ForceMode.Force);
+            _rigidbody.AddForceAtPosition(horizontalForce, _centerOfEffort, ForceMode.Force);
+            
+            // HIGH SPEED PITCH STABILIZATION
+            // At high speeds, counteract any nose-down pitching moment
+            if (speedKnots > 12f)
+            {
+                ApplyPitchStabilization(speedKnots);
+            }
             
             // Apply additional steering torque from mast rake
             // Raking the mast moves the CE fore/aft, creating turning moment
             ApplyRakeSteering();
+        }
+        
+        /// <summary>
+        /// Apply pitch stabilization at high speeds to prevent nose-diving.
+        /// </summary>
+        private void ApplyPitchStabilization(float speedKnots)
+        {
+            // Get current pitch angle (rotation around X axis)
+            float pitchAngle = transform.eulerAngles.x;
+            if (pitchAngle > 180f) pitchAngle -= 360f; // Convert to -180 to 180 range
+            
+            // Get pitch angular velocity
+            float pitchVelocity = _rigidbody.angularVelocity.x;
+            
+            // Apply counter-torque if pitching nose-down (positive pitch in Unity)
+            if (pitchAngle > 5f || pitchVelocity > 0.3f)
+            {
+                // Progressive correction based on speed and pitch amount
+                float speedFactor = Mathf.Clamp01((speedKnots - 12f) / 10f);
+                float pitchCorrection = (pitchAngle * 5f + pitchVelocity * 20f) * speedFactor;
+                
+                // Apply upward pitch torque (negative X rotation)
+                _rigidbody.AddTorque(-transform.right * pitchCorrection, ForceMode.Force);
+            }
+            
+            // Also limit maximum pitch angle
+            if (Mathf.Abs(pitchAngle) > 15f)
+            {
+                float correction = pitchAngle * 30f;
+                _rigidbody.AddTorque(-transform.right * correction, ForceMode.Force);
+            }
         }
         
         /// <summary>
@@ -391,43 +447,77 @@ namespace WindsurfingGame.Physics.Board
         {
             // Mast rake creates a turning moment because it moves the CE fore/aft relative to CLR
             // In real windsurfing:
-            // - Rake BACK (positive _mastRake) = CE moves aft = bow turns DOWNWIND (bear away)
-            // - Rake FORWARD (negative _mastRake) = CE moves forward = bow turns UPWIND (head up)
+            // - Rake BACK (positive _mastRake) = CE moves aft behind CLR = bow turns UPWIND (head up)
+            // - Rake FORWARD (negative _mastRake) = CE moves forward ahead of CLR = bow turns DOWNWIND (bear away)
             //
             // The turning direction depends on which tack we're on:
-            // - Starboard tack (AWA > 0, wind from right, sail on left): bear away = turn LEFT (negative Y torque)
-            // - Port tack (AWA < 0, wind from left, sail on right): bear away = turn RIGHT (positive Y torque)
-            //
-            // So the torque sign should match the WIND side, not the sail side.
-            // Wind side = Sign(AWA): +1 if wind from starboard, -1 if wind from port
-            // Bear away = turn TOWARD the sail (away from wind) = OPPOSITE to wind side
-            // So: torque = rake * (-Sign(AWA)) = rake * sailSide
+            // - Starboard tack (AWA > 0, wind from right, sail on left): head up = turn RIGHT (positive Y torque)
+            // - Port tack (AWA < 0, wind from left, sail on right): head up = turn LEFT (negative Y torque)
             
             float forceMag = _state.SailForce.magnitude;
+            float absAWA = Mathf.Abs(_state.ApparentWindAngle);
+            float speedKnots = _state.BoatSpeed * PhysicsConstants.MS_TO_KNOTS;
             
-            // SailSide = -Sign(AWA), so sailSide gives us the correct turn direction for bear away
-            // When raking back (positive rake), multiply by sailSide to turn toward the sail
-            float tack = _state.SailSide != 0 ? _state.SailSide : 1f;
+            // Determine tack direction
+            // When going upwind/downwind (AWA near 0 or 180), use velocity direction instead
+            float tack;
+            if (absAWA < 30f || absAWA > 150f)
+            {
+                // Near dead upwind or downwind - use last known tack or boat direction
+                // This ensures steering still works at extreme angles
+                if (_state.SailSide != 0)
+                {
+                    tack = -_state.SailSide;
+                }
+                else
+                {
+                    // Fallback: base on velocity cross product with wind
+                    Vector3 vel = _rigidbody.linearVelocity;
+                    if (vel.sqrMagnitude > 0.5f)
+                    {
+                        Vector3 cross = Vector3.Cross(vel.normalized, _state.ApparentWind.normalized);
+                        tack = cross.y > 0 ? 1f : -1f;
+                    }
+                    else
+                    {
+                        tack = 1f; // Default
+                    }
+                }
+            }
+            else
+            {
+                // Normal sailing - use sail side
+                tack = _state.SailSide != 0 ? -_state.SailSide : 1f;
+            }
             
             // HIGH-SPEED STABILITY: Reduce steering sensitivity at high speeds
-            float speedKnots = _state.BoatSpeed * PhysicsConstants.MS_TO_KNOTS;
             float steeringScale = 1f;
             if (speedKnots > 15f)
             {
-                steeringScale = Mathf.Lerp(1f, 0.3f, (speedKnots - 15f) / 10f);
-                steeringScale = Mathf.Max(steeringScale, 0.3f);
+                steeringScale = Mathf.Lerp(1f, 0.5f, (speedKnots - 15f) / 15f);
+                steeringScale = Mathf.Max(steeringScale, 0.4f);
             }
             
-            // Torque proportional to force and rake amount
-            float steeringTorque = _mastRake * tack * forceMag * 0.5f * steeringScale;
+            // COMPONENT 1: Force-based steering (works when sail is powered)
+            float steeringTorque = _mastRake * tack * forceMag * 0.3f * steeringScale;
             
-            // Base steering torque that works even without sail force
-            float baseSteeringTorque = _mastRake * tack * 150f * steeringScale;
+            // COMPONENT 2: Direct steering - ALWAYS works regardless of sail force
+            // This simulates shifting weight and tilting the board to steer
+            // Stronger effect when going upwind/downwind (where sail forces are weak)
+            float directSteeringStrength = 200f;
             
-            // Additional speed-based steering (faster = more responsive, but capped at high speed)
-            float speedTorque = _mastRake * tack * Mathf.Min(_state.BoatSpeed, 10f) * 30f * steeringScale;
+            // Increase direct steering when at extreme angles (upwind/downwind)
+            if (absAWA < 40f || absAWA > 140f)
+            {
+                directSteeringStrength = 350f; // Stronger when sail force is weak
+            }
             
-            _rigidbody.AddTorque(Vector3.up * (steeringTorque + baseSteeringTorque + speedTorque), ForceMode.Force);
+            float directTorque = _mastRake * tack * directSteeringStrength * steeringScale;
+            
+            // COMPONENT 3: Speed-based steering (faster = more fin effect)
+            float speedTorque = _mastRake * tack * Mathf.Min(_state.BoatSpeed, 8f) * 25f * steeringScale;
+            
+            _rigidbody.AddTorque(Vector3.up * (steeringTorque + directTorque + speedTorque), ForceMode.Force);
         }
         
         // Public control methods
@@ -446,6 +536,27 @@ namespace WindsurfingGame.Physics.Board
         public void AdjustSheet(float delta)
         {
             _targetSheetPosition = Mathf.Clamp01(_targetSheetPosition + delta);
+        }
+        
+        /// <summary>
+        /// Switch to the opposite tack (flip the sail to the other side).
+        /// Call this when the player wants to change from port to starboard tack or vice versa.
+        /// </summary>
+        public void SwitchTack()
+        {
+            _manualTack = -_manualTack;
+            _lastSailSide = -_lastSailSide;
+            Debug.Log($"Switched to {(_manualTack > 0 ? "STARBOARD" : "PORT")} tack");
+        }
+        
+        /// <summary>
+        /// Set the tack directly.
+        /// </summary>
+        /// <param name="starboardTack">True for starboard tack, false for port tack</param>
+        public void SetTack(bool starboardTack)
+        {
+            _manualTack = starboardTack ? 1 : -1;
+            _lastSailSide = -_manualTack;
         }
         
         /// <summary>
@@ -472,21 +583,21 @@ namespace WindsurfingGame.Physics.Board
         {
             float absAWA = Mathf.Abs(_state.ApparentWindAngle);
             
-            // Optimal angle of attack is ~15-17° for upwind, increasing for downwind
-            float optimalAoA = 17f;
+            // The optimal sheet angle depends on apparent wind angle:
+            // - Close-hauled (AWA ~45°): sheet in tight, boom at ~20° from centerline
+            // - Beam reach (AWA ~90°): medium sheet, boom at ~50° from centerline
+            // - Broad reach (AWA ~135°): ease out, boom at ~70° from centerline
+            // - Run (AWA ~180°): fully eased, boom at ~85° from centerline
+            //
+            // The goal is to maintain ~15-17° angle of attack
+            // AoA = |AWA| - sailAngle, so sailAngle = |AWA| - targetAoA
             
-            // Sail angle from centerline = AWA - AoA
-            // This puts the sail at the correct angle to the wind
-            float optimalSailAngle = absAWA - optimalAoA;
-            
-            // Clamp to physical limits
+            float targetAoA = 17f;
+            float optimalSailAngle = absAWA - targetAoA;
             optimalSailAngle = Mathf.Clamp(optimalSailAngle, 12f, 85f);
             
-            // Convert sail angle to sheet position (inverse of the Lerp in CalculateSailGeometry)
-            // Sheet position = (sailAngle - minAngle) / (maxAngle - minAngle)
-            float minAngle = 12f;
-            float maxAngle = 85f;
-            float sheetPosition = (optimalSailAngle - minAngle) / (maxAngle - minAngle);
+            // Convert sail angle to sheet position (0=12°, 1=85°)
+            float sheetPosition = (optimalSailAngle - 12f) / (85f - 12f);
             
             return Mathf.Clamp01(sheetPosition);
         }

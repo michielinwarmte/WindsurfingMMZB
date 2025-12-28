@@ -5,14 +5,22 @@ using WindsurfingGame.Physics.Water;
 namespace WindsurfingGame.Physics.Buoyancy
 {
     /// <summary>
-    /// Advanced multi-point buoyancy system for realistic flotation physics.
+    /// Realistic buoyancy system for a windsurf board.
     /// 
-    /// Uses multiple sample points distributed across the hull to calculate:
-    /// - Buoyancy force at each point based on submersion depth
-    /// - Resulting pitch and roll moments from uneven submersion
-    /// - Damping forces to reduce oscillation
+    /// Implements proper Archimedes' principle:
+    /// - Buoyancy force = ρ × g × V_submerged (density × gravity × displaced volume)
+    /// - Multi-point sampling for accurate pitch/roll moments
+    /// - Accounts for hull shape and rocker
+    /// - Reduces effective buoyancy when planing (hydrodynamic lift takes over)
     /// 
-    /// This creates realistic bobbing, tilting, and response to waves.
+    /// Key physics:
+    /// - At rest: Full buoyancy supports board + sailor weight
+    /// - At speed: Board rises onto plane, less volume submerged
+    /// - Trim matters: Bow-up attitude reduces wetted area when planing
+    /// 
+    /// References:
+    /// - Principles of Naval Architecture (SNAME)
+    /// - Savitsky, D. "Hydrodynamic Design of Planing Hulls"
     /// </summary>
     [RequireComponent(typeof(Rigidbody))]
     public class AdvancedBuoyancy : MonoBehaviour
@@ -20,35 +28,41 @@ namespace WindsurfingGame.Physics.Buoyancy
         [Header("Water Reference")]
         [SerializeField] private WaterSurface _waterSurface;
         
-        [Header("Buoyancy Configuration")]
-        [Tooltip("Total displaced volume at rest (liters)")]
-        [SerializeField] private float _displacedVolume = 120f;
+        [Header("Board Properties")]
+        [Tooltip("Total board volume (liters) - determines max buoyancy")]
+        [SerializeField] private float _boardVolumeLiters = 120f;
         
-        [Tooltip("Target floating height above water (meters)")]
-        [SerializeField] private float _floatHeight = 0.05f;
+        [Tooltip("Board length (meters)")]
+        [SerializeField] private float _boardLength = 2.5f;
+        
+        [Tooltip("Board width at widest point (meters)")]
+        [SerializeField] private float _boardWidth = 0.6f;
+        
+        [Tooltip("Board thickness at thickest point (meters)")]
+        [SerializeField] private float _boardThickness = 0.12f;
+        
+        [Tooltip("Rocker (bottom curve) at nose (meters)")]
+        [SerializeField] private float _noseRocker = 0.08f;
+        
+        [Tooltip("Rocker at tail (meters)")]
+        [SerializeField] private float _tailRocker = 0.02f;
         
         [Header("Buoyancy Points")]
-        [Tooltip("Use automatically generated points based on collider bounds")]
-        [SerializeField] private bool _autoGeneratePoints = true;
+        [Tooltip("Number of sample points along length")]
+        [SerializeField] private int _lengthSamples = 7;
         
-        [Tooltip("Number of points along length (X)")]
-        [SerializeField] private int _pointsAlongLength = 5;
-        
-        [Tooltip("Number of points along width (Y)")]  
-        [SerializeField] private int _pointsAlongWidth = 3;
-        
-        [Tooltip("Custom buoyancy sample points (local space)")]
-        [SerializeField] private Vector3[] _customPoints;
+        [Tooltip("Number of sample points along width")]
+        [SerializeField] private int _widthSamples = 3;
         
         [Header("Damping")]
-        [Tooltip("Linear damping when in water")]
-        [SerializeField] private float _waterDamping = 50f;
+        [Tooltip("Vertical damping coefficient")]
+        [SerializeField] private float _verticalDamping = 800f;
         
-        [Tooltip("Angular damping when in water")]
-        [SerializeField] private float _angularDamping = 20f;
+        [Tooltip("Rotational damping coefficient")]
+        [SerializeField] private float _rotationalDamping = 150f;
         
-        [Tooltip("Velocity threshold for damping (reduces damping at low speed for stability)")]
-        [SerializeField] private float _dampingVelocityThreshold = 0.5f;
+        [Tooltip("Horizontal damping when submerged (drag)")]
+        [SerializeField] private float _horizontalDamping = 20f;
         
         [Header("Debug")]
         [SerializeField] private bool _showDebug = true;
@@ -56,28 +70,42 @@ namespace WindsurfingGame.Physics.Buoyancy
         
         // Components
         private Rigidbody _rigidbody;
+        private WindsurfingGame.Physics.Board.AdvancedHullDrag _hullDrag;
         
         // Buoyancy calculation
-        private Vector3[] _samplePoints;
-        private float[] _pointDepths;
-        private Vector3[] _pointForces;
+        private Vector3[] _samplePoints;      // Local space sample points
+        private float[] _sampleVolumes;       // Volume contribution per point
+        private float[] _pointDepths;         // Current depth at each point
+        private Vector3[] _pointForces;       // Current force at each point
         
         // State
-        private float _submergedRatio;
+        private float _submergedVolume;       // Current submerged volume (m³)
+        private float _submergedRatio;        // 0-1 how much of board is under
         private Vector3 _totalBuoyancyForce;
-        private Vector3 _averageSubmergedPoint;
+        private Vector3 _centerOfBuoyancy;    // Where buoyancy acts
         private bool _isFloating;
         private float _waterLevel;
+        
+        // Constants
+        private float _totalVolume;           // Total board volume (m³)
+        private float _volumePerPoint;        // Base volume per sample point
         
         // Public accessors
         public bool IsFloating => _isFloating;
         public float SubmergedRatio => _submergedRatio;
+        public float SubmergedVolume => _submergedVolume;
         public float WaterLevel => _waterLevel;
         public Vector3 TotalBuoyancyForce => _totalBuoyancyForce;
+        public Vector3 CenterOfBuoyancy => _centerOfBuoyancy;
         
         private void Awake()
         {
             _rigidbody = GetComponent<Rigidbody>();
+            _hullDrag = GetComponent<WindsurfingGame.Physics.Board.AdvancedHullDrag>();
+            
+            // Convert liters to cubic meters
+            _totalVolume = _boardVolumeLiters * 0.001f;
+            
             InitializeBuoyancyPoints();
         }
         
@@ -96,74 +124,80 @@ namespace WindsurfingGame.Physics.Buoyancy
         }
         
         /// <summary>
-        /// Initialize buoyancy sample points.
+        /// Initialize buoyancy sample points with volume distribution.
+        /// Creates a grid of points on the hull bottom, each representing
+        /// a portion of the total board volume.
         /// </summary>
         private void InitializeBuoyancyPoints()
         {
-            if (_autoGeneratePoints)
-            {
-                GeneratePointsFromBounds();
-            }
-            else if (_customPoints != null && _customPoints.Length > 0)
-            {
-                _samplePoints = _customPoints;
-            }
-            else
-            {
-                // Default: single point at center
-                _samplePoints = new Vector3[] { Vector3.zero };
-            }
-            
-            _pointDepths = new float[_samplePoints.Length];
-            _pointForces = new Vector3[_samplePoints.Length];
-        }
-        
-        /// <summary>
-        /// Generate sample points based on collider bounds.
-        /// </summary>
-        private void GeneratePointsFromBounds()
-        {
-            Bounds bounds;
-            
-            Collider col = GetComponent<Collider>();
-            if (col != null)
-            {
-                // Get local bounds
-                bounds = col.bounds;
-                bounds.center = transform.InverseTransformPoint(bounds.center);
-                bounds.size = new Vector3(
-                    bounds.size.x / transform.lossyScale.x,
-                    bounds.size.y / transform.lossyScale.y,
-                    bounds.size.z / transform.lossyScale.z
-                );
-            }
-            else
-            {
-                // Default bounds
-                bounds = new Bounds(Vector3.zero, new Vector3(0.6f, 0.1f, 2.5f));
-            }
-            
-            // Generate grid of points on bottom of hull
-            int totalPoints = _pointsAlongLength * _pointsAlongWidth;
+            int totalPoints = _lengthSamples * _widthSamples;
             _samplePoints = new Vector3[totalPoints];
+            _sampleVolumes = new float[totalPoints];
+            _pointDepths = new float[totalPoints];
+            _pointForces = new Vector3[totalPoints];
             
-            float halfWidth = bounds.extents.x * 0.8f;
-            float halfLength = bounds.extents.z * 0.9f;
-            float bottom = bounds.min.y;
+            float halfLength = _boardLength * 0.5f;
+            float halfWidth = _boardWidth * 0.5f;
+            
+            // Calculate volume distribution
+            // More volume in center, less at nose/tail due to tapering
+            float totalVolumeWeight = 0f;
+            float[] volumeWeights = new float[totalPoints];
             
             int index = 0;
-            for (int i = 0; i < _pointsAlongLength; i++)
+            for (int i = 0; i < _lengthSamples; i++)
             {
-                float z = Mathf.Lerp(-halfLength, halfLength, (float)i / (_pointsAlongLength - 1));
+                // Position along length (-0.5 to +0.5, where +Z is forward/bow)
+                float lengthT = (float)i / (_lengthSamples - 1);
+                float z = Mathf.Lerp(-halfLength, halfLength, lengthT);
                 
-                for (int j = 0; j < _pointsAlongWidth; j++)
+                // Calculate rocker (how much the bottom curves up)
+                // Rocker is higher at nose (front) and tail (back)
+                float distanceFromCenter = Mathf.Abs(lengthT - 0.5f) * 2f; // 0 at center, 1 at ends
+                float rocker;
+                if (lengthT > 0.5f)
                 {
-                    float x = Mathf.Lerp(-halfWidth, halfWidth, (float)j / (_pointsAlongWidth - 1));
+                    // Forward half - nose rocker
+                    rocker = _noseRocker * distanceFromCenter * distanceFromCenter;
+                }
+                else
+                {
+                    // Aft half - tail rocker
+                    rocker = _tailRocker * distanceFromCenter * distanceFromCenter;
+                }
+                
+                // Width varies along length (narrower at nose/tail)
+                float widthFactor = 1f - 0.3f * distanceFromCenter * distanceFromCenter;
+                float localHalfWidth = halfWidth * widthFactor;
+                
+                // Volume factor - boards have more volume in center
+                float volumeFactor = 1f - 0.4f * distanceFromCenter;
+                
+                for (int j = 0; j < _widthSamples; j++)
+                {
+                    float widthT = (float)j / (_widthSamples - 1);
+                    float x = Mathf.Lerp(-localHalfWidth, localHalfWidth, widthT);
                     
-                    _samplePoints[index] = new Vector3(x, bottom, z);
+                    // Bottom of hull with rocker
+                    float y = -_boardThickness * 0.5f + rocker;
+                    
+                    _samplePoints[index] = new Vector3(x, y, z);
+                    
+                    // Volume weight for this point
+                    volumeWeights[index] = volumeFactor * widthFactor;
+                    totalVolumeWeight += volumeWeights[index];
+                    
                     index++;
                 }
             }
+            
+            // Distribute total volume proportionally
+            for (int i = 0; i < totalPoints; i++)
+            {
+                _sampleVolumes[i] = _totalVolume * (volumeWeights[i] / totalVolumeWeight);
+            }
+            
+            _volumePerPoint = _totalVolume / totalPoints;
         }
         
         private void FixedUpdate()
@@ -176,17 +210,15 @@ namespace WindsurfingGame.Physics.Buoyancy
         }
         
         /// <summary>
-        /// Calculate buoyancy forces at each sample point.
+        /// Calculate buoyancy using Archimedes' principle.
+        /// Buoyancy = ρ × g × V_displaced
         /// </summary>
         private void CalculateBuoyancy()
         {
             _totalBuoyancyForce = Vector3.zero;
-            _averageSubmergedPoint = Vector3.zero;
+            _centerOfBuoyancy = Vector3.zero;
+            _submergedVolume = 0f;
             int submergedCount = 0;
-            
-            // Force per point (assuming equal distribution)
-            float displacementForce = _displacedVolume * 0.001f * PhysicsConstants.WATER_DENSITY * PhysicsConstants.GRAVITY;
-            float forcePerPoint = displacementForce / _samplePoints.Length;
             
             for (int i = 0; i < _samplePoints.Length; i++)
             {
@@ -202,26 +234,27 @@ namespace WindsurfingGame.Physics.Buoyancy
                 
                 if (depth > 0)
                 {
-                    // Point is underwater - apply buoyancy
                     submergedCount++;
                     
-                    // Force scales with depth, but caps at full submersion
-                    // Using a soft cap for smoother behavior
-                    float submersionRatio = Mathf.Clamp01(depth / 0.3f);
-                    float pointForceMagnitude = forcePerPoint * submersionRatio;
+                    // Calculate submerged fraction of this point's volume
+                    // Using board thickness as reference for full submersion
+                    float submersionFraction = Mathf.Clamp01(depth / _boardThickness);
+                    float pointSubmergedVolume = _sampleVolumes[i] * submersionFraction;
                     
-                    // Additional force to maintain float height
-                    float heightError = (waterHeight + _floatHeight) - transform.position.y;
-                    float stabilizationForce = heightError * forcePerPoint * 0.5f;
-                    pointForceMagnitude += Mathf.Max(0, stabilizationForce);
+                    _submergedVolume += pointSubmergedVolume;
                     
-                    // Buoyancy acts upward (along water surface normal)
+                    // Buoyancy force: F = ρ × g × V
+                    float buoyancyMagnitude = PhysicsConstants.WATER_DENSITY * 
+                                              PhysicsConstants.GRAVITY * 
+                                              pointSubmergedVolume;
+                    
+                    // Get surface normal for force direction
                     Vector3 surfaceNormal = _waterSurface.GetSurfaceNormal(worldPoint);
-                    Vector3 pointForce = surfaceNormal * pointForceMagnitude;
+                    Vector3 pointForce = surfaceNormal * buoyancyMagnitude;
                     
                     _pointForces[i] = pointForce;
                     _totalBuoyancyForce += pointForce;
-                    _averageSubmergedPoint += worldPoint;
+                    _centerOfBuoyancy += worldPoint * buoyancyMagnitude;
                 }
                 else
                 {
@@ -229,17 +262,18 @@ namespace WindsurfingGame.Physics.Buoyancy
                 }
             }
             
-            // Calculate average position and submersion ratio
-            if (submergedCount > 0)
+            // Calculate weighted center of buoyancy
+            if (_totalBuoyancyForce.magnitude > 0.1f)
             {
-                _averageSubmergedPoint /= submergedCount;
-                _submergedRatio = (float)submergedCount / _samplePoints.Length;
+                _centerOfBuoyancy /= _totalBuoyancyForce.magnitude;
+                _submergedRatio = _submergedVolume / _totalVolume;
                 _isFloating = true;
             }
             else
             {
+                _centerOfBuoyancy = transform.position;
                 _submergedRatio = 0f;
-                _isFloating = false;
+                _isFloating = submergedCount > 0;
             }
             
             // Store water level at center
@@ -248,52 +282,84 @@ namespace WindsurfingGame.Physics.Buoyancy
         
         /// <summary>
         /// Apply buoyancy forces at each sample point.
+        /// This naturally creates stabilizing pitch/roll moments.
         /// </summary>
         private void ApplyBuoyancyForces()
         {
             if (!_isFloating) return;
+            
+            // When planing, hydrodynamic lift supplements buoyancy
+            // Board rides higher, less volume submerged
+            float buoyancyScale = 1f;
+            if (_hullDrag != null && _hullDrag.PlaningRatio > 0.1f)
+            {
+                // At full planing, hydrodynamic lift provides significant support
+                // Reduce buoyancy contribution to avoid excessive height
+                buoyancyScale = 1f - _hullDrag.PlaningRatio * 0.3f;
+            }
             
             for (int i = 0; i < _samplePoints.Length; i++)
             {
                 if (_pointForces[i].sqrMagnitude > 0.01f)
                 {
                     Vector3 worldPoint = transform.TransformPoint(_samplePoints[i]);
-                    _rigidbody.AddForceAtPosition(_pointForces[i], worldPoint, ForceMode.Force);
+                    Vector3 scaledForce = _pointForces[i] * buoyancyScale;
+                    _rigidbody.AddForceAtPosition(scaledForce, worldPoint, ForceMode.Force);
                 }
             }
         }
         
         /// <summary>
-        /// Apply water damping to reduce oscillation.
+        /// Apply damping to reduce oscillation and simulate water resistance.
         /// </summary>
         private void ApplyDamping()
         {
-            if (!_isFloating || _submergedRatio < 0.1f) return;
+            if (!_isFloating || _submergedRatio < 0.05f) return;
             
             Vector3 velocity = _rigidbody.linearVelocity;
             Vector3 angularVelocity = _rigidbody.angularVelocity;
             
-            // Linear damping (mostly vertical)
-            if (velocity.sqrMagnitude > 0.01f)
+            // Vertical damping - resists bobbing
+            // Proportional to how much of the board is submerged
+            float verticalVelocity = velocity.y;
+            if (Mathf.Abs(verticalVelocity) > 0.01f)
             {
-                // Stronger damping for vertical motion
-                Vector3 verticalVelocity = Vector3.up * velocity.y;
-                Vector3 horizontalVelocity = new Vector3(velocity.x, 0, velocity.z);
-                
-                float velocityMagnitude = velocity.magnitude;
-                float dampingScale = Mathf.Clamp01(velocityMagnitude / _dampingVelocityThreshold);
-                
-                Vector3 verticalDamping = -verticalVelocity * _waterDamping * _submergedRatio * dampingScale;
-                Vector3 horizontalDamping = -horizontalVelocity * _waterDamping * 0.1f * _submergedRatio;
-                
-                _rigidbody.AddForce(verticalDamping + horizontalDamping, ForceMode.Force);
+                float verticalDampingForce = -verticalVelocity * _verticalDamping * _submergedRatio;
+                _rigidbody.AddForce(Vector3.up * verticalDampingForce, ForceMode.Force);
             }
             
-            // Angular damping
-            if (angularVelocity.sqrMagnitude > 0.01f)
+            // Horizontal damping - water drag when moving sideways or slowly
+            // This is separate from the hull drag which handles forward motion
+            Vector3 horizontalVelocity = new Vector3(velocity.x, 0, velocity.z);
+            if (horizontalVelocity.sqrMagnitude > 0.01f)
             {
-                Vector3 angDamping = -angularVelocity * _angularDamping * _submergedRatio;
-                _rigidbody.AddTorque(angDamping, ForceMode.Force);
+                // Stronger damping for lateral motion than forward
+                Vector3 localVelocity = transform.InverseTransformDirection(horizontalVelocity);
+                float lateralDamping = Mathf.Abs(localVelocity.x) * _horizontalDamping * 2f;
+                float forwardDamping = Mathf.Abs(localVelocity.z) * _horizontalDamping * 0.1f;
+                
+                Vector3 dampingForce = -horizontalVelocity.normalized * 
+                                       (lateralDamping + forwardDamping) * _submergedRatio;
+                _rigidbody.AddForce(dampingForce, ForceMode.Force);
+            }
+            
+            // Rotational damping - resists roll, pitch, yaw oscillations
+            if (angularVelocity.sqrMagnitude > 0.001f)
+            {
+                // Different damping for different axes
+                Vector3 localAngVel = transform.InverseTransformDirection(angularVelocity);
+                
+                // Roll (X) - water resists rolling
+                // Pitch (Z) - water resists pitching  
+                // Yaw (Y) - less resistance (fin handles this)
+                Vector3 dampingTorque = new Vector3(
+                    -localAngVel.x * _rotationalDamping * 1.5f,
+                    -localAngVel.y * _rotationalDamping * 0.3f,
+                    -localAngVel.z * _rotationalDamping * 1.2f
+                );
+                
+                dampingTorque = transform.TransformDirection(dampingTorque) * _submergedRatio;
+                _rigidbody.AddTorque(dampingTorque, ForceMode.Force);
             }
         }
         
@@ -323,15 +389,20 @@ namespace WindsurfingGame.Physics.Buoyancy
                 {
                     Vector3 worldPoint = transform.TransformPoint(_samplePoints[i]);
                     
+                    // Size based on volume contribution
+                    float size = 0.02f + (_sampleVolumes != null && i < _sampleVolumes.Length ? 
+                                 _sampleVolumes[i] / _volumePerPoint * 0.02f : 0f);
+                    
                     if (Application.isPlaying && _pointDepths != null && i < _pointDepths.Length)
                     {
-                        // Color based on depth
                         float depth = _pointDepths[i];
                         if (depth > 0)
                         {
-                            Gizmos.color = Color.Lerp(Color.yellow, Color.blue, Mathf.Clamp01(depth / 0.3f));
+                            // Underwater - blue intensity based on depth
+                            Gizmos.color = Color.Lerp(Color.cyan, Color.blue, 
+                                                      Mathf.Clamp01(depth / _boardThickness));
                             
-                            // Draw force
+                            // Draw force vector
                             if (_pointForces != null && i < _pointForces.Length)
                             {
                                 Gizmos.DrawRay(worldPoint, _pointForces[i] * 0.001f);
@@ -339,6 +410,7 @@ namespace WindsurfingGame.Physics.Buoyancy
                         }
                         else
                         {
+                            // Above water - red
                             Gizmos.color = Color.red;
                         }
                     }
@@ -347,7 +419,14 @@ namespace WindsurfingGame.Physics.Buoyancy
                         Gizmos.color = Color.cyan;
                     }
                     
-                    Gizmos.DrawWireSphere(worldPoint, 0.03f);
+                    Gizmos.DrawWireSphere(worldPoint, size);
+                }
+                
+                // Draw center of buoyancy
+                if (Application.isPlaying && _isFloating)
+                {
+                    Gizmos.color = Color.yellow;
+                    Gizmos.DrawWireSphere(_centerOfBuoyancy, 0.1f);
                 }
             }
             
@@ -360,9 +439,9 @@ namespace WindsurfingGame.Physics.Buoyancy
                 
                 // Labels
                 UnityEditor.Handles.Label(transform.position + Vector3.up * 0.5f,
-                    $"Submerged: {_submergedRatio * 100:F0}%\n" +
+                    $"Submerged: {_submergedRatio * 100:F0}% ({_submergedVolume * 1000:F0}L)\n" +
                     $"Buoyancy: {_totalBuoyancyForce.magnitude:F0} N\n" +
-                    $"Height: {GetHeightAboveWater():F2} m");
+                    $"Height: {GetHeightAboveWater():F3} m");
             }
         }
 #endif

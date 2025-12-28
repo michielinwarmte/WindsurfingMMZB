@@ -4,7 +4,35 @@
 
 Use this checklist when setting up the scene on a new PC. For detailed parameter values, see [SCENE_CONFIGURATION.md](SCENE_CONFIGURATION.md).
 
-**Last Updated:** December 27, 2025
+**Last Updated:** December 28, 2025
+
+---
+
+## ⚠️ IMPORTANT: Known Issues
+
+Before starting, be aware of these critical bugs:
+
+| Issue | Workaround |
+|-------|------------|
+| 🔴 Camera doesn't follow | Change FOV in Inspector during Play mode |
+| 🔴 Board oscillates at planing speed | None yet - needs stability fix |
+| 🔴 Steering is inverted | None yet - A/D keys work backwards |
+
+See [KNOWN_ISSUES.md](KNOWN_ISSUES.md) for full details.
+
+---
+
+## 🌟 RECOMMENDED: Use the Setup Wizard
+
+The easiest way to set up a scene:
+
+1. **Menu:** `Windsurfing → Complete Windsurfer Setup Wizard`
+2. Assign your Board and Sail FBX models
+3. Click **"🌟 Create Complete Scene"**
+4. Press Play
+5. **⚠️ Apply camera workaround:** Select Main Camera → change FOV
+
+The wizard creates everything automatically!
 
 ---
 
@@ -21,11 +49,12 @@ For working upwind sailing and realistic physics, use the **Advanced** component
 - [ ] Rigidbody (Mass: 90, Drag: 0.5, Angular Drag: 2.0, Interpolate: checked)
 - [ ] BoxCollider
 - [ ] MeshFilter + MeshRenderer
-- [ ] **AdvancedBuoyancy** - Multi-point flotation
-- [ ] **AdvancedHullDrag** - Drag + high-speed stability
+- [ ] **AdvancedBuoyancy** - Multi-point flotation with Archimedes' principle
+- [ ] **AdvancedHullDrag** - Drag + hydrodynamic lift (displacement + planing)
 - [ ] **AdvancedSail** - Realistic aerodynamics, rake steering
 - [ ] **AdvancedFin** - Lateral resistance
 - [ ] **AdvancedWindsurferController** - Beginner/Intermediate/Advanced modes
+- [ ] **BoardMassConfiguration** - Mass/inertia, sailor COM shift
 
 #### Critical Manual Assignment
 - [ ] AdvancedBuoyancy._waterSurface → Drag **WaterSurface** here
@@ -56,10 +85,13 @@ For working upwind sailing and realistic physics, use the **Advanced** component
 
 #### Components
 - [ ] Camera (FOV: 60)
-- [ ] **ThirdPersonCamera**
+- [ ] **SimpleFollowCamera** (preferred) or **ThirdPersonCamera**
 
 #### Critical Manual Assignment
-- [ ] ThirdPersonCamera._target → Drag **WindsurfBoard** Transform here
+- [ ] SimpleFollowCamera._target → Drag **WindsurfBoard** Transform here
+
+#### ⚠️ Camera Workaround
+The camera won't follow until you change the FOV value in Inspector during Play mode.
 
 ---
 
@@ -68,8 +100,11 @@ For working upwind sailing and realistic physics, use the **Advanced** component
 
 ---
 
-### ☐ 6. AdvancedTelemetryHUD (Optional)
-- [ ] **AdvancedTelemetryHUD** - Shows physics debug info
+### ☐ 6. TelemetryHUD (Optional but Recommended)
+- [ ] Create empty GameObject named "TelemetryHUD"
+- [ ] Add **AdvancedTelemetryHUD** - Shows physics debug info
+- [ ] Wire up references to windsurfer components
+- [ ] Press **F1** during play to toggle
 
 ---
 
@@ -77,9 +112,35 @@ For working upwind sailing and realistic physics, use the **Advanced** component
 
 Only **TWO** manual assignments needed:
 1. **AdvancedBuoyancy._waterSurface** → WaterSurface GameObject
-2. **ThirdPersonCamera._target** → WindsurfBoard Transform
+2. **SimpleFollowCamera._target** → WindsurfBoard Transform
 
 Everything else auto-finds!
+
+---
+
+## 🎮 Controls Reference
+
+| Key | Action | Notes |
+|-----|--------|-------|
+| W/S | Sheet in/out | Controls sail power |
+| A/D | Steer | ⚠️ Currently inverted! |
+| Q/E | Fine mast rake | For precise steering |
+| F1 | Toggle telemetry | Shows all physics values |
+| 1-4 | Camera modes | 1=Follow, 2=Orbit, 3=Top, 4=Free |
+
+---
+
+## 🔧 Camera Workaround (Required!)
+
+The camera has an initialization bug. To make it work:
+
+1. Press Play
+2. Select "Main Camera" in Hierarchy
+3. In Inspector, find Camera component
+4. Change FOV from 60 to 61 (any change works)
+5. Camera now follows correctly
+
+This needs to be done every time you enter Play mode.
 
 ---
 

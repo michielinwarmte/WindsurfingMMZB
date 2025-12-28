@@ -6,20 +6,15 @@ using WindsurfingGame.Physics.Core;
 namespace WindsurfingGame.Player
 {
     /// <summary>
-    /// Advanced windsurfing controller with realistic physics-based control.
+    /// Simple windsurfing controller for intuitive gameplay.
     /// 
-    /// Control Model:
-    /// In real windsurfing, the sailor controls the rig through:
-    /// 1. Sheet tension - controls sail power by changing angle of attack
-    /// 2. Mast rake - moves center of effort fore/aft for steering
-    /// 3. Body position - shifts weight for balance and fine steering
+    /// Controls:
+    /// - A/D or Left/Right: Steer (combined rake + weight)
+    /// - W/S or Up/Down: Sheet in/out (power control)
+    /// - Q/E: Fine mast rake control
+    /// - T: Toggle auto-sheet
     /// 
-    /// The board responds to the balance of forces:
-    /// - Sail generates side force and drive force
-    /// - Fin converts side force into forward motion by generating lift
-    /// - Board finds equilibrium between these forces
-    /// 
-    /// This controller provides input handling for the physics components.
+    /// All assists are enabled for stable, fun gameplay.
     /// </summary>
     public class AdvancedWindsurferController : MonoBehaviour
     {
@@ -28,9 +23,6 @@ namespace WindsurfingGame.Player
         [SerializeField] private AdvancedFin _fin;
         [SerializeField] private AdvancedHullDrag _hull;
         [SerializeField] private Rigidbody _rigidbody;
-        
-        [Header("Control Mode")]
-        [SerializeField] private ControlMode _controlMode = ControlMode.Intermediate;
         
         [Header("Sheet Control (W/S)")]
         [Tooltip("Speed of sheet adjustment")]
@@ -42,7 +34,7 @@ namespace WindsurfingGame.Player
         [Tooltip("Auto-sheet response speed")]
         [SerializeField] private float _autoSheetSpeed = 0.3f;
         
-        [Header("Mast Rake Control (Q/E or A/D in beginner)")]
+        [Header("Steering Control (A/D)")]
         [Tooltip("Speed of rake adjustment")]
         [SerializeField] private float _rakeControlSpeed = 2f;
         
@@ -52,7 +44,7 @@ namespace WindsurfingGame.Player
         [Tooltip("Rake center speed")]
         [SerializeField] private float _rakeCenterSpeed = 1f;
         
-        [Header("Weight Shift (A/D in advanced)")]
+        [Header("Weight Shift")]
         [Tooltip("Maximum weight shift angle")]
         [SerializeField] private float _maxWeightShift = 20f;
         
@@ -62,7 +54,7 @@ namespace WindsurfingGame.Player
         [Tooltip("Weight shift steering torque")]
         [SerializeField] private float _weightShiftTorque = 30f;
         
-        [Header("Stability Assists")]
+        [Header("Stability")]
         [Tooltip("Prevent capsizing (limits heel angle)")]
         [SerializeField] private bool _antiCapsize = true;
         
@@ -91,15 +83,7 @@ namespace WindsurfingGame.Player
         // Input System
         private Keyboard _keyboard;
         
-        public enum ControlMode
-        {
-            Beginner,       // A/D for combined steering, W/S for sheet, auto-assists
-            Intermediate,   // Q/E for rake, A/D for weight, W/S for sheet, some assists
-            Advanced        // Full manual control, no assists
-        }
-        
         // Public accessors
-        public ControlMode CurrentMode => _controlMode;
         public float CurrentWeightShift => _currentWeightShift;
         public SailingState SailingState => _sail?.State;
         
@@ -133,12 +117,6 @@ namespace WindsurfingGame.Player
         {
             ReadInput();
             SmoothInput();
-            
-            // Toggle control mode
-            if (_keyboard != null && _keyboard.tabKey.wasPressedThisFrame)
-            {
-                CycleControlMode();
-            }
         }
         
         private void FixedUpdate()
@@ -162,48 +140,39 @@ namespace WindsurfingGame.Player
                 if (_keyboard == null) return;
             }
             
-            // Sheet control: W/S
+            // Sheet control: W/S - controls sail angle relative to WIND
+            // W = sheet in (sail closer to wind direction, less power)
+            // S = sheet out (sail further from wind direction, more power)
             _sheetInput = 0f;
             if (_keyboard.wKey.isPressed || _keyboard.upArrowKey.isPressed)
-                _sheetInput = -1f; // Sheet in (reduce angle)
+                _sheetInput = -1f; // Sheet in (smaller angle to wind)
             else if (_keyboard.sKey.isPressed || _keyboard.downArrowKey.isPressed)
-                _sheetInput = 1f; // Ease out (increase angle)
+                _sheetInput = 1f; // Ease out (larger angle to wind)
             
-            // Mode-dependent controls
-            switch (_controlMode)
+            // Steering: A/D controls combined steering (rake + weight)
+            _rakeInput = 0f;
+            _weightInput = 0f;
+            if (_keyboard.dKey.isPressed || _keyboard.rightArrowKey.isPressed)
             {
-                case ControlMode.Beginner:
-                    // A/D controls combined steering (rake + weight)
-                    _rakeInput = 0f;
-                    _weightInput = 0f;
-                    if (_keyboard.dKey.isPressed || _keyboard.rightArrowKey.isPressed)
-                    {
-                        _rakeInput = 1f;  // Turn right (rake back + weight right)
-                        _weightInput = 1f;
-                    }
-                    else if (_keyboard.aKey.isPressed || _keyboard.leftArrowKey.isPressed)
-                    {
-                        _rakeInput = -1f; // Turn left (rake forward + weight left)
-                        _weightInput = -1f;
-                    }
-                    break;
-                    
-                case ControlMode.Intermediate:
-                case ControlMode.Advanced:
-                    // Q/E for rake
-                    _rakeInput = 0f;
-                    if (_keyboard.eKey.isPressed)
-                        _rakeInput = 1f;  // Rake back (turn upwind)
-                    else if (_keyboard.qKey.isPressed)
-                        _rakeInput = -1f; // Rake forward (turn downwind)
-                    
-                    // A/D for weight shift
-                    _weightInput = 0f;
-                    if (_keyboard.dKey.isPressed || _keyboard.rightArrowKey.isPressed)
-                        _weightInput = 1f;  // Weight right
-                    else if (_keyboard.aKey.isPressed || _keyboard.leftArrowKey.isPressed)
-                        _weightInput = -1f; // Weight left
-                    break;
+                _rakeInput = 1f;  // Turn right (rake back + weight right)
+                _weightInput = 1f;
+            }
+            else if (_keyboard.aKey.isPressed || _keyboard.leftArrowKey.isPressed)
+            {
+                _rakeInput = -1f; // Turn left (rake forward + weight left)
+                _weightInput = -1f;
+            }
+            
+            // Q/E for fine rake control (optional)
+            if (_keyboard.eKey.isPressed)
+                _rakeInput = 1f;
+            else if (_keyboard.qKey.isPressed)
+                _rakeInput = -1f;
+            
+            // SPACE key switches tacks (flips sail to other side)
+            if (_keyboard.spaceKey.wasPressedThisFrame)
+            {
+                _sail.SwitchTack();
             }
             
             // T key toggles auto-sheet
@@ -276,10 +245,17 @@ namespace WindsurfingGame.Player
             
             // Weight shift creates a turning moment
             float speed = _rigidbody.linearVelocity.magnitude;
-            float speedFactor = Mathf.Clamp01(speed / 3f);
             
-            // Torque proportional to weight shift and speed
-            float torque = _currentWeightShift * _weightShiftTorque * speedFactor / _maxWeightShift;
+            // Base steering that ALWAYS works, even when stopped
+            // This simulates shifting the rig/body to turn
+            float baseSteeringTorque = 80f; // Works even at zero speed
+            
+            // Additional speed-based steering (more effective at speed)
+            float speedFactor = Mathf.Clamp01(speed / 3f);
+            float speedTorque = _currentWeightShift * _weightShiftTorque * speedFactor / _maxWeightShift;
+            
+            // Combine: always have base steering, plus speed bonus
+            float torque = (_currentWeightShift / _maxWeightShift) * baseSteeringTorque + speedTorque;
             
             _rigidbody.AddTorque(Vector3.up * torque, ForceMode.Force);
             
@@ -325,38 +301,6 @@ namespace WindsurfingGame.Player
         }
         
         /// <summary>
-        /// Cycle through control modes.
-        /// </summary>
-        private void CycleControlMode()
-        {
-            _controlMode = (ControlMode)(((int)_controlMode + 1) % 3);
-            
-            // Update auto-assist settings based on mode
-            switch (_controlMode)
-            {
-                case ControlMode.Beginner:
-                    _autoSheet = true;
-                    _autoCenterRake = true;
-                    _antiCapsize = true;
-                    break;
-                    
-                case ControlMode.Intermediate:
-                    _autoSheet = false;
-                    _autoCenterRake = true;
-                    _antiCapsize = true;
-                    break;
-                    
-                case ControlMode.Advanced:
-                    _autoSheet = false;
-                    _autoCenterRake = false;
-                    _antiCapsize = false;
-                    break;
-            }
-            
-            Debug.Log($"Control mode: {_controlMode}");
-        }
-        
-        /// <summary>
         /// Get a summary of the current sailing state for UI.
         /// </summary>
         public string GetStateDescription()
@@ -364,14 +308,15 @@ namespace WindsurfingGame.Player
             if (_sail?.State == null) return "No data";
             
             var state = _sail.State;
-            string mode = _controlMode.ToString();
             string planing = _hull?.IsPlaning == true ? "PLANING" : "Displacement";
             
-            return $"Mode: {mode}\n" +
-                   $"Speed: {state.BoatSpeed * PhysicsConstants.MS_TO_KNOTS:F1} kts\n" +
+            // Sheet In % where 100% = fully sheeted in (close), 0% = fully eased out
+            float sheetInPercent = (1f - _currentSheetPosition) * 100f;
+            
+            return $"Speed: {state.BoatSpeed * PhysicsConstants.MS_TO_KNOTS:F1} kts\n" +
                    $"AWA: {state.ApparentWindAngle:F0}°\n" +
                    $"VMG: {state.VMG * PhysicsConstants.MS_TO_KNOTS:F1} kts\n" +
-                   $"Sheet: {_currentSheetPosition * 100:F0}%\n" +
+                   $"Sheet In: {sheetInPercent:F0}%\n" +
                    $"Rake: {_currentRake:F1}\n" +
                    $"Leeway: {_fin?.LeewayAngle:F1}°\n" +
                    $"{planing}";

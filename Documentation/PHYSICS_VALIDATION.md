@@ -163,7 +163,8 @@ Wind Flow and Pressure:
 Mast rake creates steering torque by moving the Center of Effort (CE) fore/aft.
 
 ```csharp
-float tack = _state.SailSide;  // = -Sign(AWA)
+// NEGATE sailSide so positive rake (back) turns into wind (away from sail)
+float tack = -_state.SailSide;  // = Sign(AWA)
 float steeringTorque = _mastRake * tack * forceMag * 0.5f;
 ```
 
@@ -171,10 +172,13 @@ float steeringTorque = _mastRake * tack * forceMag * 0.5f;
 
 | Rake | Tack | Effect |
 |------|------|--------|
-| Back (+) | Starboard (sailSide=-1) | Turn left (bear away) |
-| Back (+) | Port (sailSide=+1) | Turn right (bear away) |
-| Forward (-) | Starboard (sailSide=-1) | Turn right (head up) |
-| Forward (-) | Port (sailSide=+1) | Turn left (head up) |
+| Back (+) | Starboard (wind from right, sailSide=-1, tack=+1) | Turn right (head up/upwind) |
+| Back (+) | Port (wind from left, sailSide=+1, tack=-1) | Turn left (head up/upwind) |
+| Forward (-) | Starboard (wind from right, sailSide=-1, tack=+1) | Turn left (bear away/downwind) |
+| Forward (-) | Port (wind from left, sailSide=+1, tack=-1) | Turn right (bear away/downwind) |
+
+**Key insight:** Raking BACK always turns you UPWIND (into the wind), regardless of tack.
+Raking FORWARD always turns you DOWNWIND (away from wind), regardless of tack.
 
 ### High-Speed Damping
 

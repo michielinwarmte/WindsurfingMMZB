@@ -165,25 +165,20 @@ namespace WindsurfingGame.UI
             GUILayout.Label("WINDSURFING TELEMETRY", _headerStyle);
             GUILayout.Space(5);
             
-            // Control mode
-            if (_controller != null)
-            {
-                DrawRow("Mode", _controller.CurrentMode.ToString());
-            }
-            
             GUILayout.Space(10);
             
             // Speed Section
             GUILayout.Label("─── SPEED ───", _headerStyle);
             float speedKts = state.BoatSpeed * PhysicsConstants.MS_TO_KNOTS;
-            DrawRow("Boat Speed", $"{speedKts:F1} kts", speedKts > 15 ? _warningStyle : _valueStyle);
-            DrawRow("VMG", $"{state.VMG * PhysicsConstants.MS_TO_KNOTS:F1} kts");
+            float speedKmh = state.BoatSpeed * 3.6f;
+            DrawRow("Boat Speed", $"{speedKmh:F1} km/h ({speedKts:F1} kts)", speedKmh > 25 ? _warningStyle : _valueStyle);
+            DrawRow("VMG", $"{state.VMG * 3.6f:F1} km/h");
             
             if (_hull != null)
             {
                 string hullMode = _hull.IsPlaning ? "PLANING" : "Displacement";
                 DrawRow("Hull Mode", hullMode, _hull.IsPlaning ? _warningStyle : _valueStyle);
-                DrawRow("Froude #", $"{_hull.FroudeNumber:F2}");
+                DrawRow("Submerged", $"{_hull.GetSubmersionRatio() * 100f:F0}%");
             }
             
             GUILayout.Space(10);
@@ -201,15 +196,22 @@ namespace WindsurfingGame.UI
             GUILayout.Label("─── SAIL ───", _headerStyle);
             if (_sail != null)
             {
-                DrawRow("Sheet", $"{_sail.SheetPosition * 100:F0}%");
+                // Show current tack
+                string tackStr = _sail.IsStarboardTack ? "STARBOARD" : "PORT";
+                DrawRow("Tack", tackStr, _sail.IsStarboardTack ? _valueStyle : _warningStyle);
+                
+                // Display as "Sheet In %" where 100% = fully sheeted in (close to wind)
+                float sheetInPercent = (1f - _sail.SheetPosition) * 100f;
+                DrawRow("Sheet In", $"{sheetInPercent:F0}%");
+                DrawRow("Sail Angle", $"{Mathf.Abs(_sail.CurrentSailAngle):F0}°");
                 DrawRow("AoA", $"{state.AngleOfAttack:F1}°");
                 DrawRow("Lift Force", $"{state.SailForce.magnitude:F0} N");
                 
-                bool stalled = Mathf.Abs(state.AngleOfAttack) > 12f;
+                bool stalled = Mathf.Abs(state.AngleOfAttack) > 25f;
                 DrawRow("Status", stalled ? "STALLED!" : "OK", stalled ? _warningStyle : _valueStyle);
             }
             
-            GUILayout.Space(10);
+            GUILayout.Space(10);;
             
             // Fin Section  
             GUILayout.Label("─── FIN ───", _headerStyle);
@@ -263,15 +265,16 @@ namespace WindsurfingGame.UI
         
         private void DrawHelpOverlay()
         {
-            float y = Screen.height - 100;
-            Rect helpRect = new Rect(_panelPadding, y, 300, 90);
+            float y = Screen.height - 120;
+            Rect helpRect = new Rect(_panelPadding, y, 320, 110);
             
             GUILayout.BeginArea(helpRect, _boxStyle);
             
             GUILayout.Label("Controls:", _labelStyle);
-            GUILayout.Label("W/S: Sheet In/Out | Q/E: Mast Rake", _labelStyle);
-            GUILayout.Label("A/D: Weight Shift | TAB: Mode", _labelStyle);
-            GUILayout.Label("F1: Toggle Detail | F2: Vectors | F3: Polar", _labelStyle);
+            GUILayout.Label("A/D: Steer | W/S: Sheet In/Out", _labelStyle);
+            GUILayout.Label("SPACE: Switch Tack | T: Auto-sheet", _labelStyle);
+            GUILayout.Label("Q/E: Fine Rake", _labelStyle);
+            GUILayout.Label("F1: Toggle HUD | 1-4: Camera modes", _labelStyle);
             
             GUILayout.EndArea();
         }

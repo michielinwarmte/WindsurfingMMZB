@@ -94,16 +94,31 @@ namespace WindsurfingGame.CameraSystem
             // Find target if not set
             if (_target == null)
             {
+                Debug.Log("[ThirdPersonCamera] No target assigned, searching for windsurfer...");
                 var board = FindFirstObjectByType<Physics.Buoyancy.BuoyancyBody>();
                 if (board == null)
                 {
                     var advBoard = FindFirstObjectByType<Physics.Buoyancy.AdvancedBuoyancy>();
-                    if (advBoard != null) _target = advBoard.transform;
+                    if (advBoard != null)
+                    {
+                        _target = advBoard.transform;
+                        Debug.Log($"[ThirdPersonCamera] Found AdvancedBuoyancy target: {_target.name}");
+                    }
+                    else
+                    {
+                        Debug.LogWarning("[ThirdPersonCamera] ❌ No target found! Camera will not work. " +
+                                        "Assign a target in the Inspector or ensure a windsurfer with AdvancedBuoyancy exists.");
+                    }
                 }
                 else
                 {
                     _target = board.transform;
+                    Debug.Log($"[ThirdPersonCamera] Found BuoyancyBody target: {_target.name}");
                 }
+            }
+            else
+            {
+                Debug.Log($"[ThirdPersonCamera] ✓ Target assigned: {_target.name}");
             }
 
             // Initialize angles
@@ -115,12 +130,28 @@ namespace WindsurfingGame.CameraSystem
                 
                 // Set initial position
                 UpdateCameraPosition(true);
+                
+                Debug.Log($"[ThirdPersonCamera] ✓ Camera initialized - Distance: {_distance}m, Pitch: {_pitch}°\n" +
+                         $"   Controls: Right-click + drag = Orbit, Scroll = Zoom, Middle-click = Reset");
             }
         }
 
         private void LateUpdate()
         {
-            if (_target == null) return;
+            if (_target == null)
+            {
+                // Try to find target again if lost
+                if (Time.frameCount % 60 == 0) // Check every second
+                {
+                    var advBoard = FindFirstObjectByType<Physics.Buoyancy.AdvancedBuoyancy>();
+                    if (advBoard != null)
+                    {
+                        _target = advBoard.transform;
+                        Debug.Log($"[ThirdPersonCamera] Re-acquired target: {_target.name}");
+                    }
+                }
+                return;
+            }
 
             HandleInput();
             UpdateCameraPosition(false);

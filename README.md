@@ -7,9 +7,10 @@ A physics-based 3D windsurfing game built with Unity 6.3 LTS.
 This game simulates realistic windsurfing physics including:
 - **Water dynamics** - Wave generation, water resistance, and surface interaction
 - **Wind simulation** - Variable wind speed, direction, and gusts
-- **Buoyancy physics** - Realistic floating behavior and water displacement
-- **Sail mechanics** - Wind catching, angle optimization, and power transfer
-- **Board physics** - Planing, edging, and hydrodynamic lift
+- **Buoyancy physics** - Archimedes' principle with multi-point sampling
+- **Sail mechanics** - Aerodynamic lift/drag, angle optimization, and power transfer
+- **Board physics** - Planing, edging, hydrodynamic lift, and displacement modes
+- **Hydrodynamic lift** - Displacement lift (pre-planing) and planing lift systems
 
 ### Design Vision
 - **Perspective**: Third-person camera
@@ -18,12 +19,23 @@ This game simulates realistic windsurfing physics including:
 - **Accessibility**: Advanced controls with assists for casual players
 - **Multiplayer**: Planned for future development
 
+## ⚠️ Known Issues
+
+**Read [KNOWN_ISSUES.md](Documentation/KNOWN_ISSUES.md) for full details and workarounds.**
+
+| Issue | Priority | Workaround |
+|-------|----------|------------|
+| Camera only works after changing FOV in Inspector | 🔴 Critical | Change FOV value during Play mode |
+| Board oscillates 0-100% submersion when planing | 🔴 Critical | None - needs PID stability fix |
+| Steering is inverted | 🔴 Critical | None - needs sign fix |
+
 ## 🛠️ Technology Stack
 
 - **Engine**: Unity 6.3 LTS
 - **Language**: C#
 - **Physics**: Unity Physics / Custom simulation
 - **Rendering**: Universal Render Pipeline (URP)
+- **Input**: New Input System
 
 ## 📁 Project Structure
 
@@ -98,33 +110,66 @@ See [DEVELOPMENT_PLAN.md](Documentation/DEVELOPMENT_PLAN.md) for detailed develo
 ## 🎯 Current Status
 
 **Phase**: Core Physics Complete ✅  
-**Last Updated**: December 27, 2025
+**Last Updated**: December 28, 2025
 
 ### ✅ Working Features
 - **Upwind sailing** - Can sail ~45° to wind on both tacks
-- **Planing** - Board lifts and accelerates at high speeds
+- **Planing** - Board lifts and accelerates at ~17+ km/h
 - **Tacking** - Sail switches sides correctly
 - **Rake steering** - Works on both tacks (bear away/head up)
 - **High-speed stability** - No wobble at 20+ knots
 - **Beginner controls** - Context-aware A/D steering
 - **Advanced controls** - Manual Q/E rake + A/D weight shift
+- **Realistic buoyancy** - Archimedes' principle with volume displacement
+- **Displacement lift** - Dynamic support at pre-planing speeds
+- **Sailor COM shift** - Moves AFT (backward) when planing
 
-### 🔧 Needs Work
-- Sail visuals (boom rotation, mesh deformation)
-- Sheet control feedback
-- Sound effects
-- Environment polish
+### 🔧 Needs Work (Priority for Next Contributor)
+1. 🔴 **Camera initialization** - Needs FOV change workaround
+2. 🔴 **Planing stability** - Board oscillates in submersion
+3. 🔴 **Inverted steering** - A/D controls reversed
+4. Sail visuals (boom rotation, mesh deformation)
+5. Sound effects
+6. Environment polish
 
 ### Physics Validation
 Core physics formulas are **validated and documented** in [PHYSICS_VALIDATION.md](Documentation/PHYSICS_VALIDATION.md).  
 ⚠️ Do not modify physics sign conventions without reading that document.
 
-### Next Up
-- ⏳ Sail visual improvements
-- ⏳ Sound effects (wind, water, sail)
-- ⏳ Environment (skybox, islands, course markers)
-- ⏳ AI opponents
-- ⏳ Racing mode
+## 📖 Documentation
+
+### Getting Started
+- [KNOWN_ISSUES.md](Documentation/KNOWN_ISSUES.md) ⚠️ **Read this first!**
+- [Quick Setup Checklist](Documentation/QUICK_SETUP_CHECKLIST.md) ⭐ **Use this to set up on a new PC**
+- [Scene Configuration Guide](Documentation/SCENE_CONFIGURATION.md) 📋 **Complete parameter reference**
+- [Component Dependencies](Documentation/COMPONENT_DEPENDENCIES.md) 🔗 **How components connect**
+- [Unity Setup Guide](Documentation/UNITY_SETUP_GUIDE.md)
+
+### Development Reference
+- [Architecture & Codebase Reference](Documentation/ARCHITECTURE.md) 📚 **Code overview**
+- [Development Plan](Documentation/DEVELOPMENT_PLAN.md)
+- [Physics Design](Documentation/PHYSICS_DESIGN.md)
+- [Code Style Guide](Documentation/CODE_STYLE.md)
+- [Progress Log](Documentation/PROGRESS_LOG.md)
+- [Test Scene Setup](Documentation/TEST_SCENE_SETUP.md)
+- [Physics Validation](Documentation/PHYSICS_VALIDATION.md)
+
+## 🚀 Quick Start for Contributors
+
+1. **Clone** the repository
+2. **Open** `WindsurfingGame` folder in Unity Hub with **Unity 6.3 LTS**
+3. **Read** [KNOWN_ISSUES.md](Documentation/KNOWN_ISSUES.md) for current bugs
+4. **Use** menu `Windsurfing → Complete Windsurfer Setup Wizard` to create scene
+5. **Press Play** (remember: change camera FOV in Inspector to activate camera)
+
+### Controls
+| Key | Action |
+|-----|--------|
+| W/S | Sheet in/out (sail power) |
+| A/D | Steer (currently inverted!) |
+| Q/E | Fine mast rake |
+| F1 | Toggle telemetry HUD |
+| 1-4 | Camera modes |
 
 ## 📄 License
 
@@ -133,3 +178,4 @@ Core physics formulas are **validated and documented** in [PHYSICS_VALIDATION.md
 ## 👥 Contributors
 
 - MMZB Team
+- [Your name here - continuing development]

@@ -4,6 +4,17 @@ Welcome to the team! This guide will help you get started and contribute effecti
 
 ---
 
+## ⚠️ IMPORTANT: Read First!
+
+**Before doing anything else, read [KNOWN_ISSUES.md](Documentation/KNOWN_ISSUES.md)!**
+
+There are 3 critical bugs that need fixing:
+1. 🔴 **Camera initialization** - Workaround: change FOV in Inspector during Play
+2. 🔴 **Planing oscillation** - Board bounces 0-100% submersion at speed
+3. 🔴 **Inverted steering** - A/D keys work backwards
+
+---
+
 ## 🚀 Quick Start
 
 ### 1. Clone the Repository
@@ -17,12 +28,52 @@ cd WindsurfingMMZB
 - Click "Add" → Navigate to `WindsurfingMMZB/WindsurfingGame`
 - Open with **Unity 6.3 LTS** (exact version required!)
 
-### 3. Read the Documentation
+### 3. Create a Test Scene
+- Menu: `Windsurfing → Complete Windsurfer Setup Wizard`
+- Assign your Board and Sail FBX models
+- Click "🌟 Create Complete Scene"
+- Press Play
+
+### 4. Camera Workaround
+⚠️ **Camera won't follow until you do this:**
+1. With game running, select "Main Camera" in Hierarchy
+2. In Inspector, change FOV from 60 to 61 (or any value)
+3. Camera starts working
+
+### 5. Read the Documentation
 **Required reading** (in order):
-1. [README.md](README.md) - Project overview
-2. [ARCHITECTURE.md](Documentation/ARCHITECTURE.md) - Codebase structure
-3. [CODE_STYLE.md](Documentation/CODE_STYLE.md) - Coding standards
+1. [KNOWN_ISSUES.md](Documentation/KNOWN_ISSUES.md) - **Current bugs**
+2. [README.md](README.md) - Project overview
+3. [ARCHITECTURE.md](Documentation/ARCHITECTURE.md) - Codebase structure
 4. [PROGRESS_LOG.md](Documentation/PROGRESS_LOG.md) - Current status
+
+---
+
+## 🎯 Priority Fixes Needed
+
+If you're continuing development, these are the top priorities:
+
+### 1. Camera Initialization Bug
+**File:** `Assets/Scripts/Camera/SimpleFollowCamera.cs`
+
+The camera doesn't activate until FOV is changed. Likely issue in `Start()` or `OnEnable()`.
+
+### 2. Planing Stability
+**Files:** 
+- `Assets/Scripts/Physics/Board/AdvancedHullDrag.cs`
+- `Assets/Scripts/Physics/Buoyancy/AdvancedBuoyancy.cs`
+
+Board oscillates between 0-100% submersion when planing. Need to add:
+- Smoothing/hysteresis to lift calculations
+- Possibly a PID controller for height stability
+- Separate equilibrium targets for displacement vs planing
+
+### 3. Inverted Steering
+**Files:**
+- `Assets/Scripts/Player/AdvancedWindsurferController.cs`
+- `Assets/Scripts/Physics/Board/AdvancedSail.cs`
+
+Check the steering input sign or rake steering torque direction.
 
 ---
 
@@ -119,12 +170,14 @@ git push origin feature/improved-wave-physics
 ## ⚠️ Important Rules
 
 ### DO ✅
+- Read [KNOWN_ISSUES.md](Documentation/KNOWN_ISSUES.md) before starting
 - Follow the [CODE_STYLE.md](Documentation/CODE_STYLE.md) guidelines
 - Write XML documentation comments
 - Update PROGRESS_LOG.md after each session
 - Test your changes in the TestScene
 - Commit .meta files with their assets
 - **Read [PHYSICS_VALIDATION.md](Documentation/PHYSICS_VALIDATION.md) before changing physics**
+- Move fixed issues to "Recently Fixed" in KNOWN_ISSUES.md
 
 ### DON'T ❌
 - Commit the `Library/` folder (it's gitignored)
@@ -205,9 +258,9 @@ When you make changes, update:
 
 | Change Type | Update These Docs |
 |-------------|-------------------|
+| Bug fix | KNOWN_ISSUES.md (move to "Fixed"), PROGRESS_LOG.md |
 | New script | ARCHITECTURE.md, PROGRESS_LOG.md |
 | Physics change | PHYSICS_DESIGN.md, PROGRESS_LOG.md |
-| Bug fix | PROGRESS_LOG.md |
 | New feature | PROGRESS_LOG.md, README.md (if major) |
 | API change | ARCHITECTURE.md |
 
@@ -234,13 +287,74 @@ When you make changes, update:
 
 ---
 
+## 🔧 Windsurfer Setup Wizard
+
+The wizard creates everything you need from an empty scene:
+
+**Menu:** `Windsurfing → Complete Windsurfer Setup Wizard`
+
+### What it creates:
+- **WaterSurface** (100m x 100m water plane)
+- **WindSystem** (configurable wind speed/direction)
+- **Camera** with SimpleFollowCamera
+- **Lighting**
+- **Windsurfer** with all physics components:
+  - Rigidbody
+  - BoxCollider
+  - AdvancedBuoyancy
+  - AdvancedHullDrag
+  - AdvancedSail
+  - AdvancedFin
+  - AdvancedWindsurferController
+  - BoardMassConfiguration
+- **TelemetryHUD** (press F1 to toggle)
+
+### Wizard Tips:
+- Expand "Camera Settings" to configure distance/pitch
+- Expand "Scene Settings" to configure wind
+- Use "Validate All Components" to check references
+- The wizard auto-finds missing references when possible
+
+---
+
+## 🧪 Testing Your Changes
+
+1. **Open TestScene** in Unity
+2. **Apply camera workaround** (change FOV in Inspector)
+3. **Check Console** for errors/warnings
+4. **Enable Gizmos** in Scene view to see debug visualization
+5. **Watch TelemetryHUD** (F1) for runtime values
+6. **Test edge cases**:
+   - No wind
+   - Very high wind
+   - Board at extreme angles
+   - Board underwater
+   - Both tacks (port and starboard wind)
+   - Upwind and downwind sailing
+
+---
+
 ## ❓ Questions?
 
 - Check the documentation first
+- Look at [KNOWN_ISSUES.md](Documentation/KNOWN_ISSUES.md) for current bugs
 - Look at existing code for patterns
-- Ask in team chat
+- Check the [PROGRESS_LOG.md](Documentation/PROGRESS_LOG.md) for history
 - Document the answer for others!
 
 ---
 
-*Last Updated: December 27, 2025*
+## 📋 Handoff Checklist
+
+When you finish working on this project:
+
+1. ✅ Update [PROGRESS_LOG.md](Documentation/PROGRESS_LOG.md) with your session
+2. ✅ Move any fixed issues to "Recently Fixed" in [KNOWN_ISSUES.md](Documentation/KNOWN_ISSUES.md)
+3. ✅ Add any new issues you discovered to [KNOWN_ISSUES.md](Documentation/KNOWN_ISSUES.md)
+4. ✅ Update the "Last Updated" dates in docs
+5. ✅ Commit all changes with clear messages
+6. ✅ Push to your branch and create PR (or push to develop)
+
+---
+
+*Last Updated: December 28, 2025*

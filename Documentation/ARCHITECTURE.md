@@ -2,11 +2,14 @@
 
 This document provides a complete overview of the codebase for team collaboration.
 
+**Last Updated:** December 28, 2025
+
 ---
 
-## ⚠️ CRITICAL PHYSICS REFERENCE
+## ⚠️ CRITICAL: Read First!
 
-**The core physics are VALIDATED AND WORKING.** See [PHYSICS_VALIDATION.md](PHYSICS_VALIDATION.md) for the complete formula chain.
+1. **Known Issues:** See [KNOWN_ISSUES.md](KNOWN_ISSUES.md) for current bugs
+2. **Physics Formulas:** See [PHYSICS_VALIDATION.md](PHYSICS_VALIDATION.md) - DO NOT CHANGE without understanding
 
 ### Key Formulas (DO NOT CHANGE)
 
@@ -16,6 +19,8 @@ This document provides a complete overview of the codebase for team collaboratio
 | Sail Side | `AdvancedSail.cs` | `sailSide = -Sign(AWA)` |
 | Lift Dir | `Aerodynamics.cs` | `project(-sailNormal) onto wind-perp` |
 | Rake Tack | `AdvancedSail.cs` | `tack = sailSide` |
+| Buoyancy | `AdvancedBuoyancy.cs` | `F = ρ × g × V_submerged` |
+| Planing | `AdvancedHullDrag.cs` | `onset: 4.0 m/s, full: 6.0 m/s` |
 
 ---
 
@@ -44,13 +49,14 @@ WindsurfingGame
 │   ├── Water      → IWaterSurface, WaterSurface
 │   ├── Wind       → IWindProvider, WindManager
 │   ├── Core       → PhysicsConstants, Aerodynamics, Hydrodynamics, SailingState
-│   ├── Buoyancy   → BuoyancyBody, AdvancedBuoyancy
+│   ├── Buoyancy   → BuoyancyBody, AdvancedBuoyancy, BoardMassConfiguration
 │   └── Board      → Sail, AdvancedSail, FinPhysics, AdvancedFin, WaterDrag, AdvancedHullDrag
 ├── Environment    → WindSystem
 ├── Player         → WindsurferController, WindsurferControllerV2, AdvancedWindsurferController
-├── CameraSystem   → ThirdPersonCamera
+├── CameraSystem   → ThirdPersonCamera, SimpleFollowCamera
 ├── UI             → TelemetryHUD, AdvancedTelemetryHUD, SailPositionIndicator, WindIndicator3D
 ├── Visual         → SailVisualizer, EquipmentVisualizer, ForceVectorVisualizer, WindDirectionIndicator
+├── Editor         → WindsurferSetup (Setup Wizard)
 └── Utilities      → PhysicsHelpers, WaterGridMarkers
 ```
 
@@ -64,11 +70,12 @@ Simple physics suitable for quick prototyping:
 
 ### Advanced Physics (Recommended) ⭐
 Realistic physics based on sailing research:
-- `AdvancedBuoyancy` - Multi-point flotation with wave response
+- `AdvancedBuoyancy` - Archimedes' principle with 21-point sampling, hull shape
 - `AdvancedSail` - Aerodynamic lift/drag with camber and aspect ratio
 - `AdvancedFin` - Hydrodynamic lift/drag with stall behavior
-- `AdvancedHullDrag` - Displacement/planing modes with Froude number
+- `AdvancedHullDrag` - Displacement lift + planing lift, speed-based thresholds
 - `AdvancedWindsurferController` - Realistic control with weight shift
+- `BoardMassConfiguration` - Mass/inertia config, sailor COM shifts AFT when planing
 - `WindSystem` - Advanced wind with gusts, shifts, and height gradient
 
 ---

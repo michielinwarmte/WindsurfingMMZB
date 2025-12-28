@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &110243871
+--- !u!1 &185212597
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,55 +127,156 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 110243872}
-  - component: {fileID: 110243873}
+  - component: {fileID: 185212601}
+  - component: {fileID: 185212600}
+  - component: {fileID: 185212599}
+  - component: {fileID: 185212598}
+  - component: {fileID: 185212602}
   m_Layer: 0
-  m_Name: TelemetryHUD
-  m_TagString: Untagged
+  m_Name: Main Camera
+  m_TagString: MainCamera
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &110243872
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 110243871}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.3733, y: 0, z: 0.4863}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &110243873
+--- !u!114 &185212598
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 110243871}
+  m_GameObject: {fileID: 185212597}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5, type: 3}
+  m_Script: {fileID: 11500000, guid: 86f6060702a9089458214f8ac543127d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.UI.AdvancedTelemetryHUD
-  _controller: {fileID: 0}
-  _sail: {fileID: 0}
-  _fin: {fileID: 0}
-  _hull: {fileID: 0}
-  _buoyancy: {fileID: 0}
-  _boardRigidbody: {fileID: 0}
-  _showDetailed: 1
-  _showForceVectors: 1
-  _showPolar: 0
-  _fontSize: 12
-  _panelWidth: 250
-  _panelPadding: 10
---- !u!1 &203844586
+  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.CameraSystem.SimpleFollowCamera
+  _target: {fileID: 1040755303}
+  _mode: 0
+  _distance: 12
+  _height: 5
+  _smoothSpeed: 5
+  _orbitSensitivity: 2
+  _zoomSpeed: 5
+--- !u!81 &185212599
+AudioListener:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 185212597}
+  m_Enabled: 1
+--- !u!20 &185212600
+Camera:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 185212597}
+  m_Enabled: 1
+  serializedVersion: 2
+  m_ClearFlags: 1
+  m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
+  m_projectionMatrixMode: 1
+  m_GateFitMode: 2
+  m_FOVAxisMode: 0
+  m_Iso: 200
+  m_ShutterSpeed: 0.005
+  m_Aperture: 16
+  m_FocusDistance: 10
+  m_FocalLength: 50
+  m_BladeCount: 5
+  m_Curvature: {x: 2, y: 11}
+  m_BarrelClipping: 0.25
+  m_Anamorphism: 0
+  m_SensorSize: {x: 36, y: 24}
+  m_LensShift: {x: 0, y: 0}
+  m_NormalizedViewPortRect:
+    serializedVersion: 2
+    x: 0
+    y: 0
+    width: 1
+    height: 1
+  near clip plane: 0.3
+  far clip plane: 1000
+  field of view: 60
+  orthographic: 0
+  orthographic size: 5
+  m_Depth: 0
+  m_CullingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_RenderingPath: -1
+  m_TargetTexture: {fileID: 0}
+  m_TargetDisplay: 0
+  m_TargetEye: 3
+  m_HDR: 1
+  m_AllowMSAA: 1
+  m_AllowDynamicResolution: 0
+  m_ForceIntoRT: 0
+  m_OcclusionCulling: 1
+  m_StereoConvergence: 10
+  m_StereoSeparation: 0.022
+--- !u!4 &185212601
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 185212597}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.16018225, y: 0, z: 0, w: 0.9870875}
+  m_LocalPosition: {x: 0, y: 5.5, z: -12}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &185212602
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 185212597}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a79441f348de89743a2939f4d699eac1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalCameraData
+  m_RenderShadows: 1
+  m_RequiresDepthTextureOption: 2
+  m_RequiresOpaqueTextureOption: 2
+  m_CameraType: 0
+  m_Cameras: []
+  m_RendererIndex: -1
+  m_VolumeLayerMask:
+    serializedVersion: 2
+    m_Bits: 1
+  m_VolumeTrigger: {fileID: 0}
+  m_VolumeFrameworkUpdateModeOption: 2
+  m_RenderPostProcessing: 0
+  m_Antialiasing: 0
+  m_AntialiasingQuality: 2
+  m_StopNaN: 0
+  m_Dithering: 0
+  m_ClearDepth: 1
+  m_AllowXRRendering: 1
+  m_AllowHDROutput: 1
+  m_UseScreenCoordOverride: 0
+  m_ScreenSizeOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_ScreenCoordScaleBias: {x: 0, y: 0, z: 0, w: 0}
+  m_RequiresDepthTexture: 0
+  m_RequiresColorTexture: 0
+  m_TaaSettings:
+    m_Quality: 3
+    m_FrameInfluence: 0.1
+    m_JitterScale: 1
+    m_MipBias: 0
+    m_VarianceClampScale: 0.9
+    m_ContrastAdaptiveSharpening: 0
+  m_Version: 2
+--- !u!1 &554527750
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -183,9 +284,171 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 203844589}
-  - component: {fileID: 203844588}
-  - component: {fileID: 203844587}
+  - component: {fileID: 554527754}
+  - component: {fileID: 554527753}
+  - component: {fileID: 554527752}
+  - component: {fileID: 554527751}
+  m_Layer: 0
+  m_Name: Water
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &554527751
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 554527750}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1c061b34bf88deb4e83a6dc63fd7b531, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Physics.Water.WaterSurface
+  _baseHeight: 0
+  _enableWaves: 0
+  _waveHeight: 0.5
+  _waveLength: 10
+  _waveSpeed: 1
+  _waveDirection: 0
+--- !u!23 &554527752
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 554527750}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: cedf56a82e8e8c84ba2ae665aaf726e1, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 1
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!33 &554527753
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 554527750}
+  m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!4 &554527754
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 554527750}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 10, y: 1, z: 10}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &665733314
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 665733316}
+  - component: {fileID: 665733315}
+  m_Layer: 0
+  m_Name: WindDirectionIndicator
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &665733315
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 665733314}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e82418aab6e24b4eb0c1ced1ceb4a22, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Visual.WindDirectionIndicator
+  _windSystem: {fileID: 0}
+  _arrowCount: 12
+  _radius: 30
+  _height: 0.1
+  _arrowSize: 3
+  _arrowColor: {r: 0.5, g: 0.7, b: 1, a: 0.6}
+  _animate: 1
+  _animationSpeed: 1
+  _followTarget: {fileID: 0}
+--- !u!4 &665733316
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 665733314}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &789876475
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 789876478}
+  - component: {fileID: 789876477}
+  - component: {fileID: 789876476}
   m_Layer: 0
   m_Name: Directional Light
   m_TagString: Untagged
@@ -193,18 +456,18 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &203844587
+--- !u!114 &789876476
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 203844586}
+  m_GameObject: {fileID: 789876475}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
   m_UsePipelineSettings: 1
   m_AdditionalLightsShadowResolutionTier: 2
   m_CustomShadowLayers: 0
@@ -222,22 +485,22 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
---- !u!108 &203844588
+--- !u!108 &789876477
 Light:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 203844586}
+  m_GameObject: {fileID: 789876475}
   m_Enabled: 1
   serializedVersion: 12
   m_Type: 1
-  m_Color: {r: 1, g: 0.95686275, b: 0.8392157, a: 1}
+  m_Color: {r: 1, g: 0.95, b: 0.85, a: 1}
   m_Intensity: 1
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
-  m_CookieSize2D: {x: 10, y: 10}
+  m_CookieSize2D: {x: 0.5, y: 0.5}
   m_Shadows:
     m_Type: 2
     m_Resolution: -1
@@ -287,22 +550,22 @@ Light:
   m_LightUnit: 1
   m_LuxAtDistance: 1
   m_EnableSpotReflector: 1
---- !u!4 &203844589
+--- !u!4 &789876478
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 203844586}
+  m_GameObject: {fileID: 789876475}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.40821788, y: -0.23456968, z: 0.10938163, w: 0.8754261}
-  m_LocalPosition: {x: -0.13, y: 2.98, z: 0}
+  m_LocalRotation: {x: 0.40821794, y: -0.23456973, z: 0.10938166, w: 0.8754261}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
---- !u!1 &268128496
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1040755296
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -310,16 +573,17 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 268128506}
-  - component: {fileID: 268128505}
-  - component: {fileID: 268128504}
-  - component: {fileID: 268128503}
-  - component: {fileID: 268128502}
-  - component: {fileID: 268128501}
-  - component: {fileID: 268128500}
-  - component: {fileID: 268128499}
-  - component: {fileID: 268128498}
-  - component: {fileID: 268128497}
+  - component: {fileID: 1040755303}
+  - component: {fileID: 1040755297}
+  - component: {fileID: 1040755307}
+  - component: {fileID: 1040755298}
+  - component: {fileID: 1040755301}
+  - component: {fileID: 1040755300}
+  - component: {fileID: 1040755299}
+  - component: {fileID: 1040755306}
+  - component: {fileID: 1040755302}
+  - component: {fileID: 1040755305}
+  - component: {fileID: 1040755304}
   m_Layer: 0
   m_Name: Windsurfer
   m_TagString: Untagged
@@ -327,224 +591,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &268128497
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 268128496}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c2cd26a34e864fb4084b1705142388d0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Visual.ForceVectorVisualizer
-  _sail: {fileID: 268128502}
-  _fin: {fileID: 268128501}
-  _rigidbody: {fileID: 268128505}
-  _showSailForces: 1
-  _showFinForces: 1
-  _showWindDirection: 1
-  _showVelocity: 1
-  _forceScale: 0.003
-  _windScale: 0.5
-  _velocityScale: 0.5
-  _lineWidth: 0.05
-  _sailForceColor: {r: 0, g: 1, b: 1, a: 1}
-  _liftColor: {r: 0, g: 1, b: 0, a: 1}
-  _dragColor: {r: 1, g: 0, b: 0, a: 1}
-  _windColor: {r: 0.3, g: 0.5, b: 1, a: 1}
-  _velocityColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  _finLiftColor: {r: 0, g: 0.8, b: 0.4, a: 1}
---- !u!114 &268128498
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 268128496}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 77145eb361321fd428a94c2ba2ea928b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Visual.EquipmentVisualizer
-  _boardPrefab: {fileID: 919132149155446097, guid: 0e1026b36c128b7488962327051b05dc, type: 3}
-  _sailPrefab: {fileID: 919132149155446097, guid: bbca76f0df811164ab3246251e355263, type: 3}
-  _sail: {fileID: 0}
-  _advancedSail: {fileID: 268128502}
-  _boardOffset: {x: 0, y: 0, z: 0}
-  _boardRotationOffset: {x: 0, y: 270, z: 0}
-  _boardScale: 1
-  _mastBasePosition: {x: 0, y: 0.1, z: -0.1}
-  _sailRotationOffset: {x: 0, y: 90, z: 0}
-  _sailScale: 1
-  _maxRakeAngle: 15
-  _sailAngleOffset: 0
-  _smoothSpeed: 8
---- !u!114 &268128499
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 268128496}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Player.AdvancedWindsurferController
-  _sail: {fileID: 268128502}
-  _fin: {fileID: 268128501}
-  _hull: {fileID: 268128500}
-  _rigidbody: {fileID: 268128505}
-  _controlMode: 1
-  _sheetControlSpeed: 0.8
-  _autoSheet: 0
-  _autoSheetSpeed: 0.3
-  _rakeControlSpeed: 2
-  _autoCenterRake: 1
-  _rakeCenterSpeed: 1
-  _maxWeightShift: 20
-  _weightShiftSpeed: 4
-  _weightShiftTorque: 30
-  _antiCapsize: 1
-  _maxHeelAngle: 45
-  _anticapsizeStrength: 50
-  _inputSmoothing: 8
---- !u!114 &268128500
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 268128496}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Physics.Board.AdvancedHullDrag
-  _hullConfig:
-    Length: 2.5
-    Width: 0.6
-    Thickness: 0.12
-    Volume: 120
-    BoardMass: 8
-    RigMass: 8
-    SailorMass: 75
-  _planingOnsetFn: 0.4
-  _fullPlaningFn: 0.7
-  _planingWettedAreaRatio: 0.35
-  _advancedBuoyancy: {fileID: 268128503}
-  _legacyBuoyancy: {fileID: 0}
-  _showDebug: 1
---- !u!114 &268128501
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 268128496}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Physics.Board.AdvancedFin
-  _finConfig:
-    Area: 0.035
-    Depth: 0.4
-    Chord: 0.1
-    Position: {x: 0, y: -0.1, z: -0.9}
-    StallAngle: 14
-  _minEffectiveSpeed: 0.5
-  _fullEffectSpeed: 2
-  _enableTracking: 1
-  _trackingStrength: 15
-  _showDebug: 1
-  _forceVectorScale: 0.001
---- !u!114 &268128502
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 268128496}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Physics.Board.AdvancedSail
-  _sailConfig:
-    Area: 6.5
-    LuffLength: 4.7
-    BoomLength: 2
-    MastHeight: 4.6
-    Camber: 0.1
-    Twist: 10
-    MastFootPosition: {x: 0, y: 0.1, z: -0.1}
-    BoomHeight: 1.4
-  _sheetPosition: 0.65
-  _sheetSpeed: 1.5
-  _autoTrim: 0
-  _mastRake: 0
-  _maxRakeAngle: 15
-  _rakeSpeed: 3
-  _windSystem: {fileID: 2021339462}
-  _legacyWindManager: {fileID: 0}
-  _showDebug: 1
-  _showForceVectors: 1
-  _forceVectorScale: 0.002
---- !u!114 &268128503
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 268128496}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Physics.Buoyancy.AdvancedBuoyancy
-  _waterSurface: {fileID: 1751557248}
-  _displacedVolume: 120
-  _floatHeight: 0.05
-  _autoGeneratePoints: 1
-  _pointsAlongLength: 5
-  _pointsAlongWidth: 3
-  _customPoints: []
-  _waterDamping: 50
-  _angularDamping: 20
-  _dampingVelocityThreshold: 0.5
-  _showDebug: 1
-  _showBuoyancyPoints: 1
---- !u!65 &268128504
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 268128496}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 0.6, y: 0.12, z: 2.5}
-  m_Center: {x: 0, y: 0, z: 0}
---- !u!54 &268128505
+--- !u!54 &1040755297
 Rigidbody:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 268128496}
+  m_GameObject: {fileID: 1040755296}
   serializedVersion: 5
   m_Mass: 91
   m_LinearDamping: 0
@@ -565,470 +618,39 @@ Rigidbody:
   m_Interpolate: 1
   m_Constraints: 0
   m_CollisionDetection: 2
---- !u!4 &268128506
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 268128496}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.5, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &961739749
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 961739753}
-  - component: {fileID: 961739752}
-  - component: {fileID: 961739751}
-  - component: {fileID: 961739750}
-  - component: {fileID: 961739754}
-  m_Layer: 0
-  m_Name: Main Camera
-  m_TagString: MainCamera
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &961739750
+--- !u!114 &1040755298
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 961739749}
+  m_GameObject: {fileID: 1040755296}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a79441f348de89743a2939f4d699eac1, type: 3}
+  m_Script: {fileID: 11500000, guid: b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: 
-  m_RenderShadows: 1
-  m_RequiresDepthTextureOption: 2
-  m_RequiresOpaqueTextureOption: 2
-  m_CameraType: 0
-  m_Cameras: []
-  m_RendererIndex: -1
-  m_VolumeLayerMask:
-    serializedVersion: 2
-    m_Bits: 1
-  m_VolumeTrigger: {fileID: 0}
-  m_VolumeFrameworkUpdateModeOption: 2
-  m_RenderPostProcessing: 0
-  m_Antialiasing: 0
-  m_AntialiasingQuality: 2
-  m_StopNaN: 0
-  m_Dithering: 0
-  m_ClearDepth: 1
-  m_AllowXRRendering: 1
-  m_AllowHDROutput: 1
-  m_UseScreenCoordOverride: 0
-  m_ScreenSizeOverride: {x: 0, y: 0, z: 0, w: 0}
-  m_ScreenCoordScaleBias: {x: 0, y: 0, z: 0, w: 0}
-  m_RequiresDepthTexture: 0
-  m_RequiresColorTexture: 0
-  m_TaaSettings:
-    m_Quality: 3
-    m_FrameInfluence: 0.1
-    m_JitterScale: 1
-    m_MipBias: 0
-    m_VarianceClampScale: 0.9
-    m_ContrastAdaptiveSharpening: 0
-  m_Version: 2
---- !u!81 &961739751
-AudioListener:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 961739749}
-  m_Enabled: 1
---- !u!20 &961739752
-Camera:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 961739749}
-  m_Enabled: 1
-  serializedVersion: 2
-  m_ClearFlags: 1
-  m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
-  m_projectionMatrixMode: 1
-  m_GateFitMode: 2
-  m_FOVAxisMode: 0
-  m_Iso: 200
-  m_ShutterSpeed: 0.005
-  m_Aperture: 16
-  m_FocusDistance: 10
-  m_FocalLength: 50
-  m_BladeCount: 5
-  m_Curvature: {x: 2, y: 11}
-  m_BarrelClipping: 0.25
-  m_Anamorphism: 0
-  m_SensorSize: {x: 36, y: 24}
-  m_LensShift: {x: 0, y: 0}
-  m_NormalizedViewPortRect:
-    serializedVersion: 2
-    x: 0
-    y: 0
-    width: 1
-    height: 1
-  near clip plane: 0.3
-  far clip plane: 1000
-  field of view: 102.6
-  orthographic: 0
-  orthographic size: 5
-  m_Depth: -1
-  m_CullingMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_RenderingPath: -1
-  m_TargetTexture: {fileID: 0}
-  m_TargetDisplay: 0
-  m_TargetEye: 3
-  m_HDR: 1
-  m_AllowMSAA: 1
-  m_AllowDynamicResolution: 0
-  m_ForceIntoRT: 0
-  m_OcclusionCulling: 1
-  m_StereoConvergence: 10
-  m_StereoSeparation: 0.022
---- !u!4 &961739753
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 961739749}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0.1102198, y: 0.76099396, z: -0.13418375, w: 0.6250876}
-  m_LocalPosition: {x: -5.76, y: 5.33, z: -8.73}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 20, y: 101.2, z: 0}
---- !u!114 &961739754
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 961739749}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 573380aff4b424d47893fbd106394fde, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Camera.ThirdPersonCamera
-  _target: {fileID: 268128506}
-  _distance: 10
-  _pitch: 30
-  _yawOffset: 0
-  _followTargetRotation: 1
-  _positionSmoothTime: 0.1
-  _rotationSmoothTime: 0.1
-  _enableInput: 1
-  _lookSensitivity: 0.3
-  _zoomSensitivity: 2
-  _invertY: 0
-  _pitchLimits: {x: 5, y: 80}
-  _distanceLimits: {x: 3, y: 20}
-  _minHeight: 1
-  _lookOffset: {x: 0, y: 1, z: 2}
-  _waterSurface: {fileID: 0}
---- !u!1 &1428871592
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1428871597}
-  - component: {fileID: 1428871596}
-  - component: {fileID: 1428871595}
-  - component: {fileID: 1428871594}
-  - component: {fileID: 1428871593}
-  - component: {fileID: 1428871600}
-  - component: {fileID: 1428871604}
-  - component: {fileID: 1428871605}
-  - component: {fileID: 1428871606}
-  - component: {fileID: 1428871607}
-  - component: {fileID: 1428871608}
-  - component: {fileID: 1428871609}
-  - component: {fileID: 1428871610}
-  - component: {fileID: 1428871611}
-  m_Layer: 0
-  m_Name: WindsurfBoard
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!54 &1428871593
-Rigidbody:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1428871592}
-  serializedVersion: 5
-  m_Mass: 50
-  m_LinearDamping: 0
-  m_AngularDamping: 0.5
-  m_CenterOfMass: {x: 0, y: 0, z: 0}
-  m_InertiaTensor: {x: 1, y: 1, z: 1}
-  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ImplicitCom: 1
-  m_ImplicitTensor: 1
-  m_UseGravity: 1
-  m_IsKinematic: 0
-  m_Interpolate: 1
-  m_Constraints: 0
-  m_CollisionDetection: 0
---- !u!65 &1428871594
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1428871592}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 0.6, y: 0.15, z: 2.5}
-  m_Center: {x: 0, y: 0, z: 0}
---- !u!23 &1428871595
-MeshRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1428871592}
-  m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 2
-  m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 3
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_MaskInteraction: 0
-  m_AdditionalVertexStreams: {fileID: 0}
---- !u!33 &1428871596
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1428871592}
-  m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
---- !u!4 &1428871597
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1428871592}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.5, z: 0}
-  m_LocalScale: {x: 0.6, y: 0.1, z: 2.5}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1428871600
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1428871592}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ca8f533054d9dc64a8701f2ecd3a91d7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Physics.Board.ApparentWindCalculator
-  _rigidbody: {fileID: 0}
-  _windManager: {fileID: 0}
-  _showDebugVectors: 1
-  _vectorScale: 0.5
---- !u!114 &1428871604
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1428871592}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4e172e8b2311d5442836c0bb84cf9f08, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Player.WindsurferControllerV2
-  _rigidbody: {fileID: 0}
-  _sail: {fileID: 0}
-  _finPhysics: {fileID: 0}
-  _apparentWind: {fileID: 0}
-  _controlMode: 0
-  _weightShiftStrength: 12
-  _maxLeanAngle: 30
-  _weightShiftSpeed: 6
-  _edgeFinBonus: 1.5
-  _maxRollAngle: 15
-  _autoSheet: 1
-  _antiCapsize: 1
-  _combinedSteering: 1
-  _autoStabilize: 1
-  _stabilizationStrength: 5
-  _inputResponsiveness: 6
-  _autoCenterMast: 1
---- !u!114 &1428871605
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1428871592}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9e85a18a050d39f4a93ba25ece5167d9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Visual.SailVisualizer
-  _sail: {fileID: 0}
-  _apparentWind: {fileID: 0}
-  _mastHeight: 4.5
-  _mastRadius: 0.04
-  _maxRakeAngle: 15
-  _mastBasePosition: {x: 0, y: 0.1, z: -0.05}
-  _boomLength: 2.5
-  _boomHeight: 1.5
-  _boomRadius: 0.03
-  _mastColor: {r: 0.3, g: 0.3, b: 0.3, a: 1}
-  _boomColor: {r: 0.4, g: 0.4, b: 0.4, a: 1}
-  _sailColor: {r: 1, g: 0.3, b: 0.1, a: 0.8}
-  _sailPoweredColor: {r: 1, g: 0.5, b: 0.2, a: 0.9}
-  _smoothSpeed: 8
---- !u!114 &1428871606
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1428871592}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Physics.Board.AdvancedSail
-  _sailConfig:
-    Area: 7.5
-    LuffLength: 4.7
-    BoomLength: 2.4
-    MastHeight: 4.7
-    Camber: 0.12
-    Twist: 10
-    MastFootPosition: {x: 0, y: 0.1, z: 0.5}
-    BoomHeight: 1.4
-  _sheetPosition: 0.5
-  _sheetSpeed: 1.5
-  _autoTrim: 0
-  _mastRake: 0
-  _maxRakeAngle: 15
-  _rakeSpeed: 3
-  _windSystem: {fileID: 0}
-  _legacyWindManager: {fileID: 0}
+  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Physics.Buoyancy.AdvancedBuoyancy
+  _waterSurface: {fileID: 554527751}
+  _boardVolumeLiters: 120
+  _boardLength: 2.5
+  _boardWidth: 0.6
+  _boardThickness: 0.12
+  _noseRocker: 0.08
+  _tailRocker: 0.02
+  _lengthSamples: 7
+  _widthSamples: 3
+  _verticalDamping: 800
+  _rotationalDamping: 150
+  _horizontalDamping: 20
   _showDebug: 1
-  _showForceVectors: 1
-  _forceVectorScale: 0.002
---- !u!114 &1428871607
+  _showBuoyancyPoints: 1
+--- !u!114 &1040755299
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1428871592}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Physics.Board.AdvancedFin
-  _finConfig:
-    Area: 0.06
-    Depth: 0.4
-    Chord: 0.15
-    Position: {x: 0, y: -0.15, z: -0.9}
-    StallAngle: 14
-  _minEffectiveSpeed: 0.5
-  _fullEffectSpeed: 2
-  _enableTracking: 1
-  _trackingStrength: 15
-  _showDebug: 1
-  _forceVectorScale: 0.002
---- !u!114 &1428871608
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1428871592}
+  m_GameObject: {fileID: 1040755296}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2, type: 3}
@@ -1039,56 +661,95 @@ MonoBehaviour:
     Width: 0.6
     Thickness: 0.12
     Volume: 120
-    BoardMass: 12
+    BoardMass: 8
     RigMass: 8
     SailorMass: 75
-  _planingOnsetFn: 0.4
-  _fullPlaningFn: 0.7
+  _planingOnsetSpeed: 4
+  _fullPlaningSpeed: 6
   _planingWettedAreaRatio: 0.35
-  _advancedBuoyancy: {fileID: 0}
+  _submersionDragMultiplier: 3
+  _enableDisplacementLift: 1
+  _displacementLiftCoefficient: 0.12
+  _displacementLiftMinSpeed: 0.5
+  _enablePlaningLift: 1
+  _planingLiftCoefficient: 0.15
+  _maxLiftFraction: 0.4
+  _optimalTrimAngle: 2
+  _advancedBuoyancy: {fileID: 1040755298}
   _legacyBuoyancy: {fileID: 0}
   _showDebug: 1
---- !u!114 &1428871609
+--- !u!114 &1040755300
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1428871592}
+  m_GameObject: {fileID: 1040755296}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3, type: 3}
+  m_Script: {fileID: 11500000, guid: f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Physics.Buoyancy.AdvancedBuoyancy
-  _waterSurface: {fileID: 1751557248}
-  _displacedVolume: 120
-  _floatHeight: 0.05
-  _autoGeneratePoints: 1
-  _pointsAlongLength: 5
-  _pointsAlongWidth: 3
-  _customPoints: []
-  _waterDamping: 50
-  _angularDamping: 15
-  _dampingVelocityThreshold: 0.5
+  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Physics.Board.AdvancedFin
+  _finConfig:
+    Area: 0.035
+    Depth: 0.4
+    Chord: 0.1
+    Position: {x: 0, y: -0.1, z: -0.9}
+    StallAngle: 14
+  _minEffectiveSpeed: 0.5
+  _fullEffectSpeed: 2
+  _enableTracking: 1
+  _trackingStrength: 15
   _showDebug: 1
-  _showBuoyancyPoints: 1
---- !u!114 &1428871610
+  _forceVectorScale: 0.001
+--- !u!114 &1040755301
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1428871592}
+  m_GameObject: {fileID: 1040755296}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Physics.Board.AdvancedSail
+  _sailConfig:
+    Area: 6.5
+    LuffLength: 4.7
+    BoomLength: 2
+    MastHeight: 4.6
+    Camber: 0.1
+    Twist: 10
+    MastFootPosition: {x: 0, y: 0.1, z: -0.1}
+    BoomHeight: 1.4
+  _sheetPosition: 0.65
+  _sheetSpeed: 1.5
+  _autoTrim: 0
+  _mastRake: 0
+  _maxRakeAngle: 15
+  _rakeSpeed: 3
+  _windSystem: {fileID: 1949352475}
+  _legacyWindManager: {fileID: 0}
+  _showDebug: 1
+  _showForceVectors: 1
+  _forceVectorScale: 0.002
+--- !u!114 &1040755302
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1040755296}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Player.AdvancedWindsurferController
-  _sail: {fileID: 1428871606}
-  _fin: {fileID: 1428871607}
-  _hull: {fileID: 1428871608}
-  _rigidbody: {fileID: 1428871593}
-  _controlMode: 1
+  _sail: {fileID: 1040755301}
+  _fin: {fileID: 1040755300}
+  _hull: {fileID: 1040755299}
+  _rigidbody: {fileID: 1040755297}
   _sheetControlSpeed: 0.8
   _autoSheet: 0
   _autoSheetSpeed: 0.3
@@ -1102,32 +763,124 @@ MonoBehaviour:
   _maxHeelAngle: 45
   _anticapsizeStrength: 50
   _inputSmoothing: 8
---- !u!114 &1428871611
+--- !u!4 &1040755303
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1040755296}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.5, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1040755304
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1428871592}
+  m_GameObject: {fileID: 1040755296}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c2cd26a34e864fb4084b1705142388d0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Visual.ForceVectorVisualizer
+  _sail: {fileID: 1040755301}
+  _fin: {fileID: 1040755300}
+  _rigidbody: {fileID: 1040755297}
+  _showSailForces: 1
+  _showFinForces: 1
+  _showWindDirection: 1
+  _showVelocity: 1
+  _forceScale: 0.003
+  _windScale: 0.5
+  _velocityScale: 0.5
+  _lineWidth: 0.05
+  _sailForceColor: {r: 0, g: 1, b: 1, a: 1}
+  _liftColor: {r: 0, g: 1, b: 0, a: 1}
+  _dragColor: {r: 1, g: 0, b: 0, a: 1}
+  _windColor: {r: 0.3, g: 0.5, b: 1, a: 1}
+  _velocityColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  _finLiftColor: {r: 0, g: 0.8, b: 0.4, a: 1}
+--- !u!114 &1040755305
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1040755296}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 77145eb361321fd428a94c2ba2ea928b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Visual.EquipmentVisualizer
-  _boardPrefab: {fileID: 0}
-  _sailPrefab: {fileID: 0}
+  _boardPrefab: {fileID: 919132149155446097, guid: 0e1026b36c128b7488962327051b05dc, type: 3}
+  _sailPrefab: {fileID: 919132149155446097, guid: bbca76f0df811164ab3246251e355263, type: 3}
   _sail: {fileID: 0}
-  _advancedSail: {fileID: 0}
+  _advancedSail: {fileID: 1040755301}
   _boardOffset: {x: 0, y: 0, z: 0}
-  _boardRotationOffset: {x: 0, y: 0, z: 0}
+  _boardRotationOffset: {x: 0, y: 270, z: 0}
   _boardScale: 1
-  _mastBasePosition: {x: 0, y: 0.1, z: -0.05}
-  _sailRotationOffset: {x: 0, y: 0, z: 0}
+  _mastBasePosition: {x: 0, y: 0.1, z: -0.1}
+  _sailRotationOffset: {x: 0, y: 90, z: 0}
   _sailScale: 1
   _maxRakeAngle: 15
   _sailAngleOffset: 0
+  _invertSailRotation: 1
   _smoothSpeed: 8
---- !u!1 &1751557243
+--- !u!114 &1040755306
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1040755296}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f432ec17c8be5bc48ac26eb9f6a7c300, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Physics.Board.BoardMassConfiguration
+  _totalMass: 95
+  _boardMass: 8
+  _rigMass: 6
+  _sailorMass: 80
+  _centerOfMass: {x: 0, y: 0.15, z: -0.1}
+  _sailorCOMHeight: 0.9
+  _boardLength: 2.4
+  _boardWidth: 0.6
+  _boardThickness: 0.12
+  _useCustomInertia: 0
+  _inertiaMultiplier: {x: 1, y: 1, z: 1}
+  _dynamicCOM: 1
+  _planingCOMShift: 0.15
+  _showDebug: 1
+--- !u!65 &1040755307
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1040755296}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.6, y: 0.12, z: 2.5}
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!1 &1702792820
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1135,152 +888,46 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1751557247}
-  - component: {fileID: 1751557246}
-  - component: {fileID: 1751557245}
-  - component: {fileID: 1751557248}
+  - component: {fileID: 1702792822}
+  - component: {fileID: 1702792821}
   m_Layer: 0
-  m_Name: WaterSurface
+  m_Name: TelemetryHUD
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!23 &1751557245
-MeshRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1751557243}
-  m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 2
-  m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 2100000, guid: cedf56a82e8e8c84ba2ae665aaf726e1, type: 2}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 3
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_MaskInteraction: 0
-  m_AdditionalVertexStreams: {fileID: 0}
---- !u!33 &1751557246
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1751557243}
-  m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
---- !u!4 &1751557247
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1751557243}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 100, y: 1, z: 100}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1751557248
+--- !u!114 &1702792821
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1751557243}
+  m_GameObject: {fileID: 1702792820}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1c061b34bf88deb4e83a6dc63fd7b531, type: 3}
+  m_Script: {fileID: 11500000, guid: d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Physics.Water.WaterSurface
-  _baseHeight: 0
-  _enableWaves: 0
-  _waveHeight: 0.5
-  _waveLength: 10
-  _waveSpeed: 1
-  _waveDirection: 0
---- !u!1 &1768501477
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1768501479}
-  - component: {fileID: 1768501478}
-  m_Layer: 0
-  m_Name: WindDirectionIndicator
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1768501478
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1768501477}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1e82418aab6e24b4eb0c1ced1ceb4a22, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Visual.WindDirectionIndicator
-  _windSystem: {fileID: 0}
-  _arrowCount: 12
-  _radius: 30
-  _height: 0.1
-  _arrowSize: 3
-  _arrowColor: {r: 0.5, g: 0.7, b: 1, a: 0.6}
-  _animate: 1
-  _animationSpeed: 1
-  _followTarget: {fileID: 0}
---- !u!4 &1768501479
+  m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.UI.AdvancedTelemetryHUD
+  _controller: {fileID: 1040755302}
+  _sail: {fileID: 1040755301}
+  _fin: {fileID: 1040755300}
+  _hull: {fileID: 1040755299}
+  _buoyancy: {fileID: 1040755298}
+  _boardRigidbody: {fileID: 1040755297}
+  _showDetailed: 1
+  _showForceVectors: 0
+  _showPolar: 0
+  _fontSize: 12
+  _panelWidth: 250
+  _panelPadding: 10
+--- !u!4 &1702792822
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1768501477}
+  m_GameObject: {fileID: 1702792820}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -1289,7 +936,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &2021339461
+--- !u!1 &1949352474
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1297,8 +944,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 2021339463}
-  - component: {fileID: 2021339462}
+  - component: {fileID: 1949352476}
+  - component: {fileID: 1949352475}
   m_Layer: 0
   m_Name: WindSystem
   m_TagString: Untagged
@@ -1306,37 +953,37 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &2021339462
+--- !u!114 &1949352475
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2021339461}
+  m_GameObject: {fileID: 1949352474}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Environment.WindSystem
   _windDirection: 270
-  _windSpeedKnots: 13.3
-  _enableGusts: 0
+  _windSpeedKnots: 15
+  _enableGusts: 1
   _gustIntensity: 0.2
   _gustPeriod: 8
   _enableShifts: 0
   _maxShiftAngle: 15
   _shiftPeriod: 60
-  _enableHeightGradient: 0
+  _enableHeightGradient: 1
   _referenceHeight: 1
   _shearExponent: 0.14
   _showGizmos: 1
---- !u!4 &2021339463
+--- !u!4 &1949352476
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2021339461}
+  m_GameObject: {fileID: 1949352474}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -1349,11 +996,10 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 961739753}
-  - {fileID: 203844589}
-  - {fileID: 1751557247}
-  - {fileID: 1428871597}
-  - {fileID: 110243872}
-  - {fileID: 2021339463}
-  - {fileID: 268128506}
-  - {fileID: 1768501479}
+  - {fileID: 554527754}
+  - {fileID: 1949352476}
+  - {fileID: 789876478}
+  - {fileID: 1040755303}
+  - {fileID: 665733316}
+  - {fileID: 185212601}
+  - {fileID: 1702792822}

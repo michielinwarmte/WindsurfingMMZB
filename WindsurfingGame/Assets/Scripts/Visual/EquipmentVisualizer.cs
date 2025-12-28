@@ -59,6 +59,9 @@ namespace WindsurfingGame.Visual
                  "Physics: 0° = sail pointing aft along board centerline. " +
                  "Adjust this if your model's 'forward' direction differs.")]
         [SerializeField] private float _sailAngleOffset = 0f;
+        
+        [Tooltip("Invert the sail rotation direction. Enable if sail rotates INTO the wind instead of away from it.")]
+        [SerializeField] private bool _invertSailRotation = true;
 
         [Header("Animation")]
         [Tooltip("How quickly the visual responds to physics changes")]
@@ -154,7 +157,8 @@ namespace WindsurfingGame.Visual
             // Add the sail angle offset to align physics with visual model orientation
             // Physics: 0° = sail pointing AFT (backward along centerline)
             // Your model may have a different "zero" orientation
-            float visualSailAngle = _currentSailAngle + _sailAngleOffset;
+            // Invert if model rotates opposite to physics convention
+            float visualSailAngle = (_invertSailRotation ? -_currentSailAngle : _currentSailAngle) + _sailAngleOffset;
             _sailPivot.transform.localRotation = Quaternion.Euler(-_currentRake, visualSailAngle, 0);
         }
 
