@@ -30,26 +30,77 @@ Investigate `SimpleFollowCamera.cs` initialization in `Start()` or `OnEnable()`.
 
 ---
 
-### 2. Steering is Inverted
+### 2. Steering Controls Inverted on Port Tack (CRITICAL - Partially Investigated)
 
 **Symptom:**  
-A/D keys steer in the wrong direction (left turns right, right turns left).
+When on PORT tack (wind coming from starboard/right side), pressing A turns the board RIGHT and pressing D turns it LEFT. This is the opposite of the expected behavior. On starboard tack, controls work correctly (A=left, D=right).
 
-**Root Cause:**  
-Sign error in the steering torque calculation or rake steering formula.
+**Root Cause (Identified but not fully fixed):**  
+There are TWO steering systems running simultaneously that conflict:
 
-**Fix Needed:**  
-1. Check `AdvancedWindsurferController.cs` for steering input handling
-2. Check `AdvancedSail.cs` → `ApplyRakeSteering()` for sign conventions
-3. May need to negate the steering input or torque direction
+1. **Sail.cs ApplyRakeTorque()** - Applies torque WITHOUT tack compensation:
+   ```csharp
+   float steeringTorque = _mastRake * forceMagnitude * _rakeTorqueMultiplier;
+   _targetRigidbody.AddTorque(Vector3.up * steeringTorque, ForceMode.Force);
+   ```
+
+2. **AdvancedSail.cs ApplyRakeSteering()** - Applies torque WITH tack compensation:
+   ```csharp
+   float tack = _state.SailSide != 0 ? -_state.SailSide : 1f;
+   float steeringTorque = _mastRake * tack * forceMag * 0.3f;
+   ```
+
+**The Problem:**  
+- Both `Sail.cs` and `AdvancedSail.cs` are active on the same GameObject
+- Each has its OWN `_mastRake` field
+- The controller (`WindsurferControllerV2.cs`) calls `_sail.RakeBack()` which modifies `Sail.cs._mastRake`
+- But `AdvancedSail.cs` has its own `_mastRake` that's controlled separately
+- AdvancedSail's steering torque uses `tack = -SailSide` which FLIPS the direction on port tack
+- Multiple attempts to compensate in the controller failed
+
+**Attempted Fixes (all failed to fully resolve):**
+1. Flipping `windFromStarboard` check in controller
+2. Inverting `effectiveSteer` on port tack
+3. Using `_advancedSail.State.SailSide` for tack detection
+4. Calling `_advancedSail.AdjustRake()` with flipped sign
+5. Using `GetApparentWindSide()` for tack detection
+
+**Proper Fix Required:**
+Choose ONE of these approaches:
+1. **Disable one steering system** - Either disable `Sail.ApplyRakeTorque()` or `AdvancedSail.ApplyRakeSteering()`, not both
+2. **Synchronize rake values** - Make both components share the same `_mastRake` value
+3. **Remove tack compensation from AdvancedSail** - Make `ApplyRakeSteering()` work like `Sail.ApplyRakeTorque()` (no tack flip)
+4. **Use only AdvancedSail for steering** - Have controller only call `AdvancedSail.AdjustRake()` and ensure compensation is correct
+
+**Debugging Steps:**
+1. Add `Debug.Log($"SailSide={_state.SailSide}, tack={tack}, rake={_mastRake}, torque={steeringTorque}")` to `AdvancedSail.ApplyRakeSteering()`
+2. Add `Debug.Log($"steer={steer}, effectiveRake={effectiveRake}")` to `WindsurferControllerV2.ApplyBeginnerControls()`
+3. Trace actual values during port and starboard tack
+4. Identify which steering system is dominant
 
 **Files:**  
-- [WindsurfingGame/Assets/Scripts/Player/AdvancedWindsurferController.cs](../WindsurfingGame/Assets/Scripts/Player/AdvancedWindsurferController.cs)
-- [WindsurfingGame/Assets/Scripts/Physics/Board/AdvancedSail.cs](../WindsurfingGame/Assets/Scripts/Physics/Board/AdvancedSail.cs)
+- [WindsurfingGame/Assets/Scripts/Player/WindsurferControllerV2.cs](../WindsurfingGame/Assets/Scripts/Player/WindsurferControllerV2.cs) - Controller input handling
+- [WindsurfingGame/Assets/Scripts/Physics/Board/Sail.cs](../WindsurfingGame/Assets/Scripts/Physics/Board/Sail.cs) - `ApplyRakeTorque()` at line ~295
+- [WindsurfingGame/Assets/Scripts/Physics/Board/AdvancedSail.cs](../WindsurfingGame/Assets/Scripts/Physics/Board/AdvancedSail.cs) - `ApplyRakeSteering()` at line ~445
+- [WindsurfingGame/Assets/Scripts/Physics/Board/ApparentWindCalculator.cs](../WindsurfingGame/Assets/Scripts/Physics/Board/ApparentWindCalculator.cs) - `GetApparentWindSide()` method
 
 ---
 
 ## ✅ Recently Fixed Issues
+
+### Fixed in Session 25 (January 1, 2026) - Physics Corrections
+
+- ✅ **Fin induced drag was LINEAR instead of QUADRATIC** → Fixed `FinPhysics.cs` to use correct formula: `Cdi = Cl² / (π × AR × e)`. This makes beam reach (high side force) have proportionally MORE induced drag than broad reach, which should make broad reach faster.
+
+- ✅ **Spray drag was DECREASING with planing** → Fixed `Hydrodynamics.cs` so spray drag INCREASES with planing (coefficient 0.01 × planingFactor). Spray generation increases at higher planing speeds.
+
+- ✅ **CE height caused porpoising** → Set Center of Effort height to 0.0m in `AdvancedSail.cs` to eliminate heeling moment from sail force.
+
+- ✅ **Artificial buoyancy reduction removed** → `AdvancedBuoyancy.cs` now uses pure Archimedes principle with no artificial scaling during planing.
+
+- ✅ **Increased vertical damping** → `_verticalDamping` increased to 8000 N·s/m and `_waterViscosity` to 800 for more stable water contact.
+
+**Note:** The velocity polar issue (beam reach faster than broad reach) may still need tuning. The physics corrections are in place but real-world testing is needed.
 
 ### 3. Half-Wind Submersion at Planing Speeds (FIXED - Session 23)
 

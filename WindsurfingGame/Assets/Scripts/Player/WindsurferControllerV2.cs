@@ -20,6 +20,7 @@ namespace WindsurfingGame.Player
         [Header("References")]
         [SerializeField] private Rigidbody _rigidbody;
         [SerializeField] private Sail _sail;
+        [SerializeField] private AdvancedSail _advancedSail;
         [SerializeField] private FinPhysics _finPhysics;
         [SerializeField] private ApparentWindCalculator _apparentWind;
 
@@ -99,6 +100,8 @@ namespace WindsurfingGame.Player
                 _rigidbody = GetComponent<Rigidbody>();
             if (_sail == null)
                 _sail = GetComponent<Sail>();
+            if (_advancedSail == null)
+                _advancedSail = GetComponent<AdvancedSail>();
             if (_finPhysics == null)
                 _finPhysics = GetComponent<FinPhysics>();
             if (_apparentWind == null)
@@ -194,51 +197,59 @@ namespace WindsurfingGame.Player
 
             if (_combinedSteering && Mathf.Abs(steer) > 0.1f)
             {
-                // Determine which side the wind is coming from (in local space)
-                Vector3 localWind = Vector3.zero;
-                if (_apparentWind != null)
+                // Use AdvancedSail's rake control since it handles steering with tack compensation
+                // AdvancedSail.ApplyRakeSteering applies: torque = _mastRake * tack * force
+                // where tack = -SailSide
+                //
+                // On starboard (SailSide=+1, tack=-1): positive rake → negative torque → turn LEFT
+                // On port (SailSide=-1, tack=+1): positive rake → positive torque → turn RIGHT
+                //
+                // So to turn RIGHT (D key), we need:
+                //   - On starboard: NEGATIVE rake (rake forward)
+                //   - On port: POSITIVE rake (rake back)
+                //
+                // This means we must FLIP the rake based on tack!
+                float sailSide = 1f;
+                if (_advancedSail != null)
                 {
-                    localWind = transform.InverseTransformDirection(_apparentWind.ApparentWind);
+                    sailSide = _advancedSail.State.SailSide;
+                    if (sailSide == 0) sailSide = 1f;
                 }
                 
-                // Wind from right side (+X) or left side (-X)?
-                bool windFromStarboard = localWind.x > 0;
+                // Flip rake direction so D always turns right:
+                // effectiveRake = steer * -sailSide
+                // D (steer=+1): on starboard (sailSide=+1) → rake = -1 (forward)
+                // D (steer=+1): on port (sailSide=-1) → rake = +1 (back)  
+                float effectiveRake = steer * -sailSide;
                 
-                // Smart rake calculation:
-                // When wind is from starboard (right):
-                //   - Turn right (D, steer > 0): rake BACK (heads you into wind = turns right)
-                //   - Turn left (A, steer < 0): rake FORWARD (bears you away = turns left)
-                // When wind is from port (left):
-                //   - Turn right (D, steer > 0): rake FORWARD (bears you away = turns right)
-                //   - Turn left (A, steer < 0): rake BACK (heads you into wind = turns left)
-                
-                bool shouldRakeBack;
-                if (windFromStarboard)
+                // Apply rake to AdvancedSail (the one that actually steers)
+                if (_advancedSail != null)
                 {
-                    // Wind from right: rake back to turn right, forward to turn left
-                    shouldRakeBack = steer > 0;
+                    _advancedSail.AdjustRake(effectiveRake * 0.25f * Time.deltaTime * 5f);
                 }
-                else
+                // Also apply to Sail for visual consistency
+                if (_sail != null)
                 {
-                    // Wind from left: rake back to turn left, forward to turn right
-                    shouldRakeBack = steer < 0;
+                    if (effectiveRake > 0)
+                        _sail.RakeBack(Mathf.Abs(steer) * 0.25f);
+                    else
+                        _sail.RakeForward(Mathf.Abs(steer) * 0.25f);
                 }
-                
-                // Apply the correct rake direction
-                if (shouldRakeBack)
-                    _sail.RakeBack(Mathf.Abs(steer) * 0.25f);  // Further reduced for smoother control
-                else
-                    _sail.RakeForward(Mathf.Abs(steer) * 0.25f);
 
-                // Apply weight shift for additional turning
+                // Apply weight shift for additional turning (use raw steer for visual consistency)
                 ApplyWeightShift(steer * 0.15f);  // Further reduced for gentler turns
                 
-                // Apply body lean for edge control
+                // Apply body lean for edge control (use raw steer for visual consistency)
                 ApplyEdging(steer);
             }
             else if (_autoCenterMast)
             {
                 _sail.CenterMast();
+                // Also center AdvancedSail's rake
+                if (_advancedSail != null)
+                {
+                    _advancedSail.SetMastRake(Mathf.MoveTowards(_advancedSail.MastRake, 0f, Time.deltaTime * 2f));
+                }
                 ApplyWeightShift(0);
                 ApplyEdging(0);
             }
