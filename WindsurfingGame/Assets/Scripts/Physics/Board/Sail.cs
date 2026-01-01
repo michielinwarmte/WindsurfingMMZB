@@ -50,6 +50,13 @@ namespace WindsurfingGame.Physics.Board
         [Tooltip("Height of boom/CE on mast")]
         [SerializeField] private float _boomHeight = 1.8f;
 
+        [Header("High Speed Stability")]
+        [Tooltip("Speed at which sail downforce starts (km/h). Sailor leans back at high speed.")]
+        [SerializeField] private float _downforceOnsetSpeedKmh = 35f;
+        
+        [Tooltip("Maximum downforce as fraction of sail lift. Keeps board in water at high speed.")]
+        [SerializeField] private float _maxDownforceFraction = 0.25f;
+        
         [Header("Mast Rake (Steering)")]
         [Tooltip("Current mast rake position (-1 = forward/downwind, +1 = back/upwind)")]
         [Range(-1f, 1f)]
@@ -78,6 +85,7 @@ namespace WindsurfingGame.Physics.Board
         private Vector3 _liftForce;
         private Vector3 _dragForce;
         private Vector3 _totalForce;
+        private Vector3 _downforce;
         private float _currentAngleOfAttack;
 
         // Air density constant
@@ -85,6 +93,7 @@ namespace WindsurfingGame.Physics.Board
 
         // Properties
         public Vector3 TotalForce => _totalForce;
+        public Vector3 Downforce => _downforce;
         public float SheetPosition => _sheetPosition;
         public float AngleOfAttack => _currentAngleOfAttack;
         public float MastRake => _mastRake;
@@ -202,6 +211,40 @@ namespace WindsurfingGame.Physics.Board
         private void ApplyForces()
         {
             if (_targetRigidbody == null || _totalForce.sqrMagnitude < 0.01f) return;
+            
+            // ===== FORCE DIRECTION FIX =====
+            // The sailor keeps the sail upright relative to the WATER, not the board.
+            // When the board pitches up/down, the sail force stays horizontal.
+            // This prevents the sail from pushing the board down when nose pitches up.
+            Vector3 horizontalForce = _totalForce;
+            horizontalForce.y = 0f; // Remove any vertical component
+            
+            // Preserve the original force magnitude in the horizontal plane
+            float originalMagnitude = new Vector2(_totalForce.x, _totalForce.z).magnitude;
+            float currentMagnitude = new Vector2(horizontalForce.x, horizontalForce.z).magnitude;
+            if (currentMagnitude > 0.01f)
+            {
+                horizontalForce *= (originalMagnitude / currentMagnitude);
+            }
+            
+            // ===== HIGH SPEED DOWNFORCE =====
+            // At high speeds, the sailor leans back and the sail generates downforce.
+            // This keeps the board in the water and prevents flying out.
+            // The downforce increases smoothly above the onset speed.
+            _downforce = Vector3.zero;
+            float boardSpeed = _targetRigidbody.linearVelocity.magnitude;
+            float boardSpeedKmh = boardSpeed * 3.6f; // m/s to km/h
+            
+            if (boardSpeedKmh > _downforceOnsetSpeedKmh)
+            {
+                // Downforce ramps up from onset to onset+20 km/h
+                float speedAboveOnset = boardSpeedKmh - _downforceOnsetSpeedKmh;
+                float downforceFactor = Mathf.Clamp01(speedAboveOnset / 20f); // Full at +20 km/h
+                
+                // Downforce proportional to sail force magnitude
+                float downforceMagnitude = horizontalForce.magnitude * _maxDownforceFraction * downforceFactor;
+                _downforce = Vector3.down * downforceMagnitude;
+            }
 
             // Calculate Center of Effort position:
             // - Start at mast foot (fixed position)
@@ -234,7 +277,14 @@ namespace WindsurfingGame.Physics.Board
             Vector3 localCE = boomAttachment + boomDirection * ceDistance;
             _currentCE = transform.TransformPoint(localCE);
             
-            _targetRigidbody.AddForceAtPosition(_totalForce, _currentCE, ForceMode.Force);
+            // Apply horizontal force (sail stays upright relative to water)
+            _targetRigidbody.AddForceAtPosition(horizontalForce, _currentCE, ForceMode.Force);
+            
+            // Apply downforce at center of mass (sailor's weight shift)
+            if (_downforce.sqrMagnitude > 0.1f)
+            {
+                _targetRigidbody.AddForce(_downforce, ForceMode.Force);
+            }
         }
 
         /// <summary>

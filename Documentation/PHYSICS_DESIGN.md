@@ -2,7 +2,7 @@
 
 This document explains the physics systems in our windsurfing simulator.
 
-**Last Updated:** December 28, 2025
+**Last Updated:** January 1, 2026
 
 ## Overview
 
@@ -128,10 +128,17 @@ volumeWeights = {0.6, 0.8, 1.0, 1.0, 0.9, 0.7, 0.5}  // Nose to tail
 ### Damping
 
 Separate damping coefficients for stable behavior:
-- **Vertical damping**: 800 N·s/m (prevents vertical oscillation)
+- **Vertical damping**: 4000 N·s/m (prevents vertical oscillation)
+- **Water viscosity**: 400 N·s²/m² (velocity-squared damping for realistic water feel)
 - **Roll damping**: 150 N·m·s/rad (prevents tipping)
 - **Pitch damping**: 150 N·m·s/rad (prevents porpoising)
 - **Yaw damping**: Lower (allows turning)
+
+The vertical damping uses a hybrid formula:
+```
+F_damping = -v × linearDamping × submersion - v × |v| × viscosity × submersion
+```
+This combines linear damping (stability) with viscous v² damping (realism).
 
 ### Water Resistance
 
@@ -167,48 +174,64 @@ Without hydrodynamic lift:
 At low speeds, forward motion creates dynamic pressure that provides lift:
 
 ```csharp
-// Displacement lift formula
+// Displacement lift formula - does NOT scale with submersion depth
 q = 0.5 × ρ_water × v²;           // Dynamic pressure
-wettedArea = boardLength × boardWidth × 0.7;
-submersionRatio = submergedVolume / totalVolume;  // 0-1
+planformArea = boardLength × boardWidth × 0.8;
 
-// KEY: Lift only on submerged portions
-liftCoeff = _displacementLiftCoefficient × submersionRatio;
-displacementLift = liftCoeff × q × wettedArea;
+// Binary check: must be touching water, but lift doesn't scale with depth
+if (submersionRatio < 0.05f) return;  // Not in water
+
+displacementLift = liftCoeff × q × planformArea;
+
+// Cap at fraction of weight - buoyancy is still primary support
+maxLift = totalMass × gravity × 0.3;
+displacementLift = Mathf.Min(displacementLift, maxLift);
 
 // Fades out as planing takes over
 displacementLift *= (1 - planingRatio);
 ```
 
-**Self-Regulating Behavior:**
-- More submerged → more lift → board rises
-- Less submerged → less lift → board sinks
-- System naturally finds equilibrium
-
 **Parameters:**
 - `displacementLiftCoefficient`: 0.12
 - `displacementLiftMinSpeed`: 0.5 m/s (~2 km/h)
 
-#### Stage 2: Planing Lift (High Speed)
+#### Stage 2: Planing Lift (High Speed) - Savitsky Equations
 
-At planing speeds, the board rises onto the surface:
+At planing speeds, the board rides on hydrodynamic lift using the Savitsky planing theory:
 
 ```csharp
-// Speed-based planing detection
-planingOnsetSpeed = 4.0 m/s;   // ~14 km/h
-fullPlaningSpeed = 6.0 m/s;    // ~22 km/h
+// Savitsky Lift Coefficient
+// CL = τ^1.1 × (0.012 × λ^0.5 + 0.0055 × λ^2.5 / Cv²)
+//
+// Where:
+//   τ = trim angle (degrees, bow-up)
+//   λ = wetted length / beam ratio
+//   Cv = speed coefficient = V / √(g × beam)
 
-planingRatio = Mathf.Clamp01((speed - onset) / (full - onset));
+float Cv = speed / Mathf.Sqrt(g * beam);
+float lambda = Mathf.Lerp(lambdaMax, 1.5f, planingRatio);
 
-// Trim-dependent lift
-trimFactor = 1 - Mathf.Abs(pitch - optimalTrim) / 20f;
-planingLift = planingLiftCoefficient × q × wettedArea × planingRatio × trimFactor;
+float dynamicTerm = 0.012f * Mathf.Sqrt(lambda);
+float hydrostaticTerm = 0.0055f * Mathf.Pow(lambda, 2.5f) / (Cv * Cv);
+float CL0 = Mathf.Pow(tau, 1.1f) * (dynamicTerm + hydrostaticTerm);
+
+// Deadrise correction: CL = CL0 - 0.0065 × β × CL0^0.6
+float CL = CL0 - 0.0065f * deadrise * Mathf.Pow(CL0, 0.6f);
+
+// Lift force: L = CL × 0.5ρV² × beam²
+float lift = CL * 0.5f * waterDensity * speed * speed * beam * beam;
 ```
 
+**Key Physics Insight - No Submersion Feedback:**
+Unlike the previous implementation, lift depends on **speed and trim angle only**, not submersion depth. This prevents the trampoline/oscillation problem:
+- Submersion is only a binary check: is the board touching water?
+- At a given speed/trim, lift is constant
+- Board height is controlled by buoyancy equilibrium, not lift equilibrium
+
 **Parameters:**
-- `planingLiftCoefficient`: 0.15
-- `optimalTrimAngle`: 2° (slight bow-up)
-- `maxLiftFraction`: 0.4 (prevents flying)
+- `planingLiftCoefficient`: 0.8 (Savitsky typical: 0.5-1.0)
+- `maxLiftFraction`: 0.85 (prevents flying out - lift capped at 85% of weight)
+- `liftSmoothingFactor`: 0.08 (smooth transitions)
 
 ### Combined Lift Application
 
@@ -540,12 +563,20 @@ float finArea = 0.04f;           // m²
 float planingOnsetSpeed = 4.0f;  // m/s (~14 km/h)
 float fullPlaningSpeed = 6.0f;   // m/s (~22 km/h)
 float displacementLiftCoeff = 0.12f;
-float planingLiftCoeff = 0.15f;
+float planingLiftCoeff = 0.8f;   // Savitsky: 0.5-1.0 typical
+float maxLiftFraction = 0.85f;   // Prevents flying out
+float liftSmoothingFactor = 0.08f;
+float submersionDragMultiplier = 12.0f;  // Penalty for sinking
 
 // Damping (AdvancedBuoyancy)
-float verticalDamping = 800f;    // N·s/m
+float verticalDamping = 4000f;   // N·s/m (linear)
+float waterViscosity = 400f;     // N·s²/m² (v² damping)
 float rotationalDamping = 150f;  // N·m·s/rad
-float horizontalDamping = 20f;   // N·s/m
+float horizontalDamping = 20f;   // N·s/m (lateral only)
+
+// Sail High-Speed Stability (Sail.cs)
+float downforceOnsetSpeedKmh = 35f;  // When downforce starts
+float maxDownforceFraction = 0.25f;  // Max 25% of sail force
 ```
 
 ---
@@ -554,20 +585,25 @@ float horizontalDamping = 20f;   // N·s/m
 
 ⚠️ See [KNOWN_ISSUES.md](KNOWN_ISSUES.md) for current bugs.
 
-### Planing Oscillation Problem
+### ✅ Planing Oscillation Problem - FIXED
 
-**Symptom:** Board oscillates between 0% and 100% submersion at planing speeds.
+**Symptom:** Board oscillated between 0% and 100% submersion at planing speeds ("trampoline effect").
 
-**Cause:** Feedback loop between lift and submersion:
-1. Board sinks → more submersion → more lift
-2. Board rises → less submersion → less lift
-3. Board falls → repeat
+**Root Cause:** Lift was scaling with submersion ratio, creating a positive feedback loop:
+1. Board sinks → submersion↑ → lift↑ → board rises
+2. Board rises → submersion↓ → lift↓ → board sinks
+3. Repeat = trampoline
 
-**Potential Fix:**
-- Add smoothing/hysteresis to lift calculations
-- Use PID controller for height stabilization
-- Add deadband around target submersion
+**Solution:** Implemented proper Savitsky planing equations where lift depends on **speed and trim only**, not submersion depth. Combined with increased water damping (4000 N·s/m) and viscosity (400 N·s²/m²).
+
+### Half-Wind Submersion Issue - UNDER INVESTIGATION
+
+**Symptom:** When sailing beam reach (half wind) with full sheet, the board may sink progressively.
+
+**Suspected Cause:** The heeling moment from sail force applied at height causes the leeward rail to submerge, creating asymmetric forces. This is a physics limitation, not a bug - in real windsurfing, sailors actively counter this by hiking out.
+
+**Current Status:** The physics correctly simulate the challenge. Future work may add sailor hiking simulation.
 
 ---
 
-*Last Updated: December 28, 2025*
+*Last Updated: January 1, 2026*

@@ -26,8 +26,8 @@ This game simulates realistic windsurfing physics including:
 | Issue | Priority | Workaround |
 |-------|----------|------------|
 | Camera only works after changing FOV in Inspector | 🔴 Critical | Change FOV value during Play mode |
-| Board oscillates 0-100% submersion when planing | 🔴 Critical | None - needs PID stability fix |
 | Steering is inverted | 🔴 Critical | None - needs sign fix |
+| Half-wind submersion at low speeds | 🟡 Medium | Get up to planing speed quickly |
 
 ## 🛠️ Technology Stack
 
@@ -110,24 +110,26 @@ See [DEVELOPMENT_PLAN.md](Documentation/DEVELOPMENT_PLAN.md) for detailed develo
 ## 🎯 Current Status
 
 **Phase**: Core Physics Complete ✅  
-**Last Updated**: December 28, 2025
+**Last Updated**: January 1, 2026
 
 ### ✅ Working Features
 - **Upwind sailing** - Can sail ~45° to wind on both tacks
 - **Planing** - Board lifts and accelerates at ~17+ km/h
 - **Tacking** - Sail switches sides correctly
 - **Rake steering** - Works on both tacks (bear away/head up)
-- **High-speed stability** - No wobble at 20+ knots
+- **High-speed stability** - No wobble at 20+ knots, no flying out
 - **Beginner controls** - Context-aware A/D steering
 - **Advanced controls** - Manual Q/E rake + A/D weight shift
 - **Realistic buoyancy** - Archimedes' principle with volume displacement
-- **Displacement lift** - Dynamic support at pre-planing speeds
+- **Savitsky planing** - Proper hydrodynamic lift equations
+- **Water viscosity** - Realistic v² damping for thick water feel
 - **Sailor COM shift** - Moves AFT (backward) when planing
+- **High-speed downforce** - Sail keeps board in water at 35+ km/h
 
 ### 🔧 Needs Work (Priority for Next Contributor)
 1. 🔴 **Camera initialization** - Needs FOV change workaround
-2. 🔴 **Planing stability** - Board oscillates in submersion
-3. 🔴 **Inverted steering** - A/D controls reversed
+2. 🔴 **Inverted steering** - A/D controls reversed
+3. 🟡 **Half-wind submersion** - Board sinks at beam reach before planing
 4. Sail visuals (boom rotation, mesh deformation)
 5. Sound effects
 6. Environment polish

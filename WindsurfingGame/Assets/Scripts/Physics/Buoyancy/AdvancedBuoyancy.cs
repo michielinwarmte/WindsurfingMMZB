@@ -55,8 +55,11 @@ namespace WindsurfingGame.Physics.Buoyancy
         [SerializeField] private int _widthSamples = 3;
         
         [Header("Damping")]
-        [Tooltip("Vertical damping coefficient")]
-        [SerializeField] private float _verticalDamping = 800f;
+        [Tooltip("Vertical damping coefficient - resists bobbing/bouncing")]
+        [SerializeField] private float _verticalDamping = 4000f;
+        
+        [Tooltip("Water viscosity - adds velocity-squared damping for thick water feel")]
+        [SerializeField] private float _waterViscosity = 400f;
         
         [Tooltip("Rotational damping coefficient")]
         [SerializeField] private float _rotationalDamping = 150f;
@@ -311,6 +314,7 @@ namespace WindsurfingGame.Physics.Buoyancy
         
         /// <summary>
         /// Apply damping to reduce oscillation and simulate water resistance.
+        /// Uses both linear damping (stability) and viscous damping (realism).
         /// </summary>
         private void ApplyDamping()
         {
@@ -319,27 +323,45 @@ namespace WindsurfingGame.Physics.Buoyancy
             Vector3 velocity = _rigidbody.linearVelocity;
             Vector3 angularVelocity = _rigidbody.angularVelocity;
             
-            // Vertical damping - resists bobbing
-            // Proportional to how much of the board is submerged
+            // ===== VERTICAL DAMPING =====
+            // Combines linear damping (stability) with viscous v² damping (realism)
+            // Real water has viscosity - resistance increases with speed squared
             float verticalVelocity = velocity.y;
             if (Mathf.Abs(verticalVelocity) > 0.01f)
             {
-                float verticalDampingForce = -verticalVelocity * _verticalDamping * _submergedRatio;
-                _rigidbody.AddForce(Vector3.up * verticalDampingForce, ForceMode.Force);
+                // Linear damping: F = -C₁ × v (stable, prevents oscillation)
+                float linearDamping = -verticalVelocity * _verticalDamping * _submergedRatio;
+                
+                // Viscous damping: F = -C₂ × v × |v| (realistic, water feels thick)
+                // Sign preserved so it opposes motion in correct direction
+                float viscousDamping = -verticalVelocity * Mathf.Abs(verticalVelocity) * _waterViscosity * _submergedRatio;
+                
+                float totalVerticalDamping = linearDamping + viscousDamping;
+                
+                // Cap to prevent extreme forces
+                totalVerticalDamping = Mathf.Clamp(totalVerticalDamping, -15000f, 15000f);
+                
+                _rigidbody.AddForce(Vector3.up * totalVerticalDamping, ForceMode.Force);
             }
             
-            // Horizontal damping - water drag when moving sideways or slowly
-            // This is separate from the hull drag which handles forward motion
+            // ===== HORIZONTAL DAMPING =====
+            // Water drag when moving sideways - NOT forward motion
+            // Hull drag handles forward resistance, this is only for lateral drift
+            // NO viscosity here - it would kill speed and prevent planing
             Vector3 horizontalVelocity = new Vector3(velocity.x, 0, velocity.z);
             if (horizontalVelocity.sqrMagnitude > 0.01f)
             {
-                // Stronger damping for lateral motion than forward
+                // Only lateral (sideways) damping - forward is handled by hull drag
                 Vector3 localVelocity = transform.InverseTransformDirection(horizontalVelocity);
-                float lateralDamping = Mathf.Abs(localVelocity.x) * _horizontalDamping * 2f;
-                float forwardDamping = Mathf.Abs(localVelocity.z) * _horizontalDamping * 0.1f;
                 
-                Vector3 dampingForce = -horizontalVelocity.normalized * 
-                                       (lateralDamping + forwardDamping) * _submergedRatio;
+                // Strong lateral damping (resists sideslip)
+                // Minimal forward damping (hull drag does this properly)
+                float lateralSpeed = Mathf.Abs(localVelocity.x);
+                float lateralDamping = lateralSpeed * _horizontalDamping * 2f;
+                
+                // Apply only in lateral direction, not forward
+                Vector3 lateralDir = transform.right * Mathf.Sign(localVelocity.x);
+                Vector3 dampingForce = -lateralDir * lateralDamping * _submergedRatio;
                 _rigidbody.AddForce(dampingForce, ForceMode.Force);
             }
             
@@ -349,16 +371,22 @@ namespace WindsurfingGame.Physics.Buoyancy
                 // Different damping for different axes
                 Vector3 localAngVel = transform.InverseTransformDirection(angularVelocity);
                 
-                // Roll (X) - water resists rolling
-                // Pitch (Z) - water resists pitching  
+                // Base damping applies even at low submersion (hull is still touching water)
+                // Only scale slightly with submersion - a windsurfing board always has some water contact
+                float minDampingFactor = 0.3f; // Always have at least 30% damping
+                float submersionFactor = minDampingFactor + (1f - minDampingFactor) * _submergedRatio;
+                
+                // Roll (X) - water resists rolling strongly (wide hull)
+                // Pitch (Z) - water resists pitching (long hull)
                 // Yaw (Y) - less resistance (fin handles this)
                 Vector3 dampingTorque = new Vector3(
-                    -localAngVel.x * _rotationalDamping * 1.5f,
-                    -localAngVel.y * _rotationalDamping * 0.3f,
-                    -localAngVel.z * _rotationalDamping * 1.2f
+                    -localAngVel.x * _rotationalDamping * 2.0f * submersionFactor,
+                    -localAngVel.y * _rotationalDamping * 0.3f * submersionFactor,
+                    -localAngVel.z * _rotationalDamping * 1.5f * submersionFactor
                 );
                 
-                dampingTorque = transform.TransformDirection(dampingTorque) * _submergedRatio;
+                // Don't multiply by submersion again - that was causing near-zero damping when planing
+                dampingTorque = transform.TransformDirection(dampingTorque);
                 _rigidbody.AddTorque(dampingTorque, ForceMode.Force);
             }
         }

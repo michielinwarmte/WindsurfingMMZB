@@ -1,6 +1,6 @@
 # 🐛 Known Issues
 
-**Last Updated:** December 28, 2025
+**Last Updated:** January 1, 2026
 
 This document tracks known issues, bugs, and their workarounds. For contributors picking up this project, these are the priority fixes needed.
 
@@ -30,29 +30,7 @@ Investigate `SimpleFollowCamera.cs` initialization in `Start()` or `OnEnable()`.
 
 ---
 
-### 2. Board Submersion Oscillates During Planing
-
-**Symptom:**  
-When planing (at speed), the board oscillates between 0% and 100% submerged instead of riding stable at ~5% submersion. Speed is maintained but visual appearance is erratic.
-
-**Root Cause:**  
-The displacement lift and planing lift forces are fighting with buoyancy. When the board rises (lift working), it loses submersion, which reduces lift, causing it to fall, which increases submersion and lift again.
-
-**Expected Behavior:**  
-Board should ride at 3-5% submersion when planing, skimming the surface with minimal bobbing.
-
-**Fix Needed:**  
-1. Add hysteresis/smoothing to the lift calculations
-2. Use a PID controller or similar feedback loop to stabilize height
-3. Consider separate equilibrium targets for displacement vs planing modes
-
-**Files:**  
-- [WindsurfingGame/Assets/Scripts/Physics/Board/AdvancedHullDrag.cs](../WindsurfingGame/Assets/Scripts/Physics/Board/AdvancedHullDrag.cs) (displacement lift, planing lift)
-- [WindsurfingGame/Assets/Scripts/Physics/Buoyancy/AdvancedBuoyancy.cs](../WindsurfingGame/Assets/Scripts/Physics/Buoyancy/AdvancedBuoyancy.cs) (buoyancy forces)
-
----
-
-### 3. Steering is Inverted
+### 2. Steering is Inverted
 
 **Symptom:**  
 A/D keys steer in the wrong direction (left turns right, right turns left).
@@ -64,6 +42,28 @@ Sign error in the steering torque calculation or rake steering formula.
 1. Check `AdvancedWindsurferController.cs` for steering input handling
 2. Check `AdvancedSail.cs` → `ApplyRakeSteering()` for sign conventions
 3. May need to negate the steering input or torque direction
+
+**Files:**  
+- [WindsurfingGame/Assets/Scripts/Player/AdvancedWindsurferController.cs](../WindsurfingGame/Assets/Scripts/Player/AdvancedWindsurferController.cs)
+- [WindsurfingGame/Assets/Scripts/Physics/Board/AdvancedSail.cs](../WindsurfingGame/Assets/Scripts/Physics/Board/AdvancedSail.cs)
+
+---
+
+### 3. Half-Wind Submersion (Under Investigation)
+
+**Symptom:**  
+When sailing beam reach (half wind) with full sheet, the board may sink progressively, especially at lower speeds before planing.
+
+**Root Cause:**  
+The heeling moment from sail force (applied high on the mast) causes the leeward rail to submerge. This creates asymmetric buoyancy and drag forces. This is realistic physics - real windsurfers must actively counter this by hiking out.
+
+**Current Status:**  
+This is a physics limitation, not a bug. The current anti-capsize system (sailor weight shift) helps but may need tuning. When planing, hydrodynamic forces naturally prevent full submersion.
+
+**Potential Improvements:**
+- Add stronger automatic sailor hiking simulation
+- Reduce sail power at high angles of attack (stall earlier)
+- Increase the anti-capsize strength for beam reach specifically
 
 **Files:**  
 - [WindsurfingGame/Assets/Scripts/Player/AdvancedWindsurferController.cs](../WindsurfingGame/Assets/Scripts/Player/AdvancedWindsurferController.cs)
@@ -97,6 +97,17 @@ Feature not implemented yet. Audio folder exists but is empty.
 ---
 
 ## ✅ Recently Fixed Issues
+
+### Fixed in Session 24 (January 1, 2026) - Savitsky Planing & Water Damping
+
+- ✅ **Board oscillates 0-100% submersion ("trampoline effect")** → Implemented Savitsky planing equations where lift depends on speed/trim only, not submersion depth. This eliminates the feedback loop that caused oscillation.
+- ✅ **Water feels too bouncy** → Added water viscosity (v² damping) and increased vertical damping to 4000 N·s/m
+- ✅ **Board flies out at high speed (45+ km/h)** → Added sail downforce at high speeds (starts at 35 km/h) and capped max lift to 85% of weight
+- ✅ **Lateral damping killed forward speed** → Removed viscosity from horizontal damping, now only applies to vertical motion
+
+### Fixed in Session 23 (Physics-Based Planing Fix)
+
+- ✅ **Board submersion oscillates during planing** → Made planing lift scale with actual submersion ratio instead of fixed value, implementing natural self-stabilization based on real hydrodynamics (Savitsky planing principles)
 
 ### Fixed in Session 22 (December 28, 2025)
 

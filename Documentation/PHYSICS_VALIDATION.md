@@ -1,6 +1,6 @@
 # 🎯 Physics Validation Document
 
-**Status: ✅ WORKING** (as of December 27, 2025)
+**Status: ✅ WORKING** (as of January 1, 2026)
 
 This document records the validated physics formulas and sign conventions that make the windsurfing simulation work correctly. **DO NOT CHANGE THESE FORMULAS** without understanding the complete system.
 
@@ -12,10 +12,11 @@ The physics system is interconnected. Changing any single formula without unders
 
 ### Validated Behaviors
 - ✅ Upwind sailing (can sail ~45° to wind)
-- ✅ Planing at high speeds
+- ✅ Planing at high speeds (Savitsky equations)
 - ✅ Correct sail side switching when tacking
 - ✅ Rake steering works on both tacks
-- ✅ Stable at high speeds (20+ knots)
+- ✅ Stable at high speeds (20+ knots) - no oscillation or flying out
+- ✅ Realistic water damping (linear + viscous)
 
 ---
 
@@ -295,13 +296,76 @@ When making physics changes, verify ALL of these:
 - [ ] Tacking works (sail switches sides)
 - [ ] Rake back = bear away on both tacks
 - [ ] Rake forward = head up on both tacks
-- [ ] Stable at 20+ knots
-- [ ] Planing works
-- [ ] No oscillation when switching sides
+- [ ] Stable at 20+ knots (no wobble or oscillation)
+- [ ] Planing works (board lifts at 17+ km/h)
+- [ ] No flying out at 45+ km/h
+- [ ] No trampoline effect (oscillation during planing)
 
 ---
 
-## 11. Legacy Physics Systems (Reference Only)
+## 11. Savitsky Planing Equations (Session 24 Addition)
+
+**File:** `AdvancedHullDrag.cs` → `CalculatePlaningLift()`
+
+The planing lift uses proper Savitsky theory where lift depends on **speed and trim only**, not submersion depth.
+
+```csharp
+// Savitsky Lift Coefficient
+// CL = τ^1.1 × (0.012 × λ^0.5 + 0.0055 × λ^2.5 / Cv²)
+//
+// Where:
+//   τ = trim angle (degrees, bow-up), clamped to 1-10°
+//   λ = wetted length / beam ratio (1-4 typical)
+//   Cv = speed coefficient = V / √(g × beam)
+
+float Cv = speed / Mathf.Sqrt(g * beam);
+float lambda = Mathf.Lerp(lambdaMax, 1.5f, planingRatio);
+
+float dynamicTerm = 0.012f * Mathf.Sqrt(lambda);
+float hydrostaticTerm = 0.0055f * Mathf.Pow(lambda, 2.5f) / (Cv * Cv);
+float CL0 = Mathf.Pow(tau, 1.1f) * (dynamicTerm + hydrostaticTerm);
+
+// Deadrise correction: CL = CL0 - 0.0065 × β × CL0^0.6
+float CL = CL0 - 0.0065f * deadrise * Mathf.Pow(CL0, 0.6f);
+
+// Lift force: L = CL × 0.5ρV² × beam²
+float lift = CL * 0.5f * waterDensity * speed * speed * beam * beam;
+```
+
+### ⚠️ CRITICAL: No Submersion Feedback
+
+Previous implementations made lift proportional to submersion, causing oscillation. The correct physics:
+- Submersion is a **binary check** only (is board touching water?)
+- At a given speed/trim, lift is **constant**
+- Board height is controlled by **buoyancy equilibrium**
+
+---
+
+## 12. Water Damping (Session 24 Addition)
+
+**File:** `AdvancedBuoyancy.cs` → `ApplyDamping()`
+
+The water uses hybrid damping for stability and realism:
+
+```csharp
+// Linear damping: F = -C₁ × v × submersion (stable)
+float linearDamping = -verticalVelocity * _verticalDamping * submersionRatio;
+
+// Viscous damping: F = -C₂ × v × |v| × submersion (realistic)
+float viscousDamping = -verticalVelocity * Mathf.Abs(verticalVelocity) * _waterViscosity * submersionRatio;
+
+float totalDamping = linearDamping + viscousDamping;
+```
+
+**Parameters:**
+- `_verticalDamping` = 4000 N·s/m
+- `_waterViscosity` = 400 N·s²/m²
+
+**IMPORTANT:** Viscosity is only applied to **vertical motion**, not horizontal. Applying to horizontal kills forward speed.
+
+---
+
+## 13. Legacy Physics Systems (Reference Only)
 
 These systems still exist but the core validated physics is documented above.
 
@@ -319,8 +383,9 @@ These systems still exist but the core validated physics is documented above.
 - Directional drag (forward, lateral, vertical)
 - Planing mode reduces forward drag at high speeds
 - Speed-dependent angular damping for stability
+- Submersion drag multiplier = 12x (penalty for sinking)
 
 ---
 
-*Last Updated: December 27, 2025*
+*Last Updated: January 1, 2026*
 *Status: VALIDATED AND WORKING*

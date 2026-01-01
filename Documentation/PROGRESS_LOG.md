@@ -6,8 +6,8 @@ This document tracks our development progress, decisions made, and lessons learn
 
 ## 📌 Quick Status Summary
 
-**Last Session**: December 28, 2025 - Session 22 (Buoyancy & Physics Complete + Documentation)  
-**Current Phase**: Core Physics Complete ✅ | Ready for GitHub Handoff
+**Last Session**: January 1, 2026 - Session 24 (Savitsky Planing & Water Physics)  
+**Current Phase**: Core Physics Complete ✅ | Planing Stability Fixed
 
 ### Physics Status: VALIDATED ✅
 
@@ -20,14 +20,17 @@ The core physics are working correctly:
 - ✅ Realistic buoyancy (Archimedes' principle)
 - ✅ Displacement lift (pre-planing support)
 - ✅ Sailor COM shifts AFT when planing
+- ✅ **Savitsky planing equations** (proper hydrodynamic lift)
+- ✅ **Water viscosity** (realistic water resistance)
+- ✅ **High-speed downforce** (prevents flying out)
 
 ### ⚠️ Known Issues (See [KNOWN_ISSUES.md](KNOWN_ISSUES.md))
 
 | Issue | Severity | Workaround |
 |-------|----------|------------|
 | Camera only works after changing FOV | 🔴 Critical | Change FOV in Inspector during play |
-| Board oscillates 0-100% submersion when planing | 🔴 Critical | None - needs stability fix |
 | Steering is inverted | 🔴 Critical | None - needs sign fix |
+| Half-wind submersion at low speeds | 🟡 Medium | Get up to planing speed quickly |
 
 **Critical formulas documented in:** [PHYSICS_VALIDATION.md](PHYSICS_VALIDATION.md)
 
@@ -74,8 +77,8 @@ The core physics are working correctly:
 
 ### Priority Fixes for Next Session
 - [ ] 🔴 Fix camera initialization (FOV workaround)
-- [ ] 🔴 Stabilize planing submersion oscillation
 - [ ] 🔴 Fix inverted steering
+- [ ] 🟡 Improve half-wind physics (sailor hiking simulation)
 - [ ] Improve sail visual representation
 - [ ] Add sound effects (wind, water, sail)
 
@@ -83,6 +86,68 @@ The core physics are working correctly:
 1. Read [KNOWN_ISSUES.md](KNOWN_ISSUES.md) first!
 2. See [CONTRIBUTING.md](../CONTRIBUTING.md) for setup
 3. See [ARCHITECTURE.md](ARCHITECTURE.md) for code overview
+
+---
+
+## January 1, 2026 - Session 24
+
+### Session: Savitsky Planing Equations & Water Physics Overhaul
+
+**Major Problem Solved: "Trampoline Effect"**
+
+The board was oscillating between 0% and 100% submersion at planing speeds, like bouncing on a trampoline.
+
+**Root Cause Analysis:**
+The previous implementation made lift proportional to submersion ratio (`submersionRatio * 2f`). This created a positive feedback loop:
+1. Board sinks → submersion↑ → lift↑ → board rises
+2. Board rises → submersion↓ → lift↓ → board sinks
+3. Repeat = oscillation
+
+**Solution: Proper Savitsky Planing Equations**
+
+Implemented the real physics where lift depends on **speed and trim angle only**, not submersion depth:
+
+```csharp
+// Savitsky Lift Coefficient
+// CL = τ^1.1 × (0.012 × λ^0.5 + 0.0055 × λ^2.5 / Cv²)
+//
+// Where:
+//   τ = trim angle (degrees, bow-up)
+//   λ = wetted length / beam ratio  
+//   Cv = speed coefficient = V / √(g × beam)
+```
+
+**Key Physics Insight:**
+- Submersion is now only a binary check: "Is the board touching water?"
+- At a given speed/trim, lift is CONSTANT
+- Board height is controlled by **buoyancy equilibrium**, not lift changes
+- This is how real planing hulls work
+
+**Other Fixes in This Session:**
+
+| Change | Before | After | Reason |
+|--------|--------|-------|--------|
+| Vertical damping | 800 N·s/m | 4000 N·s/m | Stronger resistance to bouncing |
+| Water viscosity | 0 | 400 N·s²/m² | Realistic v² damping |
+| Max lift fraction | 1.2 | 0.85 | Prevents flying out at high speed |
+| Sail downforce | None | 25% at 35+ km/h | Keeps board in water |
+| Submersion drag | 6x | 12x | More penalty for sinking |
+| Lateral damping | Had viscosity | No viscosity | Viscosity was killing speed |
+
+**Files Modified:**
+
+| File | Changes |
+|------|---------|
+| `AdvancedHullDrag.cs` | Savitsky equations, no submersion-based lift |
+| `AdvancedBuoyancy.cs` | Increased damping, added viscosity |
+| `Sail.cs` | Added high-speed downforce system |
+| `AdvancedWindsurferController.cs` | Reverted half-wind corrections (were unstable) |
+
+**Lessons Learned:**
+1. **Don't fight physics with corrections** - Fix the root cause instead of adding band-aid fixes
+2. **Lift ≠ submersion** - Real hydrodynamic lift depends on speed and trim, not how deep you are
+3. **Buoyancy handles height** - Let Archimedes control the board's height; lift just provides forward force transfer
+4. **Viscosity kills speed** - Only apply v² damping to vertical motion, not horizontal
 
 ---
 
