@@ -198,18 +198,20 @@ namespace WindsurfingGame.Physics.Core
             }
             else
             {
-                // Planing mode - resistance drops as board lifts
+                // Planing mode - resistance drops dramatically as board lifts
+                // A planing windsurfer has extremely low resistance, approaching iceboat levels
                 float planingFactor = Mathf.Clamp01((froudeNumber - 0.4f) / 0.3f);
                 
-                // Planing resistance is primarily skin friction on reduced wetted area
-                float reducedWettedArea = wettedArea * (1f - 0.5f * planingFactor);
+                // At full planing, only ~15% of the hull is in the water (just the tail)
+                // This dramatically reduces wetted area and thus skin friction
+                float reducedWettedArea = wettedArea * (1f - 0.85f * planingFactor);
                 float planingRf = Cf * q * reducedWettedArea;
                 
-                // Small residual spray drag
-                float sprayDrag = 0.002f * q * wettedArea * (1f - planingFactor);
+                // Very minimal spray drag at full planing
+                float sprayDrag = 0.0005f * q * wettedArea * (1f - planingFactor);
                 
-                // Transition blend
-                float displacementR = Rf * 1.5f; // Higher resistance at transition
+                // Transition blend from displacement to planing
+                float displacementR = Rf * 1.5f; // Higher resistance at transition hump
                 totalResistance = Mathf.Lerp(displacementR, planingRf + sprayDrag, planingFactor);
             }
             

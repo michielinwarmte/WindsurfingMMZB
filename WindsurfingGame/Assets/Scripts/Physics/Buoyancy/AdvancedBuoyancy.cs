@@ -56,10 +56,10 @@ namespace WindsurfingGame.Physics.Buoyancy
         
         [Header("Damping")]
         [Tooltip("Vertical damping coefficient - resists bobbing/bouncing")]
-        [SerializeField] private float _verticalDamping = 4000f;
+        [SerializeField] private float _verticalDamping = 8000f;
         
         [Tooltip("Water viscosity - adds velocity-squared damping for thick water feel")]
-        [SerializeField] private float _waterViscosity = 400f;
+        [SerializeField] private float _waterViscosity = 800f;
         
         [Tooltip("Rotational damping coefficient")]
         [SerializeField] private float _rotationalDamping = 150f;
@@ -291,23 +291,16 @@ namespace WindsurfingGame.Physics.Buoyancy
         {
             if (!_isFloating) return;
             
-            // When planing, hydrodynamic lift supplements buoyancy
-            // Board rides higher, less volume submerged
-            float buoyancyScale = 1f;
-            if (_hullDrag != null && _hullDrag.PlaningRatio > 0.1f)
-            {
-                // At full planing, hydrodynamic lift provides significant support
-                // Reduce buoyancy contribution to avoid excessive height
-                buoyancyScale = 1f - _hullDrag.PlaningRatio * 0.3f;
-            }
-            
+            // Pure Archimedes principle - no artificial scaling
+            // Buoyancy = ρ × g × V_displaced
+            // When planing lift raises the board, less volume is submerged,
+            // so buoyancy naturally decreases (via the displaced volume calculation)
             for (int i = 0; i < _samplePoints.Length; i++)
             {
                 if (_pointForces[i].sqrMagnitude > 0.01f)
                 {
                     Vector3 worldPoint = transform.TransformPoint(_samplePoints[i]);
-                    Vector3 scaledForce = _pointForces[i] * buoyancyScale;
-                    _rigidbody.AddForceAtPosition(scaledForce, worldPoint, ForceMode.Force);
+                    _rigidbody.AddForceAtPosition(_pointForces[i], worldPoint, ForceMode.Force);
                 }
             }
         }

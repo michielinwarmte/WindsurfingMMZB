@@ -125,8 +125,10 @@ namespace WindsurfingGame.Physics.Board
             float liftDirection = -Mathf.Sign(_lateralSpeed);
             _finLiftForce = transform.right * liftDirection * liftMagnitude;
 
-            // Small induced drag from the fin (increases with lift)
-            float dragCoeff = 0.01f + Mathf.Abs(effectiveLiftCoeff) * 0.02f;
+            // Induced drag from the fin - increases with lift generated
+            // High side force at beam reach = more fin lift = more induced drag
+            // This makes broad reach (less side force) more efficient
+            float dragCoeff = 0.008f + Mathf.Abs(effectiveLiftCoeff) * 0.04f;
             float dragMagnitude = dynamicPressure * _finArea * dragCoeff * speedFactor;
             _finDragForce = -velocity.normalized * dragMagnitude;
 

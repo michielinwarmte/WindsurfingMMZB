@@ -49,25 +49,33 @@ Sign error in the steering torque calculation or rake steering formula.
 
 ---
 
-### 3. Half-Wind Submersion (Under Investigation)
+## ✅ Recently Fixed Issues
+
+### 3. Half-Wind Submersion at Planing Speeds (FIXED - Session 23)
 
 **Symptom:**  
-When sailing beam reach (half wind) with full sheet, the board may sink progressively, especially at lower speeds before planing.
+When sailing beam reach (half wind) at high speed (planing), the board would go underwater and NOT slow down, continuing to sail submerged.
 
-**Root Cause:**  
-The heeling moment from sail force (applied high on the mast) causes the leeward rail to submerge. This creates asymmetric buoyancy and drag forces. This is realistic physics - real windsurfers must actively counter this by hiking out.
+**Root Cause (ACTUAL):**  
+The planing physics had two fundamental bugs:
 
-**Current Status:**  
-This is a physics limitation, not a bug. The current anti-capsize system (sailor weight shift) helps but may need tuning. When planing, hydrodynamic forces naturally prevent full submersion.
+1. **Planing Lift Not Disabled When Underwater**: The planing lift calculation only checked if the board was in the water (>5% submerged), but didn't check if it was TOO submerged (>50%). You can't plane underwater - the hull must be riding ON the surface.
 
-**Potential Improvements:**
-- Add stronger automatic sailor hiking simulation
-- Reduce sail power at high angles of attack (stall earlier)
-- Increase the anti-capsize strength for beam reach specifically
+2. **Insufficient Underwater Drag**: When the board went underwater at planing speed, drag didn't increase enough to slow it down. The sail kept pushing it forward underwater.
+
+**Fix Applied:**  
+Modified [AdvancedHullDrag.cs](../WindsurfingGame/Assets/Scripts/Physics/Board/AdvancedHullDrag.cs):
+
+1. **Disable Planing When Submerged**: If submersion > 50%, planing lift is completely disabled and decays rapidly
+2. **Progressive Lift Penalty**: From 35% to 50% submersion, planing lift progressively reduces to 20%
+3. **Massive Underwater Drag**: When submerged >50% at speed >4 m/s, additional drag multiplier (up to 5x) is applied
+4. **Combined Effect**: Board goes underwater → loses planing lift → massive drag → slows down → buoyancy floats it back up
+
+**New Inspector Parameter:**
+- `Max Planing Submersion`: Submersion level at which planing is disabled (default: 50%)
 
 **Files:**  
-- [WindsurfingGame/Assets/Scripts/Player/AdvancedWindsurferController.cs](../WindsurfingGame/Assets/Scripts/Player/AdvancedWindsurferController.cs)
-- [WindsurfingGame/Assets/Scripts/Physics/Board/AdvancedSail.cs](../WindsurfingGame/Assets/Scripts/Physics/Board/AdvancedSail.cs)
+- [WindsurfingGame/Assets/Scripts/Physics/Board/AdvancedHullDrag.cs](../WindsurfingGame/Assets/Scripts/Physics/Board/AdvancedHullDrag.cs)
 
 ---
 

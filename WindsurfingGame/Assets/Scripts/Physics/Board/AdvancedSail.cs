@@ -277,7 +277,7 @@ namespace WindsurfingGame.Physics.Board
         
         /// <summary>
         /// Calculate the Center of Effort position based on sail geometry and mast rake.
-        /// For stability, we apply forces at a low point to prevent excessive rotation.
+        /// The CE is where the sail force is applied - typically at boom height + offset.
         /// </summary>
         private void CalculateCenterOfEffort()
         {
@@ -287,9 +287,8 @@ namespace WindsurfingGame.Physics.Board
             // Apply mast rake - rotates the whole rig fore/aft around the mast foot
             float rakeAngle = _mastRake * _maxRakeAngle * Mathf.Deg2Rad;
             
-            // Keep CE height low for stability (just above deck)
-            // Real sails have high CE which causes heeling - we reduce this for gameplay
-            float ceHeight = 0.3f; // Low CE for stable gameplay
+            // CE height - low value for stable gameplay
+            float ceHeight = 0.0f;
             
             // With rake, the CE moves slightly fore/aft
             float ceForwardOffset = -Mathf.Sin(rakeAngle) * ceHeight;
@@ -297,14 +296,14 @@ namespace WindsurfingGame.Physics.Board
             
             localCE += new Vector3(0, ceHeightAdjusted, ceForwardOffset);
             
-            // Minimal lateral offset - don't move CE too far to side
-            // This reduces the heeling moment
+            // Lateral offset - CE moves to leeward with sail angle
+            // About 30-40% along the boom from mast
             float sailAngleRad = _currentSailAngle * Mathf.Deg2Rad;
-            float ceDistance = 0.1f; // Reduced from BoomLength * 0.5
+            float ceDistance = _sailConfig.BoomLength * 0.35f; // 35% along boom
             localCE += new Vector3(
                 Mathf.Sin(sailAngleRad) * ceDistance,
                 0,
-                0 // No fore-aft shift from sail angle
+                -Mathf.Cos(sailAngleRad) * ceDistance * 0.3f // Slight aft shift
             );
             
             _centerOfEffort = transform.TransformPoint(localCE);

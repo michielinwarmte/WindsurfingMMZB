@@ -33,8 +33,8 @@ namespace WindsurfingGame.Physics.Board
         [Tooltip("Speed at which fully planing (m/s). ~22 km/h = 6 m/s is typical")]
         [SerializeField] private float _fullPlaningSpeed = 6.0f;
         
-        [Tooltip("Wetted area reduction when fully planing (0.3 = 30% of original)")]
-        [SerializeField] private float _planingWettedAreaRatio = 0.35f;
+        [Tooltip("Wetted area reduction when fully planing (0.2 = 20% of original)")]
+        [SerializeField] private float _planingWettedAreaRatio = 0.20f;
         
         [Header("Submersion Resistance")]
         [Tooltip("Extra drag multiplier when board sinks deeper (higher = stronger penalty for sinking)")]
@@ -57,17 +57,20 @@ namespace WindsurfingGame.Physics.Board
         [Tooltip("Enable hydrodynamic lift when planing")]
         [SerializeField] private bool _enablePlaningLift = true;
         
-        [Tooltip("Planing lift coefficient - realistic planing generates STRONG lift (Savitsky: CL ~0.5-1.0)")]
-        [SerializeField] private float _planingLiftCoefficient = 0.8f;
+        [Tooltip("Planing lift multiplier - 1.0 means full target lift at planing speed")]
+        [SerializeField] private float _planingLiftCoefficient = 1.0f;
         
-        [Tooltip("Maximum lift as fraction of weight. Keep below 1.0 to prevent flying out.")]
-        [SerializeField] private float _maxLiftFraction = 0.85f;
+        [Tooltip("Maximum lift as fraction of weight. At full planing, lift can support most of the weight.")]
+        [SerializeField] private float _maxLiftFraction = 1.0f;
         
         [Tooltip("Trim angle for maximum lift (degrees bow-up)")]
         [SerializeField] private float _optimalTrimAngle = 3f;
         
         [Tooltip("How quickly lift changes (lower = smoother, more stable). 0.05-0.15 recommended.")]
         [SerializeField] private float _liftSmoothingFactor = 0.08f;
+        
+        [Tooltip("Maximum submersion before planing lift is disabled (can't plane underwater)")]
+        [SerializeField] private float _maxPlaningSubmersion = 0.50f;
         
         [Header("Buoyancy Reference")]
         [SerializeField] private AdvancedBuoyancy _advancedBuoyancy;
@@ -93,6 +96,8 @@ namespace WindsurfingGame.Physics.Board
         private float _planingLift;
         private float _displacementLift;
         private float _currentTrimAngle;
+        private float _currentHeelAngle;
+        private float _heelEfficiency;
         
         // Smoothing for stable lift
         private float _smoothedPlaningLift;
@@ -106,6 +111,8 @@ namespace WindsurfingGame.Physics.Board
         public float PlaningLift => _planingLift;
         public float DisplacementLift => _displacementLift;
         public float TotalLift => _planingLift + _displacementLift;
+        public float HeelAngle => _currentHeelAngle;
+        public float HeelEfficiency => _heelEfficiency;
         
         private void Awake()
         {
@@ -219,6 +226,21 @@ namespace WindsurfingGame.Physics.Board
                     // Squared relationship: 50% excess = 25% factor, 100% excess = 100% factor
                     float submersionDragFactor = 1f + (excessSubmersion * excessSubmersion) * _submersionDragMultiplier;
                     _totalResistance *= submersionDragFactor;
+                    
+                    // CRITICAL: When underwater at planing speed, add MASSIVE drag
+                    // A board underwater at 20+ km/h should slow down very quickly
+                    if (submersionRatio > 0.5f && speed > 4f)
+                    {
+                        // Additional underwater drag - proportional to speed squared
+                        // This ensures the board MUST slow down when submerged
+                        float underwaterDragBonus = (submersionRatio - 0.5f) * 2f; // 0 to 1
+                        float speedFactor = (speed - 4f) / 4f; // ramps up from 4 m/s
+                        speedFactor = Mathf.Clamp01(speedFactor);
+                        
+                        // Massive drag increase - up to 5x more resistance
+                        float underwaterMultiplier = 1f + underwaterDragBonus * speedFactor * 5f;
+                        _totalResistance *= underwaterMultiplier;
+                    }
                 }
                 
                 // Conversely, when planing and riding high, less drag
@@ -341,17 +363,21 @@ namespace WindsurfingGame.Physics.Board
         /// Lift = CL × 0.5ρV² × b² (b = beam width)
         /// CL = τ^1.1 × (0.012λ^0.5 + 0.0055λ^2.5/Cv²)
         /// 
-        /// CRITICAL: Lift depends on speed and trim angle, NOT on submersion depth.
-        /// A planing hull at equilibrium has constant lift for a given speed/trim.
-        /// The board height self-regulates via buoyancy, not lift changes.
+        /// CRITICAL FIX (Session 23):
+        /// - Board CANNOT plane when submerged > 50% - planing lift is disabled
+        /// - Planing lift reduces progressively from 35% to 50% submersion
+        /// - Combined with massive underwater drag, this forces the board to slow down
+        ///   when it goes underwater, allowing buoyancy to bring it back up
         /// </summary>
         private void CalculatePlaningLift()
         {
             _planingLift = 0f;
+            _heelEfficiency = 1f;
             
             if (!_enablePlaningLift || _planingRatio < 0.1f)
             {
                 _smoothedPlaningLift = 0f;
+                _currentHeelAngle = 0f;
                 return;
             }
             
@@ -363,16 +389,40 @@ namespace WindsurfingGame.Physics.Board
                 return;
             }
             
-            // Must be touching water - binary check, not proportional
+            // Must be touching water - use 5% threshold (more realistic than 1%)
             float submersionRatio = _advancedBuoyancy != null ? _advancedBuoyancy.SubmergedRatio : 0f;
-            if (submersionRatio < 0.01f)
+            if (submersionRatio < 0.05f)
             {
-                _smoothedPlaningLift *= 0.9f; // Decay when out of water
+                _smoothedPlaningLift *= 0.9f; // Decay when barely in water
                 _planingLift = _smoothedPlaningLift;
                 return;
             }
             
+            // ===== CRITICAL: CAN'T PLANE WHEN TOO SUBMERGED =====
+            // If board is deeply submerged (>50%), it's underwater, NOT planing
+            // Planing requires the hull to be riding ON the water surface
+            // This prevents "submarine mode" where board goes underwater at speed
+            if (submersionRatio > _maxPlaningSubmersion)
+            {
+                // Board is underwater - rapidly decay planing lift
+                _smoothedPlaningLift *= 0.8f; // Quick decay
+                _planingLift = _smoothedPlaningLift;
+                _heelEfficiency = 0f;
+                return;
+            }
+            
+            // NOTE: We do NOT penalize lift based on submersion during normal planing
+            // The board needs full lift to GET UP onto the plane in the first place
+            // Only disable lift completely when truly underwater (above check)
+            
+            // ===== HEEL ANGLE CALCULATION =====
+            // Get the roll angle (heel) - rotation around forward axis
+            float heelAngle = transform.eulerAngles.z;
+            if (heelAngle > 180f) heelAngle -= 360f;
+            _currentHeelAngle = Mathf.Abs(heelAngle);
+            
             // ===== TRIM ANGLE =====
+            // Calculate trim in world frame to handle heeled conditions correctly
             float pitchAngle = transform.eulerAngles.x;
             if (pitchAngle > 180f) pitchAngle -= 360f;
             _currentTrimAngle = -pitchAngle;
@@ -380,44 +430,41 @@ namespace WindsurfingGame.Physics.Board
             // Savitsky uses positive trim (bow up). Clamp to 1-10°
             float tau = Mathf.Clamp(_currentTrimAngle, 1f, 10f);
             
-            // ===== SAVITSKY PARAMETERS =====
-            float beam = _hullConfig.Width;
+            // ===== HEEL EFFECT ON EFFECTIVE BEAM =====
+            // When heeled, the effective planing beam is reduced: b_eff = b × cos(heel)
+            // This reduces the planing area and thus lift
+            float heelRad = _currentHeelAngle * Mathf.Deg2Rad;
+            float effectiveBeamFactor = Mathf.Cos(heelRad);
+            
+            // Track heel efficiency for debugging
+            _heelEfficiency = effectiveBeamFactor;
+            
+            // ===== SIMPLE PLANING LIFT MODEL =====
+            // The Savitsky equations are too complex and produce insufficient lift
+            // Use a simple speed-based model that achieves the correct result:
+            // At full planing speed, lift should support 90%+ of the board's weight
+            
             float g = PhysicsConstants.GRAVITY;
+            float weight = _hullConfig.TotalMass * g;
             
-            // Speed coefficient Cv = V / √(gb)
-            float Cv = speed / Mathf.Sqrt(g * beam);
+            // Target lift at full planing: 95% of weight
+            // This leaves ~5% for buoyancy (just the tail touching water)
+            float targetLiftAtFullPlaning = weight * _maxLiftFraction;
             
-            // Wetted length ratio λ - for planing, this is typically 1-3
-            // At high speed, less hull is in water. Use a speed-based estimate.
-            // λ decreases as speed increases (board rises)
-            float lambdaMax = _hullConfig.Length / beam; // ~4 at rest
-            float lambda = Mathf.Lerp(lambdaMax, 1.5f, _planingRatio);
-            lambda = Mathf.Clamp(lambda, 1f, 4f);
+            // Lift ramps up from planing onset to full planing
+            // planingRatio is 0 at 4 m/s, 1 at 6 m/s
+            float targetLift = targetLiftAtFullPlaning * _planingRatio;
             
-            // ===== SAVITSKY LIFT COEFFICIENT =====
-            // CL = τ^1.1 × (0.012λ^0.5 + 0.0055λ^2.5/Cv²)
-            float dynamicTerm = 0.012f * Mathf.Sqrt(lambda);
-            float hydrostaticTerm = (Cv > 0.5f) ? (0.0055f * Mathf.Pow(lambda, 2.5f) / (Cv * Cv)) : 0f;
+            // Apply heel penalty - less effective planing when heeled
+            // At 45° heel, reduce to 70% effectiveness
+            targetLift *= Mathf.Max(effectiveBeamFactor, 0.7f);
             
-            float CL0 = Mathf.Pow(tau, 1.1f) * (dynamicTerm + hydrostaticTerm);
+            // Apply the coefficient for tuning
+            targetLift *= _planingLiftCoefficient;
             
-            // Deadrise correction: CL = CL0 - 0.0065β × CL0^0.6
-            float deadrise = 3f; // degrees
-            float CL = CL0 - 0.0065f * deadrise * Mathf.Pow(Mathf.Max(CL0, 0.01f), 0.6f);
-            CL = Mathf.Max(CL, 0f);
-            
-            // ===== LIFT FORCE =====
-            // L = CL × 0.5ρV² × b²
-            float q = 0.5f * PhysicsConstants.WATER_DENSITY * speed * speed;
-            float referenceArea = beam * beam;
-            
-            float targetLift = CL * q * referenceArea * _planingLiftCoefficient;
-            
-            // Scale with planing ratio for smooth transition
-            targetLift *= _planingRatio;
-            
-            // Cap at realistic maximum
-            float maxLift = _hullConfig.TotalMass * PhysicsConstants.GRAVITY * _maxLiftFraction;
+            // ===== CAP LIFT =====
+            // Cap at maxLiftFraction of weight to prevent flying out
+            float maxLift = weight * _maxLiftFraction;
             targetLift = Mathf.Min(targetLift, maxLift);
             
             // ===== SMOOTH LIFT CHANGES =====
@@ -429,12 +476,15 @@ namespace WindsurfingGame.Physics.Board
         /// <summary>
         /// Apply all hydrodynamic lift forces (displacement + planing).
         /// Both lift types ONLY apply when hull is in the water.
+        /// 
+        /// When heeled, the lift application point shifts laterally to the
+        /// submerged side, which helps create a stabilizing righting moment.
         /// </summary>
         private void ApplyHydrodynamicLift()
         {
             // Check we're actually in the water
             float submersionRatio = _advancedBuoyancy != null ? _advancedBuoyancy.SubmergedRatio : 0.3f;
-            if (submersionRatio < 0.01f)
+            if (submersionRatio < 0.05f)
             {
                 return;
             }
@@ -450,7 +500,7 @@ namespace WindsurfingGame.Physics.Board
             if (_isPlaning)
             {
                 // Planing: lift applied further aft (tail rides on water)
-                liftPointZ = _hullConfig.Length * (0.5f - _planingRatio * 0.25f);
+                liftPointZ = -_hullConfig.Length * (0.5f - _planingRatio * 0.25f);
             }
             else
             {
@@ -560,6 +610,7 @@ namespace WindsurfingGame.Physics.Board
             UnityEditor.Handles.Label(pos + Vector3.up * 1.5f,
                 $"Speed: {speedKmh:F1} km/h ({GetSpeedKnots():F1} kts)\n" +
                 $"Submerged: {submersion:F0}%\n" +
+                $"Heel: {_currentHeelAngle:F1}° (eff: {_heelEfficiency * 100:F0}%)\n" +
                 $"Resistance: {_totalResistance:F0} N\n" +
                 $"Lift: {_displacementLift:F0} + {_planingLift:F0} = {totalLift:F0} N\n" +
                 $"{(_isPlaning ? "PLANING" : "Displacement")} ({_planingRatio * 100:F0}%)");

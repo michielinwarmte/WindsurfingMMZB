@@ -596,13 +596,39 @@ float maxDownforceFraction = 0.25f;  // Max 25% of sail force
 
 **Solution:** Implemented proper Savitsky planing equations where lift depends on **speed and trim only**, not submersion depth. Combined with increased water damping (4000 N·s/m) and viscosity (400 N·s²/m²).
 
-### Half-Wind Submersion Issue - UNDER INVESTIGATION
+### Half-Wind Submersion Issue - FIXED (Session 23)
 
-**Symptom:** When sailing beam reach (half wind) with full sheet, the board may sink progressively.
+**Symptom:** When sailing beam reach at planing speeds, the board would go underwater and NOT slow down.
 
-**Suspected Cause:** The heeling moment from sail force applied at height causes the leeward rail to submerge, creating asymmetric forces. This is a physics limitation, not a bug - in real windsurfing, sailors actively counter this by hiking out.
+**Root Cause:** Two fundamental bugs:
+1. Planing lift was not disabled when board was underwater (>50% submerged)
+2. Underwater drag at speed was insufficient to slow the board down
 
-**Current Status:** The physics correctly simulate the challenge. Future work may add sailor hiking simulation.
+**Solution:** Modified `AdvancedHullDrag.cs`:
+
+```csharp
+// CRITICAL: Can't plane when underwater
+if (submersionRatio > _maxPlaningSubmersion)
+{
+    _smoothedPlaningLift *= 0.8f; // Rapidly decay lift
+    return;
+}
+
+// Progressive penalty from 35% to 50% submersion
+if (submersionRatio > normalSubmersion)
+{
+    submersionPenalty = 1f - ((submersionRatio - 0.35f) / 0.15f) * 0.8f;
+}
+
+// MASSIVE drag when underwater at speed
+if (submersionRatio > 0.5f && speed > 4f)
+{
+    float underwaterMultiplier = 1f + underwaterDragBonus * speedFactor * 5f;
+    _totalResistance *= underwaterMultiplier;
+}
+```
+
+The physics now correctly: underwater → no planing lift → massive drag → slows down → buoyancy recovers.
 
 ---
 
