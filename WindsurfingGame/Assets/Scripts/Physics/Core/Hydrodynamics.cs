@@ -207,8 +207,11 @@ namespace WindsurfingGame.Physics.Core
                 float reducedWettedArea = wettedArea * (1f - 0.85f * planingFactor);
                 float planingRf = Cf * q * reducedWettedArea;
                 
-                // Very minimal spray drag at full planing
-                float sprayDrag = 0.0005f * q * wettedArea * (1f - planingFactor);
+                // Spray drag INCREASES with speed during planing
+                // Spray generation increases as the board rides higher and faster
+                // Coefficient of ~0.01-0.02 is realistic for high-speed planing
+                float sprayCoeff = 0.01f * planingFactor;  // Increases with planing
+                float sprayDrag = sprayCoeff * q * reducedWettedArea;
                 
                 // Transition blend from displacement to planing
                 float displacementR = Rf * 1.5f; // Higher resistance at transition hump

@@ -125,10 +125,16 @@ namespace WindsurfingGame.Physics.Board
             float liftDirection = -Mathf.Sign(_lateralSpeed);
             _finLiftForce = transform.right * liftDirection * liftMagnitude;
 
-            // Induced drag from the fin - increases with lift generated
-            // High side force at beam reach = more fin lift = more induced drag
-            // This makes broad reach (less side force) more efficient
-            float dragCoeff = 0.008f + Mathf.Abs(effectiveLiftCoeff) * 0.04f;
+            // Induced drag from the fin - QUADRATIC with lift coefficient
+            // Formula: Cdi = Cl² / (π * AR * e)
+            // High side force at beam reach = much more induced drag (Cl² relationship)
+            // This makes broad reach (less side force) significantly more efficient
+            float finSpan = 0.35f;  // Typical fin span in meters
+            float aspectRatio = (finSpan * finSpan) / _finArea;  // AR ≈ 4.3 for 0.35m span, 0.028m² area
+            float oswaldEfficiency = 0.85f;  // Efficiency factor for real fins
+            float profileDrag = 0.008f;  // Base profile drag of fin
+            float inducedDragCoeff = (effectiveLiftCoeff * effectiveLiftCoeff) / (Mathf.PI * aspectRatio * oswaldEfficiency);
+            float dragCoeff = profileDrag + inducedDragCoeff;
             float dragMagnitude = dynamicPressure * _finArea * dragCoeff * speedFactor;
             _finDragForce = -velocity.normalized * dragMagnitude;
 
