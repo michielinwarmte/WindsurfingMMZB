@@ -150,17 +150,23 @@ namespace WindsurfingGame.Player
                 _sheetInput = 1f; // Ease out (larger angle to wind)
             
             // Steering: A/D controls combined steering (rake + weight)
+            // On port tack (sail on starboard), invert steering so A/D work correctly
             _rakeInput = 0f;
             _weightInput = 0f;
+            
+            // Check if we're on port tack (CurrentTack == -1 means port tack)
+            bool isPortTack = _sail != null && !_sail.IsStarboardTack;
+            float steerDirection = isPortTack ? -1f : 1f; // Invert on port tack
+            
             if (_keyboard.dKey.isPressed || _keyboard.rightArrowKey.isPressed)
             {
-                _rakeInput = 1f;  // Turn right (rake back + weight right)
-                _weightInput = 1f;
+                _rakeInput = 1f * steerDirection;  // Turn right (or inverted on port tack)
+                _weightInput = 1f * steerDirection;
             }
             else if (_keyboard.aKey.isPressed || _keyboard.leftArrowKey.isPressed)
             {
-                _rakeInput = -1f; // Turn left (rake forward + weight left)
-                _weightInput = -1f;
+                _rakeInput = -1f * steerDirection; // Turn left (or inverted on port tack)
+                _weightInput = -1f * steerDirection;
             }
             
             // Q/E for fine rake control (optional)

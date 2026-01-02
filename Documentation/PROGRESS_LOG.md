@@ -6,8 +6,8 @@ This document tracks our development progress, decisions made, and lessons learn
 
 ## 📌 Quick Status Summary
 
-**Last Session**: January 1, 2026 - Session 24 (Savitsky Planing & Water Physics)  
-**Current Phase**: Core Physics Complete ✅ | Planing Stability Fixed
+**Last Session**: January 2, 2026 - Session 26 (Major Cleanup & Bug Fixes)  
+**Current Phase**: Core Physics Complete ✅ | Production Ready
 
 ### Physics Status: VALIDATED ✅
 
@@ -21,35 +21,36 @@ The core physics are working correctly:
 - ✅ Displacement lift (pre-planing support)
 - ✅ Sailor COM shifts AFT when planing
 - ✅ **Savitsky planing equations** (proper hydrodynamic lift)
-- ✅ **Water viscosity** (realistic water resistance)
-- ✅ **High-speed downforce** (prevents flying out)
+- ✅ **Port tack steering auto-inverts** (Session 26 fix)
+- ✅ **No more porpoising** (CE at zero, planing at center)
 
 ### ⚠️ Known Issues (See [KNOWN_ISSUES.md](KNOWN_ISSUES.md))
 
 | Issue | Severity | Workaround |
 |-------|----------|------------|
-| Camera only works after changing FOV | 🔴 Critical | Change FOV in Inspector during play |
-| Steering is inverted | 🔴 Critical | None - needs sign fix |
+| Camera only works after changing FOV | 🟡 Known Issue | Change FOV in Inspector during play |
 | Half-wind submersion at low speeds | 🟡 Medium | Get up to planing speed quickly |
 
 **Critical formulas documented in:** [PHYSICS_VALIDATION.md](PHYSICS_VALIDATION.md)
 
-### Scripts Completed (34+ total)
+### Scripts Completed (35 total - cleaned up!)
 
 | Category | Scripts |
 |----------|---------|
 | Physics Core | `PhysicsConstants`, `Aerodynamics`, `Hydrodynamics`, `SailingState` |
 | Water | `IWaterSurface`, `WaterSurface` |
-| Wind | `IWindProvider`, `WindManager`, `WindSystem` |
-| Buoyancy | `BuoyancyBody`, `AdvancedBuoyancy`, `BoardMassConfiguration` |
-| Board | `Sail`, `ApparentWindCalculator`, `WaterDrag`, `FinPhysics`, `AdvancedSail`, `AdvancedFin`, `AdvancedHullDrag` |
-| Player | `WindsurferController`, `WindsurferControllerV2`, `AdvancedWindsurferController` |
-| Camera | `ThirdPersonCamera`, `SimpleFollowCamera` |
-| UI | `TelemetryHUD`, `SailPositionIndicator`, `WindIndicator3D`, `AdvancedTelemetryHUD` |
-| Visual | `SailVisualizer`, `EquipmentVisualizer`, `ForceVectorVisualizer`, `WindDirectionIndicator` |
+| Wind | `IWindProvider`, `WindManager` (legacy), `WindSystem` ⭐ |
+| Buoyancy | `BuoyancyBody` (legacy), `AdvancedBuoyancy` ⭐, `BoardMassConfiguration` |
+| Board | `Sail` (legacy), `ApparentWindCalculator`, `WaterDrag` (legacy), `FinPhysics` (legacy), `AdvancedSail` ⭐, `AdvancedFin` ⭐, `AdvancedHullDrag` ⭐ |
+| Player | `WindsurferControllerV2` (legacy), `AdvancedWindsurferController` ⭐ |
+| Camera | `ThirdPersonCamera` (legacy), `SimpleFollowCamera` ⭐ |
+| UI | `SailPositionIndicator`, `WindIndicator3D`, `AdvancedTelemetryHUD` ⭐ |
+| Visual | `SailVisualizer`, `EquipmentVisualizer` ⭐, `ForceVectorVisualizer`, `WindDirectionIndicator` |
+| Debug | `PhysicsValidation`, `SailPhysicsDebugger` |
 | Utilities | `PhysicsHelpers`, `WaterGridMarkers` |
 | Editor | `WindsurferSetup` |
-| Shaders | `StylizedWater` |
+
+> **Removed in Session 26:** `WindsurferController` (V1), `TelemetryHUD`
 
 ### Key Decisions Made
 - ✅ Unity 6.3 LTS with URP
@@ -86,6 +87,82 @@ The core physics are working correctly:
 1. Read [KNOWN_ISSUES.md](KNOWN_ISSUES.md) first!
 2. See [CONTRIBUTING.md](../CONTRIBUTING.md) for setup
 3. See [ARCHITECTURE.md](ARCHITECTURE.md) for code overview
+
+---
+
+## January 2, 2026 - Session 26
+
+### Session: Major Cleanup & Bug Fixes
+
+**Preparing for main branch merge with comprehensive cleanup.**
+
+### Bug Fixes ✅
+
+#### 1. Steering on Port Tack
+**Problem:** A/D keys worked backwards on port tack (sail on starboard side).
+
+**Solution:** Added port tack detection in `AdvancedWindsurferController.ReadInput()`:
+```csharp
+// Detect port tack and invert steering
+if (_sail != null && !_sail.IsStarboardTack)
+{
+    steerDirection = -1f;  // Invert for port tack
+}
+_steerInput = moveAction.x * steerDirection;
+```
+
+#### 2. Porpoising at High Speed
+**Problem:** Board oscillated in pitch at planing speeds.
+
+**Solution (3 changes):**
+1. Removed downforce from `Sail.cs` (legacy)
+2. Set `CalculateCenterOfEffort()` to return `Vector3.zero` in `AdvancedSail.cs`
+3. Changed planing lift to apply at center of mass in `AdvancedHullDrag.cs` (`liftPointZ = 0f`)
+
+#### 3. Pitch Stabilization Spasming at High Heel
+**Problem:** Board spasmed when heeling over 25°.
+
+**Solution:** Modified `ApplyPitchStabilization()` in `AdvancedSail.cs`:
+- Disabled completely when heel > 25°
+- Smooth fade from 15° to 25°
+- Reduced damping multipliers
+- Clamped correction torque to ±300
+
+### Code Cleanup 🧹
+
+#### Files Removed
+| File | Reason |
+|------|--------|
+| `TelemetryHUD.cs` | Superseded by `AdvancedTelemetryHUD.cs` |
+| `WindsurferController.cs` (V1) | Superseded by V2 and `AdvancedWindsurferController` |
+
+#### Files Consolidated
+| Change | Reason |
+|--------|--------|
+| `Debugging/` → `Debug/` | Merged duplicate folders |
+| `SailPhysicsDebugger.cs` | Moved to `Debug/`, updated namespace |
+
+#### Files Updated
+| File | Change |
+|------|--------|
+| `PhysicsHelpers.cs` | Removed duplicate `PhysicsConstants` class |
+| `SailPositionIndicator.cs` | Added support for `AdvancedSail` |
+| `WindIndicator3D.cs` | Added support for `AdvancedWindsurferController` |
+| `SimpleFollowCamera.cs` | Added `ThirdPersonCamera` disabling logic |
+
+### Documentation Updated 📚
+- `KNOWN_ISSUES.md` - Added Session 26 fixes
+- `ARCHITECTURE.md` - Updated for removed files
+- `SCENE_STRUCTURE_VISUAL.md` - Added Advanced setup notes
+- `QUICK_SETUP_CHECKLIST.md` - Updated for current state
+- `CONFIGURATION_SUMMARY.md` - Updated component list
+- `PROGRESS_LOG.md` - This entry
+
+### Final Script Count: 35 Scripts
+Cleaned up from 37 after removing deprecated files.
+
+### Camera Issue
+Camera initialization remains a known issue. Workaround: change FOV in Inspector during play mode.
 
 ---
 

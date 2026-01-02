@@ -277,34 +277,14 @@ namespace WindsurfingGame.Physics.Board
         
         /// <summary>
         /// Calculate the Center of Effort position based on sail geometry and mast rake.
-        /// The CE is where the sail force is applied - typically at boom height + offset.
+        /// The CE is where the sail force is applied.
+        /// Set to (0,0,0) to prevent porpoising at high speeds.
         /// </summary>
         private void CalculateCenterOfEffort()
         {
-            // Start at mast foot
-            Vector3 localCE = _sailConfig.MastFootPosition;
-            
-            // Apply mast rake - rotates the whole rig fore/aft around the mast foot
-            float rakeAngle = _mastRake * _maxRakeAngle * Mathf.Deg2Rad;
-            
-            // CE height - low value for stable gameplay
-            float ceHeight = 0.0f;
-            
-            // With rake, the CE moves slightly fore/aft
-            float ceForwardOffset = -Mathf.Sin(rakeAngle) * ceHeight;
-            float ceHeightAdjusted = Mathf.Cos(rakeAngle) * ceHeight;
-            
-            localCE += new Vector3(0, ceHeightAdjusted, ceForwardOffset);
-            
-            // Lateral offset - CE moves to leeward with sail angle
-            // About 30-40% along the boom from mast
-            float sailAngleRad = _currentSailAngle * Mathf.Deg2Rad;
-            float ceDistance = _sailConfig.BoomLength * 0.35f; // 35% along boom
-            localCE += new Vector3(
-                Mathf.Sin(sailAngleRad) * ceDistance,
-                0,
-                -Mathf.Cos(sailAngleRad) * ceDistance * 0.3f // Slight aft shift
-            );
+            // CE set to origin (0,0,0) to prevent porpoising
+            // Forces applied at center of mass for stable gameplay
+            Vector3 localCE = Vector3.zero;
             
             _centerOfEffort = transform.TransformPoint(localCE);
             _state.CenterOfEffort = _centerOfEffort;
@@ -409,10 +389,33 @@ namespace WindsurfingGame.Physics.Board
         }
         
         /// <summary>
-        /// Apply pitch stabilization at high speeds to prevent nose-diving.
+        /// Apply pitch stabilization at high speeds to prevent porpoising.
+        /// Only active when board is relatively flat (low heel angle).
+        /// When heeled significantly, the sailor naturally balances - no correction needed.
         /// </summary>
         private void ApplyPitchStabilization(float speedKnots)
         {
+            // Get current heel (roll) angle - rotation around forward axis
+            float heelAngle = transform.eulerAngles.z;
+            if (heelAngle > 180f) heelAngle -= 360f;
+            float absHeel = Mathf.Abs(heelAngle);
+            
+            // DISABLE pitch stabilization when heeled significantly
+            // In real windsurfing, when you're heeled over, the sailor handles balance naturally
+            // Pitch correction at high heel angles causes jittering because axes are misaligned
+            if (absHeel > 25f)
+            {
+                // Board is heeled - no pitch correction needed
+                return;
+            }
+            
+            // Reduce effectiveness as heel increases (smooth fade-out from 15° to 25°)
+            float heelFactor = 1f;
+            if (absHeel > 15f)
+            {
+                heelFactor = 1f - (absHeel - 15f) / 10f; // Fades from 1.0 at 15° to 0.0 at 25°
+            }
+            
             // Get current pitch angle (rotation around X axis)
             float pitchAngle = transform.eulerAngles.x;
             if (pitchAngle > 180f) pitchAngle -= 360f; // Convert to -180 to 180 range
@@ -420,23 +423,25 @@ namespace WindsurfingGame.Physics.Board
             // Get pitch angular velocity
             float pitchVelocity = _rigidbody.angularVelocity.x;
             
-            // Apply counter-torque if pitching nose-down (positive pitch in Unity)
-            if (pitchAngle > 5f || pitchVelocity > 0.3f)
-            {
-                // Progressive correction based on speed and pitch amount
-                float speedFactor = Mathf.Clamp01((speedKnots - 12f) / 10f);
-                float pitchCorrection = (pitchAngle * 5f + pitchVelocity * 20f) * speedFactor;
-                
-                // Apply upward pitch torque (negative X rotation)
-                _rigidbody.AddTorque(-transform.right * pitchCorrection, ForceMode.Force);
-            }
+            // Progressive correction based on speed
+            float speedFactor = Mathf.Clamp01((speedKnots - 12f) / 10f);
             
-            // Also limit maximum pitch angle
-            if (Mathf.Abs(pitchAngle) > 15f)
-            {
-                float correction = pitchAngle * 30f;
-                _rigidbody.AddTorque(-transform.right * correction, ForceMode.Force);
-            }
+            // Combined factor includes both speed and heel
+            float combinedFactor = speedFactor * heelFactor;
+            
+            // SYMMETRIC PITCH DAMPING - prevent porpoising when board is flat
+            float pitchDamping = pitchVelocity * 20f * combinedFactor;
+            
+            // Gentle spring correction
+            float pitchSpring = pitchAngle * 4f * combinedFactor;
+            
+            float totalCorrection = pitchDamping + pitchSpring;
+            
+            // Clamp to prevent any extreme forces
+            totalCorrection = Mathf.Clamp(totalCorrection, -300f, 300f);
+            
+            // Apply correction torque
+            _rigidbody.AddTorque(-transform.right * totalCorrection, ForceMode.Force);
         }
         
         /// <summary>
@@ -660,7 +665,7 @@ namespace WindsurfingGame.Physics.Board
             
             // Draw CE marker
             Gizmos.color = Color.yellow;
-            Gizmos.DrawWireSphere(_centerOfEffort, 0.1f);
+            Gizmos.DrawWireSphere(_centerOfEffort, 0.0f);
             
             // ========================================
             // SAIL ORIENTATION DEBUG

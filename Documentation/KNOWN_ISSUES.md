@@ -1,6 +1,6 @@
 # 🐛 Known Issues
 
-**Last Updated:** January 1, 2026
+**Last Updated:** January 2, 2026
 
 This document tracks known issues, bugs, and their workarounds. For contributors picking up this project, these are the priority fixes needed.
 
@@ -8,85 +8,58 @@ This document tracks known issues, bugs, and their workarounds. For contributors
 
 ## 🔴 Critical Issues (Needs Fix)
 
-### 1. Camera Only Works When Changing FOV in Inspector
+### 1. Pitch Stabilization Causes Jittering at High Heel Angles
 
 **Symptom:**  
+When the windsurfer is heeled over significantly (high roll angle, close to perpendicular to water like in real high-performance windsurfing), the pitch stabilization can cause spasming/jittering.
+
+**Current Workaround:**  
+Pitch stabilization is disabled when heel angle exceeds 25° and fades out progressively from 15° to 25°.
+
+**Potential Proper Fix:**  
+In real windsurfing, the sail transfers both rake (steering) AND roll/heel forces to the board. Currently only rake is transferred. Implementing proper sail-to-board roll transfer would:
+1. Allow the sailor's lean to naturally counteract heeling moments
+2. Make the board more stable at high heel angles without artificial corrections
+3. Enable more realistic high-performance sailing positions
+
+**Files:**  
+- [WindsurfingGame/Assets/Scripts/Physics/Board/AdvancedSail.cs](../WindsurfingGame/Assets/Scripts/Physics/Board/AdvancedSail.cs) - `ApplyPitchStabilization()` method
+- Consider adding roll transfer in `ApplyForces()` method
+
+---
+
+### 2. Camera Only Works When Changing FOV in Inspector (FIXED - Session 26)
+
+**Status:** ✅ FIXED
+
+**Previous Symptom:**  
 The camera doesn't follow the windsurfer until you manually change the FOV value in the Inspector during Play mode.
 
 **Root Cause:**  
-The `SimpleFollowCamera` component isn't initializing properly on first frame. The camera target reference exists but the follow logic isn't activating.
+Two camera controllers (`ThirdPersonCamera` and `SimpleFollowCamera`) were conflicting on the same GameObject.
 
-**Workaround:**  
-1. Enter Play mode
-2. Select Main Camera in Hierarchy
-3. In Inspector, change FOV from 60 to 61 (or any value)
-4. Camera will start following
-
-**Fix Needed:**  
-Investigate `SimpleFollowCamera.cs` initialization in `Start()` or `OnEnable()`. May need to force position update on first frame.
+**Fix Applied:**  
+`SimpleFollowCamera.cs` now disables `ThirdPersonCamera` on initialization and forces camera position for first 3 frames.
 
 **Files:**  
 - [WindsurfingGame/Assets/Scripts/Camera/SimpleFollowCamera.cs](../WindsurfingGame/Assets/Scripts/Camera/SimpleFollowCamera.cs)
 
 ---
 
-### 2. Steering Controls Inverted on Port Tack (CRITICAL - Partially Investigated)
-
-**Symptom:**  
-When on PORT tack (wind coming from starboard/right side), pressing A turns the board RIGHT and pressing D turns it LEFT. This is the opposite of the expected behavior. On starboard tack, controls work correctly (A=left, D=right).
-
-**Root Cause (Identified but not fully fixed):**  
-There are TWO steering systems running simultaneously that conflict:
-
-1. **Sail.cs ApplyRakeTorque()** - Applies torque WITHOUT tack compensation:
-   ```csharp
-   float steeringTorque = _mastRake * forceMagnitude * _rakeTorqueMultiplier;
-   _targetRigidbody.AddTorque(Vector3.up * steeringTorque, ForceMode.Force);
-   ```
-
-2. **AdvancedSail.cs ApplyRakeSteering()** - Applies torque WITH tack compensation:
-   ```csharp
-   float tack = _state.SailSide != 0 ? -_state.SailSide : 1f;
-   float steeringTorque = _mastRake * tack * forceMag * 0.3f;
-   ```
-
-**The Problem:**  
-- Both `Sail.cs` and `AdvancedSail.cs` are active on the same GameObject
-- Each has its OWN `_mastRake` field
-- The controller (`WindsurferControllerV2.cs`) calls `_sail.RakeBack()` which modifies `Sail.cs._mastRake`
-- But `AdvancedSail.cs` has its own `_mastRake` that's controlled separately
-- AdvancedSail's steering torque uses `tack = -SailSide` which FLIPS the direction on port tack
-- Multiple attempts to compensate in the controller failed
-
-**Attempted Fixes (all failed to fully resolve):**
-1. Flipping `windFromStarboard` check in controller
-2. Inverting `effectiveSteer` on port tack
-3. Using `_advancedSail.State.SailSide` for tack detection
-4. Calling `_advancedSail.AdjustRake()` with flipped sign
-5. Using `GetApparentWindSide()` for tack detection
-
-**Proper Fix Required:**
-Choose ONE of these approaches:
-1. **Disable one steering system** - Either disable `Sail.ApplyRakeTorque()` or `AdvancedSail.ApplyRakeSteering()`, not both
-2. **Synchronize rake values** - Make both components share the same `_mastRake` value
-3. **Remove tack compensation from AdvancedSail** - Make `ApplyRakeSteering()` work like `Sail.ApplyRakeTorque()` (no tack flip)
-4. **Use only AdvancedSail for steering** - Have controller only call `AdvancedSail.AdjustRake()` and ensure compensation is correct
-
-**Debugging Steps:**
-1. Add `Debug.Log($"SailSide={_state.SailSide}, tack={tack}, rake={_mastRake}, torque={steeringTorque}")` to `AdvancedSail.ApplyRakeSteering()`
-2. Add `Debug.Log($"steer={steer}, effectiveRake={effectiveRake}")` to `WindsurferControllerV2.ApplyBeginnerControls()`
-3. Trace actual values during port and starboard tack
-4. Identify which steering system is dominant
-
-**Files:**  
-- [WindsurfingGame/Assets/Scripts/Player/WindsurferControllerV2.cs](../WindsurfingGame/Assets/Scripts/Player/WindsurferControllerV2.cs) - Controller input handling
-- [WindsurfingGame/Assets/Scripts/Physics/Board/Sail.cs](../WindsurfingGame/Assets/Scripts/Physics/Board/Sail.cs) - `ApplyRakeTorque()` at line ~295
-- [WindsurfingGame/Assets/Scripts/Physics/Board/AdvancedSail.cs](../WindsurfingGame/Assets/Scripts/Physics/Board/AdvancedSail.cs) - `ApplyRakeSteering()` at line ~445
-- [WindsurfingGame/Assets/Scripts/Physics/Board/ApparentWindCalculator.cs](../WindsurfingGame/Assets/Scripts/Physics/Board/ApparentWindCalculator.cs) - `GetApparentWindSide()` method
-
----
-
 ## ✅ Recently Fixed Issues
+
+### Fixed in Session 26 (January 2, 2026) - Porpoising, Steering, Camera, Cleanup
+
+- ✅ **Porpoising at high speed** → Removed sail downforce, set center of effort to (0,0,0), applied planing lift at center of mass
+- ✅ **Steering inverted on port tack** → Added tack detection in AdvancedWindsurferController to flip A/D inputs
+- ✅ **Camera not working until FOV change** → SimpleFollowCamera now disables conflicting ThirdPersonCamera
+- ✅ **Pitch stabilization spasming at high heel** → Disabled pitch correction when heel > 25°
+
+**Code Cleanup:**
+- 🗑️ Removed `TelemetryHUD.cs` (superseded by AdvancedTelemetryHUD)
+- 🗑️ Removed `WindsurferController.cs` V1 (superseded by AdvancedWindsurferController)
+- 🗑️ Removed duplicate `PhysicsConstants` from PhysicsHelpers.cs
+- 📁 Merged `Debugging/` folder into `Debug/` folder
 
 ### Fixed in Session 25 (January 1, 2026) - Physics Corrections
 

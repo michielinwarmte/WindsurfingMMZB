@@ -71,12 +71,12 @@ I've created comprehensive documentation to ensure you can replicate your windsu
 
 ### ✅ Complete Parameter Coverage
 Every single parameter from every script is documented:
-- BuoyancyBody (8 parameters)
-- WaterDrag (5 parameters)
-- Sail (13 parameters)
-- FinPhysics (9 parameters)
-- WindsurferControllerV2 (15 parameters)
-- All other components...
+- AdvancedBuoyancy (multi-point flotation) ⭐
+- AdvancedHullDrag (planing physics) ⭐
+- AdvancedSail (aerodynamics) ⭐
+- AdvancedFin (hydrodynamics) ⭐
+- AdvancedWindsurferController (realistic controls) ⭐
+- All legacy components...
 
 ### ✅ Exact Values Captured
 All values are taken directly from your current MainScene.unity file:
@@ -88,8 +88,8 @@ All values are taken directly from your current MainScene.unity file:
 
 ### ✅ Two Simple Manual Assignments
 The documentation makes clear that only **2 things** need manual assignment:
-1. **WindsurfBoard.BuoyancyBody._waterSurface** → WaterSurface GameObject
-2. **Main Camera.ThirdPersonCamera._target** → WindsurfBoard Transform
+1. **WindsurfBoard.AdvancedBuoyancy._waterSurface** → WaterSurface GameObject
+2. **Main Camera.SimpleFollowCamera._target** → WindsurfBoard Transform
 
 Everything else auto-finds!
 
@@ -131,20 +131,21 @@ Component relationship diagrams show:
 ## 🔧 What's Documented
 
 ### GameObject Configurations
-- ✅ WindsurfBoard (with 7-9 components)
+- ✅ WindsurfBoard (with Advanced physics components)
 - ✅ WaterSurface
-- ✅ WindManager
+- ✅ WindSystem (or WindManager for legacy)
 - ✅ Main Camera
 - ✅ Directional Light
-- ✅ TelemetryHUD
+- ✅ TelemetryHUD (uses AdvancedTelemetryHUD)
 
 ### All Script Parameters
-- ✅ Physics scripts (Buoyancy, Drag, Sail, Fin)
-- ✅ Player controllers (V1 and V2)
-- ✅ Camera system
-- ✅ UI systems (Telemetry, Wind Indicators)
-- ✅ Visual systems (Sail Visualizer)
-- ✅ Environment (Wind, Water)
+- ✅ Advanced physics (Buoyancy, HullDrag, Sail, Fin) ⭐
+- ✅ Legacy physics (BuoyancyBody, WaterDrag, Sail, FinPhysics)
+- ✅ Player controllers (AdvancedWindsurferController ⭐, V2)
+- ✅ Camera system (SimpleFollowCamera ⭐, ThirdPersonCamera)
+- ✅ UI systems (AdvancedTelemetryHUD ⭐, Wind Indicators)
+- ✅ Visual systems (EquipmentVisualizer ⭐, SailVisualizer)
+- ✅ Environment (WindSystem ⭐, WindManager, WaterSurface)
 
 ### Settings
 - ✅ Transform values (position, rotation, scale)
@@ -157,20 +158,29 @@ Component relationship diagrams show:
 
 ## 📊 Documentation Coverage
 
-| Component | Parameters | Documented |
-|-----------|------------|------------|
-| BuoyancyBody | 8 | ✅ All |
-| WaterDrag | 5 | ✅ All |
-| Sail | 13 | ✅ All |
-| FinPhysics | 9 | ✅ All |
-| WindsurferControllerV2 | 15 | ✅ All |
-| ApparentWindCalculator | 4 | ✅ All |
-| WaterSurface | 6 | ✅ All |
-| WindManager | 7 | ✅ All |
-| ThirdPersonCamera | 6 | ✅ All |
-| TelemetryHUD | 11 | ✅ All |
+### Advanced Components (Recommended) ⭐
+| Component | Purpose | Status |
+|-----------|---------|--------|
+| AdvancedBuoyancy | Multi-point flotation | ✅ Documented |
+| AdvancedHullDrag | Planing physics | ✅ Documented |
+| AdvancedSail | Aerodynamic forces | ✅ Documented |
+| AdvancedFin | Hydrodynamic forces | ✅ Documented |
+| AdvancedWindsurferController | Realistic controls | ✅ Documented |
+| AdvancedTelemetryHUD | Debug display | ✅ Documented |
+| SimpleFollowCamera | Multi-mode camera | ✅ Documented |
+| WindSystem | Advanced wind | ✅ Documented |
 
-**Total: 84+ parameters fully documented**
+### Legacy Components (Deprecated)
+| Component | Parameters | Status |
+|-----------|------------|--------|
+| BuoyancyBody | 8 | ✅ Documented |
+| WaterDrag | 5 | ✅ Documented |
+| Sail | 13 | ✅ Documented |
+| FinPhysics | 9 | ✅ Documented |
+| WindsurferControllerV2 | 15 | ✅ Documented |
+| ThirdPersonCamera | 6 | ✅ Documented |
+
+> **Note:** `WindsurferController` (V1) and `TelemetryHUD` were **removed** in Session 26.
 
 ---
 
@@ -195,11 +205,14 @@ If your scene file gets corrupted, you can rebuild it exactly using the document
 
 ## 🚨 Important Notes
 
-### Scripts That Were Missing
-I noticed **FinPhysics** was not in your scene file but is referenced in the code. The documentation includes it with correct parameters. Make sure to add it to your WindsurfBoard!
+### Session 26 Cleanup (January 2, 2026)
+The following files were **removed** during cleanup:
+- `WindsurferController.cs` (V1) - use `AdvancedWindsurferController` or `V2`
+- `TelemetryHUD.cs` - use `AdvancedTelemetryHUD`
+- `Debugging/` folder - merged into `Debug/`
 
-### Controller Version
-You have both **WindsurferController** and **WindsurferControllerV2** in your codebase. The scene uses the old version. Documentation covers both but recommends V2.
+### Advanced vs Legacy
+Use **Advanced** components for production. Legacy components are retained for backwards compatibility only.
 
 ### Auto-Find Safety
 Most components are smart and auto-find their dependencies. The documentation clearly marks which ones need manual assignment (only 2!).

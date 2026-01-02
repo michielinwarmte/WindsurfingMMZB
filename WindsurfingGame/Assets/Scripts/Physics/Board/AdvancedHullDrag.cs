@@ -495,18 +495,9 @@ namespace WindsurfingGame.Physics.Board
             float totalLift = _displacementLift + _planingLift;
             if (totalLift < 1f) return;
             
-            // Determine lift application point based on mode
-            float liftPointZ;
-            if (_isPlaning)
-            {
-                // Planing: lift applied further aft (tail rides on water)
-                liftPointZ = -_hullConfig.Length * (0.5f - _planingRatio * 0.25f);
-            }
-            else
-            {
-                // Displacement: lift more centered
-                liftPointZ = 0f;
-            }
+            // Apply lift at center of mass to prevent pitching moments (porpoising)
+            // Previously applied aft which caused nose-up moment and oscillation
+            float liftPointZ = 0f; // Center of mass
             
             Vector3 liftPoint = transform.TransformPoint(new Vector3(0f, 0f, liftPointZ));
             

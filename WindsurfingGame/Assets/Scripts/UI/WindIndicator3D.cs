@@ -42,9 +42,18 @@ namespace WindsurfingGame.UI
         {
             if (_boardTransform == null)
             {
-                var controller = FindFirstObjectByType<Player.WindsurferController>();
-                if (controller != null)
-                    _boardTransform = controller.transform;
+                // Try to find any controller - prefer Advanced, fallback to V2
+                var advController = FindFirstObjectByType<Player.AdvancedWindsurferController>();
+                if (advController != null)
+                {
+                    _boardTransform = advController.transform;
+                }
+                else
+                {
+                    var v2Controller = FindFirstObjectByType<Player.WindsurferControllerV2>();
+                    if (v2Controller != null)
+                        _boardTransform = v2Controller.transform;
+                }
             }
 
             if (_windManager == null)

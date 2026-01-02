@@ -4,19 +4,19 @@
 
 Use this checklist when setting up the scene on a new PC. For detailed parameter values, see [SCENE_CONFIGURATION.md](SCENE_CONFIGURATION.md).
 
-**Last Updated:** December 28, 2025
+**Last Updated:** January 2, 2026
 
 ---
 
 ## ⚠️ IMPORTANT: Known Issues
 
-Before starting, be aware of these critical bugs:
+Before starting, be aware of these known issues:
 
-| Issue | Workaround |
-|-------|------------|
-| 🔴 Camera doesn't follow | Change FOV in Inspector during Play mode |
-| 🔴 Board oscillates at planing speed | None yet - needs stability fix |
-| 🔴 Steering is inverted | None yet - A/D keys work backwards |
+| Issue | Status | Workaround |
+|-------|--------|------------|
+| 🟡 Camera doesn't follow | Known issue | Change FOV in Inspector during Play mode |
+| ✅ Steering on port tack | **FIXED** | Now auto-inverts correctly |
+| ✅ Porpoising at speed | **FIXED** | CE at zero, planing lift at center |
 
 See [KNOWN_ISSUES.md](KNOWN_ISSUES.md) for full details.
 
@@ -123,8 +123,9 @@ Everything else auto-finds!
 | Key | Action | Notes |
 |-----|--------|-------|
 | W/S | Sheet in/out | Controls sail power |
-| A/D | Steer | ⚠️ Currently inverted! |
+| A/D | Steer | Auto-inverts on port tack |
 | Q/E | Fine mast rake | For precise steering |
+| Space | Switch tack | Flips sail to other side |
 | F1 | Toggle telemetry | Shows all physics values |
 | 1-4 | Camera modes | 1=Follow, 2=Orbit, 3=Top, 4=Free |
 
@@ -144,7 +145,9 @@ This needs to be done every time you enter Play mode.
 
 ---
 
-## 📋 Legacy Setup (Basic Physics)
+## 📋 Legacy Setup (Basic Physics - Deprecated)
+
+> **⚠️ Note:** Legacy setup is deprecated. Use Advanced Physics for production.
 
 For simpler physics (prototyping only):
 
@@ -154,15 +157,18 @@ For simpler physics (prototyping only):
 - [ ] ApparentWindCalculator.cs
 
 ### Player Script (on WindsurfBoard)
-- [ ] WindsurferControllerV2.cs (recommended)
-  OR
-- [ ] WindsurferController.cs (old version)
+- [ ] WindsurferControllerV2.cs
+  ~~OR~~
+  ~~WindsurferController.cs~~ **(REMOVED in Session 26)**
 
 ### Camera Script (on Main Camera)
-- [ ] ThirdPersonCamera.cs
+- [ ] SimpleFollowCamera.cs (preferred)
+  OR
+- [ ] ThirdPersonCamera.cs (legacy)
 
 ### UI Scripts
-- [ ] TelemetryHUD.cs (on TelemetryHUD GameObject)
+- [ ] AdvancedTelemetryHUD.cs (on TelemetryHUD GameObject)
+  ~~TelemetryHUD.cs~~ **(REMOVED in Session 26)**
 - [ ] WindIndicator3D.cs (optional)
 
 ### Environment Scripts
@@ -205,6 +211,34 @@ Press Play and verify:
 
 ## Scene Hierarchy Should Look Like:
 
+### Advanced Setup (Recommended) ⭐
+```
+MainScene
+├── Main Camera
+│   └── SimpleFollowCamera
+├── Directional Light
+├── WaterSurface
+│   └── WaterSurface
+├── WindsurfBoard
+│   ├── Rigidbody
+│   ├── BoxCollider
+│   ├── MeshFilter
+│   ├── MeshRenderer
+│   ├── AdvancedBuoyancy
+│   ├── AdvancedHullDrag
+│   ├── AdvancedSail
+│   ├── AdvancedFin
+│   ├── BoardMassConfiguration
+│   ├── AdvancedWindsurferController
+│   └── EquipmentVisualizer
+├── WindSystem
+│   └── WindSystem
+└── TelemetryHUD
+    ├── AdvancedTelemetryHUD
+    └── (Optional) WindIndicator3D
+```
+
+### Legacy Setup
 ```
 MainScene
 ├── Main Camera
@@ -227,7 +261,7 @@ MainScene
 ├── WindManager
 │   └── WindManager
 └── TelemetryHUD
-    ├── TelemetryHUD
+    ├── AdvancedTelemetryHUD
     └── (Optional) WindIndicator3D
 ```
 
@@ -239,27 +273,47 @@ All scripts are in:
 ```
 Assets/Scripts/
 ├── Camera/
-│   └── ThirdPersonCamera.cs
+│   ├── SimpleFollowCamera.cs ⭐
+│   └── ThirdPersonCamera.cs (legacy)
+├── Debug/
+│   ├── PhysicsValidation.cs
+│   └── SailPhysicsDebugger.cs
 ├── Physics/
 │   ├── Board/
-│   │   ├── ApparentWindCalculator.cs
-│   │   ├── FinPhysics.cs
-│   │   ├── Sail.cs
-│   │   └── WaterDrag.cs
+│   │   ├── AdvancedSail.cs ⭐
+│   │   ├── AdvancedFin.cs ⭐
+│   │   ├── AdvancedHullDrag.cs ⭐
+│   │   ├── BoardMassConfiguration.cs ⭐
+│   │   ├── ApparentWindCalculator.cs (legacy)
+│   │   ├── FinPhysics.cs (legacy)
+│   │   ├── Sail.cs (legacy)
+│   │   └── WaterDrag.cs (legacy)
 │   ├── Buoyancy/
-│   │   └── BuoyancyBody.cs
+│   │   ├── AdvancedBuoyancy.cs ⭐
+│   │   └── BuoyancyBody.cs (legacy)
+│   ├── Core/
+│   │   ├── Aerodynamics.cs
+│   │   ├── Hydrodynamics.cs
+│   │   ├── PhysicsConstants.cs
+│   │   └── SailingState.cs
 │   ├── Water/
 │   │   └── WaterSurface.cs
 │   └── Wind/
-│       └── WindManager.cs
+│       └── WindManager.cs (legacy)
+├── Environment/
+│   └── WindSystem.cs ⭐
 ├── Player/
-│   ├── WindsurferController.cs
-│   └── WindsurferControllerV2.cs
+│   ├── AdvancedWindsurferController.cs ⭐
+│   └── WindsurferControllerV2.cs (legacy)
 ├── UI/
-│   ├── TelemetryHUD.cs
+│   ├── AdvancedTelemetryHUD.cs ⭐
+│   ├── SailPositionIndicator.cs
 │   └── WindIndicator3D.cs
 └── Visual/
-    └── SailVisualizer.cs
+    ├── EquipmentVisualizer.cs ⭐
+    ├── ForceVectorVisualizer.cs
+    ├── SailVisualizer.cs (legacy)
+    └── WindDirectionIndicator.cs
 ```
 
 ---

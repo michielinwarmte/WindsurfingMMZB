@@ -43,14 +43,59 @@ namespace WindsurfingGame.CameraSystem
         
         // Initialization flag
         private bool _initialized = false;
+        private int _initFrameCount = 0;
+        private Camera _camera;
 
-        private void Start()
+        private void Awake()
         {
+            _camera = GetComponent<Camera>();
             _mouse = Mouse.current;
             _keyboard = Keyboard.current;
             
+            // CRITICAL: Disable ThirdPersonCamera if it exists on the same GameObject
+            // Having two camera controllers causes conflicts - only one should be active
+            var thirdPersonCam = GetComponent<ThirdPersonCamera>();
+            if (thirdPersonCam != null)
+            {
+                thirdPersonCam.enabled = false;
+                Debug.Log("[SimpleFollowCamera] Disabled ThirdPersonCamera to prevent conflict");
+            }
+        }
+        
+        private void OnEnable()
+        {
+            // Reset initialization to force camera update when enabled
+            _initialized = false;
+            _initFrameCount = 0;
+            
+            // Try to initialize immediately
+            _mouse = Mouse.current;
+            _keyboard = Keyboard.current;
+            
+            // Disable ThirdPersonCamera again in case it was re-enabled
+            var thirdPersonCam = GetComponent<ThirdPersonCamera>();
+            if (thirdPersonCam != null && thirdPersonCam.enabled)
+            {
+                thirdPersonCam.enabled = false;
+            }
+            
+            FindTarget();
+        }
+
+        private void Start()
+        {
+            // Ensure input devices are available
+            if (_mouse == null) _mouse = Mouse.current;
+            if (_keyboard == null) _keyboard = Keyboard.current;
+            
             // Auto-find target if not set
             FindTarget();
+            
+            // Force immediate snap on first frame
+            if (_target != null)
+            {
+                SnapToTarget();
+            }
             
             Debug.Log($"[SimpleFollowCamera] Started in Mode: {_mode}\n" +
                      $"   Press 1 = Fixed Follow\n" +
@@ -132,10 +177,27 @@ namespace WindsurfingGame.CameraSystem
         private void LateUpdate()
         {
             // Keep trying to find target if we don't have one
-            if (_target == null || !_initialized)
+            if (_target == null)
             {
                 FindTarget();
                 if (_target == null) return;
+            }
+            
+            // Force snap for first few frames to guarantee camera is positioned correctly
+            // This fixes the issue where camera only works after changing FOV in inspector
+            if (_initFrameCount < 3)
+            {
+                _initFrameCount++;
+                SnapToTarget();
+                return;
+            }
+            
+            // Normal initialization check
+            if (!_initialized)
+            {
+                FindTarget();
+                SnapToTarget();
+                _initialized = true;
             }
             
             HandleModeSwitch();

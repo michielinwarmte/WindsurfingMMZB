@@ -10,11 +10,14 @@ namespace WindsurfingGame.UI
     /// 
     /// Mast base is FIXED at 1.2m from back of board (realistic position).
     /// Rake rotates the mast around this fixed point, not moving the base.
+    /// 
+    /// Supports both AdvancedSail (preferred) and legacy Sail.
     /// </summary>
     public class SailPositionIndicator : MonoBehaviour
     {
         [Header("References")]
-        [SerializeField] private Sail _sail;
+        [SerializeField] private AdvancedSail _advancedSail;
+        [SerializeField] private Sail _legacySail;
         [SerializeField] private ApparentWindCalculator _apparentWind;
         [SerializeField] private Rigidbody _boardRigidbody;
 
@@ -57,12 +60,20 @@ namespace WindsurfingGame.UI
 
         private void FindReferences()
         {
-            if (_sail == null)
-                _sail = FindFirstObjectByType<Sail>();
+            // Prefer AdvancedSail, fallback to legacy Sail
+            if (_advancedSail == null)
+                _advancedSail = FindFirstObjectByType<AdvancedSail>();
+            if (_advancedSail == null && _legacySail == null)
+                _legacySail = FindFirstObjectByType<Sail>();
             if (_apparentWind == null)
                 _apparentWind = FindFirstObjectByType<ApparentWindCalculator>();
-            if (_boardRigidbody == null && _sail != null)
-                _boardRigidbody = _sail.GetComponent<Rigidbody>();
+            if (_boardRigidbody == null)
+            {
+                if (_advancedSail != null)
+                    _boardRigidbody = _advancedSail.GetComponent<Rigidbody>();
+                else if (_legacySail != null)
+                    _boardRigidbody = _legacySail.GetComponent<Rigidbody>();
+            }
         }
 
         private void CreateTextures()
@@ -78,16 +89,33 @@ namespace WindsurfingGame.UI
 
         private void OnGUI()
         {
-            if (_sail == null) return;
+            // Need at least one sail reference
+            if (_advancedSail == null && _legacySail == null) return;
 
             InitStyles();
             
-            // Smooth the display values - read from simulation
-            _displayRake = Mathf.Lerp(_displayRake, _sail.MastRake, Time.deltaTime * 8f);
-            _displaySheet = Mathf.Lerp(_displaySheet, _sail.SheetPosition, Time.deltaTime * 8f);
-            _displayPower = Mathf.Lerp(_displayPower, Mathf.Clamp01(_sail.TotalForce.magnitude / 500f), Time.deltaTime * 5f);
-            // Read sail angle directly from simulation
-            _displaySailAngle = Mathf.Lerp(_displaySailAngle, _sail.CurrentSailAngle, Time.deltaTime * 8f);
+            // Read values from AdvancedSail or legacy Sail
+            float mastRake, sheetPosition, forceMag, sailAngle;
+            if (_advancedSail != null)
+            {
+                mastRake = _advancedSail.MastRake;
+                sheetPosition = _advancedSail.SheetPosition;
+                forceMag = _advancedSail.State.SailForce.magnitude;
+                sailAngle = _advancedSail.CurrentSailAngle;
+            }
+            else
+            {
+                mastRake = _legacySail.MastRake;
+                sheetPosition = _legacySail.SheetPosition;
+                forceMag = _legacySail.TotalForce.magnitude;
+                sailAngle = _legacySail.CurrentSailAngle;
+            }
+            
+            // Smooth the display values
+            _displayRake = Mathf.Lerp(_displayRake, mastRake, Time.deltaTime * 8f);
+            _displaySheet = Mathf.Lerp(_displaySheet, sheetPosition, Time.deltaTime * 8f);
+            _displayPower = Mathf.Lerp(_displayPower, Mathf.Clamp01(forceMag / 500f), Time.deltaTime * 5f);
+            _displaySailAngle = Mathf.Lerp(_displaySailAngle, sailAngle, Time.deltaTime * 8f);
 
             DrawIndicator();
         }

@@ -2,7 +2,7 @@
 
 This document provides a complete overview of the codebase for team collaboration.
 
-**Last Updated:** December 28, 2025
+**Last Updated:** January 2, 2026
 
 ---
 
@@ -47,28 +47,34 @@ All scripts use the `WindsurfingGame` root namespace:
 WindsurfingGame
 ├── Physics
 │   ├── Water      → IWaterSurface, WaterSurface
-│   ├── Wind       → IWindProvider, WindManager
+│   ├── Wind       → IWindProvider, WindManager (legacy)
 │   ├── Core       → PhysicsConstants, Aerodynamics, Hydrodynamics, SailingState
-│   ├── Buoyancy   → BuoyancyBody, AdvancedBuoyancy, BoardMassConfiguration
-│   └── Board      → Sail, AdvancedSail, FinPhysics, AdvancedFin, WaterDrag, AdvancedHullDrag
-├── Environment    → WindSystem
-├── Player         → WindsurferController, WindsurferControllerV2, AdvancedWindsurferController
-├── CameraSystem   → ThirdPersonCamera, SimpleFollowCamera
-├── UI             → TelemetryHUD, AdvancedTelemetryHUD, SailPositionIndicator, WindIndicator3D
+│   ├── Buoyancy   → BuoyancyBody (legacy), AdvancedBuoyancy
+│   └── Board      → Sail (legacy), AdvancedSail, FinPhysics (legacy), AdvancedFin,
+│                    WaterDrag (legacy), AdvancedHullDrag, ApparentWindCalculator,
+│                    BoardMassConfiguration
+├── Environment    → WindSystem ⭐
+├── Player         → WindsurferControllerV2 (legacy), AdvancedWindsurferController ⭐
+├── CameraSystem   → ThirdPersonCamera (legacy), SimpleFollowCamera ⭐
+├── UI             → AdvancedTelemetryHUD ⭐, SailPositionIndicator, WindIndicator3D
 ├── Visual         → SailVisualizer, EquipmentVisualizer, ForceVectorVisualizer, WindDirectionIndicator
+├── Debug          → PhysicsValidation, SailPhysicsDebugger
 ├── Editor         → WindsurferSetup (Setup Wizard)
-└── Utilities      → PhysicsHelpers, WaterGridMarkers
+└── Utilities      → PhysicsHelpers (extensions only), WaterGridMarkers
 ```
 
 ---
 
 ## Physics Systems
 
-### Basic Physics (Original)
-Simple physics suitable for quick prototyping:
+### Advanced Physics (Recommended) ⭐
+**Use these for production** - Realistic physics based on sailing research.
+
+### Legacy Physics (Deprecated)
+Simple physics suitable for quick prototyping - **not recommended for new development**:
 - `BuoyancyBody`, `Sail`, `FinPhysics`, `WaterDrag`, `WindsurferControllerV2`
 
-### Advanced Physics (Recommended) ⭐
+### Advanced Physics Components ⭐
 Realistic physics based on sailing research:
 - `AdvancedBuoyancy` - Archimedes' principle with 21-point sampling, hull shape
 - `AdvancedSail` - Aerodynamic lift/drag with camber and aspect ratio
@@ -109,23 +115,26 @@ Realistic physics based on sailing research:
 | [AdvancedSail.cs](../WindsurfingGame/Assets/Scripts/Physics/Board/AdvancedSail.cs) | Physics.Board | Aerodynamic sail with camber | WindSystem, Aerodynamics, Rigidbody |
 | [AdvancedFin.cs](../WindsurfingGame/Assets/Scripts/Physics/Board/AdvancedFin.cs) | Physics.Board | Hydrodynamic fin with stall | Hydrodynamics, Rigidbody |
 | [AdvancedHullDrag.cs](../WindsurfingGame/Assets/Scripts/Physics/Board/AdvancedHullDrag.cs) | Physics.Board | Displacement/planing drag | AdvancedBuoyancy, Rigidbody |
+| [BoardMassConfiguration.cs](../WindsurfingGame/Assets/Scripts/Physics/Board/BoardMassConfiguration.cs) | Physics.Board | Mass/inertia, sailor COM shift | Rigidbody |
 
 ### Player Layer
 
 | Script | Namespace | Purpose | Key Dependencies |
 |--------|-----------|---------|------------------|
-| [WindsurferController.cs](../WindsurfingGame/Assets/Scripts/Player/WindsurferController.cs) | Player | Original basic controls | Sail, Unity Input System |
-| [WindsurferControllerV2.cs](../WindsurfingGame/Assets/Scripts/Player/WindsurferControllerV2.cs) | Player | Improved controls | Sail, Unity Input System |
-| [AdvancedWindsurferController.cs](../WindsurfingGame/Assets/Scripts/Player/AdvancedWindsurferController.cs) | Player | Realistic controls (3 modes) | AdvancedSail, AdvancedFin, Input System |
+| [AdvancedWindsurferController.cs](../WindsurfingGame/Assets/Scripts/Player/AdvancedWindsurferController.cs) | Player | Realistic controls ⭐ | AdvancedSail, AdvancedFin, Input System |
+| [WindsurferControllerV2.cs](../WindsurfingGame/Assets/Scripts/Player/WindsurferControllerV2.cs) | Player | Legacy controls | Sail, Unity Input System |
+
+> **Note:** `WindsurferController.cs` (V1) was removed in Session 26 cleanup.
 
 ### UI Layer
 
 | Script | Namespace | Purpose | Key Dependencies |
 |--------|-----------|---------|------------------|
-| [TelemetryHUD.cs](../WindsurfingGame/Assets/Scripts/UI/TelemetryHUD.cs) | UI | Basic telemetry display | Rigidbody, Sail, ApparentWindCalculator |
-| [AdvancedTelemetryHUD.cs](../WindsurfingGame/Assets/Scripts/UI/AdvancedTelemetryHUD.cs) | UI | Advanced telemetry display | AdvancedSail, WindSystem, SailingState |
-| [SailPositionIndicator.cs](../WindsurfingGame/Assets/Scripts/UI/SailPositionIndicator.cs) | UI | 2D top-down sail position | Sail, ApparentWindCalculator |
+| [AdvancedTelemetryHUD.cs](../WindsurfingGame/Assets/Scripts/UI/AdvancedTelemetryHUD.cs) | UI | Telemetry display (F1 toggle) ⭐ | AdvancedSail, WindSystem, SailingState |
+| [SailPositionIndicator.cs](../WindsurfingGame/Assets/Scripts/UI/SailPositionIndicator.cs) | UI | 2D top-down sail position | AdvancedSail or Sail |
 | [WindIndicator3D.cs](../WindsurfingGame/Assets/Scripts/UI/WindIndicator3D.cs) | UI | 3D wind arrow display | WindManager, ApparentWindCalculator |
+
+> **Note:** `TelemetryHUD.cs` was removed in Session 26 cleanup. Use `AdvancedTelemetryHUD.cs` instead.
 
 ### Visual Layer
 
@@ -140,23 +149,35 @@ Realistic physics based on sailing research:
 
 | Script | Namespace | Purpose | Key Dependencies |
 |--------|-----------|---------|------------------|
-| [ThirdPersonCamera.cs](../WindsurfingGame/Assets/Scripts/CameraSystem/ThirdPersonCamera.cs) | CameraSystem | Follow camera for board | Transform target |
+| [SimpleFollowCamera.cs](../WindsurfingGame/Assets/Scripts/Camera/SimpleFollowCamera.cs) | CameraSystem | Multi-mode follow camera ⭐ | Transform target |
+| [ThirdPersonCamera.cs](../WindsurfingGame/Assets/Scripts/Camera/ThirdPersonCamera.cs) | CameraSystem | Legacy orbit camera | Transform target |
+
+> **Note:** SimpleFollowCamera automatically disables ThirdPersonCamera when both are present.
+
+### Debug Layer
+
+| Script | Namespace | Purpose | Key Dependencies |
+|--------|-----------|---------|------------------|
+| [PhysicsValidation.cs](../WindsurfingGame/Assets/Scripts/Debug/PhysicsValidation.cs) | Debug | Physics debugging tool | AdvancedSail |
+| [SailPhysicsDebugger.cs](../WindsurfingGame/Assets/Scripts/Debug/SailPhysicsDebugger.cs) | Debug | Sail force logging | AdvancedSail |
 
 ### Utilities & Editor
 
 | Script | Namespace | Purpose | Key Dependencies |
 |--------|-----------|---------|------------------|
-| [PhysicsHelpers.cs](../WindsurfingGame/Assets/Scripts/Utilities/PhysicsHelpers.cs) | Utilities | Constants & helper methods | - |
+| [PhysicsHelpers.cs](../WindsurfingGame/Assets/Scripts/Utilities/PhysicsHelpers.cs) | Utilities | Vector extensions (no constants) | - |
 | [WaterGridMarkers.cs](../WindsurfingGame/Assets/Scripts/Utilities/WaterGridMarkers.cs) | Utilities | Debug grid visualization | IWaterSurface |
 | [WindsurferSetup.cs](../WindsurfingGame/Assets/Scripts/Editor/WindsurferSetup.cs) | Editor | Editor wizard for complete setup | - |
+
+> **Note:** PhysicsConstants is in `Physics.Core` namespace. PhysicsHelpers only contains extension methods.
 
 ---
 
 ## Component Dependencies
 
-### Windsurfer GameObject Setup (Basic)
+### Windsurfer GameObject Setup (Legacy)
 
-The basic windsurfer requires these components:
+The legacy setup (for prototyping only):
 
 ```
 Windsurfer (GameObject)
@@ -172,9 +193,11 @@ Windsurfer (GameObject)
 │   └── Requires: IWaterSurface, Rigidbody
 ├── FinPhysics
 │   └── Requires: Rigidbody
-└── WindsurferControllerV2 (or WindsurferController)
+└── WindsurferControllerV2
     └── Requires: Sail
 ```
+
+> **Note:** `WindsurferController` (V1) was removed in Session 26.
 
 ### Windsurfer GameObject Setup (Advanced) ⭐
 
@@ -483,7 +506,11 @@ Documentation/PHYSICS_VALIDATION.md   → Physics testing checklist
 | Dec 27 | 14 | EquipmentVisualizer for FBX models, WindsurferSetup wizard |
 | Dec 27 | 15 | Fixed wind fallback (WindSystem→WindManager), improved error logging |
 | Dec 27 | 16 | Physics stability: reduced CE height, steering torque, default sheet position |
+| Dec 28 | 22 | Advanced physics improvements |
+| Dec 31 | 23 | Planing fixes, underwater detection |
+| Jan 1 | 24-25 | Savitsky planing, damping improvements |
+| Jan 2 | 26 | **Cleanup:** Removed V1 controller, TelemetryHUD; merged Debug folders; fixed camera/steering |
 
 ---
 
-*Last Updated: December 27, 2025*
+*Last Updated: January 2, 2026*

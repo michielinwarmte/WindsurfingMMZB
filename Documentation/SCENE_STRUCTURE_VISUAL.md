@@ -1,6 +1,19 @@
 # Scene Structure Visual Guide
 
-## Scene Hierarchy Diagram
+**Last Updated:** January 2, 2026
+
+> **⚠️ NOTE:** This document describes the **legacy physics setup**. For production, use the **Advanced Physics** components:
+> - `AdvancedBuoyancy` instead of `BuoyancyBody`
+> - `AdvancedSail` instead of `Sail`
+> - `AdvancedFin` instead of `FinPhysics`
+> - `AdvancedHullDrag` instead of `WaterDrag`
+> - `AdvancedWindsurferController` instead of `WindsurferControllerV2`
+> - `AdvancedTelemetryHUD` instead of `TelemetryHUD` (removed)
+> - `SimpleFollowCamera` instead of `ThirdPersonCamera`
+>
+> See [ARCHITECTURE.md](ARCHITECTURE.md) for the recommended setup.
+
+## Scene Hierarchy Diagram (Legacy)
 
 ```
 MainScene
@@ -109,7 +122,7 @@ MainScene
 │       └── Direction Variation: 10°
 │
 └── 📊 TelemetryHUD
-    ├── 📈 TelemetryHUD Script
+    ├── 📈 AdvancedTelemetryHUD Script ⭐ (replaces TelemetryHUD)
     │   ├── Show Telemetry: ✓
     │   ├── Show Wind: ✓
     │   ├── Font Size: 18
@@ -266,7 +279,7 @@ FRAME START
 All of above, plus:
 🌟 Directional Light
 🌟 TelemetryHUD
-   └─ 🌟 TelemetryHUD Script
+   └─ 🌟 AdvancedTelemetryHUD Script (replaces legacy TelemetryHUD)
 ```
 
 ### 💎 Full Setup (Best Experience)
@@ -298,9 +311,9 @@ BuoyancyBody
 ThirdPersonCamera
 └── requires → Target Transform ⚠️ Must assign manually
 
-TelemetryHUD
-├── auto-finds → WindsurferController(V2)
-├── auto-finds → WindManager
+AdvancedTelemetryHUD (replaces TelemetryHUD)
+├── auto-finds → AdvancedWindsurferController
+├── auto-finds → WindSystem
 └── auto-finds → All board components
 ```
 

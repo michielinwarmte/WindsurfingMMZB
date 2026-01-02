@@ -227,24 +227,10 @@ namespace WindsurfingGame.Physics.Board
                 horizontalForce *= (originalMagnitude / currentMagnitude);
             }
             
-            // ===== HIGH SPEED DOWNFORCE =====
-            // At high speeds, the sailor leans back and the sail generates downforce.
-            // This keeps the board in the water and prevents flying out.
-            // The downforce increases smoothly above the onset speed.
+            // ===== HIGH SPEED DOWNFORCE (DISABLED) =====
+            // Downforce removed to prevent porpoising at high speeds.
+            // The board should stay stable without artificial downward force.
             _downforce = Vector3.zero;
-            float boardSpeed = _targetRigidbody.linearVelocity.magnitude;
-            float boardSpeedKmh = boardSpeed * 3.6f; // m/s to km/h
-            
-            if (boardSpeedKmh > _downforceOnsetSpeedKmh)
-            {
-                // Downforce ramps up from onset to onset+20 km/h
-                float speedAboveOnset = boardSpeedKmh - _downforceOnsetSpeedKmh;
-                float downforceFactor = Mathf.Clamp01(speedAboveOnset / 20f); // Full at +20 km/h
-                
-                // Downforce proportional to sail force magnitude
-                float downforceMagnitude = horizontalForce.magnitude * _maxDownforceFraction * downforceFactor;
-                _downforce = Vector3.down * downforceMagnitude;
-            }
 
             // Calculate Center of Effort position:
             // - Start at mast foot (fixed position)

@@ -23,11 +23,12 @@ This game simulates realistic windsurfing physics including:
 
 **Read [KNOWN_ISSUES.md](Documentation/KNOWN_ISSUES.md) for full details and workarounds.**
 
-| Issue | Priority | Workaround |
-|-------|----------|------------|
-| Camera only works after changing FOV in Inspector | 🔴 Critical | Change FOV value during Play mode |
-| Steering is inverted | 🔴 Critical | None - needs sign fix |
+| Issue | Priority | Status |
+|-------|----------|--------|
+| Camera only works after changing FOV in Inspector | 🟡 Known Issue | Change FOV value during Play mode |
 | Half-wind submersion at low speeds | 🟡 Medium | Get up to planing speed quickly |
+
+✅ **Fixed in Session 26:** Steering inversion on port tack, porpoising at high speed
 
 ## 🛠️ Technology Stack
 
@@ -110,29 +111,28 @@ See [DEVELOPMENT_PLAN.md](Documentation/DEVELOPMENT_PLAN.md) for detailed develo
 ## 🎯 Current Status
 
 **Phase**: Core Physics Complete ✅  
-**Last Updated**: January 1, 2026
+**Last Updated**: January 2, 2026
 
 ### ✅ Working Features
 - **Upwind sailing** - Can sail ~45° to wind on both tacks
 - **Planing** - Board lifts and accelerates at ~17+ km/h
 - **Tacking** - Sail switches sides correctly
 - **Rake steering** - Works on both tacks (bear away/head up)
-- **High-speed stability** - No wobble at 20+ knots, no flying out
+- **Port/starboard steering** - Auto-inverts on port tack (Session 26 fix)
+- **High-speed stability** - No wobble at 20+ knots, no porpoising
 - **Beginner controls** - Context-aware A/D steering
 - **Advanced controls** - Manual Q/E rake + A/D weight shift
 - **Realistic buoyancy** - Archimedes' principle with volume displacement
 - **Savitsky planing** - Proper hydrodynamic lift equations
 - **Water viscosity** - Realistic v² damping for thick water feel
 - **Sailor COM shift** - Moves AFT (backward) when planing
-- **High-speed downforce** - Sail keeps board in water at 35+ km/h
 
 ### 🔧 Needs Work (Priority for Next Contributor)
-1. 🔴 **Camera initialization** - Needs FOV change workaround
-2. 🔴 **Inverted steering** - A/D controls reversed
-3. 🟡 **Half-wind submersion** - Board sinks at beam reach before planing
-4. Sail visuals (boom rotation, mesh deformation)
-5. Sound effects
-6. Environment polish
+1. 🟡 **Camera initialization** - Needs FOV change workaround
+2. 🟡 **Half-wind submersion** - Board sinks at beam reach before planing
+3. Sail visuals (boom rotation, mesh deformation)
+4. Sound effects
+5. Environment polish
 
 ### Physics Validation
 Core physics formulas are **validated and documented** in [PHYSICS_VALIDATION.md](Documentation/PHYSICS_VALIDATION.md).  
@@ -168,8 +168,9 @@ Core physics formulas are **validated and documented** in [PHYSICS_VALIDATION.md
 | Key | Action |
 |-----|--------|
 | W/S | Sheet in/out (sail power) |
-| A/D | Steer (currently inverted!) |
+| A/D | Steer (auto-inverts on port tack) |
 | Q/E | Fine mast rake |
+| Space | Switch tack |
 | F1 | Toggle telemetry HUD |
 | 1-4 | Camera modes |
 

@@ -380,7 +380,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 10, y: 1, z: 10}
+  m_LocalScale: {x: 100, y: 1, z: 100}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -640,6 +640,7 @@ MonoBehaviour:
   _lengthSamples: 7
   _widthSamples: 3
   _verticalDamping: 800
+  _waterViscosity: 400
   _rotationalDamping: 150
   _horizontalDamping: 20
   _showDebug: 1
@@ -668,6 +669,7 @@ MonoBehaviour:
   _fullPlaningSpeed: 6
   _planingWettedAreaRatio: 0.35
   _submersionDragMultiplier: 3
+  _submersionVerticalDamping: 600
   _enableDisplacementLift: 1
   _displacementLiftCoefficient: 0.12
   _displacementLiftMinSpeed: 0.5
@@ -675,6 +677,8 @@ MonoBehaviour:
   _planingLiftCoefficient: 0.15
   _maxLiftFraction: 0.4
   _optimalTrimAngle: 2
+  _liftSmoothingFactor: 0.15
+  _maxPlaningSubmersion: 0.5
   _advancedBuoyancy: {fileID: 1040755298}
   _legacyBuoyancy: {fileID: 0}
   _showDebug: 1
@@ -966,7 +970,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WindsurfingGame.Environment.WindSystem
   _windDirection: 270
-  _windSpeedKnots: 15
+  _windSpeedKnots: 22
   _enableGusts: 1
   _gustIntensity: 0.2
   _gustPeriod: 8

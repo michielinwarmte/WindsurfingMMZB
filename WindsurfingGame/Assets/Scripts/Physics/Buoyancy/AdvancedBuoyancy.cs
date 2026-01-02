@@ -370,12 +370,12 @@ namespace WindsurfingGame.Physics.Buoyancy
                 float submersionFactor = minDampingFactor + (1f - minDampingFactor) * _submergedRatio;
                 
                 // Roll (X) - water resists rolling strongly (wide hull)
-                // Pitch (Z) - water resists pitching (long hull)
+                // Pitch (Z in local = X in world for Unity) - STRONG damping to prevent porpoising
                 // Yaw (Y) - less resistance (fin handles this)
                 Vector3 dampingTorque = new Vector3(
-                    -localAngVel.x * _rotationalDamping * 2.0f * submersionFactor,
+                    -localAngVel.x * _rotationalDamping * 4.0f * submersionFactor,  // Pitch - increased from 2.0 to 4.0
                     -localAngVel.y * _rotationalDamping * 0.3f * submersionFactor,
-                    -localAngVel.z * _rotationalDamping * 1.5f * submersionFactor
+                    -localAngVel.z * _rotationalDamping * 3.0f * submersionFactor   // Roll - increased from 1.5 to 3.0
                 );
                 
                 // Don't multiply by submersion again - that was causing near-zero damping when planing
