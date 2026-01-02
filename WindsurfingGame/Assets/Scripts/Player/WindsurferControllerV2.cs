@@ -470,7 +470,7 @@ namespace WindsurfingGame.Player
         public float GetSpeedKnots()
         {
             return _rigidbody != null 
-                ? _rigidbody.linearVelocity.magnitude * Utilities.PhysicsConstants.MS_TO_KNOTS 
+                ? _rigidbody.linearVelocity.magnitude * Physics.Core.PhysicsConstants.MS_TO_KNOTS 
                 : 0f;
         }
 

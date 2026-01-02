@@ -2,7 +2,7 @@ using UnityEngine;
 using WindsurfingGame.Physics.Core;
 using WindsurfingGame.Physics.Board;
 
-namespace WindsurfingGame.Debug
+namespace WindsurfingGame.Debugging
 {
     /// <summary>
     /// Deep debugging tool for sail physics.

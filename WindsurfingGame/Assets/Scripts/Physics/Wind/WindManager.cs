@@ -42,7 +42,7 @@ namespace WindsurfingGame.Physics.Wind
         // Properties
         public Vector3 WindDirection => _windDirection;
         public float WindSpeed => _baseWindSpeed;
-        public float WindSpeedKnots => _baseWindSpeed * Utilities.PhysicsConstants.MS_TO_KNOTS;
+        public float WindSpeedKnots => _baseWindSpeed * Core.PhysicsConstants.MS_TO_KNOTS;
 
         // Singleton for easy access (optional pattern)
         public static WindManager Instance { get; private set; }
@@ -150,7 +150,7 @@ namespace WindsurfingGame.Physics.Wind
         /// </summary>
         public void SetWindSpeedKnots(float knots)
         {
-            _baseWindSpeed = knots * Utilities.PhysicsConstants.KNOTS_TO_MS;
+            _baseWindSpeed = knots * Core.PhysicsConstants.KNOTS_TO_MS;
         }
 
 #if UNITY_EDITOR
@@ -184,7 +184,7 @@ namespace WindsurfingGame.Physics.Wind
 
             // Label
             UnityEditor.Handles.Label(start + Vector3.up * 2, 
-                $"Wind: {_baseWindSpeed:F1} m/s ({_baseWindSpeed * Utilities.PhysicsConstants.MS_TO_KNOTS:F1} kts)\n" +
+                $"Wind: {_baseWindSpeed:F1} m/s ({_baseWindSpeed * Core.PhysicsConstants.MS_TO_KNOTS:F1} kts)\n" +
                 $"Direction: {_windDirectionDegrees:F0}°");
         }
 #endif
