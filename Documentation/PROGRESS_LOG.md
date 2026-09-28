@@ -6,8 +6,8 @@ This document tracks our development progress, decisions made, and lessons learn
 
 ## 📌 Quick Status Summary
 
-**Last Session**: January 2, 2026 - Session 26 (Major Cleanup & Bug Fixes)  
-**Current Phase**: Core Physics Complete ✅ | Production Ready
+**Last Session**: September 28, 2026 - Session 27 (Visual & Audio Polish - written without Unity, NOT yet verified in Play mode)  
+**Current Phase**: Core Physics Complete ✅ | Visual/Audio polish implemented 🧪 (needs verification)
 
 ### Physics Status: VALIDATED ✅
 
@@ -28,29 +28,34 @@ The core physics are working correctly:
 
 | Issue | Severity | Workaround |
 |-------|----------|------------|
-| Camera only works after changing FOV | 🟡 Known Issue | Change FOV in Inspector during play |
+| Session 27 code unverified in the editor | 🔴 Verify first | Follow the checklist at the top of KNOWN_ISSUES.md |
 | Half-wind submersion at low speeds | 🟡 Medium | Get up to planing speed quickly |
+| Waves now on by default (physics + visuals) | 🟡 Re-validate | Untick `Enable Waves` on the Water object to restore flat water |
 
 **Critical formulas documented in:** [PHYSICS_VALIDATION.md](PHYSICS_VALIDATION.md)
 
-### Scripts Completed (35 total - cleaned up!)
+### Scripts Completed (46 total)
 
 | Category | Scripts |
 |----------|---------|
 | Physics Core | `PhysicsConstants`, `Aerodynamics`, `Hydrodynamics`, `SailingState` |
-| Water | `IWaterSurface`, `WaterSurface` |
+| Water | `IWaterSurface`, `WaterSurface` ⭐, `GerstnerWave` (Session 27) |
 | Wind | `IWindProvider`, `WindManager` (legacy), `WindSystem` ⭐ |
+| Environment | `SkyEnvironment`, `DistantIslands` (Session 27) |
 | Buoyancy | `BuoyancyBody` (legacy), `AdvancedBuoyancy` ⭐, `BoardMassConfiguration` |
 | Board | `Sail` (legacy), `ApparentWindCalculator`, `WaterDrag` (legacy), `FinPhysics` (legacy), `AdvancedSail` ⭐, `AdvancedFin` ⭐, `AdvancedHullDrag` ⭐ |
 | Player | `WindsurferControllerV2` (legacy), `AdvancedWindsurferController` ⭐ |
 | Camera | `ThirdPersonCamera` (legacy), `SimpleFollowCamera` ⭐ |
 | UI | `SailPositionIndicator`, `WindIndicator3D`, `AdvancedTelemetryHUD` ⭐ |
-| Visual | `SailVisualizer`, `EquipmentVisualizer` ⭐, `ForceVectorVisualizer`, `WindDirectionIndicator` |
+| Visual | `SailVisualizer`, `EquipmentVisualizer` ⭐, `ForceVectorVisualizer`, `WindDirectionIndicator`, `WaterMeshBuilder`, `SailDeformer`, `BoardWakeEffects` (Session 27) |
+| Audio | `ProceduralAudioClips`, `WindAmbienceAudio`, `HullWaterAudio`, `SailFlapAudio` (Session 27) |
 | Debug | `PhysicsValidation`, `SailPhysicsDebugger` |
-| Utilities | `PhysicsHelpers`, `WaterGridMarkers` |
+| Utilities | `PhysicsHelpers`, `WaterGridMarkers`, `MeshSubdivider` (Session 27) |
 | Editor | `WindsurferSetup` |
+| Shaders | `OceanWater.shader`, `VertexColorTerrain.shader` (Session 27; `StylizedWater.shader` removed) |
 
-> **Removed in Session 26:** `WindsurferController` (V1), `TelemetryHUD`
+> **Removed in Session 26:** `WindsurferController` (V1), `TelemetryHUD`  
+> **Removed in Session 27:** `StylizedWater.shader` (replaced by `OceanWater.shader`)
 
 ### Key Decisions Made
 - ✅ Unity 6.3 LTS with URP
@@ -77,16 +82,57 @@ The core physics are working correctly:
 | Full Planing | `AdvancedHullDrag.cs` | `6.0 m/s (~22 km/h)` |
 
 ### Priority Fixes for Next Session
-- [ ] 🔴 Fix camera initialization (FOV workaround)
-- [ ] 🔴 Fix inverted steering
+- [ ] 🔴 Open in Unity, fix compile errors, run the Session 27 verification checklist in KNOWN_ISSUES.md
+- [ ] 🔴 Re-run the PHYSICS_VALIDATION.md checklist with waves enabled (disable waves if anything regressed)
+- [ ] 🟡 Tune audio levels, spray rates and water colours by eye/ear
 - [ ] 🟡 Improve half-wind physics (sailor hiking simulation)
-- [ ] Improve sail visual representation
-- [ ] Add sound effects (wind, water, sail)
+- [ ] 🟢 Sailor character (needs a rigged model)
+- [ ] 🟢 Phase 4 gameplay: race course, timer
 
 ### For New Team Members
 1. Read [KNOWN_ISSUES.md](KNOWN_ISSUES.md) first!
 2. See [CONTRIBUTING.md](../CONTRIBUTING.md) for setup
 3. See [ARCHITECTURE.md](ARCHITECTURE.md) for code overview
+
+---
+
+## September 28, 2026 - Session 27
+
+### Session: Visual & Audio Polish (Roadmap Phases 2 and 3)
+
+**⚠️ Written on a machine without Unity, dotnet or a C# compiler. Nothing below has been compiled or played. See the verification checklist at the top of [KNOWN_ISSUES.md](KNOWN_ISSUES.md).**
+
+**What we did:**
+- ✅ **Gerstner waves** shared by physics and rendering: `GerstnerWave.cs` holds the wave maths, `WaterSurface` evaluates it for buoyancy (with a fixed-point solve for the horizontal displacement) and publishes the same parameters as shader globals every frame. Wave directions follow the wind. Four default waves, ~0.2 m total amplitude, enabled in `MainScene`.
+- ✅ **Ocean shader** (`Shaders/OceanWater.shader`, replaces `StylizedWater.shader`): vertex Gerstner displacement with analytic normals, depth-based colour and refraction from the camera depth/opaque textures, Fresnel sky reflection, sun glints, wind-scrolled ripple normals, foam where geometry meets the water (hull, islands), crest foam, wind streaks, fog, underside tint. Optional debug grid.
+- ✅ **Water follow mesh** (`WaterMeshBuilder`): 3 km radial-density grid (~26k vertices) that re-centres on the camera, replacing the 121-vertex built-in plane.
+- ✅ **Sail cloth deformation** (`SailDeformer`): subdivides the FBX cloth at start, then bends it every frame from the simulated sail force (draft depth = chord x camber x power, bulging to leeward), applies leech twist and a luffing flutter. Reads only from `AdvancedSail` (simulation drives visualization). Needs Read/Write on `Sail.fbx` (set in the .meta).
+- ✅ **Procedural mast**: parsing `Sail.fbx` showed the mast is exported as a face-less curve profile, so it never rendered. `EquipmentVisualizer` now adds a cylinder mast (toggle).
+- ✅ **Spray, wake and splash** (`BoardWakeEffects`): runtime-built particle systems, soft-circle sprite, rail spray scaling with speed² and planing, heel-biased to the lower rail, rooster tail, flat foam wake pinned to the wave surface, splash bursts on slams.
+- ✅ **Sky, fog, islands** (`SkyEnvironment`, `DistantIslands`, `Shaders/VertexColorTerrain.shader`): procedural skybox with sun disc from the directional light, exponential fog hiding the mesh edge, six noise-shaped islands with sand/grass/rock vertex colours and mesh colliders.
+- ✅ **Procedural audio** (`Scripts/Audio/`): clips generated from filtered noise at start (`ProceduralAudioClips`). Wind ambience (pink noise, low-pass and volume from apparent wind), hull lapping vs planing hiss, splash one-shots on impact, sail flaps when luffing and on tack changes. Each component owns a child AudioSource so filters do not stack.
+- ✅ **Setup wizard**: adds all of the above, new menu `Windsurfing → Upgrade Scene: Add Visual and Audio Polish` for existing scenes, validation checks the follow camera and polish components, outdated known-issue text removed.
+- ✅ **MainScene.unity** hand-edited: components wired on Water, Windsurfer and a new Environment object; fog and sun set in RenderSettings; water scale reset to 1 (the builder generates metres).
+- ✅ Camera overlay moved to the top-right (it overlapped the telemetry HUD).
+
+**Bugs found while reading the code:**
+- Wizard set `_baseWindSpeed`/`_baseWindDirection` on `WindSystem`, which has `_windSpeedKnots`/`_windDirection` - the wind settings in the wizard never applied. Fixed.
+- Wizard validation searched for the legacy `ThirdPersonCamera`. Fixed.
+- `Assets/Audio.meta`, `Prefabs.meta`, `Textures.meta` are orphan folder metas (the folders are empty and not in git). Harmless; Unity recreates or drops them.
+
+**Decisions made:**
+- Everything is procedural (no textures, models or sound files) so the polish works with the assets already in the repo and can be swapped for authored assets later.
+- One wave field for physics and rendering; the shader is a consumer of `WaterSurface`, never a source. Changing the maths means changing `GerstnerMath.Displacement()` and `AccumulateGerstner()` together.
+- Water renders opaque in the transparent queue and composites the refracted scene colour itself (needs Depth + Opaque Texture, both on in `PC_RPAsset`).
+- Waves enabled by default with gentle amplitudes; one checkbox (`Enable Waves`) restores the validated flat-water physics.
+- Beam-reach submersion (Phase 1) deliberately not touched: it needs in-editor iteration and the physics formulas are protected.
+
+**Next steps:**
+- [ ] Compile and play; fix what the editor reports
+- [ ] Verify the sail deformer picked the cloth (`Plane`) and the belly bulges to leeward on both tacks
+- [ ] Re-run PHYSICS_VALIDATION.md with waves on
+- [ ] Tune colours, spray, audio levels
+- [ ] Beam-reach submersion tuning
 
 ---
 

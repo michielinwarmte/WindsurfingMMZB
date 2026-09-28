@@ -8,6 +8,7 @@ using WindsurfingGame.Environment;
 using WindsurfingGame.Player;
 using WindsurfingGame.Visual;
 using WindsurfingGame.CameraSystem;
+using WindsurfingGame.Audio;
 
 namespace WindsurfingGame.Editor
 {
@@ -31,6 +32,12 @@ namespace WindsurfingGame.Editor
     /// - AdvancedWindsurferController (realistic control)
     /// - EquipmentVisualizer (FBX model display)
     /// - ForceVectorVisualizer (debug arrows)
+    /// - SailDeformer (sail cloth belly, twist and luffing)
+    /// - BoardWakeEffects (spray, wake foam, splashes)
+    /// - WindAmbienceAudio, HullWaterAudio, SailFlapAudio (procedural sound)
+    ///
+    /// Scene extras: WaterMeshBuilder on the water, SkyEnvironment + DistantIslands on "Environment".
+    /// Existing scenes: menu Windsurfing → Upgrade Scene: Add Visual and Audio Polish.
     /// </summary>
     public class WindsurferSetupWizard : EditorWindow
     {
@@ -76,11 +83,11 @@ namespace WindsurfingGame.Editor
             
             // Known issues warning box
             EditorGUILayout.HelpBox(
-                "⚠️ KNOWN ISSUES (Dec 28, 2025):\n\n" +
-                "1. CAMERA: Won't follow until you change FOV in Inspector during Play\n" +
-                "2. PLANING: Board oscillates 0-100% submersion at speed\n" +
-                "3. STEERING: A/D keys are inverted\n\n" +
-                "See Documentation/KNOWN_ISSUES.md for details and fixes needed.", 
+                "⚠️ SESSION 27 (visual and audio polish) has not yet been verified in Play mode.\n\n" +
+                "New: Gerstner waves + ocean shader, sail cloth deformation, spray/wake,\n" +
+                "procedural sky/fog/islands and procedural sound.\n" +
+                "Existing scenes: use Windsurfing → Upgrade Scene.\n\n" +
+                "See Documentation/KNOWN_ISSUES.md for the current issue list.", 
                 MessageType.Warning);
             
             EditorGUILayout.Space(10);
@@ -91,8 +98,8 @@ namespace WindsurfingGame.Editor
                 "• Water plane with physics\n" +
                 "• Wind system\n" +
                 "• Camera with follow behavior\n" +
-                "• Lighting\n" +
-                "• Windsurfer with all physics", 
+                "• Lighting, sky, fog and distant islands\n" +
+                "• Windsurfer with all physics, sail cloth, spray and sound", 
                 MessageType.Info);
             
             EditorGUILayout.Space(10);
@@ -222,6 +229,7 @@ namespace WindsurfingGame.Editor
             WaterSurface waterSurface = EnsureWaterSurface();
             WindSystem windSystem = EnsureWindSystem();
             EnsureLighting();
+            EnsureEnvironment();
             
             // ==========================================
             // STEP 1: Create the Windsurfer
@@ -256,24 +264,19 @@ namespace WindsurfingGame.Editor
             
             Debug.Log("✅ COMPLETE SCENE CREATED!\n\n" +
                       "Scene elements:\n" +
-                      "  ✓ WaterSurface (100m x 100m water plane)\n" +
+                      "  ✓ WaterSurface (Gerstner waves, 3 km follow mesh)\n" +
                       "  ✓ WindSystem (" + _windSpeed + " knots from " + _windDirection + "°)\n" +
                       "  ✓ SimpleFollowCamera (press 1-4 for modes)\n" +
                       "  ✓ Directional Light (sun)\n" +
                       "  ✓ TelemetryHUD (press F1 to toggle)\n" +
-                      "  ✓ Windsurfer with all physics\n\n" +
-                      "⚠️ CAMERA WORKAROUND: Change FOV in Inspector during Play!\n" +
-                      "⚠️ STEERING BUG: A/D keys are currently inverted\n\n" +
+                      "  ✓ Windsurfer with all physics, sail cloth, spray and sound\n" +
+                      "  ✓ Environment (procedural sky, fog, distant islands)\n\n" +
                       "Press PLAY to test!");
             
             EditorUtility.DisplayDialog("Success!", 
                 "Complete scene created!\n\n" +
-                "⚠️ CAMERA WORKAROUND:\n" +
-                "Camera won't follow until you change the FOV\n" +
-                "value in Inspector during Play mode.\n\n" +
-                "⚠️ KNOWN BUG: Steering (A/D) is inverted!\n\n" +
                 "Controls:\n" +
-                "• A/D = Steer (inverted!)\n" +
+                "• A/D = Steer (auto-inverts on port tack)\n" +
                 "• W/S = Sheet in/out\n" +
                 "• Q/E = Fine rake\n" +
                 "• F1 = Toggle HUD\n\n" +
@@ -384,8 +387,9 @@ namespace WindsurfingGame.Editor
             if (waterSurface != null)
             {
                 Debug.Log("✓ Using existing WaterSurface");
-                // Make sure material is applied
+                // Make sure material and follow mesh are applied
                 EnsureWaterMaterial(waterSurface.gameObject);
+                EnsureWaterMeshBuilder(waterSurface.gameObject);
                 return waterSurface;
             }
             
@@ -404,13 +408,26 @@ namespace WindsurfingGame.Editor
             // Add WaterSurface component
             waterSurface = waterGO.AddComponent<WaterSurface>();
             
-            // Apply water material
+            // Apply water material and the dense follow mesh that OceanWater.shader displaces
             EnsureWaterMaterial(waterGO);
+            EnsureWaterMeshBuilder(waterGO);
             
-            Debug.Log("✓ Created WaterSurface (100m x 100m)");
+            Debug.Log("✓ Created WaterSurface (Gerstner waves, 3 km follow mesh)");
             return waterSurface;
         }
         
+        /// <summary>
+        /// Ensures the water object builds the dense, camera-following mesh at play time.
+        /// </summary>
+        private static void EnsureWaterMeshBuilder(GameObject waterGO)
+        {
+            if (waterGO.GetComponent<WaterMeshBuilder>() == null)
+            {
+                Undo.AddComponent<WaterMeshBuilder>(waterGO);
+                Debug.Log("✓ Added WaterMeshBuilder");
+            }
+        }
+
         /// <summary>
         /// Ensures the water object has a proper material assigned.
         /// </summary>
@@ -463,7 +480,7 @@ namespace WindsurfingGame.Editor
             else
             {
                 // Create a new water material with the stylized shader
-                var shader = Shader.Find("Custom/StylizedWater");
+                var shader = Shader.Find("Windsurfing/OceanWater");
                 if (shader == null)
                     shader = Shader.Find("Universal Render Pipeline/Lit");
                     
@@ -516,11 +533,11 @@ namespace WindsurfingGame.Editor
             
             // Configure wind
             SerializedObject windSO = new SerializedObject(windSystem);
-            var baseSpeedProp = windSO.FindProperty("_baseWindSpeed");
+            var baseSpeedProp = windSO.FindProperty("_windSpeedKnots");
             if (baseSpeedProp != null)
-                baseSpeedProp.floatValue = _windSpeed * 0.514444f; // Convert knots to m/s
+                baseSpeedProp.floatValue = _windSpeed; // WindSystem stores knots
             
-            var directionProp = windSO.FindProperty("_baseWindDirection");
+            var directionProp = windSO.FindProperty("_windDirection");
             if (directionProp != null)
                 directionProp.floatValue = _windDirection;
             
@@ -811,6 +828,11 @@ namespace WindsurfingGame.Editor
             forceVisSO.FindProperty("_fin").objectReferenceValue = fin;
             forceVisSO.FindProperty("_rigidbody").objectReferenceValue = rb;
             forceVisSO.ApplyModifiedProperties();
+
+            // ==========================================
+            // STEP 10b: Visual and audio polish (sail cloth, spray, sound)
+            // ==========================================
+            AddPolishComponents(windsurfer);
             
             // ==========================================
             // STEP 11: Add WindDirectionIndicator to scene (if not exists)
@@ -834,7 +856,8 @@ namespace WindsurfingGame.Editor
                       "  ✓ AdvancedWindsurferController\n" +
                       "  ✓ EquipmentVisualizer (with your models)\n" +
                       "  ✓ ForceVectorVisualizer (debug arrows)\n" +
-                      "  ✓ WindDirectionIndicator (water arrows)");
+                      "  ✓ WindDirectionIndicator (water arrows)\n" +
+                      "  ✓ SailDeformer, BoardWakeEffects and procedural audio");
             
             return windsurfer;
         }
@@ -934,32 +957,26 @@ namespace WindsurfingGame.Editor
                 report.AppendLine("✅ WaterSurface found");
             }
             
-            // Check for ThirdPersonCamera
-            bool cameraFound = false;
-            var cameras = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
-            foreach (var cam in cameras)
+            // Check for the follow camera
+            SimpleFollowCamera followCamera = FindFirstObjectByType<SimpleFollowCamera>();
+            if (followCamera == null)
             {
-                if (cam.GetType().Name == "ThirdPersonCamera")
-                {
-                    cameraFound = true;
-                    SerializedObject camSO = new SerializedObject(cam);
-                    var targetProp = camSO.FindProperty("_target");
-                    if (targetProp == null || targetProp.objectReferenceValue == null)
-                    {
-                        report.AppendLine("⚠️ WARNING: ThirdPersonCamera has no target!");
-                        warnings++;
-                    }
-                    else
-                    {
-                        report.AppendLine($"✅ ThirdPersonCamera targeting '{((Transform)targetProp.objectReferenceValue).name}'");
-                    }
-                    break;
-                }
-            }
-            if (!cameraFound)
-            {
-                report.AppendLine("❌ ERROR: No ThirdPersonCamera found!");
+                report.AppendLine("❌ ERROR: No SimpleFollowCamera found! Use 'Configure Camera for Selected Windsurfer'.");
                 errors++;
+            }
+            else
+            {
+                SerializedObject camSO = new SerializedObject(followCamera);
+                var targetProp = camSO.FindProperty("_target");
+                if (targetProp == null || targetProp.objectReferenceValue == null)
+                {
+                    report.AppendLine("⚠️ WARNING: SimpleFollowCamera has no target (it auto-finds the windsurfer at play)");
+                    warnings++;
+                }
+                else
+                {
+                    report.AppendLine($"✅ SimpleFollowCamera targeting '{((Transform)targetProp.objectReferenceValue).name}'");
+                }
             }
             
             // Check AdvancedSail components
@@ -1061,6 +1078,36 @@ namespace WindsurfingGame.Editor
                 }
             }
             
+            // Check visual/audio polish components
+            foreach (var sail in sails)
+            {
+                GameObject go = sail.gameObject;
+                bool complete = go.GetComponent<SailDeformer>() != null
+                             && go.GetComponent<BoardWakeEffects>() != null
+                             && go.GetComponent<WindAmbienceAudio>() != null
+                             && go.GetComponent<HullWaterAudio>() != null
+                             && go.GetComponent<SailFlapAudio>() != null;
+                if (!complete)
+                {
+                    report.AppendLine($"⚠️ WARNING: '{go.name}' is missing visual/audio polish components. " +
+                                      "Use Windsurfing → Upgrade Scene: Add Visual and Audio Polish.");
+                    warnings++;
+                }
+            }
+
+            if (waterSurface != null && waterSurface.GetComponent<WaterMeshBuilder>() == null)
+            {
+                report.AppendLine("⚠️ WARNING: Water has no WaterMeshBuilder - waves will render on the coarse plane only. " +
+                                  "Use Windsurfing → Upgrade Scene.");
+                warnings++;
+            }
+
+            if (FindFirstObjectByType<SkyEnvironment>() == null)
+            {
+                report.AppendLine("⚠️ WARNING: No SkyEnvironment in scene (procedural sky and fog). Use Windsurfing → Upgrade Scene.");
+                warnings++;
+            }
+
             // Summary
             report.AppendLine($"\n=============================");
             report.AppendLine($"SUMMARY: {errors} errors, {warnings} warnings");
@@ -1080,6 +1127,109 @@ namespace WindsurfingGame.Editor
             Debug.Log(report.ToString());
             EditorUtility.DisplayDialog("Validation Complete", 
                 $"Found {errors} errors, {warnings} warnings.\n\nCheck Console for details.", "OK");
+        }
+
+        /// <summary>
+        /// Adds the visual and audio polish components to a windsurfer when missing.
+        /// Returns the number of components added.
+        /// </summary>
+        internal static int AddPolishComponents(GameObject windsurfer)
+        {
+            int added = 0;
+
+            if (windsurfer.GetComponent<SailDeformer>() == null)
+            {
+                SailDeformer deformer = Undo.AddComponent<SailDeformer>(windsurfer);
+                SerializedObject deformerSO = new SerializedObject(deformer);
+                deformerSO.FindProperty("_sail").objectReferenceValue = windsurfer.GetComponent<AdvancedSail>();
+                deformerSO.FindProperty("_visualizer").objectReferenceValue = windsurfer.GetComponent<EquipmentVisualizer>();
+                deformerSO.ApplyModifiedProperties();
+                added++;
+            }
+
+            if (windsurfer.GetComponent<BoardWakeEffects>() == null)
+            {
+                Undo.AddComponent<BoardWakeEffects>(windsurfer);
+                added++;
+            }
+
+            if (windsurfer.GetComponent<WindAmbienceAudio>() == null)
+            {
+                Undo.AddComponent<WindAmbienceAudio>(windsurfer);
+                added++;
+            }
+
+            if (windsurfer.GetComponent<HullWaterAudio>() == null)
+            {
+                Undo.AddComponent<HullWaterAudio>(windsurfer);
+                added++;
+            }
+
+            if (windsurfer.GetComponent<SailFlapAudio>() == null)
+            {
+                Undo.AddComponent<SailFlapAudio>(windsurfer);
+                added++;
+            }
+
+            if (added > 0)
+            {
+                Debug.Log($"✓ Added {added} visual/audio polish component(s) to '{windsurfer.name}'");
+            }
+            return added;
+        }
+
+        /// <summary>
+        /// Ensures an "Environment" object with SkyEnvironment and DistantIslands exists.
+        /// Returns true when a new object was created.
+        /// </summary>
+        internal static bool EnsureEnvironment()
+        {
+            SkyEnvironment sky = FindFirstObjectByType<SkyEnvironment>();
+            DistantIslands islands = FindFirstObjectByType<DistantIslands>();
+            if (sky != null && islands != null)
+            {
+                Debug.Log("✓ Using existing Environment (SkyEnvironment + DistantIslands)");
+                return false;
+            }
+
+            bool created = false;
+            GameObject environment = sky != null ? sky.gameObject : (islands != null ? islands.gameObject : null);
+            if (environment == null)
+            {
+                environment = new GameObject("Environment");
+                Undo.RegisterCreatedObjectUndo(environment, "Create Environment");
+                created = true;
+            }
+
+            if (sky == null)
+            {
+                sky = Undo.AddComponent<SkyEnvironment>(environment);
+                foreach (Light light in FindObjectsByType<Light>(FindObjectsSortMode.None))
+                {
+                    if (light.type == LightType.Directional)
+                    {
+                        SerializedObject skySO = new SerializedObject(sky);
+                        skySO.FindProperty("_sun").objectReferenceValue = light;
+                        skySO.ApplyModifiedProperties();
+                        break;
+                    }
+                }
+            }
+
+            if (islands == null)
+            {
+                islands = Undo.AddComponent<DistantIslands>(environment);
+                Material islandMaterial = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/IslandTerrain.mat");
+                if (islandMaterial != null)
+                {
+                    SerializedObject islandSO = new SerializedObject(islands);
+                    islandSO.FindProperty("_material").objectReferenceValue = islandMaterial;
+                    islandSO.ApplyModifiedProperties();
+                }
+            }
+
+            Debug.Log("✓ Environment configured (procedural sky, fog, distant islands)");
+            return created;
         }
 
         private static void DisableOldBoard()
@@ -1185,6 +1335,54 @@ namespace WindsurfingGame.Editor
         public static bool QuickAddComponentsValidate()
         {
             return Selection.activeGameObject != null;
+        }
+
+        /// <summary>
+        /// Adds the Session 27 visual and audio polish to an existing scene:
+        /// water follow mesh + ocean material, sail cloth, spray, sound, sky and islands.
+        /// Safe to run repeatedly - only missing pieces are added.
+        /// </summary>
+        [MenuItem("Windsurfing/Upgrade Scene: Add Visual and Audio Polish")]
+        public static void UpgradeScenePolish()
+        {
+            int added = 0;
+
+            // Water: dense follow mesh and the ocean material
+            WaterSurface water = Object.FindFirstObjectByType<WaterSurface>();
+            if (water != null)
+            {
+                if (water.GetComponent<WaterMeshBuilder>() == null)
+                {
+                    Undo.AddComponent<WaterMeshBuilder>(water.gameObject);
+                    added++;
+                }
+
+                MeshRenderer waterRenderer = water.GetComponent<MeshRenderer>();
+                Material oceanMaterial = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/WaterMaterial.mat");
+                if (waterRenderer != null && oceanMaterial != null && waterRenderer.sharedMaterial != oceanMaterial)
+                {
+                    Undo.RecordObject(waterRenderer, "Assign Ocean Material");
+                    waterRenderer.sharedMaterial = oceanMaterial;
+                    added++;
+                }
+            }
+            else
+            {
+                Debug.LogWarning("Upgrade Scene: no WaterSurface found - run the Complete Windsurfer Setup Wizard first.");
+            }
+
+            // Windsurfers
+            foreach (AdvancedSail sail in Object.FindObjectsByType<AdvancedSail>(FindObjectsSortMode.None))
+            {
+                added += WindsurferSetupWizard.AddPolishComponents(sail.gameObject);
+            }
+
+            // Environment
+            if (WindsurferSetupWizard.EnsureEnvironment()) added++;
+
+            Debug.Log($"✅ Scene upgrade complete: {added} component(s) added. Press Play to see waves, sail cloth and spray, and hear the wind.");
+            EditorUtility.DisplayDialog("Scene Upgraded",
+                $"{added} component(s) added.\n\nPress Play to test.", "OK");
         }
     }
 }

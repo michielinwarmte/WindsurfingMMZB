@@ -8,10 +8,10 @@ Welcome to the team! This guide will help you get started and contribute effecti
 
 **Before doing anything else, read [KNOWN_ISSUES.md](Documentation/KNOWN_ISSUES.md)!**
 
-There are 3 critical bugs that need fixing:
-1. 🔴 **Camera initialization** - Workaround: change FOV in Inspector during Play
-2. 🔴 **Planing oscillation** - Board bounces 0-100% submersion at speed
-3. 🔴 **Inverted steering** - A/D keys work backwards
+Current state (September 2026):
+1. ✅ Camera, planing oscillation and inverted steering were fixed in Sessions 24-26
+2. 🧪 **Session 27 visual/audio polish is unverified** - it was written without Unity. Compile, play, and work through the checklist at the top of KNOWN_ISSUES.md
+3. 🟡 Beam-reach submersion at low speed still needs tuning
 
 ---
 
@@ -34,11 +34,8 @@ cd WindsurfingMMZB
 - Click "🌟 Create Complete Scene"
 - Press Play
 
-### 4. Camera Workaround
-⚠️ **Camera won't follow until you do this:**
-1. With game running, select "Main Camera" in Hierarchy
-2. In Inspector, change FOV from 60 to 61 (or any value)
-3. Camera starts working
+### 4. Upgrading an Existing Scene
+If you already have a scene from before Session 27, run `Windsurfing → Upgrade Scene: Add Visual and Audio Polish`. It adds only the missing pieces (water follow mesh and ocean material, sail cloth, spray, sound, sky and islands).
 
 ### 5. Read the Documentation
 **Required reading** (in order):
@@ -53,27 +50,24 @@ cd WindsurfingMMZB
 
 If you're continuing development, these are the top priorities:
 
-### 1. Camera Initialization Bug
-**File:** `Assets/Scripts/Camera/SimpleFollowCamera.cs`
+### 1. Verify Session 27 in the Editor
+**Files:** everything under `Assets/Scripts/Audio/`, `Assets/Scripts/Visual/{WaterMeshBuilder,SailDeformer,BoardWakeEffects}.cs`, `Assets/Scripts/Environment/{SkyEnvironment,DistantIslands}.cs`, `Assets/Shaders/*.shader`
 
-The camera doesn't activate until FOV is changed. Likely issue in `Start()` or `OnEnable()`.
+Compile, press Play in `MainScene`, and follow the checklist at the top of [KNOWN_ISSUES.md](Documentation/KNOWN_ISSUES.md). Fix compile errors first, then tune colours, spray rates and audio volumes.
 
-### 2. Planing Stability
-**Files:** 
+### 2. Re-validate Physics With Waves
+**Files:**
+- `Assets/Scripts/Physics/Water/WaterSurface.cs` (`Enable Waves`, wave list)
+- `Assets/Scripts/Physics/Water/GerstnerWave.cs`
+
+Waves are on by default now. Run the [PHYSICS_VALIDATION.md](Documentation/PHYSICS_VALIDATION.md) checklist. If upwind sailing or planing regressed, untick `Enable Waves` (exact Session 26 behaviour) and reduce the wave amplitudes before re-enabling.
+
+### 3. Beam-Reach Submersion
+**Files:**
 - `Assets/Scripts/Physics/Board/AdvancedHullDrag.cs`
 - `Assets/Scripts/Physics/Buoyancy/AdvancedBuoyancy.cs`
 
-Board oscillates between 0-100% submersion when planing. Need to add:
-- Smoothing/hysteresis to lift calculations
-- Possibly a PID controller for height stability
-- Separate equilibrium targets for displacement vs planing
-
-### 3. Inverted Steering
-**Files:**
-- `Assets/Scripts/Player/AdvancedWindsurferController.cs`
-- `Assets/Scripts/Physics/Board/AdvancedSail.cs`
-
-Check the steering input sign or rake steering torque direction.
+At displacement speeds on a beam reach the board sinks deeper than it should. Needs in-editor iteration; do not change the protected sign conventions.
 
 ---
 
@@ -307,6 +301,10 @@ The wizard creates everything you need from an empty scene:
   - AdvancedFin
   - AdvancedWindsurferController
   - BoardMassConfiguration
+  - SailDeformer, BoardWakeEffects (Session 27 visuals)
+  - WindAmbienceAudio, HullWaterAudio, SailFlapAudio (Session 27 audio)
+- **WaterMeshBuilder** on the water (3 km follow mesh for the ocean shader)
+- **Environment** with SkyEnvironment and DistantIslands
 - **TelemetryHUD** (press F1 to toggle)
 
 ### Wizard Tips:
@@ -319,8 +317,8 @@ The wizard creates everything you need from an empty scene:
 
 ## 🧪 Testing Your Changes
 
-1. **Open TestScene** in Unity
-2. **Apply camera workaround** (change FOV in Inspector)
+1. **Open MainScene** in Unity
+2. **Check the Session 27 checklist** in KNOWN_ISSUES.md if anything visual or audible looks off
 3. **Check Console** for errors/warnings
 4. **Enable Gizmos** in Scene view to see debug visualization
 5. **Watch TelemetryHUD** (F1) for runtime values
@@ -357,4 +355,4 @@ When you finish working on this project:
 
 ---
 
-*Last Updated: December 28, 2025*
+*Last Updated: September 28, 2026 (Session 27)*

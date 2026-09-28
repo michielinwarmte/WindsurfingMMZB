@@ -1,8 +1,27 @@
 # 🐛 Known Issues
 
-**Last Updated:** January 2, 2026
+**Last Updated:** September 28, 2026
 
 This document tracks known issues, bugs, and their workarounds. For contributors picking up this project, these are the priority fixes needed.
+
+---
+
+## 🧪 Session 27 Needs Play-Mode Verification
+
+Session 27 (visual and audio polish) was written on a machine without Unity, so none of it has been compiled or played yet. Before anything else:
+
+1. Open the project in Unity 6.3 and fix any compile errors in the new scripts (`Scripts/Audio/*`, `Scripts/Visual/WaterMeshBuilder.cs`, `SailDeformer.cs`, `BoardWakeEffects.cs`, `Scripts/Environment/SkyEnvironment.cs`, `DistantIslands.cs`, `Scripts/Physics/Water/GerstnerWave.cs`, `Scripts/Utilities/MeshSubdivider.cs`) and shaders (`Shaders/OceanWater.shader`, `Shaders/VertexColorTerrain.shader`).
+2. Open `MainScene` and press Play. The scene file was edited by hand to add the new components; if Unity reports a broken component, use `Windsurfing → Upgrade Scene: Add Visual and Audio Polish` to re-add it.
+3. Check, in this order:
+   - **Water renders** (not magenta). If it is flat pink, the shader failed to compile; check the Console. If it shows no depth foam around the hull, confirm `PC_RPAsset` has Depth Texture and Opaque Texture enabled (it does in git) or turn off `Use Scene Depth` on `WaterMaterial`.
+   - **Board floats on the visible waves.** Physics and rendering share `GerstnerMath`; if they drift apart, `WaterSurface` is not publishing shader globals (see `_driveShaderGlobals`).
+   - **Physics still validated.** Waves are now ON by default (total amplitude ~0.2 m). Re-run the [PHYSICS_VALIDATION.md](PHYSICS_VALIDATION.md) checklist. If planing or upwind behaviour degraded, untick `Enable Waves` on the Water object - this restores the exact flat-water physics of Session 26.
+   - **Sail cloth bends** with sheet/power and flutters when eased out fully. Console should log `SailDeformer: deforming 'Plane'`. If it picked the boom instead, assign `Cloth Mesh Filter` manually.
+   - **Procedural mast** appears at the mast foot (the FBX mast is a face-less curve profile). Adjust height/radius on `EquipmentVisualizer` if it does not match the sail.
+   - **Spray and wake** appear above ~9 km/h; a splash on landing.
+   - **Audio**: wind gets louder and brighter with apparent wind; hiss when planing; flaps when luffing and on Space (tack). Levels are guesses - tune the volumes on the three audio components.
+   - **Sky and islands**: blue procedural sky with a sun disc, fog at the horizon, six islands 450-900 m out.
+4. Rollback: every new feature is one component; removing it (or unticking it) restores Session 26 behaviour. Waves: `WaterSurface → Enable Waves`.
 
 ---
 
@@ -47,6 +66,17 @@ Two camera controllers (`ThirdPersonCamera` and `SimpleFollowCamera`) were confl
 ---
 
 ## ✅ Recently Fixed Issues
+
+### Addressed in Session 27 (September 28, 2026) - Visual and Audio Polish (unverified)
+
+- 🧪 **No sound effects** → Procedural wind, water and sail audio (`Scripts/Audio/`). No audio files needed.
+- 🧪 **Basic water** → Gerstner waves shared by physics and rendering, `OceanWater.shader`, dense follow mesh.
+- 🧪 **Static sail** → `SailDeformer` bends the cloth from the simulated sail force, twist and luffing.
+- 🧪 **No mast visible** → `Sail.fbx` exports the mast as a face-less curve profile; `EquipmentVisualizer` now adds a procedural mast.
+- 🧪 **Empty horizon** → Procedural sky, fog and islands (`SkyEnvironment`, `DistantIslands`).
+- ✅ **Setup wizard wind settings silently ignored** → The wizard wrote `_baseWindSpeed`/`_baseWindDirection`, which `WindSystem` does not have. Now writes `_windSpeedKnots`/`_windDirection`.
+- ✅ **Camera mode overlay drawn on top of the telemetry HUD** → `SimpleFollowCamera` overlay moved to the top-right corner.
+- ✅ **Wizard validation looked for the legacy ThirdPersonCamera** → Now checks `SimpleFollowCamera`.
 
 ### Fixed in Session 26 (January 2, 2026) - Porpoising, Steering, Camera, Cleanup
 
@@ -105,26 +135,40 @@ Modified [AdvancedHullDrag.cs](../WindsurfingGame/Assets/Scripts/Physics/Board/A
 
 ## 🟡 Minor Issues
 
-### 4. Sail Boom Visual Not Rotating
+### 4. Sail Boom Visual Not Rotating (investigated in Session 27 - verify)
 
 **Symptom:**  
 The sail mesh doesn't visually rotate with sheet adjustments.
 
+**Findings (Session 27):**  
+`Sail.fbx` contains three objects: the sail cloth (`Plane`, 140 vertices), the wishbone boom (`Plane.001`, 3456 vertices) and a face-less mast profile (`BezierCircle.001`, no triangles). Cloth and boom are children of the same `SailPivot`, which `EquipmentVisualizer.UpdateSailRotation()` rotates by the physics sail angle, so the boom should turn with the sheet. The mast never rendered because it has no faces; a procedural mast is now added.
+
 **Status:**  
-Low priority - physics work correctly, just visual feedback missing.
+Verify in Play mode. If the boom still does not follow W/S, check `_invertSailRotation` and `_sailRotationOffset` on `EquipmentVisualizer`, and confirm the Console shows the sail angle changing (F1 telemetry, "Sail Angle").
 
 **Files:**  
 - [WindsurfingGame/Assets/Scripts/Visual/EquipmentVisualizer.cs](../WindsurfingGame/Assets/Scripts/Visual/EquipmentVisualizer.cs)
+- [WindsurfingGame/Assets/Scripts/Visual/SailDeformer.cs](../WindsurfingGame/Assets/Scripts/Visual/SailDeformer.cs)
 
 ---
 
-### 5. No Sound Effects
+### 5. No Sound Effects (addressed in Session 27 - verify)
 
 **Symptom:**  
 No audio feedback for wind, water splash, or sail flapping.
 
 **Status:**  
-Feature not implemented yet. Audio folder exists but is empty.
+Procedural audio added (`Scripts/Audio/`). Volumes and filter cutoffs are untested guesses; tune them in the Inspector. Recorded samples can replace the generated clips later.
+
+---
+
+### 6. Session 27 Content Not Included in Builds Without Material References
+
+**Symptom:**  
+In a standalone build the islands or particles could render pink if their shaders were stripped.
+
+**Status:**  
+`OceanWater` and `VertexColorTerrain` are referenced by material assets (`WaterMaterial.mat`, `IslandTerrain.mat`) that the scene uses, so they are included. The particle material uses `Universal Render Pipeline/Particles/Unlit` (a URP built-in) and falls back to `Sprites/Default`. If a build shows pink particles, add the particle shader to *Project Settings → Graphics → Always Included Shaders*.
 
 ---
 

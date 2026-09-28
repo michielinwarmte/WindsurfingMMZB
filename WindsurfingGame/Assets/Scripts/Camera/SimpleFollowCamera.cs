@@ -345,10 +345,12 @@ namespace WindsurfingGame.CameraSystem
 
         private void OnGUI()
         {
-            // Show current mode on screen
+            // Show current mode on screen (top-right, so it does not overlap the telemetry HUD)
             GUIStyle style = new GUIStyle(GUI.skin.label);
             style.fontSize = 16;
             style.normal.textColor = Color.yellow;
+            style.alignment = TextAnchor.UpperRight;
+            float panelX = Screen.width - 310f;
             
             string modeText = $"Camera Mode: {_mode}\n";
             modeText += "Press 1-4 to switch modes\n";
@@ -369,15 +371,15 @@ namespace WindsurfingGame.CameraSystem
                     break;
             }
             
-            GUI.Label(new Rect(10, 10, 300, 80), modeText, style);
-            
+            GUI.Label(new Rect(panelX, 10, 300, 80), modeText, style);
+
             // Debug info
             if (_target != null)
             {
                 string debug = $"Target: {_target.name}\n" +
                               $"Distance: {_distance:F1}m\n" +
                               $"Cam Pos: {transform.position}";
-                GUI.Label(new Rect(10, 100, 300, 60), debug, style);
+                GUI.Label(new Rect(panelX, 100, 300, 60), debug, style);
             }
         }
     }

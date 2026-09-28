@@ -28,9 +28,11 @@ This is a **physics-first** windsurfing simulator that accurately models the for
 | Core Physics | ✅ Complete & Validated |
 | Player Controls | ✅ Working |
 | Camera System | ✅ Working |
-| Visuals | 🔨 Basic (needs polish) |
-| Audio | ❌ Not implemented |
-| Environment | 🔨 Basic water shader |
+| Visuals | 🧪 Ocean shader with waves, sail cloth deformation, spray and wake (Session 27, verify in Play mode) |
+| Audio | 🧪 Procedural wind, water and sail sounds (Session 27, verify in Play mode) |
+| Environment | 🧪 Procedural sky, fog and distant islands (Session 27, verify in Play mode) |
+
+> **Session 27 note:** the visual and audio polish was written without a Unity install available, so it has not yet been compiled or played. Open the project, fix any compile errors, and run through the checklist in [KNOWN_ISSUES.md](Documentation/KNOWN_ISSUES.md) before relying on it.
 
 ### ✅ Working Features
 - Upwind sailing at ~45° to wind on both tacks
@@ -43,33 +45,43 @@ This is a **physics-first** windsurfing simulator that accurately models the for
 - Advanced mode with full manual control
 - Real-time telemetry HUD (F1)
 
+### 🧪 Added in Session 27 (needs Play-mode verification)
+- Gerstner waves shared by physics and rendering (the board floats on exactly what you see)
+- Ocean shader: depth-based colour, refraction, sky reflection, sun glints, foam at the hull, wave crests and wind streaks
+- Sail cloth deformation: belly follows sail force, leech twist, flutter when luffing
+- Spray from the rails, foam wake behind the tail, splash on landing
+- Procedural sky, horizon fog and distant islands (with colliders)
+- Procedural audio: wind ambience, water lapping, planing hiss, splashes, sail flapping
+
 ---
 
 ## 🎯 Roadmap: Next Steps
 
 ### Phase 1: Fix Remaining Issues
-| Issue | Priority | Estimated Effort |
-|-------|----------|------------------|
-| Camera initialization delay | 🟡 Medium | 2-4 hours |
-| Beam reach submersion | 🟡 Medium | 4-8 hours |
+| Issue | Status | Notes |
+|-------|--------|-------|
+| Camera initialization delay | ✅ Believed fixed (Session 26) | Conflicting ThirdPersonCamera is disabled; verify no delay remains |
+| Beam reach submersion | 🟡 Open | Needs in-editor physics tuning; see [KNOWN_ISSUES.md](Documentation/KNOWN_ISSUES.md) |
 
 ### Phase 2: Visual Polish 🎨
-| Feature | Description | Priority |
-|---------|-------------|----------|
-| **Water Shader** | Realistic ocean with foam, waves, reflections | 🔴 High |
-| **Sail Deformation** | Cloth simulation or blend shapes for sail shape | 🔴 High |
-| **Wake/Spray Effects** | Particle systems for board wake and spray | 🟡 Medium |
-| **Boom Rotation** | Visual feedback for sheet position | 🟡 Medium |
-| **Sailor Animation** | Rigged character with stance changes | 🟢 Nice to have |
-| **Environment** | Skybox, horizon, distant islands | 🟢 Nice to have |
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Water Shader** | Realistic ocean with foam, waves, reflections | 🧪 Done in Session 27 (`OceanWater.shader`, `WaterMeshBuilder`, Gerstner waves) |
+| **Sail Deformation** | Procedural cloth shape driven by sail physics | 🧪 Done in Session 27 (`SailDeformer`) |
+| **Wake/Spray Effects** | Particle systems for board wake and spray | 🧪 Done in Session 27 (`BoardWakeEffects`) |
+| **Boom Rotation** | Visual feedback for sheet position | 🧪 Boom rotates with the sail model; procedural mast added. Verify in Play mode |
+| **Sailor Animation** | Rigged character with stance changes | 🟢 Open, needs a rigged character asset |
+| **Environment** | Skybox, horizon, distant islands | 🧪 Done in Session 27 (`SkyEnvironment`, `DistantIslands`) |
 
 ### Phase 3: Audio 🔊
-| Feature | Description |
-|---------|-------------|
-| Wind ambience | Volume/pitch based on wind speed |
-| Water splash | Speed-dependent splash sounds |
-| Sail flapping | When sail is eased or luffing |
-| Hull noise | Planing vs displacement sound |
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Wind ambience | Volume/pitch based on apparent wind | 🧪 Done in Session 27 (`WindAmbienceAudio`) |
+| Water splash | Impact-driven splash sounds | 🧪 Done in Session 27 (`HullWaterAudio`) |
+| Sail flapping | When sail is eased or luffing, and on tacks | 🧪 Done in Session 27 (`SailFlapAudio`) |
+| Hull noise | Planing hiss vs displacement lapping | 🧪 Done in Session 27 (`HullWaterAudio`) |
+
+All audio is generated at runtime from filtered noise (`ProceduralAudioClips`), so no sound files are needed. Replace clips with recordings later by swapping the `AudioClip` assignments.
 
 ### Phase 4: Gameplay
 | Feature | Description |
@@ -118,10 +130,13 @@ git clone https://github.com/michielinwarmte/WindsurfingMMZB.git
 Menu: `Windsurfing → Complete Windsurfer Setup Wizard`
 
 This automatically creates a fully configured scene with:
-- Water surface with shader
+- Water surface with Gerstner waves, ocean shader and a 3 km follow mesh
 - Wind system with gusts
-- Complete windsurfer with all physics components
+- Complete windsurfer with all physics components, sail cloth, spray and audio
+- Procedural sky, fog and distant islands
 - Camera and HUD
+
+Already have a scene? Menu: `Windsurfing → Upgrade Scene: Add Visual and Audio Polish` adds only the missing pieces.
 
 ---
 
@@ -140,15 +155,19 @@ BoardMassConfiguration        ← Mass and COM shifts
 Rigidbody                     ← Unity physics integration
 ```
 
-### Key Scripts (35 total)
+### Key Scripts (46 total)
 | Category | Key Scripts |
 |----------|-------------|
 | Physics Core | `PhysicsConstants`, `Aerodynamics`, `Hydrodynamics`, `SailingState` |
 | Board Physics | `AdvancedSail`, `AdvancedFin`, `AdvancedHullDrag`, `AdvancedBuoyancy` |
+| Water | `WaterSurface`, `GerstnerWave` (shared CPU/GPU wave maths) |
 | Player | `AdvancedWindsurferController` |
 | Camera | `SimpleFollowCamera` |
 | UI | `AdvancedTelemetryHUD`, `SailPositionIndicator` |
-| Environment | `WindSystem`, `WaterSurface` |
+| Environment | `WindSystem`, `SkyEnvironment`, `DistantIslands` |
+| Visual polish | `WaterMeshBuilder`, `SailDeformer`, `BoardWakeEffects`, `EquipmentVisualizer` |
+| Audio | `ProceduralAudioClips`, `WindAmbienceAudio`, `HullWaterAudio`, `SailFlapAudio` |
+| Shaders | `OceanWater.shader`, `VertexColorTerrain.shader` |
 
 See [ARCHITECTURE.md](Documentation/ARCHITECTURE.md) for complete reference.
 
@@ -216,14 +235,15 @@ WindsurfingMMZB/
 │   │   │   ├── Player/      # Controls
 │   │   │   ├── Camera/      # Camera system
 │   │   │   ├── UI/          # HUD elements
-│   │   │   ├── Visual/      # Visualizers
-│   │   │   ├── Environment/ # Wind system
+│   │   │   ├── Visual/      # Visualizers, water mesh, sail cloth, spray
+│   │   │   ├── Environment/ # Wind system, sky, islands
+│   │   │   ├── Audio/       # Procedural sound
 │   │   │   ├── Debug/       # Debug tools
 │   │   │   └── Editor/      # Setup wizard
 │   │   ├── Scenes/          # Game scenes
-│   │   ├── Materials/       # Shaders
+│   │   ├── Materials/       # WaterMaterial, IslandTerrain
 │   │   ├── Models/          # 3D models
-│   │   └── Shaders/         # Custom shaders
+│   │   └── Shaders/         # OceanWater, VertexColorTerrain
 │   └── Packages/            # Dependencies
 └── README.md
 ```
@@ -240,4 +260,4 @@ WindsurfingMMZB/
 
 **MMZB Development Team**
 
-*Last Updated: January 2, 2026*
+*Last Updated: September 28, 2026 (Session 27)*

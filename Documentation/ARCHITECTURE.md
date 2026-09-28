@@ -2,7 +2,7 @@
 
 This document provides a complete overview of the codebase for team collaboration.
 
-**Last Updated:** January 2, 2026
+**Last Updated:** September 28, 2026 (Session 27)
 
 ---
 
@@ -10,6 +10,7 @@ This document provides a complete overview of the codebase for team collaboratio
 
 1. **Known Issues:** See [KNOWN_ISSUES.md](KNOWN_ISSUES.md) for current bugs
 2. **Physics Formulas:** See [PHYSICS_VALIDATION.md](PHYSICS_VALIDATION.md) - DO NOT CHANGE without understanding
+3. **Session 27 (visual/audio polish) is unverified:** written without Unity available; compile and play before trusting it
 
 ### Key Formulas (DO NOT CHANGE)
 
@@ -46,22 +47,26 @@ All scripts use the `WindsurfingGame` root namespace:
 ```
 WindsurfingGame
 ├── Physics
-│   ├── Water      → IWaterSurface, WaterSurface
+│   ├── Water      → IWaterSurface, WaterSurface ⭐, GerstnerWave + GerstnerMath (shared CPU/GPU wave maths)
 │   ├── Wind       → IWindProvider, WindManager (legacy)
 │   ├── Core       → PhysicsConstants, Aerodynamics, Hydrodynamics, SailingState
 │   ├── Buoyancy   → BuoyancyBody (legacy), AdvancedBuoyancy
 │   └── Board      → Sail (legacy), AdvancedSail, FinPhysics (legacy), AdvancedFin,
 │                    WaterDrag (legacy), AdvancedHullDrag, ApparentWindCalculator,
 │                    BoardMassConfiguration
-├── Environment    → WindSystem ⭐
+├── Environment    → WindSystem ⭐, SkyEnvironment, DistantIslands
 ├── Player         → WindsurferControllerV2 (legacy), AdvancedWindsurferController ⭐
 ├── CameraSystem   → ThirdPersonCamera (legacy), SimpleFollowCamera ⭐
 ├── UI             → AdvancedTelemetryHUD ⭐, SailPositionIndicator, WindIndicator3D
-├── Visual         → SailVisualizer, EquipmentVisualizer, ForceVectorVisualizer, WindDirectionIndicator
+├── Visual         → SailVisualizer, EquipmentVisualizer ⭐, ForceVectorVisualizer, WindDirectionIndicator,
+│                    WaterMeshBuilder, SailDeformer, BoardWakeEffects
+├── Audio          → ProceduralAudioClips, WindAmbienceAudio, HullWaterAudio, SailFlapAudio
 ├── Debug          → PhysicsValidation, SailPhysicsDebugger
-├── Editor         → WindsurferSetup (Setup Wizard)
-└── Utilities      → PhysicsHelpers (extensions only), WaterGridMarkers
+├── Editor         → WindsurferSetup (Setup Wizard + Upgrade Scene menu)
+└── Utilities      → PhysicsHelpers (extensions only), WaterGridMarkers, MeshSubdivider
 ```
+
+Shaders (`Assets/Shaders/`): `OceanWater.shader` (water, consumes WaterSurface globals) and `VertexColorTerrain.shader` (islands).
 
 ---
 
@@ -93,7 +98,8 @@ Realistic physics based on sailing research:
 | Script | Namespace | Purpose | Key Dependencies |
 |--------|-----------|---------|------------------|
 | [IWaterSurface.cs](../WindsurfingGame/Assets/Scripts/Physics/Water/IWaterSurface.cs) | Physics.Water | Interface for water height queries | - |
-| [WaterSurface.cs](../WindsurfingGame/Assets/Scripts/Physics/Water/WaterSurface.cs) | Physics.Water | Implements water surface with waves | IWaterSurface |
+| [WaterSurface.cs](../WindsurfingGame/Assets/Scripts/Physics/Water/WaterSurface.cs) | Physics.Water | Water height/normal queries with Gerstner waves; publishes wave globals to OceanWater.shader | IWaterSurface, GerstnerMath, WindSystem (optional) |
+| [GerstnerWave.cs](../WindsurfingGame/Assets/Scripts/Physics/Water/GerstnerWave.cs) | Physics.Water | Wave parameters + CPU evaluation (mirrors the shader exactly) | PhysicsConstants |
 | [IWindProvider.cs](../WindsurfingGame/Assets/Scripts/Physics/Wind/IWindProvider.cs) | Physics.Wind | Interface for wind queries | - |
 | [WindManager.cs](../WindsurfingGame/Assets/Scripts/Physics/Wind/WindManager.cs) | Physics.Wind | Global wind control | IWindProvider |
 | [BuoyancyBody.cs](../WindsurfingGame/Assets/Scripts/Physics/Buoyancy/BuoyancyBody.cs) | Physics.Buoyancy | Multi-point buoyancy | IWaterSurface, Rigidbody |
@@ -107,6 +113,8 @@ Realistic physics based on sailing research:
 | Script | Namespace | Purpose | Key Dependencies |
 |--------|-----------|---------|------------------|
 | [WindSystem.cs](../WindsurfingGame/Assets/Scripts/Environment/WindSystem.cs) | Environment | Advanced wind with gusts/shifts | IWindProvider |
+| [SkyEnvironment.cs](../WindsurfingGame/Assets/Scripts/Environment/SkyEnvironment.cs) | Environment | Procedural skybox, sun link, ambient, fog (Session 27) | Directional Light |
+| [DistantIslands.cs](../WindsurfingGame/Assets/Scripts/Environment/DistantIslands.cs) | Environment | Procedural islands with colliders (Session 27) | WaterSurface (water level), IslandTerrain.mat |
 | [PhysicsConstants.cs](../WindsurfingGame/Assets/Scripts/Physics/Core/PhysicsConstants.cs) | Physics.Core | Physical constants (air/water density) | - |
 | [Aerodynamics.cs](../WindsurfingGame/Assets/Scripts/Physics/Core/Aerodynamics.cs) | Physics.Core | Lift/drag calculations for air | PhysicsConstants |
 | [Hydrodynamics.cs](../WindsurfingGame/Assets/Scripts/Physics/Core/Hydrodynamics.cs) | Physics.Core | Lift/drag calculations for water | PhysicsConstants |
@@ -141,9 +149,23 @@ Realistic physics based on sailing research:
 | Script | Namespace | Purpose | Key Dependencies |
 |--------|-----------|---------|------------------|
 | [SailVisualizer.cs](../WindsurfingGame/Assets/Scripts/Visual/SailVisualizer.cs) | Visual | Procedural 3D sail mesh (debug) | Sail, ApparentWindCalculator |
-| [EquipmentVisualizer.cs](../WindsurfingGame/Assets/Scripts/Visual/EquipmentVisualizer.cs) | Visual | FBX model loader for board & sail | Sail or AdvancedSail |
+| [EquipmentVisualizer.cs](../WindsurfingGame/Assets/Scripts/Visual/EquipmentVisualizer.cs) | Visual | FBX model loader for board & sail, procedural mast; exposes SailPivot/SailInstance | Sail or AdvancedSail |
 | [ForceVectorVisualizer.cs](../WindsurfingGame/Assets/Scripts/Visual/ForceVectorVisualizer.cs) | Visual | Runtime force arrows (Game view) | AdvancedSail, AdvancedFin, Rigidbody |
 | [WindDirectionIndicator.cs](../WindsurfingGame/Assets/Scripts/Visual/WindDirectionIndicator.cs) | Visual | Animated wind arrows on water | WindManager or WindSystem |
+| [WaterMeshBuilder.cs](../WindsurfingGame/Assets/Scripts/Visual/WaterMeshBuilder.cs) | Visual | Dense camera-following water grid for wave displacement (Session 27) | MeshFilter, MeshRenderer, Camera.main |
+| [SailDeformer.cs](../WindsurfingGame/Assets/Scripts/Visual/SailDeformer.cs) | Visual | Sail cloth belly/twist/flutter from sail physics (Session 27) | AdvancedSail, EquipmentVisualizer, MeshSubdivider |
+| [BoardWakeEffects.cs](../WindsurfingGame/Assets/Scripts/Visual/BoardWakeEffects.cs) | Visual | Spray, wake foam and splash particles (Session 27) | Rigidbody, AdvancedHullDrag, AdvancedBuoyancy, WaterSurface |
+
+### Audio Layer (Session 27)
+
+All clips are generated at runtime by `ProceduralAudioClips`; there are no audio files. Each component creates its own child `AudioSource` so filters do not stack.
+
+| Script | Namespace | Purpose | Key Dependencies |
+|--------|-----------|---------|------------------|
+| [ProceduralAudioClips.cs](../WindsurfingGame/Assets/Scripts/Audio/ProceduralAudioClips.cs) | Audio | Noise loops and bursts (pink/white, filtered, seamless) | - |
+| [WindAmbienceAudio.cs](../WindsurfingGame/Assets/Scripts/Audio/WindAmbienceAudio.cs) | Audio | 2D wind bed, volume/tone from apparent wind | AdvancedSail (or WindSystem) |
+| [HullWaterAudio.cs](../WindsurfingGame/Assets/Scripts/Audio/HullWaterAudio.cs) | Audio | Lapping (displacement), hiss (planing), splash one-shots | Rigidbody, AdvancedHullDrag, AdvancedBuoyancy |
+| [SailFlapAudio.cs](../WindsurfingGame/Assets/Scripts/Audio/SailFlapAudio.cs) | Audio | Flaps when luffing and on tack changes | AdvancedSail |
 
 ### Camera Layer
 
@@ -167,7 +189,8 @@ Realistic physics based on sailing research:
 |--------|-----------|---------|------------------|
 | [PhysicsHelpers.cs](../WindsurfingGame/Assets/Scripts/Utilities/PhysicsHelpers.cs) | Utilities | Vector extensions (no constants) | - |
 | [WaterGridMarkers.cs](../WindsurfingGame/Assets/Scripts/Utilities/WaterGridMarkers.cs) | Utilities | Debug grid visualization | IWaterSurface |
-| [WindsurferSetup.cs](../WindsurfingGame/Assets/Scripts/Editor/WindsurferSetup.cs) | Editor | Editor wizard for complete setup | - |
+| [MeshSubdivider.cs](../WindsurfingGame/Assets/Scripts/Utilities/MeshSubdivider.cs) | Utilities | Linear mesh subdivision (used by SailDeformer) | - |
+| [WindsurferSetup.cs](../WindsurfingGame/Assets/Scripts/Editor/WindsurferSetup.cs) | Editor | Editor wizard for complete setup; `Upgrade Scene` menu adds polish to existing scenes | - |
 
 > **Note:** PhysicsConstants is in `Physics.Core` namespace. PhysicsHelpers only contains extension methods.
 
@@ -219,11 +242,21 @@ Windsurfer (GameObject)
 │   └── Requires: AdvancedBuoyancy (or BuoyancyBody), Rigidbody
 ├── AdvancedWindsurferController
 │   └── Requires: AdvancedSail, AdvancedFin
-└── EquipmentVisualizer (Optional)
-    └── Requires: AdvancedSail (or Sail), FBX prefabs
+├── EquipmentVisualizer (Optional)
+│   └── Requires: AdvancedSail (or Sail), FBX prefabs
+├── SailDeformer (Session 27)
+│   └── Requires: AdvancedSail, EquipmentVisualizer (cloth mesh comes from its sail instance)
+├── BoardWakeEffects (Session 27)
+│   └── Requires: Rigidbody; reads AdvancedHullDrag, AdvancedBuoyancy, WaterSurface
+├── WindAmbienceAudio (Session 27)
+│   └── Reads: AdvancedSail.State (fallback WindSystem)
+├── HullWaterAudio (Session 27)
+│   └── Reads: Rigidbody, AdvancedHullDrag, AdvancedBuoyancy
+└── SailFlapAudio (Session 27)
+    └── Reads: AdvancedSail
 ```
 
-**Use the wizard**: `Windsurfing → Complete Windsurfer Setup Wizard` to auto-create all components.
+**Use the wizard**: `Windsurfing → Complete Windsurfer Setup Wizard` to auto-create all components, or `Windsurfing → Upgrade Scene: Add Visual and Audio Polish` for an existing scene.
 
 ### Scene Singletons
 
@@ -231,8 +264,12 @@ Windsurfer (GameObject)
 Scene
 ├── WindManager (implements IWindProvider) - Basic wind
 ├── WindSystem (Environment) - Advanced wind with gusts/shifts ⭐
-└── WaterSurface (implements IWaterSurface)
-    └── Found via: FindFirstObjectByType<IWaterSurface>()
+├── WaterSurface (implements IWaterSurface)
+│   ├── Found via: FindFirstObjectByType<IWaterSurface>()
+│   └── + WaterMeshBuilder (Session 27) - dense follow mesh rendered with OceanWater.shader
+└── Environment (Session 27)
+    ├── SkyEnvironment - procedural sky, sun, ambient, fog
+    └── DistantIslands - procedural islands with colliders
 ```
 
 ---
@@ -286,6 +323,21 @@ Rigidbody.AddForceAtPosition (buoyancy forces)
 Board floats
 ```
 
+### Water → Rendering (Session 27)
+
+```
+WaterSurface (GerstnerWave[] + wind)
+    ├── GetWaterHeight()         → physics (CPU, GerstnerMath.HeightAt)
+    └── Shader.SetGlobalVector   → _WaveA.._WaveD, _WaveAmplitudes, _WaterTime, _WaterWind
+                                        ↓
+                            OceanWater.shader (GPU, AccumulateGerstner)
+                                        ↓
+                            WaterMeshBuilder mesh (dense, follows the camera)
+
+IMPORTANT: the shader never invents waves. GerstnerMath.Displacement() and
+           AccumulateGerstner() must stay identical.
+```
+
 ### Simulation → Visualization
 
 ```
@@ -293,6 +345,15 @@ AdvancedSail.CurrentSailAngle / MastRake (simulation output)
     ↓
 EquipmentVisualizer (reads value, rotates FBX sail model)
 SailPositionIndicator (reads value, renders 2D HUD)
+
+AdvancedSail.State (SailForce, AngleOfAttack, ApparentWindSpeed), SailNormal
+    ↓
+SailDeformer (reads values, bends the cloth mesh: draft, twist, flutter)
+SailFlapAudio (reads values, plays flaps when luffing)
+
+Rigidbody velocity, AdvancedHullDrag.PlaningRatio, AdvancedBuoyancy.SubmergedRatio
+    ↓
+BoardWakeEffects (spray, wake, splash), HullWaterAudio (lapping, hiss, splash)
 
 Sail.CurrentSailAngle (basic simulation output)
     ↓
@@ -375,13 +436,16 @@ Assets/Scripts/Physics/Wind/          → Wind system
 Assets/Scripts/Physics/Core/          → PhysicsConstants, Aerodynamics, Hydrodynamics ⭐
 Assets/Scripts/Physics/Buoyancy/      → Buoyancy simulation
 Assets/Scripts/Physics/Board/         → Sail, fin, drag physics
-Assets/Scripts/Environment/           → WindSystem (advanced) ⭐
+Assets/Scripts/Environment/           → WindSystem (advanced) ⭐, SkyEnvironment, DistantIslands
 Assets/Scripts/Player/                → Player controllers
 Assets/Scripts/Camera/                → Camera systems (namespace: CameraSystem)
 Assets/Scripts/UI/                    → HUD and indicators
-Assets/Scripts/Visual/                → 3D visualizers, EquipmentVisualizer ⭐
+Assets/Scripts/Visual/                → 3D visualizers, EquipmentVisualizer ⭐, WaterMeshBuilder, SailDeformer, BoardWakeEffects
+Assets/Scripts/Audio/                 → Procedural sound (Session 27)
 Assets/Scripts/Editor/                → Editor wizards ⭐
-Assets/Scripts/Utilities/             → Helpers and debug tools
+Assets/Scripts/Utilities/             → Helpers, debug tools, MeshSubdivider
+Assets/Shaders/                       → OceanWater.shader, VertexColorTerrain.shader
+Assets/Materials/                     → WaterMaterial.mat, IslandTerrain.mat
 ```
 
 ### Documentation
@@ -510,7 +574,8 @@ Documentation/PHYSICS_VALIDATION.md   → Physics testing checklist
 | Dec 31 | 23 | Planing fixes, underwater detection |
 | Jan 1 | 24-25 | Savitsky planing, damping improvements |
 | Jan 2 | 26 | **Cleanup:** Removed V1 controller, TelemetryHUD; merged Debug folders; fixed camera/steering |
+| Sep 28 | 27 | **Visual & audio polish (unverified):** Gerstner waves + OceanWater shader + WaterMeshBuilder, SailDeformer, BoardWakeEffects, SkyEnvironment, DistantIslands, procedural audio, wizard upgrade menu; wizard wind-property bug fixed |
 
 ---
 
-*Last Updated: January 2, 2026*
+*Last Updated: September 28, 2026*

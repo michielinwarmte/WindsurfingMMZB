@@ -4,7 +4,7 @@
 
 Use this checklist when setting up the scene on a new PC. For detailed parameter values, see [SCENE_CONFIGURATION.md](SCENE_CONFIGURATION.md).
 
-**Last Updated:** January 2, 2026
+**Last Updated:** September 28, 2026
 
 ---
 
@@ -14,7 +14,8 @@ Before starting, be aware of these known issues:
 
 | Issue | Status | Workaround |
 |-------|--------|------------|
-| 🟡 Camera doesn't follow | Known issue | Change FOV in Inspector during Play mode |
+| 🧪 Session 27 polish (waves, sail cloth, spray, audio, sky) | **Unverified** | Compile and play; checklist in KNOWN_ISSUES.md |
+| ✅ Camera doesn't follow | **FIXED** (Session 26) | - |
 | ✅ Steering on port tack | **FIXED** | Now auto-inverts correctly |
 | ✅ Porpoising at speed | **FIXED** | CE at zero, planing lift at center |
 
@@ -30,9 +31,8 @@ The easiest way to set up a scene:
 2. Assign your Board and Sail FBX models
 3. Click **"🌟 Create Complete Scene"**
 4. Press Play
-5. **⚠️ Apply camera workaround:** Select Main Camera → change FOV
 
-The wizard creates everything automatically!
+The wizard creates everything automatically, including the Session 27 polish (waves, ocean shader, sail cloth, spray, sound, sky, islands). For an older scene use `Windsurfing → Upgrade Scene: Add Visual and Audio Polish`.
 
 ---
 
@@ -72,12 +72,13 @@ For working upwind sailing and realistic physics, use the **Advanced** component
 
 #### Transform
 - [ ] Position: `(0, 0, 0)`
-- [ ] Scale: `(100, 1, 100)`
+- [ ] Scale: `(1, 1, 1)` (WaterMeshBuilder generates a 3 km mesh in metres and resets the scale at play)
 
 #### Components
-- [ ] MeshFilter (Plane)
-- [ ] MeshRenderer (with WaterMaterial)
-- [ ] **WaterSurface** - Base Height: 0
+- [ ] MeshFilter (any mesh - replaced at play time)
+- [ ] MeshRenderer (with WaterMaterial → `Windsurfing/OceanWater` shader), Cast Shadows: Off
+- [ ] **WaterSurface** - Base Height: 0, Enable Waves: on, Align Waves To Wind: on
+- [ ] **WaterMeshBuilder** - Extent 1500, Resolution 160
 
 ---
 
@@ -88,15 +89,24 @@ For working upwind sailing and realistic physics, use the **Advanced** component
 - [ ] **SimpleFollowCamera** (preferred) or **ThirdPersonCamera**
 
 #### Critical Manual Assignment
-- [ ] SimpleFollowCamera._target → Drag **WindsurfBoard** Transform here
-
-#### ⚠️ Camera Workaround
-The camera won't follow until you change the FOV value in Inspector during Play mode.
+- [ ] SimpleFollowCamera._target → Drag **WindsurfBoard** Transform here (it also auto-finds the board)
 
 ---
 
 ### ☐ 5. Directional Light
 - [ ] Type: Directional, Intensity: 1, Shadows: Soft
+
+### ☐ 5b. Environment (Session 27)
+- [ ] Create empty GameObject named "Environment"
+- [ ] Add **SkyEnvironment** - assign the Directional Light as Sun (procedural sky, ambient, fog)
+- [ ] Add **DistantIslands** - assign `Materials/IslandTerrain.mat`
+
+### ☐ 5c. Windsurfer polish components (Session 27)
+- [ ] **SailDeformer** - sail cloth belly/twist/flutter (needs EquipmentVisualizer with the Sail FBX)
+- [ ] **BoardWakeEffects** - spray, wake, splash particles
+- [ ] **WindAmbienceAudio**, **HullWaterAudio**, **SailFlapAudio** - procedural sound
+
+All of these auto-find their references. The wizard and the Upgrade Scene menu add them for you.
 
 ---
 
@@ -131,17 +141,16 @@ Everything else auto-finds!
 
 ---
 
-## 🔧 Camera Workaround (Required!)
+## 🔧 If Something Looks Wrong (Session 27)
 
-The camera has an initialization bug. To make it work:
-
-1. Press Play
-2. Select "Main Camera" in Hierarchy
-3. In Inspector, find Camera component
-4. Change FOV from 60 to 61 (any change works)
-5. Camera now follows correctly
-
-This needs to be done every time you enter Play mode.
+| Symptom | Check |
+|---------|-------|
+| Water is pink | `OceanWater.shader` failed to compile - see Console |
+| No foam around the hull | `PC_RPAsset` needs Depth Texture + Opaque Texture, or untick `Use Scene Depth` on WaterMaterial |
+| Board clips through waves | WaterSurface `Drive Shader Globals` must be on |
+| Sail does not bend | Console should say `SailDeformer: deforming 'Plane'`; assign Cloth Mesh Filter manually if it chose the boom |
+| No mast | EquipmentVisualizer → Add Procedural Mast |
+| Too loud / too quiet | Volumes on WindAmbienceAudio, HullWaterAudio, SailFlapAudio |
 
 ---
 
@@ -218,7 +227,11 @@ MainScene
 │   └── SimpleFollowCamera
 ├── Directional Light
 ├── WaterSurface
-│   └── WaterSurface
+│   ├── WaterSurface
+│   └── WaterMeshBuilder (Session 27)
+├── Environment (Session 27)
+│   ├── SkyEnvironment
+│   └── DistantIslands
 ├── WindsurfBoard
 │   ├── Rigidbody
 │   ├── BoxCollider
@@ -230,7 +243,10 @@ MainScene
 │   ├── AdvancedFin
 │   ├── BoardMassConfiguration
 │   ├── AdvancedWindsurferController
-│   └── EquipmentVisualizer
+│   ├── EquipmentVisualizer
+│   ├── SailDeformer (Session 27)
+│   ├── BoardWakeEffects (Session 27)
+│   └── WindAmbienceAudio, HullWaterAudio, SailFlapAudio (Session 27)
 ├── WindSystem
 │   └── WindSystem
 └── TelemetryHUD

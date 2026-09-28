@@ -63,6 +63,19 @@ namespace WindsurfingGame.Visual
         [Tooltip("Invert the sail rotation direction. Enable if sail rotates INTO the wind instead of away from it.")]
         [SerializeField] private bool _invertSailRotation = true;
 
+        [Header("Procedural Mast")]
+        [Tooltip("Add a simple cylinder mast when the sail model has no mesh named 'mast'. " +
+                 "The shipped Sail.fbx exports its mast as a face-less curve profile, so nothing renders without this.")]
+        [SerializeField] private bool _addProceduralMast = true;
+
+        [Tooltip("Height of the procedural mast in metres")]
+        [SerializeField] private float _proceduralMastHeight = 4.6f;
+
+        [Tooltip("Radius of the procedural mast in metres")]
+        [SerializeField] private float _proceduralMastRadius = 0.025f;
+
+        [SerializeField] private Color _mastColor = new Color(0.15f, 0.15f, 0.17f);
+
         [Header("Animation")]
         [Tooltip("How quickly the visual responds to physics changes")]
         [SerializeField] private float _smoothSpeed = 8f;
@@ -71,17 +84,28 @@ namespace WindsurfingGame.Visual
         private GameObject _boardInstance;
         private GameObject _sailInstance;
         private GameObject _sailPivot;
+        private GameObject _mastInstance;
+        private Material _mastMaterial;
 
         // Smoothed values
         private float _currentRake;
         private float _currentSailAngle;
-        
+
         // Unified sail interface properties
-        private float TargetSailAngle => _advancedSail != null ? _advancedSail.CurrentSailAngle : 
+        private float TargetSailAngle => _advancedSail != null ? _advancedSail.CurrentSailAngle :
                                           (_sail != null ? _sail.CurrentSailAngle : 0f);
-        private float TargetMastRake => _advancedSail != null ? _advancedSail.MastRake : 
+        private float TargetMastRake => _advancedSail != null ? _advancedSail.MastRake :
                                          (_sail != null ? _sail.MastRake : 0f);
         private bool HasSailReference => _advancedSail != null || _sail != null;
+
+        /// <summary>Pivot at the mast foot that carries the sail model (rotates with rake and sheet). Null before Start.</summary>
+        public Transform SailPivot => _sailPivot != null ? _sailPivot.transform : null;
+
+        /// <summary>The instantiated sail model. Null before Start or when no sail prefab is assigned.</summary>
+        public GameObject SailInstance => _sailInstance;
+
+        /// <summary>The instantiated board model. Null before Start or when no board prefab is assigned.</summary>
+        public GameObject BoardInstance => _boardInstance;
 
         private void Awake()
         {
@@ -137,6 +161,57 @@ namespace WindsurfingGame.Visual
             {
                 Debug.LogWarning("EquipmentVisualizer: No sail prefab assigned!");
             }
+
+            if (_addProceduralMast)
+            {
+                CreateProceduralMast();
+            }
+        }
+
+        /// <summary>
+        /// Adds a cylinder mast under the sail pivot unless the sail model already contains a
+        /// renderable mesh whose name contains "mast".
+        /// </summary>
+        private void CreateProceduralMast()
+        {
+            if (_sailInstance != null)
+            {
+                foreach (MeshFilter meshFilter in _sailInstance.GetComponentsInChildren<MeshFilter>())
+                {
+                    Mesh mesh = meshFilter.sharedMesh;
+                    bool renderable = mesh != null && mesh.subMeshCount > 0 && mesh.GetIndexCount(0) >= 3;
+                    if (renderable && meshFilter.name.ToLowerInvariant().Contains("mast"))
+                    {
+                        return; // the model has a real mast
+                    }
+                }
+            }
+
+            _mastInstance = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            _mastInstance.name = "ProceduralMast";
+
+            Collider mastCollider = _mastInstance.GetComponent<Collider>();
+            if (mastCollider != null) Destroy(mastCollider);
+
+            _mastInstance.transform.SetParent(_sailPivot.transform, false);
+            _mastInstance.transform.localPosition = new Vector3(0f, _proceduralMastHeight * 0.5f, 0f);
+            _mastInstance.transform.localRotation = Quaternion.identity;
+            // Unity's cylinder primitive is 2 units tall and 1 unit wide
+            _mastInstance.transform.localScale = new Vector3(_proceduralMastRadius * 2f, _proceduralMastHeight * 0.5f, _proceduralMastRadius * 2f);
+
+            Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+            if (shader == null) shader = Shader.Find("Standard");
+            _mastMaterial = new Material(shader) { color = _mastColor };
+            if (_mastMaterial.HasProperty("_Smoothness"))
+            {
+                _mastMaterial.SetFloat("_Smoothness", 0.6f);
+            }
+            _mastInstance.GetComponent<Renderer>().material = _mastMaterial;
+        }
+
+        private void OnDestroy()
+        {
+            if (_mastMaterial != null) Destroy(_mastMaterial);
         }
 
         private void UpdateSailRotation()
