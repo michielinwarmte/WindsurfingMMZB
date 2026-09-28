@@ -1,3 +1,16 @@
+> [!IMPORTANT]
+> **This is the frozen Unity version, kept for reference only.**
+> In September 2026 (Session 28) the team restarted the game from scratch in Godot 4.7. Active development is in [`../Game`](../Game), and the plan is [`../Documentation/REBUILD_PLAN.md`](../Documentation/REBUILD_PLAN.md).
+>
+> Nothing in `Legacy/` is maintained. It is useful for:
+> - **Physics:** the force models and tuning values in `WindsurfingGame/Assets/Scripts/Physics/` and the write-ups in `Documentation/PHYSICS_DESIGN.md` and `Documentation/PHYSICS_VALIDATION.md`.
+> - **Lessons learned:** `Documentation/KNOWN_ISSUES.md` and `Documentation/PROGRESS_LOG.md` (what broke and why).
+> - **Session 27 ideas** (ocean shader, Gerstner waves, sail cloth, spray, procedural audio). Careful: that code was never compiled or played.
+>
+> Known problem in these docs: some sign-convention tables disagree with the code. In `PHYSICS_VALIDATION.md` the apparent-wind-angle and sail-side tables have port and starboard swapped (the code, and its comments, use positive AWA = wind from starboard), and the testing checklist says "rake back = bear away" where the code correctly does rake back = head up. Where they disagree, the code is right.
+>
+> The text below is the README as it was on the last Unity commit.
+
 # 🏄 Windsurfing Simulator
 
 A realistic physics-based 3D windsurfing game built with Unity 6.3 LTS.
