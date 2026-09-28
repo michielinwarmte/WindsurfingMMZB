@@ -1,243 +1,96 @@
 # 🏄 Windsurfing Simulator
 
-A realistic physics-based 3D windsurfing game built with Unity 6.3 LTS.
+A physics-first 3D windsurfing game by the MMZB team, built with **Godot 4.7** and GDScript.
 
-![Unity](https://img.shields.io/badge/Unity-6.3%20LTS-black?logo=unity)
-![C#](https://img.shields.io/badge/C%23-10.0-blue?logo=csharp)
-![URP](https://img.shields.io/badge/Render-URP-green)
-![Status](https://img.shields.io/badge/Status-Core%20Physics%20Complete-brightgreen)
+![Godot](https://img.shields.io/badge/Godot-4.7.2-478cbf?logo=godotengine&logoColor=white)
+![GDScript](https://img.shields.io/badge/GDScript-typed-478cbf)
+![Status](https://img.shields.io/badge/Status-Rebuilding%20in%20Godot-orange)
 
----
+## Status
 
-## 🎮 About This Project
+In September 2026 we restarted the game from scratch in Godot. The Unity version (Sessions 1 to 27) is kept in [`Legacy/`](Legacy) for reference; its physics work and lessons learned feed the new version.
 
-This is a **physics-first** windsurfing simulator that accurately models the forces involved in sailing. The core physics engine is complete and validated against real windsurfing polar diagrams.
+The step-by-step plan, with its current status, is in [Documentation/REBUILD_PLAN.md](Documentation/REBUILD_PLAN.md). Phase 0 (setup) is done; next is Phase 1, writing the physics spec.
 
-### What Makes This Special
-- **Real Aerodynamics** - Lift/drag coefficients, angle of attack, apparent wind calculations
-- **Savitsky Planing** - Proper hydrodynamic lift equations for high-speed planing
-- **Archimedes Buoyancy** - 21-point hull sampling with volume displacement
-- **Realistic Controls** - Mast rake steering, weight shift, and sheet control like real windsurfing
+## What we are building
 
----
+- **Real sailing physics:** apparent wind, sail lift and drag, fin, hull drag, planing (Savitsky) and buoyancy (Archimedes).
+- **Real windsurfing controls:** sheet in and out, steering by mast rake, tacks and gybes, with beginner assists and an advanced manual mode.
+- **Free sailing first, then slalom racing** against AI opponents.
 
-## 📊 Current Status
+## Quick start
 
-| Category | Status |
-|----------|--------|
-| Core Physics | ✅ Complete & Validated |
-| Player Controls | ✅ Working |
-| Camera System | ✅ Working |
-| Visuals | 🔨 Basic (needs polish) |
-| Audio | ❌ Not implemented |
-| Environment | 🔨 Basic water shader |
+### Linux
 
-### ✅ Working Features
-- Upwind sailing at ~45° to wind on both tacks
-- Automatic planing at ~17+ km/h with lift transition
-- Tacking and gybing with sail side switching
-- Rake steering (bear away/head up) on both tacks
-- Port/starboard steering auto-inversion
-- High-speed stability (20+ knots, no porpoising)
-- Beginner mode with context-aware steering
-- Advanced mode with full manual control
-- Real-time telemetry HUD (F1)
-
----
-
-## 🎯 Roadmap: Next Steps
-
-### Phase 1: Fix Remaining Issues
-| Issue | Priority | Estimated Effort |
-|-------|----------|------------------|
-| Camera initialization delay | 🟡 Medium | 2-4 hours |
-| Beam reach submersion | 🟡 Medium | 4-8 hours |
-
-### Phase 2: Visual Polish 🎨
-| Feature | Description | Priority |
-|---------|-------------|----------|
-| **Water Shader** | Realistic ocean with foam, waves, reflections | 🔴 High |
-| **Sail Deformation** | Cloth simulation or blend shapes for sail shape | 🔴 High |
-| **Wake/Spray Effects** | Particle systems for board wake and spray | 🟡 Medium |
-| **Boom Rotation** | Visual feedback for sheet position | 🟡 Medium |
-| **Sailor Animation** | Rigged character with stance changes | 🟢 Nice to have |
-| **Environment** | Skybox, horizon, distant islands | 🟢 Nice to have |
-
-### Phase 3: Audio 🔊
-| Feature | Description |
-|---------|-------------|
-| Wind ambience | Volume/pitch based on wind speed |
-| Water splash | Speed-dependent splash sounds |
-| Sail flapping | When sail is eased or luffing |
-| Hull noise | Planing vs displacement sound |
-
-### Phase 4: Gameplay
-| Feature | Description |
-|---------|-------------|
-| Race course | Buoy markers and course layout |
-| Timer system | Lap timing and splits |
-| AI opponents | Computer-controlled racers |
-| Multiplayer | Network racing support |
-
----
-
-## 🕹️ Controls
-
-| Key | Action |
-|-----|--------|
-| **W/S** | Sheet in/out (sail power) |
-| **A/D** | Steer left/right |
-| **Q/E** | Fine mast rake adjustment |
-| **Space** | Switch tack (flip sail) |
-| **F1** | Toggle telemetry HUD |
-| **1-4** | Camera modes (Follow/Orbit/Top/Free) |
-
-### Control Philosophy
-Like real windsurfing, steering is primarily done through **mast rake** (tilting the sail forward/back). The A/D keys provide intuitive left/right steering that auto-inverts on port tack for consistent feel.
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-- **Unity 6.3 LTS** (via Unity Hub)
-- **Visual Studio 2022** or VS Code with C# extension
-- **Git** for version control
-
-### Setup
 ```bash
 git clone https://github.com/michielinwarmte/WindsurfingMMZB.git
+cd WindsurfingMMZB
+tools/install_godot.sh   # installs Godot 4.7.2 for your user (no sudo), once
+tools/edit.sh            # open the project in the Godot editor
 ```
 
-1. Open **Unity Hub** → Add → Select `WindsurfingGame` folder
-2. Open with **Unity 6.3 LTS**
-3. Open `Assets/Scenes/MainScene.unity`
-4. **Press Play** and enjoy!
+After installing you can also start "Godot Engine 4.7.2" from your app menu and open `Game/project.godot`.
 
-### Using the Setup Wizard
-Menu: `Windsurfing → Complete Windsurfer Setup Wizard`
+### Windows or macOS
 
-This automatically creates a fully configured scene with:
-- Water surface with shader
-- Wind system with gusts
-- Complete windsurfer with all physics components
-- Camera and HUD
+Install **Godot 4.7.2, the standard build (not .NET)** from [godotengine.org](https://godotengine.org/download/archive/), then open `Game/project.godot` in it. To use the `tools/*.sh` scripts from Git Bash, set the `GODOT` environment variable to the Godot executable.
 
----
+## Everyday commands
 
-## 🏗️ Architecture
+Run these from the repo root.
 
-### Physics Stack (Advanced - Recommended)
-```
-AdvancedWindsurferController  ← Player input
-        ↓
-AdvancedSail                  ← Aerodynamic lift/drag
-AdvancedFin                   ← Hydrodynamic lateral force
-AdvancedHullDrag              ← Resistance + planing lift
-AdvancedBuoyancy              ← Archimedes flotation
-BoardMassConfiguration        ← Mass and COM shifts
-        ↓
-Rigidbody                     ← Unity physics integration
-```
+| What | Command |
+|---|---|
+| Play the game | `tools/play.sh` |
+| Open the editor | `tools/edit.sh` |
+| Run the tests (after every change) | `tools/test.sh` |
+| Run the slow physics validation | `tools/test.sh validation` |
+| Check that every script and scene loads | `tools/check.sh` |
+| Save a screenshot of the game | `tools/screenshot.sh` (writes `.screenshots/latest.png`) |
 
-### Key Scripts (35 total)
-| Category | Key Scripts |
-|----------|-------------|
-| Physics Core | `PhysicsConstants`, `Aerodynamics`, `Hydrodynamics`, `SailingState` |
-| Board Physics | `AdvancedSail`, `AdvancedFin`, `AdvancedHullDrag`, `AdvancedBuoyancy` |
-| Player | `AdvancedWindsurferController` |
-| Camera | `SimpleFollowCamera` |
-| UI | `AdvancedTelemetryHUD`, `SailPositionIndicator` |
-| Environment | `WindSystem`, `WaterSurface` |
+In the editor, the **GUT** panel at the bottom also runs the tests.
 
-See [ARCHITECTURE.md](Documentation/ARCHITECTURE.md) for complete reference.
+## Working with AI
 
----
+Most of the code is written with Claude. The setup is made so the AI can check its own work: it runs the tests, loads every file, and takes and views screenshots.
 
-## 📖 Documentation
+- [CLAUDE.md](CLAUDE.md) holds the rules and commands every AI session follows.
+- [Documentation/REBUILD_PLAN.md](Documentation/REBUILD_PLAN.md) says what to build next.
+- [Documentation/PROGRESS_LOG.md](Documentation/PROGRESS_LOG.md) records what each session did.
 
-### Essential Reading
-| Document | Description |
-|----------|-------------|
-| [KNOWN_ISSUES.md](Documentation/KNOWN_ISSUES.md) | ⚠️ Current bugs and workarounds |
-| [QUICK_SETUP_CHECKLIST.md](Documentation/QUICK_SETUP_CHECKLIST.md) | ⭐ Fast setup guide |
-| [ARCHITECTURE.md](Documentation/ARCHITECTURE.md) | 📚 Code structure reference |
-| [PHYSICS_VALIDATION.md](Documentation/PHYSICS_VALIDATION.md) | 🔬 Physics formulas (DO NOT CHANGE) |
+To continue, start a Claude Code session in this folder and ask it, for example: *"Read CLAUDE.md and the rebuild plan, then do the next phase."* It stops at the end of each phase so you can play-test.
 
-### Additional Docs
-- [SCENE_CONFIGURATION.md](Documentation/SCENE_CONFIGURATION.md) - Parameter reference
-- [COMPONENT_DEPENDENCIES.md](Documentation/COMPONENT_DEPENDENCIES.md) - How components connect
-- [PROGRESS_LOG.md](Documentation/PROGRESS_LOG.md) - Development history
-- [PHYSICS_DESIGN.md](Documentation/PHYSICS_DESIGN.md) - Physics equations
-
----
-
-## 🔬 Physics Validation
-
-The physics engine has been validated against real windsurfing data:
-
-| Metric | Expected | Actual |
-|--------|----------|--------|
-| Upwind angle | ~45° | ✅ ~45° |
-| Planing onset | 15-17 km/h | ✅ ~17 km/h |
-| Max speed (15kt wind) | 25-30 km/h | ✅ ~28 km/h |
-| Beam reach speed | Fastest point | ✅ Confirmed |
-
-**⚠️ Important:** Do not modify physics sign conventions without reading [PHYSICS_VALIDATION.md](Documentation/PHYSICS_VALIDATION.md).
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! Priority areas:
-
-1. **Visual Polish** - Water shaders, particle effects, environment
-2. **Audio System** - Wind, water, and sailing sounds
-3. **Gameplay Features** - Race system, course markers
-4. **Bug Fixes** - See [KNOWN_ISSUES.md](Documentation/KNOWN_ISSUES.md)
-
-### Getting Started as a Contributor
-1. Read [KNOWN_ISSUES.md](Documentation/KNOWN_ISSUES.md) for current state
-2. Check [ARCHITECTURE.md](Documentation/ARCHITECTURE.md) for code structure
-3. Use the **Advanced** physics components (not legacy)
-4. Test with telemetry HUD enabled (F1)
-
----
-
-## 📁 Project Structure
+## Project structure
 
 ```
 WindsurfingMMZB/
-├── Documentation/           # Development docs
-├── WindsurfingGame/         # Unity project
-│   ├── Assets/
-│   │   ├── Scripts/
-│   │   │   ├── Physics/     # Core simulation
-│   │   │   ├── Player/      # Controls
-│   │   │   ├── Camera/      # Camera system
-│   │   │   ├── UI/          # HUD elements
-│   │   │   ├── Visual/      # Visualizers
-│   │   │   ├── Environment/ # Wind system
-│   │   │   ├── Debug/       # Debug tools
-│   │   │   └── Editor/      # Setup wizard
-│   │   ├── Scenes/          # Game scenes
-│   │   ├── Materials/       # Shaders
-│   │   ├── Models/          # 3D models
-│   │   └── Shaders/         # Custom shaders
-│   └── Packages/            # Dependencies
-└── README.md
+├── CLAUDE.md            # rules for AI sessions
+├── Documentation/       # plan, progress log, (soon) physics spec
+├── Game/                # the Godot project (open Game/project.godot)
+│   ├── main.tscn        # placeholder scene until Phase 3
+│   ├── assets/models/   # board and sail models carried over from Unity
+│   ├── dev/             # developer helpers (project check, screenshots)
+│   ├── tests/           # unit/ (fast) and validation/ (slow physics runs)
+│   └── addons/gut/      # GUT test framework
+├── tools/               # scripts: install Godot, play, edit, test, check, screenshot
+└── Legacy/              # the frozen Unity version, reference only
 ```
 
----
+## Controls (planned, as in the Unity version)
 
-## 📄 License
+| Key | Action |
+|---|---|
+| W / S | Sheet in / out |
+| A / D | Steer left / right |
+| Q / E | Fine mast rake |
+| Space | Tack or gybe |
+| F1 | Telemetry HUD |
+| 1 to 4 | Camera modes |
 
-[MIT License](LICENSE) - Free to use and modify.
+## License
 
----
+The original README says MIT License, but the repository has no LICENSE file yet. The GUT test framework in `Game/addons/gut` is MIT licensed (see its `LICENSE.md`).
 
-## 👥 Team
+## Team
 
 **MMZB Development Team**
-
-*Last Updated: January 2, 2026*

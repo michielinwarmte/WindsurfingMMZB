@@ -1,0 +1,2 @@
+# Normalize line endings for the Godot project so Windows and Linux produce the same diffs.
+* text=auto eol=lf

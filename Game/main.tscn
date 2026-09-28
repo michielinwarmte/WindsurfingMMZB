@@ -1,0 +1,57 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://main.gd" id="1_main"]
+[ext_resource type="PackedScene" path="res://assets/models/board.fbx" id="2_board"]
+[ext_resource type="PackedScene" path="res://assets/models/sail.fbx" id="3_sail"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_main"]
+sky_top_color = Color(0.22, 0.47, 0.82, 1)
+sky_horizon_color = Color(0.68, 0.8, 0.9, 1)
+ground_bottom_color = Color(0.06, 0.2, 0.33, 1)
+ground_horizon_color = Color(0.68, 0.8, 0.9, 1)
+
+[sub_resource type="Sky" id="Sky_main"]
+sky_material = SubResource("SkyMaterial_main")
+
+[sub_resource type="Environment" id="Environment_main"]
+background_mode = 2
+sky = SubResource("Sky_main")
+ambient_light_source = 3
+reflected_light_source = 2
+tonemap_mode = 2
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_water"]
+size = Vector2(2000, 2000)
+
+[sub_resource type="StandardMaterial3D" id="Material_water"]
+albedo_color = Color(0.04, 0.24, 0.4, 1)
+roughness = 0.12
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_main")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_main")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+shadow_enabled = true
+
+[node name="Water" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_water")
+surface_material_override/0 = SubResource("Material_water")
+
+[node name="Board" parent="." instance=ExtResource("2_board")]
+
+[node name="Sail" parent="." instance=ExtResource("3_sail")]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+current = true
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="Info" type="Label" parent="HUD"]
+offset_left = 16.0
+offset_top = 12.0
+offset_right = 900.0
+offset_bottom = 40.0
+text = "Godot 4.7 project is set up. Next step: Documentation/REBUILD_PLAN.md"
