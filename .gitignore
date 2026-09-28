@@ -1,0 +1,20 @@
+# Godot cache and generated files (Godot recreates them on import)
+.godot/
+Game/android/
+
+# Local output from the tools/*.sh scripts
+/.logs/
+/.screenshots/
+/.sim_output/
+/.godot_api/
+
+# Exported game builds
+/builds/
+
+# Editor and OS clutter
+.DS_Store
+Thumbs.db
+*.tmp
+*.blend1
+
+# The Unity project in Legacy/WindsurfingGame has its own .gitignore.
