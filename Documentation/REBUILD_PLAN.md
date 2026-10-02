@@ -15,8 +15,8 @@ Written 28 September 2026 (Session 28), for the AI sessions doing the work and f
 |---|---|---|
 | 0 | Preparation: Godot installed, project skeleton, tools, first tests | ✅ Done (Session 28) |
 | 1 | Physics spec from the Unity version | ✅ Done (Session 29) |
-| 2 | Core simulation, headless and tested | ⬜ Next |
-| 3 | Playable prototype on flat water | ⬜ |
+| 2 | Core simulation, headless and tested | ✅ Done (Session 30) |
+| 3 | Playable prototype on flat water | ⬜ Next |
 | 4 | Autopilot, validation suite and tuning | ⬜ |
 | 5 | Waves and ocean | ⬜ |
 | 6 | Rig visuals: board, sail, boom, mast | ⬜ |
@@ -158,27 +158,27 @@ Change the layout when there is a good reason, and update this section when you 
 **Goal:** `Game/sim/` can simulate a windsurfer on flat water from code, with unit tests for every piece. No scenes or visuals yet.
 
 **Tasks:**
-- [ ] Config resources (`BoardConfig`, `SailConfig`, `FinConfig`, `SailorConfig`, `WaterConfig`, `WindConfig`) and their default `.tres` files, from the spec.
-- [ ] Rigid-body state and integrator: 6 degrees of freedom, inertia tensor in the body frame, forces and torques applied at points (for example `add_force_at(world_point, force)`), fixed substeps (start with 4 per 60 Hz tick and make it a setting). Tests:
+- [x] Config resources (`BoardConfig`, `SailConfig`, `FinConfig`, `SailorConfig`, `WaterConfig`, `WindConfig`) and their default `.tres` files, from the spec.
+- [x] Rigid-body state and integrator: 6 degrees of freedom, inertia tensor in the body frame, forces and torques applied at points (for example `add_force_at(world_point, force)`), fixed substeps (start with 4 per 60 Hz tick and make it a setting). Tests:
   - free fall matches ½·g·t²
   - a force through the centre of mass causes no rotation
   - an off-centre force gives the expected torque
   - a torque-free spin keeps its angular momentum
   - identical inputs give identical results
-- [ ] Environment interfaces: `WindField` (constant wind for now) and `WaterSurface` (flat for now; height, normal and water velocity at a point). The simulation only talks to these, so Phase 5 can add waves without touching it.
-- [ ] Force models one at a time, each with tests, in this order: buoyancy, then hull drag and planing lift, fin, sail and apparent wind, rake steering, and the sailor's weight and centre-of-mass shift. Example tests:
+- [x] Environment interfaces: `WindField` (constant wind for now) and `WaterSurface` (flat for now; height, normal and water velocity at a point). The simulation only talks to these, so Phase 5 can add waves without touching it.
+- [x] Force models one at a time, each with tests, in this order: buoyancy, then hull drag and planing lift, fin, sail and apparent wind, rake steering, and the sailor's weight and centre-of-mass shift. Example tests:
   - At rest, the submerged volume equals total mass ÷ water density (±2 %), level in pitch and roll.
   - Tilted and released, the board rights itself.
   - Apparent wind is correct for a few hand-calculated cases, and the AWA sign follows D4.
   - With wind from starboard the sail sits to port, and the other way round.
   - Fin: no side force at zero slip; the force grows with slip and stalls past the stall angle; induced drag grows with the square of lift.
   - Savitsky planing lift depends on speed and trim, not on how deep the board sits (the Unity "trampoline" lesson).
-- [ ] `WindsurferSim`, which combines everything. `step(dt, controls)` takes controls for sheet (0 to 1), rake (−1 to 1) and weight shift, and a `Telemetry` snapshot reports speed, heading, TWA, AWA, sail angle, forces, submersion, planing ratio, pitch and roll.
-- [ ] Behaviour tests on flat water with fixed controls:
+- [x] `WindsurferSim`, which combines everything. `step(dt, controls)` takes controls for sheet (0 to 1), rake (−1 to 1) and weight shift, and a `Telemetry` snapshot reports speed, heading, TWA, AWA, sail angle, forces, submersion, planing ratio, pitch and roll.
+- [x] Behaviour tests on flat water with fixed controls:
   - from standstill on a beam reach, the board sets off and accelerates
   - head to wind, it stops making way
   - rake back heads up and rake forward bears away, on both tacks
-- [ ] `tools/simulate.sh <scenario>`: runs a named scenario headless and writes CSV telemetry to `.sim_output/`, so the AI can analyse numbers and draw charts. Scenarios are GDScript files in `Game/dev/scenarios/`.
+- [x] `tools/simulate.sh <scenario>`: runs a named scenario headless and writes CSV telemetry to `.sim_output/`, so the AI can analyse numbers and draw charts. Scenarios are GDScript files in `Game/dev/scenarios/`.
 
 **Done when:** `tools/test.sh` and `tools/check.sh` are green, and the unit tests run in under 10 seconds.
 **Stop:** plain-language summary of what the simulation can do, with a few numbers (speed on a beam reach, how deep the board floats at rest).

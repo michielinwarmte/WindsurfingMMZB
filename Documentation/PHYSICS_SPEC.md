@@ -64,6 +64,7 @@ The **worked examples and hand-calculated test values in sections 2 to 7 and 11 
 - [14. Default configuration and real-world plausibility checks](#14-default-configuration-and-real-world-plausibility-checks)
 - [15. Decisions under the simulation principle, and the checks still to run](#15-decisions-under-the-simulation-principle-and-the-checks-still-to-run)
 - [16. Tuning log](#16-tuning-log)
+- [17. Phase 2 implementation notes](#17-phase-2-implementation-notes)
 
 ---
 
@@ -5827,4 +5828,128 @@ How to add a row: date, session, the config file and field (or the section and f
 
 | Date | Session | Where | Old | New | Motivated by | Why this value | Fudge ID |
 |---|---|---|---|---|---|---|---|
+| 2 Oct 2026 | 30 | section 5, `hull_model.gd`: planing lift | Savitsky lift at one point (the centre of pressure), angle of attack from that point's velocity | Strip model: slender-body (2D+t) planing theory over 12 strips of the wet bottom, scaled to Savitsky's lift, root force spread to Savitsky's centre of pressure (17.2) | The frozen-sailor scenario: with the sailor's fore-and-aft reflex held still, the point model's pitch oscillation grew to 20 to 30 degrees in three cycles and the board capsized (`tools/simulate.sh beam_reach --freeze=40`) | A point model has no pitch damping from the water flowing aft under the hull; the strip model has it and the same run is steady | |
+| 2 Oct 2026 | 30 | section 5, `hull_model.gd`: planing beam | Full board width 0.72 m | Mean width of the wet part (the tail is 0.50 m wide) | Same investigation | The lift of a short wet length near the tail used a width the tail does not have | |
+| 2 Oct 2026 | 30 | section 5, `hull_model.gd`: wet span | Wet length measured from the transom; no lift with a dry transom | Wet span between the first and last wet row, interpolated; the aft wet end acts as the transom | Same investigation: in the bow-down phase of the oscillation the tail was dry and the board had no dynamic lift at all | A nose-down board planes on its middle and its nose rocker | |
+| 2 Oct 2026 | 30 | section 5 and 6, `sim_rigid_body.gd`: heave added mass and pitch added inertia | None | rho pi b^2 / 8 per metre of wet bottom (about 200 kg at 1.2 m wet length) along the body's up axis, and its moment about the centre of mass in pitch | Check T5 | Strip theory; the same water whose momentum change is the planing lift | |
+| 2 Oct 2026 | 30 | section 5, `hull_model.gd`: spray-root advance | None | Root force times (1 + advance / u), advance = sinking speed / tan(bottom angle), held within 0 to 2 (A-01) | Same investigation | Wagner: a sinking hull engages new water faster; a rising one lets it go | |
+| 2 Oct 2026 | 30 | section 7, `sailor_config.gd`: legs | Rigid sailor | Damped spring, natural frequency 2.0 Hz, damping ratio 0.4, travel 0.25 m | The bounce of a planing board at 1.6 Hz went straight into a rigid sailor | Measured values for a standing person (Matsumoto and Griffin 1998) | |
+| 2 Oct 2026 | 30 | section 7, `sailor_config.gd`: pitch reflex | None | 0.5 m of fore-and-aft weight shift per rad/s of pitch rate, within -0.3 to +0.5 m, at the lean rate | Porpoising before the strip model; kept because sailors do it | A person's answer to a bouncing nose; not needed for stability since the strip model | |
+| 2 Oct 2026 | 30 | section 7, `sailor_config.gd`: hang-back | None | drive_n x 1.0 m / (m g), at most 0.5 m | The board trimmed bow-down at speed with the sailor upright | Torque balance of a body hanging on the boom at 1 m above the feet | |
+| 2 Oct 2026 | 30 | section 7, `sailor_config.gd`: windage | None | cd x A = 0.5 m2 at the sailor's position | The rig's lift-to-drag ratio came out at 11 | A standing person in a wetsuit (0.6 to 0.8 m2 frontal area, cd about 0.8) | |
+| 2 Oct 2026 | 30 | section 7, `sailor_config.gd`: lean | Legacy 20 degrees of weight shift | 1.0 m outboard at full lean, centre of mass 0.5 m lower | Capsize at 6 to 9 m/s with less | A hooked-in sailor stretched out has their centre about a metre outboard | |
+| 2 Oct 2026 | 30 | section 7, `sailor_config.gd`: stance | One position | 0.15 m aft at rest to 0.60 m aft (the back straps) between 3.5 and 7 m/s | Rounding up from standstill | Where sailors stand | |
+| 2 Oct 2026 | 30 | section 2, `sail_config.gd`: rig lean | Rig vertical | Rig leaned to windward with the sailor, 25 degrees at full lean; the lift tilts with it | Rounding up from standstill and the capsizes | Sailors lean the rig to windward; it brings the centre of effort back over the board and gives the lift an upward part | |
+| 2 Oct 2026 | 30 | section 2, `sail_config.gd`: `cd_parasitic` | 0.015 | 0.04 | Rig lift-to-drag of 11 | A complete rig with mast, boom and cambered cloth, not a bare sail | |
+| 2 Oct 2026 | 30 | section 2, `sail_config.gd`: `mast_foot_local.z` | -0.05 m (section 14) | -0.10 m (0.10 m forward of the centre) | Rounding up from standstill | Within the real mast-track range of 0.05 to 0.15 m forward (section 2, OPEN 2.5) | |
+| 2 Oct 2026 | 30 | section 3, `sail_config.gd`: `max_rake_deg` | 15 | 25 | Course holding needed more than 15 degrees at low speed | Sailors swing the rig through about 25 degrees each way | |
+| 2 Oct 2026 | 30 | section 2, formula 2.2 | n0 = r (sail_side cos theta) - f sin theta | n0 = r (-sail_side cos theta) - f sin theta | `test_sail.gd::test_mirror_symmetry` | The spec's x-sign was wrong on port tack; the two tacks were not mirror images | |
+| 2 Oct 2026 | 30 | section 4, `fin_config.gd`: `cd_plate` | None | 1.2 beyond the stall, blended in with the slip angle | Rounding up from standstill: a sideways-sliding board met no resistance from the fin | A fin at 90 degrees is a flat plate | |
+| 2 Oct 2026 | 30 | section 6, `board_config.gd`: rocker line | Quadratic rocker over each half of the board | Flat planing section, 1 cm tail kick over 0.35 m, 8 cm nose rocker over 0.9 m | Bow-down trim at speed with the quadratic line | The rocker line of a freeride board | |
+| 2 Oct 2026 | 30 | section 6, `buoyancy_model.gd`: yaw added inertia | None | The immersed hull's added inertia in yaw | Rounding up from standstill was too fast | Water turns with the hull | |
 | 2 Oct 2026 | 29 | (none yet) | | | Phase 1 wrote the starting values; see sections 11 and 14 | | |
+
+---
+
+## 17. Phase 2 implementation notes
+
+### Purpose
+
+What the code in `Game/sim/` does where it goes beyond, or differs from, sections 0 to 9, written for whoever reads this document next to the code. Everything here is physics, not tuning (plan decision D8): each change answers a question of the form "what does the real thing do?", and the few places where the code guards a formula are listed in 17.6 with their reasons. The tuning log (section 16) has one row per change.
+
+### 17.1 What was built
+
+- **Rigid body** (`sim_rigid_body.gd`): six degrees of freedom, semi-implicit Euler, four substeps per 1/60 s tick (240 Hz), world-frame angular velocity with the gyroscopic term, orientation advanced by a rotation about the angular velocity axis, centre-of-mass state with the board origin at `com_offset_body`. Two additions for the sailor and the water: an added mass that acts only along the body's up axis (17.2), and an internal velocity of the board structure relative to the centre of mass (17.3).
+- **Mass model** (`mass_model.gd`): three lumps as section 7 says (board box, rig rod, sailor cylinder). The sailor's lump moves with stance, lean, hang-back and knee bend.
+- **Buoyancy** (`buoyancy_model.gd`): section 6 on a 7 x 3 grid, with a freeride rocker line (flat planing section, 1 cm tail kick over the last 0.35 m, 8 cm nose rocker over the last 0.9 m) instead of the legacy quadratic line, the per-point heave damping of 6.9, and the yaw added inertia of the immersed hull.
+- **Hull** (`hull_model.gd`): ITTC friction, the residuary hump (9 % of the carried weight at Froude 0.55, width 0.25), sideways drag row by row, and the planing lift as a strip model (17.2).
+- **Fin** (`fin_model.gd`): section 4, plus flat-plate drag (cd 1.2) blended in toward 90 degrees of slip, because a fin at 90 degrees is a plate.
+- **Sail** (`sail_model.gd`): section 2 with three corrections. The normal `n0 = r (-sail_side cos theta) - f sin theta` (the spec's 2.2 had the wrong x-sign on port tack; the mirror-symmetry test caught it). `cd_parasitic = 0.04` for a complete rig (the spec's 0.015 is a bare clean sail and gave a lift-to-drag ratio of 11, which rigs do not reach). And the rig is leaned to windward with the sailor (25 degrees at full lean): the lift vector tilts with it, which brings the centre of effort back over the board and gives the lift an upward part. This is what real sailors do, and without it the board rounded up as soon as the sailor hiked.
+- **Sailor** (`windsurfer_sim.gd`, `sailor_config.gd`): part of the body, as section 15 decided, and behaving like a person (17.3).
+- **Wind** (`wind_field.gd`): section 8 (power law 0.11 to the 10 m reference; gusts and shifts implemented, off by default).
+- **Autopilot** (`autopilot.gd`): a sailor for tests and scenarios. It only does what a sailor does with their arms: rake to hold a wind angle (with yaw-rate damping), bear away to 70 degrees until the fin has 5 m/s to work with, trim the sheet to 15 degrees of angle of attack, and ease the sheet when the hike is used up or the board heels more than 5 degrees to leeward.
+- **Scenario tool**: `tools/simulate.sh <scenario> [seconds] [--wind_kt= --twa= --heading= --every= --freeze=]` writes `.sim_output/<scenario>.csv` with 48 columns. `--freeze=<s>` holds the sailor's fore-and-aft position from that time on, which is how 17.2 was diagnosed.
+
+### 17.2 Planing lift: why section 5's point model was replaced
+
+Section 5 applies Savitsky's lift at his centre of pressure with the angle of attack taken from the velocity of that one point. Built that way, the board planed at the right speed but **porpoised**. With the sailor's fore-and-aft reflex active it showed as a bounce of about 2 degrees of pitch and 8 cm of heave at 1.6 Hz on a beam reach; with that reflex held still (`--freeze=40`) the pitch oscillation grew from 2 to 11 to 18 to 24 degrees in three cycles of about a second, the board left the water, and it capsized. Adding, one at a time, a Wagner build-up lag, the angle of attack at the spray root, the sailor's leg suspension and the wet bottom's added mass did not cure it; some made it worse. Each was a real effect but none was the missing one.
+
+The missing one is the **pitch damping of a planing surface**. In the slender-body ("2D+t") theory of planing (Wagner; Zarnick 1978), each metre of bottom of width `b` carries an added mass of water `m' = rho pi b^2 / 8`, and the force on a strip is the rate at which the water under it gains downward momentum as it flows aft under the hull at the forward speed `u`:
+
+```
+f_strip = -u * m' * dV/dx * dx          along the hull (V = the bottom's velocity into the water)
+f_root  =  u * m' * V_root              at the spray root, where still water first meets the bottom
+```
+
+A bow-up pitch rate pushes the stern down, so `V` grows toward the stern, `dV/dx` is negative, and every strip pushes up a little more: a nose-down moment that opposes the rate. A point model cannot contain this term. With it, the frozen-sailor run is steady, and so are all three courses.
+
+What the code does (`_apply_planing_lift`):
+
+1. The wet span of the centreline between the first and last wet grid row (both ends interpolated). It usually starts at the transom; when the tail has lifted clear and the nose is down, it is the middle of the hull and the nose rocker, and the aft wet end plays the transom's part (the water leaves the bottom there as it would at a transom).
+2. Twelve strips: position on the rocker line, local bottom normal (from the rocker slope), velocity into the water `V` from the body's velocity at that point (which contains the pitch, the heave and the pitch rate) and the water's own velocity, and `m'` from the local width (the planform taper of the buoyancy grid).
+3. The convective force per strip `-u m' dV/dx dx`, by finite differences along the hull; plus `-u V dm'/dx dx` where the hull widens going aft (the nose) and nothing where it narrows (the water lets go rather than pulling); times a transom relief that falls linearly to zero over the last half beam before the aft wet end (A-02).
+4. The spray-root force `u m' V_root` times the advance factor `1 + (sinking speed / tan(bottom angle)) / u`, held within 0 and 2 (A-01): a sinking hull's root runs forward along the bottom and engages new water faster; a rising hull's root retreats.
+5. A three-dimensional correction: slender-body theory is two-dimensional and gives a flat plate `m' u^2 trim`; Savitsky measured real plates. Their ratio at the geometric trim (pitch + chord angle + camber angle of the wet bottom, or 1 degree, whichever is larger) scales all the forces (A-04). For a flat plate at steady trim the total is Savitsky's lift exactly (`test_hull.gd::test_planing_lift_matches_savitsky_at_a_known_state`, within 2 %).
+6. The root force is spread over the strips behind the root as a triangle whose centroid is Savitsky's centre of pressure (A-03), so the steady moment is the measured one.
+7. No strip may pull (A-05). Each force acts normal to the local bottom, so the pressure drag follows from the angles (`planing_drag_n`), and the centre of pressure is reported from the distribution.
+
+Added water: the same strips give the hull's **heave added mass** (about 200 kg at 1.2 m of wet length, more than twice the windsurfer's own mass) and its **pitch added inertia** about the centre of mass. The body carries the heave added mass along its own up axis only (A-08): `a = F / m - up * (F . up) * added / (m (m + added))`.
+
+Pitch damping check, flat plate at 7 m/s and 4 degrees pitching bow-up at 0.3 rad/s: the lift grows and the moment change is nose-down; nose-down rate: the opposite (`test_bow_up_pitch_rate_is_damped_by_the_water_under_the_hull`).
+
+### 17.3 The sailor is part of the simulation, not of the controller
+
+A windsurfer cannot be balanced by anyone holding still; the sailor's reflexes are part of what makes it a vehicle. They live in the simulation and are always on, in every control mode; the player gives intentions (lean more, move back, sheet in) and the simulated body does the fast part, as a real body does without thinking:
+
+- **Stance**: the weight moves from 0.15 m aft of the centre (by the mast foot) to 0.60 m aft (the back straps) between 3.5 and 7 m/s, at 1 per second.
+- **Lean**: up to 1.0 m outboard with the centre of mass 0.5 m lower, at 2 per second. The balance reflex adds `(sail heeling moment / maximum righting moment) - 4.0 x heel - 0.8 x heel rate` to the commanded lean.
+- **Hang-back**: the boom pulls the sailor forward at about 1 m above the feet, and the sailor leans back until the weight balances it: `drive x 1.0 m / (m g)`, at most 0.5 m. The pitch reflex moves it forward by 0.5 m per rad/s of nose-up pitch rate (and back for nose-down), within -0.3 m. Not needed for stability since 17.2; kept because sailors do it.
+- **Legs**: a standing person on a moving floor is a mass on a damped spring (2.0 Hz, damping ratio 0.4, Matsumoto and Griffin 1998). The knee bend is a state of its own, driven by the acceleration the sailor's position would get if everything were rigid, and the board shifts the other way by the sailor's share of the mass so that the centre of mass of the whole keeps its path. Travel 0.25 m either way (A-10). On flat water it does little; it exists for chop and for landings.
+- **Windage**: `cd x A = 0.5 m2` at the sailor's position.
+- **Rig lean**: 25 degrees to windward at full lean, as above.
+
+The slow moves (stance, lean, hang-back) shift the mass without the momentum of the move (the board stays where it is and the centre of mass jumps; A-09). The knee flex keeps momentum because it is fast.
+
+### 17.4 What the simulation does now (18 kt at 10 m, 16 kt at the sail; 75 kg sailor, 120 L board, 6.5 m2 sail, 365 cm2 fin)
+
+| Course | Speed | VMG | Pitch | Heel | Planing ratio | Submersion | Leeway (fin slip) |
+|---|---|---|---|---|---|---|---|
+| Beam reach, TWA 99 degrees | 35.9 km/h, 19.4 kt | | 1.9 degrees | 7.7 degrees to leeward | 0.61 | 16 % | 2.4 degrees |
+| Close-hauled, TWA 52 degrees | 22.7 km/h, 12.3 kt | 3.4 m/s = 6.6 kt | 1.5 degrees | 7.4 degrees to leeward | 0.45 | 27 % | 5.5 degrees |
+| Broad reach, TWA 136 degrees | 21.6 km/h, 11.7 kt | | 4.4 degrees | 1.7 degrees to leeward | 0.65 | 26 % | 1.4 degrees |
+
+All three are steady after about 20 s (pitch standard deviation below 0.01 degrees over the last 20 s) and identical on both tacks. With nobody steering (`fixed_controls`), the board rounds up and stops, as a real board does. At rest it displaces 89.8 L and floats level. Plausibility: 19 to 20 kt on a beam reach in 16 kt of wind at the sail is on the fast side for a 6.5 m2 freeride rig (real sailors see 18 to 23 kt); 6.6 kt of upwind VMG at 52 degrees is what a freeride board does. The broad reach is slower than the beam reach because the apparent wind drops, which is right.
+
+### 17.5 The checks of section 15 so far
+
+- **T1** passes: trim at speed 1.5 to 4.4 degrees bow up, no porpoising since 17.2 (also with the sailor's fore-and-aft reflex frozen).
+- **T2** not measured yet: the planing ratio passes 0.5 about 5 s after the start on a beam reach; the speed at that moment is a Phase 4 measurement.
+- **T3** passes in shape: the hump sits at Froude 0.55 (test), and the planing resistance is the pressure drag of the strips plus friction.
+- **T4** passes: a steady heel of 7 to 8 degrees to leeward and no capsize in 15 to 18 kt, with the sailor's lean and the sheet doing the work.
+- **T5** answered: the drop test settles (test); a heave added-mass term is needed, and it is in (17.2).
+- **T6** passes: leeway 2.4 degrees on a reach, 5.5 degrees close-hauled.
+- **T7** passes for the rake (the steering test holds on both tacks with the sheet trimmed); steering with the sheet eased is not tested.
+- **T8** passes (profile test); the HUD part is Phase 3.
+- **T9**, **T10**: Phases 5 and 4.
+
+### 17.6 Approximations and guards in the Phase 2 code
+
+Not fudges in the sense of section 12 (nothing here hides a symptom or lacks a mechanism), but places where the code approximates, and what would replace each.
+
+| ID | Where | What | Why | What would replace it |
+|---|---|---|---|---|
+| A-01 | `hull_model.gd` | Spray-root advance factor held within 0 and 2; bottom angle floored at 1 degree | The Wagner flux formula is singular as the bottom becomes parallel to the surface (a flat slam); the added mass in the body carries the slam beyond that | A water-entry (Wagner) solution per strip |
+| A-02 | `hull_model.gd` | Transom relief: the convective strip force falls linearly to zero over the last half beam before the aft wet end | 2D+t has no pressure relief at a transom; this is the usual near-transom correction (Garme 2005 uses a similar one) | A 3D transom solution |
+| A-03 | `hull_model.gd` | The root force spread as a triangle whose centroid is Savitsky's centre of pressure | The theory puts it at the stagnation line; measurements put the centre of pressure at 0.70 to 0.75 of the wet length; a deadrise section would spread it by itself | Sectional added mass that grows with immersion (chines-dry phase) |
+| A-04 | `hull_model.gd` | Three-dimensional factor evaluated at max(geometric trim, 1 degree) | Avoids 0/0 at zero trim; the ratio varies slowly (about trim^0.1 x sqrt(lambda)) | Nothing needed |
+| A-05 | `hull_model.gd` | No strip may pull | A planing bottom ventilates rather than sucking | Nothing needed |
+| A-06 | `hull_model.gd` | The wet bottom's camber as a thin-airfoil arc (2 x sag / length) in the reference trim | No planing-camber data exist for boards | Measurements of rockered planing plates |
+| A-07 | `hull_model.gd`, `buoyancy_model.gd` | 12 strips; a 9-point width average; the wet span from 7 grid rows with interpolation | Resolution choices; the 0.4 m row spacing limits how finely the wet length is known | More rows (costs little) |
+| A-08 | `sim_rigid_body.gd` | Added mass along the body's up axis and in pitch only; no heave-pitch coupling term, no roll added inertia | Keeps the integrator a rigid body with one correction | A full added-mass matrix |
+| A-09 | `windsurfer_sim.gd` | Stance, lean and hang-back shift the mass without the momentum of the move | Slow moves | Treating the sailor as a second body |
+| A-10 | `windsurfer_sim.gd` | The knee bend stops at 0.25 m either way without energy accounting | Legs have a range | Nothing needed |
+| A-11 | `fin_model.gd` | Flat-plate drag blended in toward 90 degrees of slip | A fin at 90 degrees is a plate; the blend is a shape choice | Measured post-stall data of a fin |
+| A-12 | `sail_model.gd`, `windsurfer_sim.gd` | The rig lean tied to the sailor's lean (25 degrees at full lean) | A sailor's habit written as a fixed coupling | A rig-lean control of its own |
+| A-13 | `hull_model.gd` | The residuary hump (9 % at Froude 0.55, width 0.25) | The one fitted curve in the hull model, as section 15 says | A wave-resistance calculation |
+| A-14 | `buoyancy_model.gd` | Heave damping 800 + 800 (6.9) that fades with the wet share | Stands in for wave radiation at rest | Radiation damping from the wave model (Phase 5) |
+

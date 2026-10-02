@@ -15,6 +15,31 @@ Template for new entries:
 
 ---
 
+## 2 October 2026 - Session 30: Phase 2, the headless simulation
+
+**Phase:** 2, done. Same day as Session 29, after the team asked for simulated physics instead of tuned limits (decision D8).
+
+**Done:**
+- Built the whole simulation in `Game/sim/` (14 scripts, no Nodes): a rigid body with its own integrator, the mass model, buoyancy on a grid with a real rocker line, the hull (friction, wave hump, sideways drag, planing lift), the fin, the sail, the wind, the water, the sailor and the `WindsurferSim` that combines them; six config resources in `Game/config/`; 92 unit tests in 11 files; a headless scenario tool `tools/simulate.sh` that writes CSV telemetry; and an autopilot that plays the sailor in tests and scenarios.
+- Every number comes from real equipment or real physics; nothing is capped to hit a target. The spec's new section 17 explains each choice; section 16 (the tuning log) has one row per change.
+- The hard part was planing. The spec's Savitsky lift at one point made the board porpoise (bounce in pitch), and the sailor's reflexes were hiding it. Holding the sailor still in a scenario showed the board pitching to 24 degrees and capsizing on its own. The fix was physics, not a damper: the planing lift is now computed strip by strip with the slender-body theory of planing, which contains the pitch damping that the water gives a planing hull, matched to Savitsky's measured lift. Section 17.2 of the spec tells the story.
+- Along the way, several real effects that were missing were added: the rig leaned to windward with the sailor, the sailor hanging back against the sail's pull, the sailor's legs as a suspension, the sailor's windage, the water's added mass in heave and pitch, flat-plate drag of the fin at large slip, a freeride rocker line, and a planing beam that follows the board's taper.
+- Numbers (18 kt at 10 m, 16 kt at the sail): beam reach 35.9 km/h (19.4 kt), close-hauled 22.7 km/h at 52 degrees to the wind with 6.6 kt of upwind VMG, broad reach 21.6 km/h; steady, identical on both tacks; the board rounds up and stops when nobody steers; at rest it displaces 89.8 L and floats level.
+
+**Verified:**
+- `tools/test.sh`: 92/92 pass in about 8 s. `tools/check.sh`: 50 files, 0 failed.
+- Scenarios `beam_reach`, `close_hauled`, `broad_reach` on both tacks, `fixed_controls`, and `beam_reach --freeze=40` (sailor held still fore and aft): all steady.
+- Not verified: how it feels to sail (no visuals yet), the planing-onset speed (check T2), steering with the sheet eased (part of T7), and anything on waves.
+
+**Decisions:**
+- The sailor's reflexes (balance, hang-back, legs, pitch reflex) live in the simulation and stay on in every control mode; the player gives intentions. A windsurfer cannot be balanced by someone holding still (spec 17.3).
+- The planing model is the strip model of spec 17.2; the point model of section 5 is superseded.
+- Added mass, legs and the other additions are physics the spec had left out, not tuning; recorded in the tuning log with their sources.
+
+**Next:** Phase 3, the playable prototype on flat water: input map, the windsurfer scene that steps the simulation in `_physics_process`, controller, cameras, HUD, main scene, screenshots.
+
+---
+
 ## 2 October 2026 - Session 29: Physics spec from the Unity version
 
 **Phase:** 1, done. Started on 28 September 2026, finished on 2 October after the session's token limit interrupted the first attempt.
