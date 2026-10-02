@@ -27,8 +27,8 @@ func _ready() -> void:
 	_detail = _label(font, 15, Vector2.ZERO)
 	_panel.add_child(_detail)
 
-	_help = _label(font, 13, Vector2(16.0, 690.0))
-	_help.text = "W/S sheet   A/D turn (beginner) or weight (advanced)   Q/E rake   Left/Right rig tilt (advanced)   Space tack/gybe   T auto-sheet   Tab mode   1-4 camera   R reset   Esc pause   F1 panel"
+	_help = _label(font, 12, Vector2(16.0, 692.0))
+	_help.text = "W/S sheet  A/D turn (beginner) / weight (advanced)  Q/E rake  Left/Right rig tilt (adv.)  Space tack/gybe  T auto-sheet  Tab mode  1-4 camera  R reset  Esc pause  F1 panel"
 	add_child(_help)
 
 	_rose = WindRose.new()
