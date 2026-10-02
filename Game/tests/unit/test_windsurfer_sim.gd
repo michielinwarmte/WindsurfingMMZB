@@ -114,6 +114,62 @@ func test_autopilot_sheets_for_the_most_drive_when_it_knows_the_sail() -> void:
 	assert_lt(pilot.best_alpha_deg(deg_to_rad(8.0)), reaching, "very close to the wind the sail is feathered")
 
 
+## Runs the simulation with the player's controller reading the keys.
+func _play(sim: WindsurferSim, controller: PlayerController, controls: SimControls, seconds: float) -> void:
+	for i: int in int(seconds / DT):
+		controller.update(sim.telemetry, controls, DT)
+		sim.step(DT, controls)
+
+
+func _beginner_sim(heading_deg: float) -> Array:
+	var sim: WindsurferSim = _sim(18.0)
+	sim.reset(Vector3.ZERO, deg_to_rad(heading_deg))
+	var controller: PlayerController = PlayerController.new()
+	controller.auto_sheet_pilot.sail = sim.sail
+	return [sim, controller, _eased()]
+
+
+func _turned_right_deg(sim: WindsurferSim, controller: PlayerController, controls: SimControls, action: String, seconds: float) -> float:
+	var before: float = sim.telemetry.heading_deg
+	Input.action_press(action)
+	_play(sim, controller, controls, seconds)
+	Input.action_release(action)
+	return wrapf(sim.telemetry.heading_deg - before, -180.0, 180.0)
+
+
+func test_beginner_sails_off_by_itself_and_turns_both_ways_when_planing_on_both_tacks() -> void:
+	for heading: float in [180.0, 0.0]:
+		var parts: Array = _beginner_sim(heading)
+		var sim: WindsurferSim = parts[0]
+		var controller: PlayerController = parts[1]
+		var controls: SimControls = parts[2]
+		_play(sim, controller, controls, 8.0)
+		assert_lt(absf(wrapf(sim.telemetry.heading_deg - heading, -180.0, 180.0)), 25.0, "the heading hold keeps it from rounding up at low speed (start %s)" % heading)
+		_play(sim, controller, controls, 17.0)
+		assert_gt(sim.telemetry.speed_ms, 7.0, "planing without touching a key (start %s)" % heading)
+		assert_gt(_turned_right_deg(sim, controller, controls, "steer_right", 3.0), 15.0, "D turns right when planing (start %s)" % heading)
+		assert_eq(sim.sailor_state, WindsurferSim.SailorState.SAILING, "without falling")
+		_play(sim, controller, controls, 2.0)
+		assert_lt(_turned_right_deg(sim, controller, controls, "steer_left", 3.0), -15.0, "A turns left when planing (start %s)" % heading)
+		assert_eq(sim.sailor_state, WindsurferSim.SailorState.SAILING, "without falling")
+
+
+func test_beginner_steers_and_holds_course_dead_downwind() -> void:
+	# Heading East with the wind from the West: a dead run, where the rake has no side force
+	# to work with and the rig tilt and the rail do the turning.
+	var parts: Array = _beginner_sim(90.0)
+	var sim: WindsurferSim = parts[0]
+	var controller: PlayerController = parts[1]
+	var controls: SimControls = parts[2]
+	_play(sim, controller, controls, 25.0)
+	assert_lt(absf(wrapf(sim.telemetry.heading_deg - 90.0, -180.0, 180.0)), 15.0, "held the run for 25 s")
+	assert_gt(sim.telemetry.speed_ms, 3.0, "and made way")
+	assert_gt(_turned_right_deg(sim, controller, controls, "steer_right", 4.0), 15.0, "D turns right on a run")
+	_play(sim, controller, controls, 2.0)
+	assert_lt(_turned_right_deg(sim, controller, controls, "steer_left", 4.0), -15.0, "A turns left on a run")
+	assert_eq(sim.sailor_state, WindsurferSim.SailorState.SAILING, "without falling")
+
+
 func test_beam_reach_sets_off_and_planes() -> void:
 	var sim: WindsurferSim = _sim()
 	sim.reset(Vector3.ZERO, deg_to_rad(180.0))  # heading South, wind from the West: starboard tack
@@ -162,6 +218,8 @@ func _twa_change_with_rake(start_heading_deg: float, rake: float) -> float:
 	var pilot: Autopilot = _pilot(90.0)
 	_run(sim, 20.0, controls, pilot)  # get going on a beam reach
 	pilot.hold_course = false
+	controls.rig_tilt = 0.0  # the pilot leaves its helm behind; this test is about the rake alone
+	controls.lean = 0.0
 	var twa_before: float = sim.telemetry.twa_deg
 	controls.rake = rake
 	_run(sim, 4.0, controls, pilot)

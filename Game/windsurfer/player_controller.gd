@@ -5,13 +5,15 @@ extends RefCounted
 ## sailor's hands and feet, at the speed a person can.
 ##
 ## Beginner mode: A/D turn the board left and right on the screen, whichever tack you are
-## on. The controller works out whether that means raking the rig back (head up) or
-## forward (bear away). With no key pressed it holds the heading with the rig, as a sailor
-## does without thinking (a board left alone rounds up into the wind). Balance is
-## automatic. Space tacks or gybes for you.
-## Advanced mode: Q/E rake the rig forward and back as a real sailor does, A/D move the
-## sailor's weight to port and starboard on top of the automatic balance reflex. Space
-## still helps with the tack.
+## on and however fast you go. The keys ask for a turn rate, and a feedback loop on the
+## measured yaw rate finds the helm that gives it, the way a sailor steers by feel: rig
+## back or forward, rig tilted toward the outside of the turn, weight on the inside rail,
+## all together (see Helm). With no key pressed the loop holds the heading, as a sailor does
+## without thinking (a board left alone rounds up into the wind). Balance is automatic.
+## Space tacks or gybes for you.
+## Advanced mode: Q/E rake the rig forward and back, Left/Right tilt it sideways and A/D
+## move the sailor's weight to port and starboard, all raw, on top of the balance reflex.
+## Space still helps with the tack.
 ## W/S sheet in and out in both modes; T toggles an automatic sheet, which is on by default
 ## in beginner mode (W/S then override it for a few seconds). In beginner mode the sailor
 ## also eases the sheet by themselves when the pull is more than they can hold, which is
@@ -33,13 +35,20 @@ var ease: float = 0.0
 ## second), let it come back to neutral, and shift weight (full lean per second).
 var sheet_rate_per_s: float = 0.6
 var rake_rate_per_s: float = 2.0
-var rake_return_rate_per_s: float = 2.0
 var lean_rate_per_s: float = 2.0
-## Beginner steering is speed-sensitive, like a car's: above this speed the rake that A/D
-## command shrinks in proportion, because a full swing of the rig at planing speed turns
-## the board faster than the fin can hold (a spin-out). Advanced mode has the full swing.
-var full_rake_below_ms: float = 4.0
-var min_rake_share: float = 0.3
+## Beginner steering: the turn rate a held key asks for, the rate the heading hold asks for
+## per degree of error (up to the same limit), the loop gains (helm per degree per second
+## of rate error now, and per degree of accumulated error: the trim that holds a course,
+## which at planing speed is a lot of rake back), the share of weight put on the inside
+## rail, and how fast the sailor moves the helm.
+var turn_rate_dps: float = 30.0
+var hold_rate_per_deg: float = 1.0
+var rate_gain: float = 0.01
+var rate_integral_gain: float = 0.05
+var lean_share: float = 0.4
+var helm_rate_per_s: float = 2.0
+## The last helm, -1 (full left) to +1 (full right), for the HUD.
+var helm_right: float = 0.0
 ## A manoeuvre that takes longer than this is abandoned (the rig goes back to neutral).
 var manoeuvre_timeout_s: float = 10.0
 ## After a sheet key the auto-sheet stays out of the way for this long.
@@ -52,11 +61,9 @@ var ease_heel_deg: float = 10.0
 var ease_rate_per_s: float = 1.0
 var ease_recovery_rate_per_s: float = 0.4
 
-## Beginner mode holds the heading when no steering key is pressed: rake per degree of
-## heading error, and per degree per second of yaw rate against overshoot.
+## Beginner mode holds the heading when no steering key is pressed.
 var hold_heading: bool = true
-var hold_gain_per_deg: float = 0.08
-var hold_yaw_damping: float = 0.02
+var _helm_trim: float = 0.0
 ## The autopilot that trims the sheet when auto_sheet is on. Give it the simulation's sail
 ## (auto_sheet_pilot.sail) and it sheets for the most drive instead of a fixed angle.
 var auto_sheet_pilot: Autopilot = Autopilot.new()
@@ -109,46 +116,46 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		ease = 0.0
 	controls.sheet = clampf(wanted_sheet - ease, 0.0, 1.0)
 
-	# Rake: positive = rig back = head up (toward the wind), on either tack.
+	# Steering.
 	var steer_key: float = _axis("steer_right", "steer_left")  # +1 = turn right on the screen
+	var tilt_key: float = _axis("tilt_right", "tilt_left")  # +1 = mast top toward starboard
 	var rake_key: float = _axis("rake_back", "rake_forward")  # +1 = rig back
-	var rake_command: float = 0.0
 	if manoeuvre != Manoeuvre.NONE:
-		rake_command = _manoeuvre_rake(telemetry, dt)
+		var turn: float = _manoeuvre_turn(telemetry, dt)
+		Helm.steer(controls, turn, tack_sign(telemetry), lean_share, dt, helm_rate_per_s)
+		helm_right = turn
 	elif mode == Mode.BEGINNER:
-		var authority: float = clampf(full_rake_below_ms / maxf(telemetry.speed_ms, 0.1), min_rake_share, 1.0)
-		if rake_key != 0.0:
-			rake_command = rake_key
-			_heading_held = false
-		elif steer_key != 0.0:
-			rake_command = steer_key * tack_sign(telemetry) * authority
-			_heading_held = false
-		elif hold_heading:
-			rake_command = _heading_hold_rake(telemetry)
+		_steer_beginner(telemetry, controls, clampf(steer_key + tilt_key, -1.0, 1.0), dt)
 	else:
-		rake_command = rake_key
+		# Raw controls: rake comes back to neutral when Q/E are released, like the others.
+		controls.rake = move_toward(controls.rake, rake_key, rake_rate_per_s * dt)
+		controls.rig_tilt = move_toward(controls.rig_tilt, tilt_key, helm_rate_per_s * dt)
+		controls.lean = move_toward(controls.lean, steer_key, lean_rate_per_s * dt)
+		helm_right = 0.0
 		_heading_held = false
-	var rate: float = rake_rate_per_s if rake_command != 0.0 else rake_return_rate_per_s
-	controls.rake = move_toward(controls.rake, rake_command, rate * dt)
-
-	# Weight: in advanced mode A/D move the sailor to port and starboard (right on the
-	# screen is starboard, because the follow camera looks forward); the balance reflex
-	# adds what is needed to stay upright in both modes.
-	var lean_command: float = steer_key if mode == Mode.ADVANCED else 0.0
-	controls.lean = move_toward(controls.lean, lean_command, lean_rate_per_s * dt)
 	controls.balance_reflex = true
 
 
-## The rake that brings the board back to the heading it had when the keys were released.
-## A right turn is heading up on starboard tack and bearing away on port tack, hence the
-## tack sign; the yaw-rate term stops it overshooting.
-func _heading_hold_rake(telemetry: Telemetry) -> float:
-	if not _heading_held:
-		_held_heading_deg = telemetry.heading_deg
-		_heading_held = true
-	var turn_right_deg: float = wrapf(_held_heading_deg - telemetry.heading_deg, -180.0, 180.0)
-	var heading_up_rate: float = -telemetry.yaw_rate_dps * tack_sign(telemetry)
-	return clampf(hold_gain_per_deg * turn_right_deg * tack_sign(telemetry) - hold_yaw_damping * heading_up_rate, -1.0, 1.0)
+## The beginner's turn-rate loop. turn_key asks for a rate; without a key the heading hold
+## asks for the rate that brings the heading back. The error against the measured yaw rate
+## moves the helm now (proportional) and slowly shifts the trim (integral), so the loop
+## finds by itself how much helm this speed and course need, in either direction.
+func _steer_beginner(telemetry: Telemetry, controls: SimControls, turn_key: float, dt: float) -> void:
+	var wanted_rate_dps: float = 0.0
+	if turn_key != 0.0:
+		wanted_rate_dps = turn_key * turn_rate_dps
+		_heading_held = false
+	elif hold_heading:
+		if not _heading_held:
+			_held_heading_deg = telemetry.heading_deg
+			_heading_held = true
+		var turn_right_deg: float = wrapf(_held_heading_deg - telemetry.heading_deg, -180.0, 180.0)
+		wanted_rate_dps = clampf(hold_rate_per_deg * turn_right_deg, -turn_rate_dps, turn_rate_dps)
+	# A positive yaw rate turns the bow to port, so the rate of turning right is its negative.
+	var error_dps: float = wanted_rate_dps - (-telemetry.yaw_rate_dps)
+	_helm_trim = clampf(_helm_trim + rate_integral_gain * error_dps * dt, -1.0, 1.0)
+	helm_right = clampf(_helm_trim + rate_gain * error_dps, -1.0, 1.0)
+	Helm.steer(controls, helm_right, tack_sign(telemetry), lean_share, dt, helm_rate_per_s)
 
 
 ## +1 when the wind comes from starboard (starboard tack), -1 from port. Heading up is a
@@ -171,8 +178,11 @@ func reset_controls(controls: SimControls) -> void:
 	manoeuvre = Manoeuvre.NONE
 	_manual_sheet_timer_s = 0.0
 	_heading_held = false
+	_helm_trim = 0.0
+	helm_right = 0.0
 	controls.sheet = 0.0
 	controls.rake = 0.0
+	controls.rig_tilt = 0.0
 	controls.lean = 0.0
 
 
@@ -196,9 +206,11 @@ func _start_manoeuvre(telemetry: Telemetry) -> void:
 	manoeuvre = Manoeuvre.TACK_HEADING_UP if absf(telemetry.twa_deg) < 90.0 else Manoeuvre.GYBE_BEARING_AWAY
 
 
-## The rig movements of a tack (head up through the wind, then bear away on the new tack)
-## and a gybe (bear away through dead downwind, then head up on the new tack).
-func _manoeuvre_rake(telemetry: Telemetry, dt: float) -> float:
+## A tack is one continuous turn toward the wind and through it (a right turn from
+## starboard tack), a gybe one continuous turn away from the wind and through it. The
+## helm keeps the turn going; the rake flips by itself when the tack changes (see Helm).
+## Returns the turn, -1 to +1, or 0 when the manoeuvre is over.
+func _manoeuvre_turn(telemetry: Telemetry, dt: float) -> float:
 	_manoeuvre_timer_s += dt
 	if _manoeuvre_timer_s > manoeuvre_timeout_s:
 		manoeuvre = Manoeuvre.NONE
@@ -206,25 +218,26 @@ func _manoeuvre_rake(telemetry: Telemetry, dt: float) -> float:
 		return 0.0
 	var twa: float = absf(telemetry.twa_deg)
 	var on_new_tack: bool = tack_sign(telemetry) == -_tack_sign_at_start
+	var toward_the_wind: float = _tack_sign_at_start  # a right turn heads up on starboard tack
 	match manoeuvre:
 		Manoeuvre.TACK_HEADING_UP:
 			if on_new_tack and twa > 5.0:
 				manoeuvre = Manoeuvre.TACK_BEARING_AWAY
-			return 1.0
+			return toward_the_wind
 		Manoeuvre.TACK_BEARING_AWAY:
 			if on_new_tack and twa > 60.0:
 				manoeuvre = Manoeuvre.NONE
 				_heading_held = false
-			return -1.0
+			return toward_the_wind
 		Manoeuvre.GYBE_BEARING_AWAY:
 			if on_new_tack and twa < 175.0:
 				manoeuvre = Manoeuvre.GYBE_HEADING_UP
-			return -1.0
+			return -toward_the_wind
 		Manoeuvre.GYBE_HEADING_UP:
 			if on_new_tack and twa < 120.0:
 				manoeuvre = Manoeuvre.NONE
 				_heading_held = false
-			return 1.0
+			return -toward_the_wind
 	return 0.0
 
 

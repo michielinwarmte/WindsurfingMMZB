@@ -127,7 +127,7 @@ func step(dt: float, controls: SimControls) -> void:
 		body.added_mass_up_kg = hull.heave_added_mass_kg
 		fin.compute(body, water, time_s, water_config.density_kg_m3)
 		if sailing:
-			sail.compute(body, wind, controls.sheet, controls.rake, RHO_AIR, lean * deg_to_rad(sailor_config.max_rig_lean_deg))
+			sail.compute(body, wind, controls.sheet, controls.rake, RHO_AIR, _rig_lean_rad(controls))
 			_apply_windage()
 			_flex_legs(sub_dt)
 		else:
@@ -225,6 +225,15 @@ func _apply_rig_in_water_drag() -> void:
 		return
 	var drag: float = in_the_water * 0.5 * water_config.density_kg_m3 * sailor_config.rig_in_water_drag_m2 * speed * speed
 	body.add_force_at(Vector3(foot.x, surface_height, foot.z), -v / speed * drag)
+
+
+## Where the rig leans sideways: it hangs toward the sailor with the lean (the sailor pulls
+## it over), and the arms tilt it further or back within their reach.
+func _rig_lean_rad(controls: SimControls) -> float:
+	var hanging: float = lean * deg_to_rad(sailor_config.max_rig_lean_deg)
+	var tilted: float = clampf(controls.rig_tilt, -1.0, 1.0) * deg_to_rad(sailor_config.rig_tilt_range_deg)
+	var limit: float = deg_to_rad(sailor_config.max_total_rig_lean_deg)
+	return clampf(hanging + tilted, -limit, limit)
 
 
 ## The sailor's own movements: stepping back as the board accelerates, and leaning to
@@ -342,6 +351,8 @@ func _fill_telemetry(controls: SimControls) -> void:
 	t.sail_side = sail.sail_side
 	t.sheet = controls.sheet
 	t.rake = controls.rake
+	t.rig_tilt = controls.rig_tilt
+	t.rig_lean_deg = rad_to_deg(sail.rig_lean_rad)
 	t.sail_angle_deg = rad_to_deg(sail.sail_angle_rad())
 	t.alpha_deg = rad_to_deg(sail.alpha_rad)
 	t.sail_lift_n = sail.lift_n

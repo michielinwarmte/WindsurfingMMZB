@@ -1,12 +1,12 @@
 extends GutTest
-## The keys become sheet, rake and lean the way PHYSICS_SPEC.md section 10 says, on both
-## tacks. The tests press the actions through the Input singleton.
+## The keys become sheet, rake, rig tilt and lean the way PHYSICS_SPEC.md section 10 and
+## the Helm say, on both tacks. The tests press the actions through the Input singleton.
 
 const DT: float = 1.0 / 60.0
 
 
 func after_each() -> void:
-	for action: String in ["sheet_in", "sheet_out", "steer_left", "steer_right", "rake_back", "rake_forward", "tack", "toggle_mode"]:
+	for action: String in ["sheet_in", "sheet_out", "steer_left", "steer_right", "tilt_left", "tilt_right", "rake_back", "rake_forward", "tack", "toggle_mode"]:
 		Input.action_release(action)
 
 
@@ -77,78 +77,96 @@ func test_overpowered_beginner_eases_the_sheet() -> void:
 	assert_almost_eq(controls.sheet, 1.0, 1e-6, "advanced sailors are on their own")
 
 
-func test_beginner_steering_is_screen_relative_on_both_tacks() -> void:
+func test_beginner_turn_key_moves_the_whole_helm_the_right_way_on_both_tacks() -> void:
+	# Starboard tack: a right turn is heading up, so D means rig back, rig tilted to port
+	# (the outside of the turn) and weight to starboard (the inside rail).
 	var controller: PlayerController = PlayerController.new()
-	controller.mode = PlayerController.Mode.BEGINNER
 	var controls: SimControls = SimControls.new()
 	Input.action_press("steer_right")
-	_run(controller, _telemetry(90.0), controls, 0.5)
-	assert_gt(controls.rake, 0.9, "starboard tack: right is toward the wind, so the rig goes back")
-	controls.rake = 0.0
-	_run(controller, _telemetry(-90.0), controls, 0.5)
-	assert_lt(controls.rake, -0.9, "port tack: right is away from the wind, so the rig goes forward")
+	_run(controller, _telemetry(90.0), controls, 0.6)
+	assert_gt(controls.rake, 0.5, "starboard tack, right: rig back")
+	assert_lt(controls.rig_tilt, -0.5, "rig tilted to port, the outside of a right turn")
+	assert_gt(controls.lean, 0.3, "weight to starboard, the inside rail")
 	Input.action_release("steer_right")
-	_run(controller, _telemetry(-90.0), controls, 1.0)
-	assert_almost_eq(controls.rake, 0.0, 1e-6, "the rig comes back to neutral when the key is released")
-	assert_eq(controls.lean, 0.0, "beginner mode leaves the weight to the balance reflex")
+	# Port tack: a right turn is bearing away, so the rig goes forward; tilt and weight as before.
+	var port: PlayerController = PlayerController.new()
+	var port_controls: SimControls = SimControls.new()
+	Input.action_press("steer_right")
+	_run(port, _telemetry(-90.0), port_controls, 0.6)
+	assert_lt(port_controls.rake, -0.5, "port tack, right: rig forward")
+	assert_lt(port_controls.rig_tilt, -0.5)
+	assert_gt(port_controls.lean, 0.3)
+	Input.action_release("steer_right")
+	# A left turn mirrors all three.
+	var left: PlayerController = PlayerController.new()
+	var left_controls: SimControls = SimControls.new()
+	Input.action_press("steer_left")
+	_run(left, _telemetry(90.0), left_controls, 0.6)
+	assert_lt(left_controls.rake, -0.5, "starboard tack, left: bear away, rig forward")
+	assert_gt(left_controls.rig_tilt, 0.5, "rig to starboard, the outside of a left turn")
+	assert_lt(left_controls.lean, -0.3, "weight to port")
+
+
+func test_beginner_loop_eases_the_helm_once_the_board_turns_as_asked() -> void:
+	# While the board does not respond the trim winds up; when it turns at the asked rate the
+	# proportional part vanishes and the helm stops growing.
+	var controller: PlayerController = PlayerController.new()
+	var controls: SimControls = SimControls.new()
+	var t: Telemetry = _telemetry(90.0)
+	Input.action_press("steer_right")
+	_run(controller, t, controls, 0.3)
+	var pushing: float = controller.helm_right
+	t.yaw_rate_dps = -controller.turn_rate_dps  # turning right at exactly the asked rate
+	_run(controller, t, controls, 0.3)
+	var settled: float = controller.helm_right
+	assert_lt(settled, pushing, "the proportional push is gone once the board turns as asked")
+	_run(controller, t, controls, 0.3)
+	assert_almost_eq(controller.helm_right, settled, 1e-6, "and the trim stops growing")
 
 
 func test_beginner_mode_holds_the_heading_when_no_key_is_pressed() -> void:
 	var controller: PlayerController = PlayerController.new()
 	var controls: SimControls = SimControls.new()
-	# Starboard tack, heading South. The board rounds up to 195 (a right turn): the rig
-	# must go forward to bring it back.
+	# Starboard tack, heading South, rounded up to 195 (a right turn): the loop asks for a
+	# left turn, which on starboard tack is bearing away: rig forward.
 	var t: Telemetry = _telemetry(90.0)
 	t.heading_deg = 180.0
 	_run(controller, t, controls, 0.2)
 	t.heading_deg = 195.0
 	t.twa_deg = 75.0
 	_run(controller, t, controls, 0.6)
-	assert_lt(controls.rake, -0.5, "starboard tack: rounded up, so the rig goes forward")
-	# Port tack, heading North, rounded up to 345 (a left turn): also forward.
+	assert_lt(controls.rake, -0.4, "starboard tack: rounded up, so the rig goes forward")
+	assert_gt(controls.rig_tilt, 0.3, "and tilts to starboard, the outside of the left turn")
+	# Port tack, heading North, rounded up to 345 (a left turn): a right turn is asked, which
+	# on port tack is bearing away: rig forward again, tilt to port.
 	var port: PlayerController = PlayerController.new()
+	var port_controls: SimControls = SimControls.new()
 	var p: Telemetry = _telemetry(-90.0)
 	p.heading_deg = 0.0
-	_run(port, p, controls, 0.2)
+	_run(port, p, port_controls, 0.2)
 	p.heading_deg = 345.0
 	p.twa_deg = -75.0
-	_run(port, p, controls, 0.6)
-	assert_lt(controls.rake, -0.5, "port tack: rounded up, so the rig goes forward")
-	# A steering key takes over and the hold re-arms on the new heading afterwards.
-	Input.action_press("steer_left")
-	_run(port, p, controls, 1.2)
-	Input.action_release("steer_left")
-	assert_gt(controls.rake, 0.5, "port tack, left is toward the wind: rig back")
-	_run(port, p, controls, 1.0)
-	assert_almost_eq(controls.rake, 0.0, 0.05, "holding the heading it has now")
+	_run(port, p, port_controls, 0.6)
+	assert_lt(port_controls.rake, -0.4, "port tack: rounded up, so the rig goes forward")
+	assert_lt(port_controls.rig_tilt, -0.3)
 
 
-func test_beginner_steering_uses_less_rake_at_speed() -> void:
+func test_advanced_mode_rakes_with_q_and_e_tilts_with_the_arrows_and_shifts_weight_with_a_and_d() -> void:
 	var controller: PlayerController = PlayerController.new()
-	var controls: SimControls = SimControls.new()
-	var fast: Telemetry = _telemetry(90.0)
-	fast.speed_ms = 10.0
-	Input.action_press("steer_right")
-	_run(controller, fast, controls, 1.0)
-	assert_almost_eq(controls.rake, 0.4, 0.01, "4 m/s over 10 m/s of the full swing")
-	var crawling: Telemetry = _telemetry(90.0)
-	crawling.speed_ms = 1.0
-	_run(controller, crawling, controls, 1.0)
-	assert_almost_eq(controls.rake, 1.0, 1e-6, "the full swing below 4 m/s")
-
-
-func test_advanced_mode_rakes_with_q_and_e_and_shifts_weight_with_a_and_d() -> void:
-	var controller: PlayerController = PlayerController.new()
-	controller.mode = PlayerController.Mode.ADVANCED
+	controller.set_mode(PlayerController.Mode.ADVANCED)
 	var controls: SimControls = SimControls.new()
 	Input.action_press("rake_back")
-	_run(controller, _telemetry(-90.0), controls, 0.5)
+	_run(controller, _telemetry(-90.0), controls, 0.6)
 	assert_gt(controls.rake, 0.9, "E is rig back on either tack")
 	Input.action_release("rake_back")
 	Input.action_press("steer_right")
 	_run(controller, _telemetry(-90.0), controls, 1.0)
 	assert_almost_eq(controls.lean, 1.0, 1e-6, "D moves the weight to starboard")
 	assert_almost_eq(controls.rake, 0.0, 1e-6, "and does not steer with the rig")
+	Input.action_release("steer_right")
+	Input.action_press("tilt_left")
+	_run(controller, _telemetry(-90.0), controls, 1.0)
+	assert_almost_eq(controls.rig_tilt, -1.0, 1e-6, "the left arrow tilts the rig to port")
 
 
 func test_space_starts_a_tack_upwind_and_a_gybe_downwind() -> void:
@@ -158,12 +176,13 @@ func test_space_starts_a_tack_upwind_and_a_gybe_downwind() -> void:
 	controller.update(_telemetry(60.0), controls, DT)
 	Input.action_release("tack")
 	assert_eq(controller.manoeuvre, PlayerController.Manoeuvre.TACK_HEADING_UP)
-	_run(controller, _telemetry(60.0), controls, 0.5)
+	_run(controller, _telemetry(60.0), controls, 0.6)
 	assert_gt(controls.rake, 0.9, "rig back to head up")
-	# Through the wind: on the new tack and past 5 degrees the rig goes forward.
+	assert_lt(controls.rig_tilt, -0.9, "rig to port, the outside of the right turn")
+	# Through the wind: on the new tack and past 5 degrees the turn goes on, now bearing away.
 	_run(controller, _telemetry(-10.0), controls, 0.1)
 	assert_eq(controller.manoeuvre, PlayerController.Manoeuvre.TACK_BEARING_AWAY)
-	_run(controller, _telemetry(-30.0), controls, 1.0)
+	_run(controller, _telemetry(-30.0), controls, 1.2)
 	assert_lt(controls.rake, -0.9, "rig forward to bear away on the new tack")
 	_run(controller, _telemetry(-70.0), controls, 0.1)
 	assert_eq(controller.manoeuvre, PlayerController.Manoeuvre.NONE, "done past 60 degrees")
@@ -183,4 +202,3 @@ func test_a_manoeuvre_that_never_completes_is_abandoned() -> void:
 	Input.action_release("tack")
 	_run(controller, _telemetry(60.0), controls, 11.0)
 	assert_eq(controller.manoeuvre, PlayerController.Manoeuvre.NONE)
-	assert_almost_eq(controls.rake, 0.0, 1e-6, "the rig is back to neutral")

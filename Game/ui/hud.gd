@@ -28,7 +28,7 @@ func _ready() -> void:
 	_panel.add_child(_detail)
 
 	_help = _label(font, 13, Vector2(16.0, 690.0))
-	_help.text = "W/S sheet   A/D steer (beginner) or weight (advanced)   Q/E rake   Space tack/gybe   T auto-sheet   Tab mode   1-4 camera   R reset   Esc pause   F1 panel"
+	_help.text = "W/S sheet   A/D turn (beginner) or weight (advanced)   Q/E rake   Left/Right rig tilt (advanced)   Space tack/gybe   T auto-sheet   Tab mode   1-4 camera   R reset   Esc pause   F1 panel"
 	add_child(_help)
 
 	_rose = WindRose.new()
@@ -70,7 +70,8 @@ func update_from(t: Telemetry, controller: PlayerController, camera_name: String
 	_detail.text = (
 		"heading %5.1f   TWA %6.1f   AWA %6.1f   AWS %4.1f kt   VMG %5.2f m/s   leeway %4.1f\n" % [t.heading_deg, t.twa_deg, t.awa_deg, t.aws_kt, t.vmg_ms, t.leeway_deg]
 		+ "pitch %5.1f   heel %5.1f   yaw rate %5.1f deg/s\n" % [t.pitch_deg, t.heel_deg, t.yaw_rate_dps]
-		+ "sheet %3.0f %%  boom %4.0f deg   rake %5.2f   alpha %5.1f deg   lean %5.2f   stance %4.2f   hang-back %4.2f m   knees %5.2f m\n" % [t.sheet * 100.0, absf(t.sail_angle_deg), t.rake, t.alpha_deg, t.lean, t.stance, t.hang_back_m, t.knee_bend_m]
+		+ "sheet %3.0f %%  boom %4.0f deg   rake %5.2f   rig tilt %5.2f (%4.0f deg)   alpha %5.1f deg   helm %5.2f\n" % [t.sheet * 100.0, absf(t.sail_angle_deg), t.rake, t.rig_tilt, t.rig_lean_deg, t.alpha_deg, controller.helm_right]
+		+ "lean %5.2f   stance %4.2f   hang-back %4.2f m   knees %5.2f m\n" % [t.lean, t.stance, t.hang_back_m, t.knee_bend_m]
 		+ "sail  lift %5.0f N  drag %4.0f N  drive %5.0f N  side %5.0f N\n" % [t.sail_lift_n, t.sail_drag_n, t.drive_n, t.side_force_n]
 		+ "fin   lift %5.0f N  drag %4.0f N  slip %5.1f deg%s\n" % [t.fin_lift_n, t.fin_drag_n, t.fin_slip_deg, "  STALLED" if t.fin_stalled else ""]
 		+ "hull  planing %3.0f %% (%4.0f N)  buoyancy %4.0f N  submersion %3.0f %%  wetted %4.2f m2  resistance %4.0f N  trim %4.1f deg\n" % [t.planing_ratio * 100.0, t.planing_lift_n, t.buoyancy_n, t.submersion_ratio * 100.0, t.wetted_area_m2, t.hull_resistance_n, t.trim_deg]

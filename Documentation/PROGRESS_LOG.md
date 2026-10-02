@@ -15,6 +15,29 @@ Template for new entries:
 
 ---
 
+## 2 October 2026 - Session 32: steering at every speed and on every course
+
+**Phase:** 3 play-tested again; Phase 4 work.
+
+**Done:**
+- The play-test said: D turns the board left when planing on starboard tack, and nothing steers dead downwind. Both reproduced headless. The first was the speed-scaled rake of Session 31: at planing speed the rig needs most of its rake just to hold a straight course, so a scaled key command fell below that trim and both keys bore away. The second is physics: rake steers through the sail's side force, which a run does not have.
+- The rig's sideways tilt is now a control of its own (the arms, up to 20 degrees on top of where the rig hangs with the lean). `Helm` turns the board the way a sailor does: rig back or forward, rig tilted to the outside of the turn and weight on the inside rail, all together. The beginner's A/D ask for a turn rate (30 degrees per second) and a loop on the measured yaw rate finds the helm, with a trim that settles at whatever the speed and course need; without a key it holds the heading. Space's tack and gybe are one continuous turn. Advanced mode: Q/E rake, Left/Right arrows rig tilt, A/D weight. The autopilot steers with the same helm.
+- Spec 17.8 explains it; the tuning log has the rows. Left/Right arrows moved from steering to rig tilt in the input map.
+
+**Verified:**
+- `tools/test.sh`: 105/105, with new whole-simulation tests: from rest on either tack the beginner controller sails off and planes by itself, D turns right and A turns left by more than 15 degrees in 3 s while planing, on both tacks, without a fall; on a dead run it holds the course for 25 s and turns either way on command. `tools/check.sh`: 60 files, 0 failed.
+- Scenarios: beam reach 34.7 km/h (rake 0.49 instead of 0.8 to hold the course), close-hauled 21.8, broad reach 22.6 from rest; the 24 kt polar from a planing start: 45.3 km/h at 90 degrees, 52.2 at 120, 49.8 at 135, 36.0 at 150. The overpowered scenario still catapults and waterstarts.
+- Screenshot `.screenshots/turning.png` with the beginner controller sailing by itself.
+- Not verified: how 30 degrees per second feels, the gybe on Space at speed, whether the rig tilt looks right on screen while turning.
+
+**Decisions:**
+- Steering is a turn-rate request in beginner mode. The physics is untouched; the loop is the sailor's skill.
+- The rig tilt is a sailor's choice, so it is a control, not a function of the lean.
+
+**Next:** the team plays again: steer at low speed, while planing and on a run, on both tacks; tack and gybe with Space; try the arrows in advanced mode. Then Phase 4 proper.
+
+---
+
 ## 2 October 2026 - Session 31: first play-test, falls instead of capsizes, downwind speed, low-speed handling
 
 **Phase:** 3 play-tested; the fixes are Phase 4 work (physics corrected at the source).

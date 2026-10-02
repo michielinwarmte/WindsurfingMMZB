@@ -20,6 +20,8 @@ var sail: SailModel = null
 var rake_gain_per_deg: float = 0.08
 ## Rake per degree per second of yaw rate, against overshoot.
 var rake_yaw_damping: float = 0.02
+## How much weight the pilot puts on the inside rail per unit of helm (see Helm).
+var lean_share: float = 0.3
 ## How fast the sailor moves the rig and the sheet (units per second).
 var rake_rate_per_s: float = 3.0
 var sheet_rate_per_s: float = 1.5
@@ -42,7 +44,7 @@ var depower_alpha_per_deg: float = 1.0
 var min_alpha_deg: float = 3.0
 
 
-## Updates controls.rake and controls.sheet from the last telemetry.
+## Updates the helm (rake, rig tilt, weight) and the sheet from the last telemetry.
 func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 	if hold_course:
 		if telemetry.speed_ms > pointing_speed_ms:
@@ -54,8 +56,10 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		# A positive yaw rate turns the bow to port. On starboard tack (positive TWA) that is
 		# bearing away, on port tack it is heading up: turn it into "rate of heading up".
 		var heading_up_rate: float = -telemetry.yaw_rate_dps * signf(telemetry.twa_deg) if telemetry.twa_deg != 0.0 else 0.0
-		var wanted_rake: float = clampf(rake_gain_per_deg * error_deg - rake_yaw_damping * heading_up_rate, -1.0, 1.0)
-		controls.rake = move_toward(controls.rake, wanted_rake, rake_rate_per_s * dt)
+		var head_up: float = clampf(rake_gain_per_deg * error_deg - rake_yaw_damping * heading_up_rate, -1.0, 1.0)
+		var tack: float = signf(telemetry.twa_deg) if telemetry.twa_deg != 0.0 else 1.0
+		# Heading up is a right turn on starboard tack and a left turn on port tack.
+		Helm.steer(controls, head_up * tack, tack, lean_share, dt, rake_rate_per_s)
 	if trim_sheet:
 		var alpha_deg: float = best_alpha_deg(deg_to_rad(telemetry.awa_deg))
 		# Leeward heel is heel away from the wind: negative on starboard tack (wind from starboard).

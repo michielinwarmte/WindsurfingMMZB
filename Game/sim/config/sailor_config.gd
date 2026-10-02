@@ -64,6 +64,11 @@ extends Resource
 ## full lean. Raking the rig to windward is what real sailors do when hooked in; it brings
 ## the sail's centre of effort back over the board and gives the sail an upward component.
 @export var max_rig_lean_deg: float = 25.0
+## How far the sailor can tilt the rig sideways with the arms on top of that (the hands
+## stay within reach of the shoulders).
+@export var rig_tilt_range_deg: float = 20.0
+## The rig cannot lean further than this either way without the boom touching the water.
+@export var max_total_rig_lean_deg: float = 45.0
 
 @export_group("Windage")
 ## Frontal area times drag coefficient of the sailor's body in the apparent wind (a hiked
