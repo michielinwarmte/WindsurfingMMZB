@@ -43,7 +43,7 @@ func test_lift_curve_matches_the_spec_table_and_is_continuous() -> void:
 		assert_almost_eq(sail.lift_coefficient(deg_to_rad(angle_deg)), expected[angle_deg], 0.002, "cl at %s degrees" % angle_deg)
 	assert_almost_eq(sail.lift_coefficient(deg_to_rad(2.5)), 0.264, 0.002, "half of the unfaded lift while luffing")
 	assert_eq(sail.lift_coefficient(0.0), 0.0, "no lift at zero angle of attack")
-	assert_eq(sail.lift_coefficient(deg_to_rad(-10.0)), 0.0, "no lift when backwinded")
+	assert_almost_eq(sail.lift_coefficient(deg_to_rad(-10.0)), 0.7 * 0.994, 0.002, "backwinded: 0.7 of the lift at the same angle, the other way (see compute)")
 	var previous: float = sail.lift_coefficient(0.0)
 	var step_deg: float = 0.01
 	var angle: float = step_deg
@@ -123,26 +123,55 @@ func test_mirror_symmetry() -> void:
 	assert_almost_eq(sail_b.ce_local.x, -sail_a.ce_local.x, 1e-6, "the centre of effort mirrors with the boom")
 
 
-func test_luffing_when_eased_too_far() -> void:
+func test_backwinded_when_eased_too_far() -> void:
 	var sail: SailModel = SailModel.new(_legacy_sail())
 	var body: SimRigidBody = _body()
-	# Wind from 60 degrees to starboard, boom eased to 75 degrees: alpha = -15, backwinded.
+	# Wind from 60 degrees to starboard, boom eased to 75 degrees: alpha = -15, the wind on
+	# the sail's leeward face. The sail inverts and pushes to windward with 0.7 of its lift.
 	sail.compute(body, _constant_wind(10.0, 60.0), 1.0 - (75.0 - 12.0) / 73.0, 0.0, 1.225)
 	assert_almost_eq(rad_to_deg(sail.alpha_rad), -15.0, 1e-3)
-	assert_true(sail.is_luffing)
-	assert_eq(sail.lift_n, 0.0)
-	assert_gt(sail.drag_n, 0.0)
+	assert_true(sail.is_backwinded)
+	assert_false(sail.is_luffing)
+	var backwinded_side: float = sail.side_force_n
+	var backwinded_lift: float = sail.lift_n
+	# The same wind with the boom at 45 degrees: alpha = +15, the normal face.
+	var normal: SailModel = SailModel.new(_legacy_sail())
+	normal.compute(_body(), _constant_wind(10.0, 60.0), 1.0 - (45.0 - 12.0) / 73.0, 0.0, 1.225)
+	assert_almost_eq(rad_to_deg(normal.alpha_rad), 15.0, 1e-3)
+	assert_lt(normal.side_force_n, 0.0, "a sail on port tack... wind from starboard pushes to port (leeward)")
+	assert_gt(backwinded_side, 0.0, "backwinded it pushes to starboard (windward)")
+	assert_almost_eq(backwinded_lift, 0.7 * normal.lift_n, 1e-3)
+
+
+func test_the_boom_pushed_across_the_centreline() -> void:
+	var sail: SailModel = SailModel.new(_legacy_sail())
+	var body: SimRigidBody = _body()
+	# Wind from 5 degrees to starboard: head to wind, nearly. Fully sheeted the boom sits at
+	# 12 degrees to port and the sail luffs. Pushed all the way across it is 35 degrees to
+	# starboard, the wind meets its starboard face at 40 degrees and it pushes to port and aft:
+	# the push that takes the bow through the wind in a tack.
+	sail.compute(body, _constant_wind(8.0, 5.0), 1.0, 0.0, 1.225, 0.0, 0.0)
+	assert_true(sail.is_luffing or sail.is_backwinded, "nearly head to wind the sheeted sail cannot fill (alpha -7)")
+	assert_almost_eq(rad_to_deg(sail.sail_angle_rad()), -12.0, 1e-6, "clew 12 degrees to port")
+	sail.compute(body, _constant_wind(8.0, 5.0), 1.0, 0.0, 1.225, 0.0, 1.0)
+	assert_almost_eq(rad_to_deg(sail.sail_angle_rad()), 35.0, 1e-6, "clew 35 degrees to starboard")
+	assert_almost_eq(rad_to_deg(sail.alpha_rad), 40.0, 1e-3)
+	assert_gt(sail.ce_local.x, 0.0, "the centre of effort went to starboard with the clew")
+	assert_lt(sail.side_force_n, -50.0, "pushes to port")
+	assert_lt(sail.drive_n, 0.0, "and backwards")
 
 
 func test_sail_side_hysteresis() -> void:
 	var sail: SailModel = SailModel.new(_legacy_sail())
-	var sequence: Array[float] = [10.0, 3.0, -3.0, -6.0]
-	var expected: Array[int] = [-1, -1, -1, 1]
+	# The sail keeps its side until the wind is 15 degrees across: the sailor holds the rig
+	# through a tack and the sail only blows over once the wind clearly has the other face.
+	var sequence: Array[float] = [10.0, 3.0, -3.0, -6.0, -14.0, -16.0]
+	var expected: Array[int] = [-1, -1, -1, -1, -1, 1]
 	for i: int in sequence.size():
 		sail.update_side(deg_to_rad(sequence[i]))
 		assert_eq(sail.sail_side, expected[i], "awa %s" % sequence[i])
-	var downwind: Array[float] = [170.0, 178.0, -178.0, -170.0]
-	var expected_downwind: Array[int] = [-1, -1, -1, 1]
+	var downwind: Array[float] = [160.0, 170.0, 178.0, -178.0, -170.0, -160.0]
+	var expected_downwind: Array[int] = [-1, -1, -1, -1, -1, 1]
 	for i: int in downwind.size():
 		sail.update_side(deg_to_rad(downwind[i]))
 		assert_eq(sail.sail_side, expected_downwind[i], "awa %s" % downwind[i])

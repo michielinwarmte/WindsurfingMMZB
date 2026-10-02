@@ -19,6 +19,17 @@ extends Resource
 @export var stance_rest_z_m: float = 0.15
 ## Where the weight is when planing: in the back footstraps, about 0.6 m from the tail.
 @export var stance_planing_z_m: float = 0.60
+## Where the weight is in a tack, the front foot just ahead of the mast: the nose dips, the
+## tail and the fin lift a little, and the board pivots more easily. Further forward than
+## this a 120 L board buries its nose.
+@export var stance_tack_z_m: float = -0.20
+## How fast the sailor steps in a tack (fraction of the full stance per second).
+@export var step_rate_per_s: float = 2.5
+## The sailor stops stepping forward as the bottom at the nose sinks to within this
+## distance of deck depth (the nose about to go under), and is back at the rest stance
+## when it reaches it: a board that still carries speed buries its nose under a sailor
+## who steps forward too soon.
+@export var nose_dive_ramp_m: float = 0.06
 ## The sailor starts stepping back at this forward speed and is in the straps at the second.
 @export var stance_speed_start_ms: float = 3.5
 @export var stance_speed_full_ms: float = 7.0
@@ -46,10 +57,16 @@ extends Resource
 @export var catapult_heel_deg: float = 20.0
 ## Past this windward heel the sailor falls in backwards (the pull vanished while hiked out).
 @export var fall_back_heel_deg: float = 25.0
+## A catapult needs a sail that pulls: below this side force the sailor is standing, not
+## hanging, and only falls off a board heeled past standing_fall_heel_deg either way.
+@export var catapult_min_sail_force_n: float = 120.0
+@export var standing_fall_heel_deg: float = 40.0
 ## Seconds in the water before the sailor is back on the board (a waterstart).
 @export var waterstart_time_s: float = 4.0
-## Drag area (cd times area) of the rig lying in the water, pulling on the mast foot.
-@export var rig_in_water_drag_m2: float = 0.05
+## Drag area (cd times area) of the rig in the water, pulling on the mast foot. A sail that
+## hits the water at speed is a sea anchor: it stops the board within a fraction of a second
+## (and often flips it), which is what a catapult looks like.
+@export var rig_in_water_drag_m2: float = 0.3
 
 @export_group("Lean (sideways)")
 ## Sideways distance of the sailor's centre of mass from the centreline at full lean:
@@ -76,13 +93,27 @@ extends Resource
 @export var windage_area_cd_m2: float = 0.5
 
 @export_group("Automatic balance (beginner mode)")
-## The sailor leans this many units of full lean per radian of heel.
-@export var balance_heel_gain: float = 4.0
-## And this many per radian per second of heel rate.
-@export var balance_rate_gain: float = 0.8
+## Weight on a rail asks for a turn: at full lean the sailor banks the board for a
+## coordinated turn at this rate, as much bank as that needs at the current speed
+## (atan(v w / g)) and never more than bank_max_deg, taking the bank up at bank_rate_dps.
+## A carved gybe is sailed at 25 to 35 degrees of bank, a course change at speed at 10
+## to 15, and at rest a lean is just a lean.
+@export var carve_rate_dps: float = 57.0
+@export var bank_max_deg: float = 30.0
+@export var bank_rate_dps: float = 12.0
+## The sailor leans this many units of full lean per radian of heel away from that bank,
+## and this many per radian per second of heel rate. With the sailor's weight as the
+## spring (gain x weight x lean) and the whole windsurfer's roll inertia, these give a
+## balance that returns to the bank in about a second without overshooting (a 0.7 Hz
+## loop, critically damped); stiffer, the sailor rocked the board at that frequency.
+@export var balance_heel_gain: float = 2.5
+@export var balance_rate_gain: float = 1.2
 ## The sailor also leans against the sail's heeling moment directly: units of full lean
 ## per newton metre of heeling moment divided by the sailor's maximum righting moment.
 @export var balance_moment_gain: float = 1.0
 ## Fore-and-aft weight shift against the pitch rate (metres per radian per second): the
 ## sailor's answer to a bouncing nose.
 @export var pitch_reflex_m_per_rad_s: float = 0.5
+## The sideways push of a turn that the sailor leans into is felt averaged over this
+## time: a sustained turn is banked into, a quick wobble is ridden out.
+@export var balance_feel_time_s: float = 0.3

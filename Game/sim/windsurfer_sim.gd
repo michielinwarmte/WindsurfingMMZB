@@ -37,12 +37,23 @@ var time_s: float = 0.0
 ## lost the sailor and the rig go over (the rig pivots freely at the mast foot, so the sail
 ## cannot roll the board over) and the body is the board alone until the waterstart.
 var sailor_state: SailorState = SailorState.SAILING
+## Inertia of the board alone, for the time the sailor is in the water.
+var _board_only_inertia: Basis = Basis.IDENTITY
+## The sideways push of the turn as the sailor feels it (m/s2, toward starboard), averaged
+## over balance_feel_time_s.
+var _felt_push_ms2: float = 0.0
+## The bank the sailor is working toward (rad, positive = starboard rail down).
+var _wanted_bank_rad: float = 0.0
 ## Which side the sailor and rig fell to (+1 starboard, -1 port), what kind of fall it
 ## was ("catapult" to leeward, "fell back" to windward), and for how long.
 var fall_side: int = 0
 var fall_kind: String = ""
 var fallen_for_s: float = 0.0
 var _tack_before_fall: float = 1.0
+## The sideways weight the controls asked for at the last step (the deliberate part of
+## the heel, which is not a loss of balance).
+var _asked_lean: float = 0.0
+var _asked_across: float = 0.0
 ## 0 = standing near the mast foot, 1 = in the back straps.
 var stance: float = 0.0
 ## -1 = sailor out to port, +1 = out to starboard.
@@ -93,6 +104,8 @@ func reset(origin_xz: Vector3, heading_rad: float) -> void:
 	fall_side = 0
 	fall_kind = ""
 	fallen_for_s = 0.0
+	_felt_push_ms2 = 0.0
+	_wanted_bank_rad = 0.0
 	stance = 0.0
 	lean = 0.0
 	hang_back_m = 0.0
@@ -127,11 +140,14 @@ func step(dt: float, controls: SimControls) -> void:
 		body.added_mass_up_kg = hull.heave_added_mass_kg
 		fin.compute(body, water, time_s, water_config.density_kg_m3)
 		if sailing:
-			sail.compute(body, wind, controls.sheet, controls.rake, RHO_AIR, _rig_lean_rad(controls))
+			sail.compute(body, wind, controls.sheet, controls.rake, RHO_AIR, _rig_lean_rad(controls), controls.boom_across, controls.hold_side)
 			_apply_windage()
 			_flex_legs(sub_dt)
+			_feel_the_turn(sub_dt)
 		else:
-			_apply_rig_in_water_drag()
+			# The bare board still drags its water along when it rolls, pitches or turns.
+			body.set_mass_properties(board_config.mass_kg, _inertia_with_added_water(_board_only_inertia), Vector3.ZERO)
+			_apply_rig_in_water_drag(sub_dt)
 		body.integrate(sub_dt)
 		time_s += sub_dt
 		if sailing:
@@ -152,11 +168,30 @@ func _check_balance() -> void:
 	var twa: float = SimMath.wind_angle_rad(body.basis, wind.from_direction())
 	var tack: float = 1.0 if twa >= 0.0 else -1.0
 	# Heel is positive with the starboard rail down; on starboard tack leeward is port.
-	var leeward_heel: float = -SimMath.heel_rad(body.basis) * tack
-	if leeward_heel > deg_to_rad(sailor_config.catapult_heel_deg):
+	var leeward_heel: float = -_felt_heel_rad() * tack
+	# A sailor who presses the leeward rail on purpose (carving into a gybe) banks the
+	# board that far by choice; only the heel beyond that is a loss of balance.
+	var deliberate: float = maxf(-_wanted_bank_rad * tack, 0.0)
+	# Hanging on a pulling sail, the sailor is levered over it (catapult) or dropped behind
+	# it (fell back) at modest heels. Standing with a sail that pulls little, they ride the
+	# heel with their knees and only fall off a board tipped a long way.
+	# A backed sail is pushed with the arms from a standing position, not hung on.
+	var hanging: bool = absf(sail.side_force_n) > sailor_config.catapult_min_sail_force_n and _asked_across <= 0.0
+	var standing_limit: float = deg_to_rad(sailor_config.standing_fall_heel_deg)
+	# Falling backwards: the board (or the turn's push) tips the sailor to windward and the
+	# sail's pull is not enough to hold them. The pull on the hands is the sail's side force
+	# levered from the centre of effort to the boom; it tilts the apparent gravity the
+	# sailor hangs in toward leeward by atan(pull / weight).
+	var pull_on_hands: float = absf(sail.side_force_n) * sail_config.ce_height_fraction * sail_config.luff_m / maxf(sail_config.boom_height_m, 0.1)
+	var held_by_the_sail: float = atan2(pull_on_hands, sailor_config.mass_kg * sim_config.gravity_ms2)
+	if hanging and leeward_heel > deg_to_rad(sailor_config.catapult_heel_deg) + deliberate:
 		_fall(int(-tack), "catapult", tack)
-	elif leeward_heel < -deg_to_rad(sailor_config.fall_back_heel_deg):
+	elif hanging and leeward_heel + held_by_the_sail < -deg_to_rad(sailor_config.fall_back_heel_deg):
 		_fall(int(tack), "fell back", tack)
+	elif leeward_heel > standing_limit:
+		_fall(int(-tack), "fell off", tack)
+	elif leeward_heel < -standing_limit:
+		_fall(int(tack), "fell off", tack)
 
 
 ## Makes the sailor fall now, as if they slipped: to leeward ("catapult") or to windward
@@ -178,7 +213,8 @@ func _fall(side: int, kind: String, tack: float) -> void:
 	fallen_for_s = 0.0
 	_tack_before_fall = tack
 	var board_only: Vector3 = MassModel._box_inertia(board_config.mass_kg, board_config.width_m, board_config.thickness_m, board_config.length_m)
-	body.set_mass_properties(board_config.mass_kg, Basis.IDENTITY.scaled(board_only), Vector3.ZERO)
+	_board_only_inertia = Basis.IDENTITY.scaled(board_only)
+	body.set_mass_properties(board_config.mass_kg, _inertia_with_added_water(_board_only_inertia), Vector3.ZERO)
 	body.internal_velocity = Vector3.ZERO
 	stance = 0.0
 	lean = 0.0
@@ -198,6 +234,8 @@ func waterstart() -> void:
 	hang_back_m = 0.0
 	knee_bend_m = 0.0
 	knee_bend_rate_ms = 0.0
+	_felt_push_ms2 = 0.0
+	_wanted_bank_rad = 0.0
 	mass_model.update(stance, lean, hang_back_m, knee_bend_m)
 	body.set_mass_properties(mass_model.total_mass_kg, mass_model.inertia_body, mass_model.com_offset_body)
 	var origin: Vector3 = body.origin_world()
@@ -211,20 +249,59 @@ func waterstart() -> void:
 	sail.set_side_for_wind(SimMath.wind_angle_rad(body.basis, wind.from_direction()))
 
 
-## The rig lying in the water pulls on the mast foot like a sea anchor. It takes the rig
-## about a second to fall onto the water, so the drag comes on over the first second.
-func _apply_rig_in_water_drag() -> void:
-	var in_the_water: float = smoothstep(0.4, 1.0, fallen_for_s)
-	if in_the_water <= 0.0:
-		return
+## The rig in the water pulls on the mast foot like a sea anchor, from the moment the
+## sailor lets go (the sail is on the water within a fraction of a second at speed).
+## A sea anchor on a 9 kg board at 10 m/s would stop it within one step, so the drag is
+## integrated implicitly: over the step, quadratic drag takes the point's speed from v to
+## v / (1 + k v dt / m), never past zero, with m the effective mass of the mast foot.
+func _apply_rig_in_water_drag(dt: float) -> void:
 	var foot: Vector3 = body.point_world(sail_config.mast_foot_local)
 	var surface_height: float = water.height_at(foot.x, foot.z, time_s)
-	var v: Vector3 = SimMath.horizontal(body.point_velocity(foot) - water.velocity_at(foot.x, foot.z, time_s))
+	var at: Vector3 = Vector3(foot.x, surface_height, foot.z)
+	var v: Vector3 = SimMath.horizontal(body.point_velocity(at) - water.velocity_at(foot.x, foot.z, time_s))
 	var speed: float = v.length()
 	if speed < 0.01:
 		return
-	var drag: float = in_the_water * 0.5 * water_config.density_kg_m3 * sailor_config.rig_in_water_drag_m2 * speed * speed
-	body.add_force_at(Vector3(foot.x, surface_height, foot.z), -v / speed * drag)
+	var direction: Vector3 = v / speed
+	var k: float = 0.5 * water_config.density_kg_m3 * sailor_config.rig_in_water_drag_m2
+	var m_eff: float = body.effective_mass_at(at, direction)
+	var speed_after: float = speed / (1.0 + k * speed * dt / m_eff)
+	var impulse: float = m_eff * (speed - speed_after)
+	body.add_force_at(at, -direction * impulse / dt)
+
+
+## The bank a sailor who leans this much wants: the bank of a coordinated turn at
+## lean times carve_rate_dps at this speed, atan(v w / g), at most bank_max_deg. At rest
+## it is nothing (a lean at rest is just a lean), at planing speed a full lean is a carve.
+func _bank_for_turn(lean_asked: float, forward_speed: float) -> float:
+	var turn_rate: float = lean_asked * deg_to_rad(sailor_config.carve_rate_dps)
+	var bank: float = atan2(maxf(forward_speed, 0.0) * turn_rate, sim_config.gravity_ms2)
+	var limit: float = deg_to_rad(sailor_config.bank_max_deg)
+	return clampf(bank, -limit, limit)
+
+
+## The heel the sailor feels: the board's heel less the bank that the turn asks for. In a
+## turn the water pushes the board sideways (v times the yaw rate) and gravity plus that
+## push, the apparent gravity, is what a standing person balances against, as a cyclist
+## leans into a bend. A board banked into its turn by exactly atan(v w / g) feels level;
+## that is the bank of a carved turn, and a sailor neither fights it nor falls off it.
+func _felt_heel_rad() -> float:
+	var coordinated_heel: float = atan2(_felt_push_ms2, sim_config.gravity_ms2)
+	return SimMath.heel_rad(body.basis) - coordinated_heel
+
+
+## Updates the felt sideways push: the sideways acceleration the sailor's body is about to
+## get from the forces of this step, less gravity's share on a heeled deck, averaged over
+## balance_feel_time_s (the sense of balance does not follow a quick wobble). It is the
+## real acceleration, not v times the yaw rate: a board that skids round on a stalled fin
+## turns without pushing its sailor sideways. Called with the step's forces collected.
+func _feel_the_turn(dt: float) -> void:
+	var sailor_world: Vector3 = body.point_world(mass_model.sailor_position_body)
+	var acceleration_body: Vector3 = SimMath.to_body(body.basis, body.acceleration_at(sailor_world))
+	var gravity_body: Vector3 = SimMath.to_body(body.basis, Vector3(0.0, -sim_config.gravity_ms2, 0.0))
+	var sideways_push: float = acceleration_body.x - gravity_body.x  # toward starboard
+	var blend: float = clampf(dt / maxf(sailor_config.balance_feel_time_s, dt), 0.0, 1.0)
+	_felt_push_ms2 = lerpf(_felt_push_ms2, sideways_push, blend)
 
 
 ## Where the rig leans sideways: it hangs toward the sailor with the lean (the sailor pulls
@@ -241,19 +318,44 @@ func _rig_lean_rad(controls: SimControls) -> float:
 func _update_sailor(dt: float, controls: SimControls) -> void:
 	var forward_speed: float = -SimMath.to_body(body.basis, body.velocity).z
 	var stance_target: float = smoothstep(sailor_config.stance_speed_start_ms, sailor_config.stance_speed_full_ms, forward_speed)
+	# In a tack the sailor steps round the front of the mast instead, and quickly, but only
+	# as far as the nose allows: a board still carrying speed buries its nose under a sailor
+	# who steps forward too early, so the sailor stops stepping (and backs off) as the
+	# bottom at the nose sinks toward deck depth, where the water would come over the nose.
+	var stepping: bool = controls.step_forward > 0.0
+	var nose_depth: float = buoyancy.point_depths_m[buoyancy.bow_centre_index]
+	var nose_room: float = clampf((board_config.thickness_m - nose_depth) / sailor_config.nose_dive_ramp_m, 0.0, 1.0)
+	stance_target = lerpf(stance_target, -1.0, clampf(controls.step_forward, 0.0, 1.0) * nose_room)
+	var stance_rate: float = sailor_config.step_rate_per_s if stepping else sailor_config.stance_rate_per_s
 	if not controls.freeze_fore_aft:
-		stance = move_toward(stance, stance_target, sailor_config.stance_rate_per_s * dt)
+		stance = move_toward(stance, stance_target, stance_rate * dt)
 
 	var lean_target: float = clampf(controls.lean, -1.0, 1.0)
+	_asked_lean = lean_target
+	_asked_across = controls.boom_across
 	if controls.balance_reflex:
+		# The lean the controls ask for is read as a turn the sailor wants: weight on a rail
+		# banks the board, and a banked planing board carves. The bank asked for is the one
+		# a coordinated turn at carve_rate_dps (times the lean) needs at this speed,
+		# atan(v w / g), capped at bank_max_deg and taken up progressively, at
+		# bank_rate_dps. The reflex then holds that bank with the sailor's whole weight, as
+		# a skier holds an edge, and keeps the sailor standing in the apparent gravity of
+		# the turn: for every radian the deck is off square to it, the body's centre has to
+		# move its own height sideways.
 		var heel: float = SimMath.heel_rad(body.basis)
 		var heel_rate: float = -body.angular_velocity_body().z
+		var bank_target: float = _bank_for_turn(lean_target, forward_speed)
+		_wanted_bank_rad = move_toward(_wanted_bank_rad, bank_target, deg_to_rad(sailor_config.bank_rate_dps) * dt)
+		var standing: float = sailor_config.com_height_m / maxf(sailor_config.lean_max_m, 0.1)
 		var max_moment: float = mass_model.max_righting_moment_nm(sim_config.gravity_ms2)
 		# A positive sail torque about the aft axis lifts the starboard rail (heels to port);
 		# the sailor answers by moving to starboard (positive lean), and the other way round.
 		var feed_forward: float = sailor_config.balance_moment_gain * sail.torque_body.z / max_moment
-		lean_target += feed_forward - sailor_config.balance_heel_gain * heel - sailor_config.balance_rate_gain * heel_rate
+		lean_target = feed_forward - standing * _felt_heel_rad() \
+			- sailor_config.balance_heel_gain * (heel - _wanted_bank_rad) - sailor_config.balance_rate_gain * heel_rate
 		lean_target = clampf(lean_target, -1.0, 1.0)
+	else:
+		_wanted_bank_rad = 0.0
 	lean = move_toward(lean, lean_target, sailor_config.lean_rate_per_s * dt)
 
 	# The boom pulls the sailor forward; the sailor leans back until their weight balances
@@ -269,15 +371,16 @@ func _update_sailor(dt: float, controls: SimControls) -> void:
 
 	# These are slow moves: the board stays put and the weight shifts inside it.
 	mass_model.update(stance, lean, hang_back_m, knee_bend_m)
-	body.set_mass_properties(mass_model.total_mass_kg, _inertia_with_added_water(), mass_model.com_offset_body)
+	body.set_mass_properties(mass_model.total_mass_kg, _inertia_with_added_water(mass_model.inertia_body), mass_model.com_offset_body)
 
 
 ## The inertia of the body plus the water the hull drags along when it turns (yaw) and
 ## when it pitches (the wet bottom's added mass, from the last hull computation).
-func _inertia_with_added_water() -> Basis:
-	var inertia: Basis = mass_model.inertia_body
+func _inertia_with_added_water(base: Basis) -> Basis:
+	var inertia: Basis = base
 	inertia.x = Vector3(inertia.x.x + hull.pitch_added_inertia_kgm2, inertia.x.y, inertia.x.z)
 	inertia.y = Vector3(inertia.y.x, inertia.y.y + buoyancy.yaw_added_inertia_kgm2(), inertia.y.z)
+	inertia.z = Vector3(inertia.z.x, inertia.z.y, inertia.z.z + hull.roll_added_inertia_kgm2)
 	return inertia
 
 
@@ -309,7 +412,7 @@ func _flex_legs(dt: float) -> void:
 		knee_bend_m = signf(knee_bend_m) * sailor_config.leg_travel_m
 		knee_bend_rate_ms = 0.0
 	mass_model.update(stance, lean, hang_back_m, knee_bend_m)
-	body.set_mass_properties(total, _inertia_with_added_water(), mass_model.com_offset_body, true)
+	body.set_mass_properties(total, _inertia_with_added_water(mass_model.inertia_body), mass_model.com_offset_body, true)
 	body.internal_velocity = up * (m_sailor / total * knee_bend_rate_ms)
 
 
@@ -352,6 +455,8 @@ func _fill_telemetry(controls: SimControls) -> void:
 	t.sheet = controls.sheet
 	t.rake = controls.rake
 	t.rig_tilt = controls.rig_tilt
+	t.boom_across = controls.boom_across
+	t.is_backwinded = sail.is_backwinded
 	t.rig_lean_deg = rad_to_deg(sail.rig_lean_rad)
 	t.sail_angle_deg = rad_to_deg(sail.sail_angle_rad())
 	t.alpha_deg = rad_to_deg(sail.alpha_rad)
@@ -366,6 +471,7 @@ func _fill_telemetry(controls: SimControls) -> void:
 	t.fin_lift_n = fin.lift_n
 	t.fin_drag_n = fin.drag_n
 	t.fin_stalled = fin.is_stalled
+	t.fin_immersed = fin.immersed_fraction
 
 	t.buoyancy_n = buoyancy.buoyancy_force_n
 	t.submersion_ratio = buoyancy.submersion_ratio
@@ -376,6 +482,8 @@ func _fill_telemetry(controls: SimControls) -> void:
 	t.wetted_aft_m = hull.wetted_aft_m
 	t.spray_root_factor = hull.spray_root_factor
 	t.heave_added_mass_kg = hull.heave_added_mass_kg
+	t.planing_cop_z_m = hull.cop_local.z
+	t.bow_immersion_m = buoyancy.point_depths_m[buoyancy.bow_centre_index]
 	t.is_planing = hull.planing_ratio > 0.5
 	t.trim_deg = hull.trim_deg
 	t.hull_friction_n = hull.friction_n
@@ -387,6 +495,9 @@ func _fill_telemetry(controls: SimControls) -> void:
 	t.fall_kind = fall_kind
 	t.waterstart_in_s = maxf(sailor_config.waterstart_time_s - fallen_for_s, 0.0) if sailor_state == SailorState.FALLEN else 0.0
 	t.stance = stance
+	t.wanted_bank_deg = rad_to_deg(_wanted_bank_rad)
+	t.felt_push_ms2 = _felt_push_ms2
+	t.felt_heel_deg = rad_to_deg(_felt_heel_rad())
 	t.lean = lean
 	t.hang_back_m = hang_back_m
 	t.knee_bend_m = knee_bend_m

@@ -30,6 +30,8 @@ var side_force_n: float = 0.0
 var ce_local: Vector3 = Vector3.ZERO
 var ce_world: Vector3 = Vector3.ZERO
 var is_luffing: bool = false
+## The wind is on the sail's leeward face: the sail has inverted and pushes the other way.
+var is_backwinded: bool = false
 var apparent_wind_world: Vector3 = Vector3.ZERO
 var aws_ms: float = 0.0
 var awa_rad: float = 0.0
@@ -58,10 +60,14 @@ func set_side_for_wind(apparent_wind_angle_rad: float) -> void:
 
 
 ## Computes the sail force for the body's state and applies it to the body.
-func compute(body: SimRigidBody, wind: WindField, sheet: float, rake: float, rho_air: float, rig_lean: float = 0.0) -> void:
+## held_side: 0 lets the wind decide which side the sail is on; +1 or -1 is the sailor
+## holding the rig on that side (through a tack, until they flip it).
+func compute(body: SimRigidBody, wind: WindField, sheet: float, rake: float, rho_air: float, rig_lean: float = 0.0, boom_across: float = 0.0, held_side: int = 0) -> void:
 	rake_rad = clampf(rake, -1.0, 1.0) * config.max_rake_rad()
 	rig_lean_rad = rig_lean
-	sheet_angle_rad = lerpf(deg_to_rad(config.sheet_angle_out_deg), deg_to_rad(config.sheet_angle_in_deg), clampf(sheet, 0.0, 1.0))
+	# The boom angle on the sail's side; pushed across the centreline it goes negative.
+	sheet_angle_rad = lerpf(deg_to_rad(config.sheet_angle_out_deg), deg_to_rad(config.sheet_angle_in_deg), clampf(sheet, 0.0, 1.0)) \
+		- clampf(boom_across, 0.0, 1.0) * deg_to_rad(config.boom_across_max_deg)
 
 	# The apparent wind is sampled where the sail is. The side decision uses the point
 	# on the mast, which does not depend on the side; the chord offset is added after.
@@ -71,7 +77,9 @@ func compute(body: SimRigidBody, wind: WindField, sheet: float, rake: float, rho
 	true_wind_at_ce_world = wind.velocity_at(mast_point_world)
 	var apparent_at_mast: Vector3 = true_wind_at_ce_world - body.point_velocity(mast_point_world)
 	var apparent_h: Vector3 = SimMath.horizontal(apparent_at_mast)
-	if apparent_h.length() >= config.min_apparent_wind_ms:
+	if held_side != 0:
+		sail_side = held_side
+	elif apparent_h.length() >= config.min_apparent_wind_ms:
 		update_side(SimMath.wind_angle_rad(body.basis, -apparent_h))
 
 	# Boom direction and the centre of effort (section 2.2 and 2.13), in body axes.
@@ -104,7 +112,8 @@ func compute(body: SimRigidBody, wind: WindField, sheet: float, rake: float, rho
 	var n0: Vector3 = r * (-sail_side * cos(sheet_angle_rad)) - f * sin(sheet_angle_rad)
 	var sin_alpha: float = clampf(from_hat.dot(n0), -1.0, 1.0)
 	alpha_rad = asin(sin_alpha)
-	is_luffing = alpha_rad <= 0.0
+	is_luffing = absf(alpha_rad) < deg_to_rad(config.alpha_luff_deg)
+	is_backwinded = alpha_rad <= -deg_to_rad(config.alpha_luff_deg)
 
 	cl = lift_coefficient(alpha_rad)
 	cd = drag_coefficient(cl, alpha_rad)
@@ -149,6 +158,7 @@ func _clear_forces() -> void:
 	drive_n = 0.0
 	side_force_n = 0.0
 	is_luffing = true
+	is_backwinded = false
 	torque_body = Vector3.ZERO
 
 
@@ -163,8 +173,10 @@ func mast_direction() -> Vector3:
 	return Vector3(sin(rig_lean_rad), cos(rig_lean_rad) * cos(rake_rad), cos(rig_lean_rad) * sin(rake_rad))
 
 
-## Lift coefficient against the signed angle of attack: the legacy curve made continuous,
-## with the luff fade below alpha_luff (section 2.7 and 2.9).
+## Size of the lift coefficient against the angle of attack: the legacy curve made
+## continuous, with the luff fade within alpha_luff of zero (section 2.7 and 2.9). The
+## direction of the force is decided in compute(): a backwinded sail (negative angle) pushes
+## the other way with backwind_efficiency of the lift, as an inverted cambered sail does.
 func lift_coefficient(alpha: float) -> float:
 	var a_deg: float = rad_to_deg(absf(alpha))
 	var slope: float = lift_slope_per_rad()
@@ -182,17 +194,17 @@ func lift_coefficient(alpha: float) -> float:
 		value = lerpf(config.stall_retention * cl_max, config.deep_stall_cl, (a_deg - config.cl_stall_end_deg) / (config.cl_deep_stall_deg - config.cl_stall_end_deg))
 	else:
 		value = config.deep_stall_cl * cos(deg_to_rad(a_deg - config.cl_deep_stall_deg))
-	return value * luff_factor(alpha)
+	var backwinded: float = config.backwind_efficiency if alpha < 0.0 else 1.0
+	return value * luff_factor(alpha) * backwinded
 
 
-## A sail cannot carry lift when the wind hits it from the wrong face; near zero angle
-## of attack the luff collapses and the lift fades out.
+## Near zero angle of attack the luff collapses and the sail flaps: the lift fades out
+## within alpha_luff of zero on either side.
 func luff_factor(alpha: float) -> float:
-	if alpha <= 0.0:
-		return 0.0
+	var a: float = absf(alpha)
 	var alpha_luff: float = deg_to_rad(config.alpha_luff_deg)
-	if alpha < alpha_luff:
-		return alpha / alpha_luff
+	if a < alpha_luff:
+		return a / alpha_luff
 	return 1.0
 
 

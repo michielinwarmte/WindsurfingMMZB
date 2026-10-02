@@ -159,8 +159,11 @@ func apply(body: SimRigidBody, surface: WaterSurface, time_s: float, gravity_ms2
 		# A damper can only take away the momentum there is: in one step this point's share
 		# of the force may not exceed what stops its motion (the exact answer for a damper
 		# integrated implicitly). Without this a light hull slamming down at a few metres per
-		# second can be thrown back out by the quadratic term (A-16).
-		var stopping_force: float = (body.mass_kg + body.added_mass_up_kg) * absf(normal_speed) / dt * wet_share
+		# second can be thrown back out by the quadratic term (A-16). The momentum a point has
+		# is its effective mass (translation and rotation about the centre of mass) times its
+		# speed: a rail of a light board rolling fast carries little, and a damper that took
+		# more would spin the board the other way instead of stopping it.
+		var stopping_force: float = body.effective_mass_at(point_world, normal) * absf(normal_speed) / dt * wet_share
 		damping = clampf(damping, -stopping_force, stopping_force)
 		body.add_force_at(point_world, normal * damping)
 		damping_sum += normal * damping

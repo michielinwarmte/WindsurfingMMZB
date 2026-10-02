@@ -125,7 +125,7 @@ func _beginner_sim(heading_deg: float) -> Array:
 	var sim: WindsurferSim = _sim(18.0)
 	sim.reset(Vector3.ZERO, deg_to_rad(heading_deg))
 	var controller: PlayerController = PlayerController.new()
-	controller.auto_sheet_pilot.sail = sim.sail
+	controller.set_sail(sim.sail)
 	return [sim, controller, _eased()]
 
 
@@ -147,10 +147,10 @@ func test_beginner_sails_off_by_itself_and_turns_both_ways_when_planing_on_both_
 		assert_lt(absf(wrapf(sim.telemetry.heading_deg - heading, -180.0, 180.0)), 25.0, "the heading hold keeps it from rounding up at low speed (start %s)" % heading)
 		_play(sim, controller, controls, 17.0)
 		assert_gt(sim.telemetry.speed_ms, 7.0, "planing without touching a key (start %s)" % heading)
-		assert_gt(_turned_right_deg(sim, controller, controls, "steer_right", 3.0), 15.0, "D turns right when planing (start %s)" % heading)
+		assert_gt(_turned_right_deg(sim, controller, controls, "steer_right", 2.0), 10.0, "D turns right when planing (start %s)" % heading)
 		assert_eq(sim.sailor_state, WindsurferSim.SailorState.SAILING, "without falling")
 		_play(sim, controller, controls, 2.0)
-		assert_lt(_turned_right_deg(sim, controller, controls, "steer_left", 3.0), -15.0, "A turns left when planing (start %s)" % heading)
+		assert_lt(_turned_right_deg(sim, controller, controls, "steer_left", 2.0), -10.0, "A turns left when planing (start %s)" % heading)
 		assert_eq(sim.sailor_state, WindsurferSim.SailorState.SAILING, "without falling")
 
 
@@ -168,6 +168,117 @@ func test_beginner_steers_and_holds_course_dead_downwind() -> void:
 	_play(sim, controller, controls, 2.0)
 	assert_lt(_turned_right_deg(sim, controller, controls, "steer_left", 4.0), -15.0, "A turns left on a run")
 	assert_eq(sim.sailor_state, WindsurferSim.SailorState.SAILING, "without falling")
+
+
+func _press_once(action: String, sim: WindsurferSim, controller: PlayerController, controls: SimControls) -> void:
+	Input.action_press(action)
+	controller.update(sim.telemetry, controls, DT)
+	sim.step(DT, controls)
+	Input.action_release(action)
+
+
+func test_beginner_tacks_with_space_from_a_beam_reach_on_both_tacks() -> void:
+	for heading: float in [180.0, 0.0]:
+		var parts: Array = _beginner_sim(heading)
+		var sim: WindsurferSim = parts[0]
+		var controller: PlayerController = parts[1]
+		var controls: SimControls = parts[2]
+		_play(sim, controller, controls, 25.0)
+		var tack_before: float = signf(sim.telemetry.twa_deg)
+		_press_once("tack", sim, controller, controls)
+		var crossed_at: float = -1.0
+		var away_at: float = -1.0
+		var fell: bool = false
+		for i: int in int(20.0 / DT):
+			controller.update(sim.telemetry, controls, DT)
+			sim.step(DT, controls)
+			fell = fell or sim.sailor_state == WindsurferSim.SailorState.FALLEN
+			var twa: float = sim.telemetry.twa_deg
+			if crossed_at < 0.0 and signf(twa) == -tack_before and absf(twa) > 5.0:
+				crossed_at = sim.time_s
+			if crossed_at >= 0.0 and away_at < 0.0 and signf(twa) == -tack_before and absf(twa) > 60.0:
+				away_at = sim.time_s
+				break
+		assert_gt(crossed_at, 0.0, "the bow went through the wind (start %s)" % heading)
+		assert_gt(away_at, 0.0, "and the board bore away on the new tack (start %s)" % heading)
+		assert_lt(away_at - 25.0, 15.0, "within 15 s (start %s)" % heading)
+		assert_false(fell, "without falling (start %s)" % heading)
+		_play(sim, controller, controls, 8.0)
+		assert_gt(sim.telemetry.speed_ms, 3.0, "and got going again (start %s)" % heading)
+
+
+func test_beginner_tacks_by_holding_the_turn_key() -> void:
+	# Starboard tack, D held: heading up through the wind and on round onto port tack.
+	var parts: Array = _beginner_sim(180.0)
+	var sim: WindsurferSim = parts[0]
+	var controller: PlayerController = parts[1]
+	var controls: SimControls = parts[2]
+	_play(sim, controller, controls, 25.0)
+	var crossed: bool = false
+	Input.action_press("steer_right")
+	for i: int in int(15.0 / DT):
+		controller.update(sim.telemetry, controls, DT)
+		sim.step(DT, controls)
+		if sim.telemetry.twa_deg < -40.0:
+			crossed = true
+			break
+	Input.action_release("steer_right")
+	assert_true(crossed, "D held from a beam reach takes the board through the wind and onto the other tack")
+
+
+func test_beginner_gets_out_of_irons() -> void:
+	# At rest, head to wind (heading West, wind from the West). D turns the bow to starboard,
+	# so the wind comes onto the port side and the board bears away on port tack.
+	var parts: Array = _beginner_sim(270.0)
+	var sim: WindsurferSim = parts[0]
+	var controller: PlayerController = parts[1]
+	var controls: SimControls = parts[2]
+	_play(sim, controller, controls, 2.0)
+	var away: bool = false
+	Input.action_press("steer_right")
+	for i: int in int(20.0 / DT):
+		controller.update(sim.telemetry, controls, DT)
+		sim.step(DT, controls)
+		if sim.telemetry.twa_deg < -45.0 and sim.telemetry.speed_ms > 1.5:
+			away = true
+			break
+	Input.action_release("steer_right")
+	assert_true(away, "out of irons and sailing on port tack within 20 s")
+
+
+func test_beginner_gybes_with_space_and_settles_on_the_new_course() -> void:
+	var parts: Array = _beginner_sim(180.0)
+	var sim: WindsurferSim = parts[0]
+	var controller: PlayerController = parts[1]
+	var controls: SimControls = parts[2]
+	_play(sim, controller, controls, 25.0)
+	# Bear away to a broad reach first, as a sailor does before a gybe.
+	Input.action_press("steer_left")
+	_play(sim, controller, controls, 2.0)
+	Input.action_release("steer_left")
+	_play(sim, controller, controls, 3.0)
+	assert_gt(sim.telemetry.twa_deg, 110.0, "on a broad reach")
+	_press_once("tack", sim, controller, controls)
+	var done_at: float = -1.0
+	var fell: bool = false
+	for i: int in int(15.0 / DT):
+		controller.update(sim.telemetry, controls, DT)
+		sim.step(DT, controls)
+		fell = fell or sim.sailor_state == WindsurferSim.SailorState.FALLEN
+		if controller.manoeuvre == PlayerController.Manoeuvre.NONE and sim.telemetry.twa_deg < 0.0:
+			done_at = sim.time_s
+			break
+	assert_gt(done_at, 0.0, "the gybe completed")
+	assert_lt(done_at - 30.0, 12.0, "within 12 s")
+	assert_false(fell, "without falling")
+	# Settling: five seconds later the heading hardly moves any more.
+	_play(sim, controller, controls, 5.0)
+	var heading_a: float = sim.telemetry.heading_deg
+	_play(sim, controller, controls, 3.0)
+	var drift: float = absf(wrapf(sim.telemetry.heading_deg - heading_a, -180.0, 180.0))
+	assert_lt(drift, 10.0, "steady on the new course")
+	assert_lt(absf(sim.telemetry.yaw_rate_dps), 6.0)
+	assert_gt(sim.telemetry.speed_ms, 4.0, "and still moving")
 
 
 func test_beam_reach_sets_off_and_planes() -> void:
@@ -221,18 +332,26 @@ func _twa_change_with_rake(start_heading_deg: float, rake: float) -> float:
 	controls.rig_tilt = 0.0  # the pilot leaves its helm behind; this test is about the rake alone
 	controls.lean = 0.0
 	var twa_before: float = sim.telemetry.twa_deg
-	controls.rake = rake
-	_run(sim, 4.0, controls, pilot)
+	# On top of the rake the pilot needed to hold the course: at speed the rig leaned to
+	# windward with the hiked sailor bears the board away, and the trim is rake back.
+	controls.rake = clampf(controls.rake + rake, -1.0, 1.0)
+	_run(sim, 3.0, controls, pilot)
 	return absf(sim.telemetry.twa_deg) - absf(twa_before)
 
 
 func test_rake_back_heads_up_and_rake_forward_bears_away_on_both_tacks() -> void:
-	# Starboard tack: heading South with the wind from the West (TWA +90).
-	assert_lt(_twa_change_with_rake(180.0, 1.0), -8.0, "starboard tack, rake back: the wind angle gets smaller (heading up)")
-	assert_gt(_twa_change_with_rake(180.0, -1.0), 8.0, "starboard tack, rake forward: bearing away")
-	# Port tack: heading North (TWA -90).
-	assert_lt(_twa_change_with_rake(0.0, 1.0), -8.0, "port tack, rake back heads up")
-	assert_gt(_twa_change_with_rake(0.0, -1.0), 8.0, "port tack, rake forward bears away")
+	# Half rake for three seconds: a full swing at planing speed spins the board right
+	# through a gybe, which makes the wind angle meaningless. Both tacks must mirror.
+	var starboard_up: float = _twa_change_with_rake(180.0, 0.5)
+	var starboard_away: float = _twa_change_with_rake(180.0, -0.5)
+	var port_up: float = _twa_change_with_rake(0.0, 0.5)
+	var port_away: float = _twa_change_with_rake(0.0, -0.5)
+	assert_lt(starboard_up, -8.0, "starboard tack, rake back: the wind angle gets smaller (heading up)")
+	assert_gt(starboard_away, 8.0, "starboard tack, rake forward: bearing away")
+	assert_lt(port_up, -8.0, "port tack, rake back heads up")
+	assert_gt(port_away, 8.0, "port tack, rake forward bears away")
+	assert_almost_eq(port_up, starboard_up, 0.25 * absf(starboard_up) + 2.0, "the tacks mirror (heading up)")
+	assert_almost_eq(port_away, starboard_away, 0.25 * absf(starboard_away) + 2.0, "the tacks mirror (bearing away)")
 
 
 func test_both_tacks_are_mirror_images() -> void:

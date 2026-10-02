@@ -16,6 +16,7 @@ var drag_n: float = 0.0
 var force_world: Vector3 = Vector3.ZERO
 var cop_world: Vector3 = Vector3.ZERO
 var is_stalled: bool = false
+var immersed_fraction: float = 1.0
 var in_water: bool = false
 
 
@@ -25,8 +26,13 @@ func _init(fin_config: FinConfig) -> void:
 
 func compute(body: SimRigidBody, surface: WaterSurface, time_s: float, rho_water: float) -> void:
 	cop_world = body.point_world(config.cop_local())
+	# The part of the span that is in the water: all of it with the root under the surface,
+	# less when the tail has lifted and the root is in the air (a tack with the sailor's
+	# weight forward, a bounce). The force scales with the immersed area.
 	var root_world: Vector3 = body.point_world(config.root_local)
-	in_water = surface.depth_at(root_world, time_s) > 0.0
+	var root_depth: float = surface.depth_at(root_world, time_s)
+	immersed_fraction = clampf((root_depth + config.span_m) / config.span_m, 0.0, 1.0)
+	in_water = immersed_fraction > 0.0
 	if not in_water:
 		_clear()
 		return
@@ -46,8 +52,8 @@ func compute(body: SimRigidBody, surface: WaterSurface, time_s: float, rho_water
 	is_stalled = rad_to_deg(absf(slip_rad)) > config.stall_peak_deg
 
 	var q: float = 0.5 * rho_water * speed * speed
-	lift_n = q * config.area_m2 * absf(cl)
-	drag_n = q * config.area_m2 * cd
+	lift_n = q * config.area_m2 * immersed_fraction * absf(cl)
+	drag_n = q * config.area_m2 * immersed_fraction * cd
 
 	# Drag along the flow; lift perpendicular to it, in the fin's plane, against the slip.
 	var flow_dir: Vector3 = v_plane / speed

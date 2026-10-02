@@ -15,6 +15,39 @@ Template for new entries:
 
 ---
 
+## 3 October 2026 - Session 33: tacks, gybes, and a hull that carves
+
+**Phase:** 3 play-tested a third time; Phase 4 work. Stopped at the team's request so they can play-test before more is optimised.
+
+**Done:**
+- The play-test said: gybing is a little slow and takes a while to settle; tacking is impossible. Both reproduced in the `player_steer` scenario at 12 and 18 kt and worked on with frame-by-frame traces (`.scratch/trace.py`).
+- The hull now knows about heel: the planing strips run across the width, so a banked board carries its lift on the low rail and forward. That gives the righting moment, the sideways force and the turn into the bank that make a real board carve (spec section 5 and 17.9, with a new hull test). Before this a banked board turned away from its bank and gybes could only be spun with the rig.
+- The sailor's balance was rebuilt on that: weight on a rail asks for a turn and the reflex banks the board for it (at most 30 degrees, 12 degrees per second); the sailor balances in the apparent gravity of the turn (the measured sideways acceleration of the body, averaged over 0.3 s), and the fall checks use the same felt heel. The balance gains were re-tuned (2.5 and 1.2) to a critically damped loop. The depowering is gradual with an urgent rate near the limits; the player's on-off ease only acts while sheeting by hand.
+- The tack is a latched sequence in the pilot that follows the wanted turn: backed across the centreline to take the bow away from the sail (the flip at 25 degrees through and 17 of apparent wind on the new side), backed on its own side to take the bow toward it (after the flip and out of irons), given up when the bow falls back 35 degrees. The arm limit is 350 N and can take the sail down to flapping; the step forward is paced by the nose's depth. The controller rakes fully back whenever the pilot backs.
+- Every turn goes through the rate loop (keys 30, tack 15, gybe 30 degrees per second) with the rail sized for the rate and the rig closing the loop; the heading hold uses the rig alone. A gybe keeps the sail eased to 8 degrees of angle of attack until the board has settled; after a manoeuvre the board straightens by itself before the hold takes over. Space tacks up to 100 degrees of true wind angle.
+- Stability after a fall: roll added inertia for the hull, a damping cap per point based on that point's own effective mass, an implicit sea anchor, no planing when the bottom does not face the water. No NaN anywhere any more.
+- Telemetry and the CSV gained `bow_immersion_m`, `planing_cop_z_m`, `fall_kind`, `wanted_bank_deg`, `felt_push_ms2`, `felt_heel_deg`. The test `test_the_boom_pushed_across_the_centreline` now asks for "luffing or backwinded" (at 5 degrees of apparent wind the sheeted sail is at -7 degrees).
+
+**Verified:**
+- `tools/test.sh`: 110 of 111 passing. Failing: `test_beginner_gets_out_of_irons` (D at rest head to wind in 18 kt; the bow hunts at the edge of the 20 degree fill band at 1 m/s). `tools/check.sh`: 61 files, 0 failed.
+- Headless scenarios at 18 kt from a 10 m/s beam reach, no falls, no NaN: Space tack through the wind 6.5 s after the key and on the new close reach after 9 s, both tacks mirror images; D held tacks the same way; gybe from a broad reach dead downwind 2.7 s after Space and on the new broad reach after 6.2 s; gybe from a beam reach at 10.5 m/s in 7.1 s; A on a dead run turns left. At 12 kt the tack and the gybe are clean. The steady beam reach at 18 kt is smooth (10.7 m/s, 2.7 degrees of heel, no pumping).
+- Not verified: how any of it feels in the game (no play-test since the changes); no screenshot this session (nothing visual changed except the HUD numbers). Advanced mode was not re-tested by hand.
+
+**Known problems left on purpose (the team asked to stop and play-test first):**
+1. After the Space tack at 18 kt, on the new close reach at about 6.5 m/s, the hike, the depowering and the heading hold oscillate together (2 s period) and the sailor is catapulted about 10 s after the tack (the `tack_stb_18` run falls at 42 s). The urgent re-powering added last is the first suspect.
+2. Out of irons with D at rest in 18 kt fails (above).
+3. A full rake step at 10 m/s (advanced mode, `bear_away` scenario) spins the board at 100 degrees per second and the sailor falls; the beginner loop never asks for that, advanced mode has no protection.
+4. Everything was tuned at 12 and 18 kt, flat water, one board, one sail.
+
+**Decisions:**
+- The rail is for turns, not for holding a course: a planing board carves hard on a few degrees of bank.
+- Manoeuvres are rate-controlled like the keys; full helm at planing speed is a spin-out in this physics as on the water.
+- Falls and balance use the heel the sailor feels, from the measured acceleration, not from v times the yaw rate.
+
+**Next:** the team plays: tack and gybe with Space at a few wind strengths, hold A/D through the wind, sail close-hauled at 18 kt and see whether the board rocks. Then decide what is worth fixing from the list above before waves, other boards and sails, and other winds add complexity.
+
+---
+
 ## 2 October 2026 - Session 32: steering at every speed and on every course
 
 **Phase:** 3 play-tested again; Phase 4 work.

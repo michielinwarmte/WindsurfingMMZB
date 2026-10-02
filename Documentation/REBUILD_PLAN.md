@@ -16,7 +16,7 @@ Written 28 September 2026 (Session 28), for the AI sessions doing the work and f
 | 0 | Preparation: Godot installed, project skeleton, tools, first tests | ✅ Done (Session 28) |
 | 1 | Physics spec from the Unity version | ✅ Done (Session 29) |
 | 2 | Core simulation, headless and tested | ✅ Done (Session 30) |
-| 3 | Playable prototype on flat water | ✅ Done (Session 30); play-tested in Sessions 31 and 32: falls, downwind trim, the helm (rake, rig tilt, rail) and beginner assists added |
+| 3 | Playable prototype on flat water | ✅ Done (Session 30); play-tested in Sessions 31 to 33: falls, downwind trim, the helm (rake, rig tilt, rail), beginner assists, a hull that carves when banked, tacks and gybes on Space and on the keys (Session 33 notes list what is still open) |
 | 4 | Autopilot, validation suite and tuning | ⬜ Next |
 | 5 | Waves and ocean | ⬜ |
 | 6 | Rig visuals: board, sail, boom, mast | ⬜ |

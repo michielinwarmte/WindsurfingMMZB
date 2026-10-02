@@ -267,3 +267,46 @@ func test_identical_inputs_identical_outputs() -> void:
 	_evaluate(first_models[1], first_models[0], a)
 	_evaluate(second_models[1], second_models[0], b)
 	assert_eq(b._force_sum, a._force_sum)
+
+
+## The Savitsky plate again, level or heeled (starboard rail down), with only the hull's
+## own forces summed. Returns the heel it ended up with, the lift, the sideways force in
+## the world (the board heads along world -Z, so +X is to starboard), the roll torque about
+## the bow axis (positive heels to starboard) and where the planing force acts along the
+## board.
+func _heeled_plate(heel_deg: float) -> Dictionary:
+	var models: Array = _flat_models()
+	var hull: HullModel = models[1]
+	var buoyancy: BuoyancyModel = models[0]
+	var body: SimRigidBody = _trimmed_body(7.0, 4.0)
+	body.basis = Basis(Vector3.RIGHT, deg_to_rad(4.0)) * Basis(Vector3.FORWARD, deg_to_rad(heel_deg))
+	var board: BoardConfig = hull.board
+	var transom_local: Vector3 = Vector3(0.0, -0.5 * board.thickness_m, 0.5 * board.length_m)
+	body.position.y -= body.point_world(transom_local).y + 0.075
+	body.clear_forces()
+	buoyancy.apply(body, FlatWater.new(), 0.0, G)
+	body.clear_forces()
+	hull.compute(body, buoyancy, FlatWater.new(), 0.0, G, body.mass_kg, 1.0)
+	return {
+		"heel_deg": rad_to_deg(SimMath.heel_rad(body.basis)),
+		"lift": hull.planing_lift_n,
+		"side_force": body._force_sum.x,
+		"roll_torque": body._torque_sum.dot(-body.basis.z),
+		"cop_z": hull.cop_local.z,
+	}
+
+
+func test_a_heeled_planing_plate_carries_its_lift_on_the_low_rail() -> void:
+	# Heeled 15 degrees to starboard, the plate is wet further forward on its low rail and
+	# the lift moves there: the planing force rights the board, pushes it sideways toward
+	# the low rail (the centripetal force of a carved turn) and acts further forward than
+	# on the level plate. Level, none of that happens.
+	var level: Dictionary = _heeled_plate(0.0)
+	var heeled: Dictionary = _heeled_plate(15.0)
+	assert_almost_eq(float(heeled["heel_deg"]), 15.0, 0.2, "the test body is heeled 15 degrees")
+	assert_almost_eq(float(level["side_force"]), 0.0, 1.0, "level: no sideways force")
+	assert_almost_eq(float(level["roll_torque"]), 0.0, 1.0, "level: no roll torque from the planing lift")
+	assert_between(float(heeled["lift"]), 0.6 * float(level["lift"]), 1.3 * float(level["lift"]), "heeled: about the same lift")
+	assert_gt(float(heeled["side_force"]), 0.1 * float(heeled["lift"]), "heeled: pushed toward the low rail")
+	assert_lt(float(heeled["roll_torque"]), -50.0, "heeled: the lift on the low rail rights the board")
+	assert_lt(float(heeled["cop_z"]), float(level["cop_z"]) - 0.1, "heeled: the force acts further forward")

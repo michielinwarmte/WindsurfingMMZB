@@ -97,6 +97,21 @@ func angular_velocity_body() -> Vector3:
 	return basis.transposed() * angular_velocity
 
 
+## The mass a force at a world point along a unit direction has to accelerate: the whole
+## body in translation plus what the lever arm lets it rotate, 1 / m_eff = 1 / m +
+## (r x n) . I^-1 (r x n). A rail far from the centre of a light board is "light" (easy to
+## push), the centre of a heavy one is not. Dampers use it to know how much momentum a
+## point really has (see BuoyancyModel and the rig-in-water drag).
+func effective_mass_at(point: Vector3, direction: Vector3) -> float:
+	var up: Vector3 = basis.y
+	var along_up: float = direction.dot(up)
+	var translational: float = (1.0 - along_up * along_up * added_mass_up_kg / (mass_kg + added_mass_up_kg)) / mass_kg
+	var r_cross_n: Vector3 = (point - position).cross(direction)
+	var inertia_world_inv: Basis = basis * inertia_body_inv * basis.transposed()
+	var rotational: float = r_cross_n.dot(inertia_world_inv * r_cross_n)
+	return 1.0 / maxf(translational + rotational, 1e-9)
+
+
 ## A force (world frame) acting at a world point. The torque about the centre of mass
 ## follows from the lever arm; nothing else decides which way the body turns.
 func add_force_at(point: Vector3, force: Vector3) -> void:

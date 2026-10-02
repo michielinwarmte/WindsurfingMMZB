@@ -40,7 +40,7 @@ var _sailor: MeshInstance3D
 
 func _ready() -> void:
 	sim = WindsurferSim.create_default()
-	controller.auto_sheet_pilot.sail = sim.sail
+	controller.set_sail(sim.sail)
 	autopilot.sail = sim.sail
 	_build_visuals()
 	reset()
@@ -113,7 +113,8 @@ func _copy_state_to_visuals() -> void:
 
 	# The sailor: a capsule from the feet up to and beyond the centre of mass.
 	var com: Vector3 = sim.mass_model.sailor_position_body
-	var feet: Vector3 = Vector3(0.22 * clampf(sim.lean * 3.0, -1.0, 1.0), 0.06, lerpf(sailor_config.stance_rest_z_m, sailor_config.stance_planing_z_m, sim.stance))
+	var feet_z: float = lerpf(sailor_config.stance_rest_z_m, sailor_config.stance_planing_z_m, sim.stance) if sim.stance >= 0.0 else lerpf(sailor_config.stance_rest_z_m, sailor_config.stance_tack_z_m, -sim.stance)
+	var feet: Vector3 = Vector3(0.22 * clampf(sim.lean * 3.0, -1.0, 1.0), 0.06, feet_z)
 	var axis: Vector3 = (com - feet).normalized()
 	_sailor.transform = Transform3D(_basis_with_up(axis), feet + axis * (0.5 * sailor_config.height_m))
 

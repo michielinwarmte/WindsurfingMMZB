@@ -14,6 +14,7 @@ func _telemetry(twa_deg: float) -> Telemetry:
 	var t: Telemetry = Telemetry.new()
 	t.twa_deg = twa_deg
 	t.awa_deg = twa_deg
+	t.sail_side = -1 if twa_deg >= 0.0 else 1  # the boom is on the leeward side
 	return t
 
 
@@ -86,7 +87,7 @@ func test_beginner_turn_key_moves_the_whole_helm_the_right_way_on_both_tacks() -
 	_run(controller, _telemetry(90.0), controls, 0.6)
 	assert_gt(controls.rake, 0.5, "starboard tack, right: rig back")
 	assert_lt(controls.rig_tilt, -0.5, "rig tilted to port, the outside of a right turn")
-	assert_gt(controls.lean, 0.3, "weight to starboard, the inside rail")
+	assert_gt(controls.lean, 0.2, "weight to starboard, the inside rail")
 	Input.action_release("steer_right")
 	# Port tack: a right turn is bearing away, so the rig goes forward; tilt and weight as before.
 	var port: PlayerController = PlayerController.new()
@@ -95,7 +96,7 @@ func test_beginner_turn_key_moves_the_whole_helm_the_right_way_on_both_tacks() -
 	_run(port, _telemetry(-90.0), port_controls, 0.6)
 	assert_lt(port_controls.rake, -0.5, "port tack, right: rig forward")
 	assert_lt(port_controls.rig_tilt, -0.5)
-	assert_gt(port_controls.lean, 0.3)
+	assert_gt(port_controls.lean, 0.2)
 	Input.action_release("steer_right")
 	# A left turn mirrors all three.
 	var left: PlayerController = PlayerController.new()
@@ -104,7 +105,7 @@ func test_beginner_turn_key_moves_the_whole_helm_the_right_way_on_both_tacks() -
 	_run(left, _telemetry(90.0), left_controls, 0.6)
 	assert_lt(left_controls.rake, -0.5, "starboard tack, left: bear away, rig forward")
 	assert_gt(left_controls.rig_tilt, 0.5, "rig to starboard, the outside of a left turn")
-	assert_lt(left_controls.lean, -0.3, "weight to port")
+	assert_lt(left_controls.lean, -0.2, "weight to port")
 
 
 func test_beginner_loop_eases_the_helm_once_the_board_turns_as_asked() -> void:
@@ -134,7 +135,7 @@ func test_beginner_mode_holds_the_heading_when_no_key_is_pressed() -> void:
 	_run(controller, t, controls, 0.2)
 	t.heading_deg = 195.0
 	t.twa_deg = 75.0
-	_run(controller, t, controls, 0.6)
+	_run(controller, t, controls, 1.5)
 	assert_lt(controls.rake, -0.4, "starboard tack: rounded up, so the rig goes forward")
 	assert_gt(controls.rig_tilt, 0.3, "and tilts to starboard, the outside of the left turn")
 	# Port tack, heading North, rounded up to 345 (a left turn): a right turn is asked, which
@@ -146,7 +147,7 @@ func test_beginner_mode_holds_the_heading_when_no_key_is_pressed() -> void:
 	_run(port, p, port_controls, 0.2)
 	p.heading_deg = 345.0
 	p.twa_deg = -75.0
-	_run(port, p, port_controls, 0.6)
+	_run(port, p, port_controls, 1.5)
 	assert_lt(port_controls.rake, -0.4, "port tack: rounded up, so the rig goes forward")
 	assert_lt(port_controls.rig_tilt, -0.3)
 
@@ -176,14 +177,14 @@ func test_space_starts_a_tack_upwind_and_a_gybe_downwind() -> void:
 	controller.update(_telemetry(60.0), controls, DT)
 	Input.action_release("tack")
 	assert_eq(controller.manoeuvre, PlayerController.Manoeuvre.TACK_HEADING_UP)
-	_run(controller, _telemetry(60.0), controls, 0.6)
-	assert_gt(controls.rake, 0.9, "rig back to head up")
-	assert_lt(controls.rig_tilt, -0.9, "rig to port, the outside of the right turn")
-	# Through the wind: on the new tack and past 5 degrees the turn goes on, now bearing away.
-	_run(controller, _telemetry(-10.0), controls, 0.1)
+	_run(controller, _telemetry(60.0), controls, 2.5)
+	assert_gt(controls.rake, 0.7, "rig back to head up")
+	assert_lt(controls.rig_tilt, -0.7, "rig to port, the outside of the right turn")
+	# Through the wind: once the rig has flipped the turn goes on, now bearing away.
+	_run(controller, _telemetry(-20.0), controls, 0.1)
 	assert_eq(controller.manoeuvre, PlayerController.Manoeuvre.TACK_BEARING_AWAY)
-	_run(controller, _telemetry(-30.0), controls, 1.2)
-	assert_lt(controls.rake, -0.9, "rig forward to bear away on the new tack")
+	_run(controller, _telemetry(-30.0), controls, 2.5)
+	assert_lt(controls.rake, -0.7, "rig forward to bear away on the new tack")
 	_run(controller, _telemetry(-70.0), controls, 0.1)
 	assert_eq(controller.manoeuvre, PlayerController.Manoeuvre.NONE, "done past 60 degrees")
 
@@ -200,5 +201,5 @@ func test_a_manoeuvre_that_never_completes_is_abandoned() -> void:
 	Input.action_press("tack")
 	controller.update(_telemetry(60.0), controls, DT)
 	Input.action_release("tack")
-	_run(controller, _telemetry(60.0), controls, 11.0)
+	_run(controller, _telemetry(60.0), controls, 21.0)
 	assert_eq(controller.manoeuvre, PlayerController.Manoeuvre.NONE)

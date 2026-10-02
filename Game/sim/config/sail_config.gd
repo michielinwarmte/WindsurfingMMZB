@@ -40,7 +40,7 @@ extends Resource
 ## 25 degrees each way from upright when steering hard.
 @export var max_rake_deg: float = 25.0
 ## The sail keeps its side until the wind is this close to dead ahead or dead astern.
-@export var side_hysteresis_deg: float = 5.0
+@export var side_hysteresis_deg: float = 15.0
 
 @export_group("Lift coefficient curve")
 ## Reduction of the thin-airfoil lift slope for a soft sail with gaps.
@@ -61,6 +61,12 @@ extends Resource
 @export var deep_stall_cl: float = 0.5
 ## Below this angle of attack the sail is luffing and its lift fades to zero (section 2.9).
 @export var alpha_luff_deg: float = 5.0
+## A backwinded sail (the wind on its leeward face) inverts its camber against the battens
+## and still works, less well: its lift is this share of the normal sail's at the same angle.
+@export var backwind_efficiency: float = 0.7
+## How far the sailor can push the clew across the centreline toward the windward side
+## beyond the fully sheeted position (backing the sail to get through a tack), degrees.
+@export var boom_across_max_deg: float = 47.0
 
 @export_group("Drag coefficient")
 ## Drag with no lift: cloth friction, mast, boom and battens. Rig coefficient sets in the

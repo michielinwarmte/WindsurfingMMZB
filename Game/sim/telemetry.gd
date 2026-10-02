@@ -31,6 +31,8 @@ var sail_side: int = -1
 var sheet: float = 0.0
 var rake: float = 0.0
 var rig_tilt: float = 0.0
+var boom_across: float = 0.0
+var is_backwinded: bool = false
 var rig_lean_deg: float = 0.0
 var sail_angle_deg: float = 0.0
 var alpha_deg: float = 0.0
@@ -46,6 +48,7 @@ var fin_slip_deg: float = 0.0
 var fin_lift_n: float = 0.0
 var fin_drag_n: float = 0.0
 var fin_stalled: bool = false
+var fin_immersed: float = 1.0
 
 # Hull and water
 var buoyancy_n: float = 0.0
@@ -53,6 +56,10 @@ var submersion_ratio: float = 0.0
 var wetted_area_m2: float = 0.0
 var planing_lift_n: float = 0.0
 var planing_ratio: float = 0.0
+## Where the planing force acts, in body axes (z aft), for debugging the balance of a turn.
+var planing_cop_z_m: float = 0.0
+## Depth of the bottom at the nose below the surface (negative = the nose is clear).
+var bow_immersion_m: float = 0.0
 var wetted_length_m: float = 0.0
 var wetted_aft_m: float = 0.0
 var spray_root_factor: float = 1.0
@@ -71,6 +78,13 @@ var fall_kind: String = ""
 var waterstart_in_s: float = 0.0
 var stance: float = 0.0
 var lean: float = 0.0
+## The bank the sailor is deliberately holding (degrees, positive = starboard rail down).
+var wanted_bank_deg: float = 0.0
+## The sideways push the sailor feels (m/s2, toward starboard), see WindsurferSim.
+var felt_push_ms2: float = 0.0
+## The heel the sailor feels: the board's heel less the bank a coordinated turn would need
+## for the push they feel (degrees, positive = tipped toward starboard).
+var felt_heel_deg: float = 0.0
 var hang_back_m: float = 0.0
 var knee_bend_m: float = 0.0
 var sailor_position_body: Vector3 = Vector3.ZERO
@@ -85,7 +99,8 @@ static func csv_header() -> String:
 		+ "sail_lift_n,sail_drag_n,drive_n,side_force_n,fin_slip_deg,fin_lift_n,fin_drag_n," \
 		+ "buoyancy_n,submersion_ratio,wetted_area_m2,planing_lift_n,planing_ratio,trim_deg," \
 		+ "hull_friction_n,hull_residuary_n,hull_lateral_n,stance,lean,hang_back_m,knee_bend_m," \
-		+ "wetted_length_m,wetted_aft_m,spray_root_factor,heave_added_mass_kg"
+		+ "wetted_length_m,wetted_aft_m,spray_root_factor,heave_added_mass_kg,rig_tilt,rig_lean_deg,sailor_state,boom_across,fin_immersed," \
+		+ "bow_immersion_m,planing_cop_z_m,fall_kind,wanted_bank_deg,felt_push_ms2,felt_heel_deg"
 
 
 func to_csv_row() -> String:
@@ -95,7 +110,8 @@ func to_csv_row() -> String:
 		sail_lift_n, sail_drag_n, drive_n, side_force_n, fin_slip_deg, fin_lift_n, fin_drag_n,
 		buoyancy_n, submersion_ratio, wetted_area_m2, planing_lift_n, planing_ratio, trim_deg,
 		hull_friction_n, hull_residuary_n, hull_lateral_n, stance, lean, hang_back_m, knee_bend_m,
-		wetted_length_m, wetted_aft_m, spray_root_factor, heave_added_mass_kg]
+		wetted_length_m, wetted_aft_m, spray_root_factor, heave_added_mass_kg, rig_tilt, rig_lean_deg, sailor_state, boom_across, fin_immersed,
+		bow_immersion_m, planing_cop_z_m, fall_kind, wanted_bank_deg, felt_push_ms2, felt_heel_deg]
 	var parts: PackedStringArray = PackedStringArray()
 	for value: Variant in values:
 		if value is float:
