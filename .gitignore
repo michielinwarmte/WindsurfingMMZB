@@ -18,3 +18,6 @@ Thumbs.db
 *.blend1
 
 # The Unity project in Legacy/WindsurfingGame has its own .gitignore.
+
+# Scratch files of AI sessions
+/.scratch/

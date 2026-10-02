@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="SailorConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://sim/config/sailor_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+mass_kg = 75.0
+com_height_m = 1.0
+torso_radius_m = 0.2
+height_m = 1.75
+stance_rest_z_m = 0.15
+stance_planing_z_m = 0.6
+stance_speed_start_ms = 3.5
+stance_speed_full_ms = 7.0
+stance_rate_per_s = 1.0
+hang_height_m = 1.0
+hang_back_max_m = 0.5
+leg_natural_frequency_hz = 2.0
+leg_damping_ratio = 0.4
+leg_travel_m = 0.25
+catapult_heel_deg = 20.0
+fall_back_heel_deg = 25.0
+waterstart_time_s = 4.0
+rig_in_water_drag_m2 = 0.05
+lean_max_m = 1.0
+lean_height_drop_m = 0.5
+lean_rate_per_s = 2.0
+max_rig_lean_deg = 25.0
+windage_area_cd_m2 = 0.5
+balance_heel_gain = 4.0
+balance_rate_gain = 0.8
+balance_moment_gain = 1.0
+pitch_reflex_m_per_rad_s = 0.5

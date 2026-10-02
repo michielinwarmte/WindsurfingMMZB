@@ -5,6 +5,8 @@
 #   tools/screenshot.sh                                 main scene -> .screenshots/latest.png
 #   tools/screenshot.sh res://world/test.tscn           a different scene
 #   tools/screenshot.sh res://main.tscn out.png 180     scene, output file, frames to wait
+#   tools/screenshot.sh res://main.tscn out.png 180 --camera=3 --autopilot=1
+#                                                       extra options for the game (main.gd)
 #
 # The game runs at a fixed 60 frames per second of game time, so 180 frames = 3 seconds.
 # Prints any engine or shader errors. Needs a desktop session: a window opens briefly.
@@ -14,6 +16,7 @@ source "$(dirname "$0")/common.sh"
 scene="${1:-}"
 output="${2:-$REPO_ROOT/.screenshots/latest.png}"
 frames="${3:-60}"
+extra=("${@:4}")
 
 mkdir -p "$(dirname "$output")"
 output="$(cd "$(dirname "$output")" && pwd)/$(basename "$output")"
@@ -29,7 +32,7 @@ if [[ -n "$scene" ]]; then args+=("$scene"); fi
 
 log="$REPO_ROOT/.logs/screenshot.log"
 status=0
-timeout 300 "$godot" "${args[@]}" -- --screenshot="$output" --frames="$frames" >"$log" 2>&1 || status=$?
+timeout 300 "$godot" "${args[@]}" -- --screenshot="$output" --frames="$frames" "${extra[@]}" >"$log" 2>&1 || status=$?
 
 grep -E "SCRIPT ERROR|SHADER ERROR|^ERROR|^WARNING|^ +at: " "$log" || true
 if [[ $status -ne 0 || ! -f "$output" ]]; then
