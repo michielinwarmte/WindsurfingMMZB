@@ -14,8 +14,8 @@ Written 28 September 2026 (Session 28), for the AI sessions doing the work and f
 | Phase | What | Status |
 |---|---|---|
 | 0 | Preparation: Godot installed, project skeleton, tools, first tests | ✅ Done (Session 28) |
-| 1 | Physics spec from the Unity version | ⬜ Next |
-| 2 | Core simulation, headless and tested | ⬜ |
+| 1 | Physics spec from the Unity version | ✅ Done (Session 29) |
+| 2 | Core simulation, headless and tested | ⬜ Next |
 | 3 | Playable prototype on flat water | ⬜ |
 | 4 | Autopilot, validation suite and tuning | ⬜ |
 | 5 | Waves and ocean | ⬜ |
@@ -77,9 +77,12 @@ The same Gerstner wave parameters (one Resource) feed both the GDScript height q
 Visual scripts read the simulation state (sail angle, forces, planing ratio and so on). Nothing visual feeds back into the physics.
 
 ### D7. Verify, don't assume
-- Physics: every behaviour has a test. "Tuned" means the validation suite passes and the team says it feels right.
+- Physics: every behaviour has a test. A physics check passes when the simulation falls in the real-world range for the right physical reason (see D8).
 - Visuals: take a screenshot with `tools/screenshot.sh` and look at it before saying it works.
 - Tell the team clearly what could not be verified.
+
+### D8. The physics is simulated, not tuned (added in Session 29)
+Real windsurfing physics is the core mechanic of the game. Every force comes from a physical model with real-world coefficients and real equipment dimensions. How fast the board goes, which point of sail is fastest, when it starts planing and how it reacts to the rig are outcomes of the simulation, never numbers we choose: there are no behaviour targets, no speed caps, no artificial torques and no "feel" constants. Validation compares the simulation with what real windsurfing kit does (a planing freeride board in 15 kt goes faster than the wind, fastest on a broad reach, planes from about 15 km/h, points about 45° to the wind). When a check fails we look for the physical cause (a coefficient that does not match real equipment, a missing effect, a force applied at the wrong point) and fix the model, writing the real-world source of the fix in the spec's tuning log. The Unity version is a list of lessons, not a reference for behaviour. Where real life is unplayable in a game (balance reflexes, falling in), the sailor model may help the player in beginner mode; such help is explicit, documented in the spec and switchable off. The decisions this replaced are in [PHYSICS_SPEC.md](PHYSICS_SPEC.md) section 15.
 
 ## Target project layout
 
@@ -114,7 +117,7 @@ Change the layout when there is a good reason, and update this section when you 
 - [x] Installed the godot-tools extension in VS Code and pointed it at the installed Godot.
 - [x] Wrote CLAUDE.md, README.md and this plan.
 
-## Phase 1: Physics spec from the Unity version
+## Phase 1: Physics spec from the Unity version ✅ (Session 29)
 
 **Goal:** one engine-neutral document, `Documentation/PHYSICS_SPEC.md`, that describes every force model we will build, in D4 conventions and with its numbers. No code yet.
 
@@ -127,9 +130,9 @@ Change the layout when there is a good reason, and update this section when you 
 - `Legacy/Documentation/`: `PHYSICS_DESIGN.md`, `PHYSICS_VALIDATION.md`, `KNOWN_ISSUES.md`, and `PROGRESS_LOG.md` Sessions 12 to 26 (what broke and why)
 
 **Tasks:**
-- [ ] For each model, write down its purpose, formula, inputs and units, coefficients and values, where the force acts, and the source (legacy file and line, or literature). The models: apparent wind; sail lift and drag (coefficient curves, aspect ratio, camber, centre of effort); sail side and tacking; rake steering; fin (lift, drag, stall, induced drag); hull drag, displacement lift and Savitsky planing; buoyancy (hull shape, rocker, taper, volume weights); damping; mass, inertia and the sailor's centre-of-mass shift; wind (gusts, shifts, height gradient); Gerstner waves.
-- [ ] Translate every direction and sign into D4 conventions, and note each place where Unity's left-handed frame changes a sign.
-- [ ] List every stabiliser or fudge in the legacy code, with a recommendation (keep, drop or re-evaluate) and the reason. Known ones:
+- [x] For each model, write down its purpose, formula, inputs and units, coefficients and values, where the force acts, and the source (legacy file and line, or literature). The models: apparent wind; sail lift and drag (coefficient curves, aspect ratio, camber, centre of effort); sail side and tacking; rake steering; fin (lift, drag, stall, induced drag); hull drag, displacement lift and Savitsky planing; buoyancy (hull shape, rocker, taper, volume weights); damping; mass, inertia and the sailor's centre-of-mass shift; wind (gusts, shifts, height gradient); Gerstner waves.
+- [x] Translate every direction and sign into D4 conventions, and note each place where Unity's left-handed frame changes a sign.
+- [x] List every stabiliser or fudge in the legacy code, with a recommendation (keep, drop or re-evaluate) and the reason. Known ones:
   - rake steering base torque (`150 × rake`) and the speed term
   - high-speed steering scale-down (to 0.3 between 15 and 25 kt)
   - speed-dependent angular damping (up to ×5)
@@ -141,12 +144,14 @@ Change the layout when there is a good reason, and update this section when you 
   - the high-speed sail downforce (added in Session 24, removed in Session 26)
 
   Default: start without the fudge, and add it back only when a Phase 4 test shows it is needed, with a note saying why.
-- [ ] Resolve the legacy contradictions listed under "Known legacy pitfalls" below, and write down the resolution.
-- [ ] Write a validation targets table (what Phase 4 will test), with a source or reason for every number.
-- [ ] Pick a default configuration: board (volume, length, width, mass), sail (area, luff and boom length), fin (area, aspect ratio), sailor mass. The legacy config says 120 L, 2.5 m × 0.6 m, 6 m² sail, 75 kg sailor plus 15 kg of equipment. The old board model measures 2.28 m × 0.80 m. Choose, and say why.
+
+  Session 29 note: this list was written from the legacy docs. [PHYSICS_SPEC.md](PHYSICS_SPEC.md) section 12 corrects it against the code that actually ran (the final rake torque is 0.3 × sail force + 200 to 350 N·m + 25 × speed, the high-speed scale-down goes to 0.5 at 30 kt, the planing lift was a speed ramp rather than Savitsky, and the played cap was 0.4 × 0.15 of the weight) and adds 27 more items, F-10 to F-36.
+- [x] Resolve the legacy contradictions listed under "Known legacy pitfalls" below, and write down the resolution.
+- [x] Write a validation targets table (what Phase 4 will test), with a source or reason for every number.
+- [x] Pick a default configuration: board (volume, length, width, mass), sail (area, luff and boom length), fin (area, aspect ratio), sailor mass. The legacy config says 120 L, 2.5 m × 0.6 m, 6 m² sail, 75 kg sailor plus 15 kg of equipment. The old board model measures 2.28 m × 0.80 m. Choose, and say why.
 
 **Done when:** PHYSICS_SPEC.md is complete enough that Phase 2 can be written from it without opening `Legacy/` again.
-**Stop:** show the team the targets table and the open questions at the end of this plan, and get their answers.
+**Stop:** show the team the targets table and the open questions at the end of this plan, and get their answers. (Session 29: settled under D8, see PHYSICS_SPEC.md sections 14 and 15; the team asked for a playable demo without a stop here.)
 
 ## Phase 2: Core simulation, headless and tested
 
@@ -201,7 +206,7 @@ Change the layout when there is a good reason, and update this section when you 
 
 ## Phase 4: Autopilot, validation suite and tuning
 
-**Goal:** prove the physics against numbers, tune it, and keep it proven.
+**Goal:** check the simulated physics against real-world windsurfing data, fix what the checks expose at its physical source, and keep it checked (D8).
 
 **Tasks:**
 - [ ] An autopilot for tests: holds a chosen TWA using rake (a simple PID controller) and trims the sheet for best speed. Phase 9 reuses it for the AI opponents.
@@ -210,11 +215,11 @@ Change the layout when there is a good reason, and update this section when you 
   - No-go zone: no lasting progress upwind closer than about 35 to 40° TWA.
   - Upwind: at about 45° TWA the board keeps moving with positive VMG, on both tacks.
   - Planing starts between 15 and 17 km/h of boat speed.
-  - Top speed and fastest point of sail match the targets agreed in Phase 1.
+  - Top speed and fastest point of sail fall in the real-world ranges of PHYSICS_SPEC.md section 14 (faster than the wind, fastest on a broad reach). If not, the model is wrong, not the range.
   - Stable above 20 kt of boat speed: pitch and heave oscillation stay below a threshold (no porpoising), submersion stays steady (no trampoline effect), and the board doesn't fly off at 45+ km/h.
   - Recovers from a nose-dive: submerged at speed, it slows down and floats back up.
   - Symmetry: port and starboard tack give the same speeds (±2 %).
-- [ ] Tune the coefficients in the `.tres` files until the suite passes. Log every change, and why, in PHYSICS_SPEC.md.
+- [ ] When a check fails, find the physical cause (a coefficient that does not match real equipment, a missing effect, a force applied at the wrong point) and fix the model; never adjust a number to hit a range (D8). Log every change, with its real-world source, in PHYSICS_SPEC.md section 16.
 - [ ] Save a polar diagram of the sweep in `Documentation/` (a chart, or at least a table the test prints).
 - [ ] Keep `tools/test.sh validation` under about 2 minutes: flat water, and the shortest settling times that still give steady numbers.
 
@@ -295,16 +300,13 @@ Multiplayer, a rigged sailor, more boards and sails, exported builds for Windows
 4. Planing lift must not depend on how deep the board sits. That dependency caused the "trampoline" oscillation.
 5. Viscous damping belongs on vertical motion only. Applying it horizontally killed the forward speed.
 6. Beam-reach submersion at low speed was never solved.
-7. "Beam reach is the fastest point" (old README) conflicts with the Session 25 notes, which say a broad reach should be faster. See the open questions.
+7. "Beam reach is the fastest point" (old README) conflicts with the Session 25 notes, which say a broad reach should be faster. Under D8 the simulation decides; real polars say broad reach.
 8. At rest, a 120 L board carrying 90 kg is about 73 % submerged (90 kg ÷ 1025 kg/m³ ≈ 88 L). That is Archimedes, not a bug. The Unity "displacement lift" was partly added to fight it, so re-evaluate it.
 9. The Session 27 code (ocean shader, sail deformer, spray, audio) was never compiled or played. Use it for ideas only.
 
-## Open questions for the team (answer at the Phase 1 Stop)
+## Former open questions (settled in Session 29 under D8)
 
-1. **Top speed.** The Unity target was 25 to 30 km/h in 15 kt of wind, about the wind speed itself. Planing windsurfers often go faster than the wind on a broad reach. How fast should our default setup be?
-2. **Fastest point of sail.** Beam reach (old README) or broad reach (Session 25 notes and most real polars)?
-3. **Default equipment.** Keep 120 L, 6 m² and a 75 kg sailor, or something else?
-4. **Control modes.** Keep beginner, intermediate and advanced, or start with just beginner and advanced?
+The plan used to ask the team four questions here: the top speed, the fastest point of sail, the default equipment and the control modes. They are not questions any more. The top speed and the fastest point of sail are whatever the simulation gives (real life: faster than the wind, fastest on a broad reach); the equipment is a real, common freeride setup (120 L board, 6.5 m² sail, 38 cm fin, 75 kg sailor); the game has a beginner and an advanced mode. The decisions, with reasons, are in [PHYSICS_SPEC.md](PHYSICS_SPEC.md) section 15.
 
 ## Tooling notes (from Session 28)
 
