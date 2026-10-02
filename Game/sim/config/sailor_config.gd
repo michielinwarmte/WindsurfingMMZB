@@ -40,6 +40,17 @@ extends Resource
 ## How far the knees can flex either way from the normal stance before the legs reach a stop.
 @export var leg_travel_m: float = 0.25
 
+@export_group("Falling and getting back up")
+## The board heels toward the sail only when the sailor can no longer balance the sail's
+## pull. Past this leeward heel a standing person is pulled over the sail: a catapult.
+@export var catapult_heel_deg: float = 20.0
+## Past this windward heel the sailor falls in backwards (the pull vanished while hiked out).
+@export var fall_back_heel_deg: float = 25.0
+## Seconds in the water before the sailor is back on the board (a waterstart).
+@export var waterstart_time_s: float = 4.0
+## Drag area (cd times area) of the rig lying in the water, pulling on the mast foot.
+@export var rig_in_water_drag_m2: float = 0.05
+
 @export_group("Lean (sideways)")
 ## Sideways distance of the sailor's centre of mass from the centreline at full lean:
 ## hooked in with the feet on the windward rail and the body stretched out, the body's

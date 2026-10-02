@@ -66,6 +66,54 @@ func test_legs_flex_on_a_kick_and_settle_again() -> void:
 	assert_lt(absf(sim.telemetry.pitch_deg), 3.0, "still level")
 
 
+func test_overpowered_sailor_is_catapulted_and_the_board_stays_upright() -> void:
+	var sim: WindsurferSim = _sim(18.0)
+	sim.reset(Vector3.ZERO, deg_to_rad(180.0))
+	var controls: SimControls = _eased()
+	var pilot: Autopilot = _pilot(90.0)
+	_run(sim, 20.0, controls, pilot)
+	assert_eq(sim.sailor_state, WindsurferSim.SailorState.SAILING)
+	# Head up with the sail pulled fully in and held there: more than a 75 kg sailor holds.
+	pilot.target_twa_deg = 60.0
+	pilot.trim_sheet = false
+	var fell_at: float = -1.0
+	var heel_at_fall: float = 0.0
+	var max_heel_after: float = 0.0
+	while sim.time_s < 40.0 and (fell_at < 0.0 or sim.time_s < fell_at + 6.0):
+		controls.sheet = 1.0 if fell_at < 0.0 else 0.0
+		pilot.update(sim.telemetry, controls, DT)
+		sim.step(DT, controls)
+		var heel: float = absf(sim.telemetry.heel_deg)
+		if sim.sailor_state == WindsurferSim.SailorState.FALLEN:
+			if fell_at < 0.0:
+				fell_at = sim.time_s
+				heel_at_fall = heel
+			else:
+				max_heel_after = maxf(max_heel_after, heel)
+	assert_gt(fell_at, 20.0, "the sailor went over")
+	assert_eq(sim.fall_kind, "catapult", "to leeward, over the sail")
+	assert_lt(heel_at_fall, 30.0, "the board had heeled only a little when the sailor let go")
+	assert_lt(max_heel_after, 45.0, "and did not roll over afterwards")
+	assert_eq(sim.sailor_state, WindsurferSim.SailorState.SAILING, "back on the board after the waterstart")
+	var t: Telemetry = sim.telemetry
+	assert_lt(absf(t.heel_deg), 5.0, "level")
+	assert_lt(t.speed_ms, 1.0, "at rest")
+	assert_between(t.twa_deg, 70.0, 110.0, "across the wind, on the same tack as before")
+
+
+func test_autopilot_sheets_for_the_most_drive_when_it_knows_the_sail() -> void:
+	var sim: WindsurferSim = _sim()
+	var pilot: Autopilot = Autopilot.new()
+	assert_almost_eq(pilot.best_alpha_deg(deg_to_rad(90.0)), 15.0, 1e-9, "a fixed angle without the sail")
+	pilot.sail = sim.sail
+	var reaching: float = pilot.best_alpha_deg(deg_to_rad(90.0))
+	var pointing: float = pilot.best_alpha_deg(deg_to_rad(25.0))
+	assert_between(reaching, 16.0, 22.0, "on a reach the most drive is near the stall")
+	assert_between(pointing, 10.0, 22.0, "close to the wind the drag counts, so no further than the stall")
+	assert_true(pointing <= reaching)
+	assert_lt(pilot.best_alpha_deg(deg_to_rad(8.0)), reaching, "very close to the wind the sail is feathered")
+
+
 func test_beam_reach_sets_off_and_planes() -> void:
 	var sim: WindsurferSim = _sim()
 	sim.reset(Vector3.ZERO, deg_to_rad(180.0))  # heading South, wind from the West: starboard tack

@@ -18,6 +18,17 @@ var controls: SimControls = SimControls.new()
 var controller: PlayerController = PlayerController.new()
 var autopilot: Autopilot = Autopilot.new()
 
+## The fall takes this long on screen (the physics has already let go).
+const FALL_DURATION_S: float = 0.9
+
+var _previous_state: WindsurferSim.SailorState = WindsurferSim.SailorState.SAILING
+# The pose at the last sailing tick, from which a fall starts.
+var _last_mast_dir: Vector3 = Vector3.UP
+var _last_boom_angle: float = 0.0
+var _last_sailor_com: Vector3 = Vector3(0.0, 1.0, 0.15)
+var _last_sailor_axis: Vector3 = Vector3.UP
+var _last_feet: Vector3 = Vector3(0.0, 0.06, 0.15)
+
 var _board: MeshInstance3D
 var _nose: MeshInstance3D
 var _fin: MeshInstance3D
@@ -29,6 +40,8 @@ var _sailor: MeshInstance3D
 
 func _ready() -> void:
 	sim = WindsurferSim.create_default()
+	controller.auto_sheet_pilot.sail = sim.sail
+	autopilot.sail = sim.sail
 	_build_visuals()
 	reset()
 
@@ -36,21 +49,43 @@ func _ready() -> void:
 ## Puts the board back at the start, at rest.
 func reset() -> void:
 	controls = SimControls.new()
-	controls.sheet = 0.0
-	controller.manoeuvre = PlayerController.Manoeuvre.NONE
+	controller.reset_controls(controls)
 	sim.reset(Vector3.ZERO, deg_to_rad(start_heading_deg))
+	_previous_state = sim.sailor_state
 	autopilot.target_twa_deg = autopilot_twa_deg
 	_copy_state_to_visuals()
 	reset_physics_interpolation()
 
 
+## Skips the rest of the time in the water.
+func waterstart_now() -> void:
+	if sim.sailor_state == WindsurferSim.SailorState.FALLEN:
+		sim.waterstart()
+		_after_waterstart()
+
+
+func is_fallen() -> bool:
+	return sim.sailor_state == WindsurferSim.SailorState.FALLEN
+
+
 func _physics_process(delta: float) -> void:
-	if use_autopilot:
-		autopilot.update(sim.telemetry, controls, delta)
-	else:
-		controller.update(sim.telemetry, controls, delta)
+	if sim.sailor_state == WindsurferSim.SailorState.SAILING:
+		if use_autopilot:
+			autopilot.update(sim.telemetry, controls, delta)
+		else:
+			controller.update(sim.telemetry, controls, delta)
 	sim.step(delta, controls)
+	if sim.sailor_state == WindsurferSim.SailorState.SAILING and _previous_state == WindsurferSim.SailorState.FALLEN:
+		_after_waterstart()
+	_previous_state = sim.sailor_state
 	_copy_state_to_visuals()
+
+
+func _after_waterstart() -> void:
+	controller.reset_controls(controls)
+	_previous_state = sim.sailor_state
+	_copy_state_to_visuals()
+	reset_physics_interpolation()
 
 
 func telemetry() -> Telemetry:
@@ -65,23 +100,59 @@ func interpolated_transform() -> Transform3D:
 func _copy_state_to_visuals() -> void:
 	var body: SimRigidBody = sim.body
 	global_transform = Transform3D(body.basis, body.origin_world())
+	if sim.sailor_state == WindsurferSim.SailorState.FALLEN:
+		_pose_fallen()
+		return
 
 	# The rig: mast from the mast foot along the mast direction, sail and boom in the plane
 	# of the mast and the boom.
-	var sail_config: SailConfig = sim.sail_config
+	var sailor_config: SailorConfig = sim.sailor_config
 	var mast_dir: Vector3 = sim.sail.mast_direction()
-	var foot: Vector3 = sail_config.mast_foot_local
-	_mast.transform = Transform3D(_basis_with_up(mast_dir), foot + mast_dir * (0.5 * sail_config.mast_m))
 	var boom_angle: float = sim.sail.sail_angle_rad()
-	var boom_dir: Vector3 = Vector3(sin(boom_angle), 0.0, cos(boom_angle))
-	_sail.transform = Transform3D(Basis(boom_dir, mast_dir, boom_dir.cross(mast_dir).normalized()), foot)
+	_pose_rig(mast_dir, boom_angle)
 
 	# The sailor: a capsule from the feet up to and beyond the centre of mass.
-	var sailor_config: SailorConfig = sim.sailor_config
 	var com: Vector3 = sim.mass_model.sailor_position_body
 	var feet: Vector3 = Vector3(0.22 * clampf(sim.lean * 3.0, -1.0, 1.0), 0.06, lerpf(sailor_config.stance_rest_z_m, sailor_config.stance_planing_z_m, sim.stance))
 	var axis: Vector3 = (com - feet).normalized()
 	_sailor.transform = Transform3D(_basis_with_up(axis), feet + axis * (0.5 * sailor_config.height_m))
+
+	_last_mast_dir = mast_dir
+	_last_boom_angle = boom_angle
+	_last_sailor_com = com
+	_last_sailor_axis = axis
+	_last_feet = feet
+
+
+func _pose_rig(mast_dir: Vector3, boom_angle: float) -> void:
+	var sail_config: SailConfig = sim.sail_config
+	var foot: Vector3 = sail_config.mast_foot_local
+	_mast.transform = Transform3D(_basis_with_up(mast_dir), foot + mast_dir * (0.5 * sail_config.mast_m))
+	var boom_dir: Vector3 = Vector3(sin(boom_angle), 0.0, cos(boom_angle))
+	var sail_normal: Vector3 = boom_dir.cross(mast_dir)
+	if sail_normal.length() < 0.05:
+		sail_normal = Vector3.UP
+	_sail.transform = Transform3D(Basis(boom_dir, mast_dir, sail_normal.normalized()), foot)
+
+
+## The fall on screen: the rig pivots about the mast foot until it lies on the water on the
+## side of the fall, and the sailor goes with it: over the sail in a catapult (landing
+## beyond the mast top), or backwards beside the board when falling to windward.
+func _pose_fallen() -> void:
+	var progress: float = clampf(sim.fallen_for_s / FALL_DURATION_S, 0.0, 1.0)
+	var eased: float = progress * progress  # a fall picks up speed
+	var side: float = float(sim.fall_side)
+	var flat: Vector3 = Vector3(side, 0.03, 0.0).normalized()
+	var mast_dir: Vector3 = _last_mast_dir.slerp(flat, eased).normalized()
+	_pose_rig(mast_dir, _last_boom_angle)
+
+	var catapult: bool = sim.fall_kind == "catapult"
+	var reach: float = sim.sail_config.mast_m + 1.0 if catapult else 1.8
+	var landing: Vector3 = Vector3(side * reach, -0.05, _last_feet.z)
+	var arc: float = (1.5 if catapult else 0.3) * sin(PI * eased)
+	var com: Vector3 = _last_sailor_com.lerp(landing, eased) + Vector3(0.0, arc, 0.0)
+	var axis: Vector3 = _last_sailor_axis.slerp(Vector3(side, 0.05, 0.0).normalized(), eased).normalized()
+	_sailor.transform = Transform3D(_basis_with_up(axis), com)
 
 
 func _build_visuals() -> void:

@@ -88,7 +88,12 @@ func compute(body: SimRigidBody, wind: WindField, sheet: float, rake: float, rho
 	awa_rad = SimMath.wind_angle_rad(body.basis, -w)
 
 	# Everything else happens in the horizontal "heading frame": f = bow, r = starboard.
-	var f: Vector3 = SimMath.horizontal(SimMath.forward(body.basis)).normalized()
+	# A board standing on its nose or tail has no heading frame; then there is no sail force.
+	var f: Vector3 = SimMath.horizontal(SimMath.forward(body.basis))
+	if f.length() < 0.1:
+		_clear_forces()
+		return
+	f = f.normalized()
 	var r: Vector3 = f.cross(Vector3.UP)
 	var w_hat: Vector3 = w / aws_ms
 	var from_hat: Vector3 = -w_hat
@@ -127,6 +132,11 @@ func compute(body: SimRigidBody, wind: WindField, sheet: float, rake: float, rho
 
 	body.add_force_at(ce_world, force_world)
 	torque_body = SimMath.to_body(body.basis, (ce_world - body.position).cross(force_world))
+
+
+## Forgets the last forces (the rig is in the water).
+func clear() -> void:
+	_clear_forces()
 
 
 func _clear_forces() -> void:

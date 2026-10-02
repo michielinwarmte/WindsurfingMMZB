@@ -3,7 +3,8 @@ extends Node3D
 ## HUD, and the keys that are not about sailing (pause, reset, camera, panels).
 ##
 ## Command line options for screenshots and demos (after "--"): --camera=1..4,
-## --autopilot=1 (the test autopilot sails a beam reach), --hud=0 (no panel).
+## --autopilot=1 (the test autopilot sails a beam reach), --hud=0 (no panel),
+## --fall=<seconds> (the sailor is catapulted at that time).
 
 @onready var _windsurfer: WindsurferNode = $Windsurfer
 @onready var _camera_rig: CameraRig = $CameraRig
@@ -11,6 +12,7 @@ extends Node3D
 @onready var _sun: DirectionalLight3D = $Sun
 
 var _paused: bool = false
+var _fall_at_s: float = -1.0
 
 
 func _ready() -> void:
@@ -23,7 +25,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause"):
 		_set_paused(not _paused)
 	elif event.is_action_pressed("reset"):
-		_windsurfer.reset()
+		if _windsurfer.is_fallen():
+			_windsurfer.waterstart_now()
+		else:
+			_windsurfer.reset()
 		_set_paused(false)
 	elif event.is_action_pressed("toggle_hud"):
 		_hud.toggle_detail()
@@ -38,6 +43,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _process(_delta: float) -> void:
+	if _fall_at_s >= 0.0 and _windsurfer.sim.time_s >= _fall_at_s:
+		_fall_at_s = -1.0
+		_windsurfer.sim.force_fall("catapult")
 	_hud.update_from(_windsurfer.telemetry(), _windsurfer.controller, _camera_rig.mode_name(), _windsurfer.use_autopilot)
 
 
@@ -60,3 +68,5 @@ func _apply_command_line_options() -> void:
 		_windsurfer.use_autopilot = true
 	if options.get("hud", "1") == "0":
 		_hud.toggle_detail()
+	if options.has("fall"):
+		_fall_at_s = options["fall"].to_float()

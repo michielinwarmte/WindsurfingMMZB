@@ -55,6 +55,8 @@ func toggle_detail() -> void:
 func update_from(t: Telemetry, controller: PlayerController, camera_name: String, use_autopilot: bool) -> void:
 	var tack: String = "starboard tack" if t.twa_deg >= 0.0 else "port tack"
 	var state: String = "planing" if t.is_planing else ("luffing" if t.is_luffing else "displacement")
+	if t.sailor_state == 1:
+		state = "%s!  waterstart in %d s (R: now)" % [t.fall_kind.to_upper(), ceili(t.waterstart_in_s)]
 	var who: String = "autopilot" if use_autopilot else controller.mode_name()
 	var manoeuvre: String = controller.manoeuvre_name()
 	_strip.text = "%5.1f km/h  %4.1f kt    wind %4.1f kt at 10 m, %4.1f kt at the sail, from %03.0f    %s, %s%s    %s    camera: %s" % [

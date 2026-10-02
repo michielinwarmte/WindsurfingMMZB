@@ -10,8 +10,12 @@ extends RefCounted
 
 ## Wanted true wind angle, in degrees, as a magnitude (the tack is whatever it is).
 var target_twa_deg: float = 90.0
-## Wanted angle of attack of the sail, in degrees. Around 15 is where a sail works best.
+## Wanted angle of attack of the sail, in degrees, when the pilot does not know the sail.
 var target_alpha_deg: float = 15.0
+## The simulation's sail, when the pilot may use its lift and drag curves to sheet for the
+## most drive at the current apparent wind angle, which is what a sailor does by feel:
+## close to the wind that is a modest angle (drag costs), on a reach it is near the stall.
+var sail: SailModel = null
 ## Rake per degree of wind-angle error.
 var rake_gain_per_deg: float = 0.08
 ## Rake per degree per second of yaw rate, against overshoot.
@@ -53,13 +57,34 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		var wanted_rake: float = clampf(rake_gain_per_deg * error_deg - rake_yaw_damping * heading_up_rate, -1.0, 1.0)
 		controls.rake = move_toward(controls.rake, wanted_rake, rake_rate_per_s * dt)
 	if trim_sheet:
-		var alpha_deg: float = target_alpha_deg
+		var alpha_deg: float = best_alpha_deg(deg_to_rad(telemetry.awa_deg))
 		# Leeward heel is heel away from the wind: negative on starboard tack (wind from starboard).
 		var leeward_heel_deg: float = -telemetry.heel_deg * signf(telemetry.twa_deg) if telemetry.twa_deg != 0.0 else 0.0
 		var hike_used: float = clampf((absf(telemetry.lean) - depower_lean_start) / (1.0 - depower_lean_start), 0.0, 1.0)
-		alpha_deg = lerpf(target_alpha_deg, min_alpha_deg, hike_used)
+		alpha_deg = lerpf(alpha_deg, min_alpha_deg, hike_used)
 		if leeward_heel_deg > depower_heel_allowance_deg:
 			alpha_deg = maxf(alpha_deg - depower_alpha_per_deg * (leeward_heel_deg - depower_heel_allowance_deg), min_alpha_deg)
 		var boom_angle_deg: float = clampf(absf(telemetry.awa_deg) - alpha_deg, sheet_angle_in_deg, sheet_angle_out_deg)
 		var wanted_sheet: float = 1.0 - (boom_angle_deg - sheet_angle_in_deg) / (sheet_angle_out_deg - sheet_angle_in_deg)
 		controls.sheet = move_toward(controls.sheet, wanted_sheet, sheet_rate_per_s * dt)
+
+
+## The angle of attack that gives the most drive at this apparent wind angle, from the
+## sail's own lift and drag curves (drive = lift along the course minus drag against it).
+func best_alpha_deg(awa_rad: float) -> float:
+	if sail == null:
+		return target_alpha_deg
+	var awa: float = absf(awa_rad)
+	var best_alpha: float = target_alpha_deg
+	var best_drive: float = -INF
+	var alpha_deg: float = 4.0
+	while alpha_deg <= 24.0:
+		var alpha: float = deg_to_rad(alpha_deg)
+		var cl: float = sail.lift_coefficient(alpha)
+		var cd: float = sail.drag_coefficient(cl, alpha)
+		var drive: float = cl * sin(awa) - cd * cos(awa)
+		if drive > best_drive:
+			best_drive = drive
+			best_alpha = alpha_deg
+		alpha_deg += 1.0
+	return best_alpha

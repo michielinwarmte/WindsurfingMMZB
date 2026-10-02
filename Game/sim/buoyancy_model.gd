@@ -114,7 +114,7 @@ func _build_grid() -> void:
 
 
 ## Computes the buoyancy and damping forces for the body's current state and applies them.
-func apply(body: SimRigidBody, surface: WaterSurface, time_s: float, gravity_ms2: float) -> void:
+func apply(body: SimRigidBody, surface: WaterSurface, time_s: float, gravity_ms2: float, dt: float = 1.0 / 240.0) -> void:
 	var force_sum: Vector3 = Vector3.ZERO
 	var damping_sum: Vector3 = Vector3.ZERO
 	var weighted_position: Vector3 = Vector3.ZERO
@@ -147,12 +147,21 @@ func apply(body: SimRigidBody, surface: WaterSurface, time_s: float, gravity_ms2
 		weighted_position += point_world * magnitude
 
 		# Heave damping from this point's own motion through the surface, in proportion to
-		# the share of the hull it has under water (section 6.9).
-		var wet_share: float = volume / board.volume_m3
+		# the share of the bottom's area that this point has in the water (section 6.9). The
+		# damping stands in for the waves a heaving hull radiates, which depend on how much
+		# surface it works against, not on how deep it sits; a light hull floating high is
+		# damped like a loaded one as long as its bottom is wet.
+		var wet_share: float = sample_areas_m2[k] * clampf(depth / WET_RAMP_M, 0.0, 1.0) / board.planform_area_m2()
 		var relative_velocity: Vector3 = body.point_velocity(point_world) - surface.velocity_at(point_world.x, point_world.z, time_s)
 		var normal_speed: float = relative_velocity.dot(normal)
 		var damping: float = -(water.damping_linear_ns_m * normal_speed
 			+ water.damping_quadratic_ns2_m2 * normal_speed * absf(normal_speed)) * wet_share
+		# A damper can only take away the momentum there is: in one step this point's share
+		# of the force may not exceed what stops its motion (the exact answer for a damper
+		# integrated implicitly). Without this a light hull slamming down at a few metres per
+		# second can be thrown back out by the quadratic term (A-16).
+		var stopping_force: float = (body.mass_kg + body.added_mass_up_kg) * absf(normal_speed) / dt * wet_share
+		damping = clampf(damping, -stopping_force, stopping_force)
 		body.add_force_at(point_world, normal * damping)
 		damping_sum += normal * damping
 

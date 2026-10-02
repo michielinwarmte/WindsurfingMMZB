@@ -4,6 +4,7 @@ extends SceneTree
 ##
 ## Arguments after "--": --scenario=<name> --out=<file.csv> [--seconds=<n>] [--wind_kt=<n>]
 ## [--twa=<deg>] [--heading=<deg>] [--every=<steps>] [--freeze=<s>: the sailor stops moving fore and aft from then on]
+## [--twa2=<deg> --switch=<s>: the pilot steers to a second wind angle from that time on]
 
 const DT: float = 1.0 / 60.0
 
@@ -28,11 +29,13 @@ func _initialize() -> void:
 		scenario.start_heading_deg = options["heading"].to_float()
 	var every: int = maxi(options.get("every", "6").to_int(), 1)
 	var freeze_s: float = options.get("freeze", "-1").to_float()
+	var switch_s: float = options.get("switch", "-1").to_float()
 
 	var sim: WindsurferSim = WindsurferSim.create_default()
 	sim.wind_config = sim.wind_config.duplicate()
 	sim.wind_config.speed_kt = scenario.wind_kt
 	sim.wind = WindField.new(sim.wind_config)
+	scenario.pilot.sail = sim.sail
 	scenario.setup(sim)
 	sim.reset(Vector3.ZERO, deg_to_rad(scenario.start_heading_deg))
 
@@ -56,6 +59,8 @@ func _initialize() -> void:
 	for i: int in steps:
 		if freeze_s >= 0.0 and sim.time_s >= freeze_s:
 			scenario.controls.freeze_fore_aft = true
+		if switch_s >= 0.0 and sim.time_s >= switch_s and options.has("twa2"):
+			scenario.pilot.target_twa_deg = options["twa2"].to_float()
 		scenario.update(sim, DT)
 		sim.step(DT, scenario.controls)
 		var t: Telemetry = sim.telemetry

@@ -15,6 +15,33 @@ Template for new entries:
 
 ---
 
+## 2 October 2026 - Session 31: first play-test, falls instead of capsizes, downwind speed, low-speed handling
+
+**Phase:** 3 play-tested; the fixes are Phase 4 work (physics corrected at the source).
+
+**Done:**
+- The team's play-test said: the whole set capsized when heading up while planing (never happens; the sailor should go over the sail), half wind was faster than downwind (weird), and the board had "grip" at low speed. Each was measured in a scenario, traced to its mechanism and fixed. Spec section 17.7 has the full story with sources; section 16 has one tuning-log row per change.
+- Falls: the sailor now goes over when the balance is lost (20 degrees of leeward heel = catapult, 25 degrees of windward heel = fell back). The board is then simulated alone, the rig in the water drags on the mast foot, and after 4 s the sailor waterstarts across the wind. On screen the rig pivots onto the water and the sailor flies over it; the HUD shows a countdown and R waterstarts at once. Why: the mast foot is a joint and feet cannot pull a board up, so a sail cannot roll a board; only a one-body model can.
+- Downwind: the pilot and the player's auto-sheet now sheet for the most drive from the sail's own curves instead of a fixed 15 degrees. The polar is run from a planing start (new runner option `--twa2=<deg> --switch=<s>`): at 24 kt the fastest course is 105 to 120 degrees (52 km/h), 135 degrees gives 46 km/h; at 18 kt the beam reach still wins because a 6.5 m2 is marginal for 75 kg in 16 kt at the sail. The sail's lift curve was checked against wind-tunnel measurements of windsurf sails (Zhang et al. 2025, Mok et al. 2023) and kept.
+- Low speed: the rounding up from rest is physical (no speed, no fin grip, the sail's centre of effort behind the hull's resistance). Beginner mode now does the sailor's part: auto-sheet on by default (W/S override it for 3 s), a heading hold with the rig when no key is held, speed-sensitive steering (less rake at speed) and an automatic ease when overpowered. Advanced mode keeps the raw controls and the consequences (spin-outs, catapults).
+- Numerics: the heave damping is weighted by the wetted area share (a light board alone was undamped) and held to the momentum there is per step (a 9 kg board blew up dead downwind); the sail force is skipped when the board stands on its nose.
+- New scenarios: `overpowered`, `bear_away`, `low_speed_turn`; new runner options `--twa2`, `--switch`; `--fall=<s>` for `tools/screenshot.sh`.
+
+**Verified:**
+- `tools/test.sh`: 103/103 (new: catapult and waterstart, auto-sheet with override, overpower ease, heading hold on both tacks, speed-sensitive rake, drive-maximising trim). `tools/check.sh`: 59 files, 0 failed.
+- Scenarios: `overpowered` (catapult at 23 degrees of heel, the board stops level in a second, waterstart at 4 s), polars at 18 and 24 kt from a planing start, `low_speed_turn`, `bear_away`, dead downwind without NaN.
+- Screenshots `.screenshots/fall_mid.png` and `fall.png`: the rig over the water and lying on it, the sailor beyond, the board upright.
+- Not verified: how the beginner assists feel in play, whether 20 and 25 degrees are the right fall thresholds in play, the gybe on Space at speed (it may spin out), the planing onset (T2).
+
+**Decisions:**
+- Falls are an event in the one-body model (A-17), not a two-body sailor yet. If the team wants to feel the sailor being pulled before a catapult, the two-body sailor is the next step.
+- Beginner assists are control, not physics; the physics is identical in both modes.
+- The 6.5 m2 sail stays the default; a bigger sail is the team's equipment choice if they want more downwind speed in 18 kt.
+
+**Next:** the team plays again (same checklist, plus: get catapulted on purpose in advanced mode, and bear away from a beam reach at speed in both modes). Then Phase 4 proper: planing onset (T2), steering with the sheet eased (T7), and the polar against GPS data if the team has any.
+
+---
+
 ## 2 October 2026 - Session 30: Phase 2 (the headless simulation) and Phase 3 (the playable prototype)
 
 **Phase:** 2 and 3, both done. Same day as Session 29, after the team asked for simulated physics instead of tuned limits (decision D8) and a playable demo.

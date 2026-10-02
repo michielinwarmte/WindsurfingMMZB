@@ -63,6 +63,10 @@ var hull_lateral_n: float = 0.0
 var hull_resistance_n: float = 0.0
 
 # Sailor and mass
+## 0 = sailing, 1 = in the water after a fall; what kind of fall, and the time to the waterstart.
+var sailor_state: int = 0
+var fall_kind: String = ""
+var waterstart_in_s: float = 0.0
 var stance: float = 0.0
 var lean: float = 0.0
 var hang_back_m: float = 0.0

@@ -29,7 +29,20 @@ var telemetry: Telemetry = Telemetry.new()
 
 const RHO_AIR: float = 1.225
 
+enum SailorState { SAILING, FALLEN }
+
 var time_s: float = 0.0
+## Whether the sailor is on the board or in the water. The board, rig and sailor are one
+## body only while the sailor stands on it and balances the sail; when that balance is
+## lost the sailor and the rig go over (the rig pivots freely at the mast foot, so the sail
+## cannot roll the board over) and the body is the board alone until the waterstart.
+var sailor_state: SailorState = SailorState.SAILING
+## Which side the sailor and rig fell to (+1 starboard, -1 port), what kind of fall it
+## was ("catapult" to leeward, "fell back" to windward), and for how long.
+var fall_side: int = 0
+var fall_kind: String = ""
+var fallen_for_s: float = 0.0
+var _tack_before_fall: float = 1.0
 ## 0 = standing near the mast foot, 1 = in the back straps.
 var stance: float = 0.0
 ## -1 = sailor out to port, +1 = out to starboard.
@@ -76,6 +89,10 @@ static func create_default() -> WindsurferSim:
 ## compass heading, with the sail on the leeward side of the current wind.
 func reset(origin_xz: Vector3, heading_rad: float) -> void:
 	time_s = 0.0
+	sailor_state = SailorState.SAILING
+	fall_side = 0
+	fall_kind = ""
+	fallen_for_s = 0.0
 	stance = 0.0
 	lean = 0.0
 	hang_back_m = 0.0
@@ -100,19 +117,114 @@ func step(dt: float, controls: SimControls) -> void:
 	var substeps: int = maxi(sim_config.substeps, 1)
 	var sub_dt: float = dt / substeps
 	for i: int in substeps:
-		_update_sailor(sub_dt, controls)
+		var sailing: bool = sailor_state == SailorState.SAILING
+		if sailing:
+			_update_sailor(sub_dt, controls)
 		wind.step(sub_dt)
 		body.add_force(Vector3(0.0, -sim_config.gravity_ms2 * body.mass_kg, 0.0))
-		buoyancy.apply(body, water, time_s, sim_config.gravity_ms2)
+		buoyancy.apply(body, water, time_s, sim_config.gravity_ms2, sub_dt)
 		hull.compute(body, buoyancy, water, time_s, sim_config.gravity_ms2, body.mass_kg, sub_dt)
 		body.added_mass_up_kg = hull.heave_added_mass_kg
 		fin.compute(body, water, time_s, water_config.density_kg_m3)
-		sail.compute(body, wind, controls.sheet, controls.rake, RHO_AIR, lean * deg_to_rad(sailor_config.max_rig_lean_deg))
-		_apply_windage()
-		_flex_legs(sub_dt)
+		if sailing:
+			sail.compute(body, wind, controls.sheet, controls.rake, RHO_AIR, lean * deg_to_rad(sailor_config.max_rig_lean_deg))
+			_apply_windage()
+			_flex_legs(sub_dt)
+		else:
+			_apply_rig_in_water_drag()
 		body.integrate(sub_dt)
 		time_s += sub_dt
+		if sailing:
+			_check_balance()
+		else:
+			fallen_for_s += sub_dt
+			if fallen_for_s >= sailor_config.waterstart_time_s:
+				waterstart()
 	_fill_telemetry(controls)
+
+
+## A sailor keeps the board upright only as long as their weight can balance the sail's
+## pull; the mast foot is a joint and passes no roll moment to the board. So when the board
+## heels past what a standing person can recover, it is the sailor who goes, not the board:
+## over the sail to leeward when overpowered (a catapult), backwards into the water to
+## windward when the pull vanished while hiked out.
+func _check_balance() -> void:
+	var twa: float = SimMath.wind_angle_rad(body.basis, wind.from_direction())
+	var tack: float = 1.0 if twa >= 0.0 else -1.0
+	# Heel is positive with the starboard rail down; on starboard tack leeward is port.
+	var leeward_heel: float = -SimMath.heel_rad(body.basis) * tack
+	if leeward_heel > deg_to_rad(sailor_config.catapult_heel_deg):
+		_fall(int(-tack), "catapult", tack)
+	elif leeward_heel < -deg_to_rad(sailor_config.fall_back_heel_deg):
+		_fall(int(tack), "fell back", tack)
+
+
+## Makes the sailor fall now, as if they slipped: to leeward ("catapult") or to windward
+## ("fell back"). For demos, screenshots and tests.
+func force_fall(kind: String) -> void:
+	if sailor_state != SailorState.SAILING:
+		return
+	var twa: float = SimMath.wind_angle_rad(body.basis, wind.from_direction())
+	var tack: float = 1.0 if twa >= 0.0 else -1.0
+	_fall(int(-tack) if kind == "catapult" else int(tack), kind, tack)
+
+
+## The sailor and the rig leave the board. The rig floats on its own and the sailor swims,
+## so from here the body is the board alone, keeping the speed it had.
+func _fall(side: int, kind: String, tack: float) -> void:
+	sailor_state = SailorState.FALLEN
+	fall_side = side
+	fall_kind = kind
+	fallen_for_s = 0.0
+	_tack_before_fall = tack
+	var board_only: Vector3 = MassModel._box_inertia(board_config.mass_kg, board_config.width_m, board_config.thickness_m, board_config.length_m)
+	body.set_mass_properties(board_config.mass_kg, Basis.IDENTITY.scaled(board_only), Vector3.ZERO)
+	body.internal_velocity = Vector3.ZERO
+	stance = 0.0
+	lean = 0.0
+	hang_back_m = 0.0
+	knee_bend_m = 0.0
+	knee_bend_rate_ms = 0.0
+	sail.clear()
+
+
+## Back on the board: level, at rest, across the wind on the tack the sailor fell from,
+## where the board has drifted to. The sail starts eased (the caller resets its controls).
+func waterstart() -> void:
+	sailor_state = SailorState.SAILING
+	fallen_for_s = 0.0
+	stance = 0.0
+	lean = 0.0
+	hang_back_m = 0.0
+	knee_bend_m = 0.0
+	knee_bend_rate_ms = 0.0
+	mass_model.update(stance, lean, hang_back_m, knee_bend_m)
+	body.set_mass_properties(mass_model.total_mass_kg, mass_model.inertia_body, mass_model.com_offset_body)
+	var origin: Vector3 = body.origin_world()
+	var heading_rad: float = wind.current_from_bearing_rad - _tack_before_fall * PI / 2.0
+	body.basis = Basis(Vector3.UP, -heading_rad)
+	var rest_depth: float = mass_model.total_mass_kg / water_config.density_kg_m3 / board_config.volume_m3 * board_config.thickness_m
+	body.set_origin_world(Vector3(origin.x, water_config.base_height_m + 0.5 * board_config.thickness_m - rest_depth, origin.z))
+	body.velocity = Vector3.ZERO
+	body.angular_velocity = Vector3.ZERO
+	body.internal_velocity = Vector3.ZERO
+	sail.set_side_for_wind(SimMath.wind_angle_rad(body.basis, wind.from_direction()))
+
+
+## The rig lying in the water pulls on the mast foot like a sea anchor. It takes the rig
+## about a second to fall onto the water, so the drag comes on over the first second.
+func _apply_rig_in_water_drag() -> void:
+	var in_the_water: float = smoothstep(0.4, 1.0, fallen_for_s)
+	if in_the_water <= 0.0:
+		return
+	var foot: Vector3 = body.point_world(sail_config.mast_foot_local)
+	var surface_height: float = water.height_at(foot.x, foot.z, time_s)
+	var v: Vector3 = SimMath.horizontal(body.point_velocity(foot) - water.velocity_at(foot.x, foot.z, time_s))
+	var speed: float = v.length()
+	if speed < 0.01:
+		return
+	var drag: float = in_the_water * 0.5 * water_config.density_kg_m3 * sailor_config.rig_in_water_drag_m2 * speed * speed
+	body.add_force_at(Vector3(foot.x, surface_height, foot.z), -v / speed * drag)
 
 
 ## The sailor's own movements: stepping back as the board accelerates, and leaning to
@@ -260,6 +372,9 @@ func _fill_telemetry(controls: SimControls) -> void:
 	t.hull_lateral_n = hull.lateral_n
 	t.hull_resistance_n = hull.resistance_n
 
+	t.sailor_state = sailor_state
+	t.fall_kind = fall_kind
+	t.waterstart_in_s = maxf(sailor_config.waterstart_time_s - fallen_for_s, 0.0) if sailor_state == SailorState.FALLEN else 0.0
 	t.stance = stance
 	t.lean = lean
 	t.hang_back_m = hang_back_m
