@@ -15,9 +15,9 @@ Template for new entries:
 
 ---
 
-## 2 October 2026 - Session 30: Phase 2, the headless simulation
+## 2 October 2026 - Session 30: Phase 2 (the headless simulation) and Phase 3 (the playable prototype)
 
-**Phase:** 2, done. Same day as Session 29, after the team asked for simulated physics instead of tuned limits (decision D8).
+**Phase:** 2 and 3, both done. Same day as Session 29, after the team asked for simulated physics instead of tuned limits (decision D8) and a playable demo.
 
 **Done:**
 - Built the whole simulation in `Game/sim/` (14 scripts, no Nodes): a rigid body with its own integrator, the mass model, buoyancy on a grid with a real rocker line, the hull (friction, wave hump, sideways drag, planing lift), the fin, the sail, the wind, the water, the sailor and the `WindsurferSim` that combines them; six config resources in `Game/config/`; 92 unit tests in 11 files; a headless scenario tool `tools/simulate.sh` that writes CSV telemetry; and an autopilot that plays the sailor in tests and scenarios.
@@ -25,18 +25,20 @@ Template for new entries:
 - The hard part was planing. The spec's Savitsky lift at one point made the board porpoise (bounce in pitch), and the sailor's reflexes were hiding it. Holding the sailor still in a scenario showed the board pitching to 24 degrees and capsizing on its own. The fix was physics, not a damper: the planing lift is now computed strip by strip with the slender-body theory of planing, which contains the pitch damping that the water gives a planing hull, matched to Savitsky's measured lift. Section 17.2 of the spec tells the story.
 - Along the way, several real effects that were missing were added: the rig leaned to windward with the sailor, the sailor hanging back against the sail's pull, the sailor's legs as a suspension, the sailor's windage, the water's added mass in heave and pitch, flat-plate drag of the fin at large slip, a freeride rocker line, and a planing beam that follows the board's taper.
 - Numbers (18 kt at 10 m, 16 kt at the sail): beam reach 35.9 km/h (19.4 kt), close-hauled 22.7 km/h at 52 degrees to the wind with 6.6 kt of upwind VMG, broad reach 21.6 km/h; steady, identical on both tacks; the board rounds up and stops when nobody steers; at rest it displaces 89.8 L and floats level.
+- Phase 3, the playable prototype: an input map in `project.godot` (W/S sheet, A/D steer, Q/E rake, Space tack or gybe, T auto-sheet, Tab mode, 1 to 4 cameras, R reset, Esc pause, F1 panel); `windsurfer/windsurfer.tscn`, a node that owns the simulation, steps it every physics tick and copies the state onto simple shapes (a box board with an orange nose, a fin, a mast, a sail that turns with the sheet, the rake and the rig lean, a boom, and a capsule for the sailor that leans and steps back as the simulated sailor does); `windsurfer/player_controller.gd` with a beginner mode (A/D turn left and right on the screen on either tack, automatic balance) and an advanced mode (Q/E rake, A/D weight), both with W/S sheeting, an optional auto-sheet and a tack or gybe on Space; `camera/camera_rig.gd` with follow, orbit (right mouse button to turn, wheel to zoom), top-down (bow up) and free (spectator) cameras on the board's interpolated transform; `ui/hud.gd` with a one-line strip, a detail panel (F1), a wind rose and the key help; `world/water.gdshader`, a flat sea with a 5 m grid so that speed shows; `main.tscn` and `main.gd` that tie it together, with `--camera=`, `--autopilot=1` and `--hud=0` options for screenshots. The old FBX models stay in `assets/models/` for Phase 6; the prototype uses plain shapes.
 
 **Verified:**
 - `tools/test.sh`: 92/92 pass in about 8 s. `tools/check.sh`: 50 files, 0 failed.
 - Scenarios `beam_reach`, `close_hauled`, `broad_reach` on both tacks, `fixed_controls`, and `beam_reach --freeze=40` (sailor held still fore and aft): all steady.
-- Not verified: how it feels to sail (no visuals yet), the planing-onset speed (check T2), steering with the sheet eased (part of T7), and anything on waves.
+- Phase 3: `tools/test.sh` 97/97 (five new controller tests: sheet pace, screen-relative steering on both tacks, advanced mode, tack and gybe on Space, a stuck manoeuvre is abandoned); `tools/check.sh` 56 files, 0 failed; screenshots of all four cameras with the autopilot sailing (`tools/screenshot.sh res://main.tscn .screenshots/cam1.png 360 --camera=1 --autopilot=1`, and 2 to 4), looked at and corrected (help line cut off, free camera starting inside the board).
+- Not verified: how it feels to sail with the keys (nobody has played it yet; the autopilot sailed for the screenshots), whether the tack and gybe on Space carry the board through the wind in play, the planing-onset speed (check T2), steering with the sheet eased (part of T7), and anything on waves.
 
 **Decisions:**
 - The sailor's reflexes (balance, hang-back, legs, pitch reflex) live in the simulation and stay on in every control mode; the player gives intentions. A windsurfer cannot be balanced by someone holding still (spec 17.3).
 - The planing model is the strip model of spec 17.2; the point model of section 5 is superseded.
 - Added mass, legs and the other additions are physics the spec had left out, not tuning; recorded in the tuning log with their sources.
 
-**Next:** Phase 3, the playable prototype on flat water: input map, the windsurfer scene that steps the simulation in `_physics_process`, controller, cameras, HUD, main scene, screenshots.
+**Next:** the team play-tests the prototype (checklist in the plan, Phase 3). Then Phase 4, validation and physics fixes at the source, starting with what the play-test turns up and with checks T2 and T7.
 
 ---
 

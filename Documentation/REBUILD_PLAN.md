@@ -16,8 +16,8 @@ Written 28 September 2026 (Session 28), for the AI sessions doing the work and f
 | 0 | Preparation: Godot installed, project skeleton, tools, first tests | ✅ Done (Session 28) |
 | 1 | Physics spec from the Unity version | ✅ Done (Session 29) |
 | 2 | Core simulation, headless and tested | ✅ Done (Session 30) |
-| 3 | Playable prototype on flat water | ⬜ Next |
-| 4 | Autopilot, validation suite and tuning | ⬜ |
+| 3 | Playable prototype on flat water | ✅ Done (Session 30), awaiting the play-test |
+| 4 | Autopilot, validation suite and tuning | ⬜ Next |
 | 5 | Waves and ocean | ⬜ |
 | 6 | Rig visuals: board, sail, boom, mast | ⬜ |
 | 7 | Environment and effects | ⬜ |
@@ -188,13 +188,13 @@ Change the layout when there is a good reason, and update this section when you 
 **Goal:** the team can sail. Simple visuals are fine.
 
 **Tasks:**
-- [ ] Input map in `project.godot`: sheet in and out (W/S), steer left and right (A/D), fine rake (Q/E), tack or gybe (Space), toggle the HUD (F1), camera modes (1 to 4), reset (R), pause (Esc).
-- [ ] Windsurfer scene: a node that owns a `WindsurferSim`, steps it in `_physics_process` and copies its transform. Simple visuals: the old models in a wrapper scene that corrects their orientation (see the Phase 6 notes), or boxes if that is quicker. The sail turns with the simulated sail angle and rake.
-- [ ] Controller: a beginner mode (A/D turn relative to the screen, sheet assist) and an advanced mode (direct rake and sheet), based on the legacy `AdvancedWindsurferController`.
-- [ ] Cameras: follow (default), orbit, top-down and free. Smooth, and following the interpolated transform.
-- [ ] Telemetry HUD on F1: speed in km/h and knots, heading, TWA and AWA, sail angle, sheet, rake, planing %, submersion % and the main forces. Plus a wind indicator.
-- [ ] Main scene: flat water with a grid or texture so you can see the speed, a sky, a sun, and wind from a fixed direction.
-- [ ] Take a screenshot of each camera mode and check it.
+- [x] Input map in `project.godot`: sheet in and out (W/S), steer left and right (A/D), fine rake (Q/E), tack or gybe (Space), toggle the HUD (F1), camera modes (1 to 4), reset (R), pause (Esc).
+- [x] Windsurfer scene: a node that owns a `WindsurferSim`, steps it in `_physics_process` and copies its transform. Simple visuals: the old models in a wrapper scene that corrects their orientation (see the Phase 6 notes), or boxes if that is quicker. The sail turns with the simulated sail angle and rake.
+- [x] Controller: a beginner mode (A/D turn relative to the screen, sheet assist) and an advanced mode (direct rake and sheet), based on the legacy `AdvancedWindsurferController`.
+- [x] Cameras: follow (default), orbit, top-down and free. Smooth, and following the interpolated transform.
+- [x] Telemetry HUD on F1: speed in km/h and knots, heading, TWA and AWA, sail angle, sheet, rake, planing %, submersion % and the main forces. Plus a wind indicator.
+- [x] Main scene: flat water with a grid or texture so you can see the speed, a sky, a sun, and wind from a fixed direction.
+- [x] Take a screenshot of each camera mode and check it.
 
 **Done when:** tests and the check are green and the screenshots look right.
 **Stop:** play-test checklist for the team:

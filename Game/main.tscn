@@ -1,8 +1,10 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://main.gd" id="1_main"]
-[ext_resource type="PackedScene" path="res://assets/models/board.fbx" id="2_board"]
-[ext_resource type="PackedScene" path="res://assets/models/sail.fbx" id="3_sail"]
+[ext_resource type="PackedScene" path="res://windsurfer/windsurfer.tscn" id="2_windsurfer"]
+[ext_resource type="Script" path="res://camera/camera_rig.gd" id="3_camera"]
+[ext_resource type="Script" path="res://ui/hud.gd" id="4_hud"]
+[ext_resource type="Shader" path="res://world/water.gdshader" id="5_water"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_main"]
 sky_top_color = Color(0.22, 0.47, 0.82, 1)
@@ -21,11 +23,10 @@ reflected_light_source = 2
 tonemap_mode = 2
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_water"]
-size = Vector2(2000, 2000)
+size = Vector2(3000, 3000)
 
-[sub_resource type="StandardMaterial3D" id="Material_water"]
-albedo_color = Color(0.04, 0.24, 0.4, 1)
-roughness = 0.12
+[sub_resource type="ShaderMaterial" id="Material_water"]
+shader = ExtResource("5_water")
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_main")
@@ -40,18 +41,11 @@ shadow_enabled = true
 mesh = SubResource("PlaneMesh_water")
 surface_material_override/0 = SubResource("Material_water")
 
-[node name="Board" parent="." instance=ExtResource("2_board")]
+[node name="Windsurfer" parent="." instance=ExtResource("2_windsurfer")]
 
-[node name="Sail" parent="." instance=ExtResource("3_sail")]
-
-[node name="Camera3D" type="Camera3D" parent="."]
-current = true
+[node name="CameraRig" type="Node3D" parent="."]
+script = ExtResource("3_camera")
+target_path = NodePath("../Windsurfer")
 
 [node name="HUD" type="CanvasLayer" parent="."]
-
-[node name="Info" type="Label" parent="HUD"]
-offset_left = 16.0
-offset_top = 12.0
-offset_right = 900.0
-offset_bottom = 40.0
-text = "Godot 4.7 project is set up. Next step: Documentation/REBUILD_PLAN.md"
+script = ExtResource("4_hud")
