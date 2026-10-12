@@ -10,6 +10,7 @@ extends Node3D
 @onready var _camera_rig: CameraRig = $CameraRig
 @onready var _hud: Hud = $HUD
 @onready var _sun: DirectionalLight3D = $Sun
+@onready var _ocean: OceanNode = $Ocean
 
 var _paused: bool = false
 var _fall_at_s: float = -1.0
@@ -19,6 +20,7 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_sun.rotation_degrees = Vector3(-50.0, 30.0, 0.0)
 	_apply_command_line_options()
+	_ocean.setup(_windsurfer.sim, _camera_rig.camera)
 
 
 func _unhandled_input(event: InputEvent) -> void:

@@ -5,9 +5,10 @@ extends SceneTree
 ## Arguments after "--": --scenario=<name> --out=<file.csv> [--seconds=<n>] [--wind_kt=<n>]
 ## [--twa=<deg>] [--heading=<deg>] [--every=<steps>] [--freeze=<s>: the sailor stops moving fore and aft from then on]
 ## [--twa2=<deg> --switch=<s>: the pilot steers to a second wind angle from that time on]
+## [--kick_pitch=<rad/s> --kick_at=<s>: a sudden bow-up pitch rate at that time]
 ## [--pilot.<field>=<n> --sailor.<field>=<n> --sail.<field>=<n>: try another value of a
 ## tuning field without editing code] [--gradient=0: the same wind at every height, as
-## the validation suite uses]
+## the validation suite uses] [--waves=1: the default wave set on the water]
 
 const DT: float = 1.0 / 60.0
 
@@ -32,9 +33,12 @@ func _initialize() -> void:
 		scenario.start_heading_deg = options["heading"].to_float()
 	var every: int = maxi(options.get("every", "6").to_int(), 1)
 	var freeze_s: float = options.get("freeze", "-1").to_float()
+	# --kick_pitch=<rad/s> --kick_at=<s>: a sudden bow-up pitch rate, to watch how it decays.
+	var kick_pitch: float = options.get("kick_pitch", "0").to_float()
+	var kick_at_s: float = options.get("kick_at", "-1").to_float()
 	var switch_s: float = options.get("switch", "-1").to_float()
 
-	var sim: WindsurferSim = WindsurferSim.create_default()
+	var sim: WindsurferSim = WindsurferSim.create_default(options.get("waves", "0") == "1")
 	sim.wind_config = sim.wind_config.duplicate()
 	sim.wind_config.speed_kt = scenario.wind_kt
 	sim.wind = WindField.new(sim.wind_config)
@@ -52,6 +56,8 @@ func _initialize() -> void:
 				target = sim.sailor_config
 			"sail":
 				target = sim.sail_config
+			"board":
+				target = sim.board_config
 		if target == null or not (parts[1] in target):
 			push_error("No field '%s' to override." % key)
 			continue
@@ -61,6 +67,11 @@ func _initialize() -> void:
 	if options.get("gradient", "1") == "0":
 		sim.wind_config.height_gradient_enabled = false
 		sim.wind = WindField.new(sim.wind_config)
+	if options.has("wave_scale"):
+		for wave: GerstnerWaveConfig in sim.wave_set_config.waves:
+			wave.amplitude_m *= options["wave_scale"].to_float()
+			wave.steepness *= options["wave_scale"].to_float()
+	sim.set_waves(options.get("waves", "0") == "1")
 	sim.reset(Vector3.ZERO, deg_to_rad(scenario.start_heading_deg))
 	scenario.setup(sim)
 
@@ -84,6 +95,9 @@ func _initialize() -> void:
 	for i: int in steps:
 		if freeze_s >= 0.0 and sim.time_s >= freeze_s:
 			scenario.controls.freeze_fore_aft = true
+		if kick_at_s >= 0.0 and sim.time_s >= kick_at_s:
+			sim.body.angular_velocity += sim.body.basis.x * kick_pitch
+			kick_at_s = -1.0
 		if switch_s >= 0.0 and sim.time_s >= switch_s and options.has("twa2"):
 			scenario.pilot.target_twa_deg = options["twa2"].to_float()
 		scenario.update(sim, DT)

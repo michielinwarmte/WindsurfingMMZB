@@ -18,8 +18,8 @@ Written 28 September 2026 (Session 28), for the AI sessions doing the work and f
 | 2 | Core simulation, headless and tested | ✅ Done (Session 30) |
 | 3 | Playable prototype on flat water | ✅ Done (Session 30); play-tested in Sessions 31 to 33: falls, downwind trim, the helm (rake, rig tilt, rail), beginner assists, a hull that carves when banked, tacks and gybes on Space and on the keys; Session 34: trim by feel, out of irons, 12 to 24 kt all clean in `tools/matrix.sh` |
 | 4 | Autopilot, validation suite and tuning | ✅ Done (Session 35): `tools/test.sh validation`, 17 checks green, polar in `Documentation/POLAR_15KT.md` |
-| 5 | Waves and ocean | ⬜ Next |
-| 6 | Rig visuals: board, sail, boom, mast | ⬜ |
+| 5 | Waves and ocean | ✅ Done (Session 36): Gerstner field, shader and mesh, validation on a swell-dominated sea; short chop waits for a sailor with compliant legs (spec 17.12) |
+| 6 | Rig visuals: board, sail, boom, mast | ⬜ Next |
 | 7 | Environment and effects | ⬜ |
 | 8 | Audio | ⬜ |
 | 9 | Gameplay: racing | ⬜ |
@@ -231,13 +231,13 @@ Change the layout when there is a good reason, and update this section when you 
 **Goal:** the board floats on the waves you see.
 
 **Tasks:**
-- [ ] A Gerstner `WaveField` that implements the `WaterSurface` interface: height, normal and orbital velocity at a world point. It uses a fixed-point solve for the horizontal displacement, as the legacy `WaterSurface.cs` did. The wave set is one Resource, and the wave directions follow the wind.
-- [ ] Unit tests: flat when the amplitude is 0; heights match hand-calculated values at sample points; heights stay within the total amplitude; the pattern repeats with the wave period.
-- [ ] An ocean shader using the same parameters: vertex displacement with analytic normals, depth colour, Fresnel sky reflection, sun glint, and foam on the crests. The legacy `OceanWater.shader` has ideas, but it was never compiled, so treat it as notes rather than code.
-- [ ] A water mesh that follows the camera, snapped to a grid so the waves don't slide, dense close to the camera, with its far edge hidden in fog.
-- [ ] Run validation again with gentle waves. If the results change a lot, find out why (buoyancy sampling, damping) before tuning.
+- [x] A Gerstner `WaveField` that implements the `WaterSurface` interface: height, normal and orbital velocity at a world point. It uses a fixed-point solve for the horizontal displacement, as the legacy `WaterSurface.cs` did. The wave set is one Resource, and the wave directions follow the wind.
+- [x] Unit tests: flat when the amplitude is 0; heights match hand-calculated values at sample points; heights stay within the total amplitude; the pattern repeats with the wave period.
+- [x] An ocean shader using the same parameters: vertex displacement with analytic normals, depth colour, Fresnel sky reflection, sun glint, and foam on the crests. The legacy `OceanWater.shader` has ideas, but it was never compiled, so treat it as notes rather than code.
+- [x] A water mesh that follows the camera, snapped to a grid so the waves don't slide, dense close to the camera, with its far edge hidden in fog.
+- [x] Run validation again with gentle waves. If the results change a lot, find out why (buoyancy sampling, damping) before tuning.
 
-**Done when:** tests and validation pass on flat and wavy water, and a screenshot shows the board sitting on the visible wave surface, not above it or clipping through.
+**Done when:** tests and validation pass on flat and wavy water, and a screenshot shows the board sitting on the visible wave surface, not above it or clipping through. (Session 36: done on a swell-dominated sea; the legacy chop set slams the rigid one-body sailor off the board, see PHYSICS_SPEC.md 17.12, and comes back with the compliant sailor.)
 **Stop:** team check.
 
 ## Phase 6: Rig visuals

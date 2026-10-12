@@ -159,6 +159,7 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		var pivot: bool = Helm.pivoting(telemetry, controls, 30.0)
 		Helm.steer(controls, head_up * tack, tack, 0.0 if pivot else lean_share, dt, rake_rate_per_s, 0.0 if pivot else 1.0)
 	if trim_sheet:
+		_feel_the_pull(telemetry, dt)
 		var alpha_deg: float = minf(best_alpha_deg(deg_to_rad(telemetry.awa_deg)), max_alpha_deg)
 		# Leeward heel is heel away from the wind: negative on starboard tack (wind from
 		# starboard). The bank the sailor holds on purpose (carving) is not overpowering:
@@ -329,11 +330,26 @@ func _max_righting_moment_nm() -> float:
 ## under the board, and heels it the same way), or heeling_arm_default_m when the sail
 ## carries nothing yet.
 var heeling_arm_default_m: float = 2.1
+## The heeling lever (the torque per newton of side force, sail and fin together) is felt
+## averaged over this long: on chop the fin's load jumps every wave, and a sailor holds
+## the sheet through that rather than re-trimming at every jolt. The apparent wind itself
+## is taken as it is (a gust is answered at once; a lag there made the sheet hunt upwind,
+## and so did 0.5 s on the lever: 0.15 s keeps the 45 degree course steady).
+var trim_feel_time_s: float = 0.15
+var _felt_side_force_n: float = 0.0
+var _felt_heeling_torque_nm: float = 0.0
 
 
-func _heeling_arm_m(telemetry: Telemetry) -> float:
-	if absf(telemetry.side_force_n) > 30.0:
-		return clampf(absf(telemetry.heeling_torque_nm) / absf(telemetry.side_force_n), 0.5, 4.0)
+## Averages what the trim feels: the side force and the heeling torque.
+func _feel_the_pull(telemetry: Telemetry, dt: float) -> void:
+	var blend: float = clampf(dt / maxf(trim_feel_time_s, dt), 0.0, 1.0)
+	_felt_side_force_n = lerpf(_felt_side_force_n, telemetry.side_force_n, blend)
+	_felt_heeling_torque_nm = lerpf(_felt_heeling_torque_nm, telemetry.heeling_torque_nm, blend)
+
+
+func _heeling_arm_m(_telemetry: Telemetry) -> float:
+	if absf(_felt_side_force_n) > 30.0:
+		return clampf(absf(_felt_heeling_torque_nm) / absf(_felt_side_force_n), 0.5, 4.0)
 	return heeling_arm_default_m
 
 

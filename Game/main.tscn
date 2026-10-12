@@ -4,7 +4,7 @@
 [ext_resource type="PackedScene" path="res://windsurfer/windsurfer.tscn" id="2_windsurfer"]
 [ext_resource type="Script" path="res://camera/camera_rig.gd" id="3_camera"]
 [ext_resource type="Script" path="res://ui/hud.gd" id="4_hud"]
-[ext_resource type="Shader" path="res://world/water.gdshader" id="5_water"]
+[ext_resource type="Script" path="res://world/ocean.gd" id="5_ocean"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_main"]
 sky_top_color = Color(0.22, 0.47, 0.82, 1)
@@ -21,12 +21,13 @@ sky = SubResource("Sky_main")
 ambient_light_source = 3
 reflected_light_source = 2
 tonemap_mode = 2
-
-[sub_resource type="PlaneMesh" id="PlaneMesh_water"]
-size = Vector2(3000, 3000)
-
-[sub_resource type="ShaderMaterial" id="Material_water"]
-shader = ExtResource("5_water")
+fog_enabled = true
+fog_mode = 1
+fog_light_color = Color(0.68, 0.78, 0.88, 1)
+fog_sky_affect = 0.25
+fog_depth_curve = 1.5
+fog_depth_begin = 120.0
+fog_depth_end = 1500.0
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_main")
@@ -37,9 +38,8 @@ environment = SubResource("Environment_main")
 [node name="Sun" type="DirectionalLight3D" parent="."]
 shadow_enabled = true
 
-[node name="Water" type="MeshInstance3D" parent="."]
-mesh = SubResource("PlaneMesh_water")
-surface_material_override/0 = SubResource("Material_water")
+[node name="Ocean" type="Node3D" parent="."]
+script = ExtResource("5_ocean")
 
 [node name="Windsurfer" parent="." instance=ExtResource("2_windsurfer")]
 

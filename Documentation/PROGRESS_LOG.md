@@ -15,6 +15,30 @@ Template for new entries:
 
 ---
 
+## 13 October 2026 - Session 36: Phase 5, waves
+
+**Phase:** 5 done, with the chop limitation below.
+
+**Done:**
+- The Gerstner wave field of spec section 9 (`WaveField`, `WaveSetConfig`, `GerstnerWaveConfig`, `waves_default.tres`): the height solve, exact normals, orbital velocity, oriented to the wind; 11 unit tests against the spec's hand-calculated table. The simulation sails on it with `create_default(true)`; the game does.
+- The ocean: `water.gdshader` with the same formulas (vertex displacement, analytic normals, Fresnel, lighter crests, foam only at real steepness) and `OceanNode` (a 400 m mesh of 1 m cells following the camera snapped to its grid, a far plane under the fog, the shader clock from the simulation clock). Screenshots show the board on the rendered swell.
+- The matrix and the scenario runner take `--waves=1`, `--wave_scale=`, `--waveN.field=`; the scenario runner also `--kick_pitch=`.
+- Found and documented why the legacy chop set wrecks the sailing (spec 17.12): slams from the strip theory's curvature term on waves shorter than three hull lengths, taken by a rigid one-body sailor as roll impulses; the hull at Savitsky's porpoising boundary. The default sea is now a swell of 8 cm on 14 m with a little 7 m chop, which the board rides. The fall checks use a 1 s felt push (a jolt is not a fall); the pilot feels the heeling lever over 0.15 s.
+- `tools/test.sh validation` has `test_waves.gd`: 60, 90 and 120 degrees on the sea against flat water.
+
+**Verified:**
+- `tools/test.sh`: 122 of 122. `tools/test.sh validation`: 20 of 20 (about 70 s). `tools/check.sh`: 72 files. `tools/matrix.sh`: 24 cases clean on flat water; on the sea 22 of 24 (a 12 kt tack and a 24 kt gybe fall).
+- On the sea: 90 degrees 10 % slower than flat, 120 degrees 1 %, 60 degrees 32 %; pitch 9 degrees peak to peak; the hull on the surface.
+- Not verified: the look of the water beyond two screenshots; the feel of the swell in play.
+
+**Decisions:**
+- Steepness is the physical k A: the hull and the fin use the water's velocity, so the trochoid must be consistent.
+- Chop waits for the compliant sailor (A-17); the sea ships swell-dominated rather than fake-smooth physics.
+
+**Next:** play-test on the swell; then either the two-body sailor (so the chop can come back) or Phase 6 (rig visuals), the team's choice.
+
+---
+
 ## 12 October 2026 - Session 35: Phase 4, the validation suite is green
 
 **Phase:** 4 done.

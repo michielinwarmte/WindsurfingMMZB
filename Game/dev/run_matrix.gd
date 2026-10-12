@@ -7,6 +7,7 @@ extends SceneTree
 ##
 ## Arguments after "--": [--only=<substring of the case name>] [--winds=<kt,kt,...>]
 ## [--every=<steps between CSV rows>] [--out_dir=<dir for the per-case CSV files>]
+## [--waves=1: the default wave set on the water] [--wave_scale=<factor> on its amplitudes]
 ## [--pilot.<field>=<number>] [--controller.<field>=<number>] [--sailor.<field>=<number>]
 ## [--sail.<field>=<number>]: try another value of a tuning field without editing code
 ## (the pilot is the controller's auto-sheet pilot; sailor and sail are the config
@@ -24,6 +25,8 @@ const WINDOW_START_S: float = 2.0
 const WINDOW_LENGTH_S: float = 12.0
 
 var _overrides: Dictionary[String, String] = {}
+var _waves: bool = false
+var _wave_scale: float = 1.0
 
 
 ## One run: who starts where, which key is held when, and when Space is pressed.
@@ -101,6 +104,8 @@ func _initialize() -> void:
 			winds.append(part.to_float())
 	var every: int = maxi(options.get("every", "2").to_int(), 1)
 	var out_dir: String = options.get("out_dir", "")
+	_waves = options.get("waves", "0") == "1"
+	_wave_scale = options.get("wave_scale", "1").to_float()
 	for key: String in options:
 		if key.contains("."):
 			_overrides[key] = options[key]
@@ -144,6 +149,10 @@ func _run_case(c: Case, every: int, out_dir: String) -> Result:
 	var controller: PlayerController = PlayerController.new()
 	controller.set_sail(sim.sail, sim.sailor_config)
 	_apply_overrides(sim, controller)
+	if _waves and _wave_scale != 1.0:
+		scale_waves(sim.wave_set_config, _wave_scale)
+		_wave_scale = 1.0  # the shared resource is scaled once for the whole run
+	sim.set_waves(_waves)
 	var controls: SimControls = SimControls.new()
 	controls.sheet = 0.0
 	sim.reset(Vector3.ZERO, deg_to_rad(c.heading_deg))
@@ -269,7 +278,15 @@ func _run_case(c: Case, every: int, out_dir: String) -> Result:
 	return r
 
 
-## --pilot.x=, --controller.x=, --sailor.x= and --sail.x= set a field by name.
+## Scales every wave's amplitude and steepness (--wave_scale), in the shared resource.
+static func scale_waves(wave_set: WaveSetConfig, factor: float) -> void:
+	for wave: GerstnerWaveConfig in wave_set.waves:
+		wave.amplitude_m *= factor
+		wave.steepness *= factor
+
+
+## --pilot.x=, --controller.x=, --sailor.x=, --sail.x=, --board.x= and --wave1.x= to
+## --wave4.x= (the waves of the set, before they are put on the water) set a field by name.
 func _apply_overrides(sim: WindsurferSim, controller: PlayerController) -> void:
 	for key: String in _overrides:
 		var parts: PackedStringArray = key.split(".", true, 1)
@@ -286,6 +303,12 @@ func _apply_overrides(sim: WindsurferSim, controller: PlayerController) -> void:
 				target = sim.sailor_config
 			"sail":
 				target = sim.sail_config
+			"board":
+				target = sim.board_config
+			"wave1", "wave2", "wave3", "wave4":
+				var index: int = parts[0].substr(4).to_int() - 1
+				if index < sim.wave_set_config.waves.size():
+					target = sim.wave_set_config.waves[index]
 		if target == null or not (parts[1] in target):
 			push_error("No field '%s' to override." % key)
 			continue

@@ -44,3 +44,4 @@ balance_rate_gain = 1.2
 balance_moment_gain = 1.0
 pitch_reflex_m_per_rad_s = 0.5
 balance_feel_time_s = 0.3
+fall_feel_time_s = 1.0

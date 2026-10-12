@@ -39,7 +39,7 @@ var _sailor: MeshInstance3D
 
 
 func _ready() -> void:
-	sim = WindsurferSim.create_default()
+	sim = WindsurferSim.create_default(true)
 	controller.set_sail(sim.sail, sim.sailor_config)
 	autopilot.sail = sim.sail
 	_build_visuals()

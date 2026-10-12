@@ -241,7 +241,7 @@ func _apply_planing_lift(body: SimRigidBody, buoyancy: BuoyancyModel, aft: float
 	var root_down_speed: float = -(body.point_velocity(root_world) - surface.velocity_at(root_world.x, root_world.z, time_s)).dot(root_normal)
 	var bottom_angle: float = pitch + board.bottom_slope(forward)
 	var advance_ms: float = root_down_speed / tan(maxf(bottom_angle, MIN_SPRAY_ROOT_ANGLE_RAD))
-	spray_root_factor = clampf(1.0 + advance_ms / u, 0.0, 2.0)
+	spray_root_factor = clampf(1.0 + advance_ms / u, 0.0, board.spray_root_factor_max)
 	var root_force: float = maxf(u * spray_root_factor * m_per_m[last] * v_root, 0.0)
 
 	# 4. Three-dimensional correction: the strip theory is two-dimensional and gives a flat

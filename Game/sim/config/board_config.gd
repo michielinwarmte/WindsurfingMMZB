@@ -49,6 +49,10 @@ extends Resource
 @export var residuary_froude_width: float = 0.25
 ## Deadrise angle of the bottom near the tail. Freeride boards are nearly flat.
 @export var deadrise_deg: float = 2.0
+## The unsteady lift factor of the spray root running forward along a sinking hull (the
+## slamming part of planing, section 5) is held at most at this: a flat bottom meeting
+## rising water at a small angle would otherwise see an unbounded root speed.
+@export var spray_root_factor_max: float = 2.0
 ## Drag coefficient of the nose and deck when the bow goes under water (a blunt body
 ## meeting the water face-on: 0.8 to 1.0 for a box section; 0.8 as section 14 assumes).
 ## This is what stops a board that pearls, and what pitches it over the nose.

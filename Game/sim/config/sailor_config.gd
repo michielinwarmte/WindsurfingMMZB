@@ -130,3 +130,7 @@ extends Resource
 ## The sideways push of a turn that the sailor leans into is felt averaged over this
 ## time: a sustained turn is banked into, a quick wobble is ridden out.
 @export var balance_feel_time_s: float = 0.3
+## The fall checks use the push averaged over this longer time: a jolt of a few tenths
+## of a second (a slam on a wave) is taken by the knees and does not throw a sailor; a
+## push that lasts does.
+@export var fall_feel_time_s: float = 1.0

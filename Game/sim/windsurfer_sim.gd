@@ -14,6 +14,8 @@ var sail_config: SailConfig
 var fin_config: FinConfig
 var sailor_config: SailorConfig
 var water_config: WaterConfig
+## The sea state (Phase 5); null or disabled means flat water.
+var wave_set_config: WaveSetConfig = null
 var wind_config: WindConfig
 var sim_config: SimConfig
 
@@ -45,6 +47,11 @@ var _rig_lean_now_rad: float = 0.0
 ## averaged over balance_feel_time_s: what a hard turn or a slam adds to gravity.
 var _felt_push_ms2: float = 0.0
 var _felt_lift_ms2: float = 0.0
+## The same, averaged over fall_feel_time_s, for the fall checks: a jolt of a few tenths
+## of a second (a slam on a wave) is taken by the legs and does not throw a sailor; a push
+## that lasts does.
+var _fall_push_ms2: float = 0.0
+var _fall_lift_ms2: float = 0.0
 ## The bank the sailor is working toward (rad, positive = starboard rail down).
 var _wanted_bank_rad: float = 0.0
 ## Which side the sailor and rig fell to (+1 starboard, -1 port), what kind of fall it
@@ -69,7 +76,7 @@ var knee_bend_rate_ms: float = 0.0
 
 
 func _init(board: BoardConfig, sail_cfg: SailConfig, fin_cfg: FinConfig, sailor: SailorConfig,
-		water_cfg: WaterConfig, wind_cfg: WindConfig, sim_cfg: SimConfig) -> void:
+		water_cfg: WaterConfig, wind_cfg: WindConfig, sim_cfg: SimConfig, wave_set: WaveSetConfig = null) -> void:
 	board_config = board
 	sail_config = sail_cfg
 	fin_config = fin_cfg
@@ -77,6 +84,7 @@ func _init(board: BoardConfig, sail_cfg: SailConfig, fin_cfg: FinConfig, sailor:
 	water_config = water_cfg
 	wind_config = wind_cfg
 	sim_config = sim_cfg
+	wave_set_config = wave_set
 	mass_model = MassModel.new(board_config, sail_config, sailor_config)
 	buoyancy = BuoyancyModel.new(board_config, water_config)
 	hull = HullModel.new(board_config, water_config)
@@ -90,14 +98,32 @@ func _init(board: BoardConfig, sail_cfg: SailConfig, fin_cfg: FinConfig, sailor:
 ## Loads the default configuration files. with_waves = true puts the default wave set
 ## on the water (the game); tests and the validation sail on flat water unless they ask.
 static func create_default(with_waves: bool = false) -> WindsurferSim:
-	return WindsurferSim.new(
+	var sim: WindsurferSim = WindsurferSim.new(
 		load("res://config/board_default.tres"),
 		load("res://config/sail_default.tres"),
 		load("res://config/fin_default.tres"),
 		load("res://config/sailor_default.tres"),
 		load("res://config/water_default.tres"),
 		load("res://config/wind_default.tres"),
-		load("res://config/sim_default.tres"))
+		load("res://config/sim_default.tres"),
+		load("res://config/waves_default.tres"))
+	sim.set_waves(with_waves)
+	return sim
+
+
+## Puts the wave set on the water (oriented to the base wind of the moment) or takes it
+## off. The models never notice: they ask the water surface for heights, normals and
+## velocities either way.
+func set_waves(enabled: bool) -> void:
+	if enabled and wave_set_config != null and wave_set_config.enable_waves:
+		water = WaveField.new(wave_set_config, water_config, wind_config.from_bearing_deg)
+	else:
+		water = FlatWater.new(water_config)
+
+
+## Whether the water has waves on it.
+func has_waves() -> bool:
+	return water is WaveField
 
 
 ## Puts the board at rest, level, floating at about its resting depth, pointing along a
@@ -110,6 +136,8 @@ func reset(origin_xz: Vector3, heading_rad: float) -> void:
 	fallen_for_s = 0.0
 	_felt_push_ms2 = 0.0
 	_felt_lift_ms2 = 0.0
+	_fall_push_ms2 = 0.0
+	_fall_lift_ms2 = 0.0
 	_wanted_bank_rad = 0.0
 	stance = 0.0
 	lean = 0.0
@@ -173,7 +201,7 @@ func _check_balance() -> void:
 	var twa: float = SimMath.wind_angle_rad(body.basis, wind.from_direction())
 	var tack: float = 1.0 if twa >= 0.0 else -1.0
 	# Heel is positive with the starboard rail down; on starboard tack leeward is port.
-	var leeward_heel: float = -_felt_heel_rad() * tack
+	var leeward_heel: float = -_fall_heel_rad() * tack
 	# A sailor who presses the leeward rail on purpose (carving into a gybe) banks the
 	# board that far by choice; only the heel beyond that is a loss of balance.
 	var deliberate: float = maxf(-_wanted_bank_rad * tack, 0.0)
@@ -243,6 +271,8 @@ func waterstart() -> void:
 	knee_bend_rate_ms = 0.0
 	_felt_push_ms2 = 0.0
 	_felt_lift_ms2 = 0.0
+	_fall_push_ms2 = 0.0
+	_fall_lift_ms2 = 0.0
 	_wanted_bank_rad = 0.0
 	mass_model.update(stance, lean, hang_back_m, knee_bend_m)
 	body.set_mass_properties(mass_model.total_mass_kg, mass_model.inertia_body, mass_model.com_offset_body)
@@ -294,11 +324,20 @@ func _bank_for_turn(lean_asked: float, forward_speed: float) -> float:
 ## leans into a bend. A board banked into its turn by exactly atan(v w / g) feels level;
 ## that is the bank of a carved turn, and a sailor neither fights it nor falls off it.
 func _felt_heel_rad() -> float:
-	# The apparent gravity is gravity less the body's own acceleration (a plumb line held
-	# by the sailor hangs along it); the felt heel is its angle from the deck's normal.
+	return _apparent_heel_rad(_felt_push_ms2, _felt_lift_ms2)
+
+
+## The felt heel for the fall checks, with the slower push (fall_feel_time_s).
+func _fall_heel_rad() -> float:
+	return _apparent_heel_rad(_fall_push_ms2, _fall_lift_ms2)
+
+
+## The apparent gravity is gravity less the body's own acceleration (a plumb line held
+## by the sailor hangs along it); the felt heel is its angle from the deck's normal.
+func _apparent_heel_rad(push_ms2: float, lift_ms2: float) -> float:
 	var gravity_body: Vector3 = SimMath.to_body(body.basis, Vector3(0.0, -sim_config.gravity_ms2, 0.0))
-	var apparent_x: float = gravity_body.x - _felt_push_ms2
-	var apparent_down: float = -(gravity_body.y - _felt_lift_ms2)
+	var apparent_x: float = gravity_body.x - push_ms2
+	var apparent_down: float = -(gravity_body.y - lift_ms2)
 	return atan2(apparent_x, maxf(apparent_down, 0.1))
 
 
@@ -313,6 +352,9 @@ func _feel_the_turn(dt: float) -> void:
 	var blend: float = clampf(dt / maxf(sailor_config.balance_feel_time_s, dt), 0.0, 1.0)
 	_felt_push_ms2 = lerpf(_felt_push_ms2, acceleration_body.x, blend)
 	_felt_lift_ms2 = lerpf(_felt_lift_ms2, acceleration_body.y, blend)
+	var slow_blend: float = clampf(dt / maxf(sailor_config.fall_feel_time_s, dt), 0.0, 1.0)
+	_fall_push_ms2 = lerpf(_fall_push_ms2, acceleration_body.x, slow_blend)
+	_fall_lift_ms2 = lerpf(_fall_lift_ms2, acceleration_body.y, slow_blend)
 
 
 ## Where the rig leans sideways: it hangs toward the sailor with the lean (the sailor pulls
@@ -516,6 +558,8 @@ func _fill_telemetry(controls: SimControls) -> void:
 	t.hull_lateral_n = hull.lateral_n
 	t.hull_resistance_n = hull.resistance_n
 	t.bow_drag_n = hull.bow_drag_n
+	var origin: Vector3 = body.origin_world()
+	t.water_height_m = water.height_at(origin.x, origin.z, time_s)
 
 	t.sailor_state = sailor_state
 	t.fall_kind = fall_kind
