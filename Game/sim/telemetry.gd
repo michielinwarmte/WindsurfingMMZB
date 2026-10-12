@@ -40,6 +40,10 @@ var sail_lift_n: float = 0.0
 var sail_drag_n: float = 0.0
 var drive_n: float = 0.0
 var side_force_n: float = 0.0
+## The roll torque of the sail and of the fin together about the centre of mass (N m,
+## body axes): what the sailor's weight has to balance. The fin's side force under the
+## board heels it the same way as the sail's above it.
+var heeling_torque_nm: float = 0.0
 var is_luffing: bool = false
 var ce_local: Vector3 = Vector3.ZERO
 

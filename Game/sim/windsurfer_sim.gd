@@ -39,9 +39,10 @@ var time_s: float = 0.0
 var sailor_state: SailorState = SailorState.SAILING
 ## Inertia of the board alone, for the time the sailor is in the water.
 var _board_only_inertia: Basis = Basis.IDENTITY
-## The sideways push of the turn as the sailor feels it (m/s2, toward starboard), averaged
-## over balance_feel_time_s.
+## The sailor's own acceleration along the deck (m/s2, x toward starboard, y up the mast),
+## averaged over balance_feel_time_s: what a hard turn or a slam adds to gravity.
 var _felt_push_ms2: float = 0.0
+var _felt_lift_ms2: float = 0.0
 ## The bank the sailor is working toward (rad, positive = starboard rail down).
 var _wanted_bank_rad: float = 0.0
 ## Which side the sailor and rig fell to (+1 starboard, -1 port), what kind of fall it
@@ -105,6 +106,7 @@ func reset(origin_xz: Vector3, heading_rad: float) -> void:
 	fall_kind = ""
 	fallen_for_s = 0.0
 	_felt_push_ms2 = 0.0
+	_felt_lift_ms2 = 0.0
 	_wanted_bank_rad = 0.0
 	stance = 0.0
 	lean = 0.0
@@ -178,19 +180,21 @@ func _check_balance() -> void:
 	# A backed sail is pushed with the arms from a standing position, not hung on.
 	var hanging: bool = absf(sail.side_force_n) > sailor_config.catapult_min_sail_force_n and _asked_across <= 0.0
 	var standing_limit: float = deg_to_rad(sailor_config.standing_fall_heel_deg)
-	# Falling backwards: the board (or the turn's push) tips the sailor to windward and the
-	# sail's pull is not enough to hold them. The pull on the hands is the sail's side force
-	# levered from the centre of effort to the boom; it tilts the apparent gravity the
-	# sailor hangs in toward leeward by atan(pull / weight).
+	# Falling to windward: the board (or the push of a fast bear-away) tips the sailor to
+	# windward and the sail's pull is not enough to hold them. The pull on the hands is the
+	# sail's side force levered from the centre of effort to the boom; it tilts the
+	# apparent gravity the sailor hangs in toward leeward by atan(pull / weight), so a
+	# sailor hanging on a pulling sail rides out a fling that would drop a standing one.
 	var pull_on_hands: float = absf(sail.side_force_n) * sail_config.ce_height_fraction * sail_config.luff_m / maxf(sail_config.boom_height_m, 0.1)
 	var held_by_the_sail: float = atan2(pull_on_hands, sailor_config.mass_kg * sim_config.gravity_ms2)
+	var windward_tip: float = -leeward_heel - held_by_the_sail
 	if hanging and leeward_heel > deg_to_rad(sailor_config.catapult_heel_deg) + deliberate:
 		_fall(int(-tack), "catapult", tack)
-	elif hanging and leeward_heel + held_by_the_sail < -deg_to_rad(sailor_config.fall_back_heel_deg):
+	elif hanging and windward_tip > deg_to_rad(sailor_config.fall_back_heel_deg):
 		_fall(int(tack), "fell back", tack)
 	elif leeward_heel > standing_limit:
 		_fall(int(-tack), "fell off", tack)
-	elif leeward_heel < -standing_limit:
+	elif windward_tip > standing_limit:
 		_fall(int(tack), "fell off", tack)
 
 
@@ -235,6 +239,7 @@ func waterstart() -> void:
 	knee_bend_m = 0.0
 	knee_bend_rate_ms = 0.0
 	_felt_push_ms2 = 0.0
+	_felt_lift_ms2 = 0.0
 	_wanted_bank_rad = 0.0
 	mass_model.update(stance, lean, hang_back_m, knee_bend_m)
 	body.set_mass_properties(mass_model.total_mass_kg, mass_model.inertia_body, mass_model.com_offset_body)
@@ -286,22 +291,25 @@ func _bank_for_turn(lean_asked: float, forward_speed: float) -> float:
 ## leans into a bend. A board banked into its turn by exactly atan(v w / g) feels level;
 ## that is the bank of a carved turn, and a sailor neither fights it nor falls off it.
 func _felt_heel_rad() -> float:
-	var coordinated_heel: float = atan2(_felt_push_ms2, sim_config.gravity_ms2)
-	return SimMath.heel_rad(body.basis) - coordinated_heel
+	# The apparent gravity is gravity less the body's own acceleration (a plumb line held
+	# by the sailor hangs along it); the felt heel is its angle from the deck's normal.
+	var gravity_body: Vector3 = SimMath.to_body(body.basis, Vector3(0.0, -sim_config.gravity_ms2, 0.0))
+	var apparent_x: float = gravity_body.x - _felt_push_ms2
+	var apparent_down: float = -(gravity_body.y - _felt_lift_ms2)
+	return atan2(apparent_x, maxf(apparent_down, 0.1))
 
 
-## Updates the felt sideways push: the sideways acceleration the sailor's body is about to
-## get from the forces of this step, less gravity's share on a heeled deck, averaged over
-## balance_feel_time_s (the sense of balance does not follow a quick wobble). It is the
-## real acceleration, not v times the yaw rate: a board that skids round on a stalled fin
-## turns without pushing its sailor sideways. Called with the step's forces collected.
+## Updates the felt acceleration: the acceleration the sailor's body is about to get from
+## the forces of this step, in deck axes, averaged over balance_feel_time_s (the sense of
+## balance does not follow a quick wobble). It is the real acceleration, not v times the
+## yaw rate: a board that skids round on a stalled fin turns without pushing its sailor
+## sideways. Called with the step's forces collected.
 func _feel_the_turn(dt: float) -> void:
 	var sailor_world: Vector3 = body.point_world(mass_model.sailor_position_body)
 	var acceleration_body: Vector3 = SimMath.to_body(body.basis, body.acceleration_at(sailor_world))
-	var gravity_body: Vector3 = SimMath.to_body(body.basis, Vector3(0.0, -sim_config.gravity_ms2, 0.0))
-	var sideways_push: float = acceleration_body.x - gravity_body.x  # toward starboard
 	var blend: float = clampf(dt / maxf(sailor_config.balance_feel_time_s, dt), 0.0, 1.0)
-	_felt_push_ms2 = lerpf(_felt_push_ms2, sideways_push, blend)
+	_felt_push_ms2 = lerpf(_felt_push_ms2, acceleration_body.x, blend)
+	_felt_lift_ms2 = lerpf(_felt_lift_ms2, acceleration_body.y, blend)
 
 
 ## Where the rig leans sideways: it hangs toward the sailor with the lean (the sailor pulls
@@ -346,7 +354,7 @@ func _update_sailor(dt: float, controls: SimControls) -> void:
 		var heel_rate: float = -body.angular_velocity_body().z
 		var bank_target: float = _bank_for_turn(lean_target, forward_speed)
 		_wanted_bank_rad = move_toward(_wanted_bank_rad, bank_target, deg_to_rad(sailor_config.bank_rate_dps) * dt)
-		var standing: float = sailor_config.com_height_m / maxf(sailor_config.lean_max_m, 0.1)
+		var standing: float = sailor_config.balance_felt_gain
 		var max_moment: float = mass_model.max_righting_moment_nm(sim_config.gravity_ms2)
 		# A positive sail torque about the aft axis lifts the starboard rail (heels to port);
 		# the sailor answers by moving to starboard (positive lean), and the other way round.
@@ -482,6 +490,8 @@ func _fill_telemetry(controls: SimControls) -> void:
 	t.wetted_aft_m = hull.wetted_aft_m
 	t.spray_root_factor = hull.spray_root_factor
 	t.heave_added_mass_kg = hull.heave_added_mass_kg
+	var fin_torque: Vector3 = SimMath.to_body(body.basis, (fin.cop_world - body.position).cross(fin.force_world))
+	t.heeling_torque_nm = sail.torque_body.z + fin_torque.z
 	t.planing_cop_z_m = hull.cop_local.z
 	t.bow_immersion_m = buoyancy.point_depths_m[buoyancy.bow_centre_index]
 	t.is_planing = hull.planing_ratio > 0.5

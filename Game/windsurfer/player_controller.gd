@@ -69,19 +69,18 @@ var tack_rate_dps: float = 15.0
 ## coordinated turn at lean times this rate: SailorConfig.carve_rate_dps). The rail asked
 ## for a wanted rate is rate / carve_rate_dps; the rig does the rest.
 var carve_rate_dps: float = 57.0
-## After a manoeuvre the board is left to straighten by itself (rig neutral, weight off
-## the rails) until it turns slower than this; only then does the heading hold take over.
-## A hold that grabbed a board still carving at 60 degrees per second would throw the
-## rig the other way and the sailor off.
+## After a manoeuvre at planing speed (above settle_speed_ms) the board is left to
+## straighten by itself (rig neutral, weight off the rails) until it turns slower than
+## settle_rate_dps; only then does the heading hold take over. A hold that grabbed a board
+## still carving at 60 degrees per second would throw the rig the other way and the sailor
+## off. Slower, there is no carve to wait for and an eased sail only rounds the board up.
 var settle_rate_dps: float = 15.0
+var settle_speed_ms: float = 5.0
 var _settling: bool = false
 ## Space tacks from a beam reach and anything closer to the wind, gybes from further off.
 var tack_up_to_twa_deg: float = 100.0
-## The angle of attack the sail is eased to through a gybe, and how fast the full trim
-## comes back afterwards (degrees of angle of attack per second).
+## The angle of attack the sail is eased to through a gybe.
 var gybe_entry_alpha_deg: float = 8.0
-var alpha_cap_return_dps: float = 10.0
-var _alpha_cap_deg: float = 90.0
 var helm_rate_per_s: float = 2.0
 ## The last helm, -1 (full left) to +1 (full right), the rate the loop asked for and the
 ## heading it holds, for the HUD and for debugging.
@@ -127,6 +126,7 @@ var _was_down: Dictionary[String, bool] = {}
 
 
 var _sail: SailModel = null
+var _sailor: SailorConfig = null
 
 
 func _init() -> void:
@@ -135,9 +135,11 @@ func _init() -> void:
 
 
 ## Gives the controller the simulation's sail, so the auto-sheet trims for the most drive.
-func set_sail(sail: SailModel) -> void:
+func set_sail(sail: SailModel, sailor: SailorConfig = null) -> void:
 	_sail = sail
+	_sailor = sailor
 	auto_sheet_pilot.sail = sail
+	auto_sheet_pilot.sailor = sailor
 
 
 ## Reads the keys and writes the controls: sheet, boom across, rake, rig tilt and lean.
@@ -171,13 +173,10 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 	var tilt_key: float = _axis("tilt_right", "tilt_left")  # +1 = mast top toward starboard
 	var rake_key: float = _axis("rake_back", "rake_forward")  # +1 = rig back
 	# Through a gybe the sailor keeps the sail eased: with the rig laid forward and the body
-	# inside the turn, a fully powered sail would pull them over it, and coming out of the
-	# turn still banked they are in no position to take the full pull. The bank does the
-	# turning; the power comes back gradually once the board has settled on its course.
+	# inside the turn, a fully powered sail would pull them over it. The bank does the
+	# turning; afterwards the pilot sheets back in at the pace the body can lean out.
 	var gybing: bool = manoeuvre == Manoeuvre.GYBE_BEARING_AWAY or manoeuvre == Manoeuvre.GYBE_HEADING_UP
-	var cap_target: float = gybe_entry_alpha_deg if (gybing or _settling) else 90.0
-	_alpha_cap_deg = minf(cap_target, _alpha_cap_deg + alpha_cap_return_dps * dt) if cap_target > _alpha_cap_deg else cap_target
-	auto_sheet_pilot.max_alpha_deg = _alpha_cap_deg
+	auto_sheet_pilot.max_alpha_deg = gybe_entry_alpha_deg if gybing else 90.0
 	_turn_wanted = 0.0
 	if manoeuvre != Manoeuvre.NONE:
 		var is_gybe: bool = manoeuvre == Manoeuvre.GYBE_BEARING_AWAY or manoeuvre == Manoeuvre.GYBE_HEADING_UP
@@ -254,7 +253,7 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 func _steer_beginner(telemetry: Telemetry, controls: SimControls, turn_key: float, dt: float) -> void:
 	# Coming out of a manoeuvre: let the board straighten before holding a heading.
 	if _settling and turn_key == 0.0:
-		if absf(telemetry.yaw_rate_dps) > settle_rate_dps:
+		if absf(telemetry.yaw_rate_dps) > settle_rate_dps and telemetry.speed_ms > settle_speed_ms:
 			helm_right = 0.0
 			wanted_rate_dps = 0.0
 			controls.rake = move_toward(controls.rake, 0.0, helm_rate_per_s * dt)
@@ -361,7 +360,6 @@ func set_mode(new_mode: Mode) -> void:
 ## Forgets the sheet and the manoeuvre (after a reset or a waterstart).
 func reset_controls(controls: SimControls) -> void:
 	_settling = false
-	_alpha_cap_deg = 90.0
 	wanted_sheet = 0.0
 	ease = 0.0
 	manoeuvre = Manoeuvre.NONE
@@ -375,6 +373,7 @@ func reset_controls(controls: SimControls) -> void:
 	auto_sheet_pilot.hold_course = false
 	auto_sheet_pilot.trim_sheet = true
 	auto_sheet_pilot.sail = _sail
+	auto_sheet_pilot.sailor = _sailor
 	controls.sheet = 0.0
 	controls.boom_across = 0.0
 	controls.rake = 0.0

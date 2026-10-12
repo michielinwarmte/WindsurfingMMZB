@@ -81,9 +81,11 @@ extends Resource
 ## full lean. Raking the rig to windward is what real sailors do when hooked in; it brings
 ## the sail's centre of effort back over the board and gives the sail an upward component.
 @export var max_rig_lean_deg: float = 25.0
-## How far the sailor can tilt the rig sideways with the arms on top of that (the hands
-## stay within reach of the shoulders).
-@export var rig_tilt_range_deg: float = 20.0
+## How far the sailor can tilt the rig sideways with the arms and shoulders on top of that
+## (the mast foot is a free joint; what limits the tilt is the reach of the arms and, at
+## speed, the pull in the sail). At 20 degrees a board on a run in light wind could not
+## be turned against the push of its own eased sail; 30 turns it.
+@export var rig_tilt_range_deg: float = 30.0
 ## The rig cannot lean further than this either way without the boom touching the water.
 @export var max_total_rig_lean_deg: float = 45.0
 
@@ -101,6 +103,9 @@ extends Resource
 @export var carve_rate_dps: float = 57.0
 @export var bank_max_deg: float = 30.0
 @export var bank_rate_dps: float = 12.0
+## The sailor also moves this many units of full lean per radian that the deck is off
+## square to the apparent gravity of a turn (see WindsurferSim._felt_heel_rad).
+@export var balance_felt_gain: float = 1.0
 ## The sailor leans this many units of full lean per radian of heel away from that bank,
 ## and this many per radian per second of heel rate. With the sailor's weight as the
 ## spring (gain x weight x lean) and the whole windsurfer's roll inertia, these give a

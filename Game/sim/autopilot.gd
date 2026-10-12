@@ -16,6 +16,13 @@ var target_alpha_deg: float = 15.0
 ## most drive at the current apparent wind angle, which is what a sailor does by feel:
 ## close to the wind that is a modest angle (drag costs), on a reach it is near the stall.
 var sail: SailModel = null
+## The sailor, when the pilot may use their weight, reach and lean rate to sheet in only
+## as fast as the body can lean out against the pull.
+var sailor: SailorConfig = null
+## The sailor sheets in at this share of the pace they can hike out at, so the body stays
+## ahead of the pull: the sail's heeling torque may rise by at most this share of the
+## sailor's full righting moment per unit of lean per second.
+var sheet_in_share: float = 0.5
 ## Rake per degree of wind-angle error, and rake per degree per second of yaw rate against
 ## it. Together they set the turn rate the pilot settles for: about 15 degrees per second
 ## for a large error. The rig has a lot of authority at planing speed (a full rake moves
@@ -40,22 +47,23 @@ var hold_course: bool = true
 var pointing_speed_ms: float = 5.0
 var bear_away_twa_deg: float = 70.0
 var _pointing: bool = false
-## Depowering: the sheet is the throttle. While the sailor is out of hike (lean beyond
-## depower_lean_start) or the board heels to leeward past a small allowance, the sailor
-## eases, gradually, toward min_alpha_deg; while there is hike in reserve they sheet back
-## in. The rate is depower_rate_per_s per second per unit of excess. A trim that answered
-## the lean instantly would pump the sail at several hertz against the sailor's own
-## reflex (the lean follows the pull, the trim follows the lean); a real sailor eases a
-## little and holds. Leeward heel beyond the allowance is answered at once as well, by
-## depower_alpha_per_deg per degree: the board rolls slowly, so that loop is calm.
-var depower_lean_start: float = 0.75
+## Depowering: the sheet is the throttle, and the sailor sheets in only to the pull they
+## can hold. The sail is never trimmed beyond the angle of attack at which its heeling
+## torque, at this apparent wind, is hike_share of the sailor's full righting moment: a
+## little of the hike is kept in reserve for gusts and waves (0.75 held the sail at the
+## edge of the leeward-heel allowance and was slower and less steady than 0.9). This is a sailor feeling the
+## pull in the hands and the harness: more apparent wind, less sheet, at once and without
+## any loop that could pump (an earlier version integrated the hike itself and pumped the
+## sail against the sailor's own reflex at about 1 Hz).
+var hike_share: float = 0.9
+## On top of that, leeward heel beyond the deliberate bank and a small allowance is
+## answered at once by depower_alpha_per_deg per degree (the board is going over), and
+## the push of a hard turn, felt as leeward heel, slowly (depower_rate_per_s per second
+## per unit of excess over depower_heel_span_deg, and depower_urgent_rate_per_s more
+## beyond half of it): a sailor flung outward in a turn eases a little.
 var depower_heel_allowance_deg: float = 5.0
 var depower_heel_span_deg: float = 10.0
 var depower_rate_per_s: float = 0.25
-## Near the limits the sailor moves much faster: with the hike more than seven eighths
-## used, or the felt leeward heel well past the allowance, they let the sail out at once;
-## standing nearly upright with the sail eased, they sheet back in at once. This much
-## more per second per unit beyond the half-way marks.
 var depower_urgent_rate_per_s: float = 2.0
 var depower_alpha_per_deg: float = 1.0
 var _depower: float = 0.0
@@ -92,6 +100,12 @@ var tack_abandon_twa_deg: float = 35.0
 ## band and this the sheeted sail carries too little to sail out of irons on; the sailor
 ## backs it instead.
 var fill_margin_deg: float = 3.0
+## A sail backed on its own side (out of irons, or just after the rig flipped in a tack)
+## is kept backed until the bow is this far off the wind, unless the board already has
+## way on (backing_exit_speed_ms): a filled sail on a board without speed, with the rig
+## raked back, only rounds it straight back up, because the fin cannot hold the bow yet.
+var backing_exit_twa_deg: float = 55.0
+var backing_exit_speed_ms: float = 3.0
 ## Where the tack is: 0 = not tacking; 1 = the bow in the no-go zone, the rig held on the
 ## old side and the sail backed; 2 = the rig flipped and held on the new side until the
 ## bow is well round. Once begun, the sailor's hands decide which side the rig is on, not
@@ -147,10 +161,10 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		var deliberate_leeward_deg: float = maxf(-telemetry.wanted_bank_deg * windward, 0.0)
 		var leeward_heel_deg: float = -telemetry.heel_deg * windward - deliberate_leeward_deg
 		var felt_leeward_heel_deg: float = -telemetry.felt_heel_deg * windward - deliberate_leeward_deg
-		var over_hike: float = clampf((absf(telemetry.lean) - depower_lean_start) / (1.0 - depower_lean_start), -1.0, 1.0)
-		var over_heel: float = clampf((felt_leeward_heel_deg - depower_heel_allowance_deg) / depower_heel_span_deg, 0.0, 1.0)
-		var urgency: float = maxf(over_hike - 0.5, 0.0) + maxf(over_heel - 0.5, 0.0) - maxf(-over_hike - 0.5, 0.0)
-		_depower = clampf(_depower + (depower_rate_per_s * (over_hike + over_heel) + depower_urgent_rate_per_s * urgency) * dt, 0.0, 1.0)
+		alpha_deg = minf(alpha_deg, _alpha_for_torque_deg(telemetry, hike_share * _max_righting_moment_nm()))
+		var over_heel: float = clampf((felt_leeward_heel_deg - depower_heel_allowance_deg) / depower_heel_span_deg, -1.0, 1.0)
+		var urgency: float = maxf(over_heel - 0.5, 0.0)
+		_depower = clampf(_depower + (depower_rate_per_s * over_heel + depower_urgent_rate_per_s * urgency) * dt, 0.0, 1.0)
 		alpha_deg = lerpf(alpha_deg, min_alpha_deg, _depower)
 		if leeward_heel_deg > depower_heel_allowance_deg:
 			alpha_deg = maxf(alpha_deg - depower_alpha_per_deg * (leeward_heel_deg - depower_heel_allowance_deg), min_alpha_deg)
@@ -167,10 +181,7 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		# With the apparent wind inside the no-go zone and a turn wanted, the sail is backed:
 		# across the centreline when the bow is to go away from the sail's side (a tack,
 		# phase 1), on its own side when the bow is to go toward it (out of irons, phase 2).
-		# Without a stated wish, a rig raked back counts as heading up.
 		var wanted_turn: float = _hold_turn_right if hold_course else turn_right_wanted
-		if wanted_turn == 0.0 and controls.rake > 0.5:
-			wanted_turn = tack
 		var away_from_sail: float = -float(telemetry.sail_side)
 		# The no-go zone is the apparent wind within the luff band of the bow, on either side
 		# (the own-side angle alone would also be small with the wind behind the sail on a
@@ -178,11 +189,13 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		# carries something but not enough to drive out of irons on.
 		var in_no_go_zone: bool = absf(telemetry.awa_deg) < luff_band_deg
 		var cannot_fill: bool = absf(telemetry.awa_deg) < luff_band_deg + fill_margin_deg
+		var bow_well_off: bool = twa_own_side_deg >= backing_exit_twa_deg or telemetry.speed_ms >= backing_exit_speed_ms
 		# A change of mind ends either phase; so does a bow that fell back out of the zone
-		# (phase 1), or a sail that fills or a wind clearly back on the sail's side (phase 2).
+		# (phase 1), or a sail that can fill on a bow well enough off the wind, or a wind
+		# clearly back on the sail's side (phase 2).
 		if _tack_phase == 1 and (wanted_turn * away_from_sail < 0.0 or twa_own_side_deg > tack_abandon_twa_deg):
 			_tack_phase = 0
-		if _tack_phase == 2 and (wanted_turn * away_from_sail > 0.0 or not cannot_fill or twa_own_side_deg <= -tack_abandon_twa_deg):
+		if _tack_phase == 2 and (wanted_turn * away_from_sail > 0.0 or (not cannot_fill and bow_well_off) or twa_own_side_deg <= -tack_abandon_twa_deg):
 			_tack_phase = 0
 		if _tack_phase == 0 and wanted_turn != 0.0:
 			if wanted_turn * away_from_sail > 0.0 and in_no_go_zone:
@@ -204,7 +217,7 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 				_tack_phase = 2
 				controls.hold_side = -telemetry.sail_side
 				controls.boom_across = 0.0
-				var filled_alpha_deg: float = best_alpha_deg(deg_to_rad(telemetry.awa_deg))
+				var filled_alpha_deg: float = alpha_luff_deg + fill_margin_deg
 				var filled_boom_deg: float = clampf(absf(telemetry.awa_deg) - filled_alpha_deg, sheet_angle_in_deg, sheet_angle_out_deg)
 				controls.sheet = 1.0 - (filled_boom_deg - sheet_angle_in_deg) / (sheet_angle_out_deg - sheet_angle_in_deg)
 				return
@@ -233,6 +246,16 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 			# to fill.
 			controls.hold_side = telemetry.sail_side
 			boom_angle_deg = clampf(awa_own_side_deg + _backing_alpha_deg(telemetry), sheet_angle_in_deg, sheet_angle_out_deg)
+		if _tack_phase == 0 and across <= 0.0:
+			# Sheeting in is paced by the body: the pull may grow only as fast as the sailor
+			# can lean out against it (a sailor who sheets in faster than they hike is pulled
+			# over the sail). The angle of attack may rise at most by the rate at which the
+			# allowed torque rise is matched by the sail's lift slope at this wind.
+			var alpha_now_deg: float = maxf(telemetry.alpha_deg, 0.0)
+			var wanted_alpha_deg: float = absf(telemetry.awa_deg) - boom_angle_deg
+			if wanted_alpha_deg > alpha_now_deg:
+				var limited_alpha_deg: float = alpha_now_deg + _alpha_rise_limit_dps(telemetry) * dt
+				boom_angle_deg = clampf(absf(telemetry.awa_deg) - minf(wanted_alpha_deg, limited_alpha_deg), sheet_angle_in_deg, sheet_angle_out_deg)
 		var wanted_sheet: float = 1.0 - (boom_angle_deg - sheet_angle_in_deg) / (sheet_angle_out_deg - sheet_angle_in_deg)
 		controls.sheet = move_toward(controls.sheet, wanted_sheet, sheet_rate_per_s * dt)
 		controls.boom_across = move_toward(controls.boom_across, across, sheet_rate_per_s * dt)
@@ -283,6 +306,66 @@ static func carry_boom_across_the_flip(controls: SimControls, _in_deg: float, _o
 		return
 	controls.sheet = 1.0
 	controls.boom_across = 0.0
+
+
+## The sailor's full righting moment: their weight at full lean. Infinite without a sailor.
+func _max_righting_moment_nm() -> float:
+	if sailor == null:
+		return INF
+	return sailor.mass_kg * 9.81 * sailor.lean_max_m
+
+
+## The heeling torque per newton of the sail's side force, as it is now: the sail's own
+## lever about the centre of mass plus the fin's (the fin holds the sail's side force
+## under the board, and heels it the same way), or heeling_arm_default_m when the sail
+## carries nothing yet.
+var heeling_arm_default_m: float = 2.1
+
+
+func _heeling_arm_m(telemetry: Telemetry) -> float:
+	if absf(telemetry.side_force_n) > 30.0:
+		return clampf(absf(telemetry.heeling_torque_nm) / absf(telemetry.side_force_n), 0.5, 4.0)
+	return heeling_arm_default_m
+
+
+## The largest angle of attack (up to 24 degrees) at which the sail's heeling torque at
+## this apparent wind stays within limit_nm: side force q A (Cl cos AWA + Cd sin AWA)
+## times the lever arm. Down to a quarter of a degree, where the sail flaps and carries
+## next to nothing. Unlimited without a sail or a limit.
+func _alpha_for_torque_deg(telemetry: Telemetry, limit_nm: float) -> float:
+	if sail == null or limit_nm == INF:
+		return INF
+	var aws_ms: float = telemetry.aws_kt * SimMath.KNOT_MS
+	var q_area: float = 0.5 * 1.225 * aws_ms * aws_ms * sail.config.area_m2
+	var awa: float = deg_to_rad(absf(telemetry.awa_deg))
+	var arm_m: float = _heeling_arm_m(telemetry)
+	var alpha_deg: float = 24.0
+	while alpha_deg > 0.25:
+		var alpha: float = deg_to_rad(alpha_deg)
+		var cl: float = sail.lift_coefficient(alpha)
+		var cd: float = sail.drag_coefficient(cl, alpha)
+		var side_n: float = q_area * absf(cl * cos(awa) + cd * sin(awa))
+		if side_n * arm_m <= limit_nm:
+			return alpha_deg
+		alpha_deg -= 0.25
+	return 0.25
+
+
+## How fast the angle of attack may rise (degrees per second) so that the sail's heeling
+## torque rises no faster than sheet_in_share of what the sailor's lean can add per
+## second: torque rate / (q A x lever arm x lift slope). The lever arm is the one the
+## sail has now (its torque over its side force), or the centre of effort's height when
+## the sail carries nothing yet. Unlimited without a sailor or a sail to ask.
+func _alpha_rise_limit_dps(telemetry: Telemetry) -> float:
+	if sail == null or sailor == null:
+		return INF
+	var aws_ms: float = telemetry.aws_kt * SimMath.KNOT_MS
+	var q_area: float = 0.5 * 1.225 * aws_ms * aws_ms * sail.config.area_m2
+	if q_area < 1.0:
+		return INF
+	var slope_per_deg: float = sail.lift_slope_per_rad() * PI / 180.0
+	var torque_rate_nm_s: float = sheet_in_share * sailor.lean_rate_per_s * _max_righting_moment_nm()
+	return torque_rate_nm_s / (q_area * _heeling_arm_m(telemetry) * slope_per_deg)
 
 
 ## The angle a backed sail is held at: the backing angle, or less when the wind is strong

@@ -15,6 +15,34 @@ Template for new entries:
 
 ---
 
+## 12 October 2026 - Session 34: the manoeuvre matrix, sheeting to the pull, sailing in 24 kt
+
+**Phase:** 3 play-test follow-up (the open items of Session 33); Phase 4 work. Stopped for a play-test.
+
+**Done:**
+- A batch harness: `tools/matrix.sh` runs 24 manoeuvre cases (tacks, gybes, a turn on a run, out of irons, straight) at 12, 18 and 24 kt in one Godot process and prints one line per case with falls, NaN, the manoeuvre's timing and how calm the sailing is afterwards; `--pilot.x= --controller.x= --sailor.x= --sail.x=` try other values without editing code (also on `tools/simulate.sh`). This is how the rest of the session was done: one run per hypothesis, a trace only for the one case that needed it.
+- The sail is now sheeted to the pull the body can hold (0.9 of the sailor's righting moment, from the sail's curves and the measured heeling lever of sail plus fin) and sheeted in no faster than the body can lean out against it. This replaces the hike integrator, fixes the catapult 4 s into every 24 kt run, and makes 24 kt sailable (depowered, 11.3 m/s on a beam reach).
+- The felt heel counted the heel twice; fixed to the exact apparent-gravity angle. That was the 1 Hz sail pumping at every wind. Steady sailing is now steady at 12, 18 and 24 kt.
+- Out of irons: the sail stays backed until the bow is 55 degrees off the wind or the board makes 3 m/s (a filled sail on a board without way only rounds it up); no backing without a wanted turn. Works at 12, 18 and 24 kt (2 to 4 s).
+- Settling after a manoeuvre only at planing speed, and the gybe's eased sail only through the gybe: the 12 kt gybe keeps its speed.
+- The arms' rig tilt range 20 to 30 degrees: the run at 12 kt turns left now.
+- Falling to windward counts the sail's pull on the hands in both rules. The rake test of section 3 measures the first two seconds (an unsteered planing board wobbles rail to rail after that; see spec 17.10), and the test pilot now knows the sail and the sailor like the game's pilot.
+- Spec 17.10 and the tuning log; this entry; CLAUDE.md lists the matrix tool.
+
+**Verified:**
+- `tools/matrix.sh`: 24 cases, 0 falls, 0 NaN, every manoeuvre completed; tacks 6 to 8 s, gybes 5 to 7 s, irons 2 to 4 s at all three winds; straight sailing 7.9 / 10.0 / 11.3 m/s at 12 / 18 / 24 kt with 0 sheet reversals.
+- `tools/test.sh`: 111 of 111. `tools/check.sh`: 62 files, 0 failed.
+- Not verified: how it feels in the game (no play-test since); nothing visual changed, no screenshot.
+
+**Decisions:**
+- Trim by feel, not by integrator: the pilot sheets to the pull the body can hold and in at the pace the body can lean. No state in the trim.
+- The felt-gravity reflex stays (gain 1.0): with the felt heel computed right it is steadier than without in every case.
+- The rate loop is the yaw damper of a carving board; the open-loop wobble is noted, not hidden.
+
+**Next:** the team plays at a few wind strengths (the wind is in `Game/config/wind_default.tres`, `speed_kt`): tack and gybe with Space, hold A/D, get out of irons by pressing a key, sail a run in light wind. Then waves (Phase 5) or more equipment, adding each to the matrix.
+
+---
+
 ## 3 October 2026 - Session 33: tacks, gybes, and a hull that carves
 
 **Phase:** 3 play-tested a third time; Phase 4 work. Stopped at the team's request so they can play-test before more is optimised.

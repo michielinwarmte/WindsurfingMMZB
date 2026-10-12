@@ -5,6 +5,8 @@ extends SceneTree
 ## Arguments after "--": --scenario=<name> --out=<file.csv> [--seconds=<n>] [--wind_kt=<n>]
 ## [--twa=<deg>] [--heading=<deg>] [--every=<steps>] [--freeze=<s>: the sailor stops moving fore and aft from then on]
 ## [--twa2=<deg> --switch=<s>: the pilot steers to a second wind angle from that time on]
+## [--pilot.<field>=<n> --sailor.<field>=<n> --sail.<field>=<n>: try another value of a
+## tuning field without editing code]
 
 const DT: float = 1.0 / 60.0
 
@@ -36,6 +38,25 @@ func _initialize() -> void:
 	sim.wind_config.speed_kt = scenario.wind_kt
 	sim.wind = WindField.new(sim.wind_config)
 	scenario.pilot.sail = sim.sail
+	scenario.pilot.sailor = sim.sailor_config
+	for key: String in options:
+		var parts: PackedStringArray = key.split(".", true, 1)
+		if parts.size() != 2:
+			continue
+		var target: Object = null
+		match parts[0]:
+			"pilot":
+				target = scenario.pilot
+			"sailor":
+				target = sim.sailor_config
+			"sail":
+				target = sim.sail_config
+		if target == null or not (parts[1] in target):
+			push_error("No field '%s' to override." % key)
+			continue
+		var current: Variant = target.get(parts[1])
+		var number: float = options[key].to_float()
+		target.set(parts[1], (number != 0.0) if current is bool else (int(number) if current is int else number))
 	scenario.setup(sim)
 	sim.reset(Vector3.ZERO, deg_to_rad(scenario.start_heading_deg))
 

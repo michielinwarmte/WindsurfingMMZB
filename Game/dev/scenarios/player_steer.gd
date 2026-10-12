@@ -20,7 +20,7 @@ func _init() -> void:
 
 
 func setup(sim: WindsurferSim) -> void:
-	controller.auto_sheet_pilot.sail = sim.sail
+	controller.set_sail(sim.sail, sim.sailor_config)
 	var options: Dictionary[String, String] = {}
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--") and arg.contains("="):
