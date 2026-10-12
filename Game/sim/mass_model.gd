@@ -32,14 +32,16 @@ func _init(board_config: BoardConfig, sail_config: SailConfig, sailor_config: Sa
 ## lean: -1 = sailor fully out to port, +1 = fully out to starboard, 0 = upright.
 ## hang_back_m: how far the sailor's weight hangs behind the feet against the sail's pull.
 ## knee_bend_m: how far the knees have flexed; positive lowers the sailor's body.
-func update(stance: float, lean: float, hang_back_m: float = 0.0, knee_bend_m: float = 0.0) -> void:
+## rig_lean_rad: how far the rig leans sideways (positive toward starboard); its mass goes
+## with it, which is part of what a sailor hanging the rig to windward gains.
+func update(stance: float, lean: float, hang_back_m: float = 0.0, knee_bend_m: float = 0.0, rig_lean_rad: float = 0.0) -> void:
 	stance = clampf(stance, -1.0, 1.0)
 	lean = clampf(lean, -1.0, 1.0)
 	sailor_position_body = Vector3(
 		lean * sailor.lean_max_m,
 		sailor.com_height_m - absf(lean) * sailor.lean_height_drop_m - knee_bend_m,
 		(lerpf(sailor.stance_rest_z_m, sailor.stance_planing_z_m, stance) if stance >= 0.0 else lerpf(sailor.stance_rest_z_m, sailor.stance_tack_z_m, -stance)) + hang_back_m)
-	rig_position_body = sail.mast_foot_local + Vector3(0.0, sail.rig_com_height_m, 0.0)
+	rig_position_body = sail.mast_foot_local + Vector3(sin(rig_lean_rad) * sail.rig_com_height_m, cos(rig_lean_rad) * sail.rig_com_height_m, 0.0)
 	var board_position_body: Vector3 = Vector3.ZERO
 
 	total_mass_kg = board.mass_kg + sail.rig_mass_kg + sailor.mass_kg

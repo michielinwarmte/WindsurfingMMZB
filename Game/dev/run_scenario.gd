@@ -6,7 +6,8 @@ extends SceneTree
 ## [--twa=<deg>] [--heading=<deg>] [--every=<steps>] [--freeze=<s>: the sailor stops moving fore and aft from then on]
 ## [--twa2=<deg> --switch=<s>: the pilot steers to a second wind angle from that time on]
 ## [--pilot.<field>=<n> --sailor.<field>=<n> --sail.<field>=<n>: try another value of a
-## tuning field without editing code]
+## tuning field without editing code] [--gradient=0: the same wind at every height, as
+## the validation suite uses]
 
 const DT: float = 1.0 / 60.0
 
@@ -57,8 +58,11 @@ func _initialize() -> void:
 		var current: Variant = target.get(parts[1])
 		var number: float = options[key].to_float()
 		target.set(parts[1], (number != 0.0) if current is bool else (int(number) if current is int else number))
-	scenario.setup(sim)
+	if options.get("gradient", "1") == "0":
+		sim.wind_config.height_gradient_enabled = false
+		sim.wind = WindField.new(sim.wind_config)
 	sim.reset(Vector3.ZERO, deg_to_rad(scenario.start_heading_deg))
+	scenario.setup(sim)
 
 	var file: FileAccess = null
 	if out_path != "":

@@ -27,9 +27,12 @@ var sheet_in_share: float = 0.5
 ## it. Together they set the turn rate the pilot settles for: about 15 degrees per second
 ## for a large error. The rig has a lot of authority at planing speed (a full rake moves
 ## the centre of effort a metre), and a sailor who turned harder would be flung out of
-## the turn.
+## the turn. Holding a course needs a steady rake (weather helm), which a sailor finds by
+## feel: the trim accumulates at rake_trim_per_deg_s per degree of error per second.
 var rake_gain_per_deg: float = 0.03
 var rake_yaw_damping: float = 0.05
+var rake_trim_per_deg_s: float = 0.01
+var _rake_trim: float = 0.0
 ## How much weight the pilot puts on the inside rail per unit of helm (see Helm). None by
 ## default: holding a course is done with the rig and a flat board; a planing board carves
 ## hard on a few degrees of bank, so a rail used for every small correction rocks it.
@@ -112,6 +115,9 @@ var backing_exit_speed_ms: float = 3.0
 ## the wind: a rig that flipped itself in the middle of a tack backwinds and pushes the
 ## bow straight back.
 var _tack_phase: int = 0
+## Whether the pilot may back the sail through the wind when it cannot point as high as it
+## is asked to (the validation's no-go check wants a pilot that keeps trying and fails).
+var may_tack: bool = true
 ## Which way the bow is wanted to turn, +1 right, -1 left, 0 none: set by the player
 ## controller (the key or the manoeuvre) before update(), or by the course hold. In the
 ## no-go zone it decides how the sail is backed: pushed across the centreline the wind on
@@ -144,7 +150,10 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		# A positive yaw rate turns the bow to port. On starboard tack (positive TWA) that is
 		# bearing away, on port tack it is heading up: turn it into "rate of heading up".
 		var heading_up_rate: float = -telemetry.yaw_rate_dps * signf(telemetry.twa_deg) if telemetry.twa_deg != 0.0 else 0.0
-		var head_up: float = clampf(rake_gain_per_deg * error_deg - rake_yaw_damping * heading_up_rate, -1.0, 1.0)
+		# The trim only accumulates while the helm is not already at its stop (no wind-up).
+		if absf(_rake_trim + rake_gain_per_deg * error_deg) < 1.0:
+			_rake_trim = clampf(_rake_trim + rake_trim_per_deg_s * error_deg * dt, -0.8, 0.8)
+		var head_up: float = clampf(_rake_trim + rake_gain_per_deg * error_deg - rake_yaw_damping * heading_up_rate, -1.0, 1.0)
 		_hold_turn_right = signf(head_up) * tack if absf(head_up) > 0.1 else 0.0
 		# Heading up is a right turn on starboard tack and a left turn on port tack.
 		var pivot: bool = Helm.pivoting(telemetry, controls, 30.0)
@@ -198,7 +207,7 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		if _tack_phase == 2 and (wanted_turn * away_from_sail > 0.0 or (not cannot_fill and bow_well_off) or twa_own_side_deg <= -tack_abandon_twa_deg):
 			_tack_phase = 0
 		if _tack_phase == 0 and wanted_turn != 0.0:
-			if wanted_turn * away_from_sail > 0.0 and in_no_go_zone:
+			if wanted_turn * away_from_sail > 0.0 and in_no_go_zone and may_tack:
 				_tack_phase = 1
 			elif wanted_turn * away_from_sail < 0.0 and cannot_fill:
 				_tack_phase = 2

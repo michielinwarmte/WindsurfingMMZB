@@ -33,6 +33,7 @@ backwind_efficiency = 0.7
 boom_across_max_deg = 47.0
 cd_parasitic = 0.04
 oswald_e = 0.75
+end_plate_factor = 1.4
 cd_separation_start_deg = 15.0
 cd_separation_span_deg = 30.0
 cd_separation_gain = 0.5

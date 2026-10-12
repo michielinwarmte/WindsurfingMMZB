@@ -39,6 +39,8 @@ var time_s: float = 0.0
 var sailor_state: SailorState = SailorState.SAILING
 ## Inertia of the board alone, for the time the sailor is in the water.
 var _board_only_inertia: Basis = Basis.IDENTITY
+## Where the rig leans right now (rad, positive toward starboard), for the mass model.
+var _rig_lean_now_rad: float = 0.0
 ## The sailor's own acceleration along the deck (m/s2, x toward starboard, y up the mast),
 ## averaged over balance_feel_time_s: what a hard turn or a slam adds to gravity.
 var _felt_push_ms2: float = 0.0
@@ -85,8 +87,9 @@ func _init(board: BoardConfig, sail_cfg: SailConfig, fin_cfg: FinConfig, sailor:
 	reset(Vector3.ZERO, 0.0)
 
 
-## Loads the default configuration files.
-static func create_default() -> WindsurferSim:
+## Loads the default configuration files. with_waves = true puts the default wave set
+## on the water (the game); tests and the validation sail on flat water unless they ask.
+static func create_default(with_waves: bool = false) -> WindsurferSim:
 	return WindsurferSim.new(
 		load("res://config/board_default.tres"),
 		load("res://config/sail_default.tres"),
@@ -326,6 +329,11 @@ func _rig_lean_rad(controls: SimControls) -> float:
 func _update_sailor(dt: float, controls: SimControls) -> void:
 	var forward_speed: float = -SimMath.to_body(body.basis, body.velocity).z
 	var stance_target: float = smoothstep(sailor_config.stance_speed_start_ms, sailor_config.stance_speed_full_ms, forward_speed)
+	# Through the hump the weight goes aft to keep the bow up (SailorConfig.hump_trim_deg).
+	var hump_speed: float = board_config.residuary_peak_froude * sqrt(sim_config.gravity_ms2 * board_config.length_m)
+	if forward_speed > hump_speed:
+		var bow_low: float = clampf((sailor_config.hump_trim_deg - rad_to_deg(SimMath.pitch_rad(body.basis))) / sailor_config.hump_trim_deg, 0.0, 1.0)
+		stance_target = maxf(stance_target, bow_low)
 	# In a tack the sailor steps round the front of the mast instead, and quickly, but only
 	# as far as the nose allows: a board still carrying speed buries its nose under a sailor
 	# who steps forward too early, so the sailor stops stepping (and backs off) as the
@@ -370,15 +378,22 @@ func _update_sailor(dt: float, controls: SimControls) -> void:
 	# the pull about the feet (the same balance as the sideways lean, fore and aft).
 	var hang_target: float = clampf(maxf(sail.drive_n, 0.0) * sailor_config.hang_height_m / (sailor_config.mass_kg * sim_config.gravity_ms2), 0.0, sailor_config.hang_back_max_m)
 	# Pitch reflex: when the nose rises fast the sailor moves their weight forward, and back
-	# when it drops. This is how a sailor stops a planing board from porpoising.
+	# when it drops. This is how a sailor stops a planing board from porpoising. And on a
+	# deck that is pitched, the sailor stands square to gravity as they do in roll: the
+	# weight moves aft on a bow-down deck (by the body's height times the tangent of the
+	# pitch) and forward on a bow-up one, so their own weight does not push the low end
+	# further down.
 	if controls.balance_reflex:
 		var pitch_rate: float = body.angular_velocity_body().x
-		hang_target = clampf(hang_target - sailor_config.pitch_reflex_m_per_rad_s * pitch_rate, -0.3, sailor_config.hang_back_max_m)
+		var deck_pitch: float = clampf(SimMath.pitch_rad(body.basis), -0.6, 0.6)
+		hang_target = clampf(hang_target - sailor_config.pitch_reflex_m_per_rad_s * pitch_rate - sailor_config.com_height_m * tan(deck_pitch), -0.3, sailor_config.hang_back_max_m)
 	if not controls.freeze_fore_aft:
 		hang_back_m = move_toward(hang_back_m, hang_target, sailor_config.lean_rate_per_s * sailor_config.hang_back_max_m * dt)
 
-	# These are slow moves: the board stays put and the weight shifts inside it.
-	mass_model.update(stance, lean, hang_back_m, knee_bend_m)
+	# These are slow moves: the board stays put and the weight shifts inside it. The rig's
+	# own mass leans with the rig.
+	_rig_lean_now_rad = _rig_lean_rad(controls)
+	mass_model.update(stance, lean, hang_back_m, knee_bend_m, _rig_lean_now_rad)
 	body.set_mass_properties(mass_model.total_mass_kg, _inertia_with_added_water(mass_model.inertia_body), mass_model.com_offset_body)
 
 
@@ -419,7 +434,7 @@ func _flex_legs(dt: float) -> void:
 		# The legs reach a stop: fully bent or fully stretched.
 		knee_bend_m = signf(knee_bend_m) * sailor_config.leg_travel_m
 		knee_bend_rate_ms = 0.0
-	mass_model.update(stance, lean, hang_back_m, knee_bend_m)
+	mass_model.update(stance, lean, hang_back_m, knee_bend_m, _rig_lean_now_rad)
 	body.set_mass_properties(total, _inertia_with_added_water(mass_model.inertia_body), mass_model.com_offset_body, true)
 	body.internal_velocity = up * (m_sailor / total * knee_bend_rate_ms)
 
@@ -500,6 +515,7 @@ func _fill_telemetry(controls: SimControls) -> void:
 	t.hull_residuary_n = hull.residuary_n
 	t.hull_lateral_n = hull.lateral_n
 	t.hull_resistance_n = hull.resistance_n
+	t.bow_drag_n = hull.bow_drag_n
 
 	t.sailor_state = sailor_state
 	t.fall_kind = fall_kind

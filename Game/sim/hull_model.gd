@@ -57,6 +57,7 @@ var reynolds_number: float = 0.0
 var cop_local: Vector3 = Vector3.ZERO
 var forward_speed_ms: float = 0.0
 var planing_drag_n: float = 0.0  # the part of the planing force that points against the motion
+var bow_drag_n: float = 0.0  # form drag of a nose pushed under the water
 
 
 func _init(board_config: BoardConfig, water_config: WaterConfig) -> void:
@@ -114,7 +115,10 @@ func compute(body: SimRigidBody, buoyancy: BuoyancyModel, surface: WaterSurface,
 	# 4. Dynamic lift of the planing surface.
 	_apply_planing_lift(body, buoyancy, span[0], span[1], surface, time_s, gravity_ms2, total_mass_kg, rho, dt)
 
-	resistance_n = friction_n + residuary_n + planing_drag_n
+	# 5. A nose under water meets the water face-on.
+	_apply_bow_drag(body, buoyancy, surface, time_s, rho)
+
+	resistance_n = friction_n + residuary_n + planing_drag_n + bow_drag_n
 
 
 func _apply_lateral_drag(body: SimRigidBody, buoyancy: BuoyancyModel, surface: WaterSurface, time_s: float, rho: float) -> void:
@@ -289,6 +293,29 @@ func _apply_planing_lift(body: SimRigidBody, buoyancy: BuoyancyModel, aft: float
 	planing_ratio = clampf(planing_lift_n / (total_mass_kg * gravity_ms2), 0.0, 1.0)
 
 
+## When the deck at the bow goes under (a nose dive, a wave over the nose), the water
+## meets the nose and the deck face-on: a blunt body of the hull's section at the nose
+## (its width there times the depth of the deck, at most the thickness) with bow_drag_cd.
+## The force acts at the nose, against the flow there, which is below the centre of mass:
+## it slows the board hard and pitches it over the nose, as a pearling board does. A bow
+## whose bottom is wet but whose deck is dry (the hump, a chop) is a knife, not a face,
+## and its wave-making is in the residuary drag already; it feels nothing here.
+func _apply_bow_drag(body: SimRigidBody, buoyancy: BuoyancyModel, surface: WaterSurface, time_s: float, rho: float) -> void:
+	bow_drag_n = 0.0
+	var deck_immersion: float = buoyancy.bow_immersion_m - board.thickness_m
+	var immersed_height: float = clampf(deck_immersion, 0.0, board.thickness_m)
+	if immersed_height <= 0.0:
+		return
+	var nose_world: Vector3 = body.point_world(buoyancy.sample_points[buoyancy.bow_centre_index])
+	var v_rel: Vector3 = body.point_velocity(nose_world) - surface.velocity_at(nose_world.x, nose_world.z, time_s)
+	var along: float = v_rel.dot(-body.basis.z)  # forward speed through the water at the nose
+	if along <= 0.05:
+		return
+	var area: float = _width_at(board.length_m) * immersed_height
+	bow_drag_n = 0.5 * rho * board.bow_drag_cd * area * along * along
+	body.add_force_at(nose_world, body.basis.z * bow_drag_n)
+
+
 ## The wet part of the bottom as [aft, forward] in metres from the transom, from the
 ## deepest point of each row (the centre of a level board, the low rail of a heeled one),
 ## with both ends interpolated between the last wet row and the first dry one. [0, 0] when
@@ -436,6 +463,7 @@ func _clear() -> void:
 	planing_lift_n = 0.0
 	planing_normal_force_n = 0.0
 	planing_drag_n = 0.0
+	bow_drag_n = 0.0
 	planing_ratio = 0.0
 	trim_deg = 0.0
 	wetted_length_m = 0.0

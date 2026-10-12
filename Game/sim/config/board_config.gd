@@ -49,6 +49,10 @@ extends Resource
 @export var residuary_froude_width: float = 0.25
 ## Deadrise angle of the bottom near the tail. Freeride boards are nearly flat.
 @export var deadrise_deg: float = 2.0
+## Drag coefficient of the nose and deck when the bow goes under water (a blunt body
+## meeting the water face-on: 0.8 to 1.0 for a box section; 0.8 as section 14 assumes).
+## This is what stops a board that pearls, and what pitches it over the nose.
+@export var bow_drag_cd: float = 0.8
 
 
 ## Height of the bottom above the flat planing section, at a distance forward of the transom.

@@ -15,6 +15,7 @@ step_rate_per_s = 2.5
 nose_dive_ramp_m = 0.06
 stance_speed_start_ms = 3.5
 stance_speed_full_ms = 7.0
+hump_trim_deg = 3.0
 stance_rate_per_s = 1.0
 hang_height_m = 1.0
 hang_back_max_m = 0.5

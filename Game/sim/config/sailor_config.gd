@@ -33,6 +33,14 @@ extends Resource
 ## The sailor starts stepping back at this forward speed and is in the straps at the second.
 @export var stance_speed_start_ms: float = 3.5
 @export var stance_speed_full_ms: float = 7.0
+## Getting through the hump: once the board makes its hump speed (the Froude number of
+## the hull's wave-making peak, BoardConfig.residuary_peak_froude, 2.7 m/s for the
+## default board) the sailor moves the weight aft as long as the bow is below
+## hump_trim_deg of bow-up pitch, all the way to the back straps at hump_trim_deg below
+## it. The sail's drive, high up, pushes the nose down; the tail has to be pressed for the
+## bottom to meet the water at the angle that lifts it onto the plane. Every sailor learns
+## this as "step back to get planing".
+@export var hump_trim_deg: float = 3.0
 ## How fast the sailor can move fore and aft (fraction of the full stance per second).
 @export var stance_rate_per_s: float = 1.0
 ## Hanging back against the sail's pull: the boom pulls the sailor forward at about this

@@ -17,8 +17,8 @@ Written 28 September 2026 (Session 28), for the AI sessions doing the work and f
 | 1 | Physics spec from the Unity version | ✅ Done (Session 29) |
 | 2 | Core simulation, headless and tested | ✅ Done (Session 30) |
 | 3 | Playable prototype on flat water | ✅ Done (Session 30); play-tested in Sessions 31 to 33: falls, downwind trim, the helm (rake, rig tilt, rail), beginner assists, a hull that carves when banked, tacks and gybes on Space and on the keys; Session 34: trim by feel, out of irons, 12 to 24 kt all clean in `tools/matrix.sh` |
-| 4 | Autopilot, validation suite and tuning | ⬜ Next |
-| 5 | Waves and ocean | ⬜ |
+| 4 | Autopilot, validation suite and tuning | ✅ Done (Session 35): `tools/test.sh validation`, 17 checks green, polar in `Documentation/POLAR_15KT.md` |
+| 5 | Waves and ocean | ⬜ Next |
 | 6 | Rig visuals: board, sail, boom, mast | ⬜ |
 | 7 | Environment and effects | ⬜ |
 | 8 | Audio | ⬜ |
@@ -209,8 +209,8 @@ Change the layout when there is a good reason, and update this section when you 
 **Goal:** check the simulated physics against real-world windsurfing data, fix what the checks expose at its physical source, and keep it checked (D8).
 
 **Tasks:**
-- [ ] An autopilot for tests: holds a chosen TWA using rake (a simple PID controller) and trims the sheet for best speed. Phase 9 reuses it for the AI opponents.
-- [ ] Validation tests in `tests/validation/`. Delete `test_validation_placeholder.gd` when you start.
+- [x] An autopilot for tests: holds a chosen TWA using rake (a simple PID controller) and trims the sheet for best speed. Phase 9 reuses it for the AI opponents.
+- [x] Validation tests in `tests/validation/`. Delete `test_validation_placeholder.gd` when you start.
   - Polar sweep at 15 kt of wind: steady speed at TWA 40, 45, 60, 75, 90, 105, 120, 135, 150 and 165°.
   - No-go zone: no lasting progress upwind closer than about 35 to 40° TWA.
   - Upwind: at about 45° TWA the board keeps moving with positive VMG, on both tacks.
@@ -219,9 +219,9 @@ Change the layout when there is a good reason, and update this section when you 
   - Stable above 20 kt of boat speed: pitch and heave oscillation stay below a threshold (no porpoising), submersion stays steady (no trampoline effect), and the board doesn't fly off at 45+ km/h.
   - Recovers from a nose-dive: submerged at speed, it slows down and floats back up.
   - Symmetry: port and starboard tack give the same speeds (±2 %).
-- [ ] When a check fails, find the physical cause (a coefficient that does not match real equipment, a missing effect, a force applied at the wrong point) and fix the model; never adjust a number to hit a range (D8). Log every change, with its real-world source, in PHYSICS_SPEC.md section 16.
-- [ ] Save a polar diagram of the sweep in `Documentation/` (a chart, or at least a table the test prints).
-- [ ] Keep `tools/test.sh validation` under about 2 minutes: flat water, and the shortest settling times that still give steady numbers.
+- [x] When a check fails, find the physical cause (a coefficient that does not match real equipment, a missing effect, a force applied at the wrong point) and fix the model; never adjust a number to hit a range (D8). Log every change, with its real-world source, in PHYSICS_SPEC.md section 16.
+- [x] Save a polar diagram of the sweep in `Documentation/` (a chart, or at least a table the test prints).
+- [x] Keep `tools/test.sh validation` under about 2 minutes: flat water, and the shortest settling times that still give steady numbers.
 
 **Done when:** the validation suite is green.
 **Stop:** the team play-tests the feel: the Phase 3 checklist, plus upwind sailing, fast reaching and bearing away.

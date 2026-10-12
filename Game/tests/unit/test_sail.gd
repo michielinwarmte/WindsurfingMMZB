@@ -11,6 +11,8 @@ func _legacy_sail() -> SailConfig:
 	config.luff_m = 4.7
 	config.boom_m = 2.0
 	config.cd_parasitic = 0.015  # the spec's worked examples use the legacy clean-sail value
+	# The sail of the worked examples stands alone in a wind tunnel: no deck under its foot.
+	config.end_plate_factor = 1.0
 	return config
 
 
@@ -32,8 +34,11 @@ func _body() -> SimRigidBody:
 
 func test_aspect_ratio_and_slope() -> void:
 	var sail: SailModel = SailModel.new(_legacy_sail())
-	assert_almost_eq(sail.config.aspect_ratio(), 3.398, 0.001)
-	assert_almost_eq(sail.lift_slope_per_rad(), 3.560, 0.002)
+	assert_almost_eq(sail.config.geometric_aspect_ratio(), 3.398, 0.001, "luff squared over area")
+	assert_almost_eq(sail.config.aspect_ratio(), 3.398, 0.002, "in the tunnel the induced drag sees the geometric wing")
+	var on_the_water: SailConfig = load("res://config/sail_default.tres")
+	assert_almost_eq(on_the_water.aspect_ratio(), on_the_water.geometric_aspect_ratio() * 1.4, 0.01, "on the water the deck's end plate cuts the induced drag")
+	assert_almost_eq(sail.lift_slope_per_rad(), 3.560, 0.002, "the lift slope is the measured one of the geometric wing")
 
 
 func test_lift_curve_matches_the_spec_table_and_is_continuous() -> void:

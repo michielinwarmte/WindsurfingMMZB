@@ -73,6 +73,7 @@ var trim_deg: float = 0.0
 var hull_friction_n: float = 0.0
 var hull_residuary_n: float = 0.0
 var hull_lateral_n: float = 0.0
+var bow_drag_n: float = 0.0
 var hull_resistance_n: float = 0.0
 
 # Sailor and mass
@@ -104,7 +105,7 @@ static func csv_header() -> String:
 		+ "buoyancy_n,submersion_ratio,wetted_area_m2,planing_lift_n,planing_ratio,trim_deg," \
 		+ "hull_friction_n,hull_residuary_n,hull_lateral_n,stance,lean,hang_back_m,knee_bend_m," \
 		+ "wetted_length_m,wetted_aft_m,spray_root_factor,heave_added_mass_kg,rig_tilt,rig_lean_deg,sailor_state,boom_across,fin_immersed," \
-		+ "bow_immersion_m,planing_cop_z_m,fall_kind,wanted_bank_deg,felt_push_ms2,felt_heel_deg"
+		+ "bow_immersion_m,planing_cop_z_m,fall_kind,wanted_bank_deg,felt_push_ms2,felt_heel_deg,bow_drag_n"
 
 
 func to_csv_row() -> String:
@@ -115,7 +116,7 @@ func to_csv_row() -> String:
 		buoyancy_n, submersion_ratio, wetted_area_m2, planing_lift_n, planing_ratio, trim_deg,
 		hull_friction_n, hull_residuary_n, hull_lateral_n, stance, lean, hang_back_m, knee_bend_m,
 		wetted_length_m, wetted_aft_m, spray_root_factor, heave_added_mass_kg, rig_tilt, rig_lean_deg, sailor_state, boom_across, fin_immersed,
-		bow_immersion_m, planing_cop_z_m, fall_kind, wanted_bank_deg, felt_push_ms2, felt_heel_deg]
+		bow_immersion_m, planing_cop_z_m, fall_kind, wanted_bank_deg, felt_push_ms2, felt_heel_deg, bow_drag_n]
 	var parts: PackedStringArray = PackedStringArray()
 	for value: Variant in values:
 		if value is float:

@@ -22,3 +22,4 @@ residuary_peak_fraction = 0.09
 residuary_peak_froude = 0.55
 residuary_froude_width = 0.25
 deadrise_deg = 2.0
+bow_drag_cd = 0.8

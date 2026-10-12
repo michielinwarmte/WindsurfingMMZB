@@ -75,6 +75,13 @@ extends Resource
 @export var cd_parasitic: float = 0.04
 ## Span efficiency of the induced drag term.
 @export var oswald_e: float = 0.75
+## The deck and the water under the sail's foot act as a partial end plate: a wing with
+## one end on a wall behaves like a wing of twice the aspect ratio, and a sail whose foot
+## runs a few percent of its span above the deck keeps roughly half of that gain (Larsson
+## and Eliasson, Principles of Yacht Design, ch. 7, the "gap" effect; Marchaj, Sail
+## Performance: why racers pull the foot down to the deck). The fin has the same factor
+## of 2 for the hull above it (FinConfig.end_plate_factor).
+@export var end_plate_factor: float = 1.4
 ## Separation drag grows as ((alpha - start) / span)^2 times this gain.
 @export var cd_separation_start_deg: float = 15.0
 @export var cd_separation_span_deg: float = 30.0
@@ -89,9 +96,16 @@ extends Resource
 @export var min_apparent_wind_ms: float = 0.5
 
 
-## Aspect ratio as the lift-slope formula wants it: luff squared over area.
-func aspect_ratio() -> float:
+## Geometric aspect ratio: luff squared over area (3.26 for the default sail).
+func geometric_aspect_ratio() -> float:
 	return luff_m * luff_m / area_m2
+
+
+## The aspect ratio the induced drag sees: the geometric one times the end-plate factor
+## of the deck under the foot. The lift slope keeps the geometric one (the measured curves
+## of section 2 are of a sail in a tunnel, and the lift data stand as measured).
+func aspect_ratio() -> float:
+	return geometric_aspect_ratio() * end_plate_factor
 
 
 func max_rake_rad() -> float:

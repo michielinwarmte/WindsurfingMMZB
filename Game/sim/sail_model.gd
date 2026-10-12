@@ -211,6 +211,7 @@ func luff_factor(alpha: float) -> float:
 ## Parasitic, induced, separation and flat-plate drag, capped at cd_max (section 2.8).
 func drag_coefficient(lift_coeff: float, alpha: float) -> float:
 	var a_deg: float = rad_to_deg(absf(alpha))
+	# The induced drag sees the aspect ratio with the deck's end-plate effect.
 	var induced: float = lift_coeff * lift_coeff / (PI * config.aspect_ratio() * config.oswald_e)
 	var separation: float = 0.0
 	if a_deg > config.cd_separation_start_deg:
@@ -224,5 +225,8 @@ func drag_coefficient(lift_coeff: float, alpha: float) -> float:
 
 ## Lift per radian of angle of attack for this sail's aspect ratio (section 2.4).
 func lift_slope_per_rad() -> float:
-	var ar: float = config.aspect_ratio()
+	# The geometric aspect ratio: the lift curve of section 2 is the measured one of a sail
+	# in a wind tunnel, which the deck's end plate (config.aspect_ratio()) must not inflate;
+	# that end plate only cuts the induced drag.
+	var ar: float = config.geometric_aspect_ratio()
 	return 2.0 * PI * ar / (ar + 2.0) * config.lift_slope_factor

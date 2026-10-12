@@ -15,6 +15,30 @@ Template for new entries:
 
 ---
 
+## 12 October 2026 - Session 35: Phase 4, the validation suite is green
+
+**Phase:** 4 done.
+
+**Done:**
+- `tools/test.sh validation` (about 65 s): the polar sweep of PHYSICS_SPEC.md section 14 at 15 kt on both tacks, with the speed bands, shape rules, top speed, fastest angle, symmetry, upwind VMG, no-go zone, planing onset, acceleration, stability at speed and force sanity read from one sweep; plus the no-fly-off equilibrium, the nose-dive recovery, righting (bare board and balancing sailor) and stopping head to wind. The polar is saved to `Documentation/POLAR_15KT.md`.
+- The pilot's course hold has a trim integral (it sailed 10 to 15 degrees wider than asked without one).
+- Physics fixed at the source, each from a failed check: form drag of a submerged bow (the deck's immersion at the nose, Cd 0.8); the sailor steps back from the hull's hump speed while the bow is low; the rig's mass leans with the rig; the fore-and-aft balance stands square to gravity; the deck and water under the sail's foot cut the sail's induced drag (end-plate factor 1.4, the lift curve unchanged). Tuning log rows and spec 17.11.
+- Three plausibility bounds that were reasoned rather than measured now use the sourced values (planing onset from 14 km/h, beam reach 80 % of the maximum, 135 degrees with 20 %); the note under the shape rules of section 14 says why.
+- `tools/simulate.sh` takes `--gradient=0` (the validation wind); a `nose_dive` scenario.
+
+**Verified:**
+- `tools/test.sh validation`: 17 of 17. `tools/test.sh`: 111 of 111. `tools/check.sh`: 65 files. `tools/matrix.sh`: 24 cases, 0 falls, 0 NaN.
+- The polar: 45 degrees 10.2 kt, 90 degrees 20.0, 120 degrees 24.0, 135 degrees 24.2 (top, 1.62 times the wind), 165 degrees 9.3; both tacks within 0.1 %; planing onset 14.9 km/h.
+- Not verified: how it feels; nothing visual changed.
+
+**Decisions:**
+- The sail's lift curve stays the measured one; the deck's end plate acts on the induced drag only.
+- The validation suite is the regression guard from here: a number leaving its band is a model error to find, never a bound to move (the three sourced bounds above are the exception, recorded in section 14).
+
+**Next:** Phase 5, waves: the Gerstner wave field, its tests, the ocean shader and mesh, and the validation on waves.
+
+---
+
 ## 12 October 2026 - Session 34: the manoeuvre matrix, sheeting to the pull, sailing in 24 kt
 
 **Phase:** 3 play-test follow-up (the open items of Session 33); Phase 4 work. Stopped for a play-test.
