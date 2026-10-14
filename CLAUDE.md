@@ -4,6 +4,10 @@ Windsurfing simulator by the MMZB team, being rebuilt from scratch in **Godot 4.
 
 **What to work on:** [Documentation/REBUILD_PLAN.md](Documentation/REBUILD_PLAN.md). Check its Status table, then continue with the first unticked task of the current phase. The newest entry in [Documentation/PROGRESS_LOG.md](Documentation/PROGRESS_LOG.md) says where the last session stopped.
 
+**On the branch `feature/map-silvaplana`:** work from [Documentation/MAP_SILVAPLANA_PLAN.md](Documentation/MAP_SILVAPLANA_PLAN.md) instead (the first real map, Lake Silvaplana, built from Swiss open data). Michiel does the physics; Max does the map, and later the wind patterns that belong to it. It does not touch the physics in `Game/sim/`. What the map needs from the physics track is in [Documentation/PHYSICS_REQUESTS_FROM_MAP.md](Documentation/PHYSICS_REQUESTS_FROM_MAP.md). Map commands:
+- `tools/map/build.sh`: download the data and prepare it. See [tools/map/README.md](tools/map/README.md).
+- `tools/blender.sh <script.py> [args]`: run a Blender script headless.
+
 ## The team
 
 The team are not very experienced programmers and rely on AI for most of the code. So:

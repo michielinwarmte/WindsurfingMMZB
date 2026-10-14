@@ -15,6 +15,93 @@ Template for new entries:
 
 ---
 
+## 14 October 2026 - Session 38 (map track): Phase M0, tools and data
+
+**Phase:** M0 of the map plan, done on Windows. Branch `feature/map-silvaplana`. Nothing new on `feature/physics-sim` to merge.
+
+**Done:**
+- Tools on Max's PC:
+  - `tifffile`, `Pillow` and `imagecodecs` (needed for the compressed GeoTIFFs), and QGIS LTR 3.44.14.
+  - `tools/common.sh` got `find_blender`, and `tools/blender.sh` runs Blender scripts headless with factory settings.
+  - The user variable `BLENDER` is set on this PC.
+- Round-trip test:
+  - `tools/blender/roundtrip_test.py` builds a test hill and exports `.glb`.
+  - `test_map_roundtrip.gd` proves the axes come through (east +X, up +Y, north −Z).
+  - `roundtrip_view.tscn` shows it in a screenshot.
+- `tools/map/`:
+  - `download.py` (STAC v1, SHA-256 checked, in stages),
+  - `lake_level.py` (1790.63 m, writes `map_config.tres`),
+  - `visible.py` (what you can see from the water),
+  - `readers.py`, `silvaplana_area.py`, `build.sh`, `README.md`.
+- `MapConfig` (`Game/maps/map_config.gd`) converts LV95 ↔ game, with `test_map_config.gd`.
+- Git LFS rules in `Game/maps/.gitattributes` and `Art/.gitattributes`.
+- Downloaded 701 MB: heights, lakebed, swissALTIRegio, wind, and 2 m photos of the visible tiles.
+- What can be seen:
+  - From the water only, about 70 km² at first.
+  - Max pointed out that the orbit and replay cameras see more. `visible.py` now looks from the viewpoints in `silvaplana_area.VIEWPOINTS`: the sailor at 2 m, the orbit camera at 60 m, a replay drone at 150 m, and cameras on the shore at 2 m and 50 m.
+  - Result: 137 km² in 354 tiles of 1 km (the sailor alone: 76 km²), 90 % within 22 km.
+  - The surroundings grew to the west and the north until nothing visible touched the edge.
+  - The picture shows the sailor's view in orange and the camera-only land in yellow.
+- `build.sh` opens the visibility picture at the end, and keeps a double-clicked window open.
+- A Blender preview of the real valley, so the team can see the data (Max asked to see what is being done):
+  - `preview_data.py` and `build_preview.py` make `silvaplana_preview.blend`, with the shore band at 5 m with the lakebed, the surroundings at 100 m, and the photos.
+  - Four cameras render pictures. The cameras place themselves on the water, or above the ground.
+  - It runs as part of `build.sh` (about 1.5 minutes in all).
+  - The lakebed's deepest point comes out at 76.8 m, as published.
+- BlenderGIS 2.2.10 loads in Blender 4.5, without GDAL or PyProj, which we don't need.
+- Found that the game camera draws only up to 3 km (`camera_rig.gd`, `far = 3000`). For the mountains it must go to about 35 km: added to M2.
+- 22 of the visible tiles are in Italy, without Swiss aerial photos: added to M2.
+
+**Verified:** `tools/test.sh` 129 of 129, `tools/check.sh` 78 files, the round-trip screenshot (the hill's top under the red marker), and a second `tools/map/build.sh` run that downloads nothing. Not verified: the Linux PC (Blender version, Git LFS, round trip).
+
+**Decisions:**
+- Downloads come in stages. The 10 cm photos of the shore band (1.1 GB, for M2) and the surface model (0.34 GB, for M4) wait for the team: the first is over the plan's 1 GB limit, and C: has only 17 GB free.
+- `python -I` doesn't see user-installed packages on this PC, so the map scripts run normally from the repo root. Python then only loads code from `tools/map/` and the repo root, never from `.map_data/`.
+
+**Roles** (Max, 14 October 2026):
+- Michiel does the physics.
+- Max does the map, and later the wind patterns connected to it: the daily cycle, the gusts and shifts, and where the wind is strong or weak. They connect to the physics through `WindField`, agreed with Michiel.
+- Updated in the map plan, the physics requests (R5), the rebuild plan and CLAUDE.md.
+
+**Next:** the team looks at `.map_data/work/visible_map.png` and decides on the 10 cm photos. Then M1: `heights.py`, `build_terrain.py` in Blender, and the terrain in Godot. Check the Linux PC when convenient.
+
+---
+
+## 14 October 2026 - Session 37 (map track): Plan for the first map, Lake Silvaplana
+
+**Phase:** side track M (the map), planning only. Branch `feature/map-silvaplana`, started from `feature/physics-sim`.
+
+**Done:**
+- Set up Max's Windows PC (Godot 4.7.2 from the official build, SHA-512 checked; the `GODOT` variable for `tools/*.sh`; the godot-tools VS Code extension). Blender 4.5.4 LTS with BlenderGIS was already installed.
+- Wrote [MAP_SILVAPLANA_PLAN.md](MAP_SILVAPLANA_PLAN.md): phases M0 to M4, decisions MD1 to MD7, the open data and the tools, plus a "Later" section of physics requests for Michiel (wind simulation, wind-driven waves, mountain-lake physics, live weather, other sailors).
+- Wrote [SILVAPLANA_SPOT_NOTES.md](SILVAPLANA_SPOT_NOTES.md): questions for Max's local knowledge of the spot.
+- Checked in the STAC API that all the data exists for the area: swissALTI3D, swissALTIRegio (10 m, for the far mountains), SWISSIMAGE, swissSURFACE3D, swissBUILDINGS3D, swissTLM3D, the swissBATHY3D lakebed of Silvaplanersee (survey of 2019), the MeteoSwiss station Segl-Maria (SIA) at the south-west end of the lake (10-minute wind with 1 s and 3 s gusts), and the BAFU lake-level station 2073.
+- Wrote [PHYSICS_REQUESTS_FROM_MAP.md](PHYSICS_REQUESTS_FROM_MAP.md) for Michiel: requests R1 to R8 (a map's own air, water and wind; thin air; fresh water; lakebed and running aground; moving gusts; wind waves; replay and live weather; other sailors), with sources, numbers and suggested interfaces. `PHYSICS_SPEC.md` was not touched.
+- Measured the Maloja from MeteoSwiss Segl-Maria, 10-minute data of the summers 2020 to 2025 (new script `tools/map/maloja_stats.py`):
+  - from 244°, with a median 12 kt mean at the station and 1-second gusts 1.55 times the mean,
+  - 61 % of summer days are Maloja days,
+  - the air density on Maloja afternoons is 0.98 kg/m³: 20 % below the 1.225 in `WindsurferSim.RHO_AIR` and the autopilot.
+  - Worked out the expected lake waves with JONSWAP: about 0.29 m and 6 m long at 20 kt over 3 km.
+- Added `/.map_data/` (raw map downloads) to `.gitignore`.
+- No code or game files changed. A wave-size experiment was tried and undone at the team's request.
+
+**Verified:** on Windows, `tools/check.sh` (72 files), `tools/test.sh` (122 of 122) and `tools/screenshot.sh` pass on `feature/physics-sim`. `tools/map/maloja_stats.py` run from the repo reproduces the numbers in the requests document. Nothing of the map was built or tested yet. The station's wind speeds were not checked against the wind on the water.
+
+**Decisions:**
+- The team's answers (plan, "Team decisions"):
+  - only Silvaplana is sailable, and the map is as small as possible: a detailed shore band, plus only what you can see from the water,
+  - waves will come from a general wind-wave system later, and until then the current waves stay unchanged,
+  - at most 300 MB of map files,
+  - one fixed Maloja setting of 12 to 20 knots, with the existing simple gusts and shifts,
+  - Michiel makes all physics changes,
+  - other sailors on the water come later,
+  - Max is the local expert.
+- MD1 to MD7: LV95 coordinates straight into the game with the lake surface at Y = 0; Python prepares the data (numpy, tifffile, Pillow; no GDAL); Blender builds the 3D (terrain by a headless script, props by hand) and exports `.glb`, with the `.blend` sources in `Art/`; the game logic reads the grids, never the meshes; the lakebed replaces the flat lake; the map sets its own wind config and never changes `Game/sim/`, the shared configs or the ocean; Michiel's branch is merged into this branch at the start of every map phase.
+
+**Next:** Phase M0: `pip install tifffile pillow`, install QGIS, the Python → Blender → Godot round-trip test, then the download and visibility scripts. Max fills in the spot notes when there is time.
+
+---
+
 ## 13 October 2026 - Session 36: Phase 5, waves
 
 **Phase:** 5 done, with the chop limitation below.
