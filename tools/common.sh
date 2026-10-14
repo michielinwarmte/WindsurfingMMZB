@@ -39,6 +39,35 @@ find_godot() {
 	echo "$candidate"
 }
 
+# The Blender version the map track's 3D scripts (tools/blender/) are written for.
+BLENDER_VERSION="4.5"
+
+# Prints the path of the Blender executable to use.
+# Order: $BLENDER (if set), `blender` on PATH, the default Windows install of BLENDER_VERSION.
+find_blender() {
+	local candidate=""
+	local windows_default="/c/Program Files/Blender Foundation/Blender $BLENDER_VERSION/blender.exe"
+	if [[ -n "${BLENDER:-}" ]]; then
+		candidate="$BLENDER"
+	elif command -v blender >/dev/null 2>&1; then
+		candidate="$(command -v blender)"
+	elif [[ -x "$windows_default" ]]; then
+		candidate="$windows_default"
+	else
+		echo "Blender $BLENDER_VERSION was not found." >&2
+		echo "Install Blender $BLENDER_VERSION LTS and set BLENDER=/path/to/blender." >&2
+		return 1
+	fi
+
+	# Warn (but continue) when a different Blender version is picked up.
+	local version
+	version="$("$candidate" --background --factory-startup --version 2>/dev/null | head -n 1 || true)"
+	if [[ "$version" != "Blender $BLENDER_VERSION".* ]]; then
+		echo "Warning: $candidate is '$version', the map scripts expect Blender $BLENDER_VERSION." >&2
+	fi
+	echo "$candidate"
+}
+
 # Imports new or changed assets and refreshes Godot's class list, quietly.
 # Prints error lines and returns non-zero if the import itself fails.
 import_project() {

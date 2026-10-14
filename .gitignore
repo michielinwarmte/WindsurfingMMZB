@@ -21,3 +21,9 @@ Thumbs.db
 
 # Scratch files of AI sessions
 /.scratch/
+
+# Raw downloads of the map track (tools/map/), rebuilt by its scripts
+/.map_data/
+
+# Python bytecode caches (tools/map)
+__pycache__/
