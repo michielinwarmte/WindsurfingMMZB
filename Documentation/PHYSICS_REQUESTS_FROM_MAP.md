@@ -24,6 +24,7 @@ The interfaces below are suggestions only. D8 applies: every change is a physica
 | R6 | Waves made by the wind (fetch) | Lake chop instead of the sea swell | large | after the two-body sailor (A-17, spec 17.12) |
 | R7 | Replay a measured day, or today's live wind | Fun, and a check of R5 | medium (mostly game side) | after R5 |
 | R8 | Other kiters and windsurfers on the water | Life on the lake | large | with main-plan Phase 9 |
+| R9 | Realistic water: see-through, darker with depth, ripples, mountains mirrored (a look request, not physics). The map built it for the lake; how should it meet the waves in the game? | The game's water is one colour with a sky reflection; Max found it "really bad" next to the photo terrain | small to medium | before M3 puts the board on the lake |
 
 The map track will meanwhile use what exists (map plan M3):
 - its own `WindConfig` with the current sine gusts and shifts, swapped in by the scene the way `tools/matrix.sh` does,
@@ -128,6 +129,60 @@ A game feature on top of R5:
 ## R8. Other water users
 
 Kitesurfers and windsurfers on the lake, at first for looks only. The AI sailors of main-plan Phase 9 are the natural route.
+
+## R9. Realistic water
+
+Added 14 October 2026 (Sessions 40 and 41, map track, phase M2). Not physics, but `Game/world/water.gdshader` is yours (map plan MD7), so it is asked here.
+
+**Why.** Next to the photo terrain, the game's water looks like one flat colour. Max: "this is really bad, water is semi-transparent". The shader's colour only depends on the wave crests (`deep_color`, `shallow_color`), and it is opaque.
+
+**What the map built** (map files only, shown in the terrain view, `tools/play.sh silvaplana`; G switches between the two waters):
+- `Game/maps/lake.gdshader` with `Game/maps/silvaplana/lake.tres`. It does four things:
+  1. **See-through, darker with depth.** The shader reads the depth buffer behind the water (`hint_depth_texture`) and works out how far the view travels through water to the bed. What gets through after d metres is exp(−absorption × d), per colour: red 0.40, green 0.10, blue 0.08 per metre. The rest is the water's own colour.
+
+     The lakebed is real terrain, so the shallows turn turquoise by themselves. That replaces the first version of this request (a separate depth texture).
+  2. **Refraction.** The picture behind the water (`hint_screen_texture`) is read slightly off to the side, by the ripples' tilt. It isn't bent where that would land on something above the water.
+  3. **Fresnel.** About 2 % mirror looking straight down, almost all at a glancing angle. The rest of the light comes out of the water.
+  4. **Ripples.** Two layers of a noise normal map, stretched along the crests, drifting downwind. They are rougher far away, so distant water doesn't become a perfect mirror of the pale horizon.
+- `LakeReflections`, a reflection probe in `silvaplana.tscn`:
+  - It takes one 360° picture of the valley from the middle of the lake, and only the lake water mirrors it (render layer 2).
+  - Without it, the water could only mirror the sky. From a raised viewpoint that made the lake pale, where the real lake mirrors the dark mountainsides.
+  - It changes nothing else, but Godot prints a harmless "7 RIDs of type Texture were leaked" warning when it quits.
+- Cost: about 6 % of the frame rate (see below).
+
+**What the research found** (October 2026):
+- **Built-in screen-space reflections don't work on see-through water.** A material that reads the screen texture counts as transparent, and Godot 4's SSR only works on opaque surfaces.
+  - The workarounds are a reflection probe (what the map uses), a custom SSR ray-march inside the water shader (the MIT-licensed GodotSSRWater does that, Godot 4.3+), or planar reflections with a second camera (the add-ons Mirror3D and PlanarReflector-CPP).
+  - Planar reflections are the sharpest, but they cost a second render of the scene. With a 15 to 20 kt Maloja the lake is choppy, so sharp mirror images matter less than on a calm day.
+- **Depth reconstruction since Godot 4.3** (reversed Z): `ndc = vec3(SCREEN_UV * 2.0 - 1.0, depth)`, then `INV_PROJECTION_MATRIX` and divide by w. The Compatibility renderer needs a different formula.
+- **Lakes are not oceans.** Ocean colour tables (Jerlov water types) don't fit a glacier lake, so the absorption numbers are tuned against the aerial photo: deep teal blue, lighter green-turquoise in the shallows.
+
+**The question: how does this meet your waves in the game (M3)?** The lake shader has no Gerstner waves; your shader has the waves the board floats on (D5: "change one, change the other"). Three ways:
+1. **Your shader gets these four features** (depth, refraction, Fresnel, ripples), and the map only sets its parameters (MD6).
+   - The sea profits too: you'd see the bottom in shallow sea.
+   - Map pieces it can use as-is: `lake.gdshader` lines for 1 to 4, and the reflection probe idea.
+2. **The wave math moves into an include file**, for example `res://world/gerstner.gdshaderinc`, used by both `water.gdshader` and `lake.gdshader`.
+   - The waves stay identical, and each shader has its own look.
+   - This is a small change to your shader.
+3. **The map draws its lake with `lake.gdshader` and copies the wave math.** Not recommended: two copies drift apart.
+
+Max and the map track would prefer 1 or 2. It's your shader, so you decide.
+
+**To keep in mind, whichever way is chosen:**
+- **The normal.** With waves, the ripples must tilt the wave's normal, not a flat one. `lake.gdshader` uses `NORMAL_MAP`, so the vertex stage must also give Godot the wave's `TANGENT` and `BINORMAL` (your shader already computes both tangents for the normal).
+- **The draw order.** The sail is see-through (`windsurfer.gd`, `TRANSPARENCY_ALPHA`), and so is this water. See-through things don't block each other, so a big water plane drawn after the sail would paint over it. `lake.tres` has `render_priority = -1`, so the water is drawn first.
+- **What the water sees.** The water can't show other see-through things under it, and the reflection probe photographs the valley once at the start: no board or other sailors in the mirror. Neither matters much on a choppy lake.
+- **The renderer.** The depth formula is the one for Forward+ (this project's renderer). The Compatibility renderer would need the other formula from the Godot docs.
+- **An opportunity for the wind patterns (R5).** The ripples' strength and direction are shader parameters. With a wind field behind them, gusts could show on the water as dark, rippled patches, the way sailors spot them coming.
+
+**Cost:** about 6 % of the frame rate on Max's PC (1,280 → 1,200 fps, both measured the same way).
+
+**Sources:**
+- Godot docs, [Screen-reading shaders](https://docs.godotengine.org/en/stable/tutorials/shaders/screen-reading_shaders.html) and [Advanced post-processing](https://docs.godotengine.org/en/stable/tutorials/shaders/advanced_postprocessing.html) (depth reconstruction).
+- [Transparent Water Shader supporting SSR and Refraction](https://godotshaders.com/?p=5689) (GodotSSRWater, MIT).
+- [PlanarReflector-CPP](https://godotengine.org/asset-library/asset/edit/18380) and [Mirror3D](https://godotengine.org/asset-library/asset/edit/21923).
+- [Planar reflections and clipping, Godot forum](https://forum.godotengine.org/t/culling-arbitrary-pixels-using-a-compositor-effect/118369).
+- [Underwater colour and water types](https://arxiv.org/pdf/1811.01343).
 
 ## The Maloja, measured
 

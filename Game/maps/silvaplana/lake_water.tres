@@ -1,0 +1,17 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+
+; The colours of Lake Silvaplana for the game's water shader (MAP_SILVAPLANA_PLAN.md, M2 and MD6):
+; only shader parameters, the shader itself (res://world/water.gdshader) is the physics track's.
+; The colours are measured in the 2025 aerial photo, taken in sunshine: deep water is a teal blue
+; (sRGB 45, 95, 112), shallow water near the camping lighter and greener (70, 107, 110). The
+; shader uses shallow_color toward the wave crests. A slightly rougher surface softens the mirror
+; of the deep blue sky. No grid lines on the lake.
+
+[ext_resource type="Shader" path="res://world/water.gdshader" id="1_water"]
+
+[resource]
+shader = ExtResource("1_water")
+shader_parameter/deep_color = Color(0.176, 0.373, 0.439, 1)
+shader_parameter/shallow_color = Color(0.275, 0.42, 0.431, 1)
+shader_parameter/roughness_value = 0.1
+shader_parameter/grid_strength = 0.0

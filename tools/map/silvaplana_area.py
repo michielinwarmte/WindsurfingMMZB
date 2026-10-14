@@ -30,6 +30,21 @@ REGIO_TILES_NORTH_KM = (1124, 1134, 1144, 1154, 1164)
 # The weather station at the south-west end of the lake (MeteoSwiss Segl-Maria, SIA).
 WIND_STATION = "sia"
 
+# Known points for the checks (tools/map/tests/, and Game/tests/unit/maps/ uses the same numbers):
+# LV95 east and north in metres, and the published height above sea level where there is one.
+KNOWN_POINTS = {
+    # MeteoSwiss station list; the station stands at 1804 m.
+    "weather station Segl-Maria": (2_778_576.0, 1_144_976.0, 1804.0),
+    # The church of Santa Maria in Silvaplana village (OpenStreetMap, converted to LV95).
+    "church Silvaplana": (2_781_018.0, 1_148_074.0, None),
+    # The middle of the camping area "Silvaplana" in swissNAMES3D; the lake is about 60 m south.
+    "camping Silvaplana": (2_780_866.0, 1_147_617.0, None),
+    # The summit in swissNAMES3D; 3451 m on the national map.
+    "Piz Corvatsch": (2_782_788.5, 1_142_434.75, 3451.0),
+}
+# The published maximum depth of Silvaplanersee (swisstopo, Wikipedia): 77 m.
+LAKE_MAX_DEPTH_M = 77.0
+
 # Where the land is seen from, for visible.py: (name, on "lake" or "shore", metres above the
 # water or the ground there). Only land seen from at least one of these gets built.
 # They cover the game's cameras in Game/camera/camera_rig.gd:

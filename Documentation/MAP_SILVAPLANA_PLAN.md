@@ -18,9 +18,9 @@ The branch starts from `feature/physics-sim` (Phases 1 to 5), because `main` doe
 
 | Phase | What | Status |
 |---|---|---|
-| M0 | Tools, round-trip test, data download | ✅ Done on Windows (Session 38). Waiting for the team: the Linux PC check, and the go for the big downloads (10 cm photos, surface model) |
-| M1 | Terrain and lakebed in Godot | ⬜ |
-| M2 | The look: aerial photo, sky, the mountains you can see | ⬜ |
+| M0 | Tools, round-trip test, data download | ✅ Done on Windows (Session 38). The 10 cm photos were agreed and downloaded in M2. Still open: the Linux PC check, and the surface model (M4) |
+| M1 | Terrain and lakebed in Godot | ✅ Built on Windows (Session 39). Waiting for Max's check: does it look like Silvaplana from the water? |
+| M2 | The look: aerial photo, sky, the mountains you can see | ✅ Built on Windows (Sessions 40 and 41), with see-through lake water in the terrain view. Waiting for Max's check of the look, and for Michiel on R9 (the water in the game) |
 | M3 | Sailing on the lake: start spot, one Maloja weather setting, shoreline | ⬜ |
 | M4 | Details: camping and beach, village, trees, landmarks | ⬜ |
 | Later | Big projects for every spot, with Michiel: wind simulation, wind-driven waves, mountain-lake physics, live weather, other sailors | ⬜ |
@@ -131,7 +131,16 @@ glTF (`.glb`) is the 3D format Godot works with best: meshes, materials, texture
 
   The top-down camera looks straight down, so it only sees land close to the board. When the cameras change, change the viewpoints and run `tools/map/build.sh` again.
 
-  Only those pieces are built, with less detail the further away they are: about 10 m up to 3 km from the lake, and about 50 m beyond that, out to the last visible ridge. The source is swissALTIRegio at 10 m, which also covers the Italian side.
+  Only those pieces are built, with less detail the further away they are, out to the last visible ridge. The source is swissALTIRegio at 10 m, which also covers the Italian side. M1 uses four detail levels, so that one grid cell looks about equally big from the water at every distance (about 0.3°):
+
+  | Zone | Grid | Where | Tiles of 1 km |
+  |---|---|---|---|
+  | near | 2 m | the shore band (swissALTI3D and the lakebed) | 25 |
+  | mid | 10 m | visible, up to 3 km from the lake | 56 |
+  | far | 20 m | visible, 3 to 8 km from the lake | 103 |
+  | distant | 40 m | visible, further away | 170 |
+
+  The first idea was 10 m up to 3 km and 50 m beyond. But Piz Corvatsch, the big mountain above the lake, is 4.1 km from the water and would have looked blocky at 50 m.
   - Result (M0): about 137 km² can be seen, in 354 tiles of 1 km.
     - The sailor alone sees 76 km²; the cameras add the rest, mostly higher slopes and side valleys.
     - The view runs along the valley both ways, past Maloja and toward Samedan.
@@ -201,32 +210,102 @@ Michiel works on the physics in parallel. To avoid getting in each other's way:
 **Goal:** you can fly a free camera around a grey Silvaplana valley and recognise it.
 
 **Tasks:**
-- [ ] `tools/map/heights.py`: merges swissALTI3D, swissALTIRegio and swissBATHY3D into height grids (MD4, MD5) and cuts them into chunks. Heights are relative to the lake level, in metres. Write the scale and offset into a small JSON file next to the chunks. The shore band's grid, as one file, is what the game reads for the shoreline and the depth (M3).
-- [ ] Python checks (simple `assert` scripts in `tools/map/tests/`): the lake level comes out at 0 m, the deepest point of the lake matches the published maximum depth (about 77 m, check it), Piz Corvatsch comes out at about 3451 − lake level, and there are no holes (NaN) in the grid.
-- [ ] `tools/blender/build_terrain.py` (MD3): builds the chunk meshes, thins out flat areas, exports `.glb` to `Game/maps/silvaplana/terrain/`, and renders a preview image from above to `.screenshots/terrain_blender.png`.
-- [ ] `Game/maps/silvaplana/silvaplana.tscn`: places all terrain chunks. Check that Godot's import made the far-away versions (LOD) and set sensible `visibility_range` values.
-- [ ] GUT unit tests: the known points of MD1 land in the right place, and the terrain height at a few known points (the church, the weather station, the lake shore at the camping) matches the grid within half a metre.
-- [ ] Screenshots from three fixed viewpoints (on the water at the launch spot, from Silvaplana village looking south-west, from above), compared by eye with map.geo.admin.ch in 3D view.
+- [x] `tools/map/heights.py`: merges swissALTI3D, swissALTIRegio and swissBATHY3D into height grids (MD4, MD5) and cuts them into chunks. Heights are relative to the lake level, in metres.
+  - Four detail levels (MD4). Every 1 km tile is a grid of vertices on its corners.
+  - Where two levels meet, the finer tile's edge is put on the straight lines of the coarser one ("stitching"). The step at the seams is 0.06 mm.
+  - The lakebed (MD5): swissBATHY3D wherever it has a depth. The 0.16 km² of shallow lake the survey didn't reach is filled in smoothly between the shoreline (0 m) and the first surveyed depths. Every cell there becomes the average of its neighbours, again and again, until nothing changes.
+  - Chunks: 80 in all (near 1 km, mid 2 km, far 4 km, distant 8 km), in `.map_data/work/terrain/`, with `chunks.json` and a picture, `zones.png`.
+  - The game grid is the shore band's 2 m vertices, 2501 × 2501: `Game/maps/silvaplana/terrain/shore_heights.bin` (12.5 MB, 16-bit) and `shore_heights.json` (scale, offset, position). The game reads it for the shoreline and the depth (M3).
+- [x] Python checks: `tools/map/tests/test_heights.py`, 8 checks, all pass.
+  - The lake surface in swissALTI3D is 0.005 m from the lake level.
+  - Every surveyed lake point is under water, and the water area in the band is 2.89 km².
+  - The deepest point is 76.9 m (published: 77 m).
+  - Piz Corvatsch is 3450 m in swissALTIRegio (published: 3451 m). In its 20 m chunk it is 1651 m above the lake.
+  - The weather station ground is at 1803.5 m (published: 1804 m), and the camping is 59 m from the water.
+  - No holes (NaN), and no cracks between chunks (30,210 shared border vertices, 0 mm apart).
+- [x] `tools/blender/build_terrain.py` (MD3): builds the chunk meshes and thins them out with Blender's Decimate (collapse).
+  - Thinning keeps 10 % of the triangles near the lake and 35 to 60 % further out. Flat ground goes first. Each chunk's border is locked, so the chunks still meet exactly.
+  - Each chunk gets a hidden "skirt" hanging down from its border, so a hairline gap between far-away versions shows ground, not sky.
+  - The shading normals come from the height grid, so the light doesn't show the chunk borders.
+  - It exports `.glb` to `Game/maps/silvaplana/terrain/` and writes `terrain.tscn`.
+  - It renders `.screenshots/terrain_blender.png` (everything) and `terrain_blender_band.png` (the shore band, with the lake in blue).
+  - 1.14 million vertices, 49.6 MB of `.glb`, about 1 minute.
+  - Thinned mesh against the grid, at 2000 random points of the band: median 3 cm, 95 % within 15 cm, worst 52 cm (on rock).
+- [x] `Game/maps/silvaplana/silvaplana.tscn` places all terrain chunks (through the generated `terrain.tscn`). Godot's import made 5 far-away versions (LOD) of every chunk.
+  - No `visibility_range` on the terrain: every chunk must stay visible from everywhere (the mountains close the view), and the automatic LOD already makes far chunks cheap. Visibility ranges are for the M4 props.
+  - The camera can draw the whole map at about 1,500 fps on Max's PC (RX 6950 XT), at 1280 × 720.
+- [x] GUT unit tests, `Game/tests/unit/maps/test_silvaplana_terrain.gd`, 6 tests. They check:
+  - the known points of MD1 (church, Piz Corvatsch),
+  - the grid heights at the weather station, the camping, the camping's shore, the lake's middle and the village,
+  - the meshes against the grid within half a metre at five points (worst 8 cm),
+  - that every chunk is in `terrain.tscn` and has LODs.
+  - `TerrainGrid` (`Game/maps/terrain_grid.gd`) reads the grid for the game.
+- [x] Screenshots from the viewpoints, in `res://maps/silvaplana/dev/terrain_view.tscn`: a free camera (`Game/maps/fly_camera.gd`) and a flat blue stand-in for the lake.
+  - The viewpoints: on the water at the launch spot, above Silvaplana village looking south-west, high above the valley from the north-east, and straight down.
+  - `.screenshots/m1_<view>.png`, made with `tools/screenshot.sh res://maps/silvaplana/dev/terrain_view.tscn <file> 240 --view=<view>`.
+  - Still to do by Max: compare them by eye with map.geo.admin.ch in 3D view.
+
+Notes for the next phases:
+- Size after M1: `Game/maps/silvaplana/` is 62 MB of the 300 MB budget (49.6 MB of terrain `.glb`, 12.5 MB game grid). The near chunks are 30 MB of that; keeping 7 % instead of 10 % of their triangles would save about 9 MB if M2 needs the room.
+- File formats (MD2): the chunk grids for Blender are numpy files in `.map_data/work/terrain/`, and the game grid is a plain 16-bit `.bin`. Godot can't read 16-bit PNGs at full precision (it turns them into 8-bit).
+- The "above" view shows holes where nothing is built: land that can't be seen from the game's viewpoints (MD4). That is expected. A replay camera higher than 150 m would need `visible.py` run again with that viewpoint.
+- Lake Sils and Lake St. Moritz are flat grey surfaces at their own level for now. Lej da Champfèr has the lakebed (it is in the swissBATHY3D survey of Silvaplanersee) but no water beyond the shore band's northern edge (1149 km). M2/M3 decide how other lakes look.
+- The terrain is a bluish light grey in the view, because the sky light is strong. M2 brings the aerial photos and the real light.
 
 **Done when:** tests and the check pass, and the screenshots show the right valley shape, with the lake where it belongs.
-**Stop:** Max checks: does it look like Silvaplana from the water?
+**Stop:** Max checks: does it look like Silvaplana from the water? Open the view by double-clicking `tools/play.sh` and choosing 2, or with `tools/play.sh silvaplana`. Keys 1 to 4 are the viewpoints; W A S D, E and Q fly; hold the right mouse button to look around.
 
 ## Phase M2: The look
 
 **Goal:** the valley looks like the photos: real colours, the mountains you see from the water, alpine light.
 
 **Tasks:**
-- [ ] `tools/map/photos.py`: cuts SWISSIMAGE into one texture per chunk, sharpest at the camping and the beach, coarser further away.
-- [ ] Terrain material: the aerial photo as colour, with slope-based darkening so the mountains don't look flat. The photo has shadows baked in, so keep the sun roughly where it was when the photos were taken (around midday).
-- [ ] The water: alpine lake colours through the shader parameters (MD6), lighter in the shallows using the depth grid.
-- [ ] The far mountains in a light haze, and no sea horizon anywhere: the mountains close the view all round.
-- [ ] Sky and sun for 46.4° north on a summer afternoon around 15:00.
-- [ ] Raise the camera's far plane from 3 km (`camera.far = 3000` in `Game/camera/camera_rig.gd`) to about 35 km, so the mountains of MD4 are drawn at all. Godot 4 uses a reversed depth buffer, so a near plane of 0.05 m should still be fine; check for flickering on the far ridges. Mention it to Michiel (MD7).
-- [ ] The 22 visible tiles in Italy have no Swiss aerial photo. Colour them from height and slope (rock, scree, grass), and check that the border doesn't show as a seam.
-- [ ] Performance: 60 fps at 1280×720 on the team's PCs; measure it and write it down. Measure the size of `Game/maps/silvaplana/` against the 300 MB budget.
+- [x] `tools/map/photos.py`: cuts SWISSIMAGE into one texture per chunk, sharpest at the camping and the beach, coarser further away.
+  - 8192 px per km (12 cm) on the two tiles of the camping and the launch beach (`near_2780_1147` and `near_2781_1147`: the camping sits on the border between them).
+  - 2048 px (0.5 m) on the rest of the shore band, from the 10 cm photos (2025 flight, downloaded after the team's go).
+  - 512 px (2 m) up to 8 km, and 128 px (8 m) further away, from the 2 m photos.
+  - WebP, 50 MB in all. Godot imports them with mipmaps and graphics-card compression (a `.import` file per photo). The camping photo takes 45 MB of video memory.
+  - `tools/map/tests/test_photos.py`, 4 checks: the sizes, the import settings, the photos line up with the lake (water is bluer than land; flipped or shifted by 100 m lines up worse), no black patches.
+- [x] Terrain material: `Game/maps/terrain.gdshader` and `MapTerrain` (`Game/maps/map_terrain.gd`, the root of the generated `terrain.tscn`), which gives every chunk its photo.
+  - Slope darkening: a vertical cliff is 25 % darker than flat ground.
+  - The photos were flown in the morning: the shadows fall to the north-west, so the sun was in the south-east. To avoid two suns lighting the slopes, the game's sun shades the slopes only half as much as usual (`sun_shading` 0.5), and the photo's own light does the rest. Cast shadows stay full.
+  - The photos go on in Godot, not in Blender as MD3 first said. Then a new photo doesn't need new meshes, and the shader can do the slope darkening and the light.
+- [x] The water, in two steps:
+  - **First (Session 40):** alpine lake colours through the game shader's parameters (MD6), in `lake_water.tres`. The colours are measured in the aerial photo: teal blue (sRGB 45, 95, 112); no grid lines on the lake. Max's verdict: "really bad", one flat colour.
+  - **Then (Session 41, after research):** the map's own see-through lake water, `Game/maps/lake.gdshader` with `Game/maps/silvaplana/lake.tres`:
+    - darker with depth (it reads the depth behind the water, so the real lakebed makes the shallows turquoise: the "lighter shallows" of this task),
+    - refraction,
+    - a Fresnel mirror,
+    - wind ripples drifting downwind,
+    - plus the `LakeReflections` probe in `silvaplana.tscn`, so the water mirrors the mountains.
+  - It is shown in the terrain view; G switches to the game's water to compare. It costs about 6 % of the frame rate.
+  - How it meets the physics' waves in the game is a question for Michiel: request R9 (his shader gets these features, or the waves move into a shared include file). Until then the game's water is unchanged (MD7).
+- [x] The far mountains in a light haze: exponential fog, 0.000035 per metre (about 30 % at 10 km), half of it taking the sky's colour. No sea horizon: the mountains close the view, and where nothing is built (only visible from above the game's viewpoints) the sky's lower half has the colour of the haze.
+- [x] Sky and sun, in the map scene `silvaplana.tscn`. The map brings its own light (MD6); M3 lets it replace the game's.
+  - The sun: mid-July, 15:00 summer time at 46.45° N, 9.8° E. Azimuth 225° (south-west), 59° up, with shadows to 4 km. `test_silvaplana_look.gd` checks it; it caught the sun pointing 37° below the horizon in the first version.
+  - The fill light is 60 % sky and 40 % a neutral grey-green, because all sky made the lake and the slopes too blue.
+- [x] The camera's far plane: 3 km → 35 km in `Game/camera/camera_rig.gd` (a shared file, a one-line change: mention it to Michiel). The terrain view uses the same near (0.05 m) and far planes; no flickering on the far ridges in the screenshots. The open-water game looks the same (its fog ends at 1.5 km).
+- [x] The 22 visible tiles in Italy (and the holes in a chunk) are painted.
+  - `photos.py` learns the average photo colour of the Swiss tiles for each height (100 m steps), slope (5°) and lighting by the photo's morning sun. Lakes are left out, because they made flat ground dark blue.
+  - It paints that colour, made lighter and darker by the small ridges of the 10 m heights.
+  - The seam with the photographed tiles shows up close, but these tiles are 20 to 30 km from the lake and in haze, and they are only seen from the higher camera viewpoints.
+- [x] Performance and size.
+  - About 1,500 fps at every viewpoint on Max's PC (RX 6950 XT, 1280 × 720, no vsync). Max had to switch off a 100 fps cap in RivaTuner to measure this. The Linux PC is still to measure.
+  - Size: `Game/maps/silvaplana/` is 111 MB of 300 MB: 52 MB of meshes, 50 MB of photos, 12.5 MB of game grid.
+  - Room left for M4, or for sharper photos along the shore: 4096 px on the 14 near chunks that touch the lake would cost about 35 MB more.
+
+Also in M2:
+- **The skirts' shadows:** the skirts (M1) cast long dark bands across the slopes, where a simpler far-away neighbour let them stick out. Each skirt is now a separate mesh in its chunk's `.glb` (`<chunk>_skirt`), and `MapTerrain` switches its shadow off.
+- **The terrain view:**
+  - It shows the map's own light, and the lake in the lake's colours with the game's water shader (`lake_water.tres`).
+  - Its camera has the game camera's near and far planes.
+  - `--at=e,n,h --look=e,n,h` starts at any viewpoint.
 
 **Done when:** screenshots from the three viewpoints look right next to real photos of the spot, at 60 fps.
-**Stop:** Max checks the look against memory and photos of the spot.
+**Stop:** Max checks the look against memory and photos of the spot:
+- the colour of the lake from the water,
+- the light and the haze,
+- the mountains and the shore from the launch, from the village and from above (`tools/play.sh silvaplana`, keys 1 to 4).
 
 ## Phase M3: Sailing on the lake
 
@@ -242,7 +321,7 @@ Michiel works on the physics in parallel. To avoid getting in each other's way:
   For reference, the station measures a 12 kt median 10-minute mean, with 1-second gusts 1.55 times the mean (about 19 kt). The 10-minute direction barely moves (median change 2°). The station is on land, though, and the wind on the water is probably stronger. Max tunes the gusts and the shifts by feel, from experience on the water there.
 - [ ] The start spot: the beach at Camping Silvaplana at the north end of the lake (find it on the aerial photo). Start in the water just off the beach, with the board pointing across the wind.
 - [ ] The shoreline (MD6): read the water depth under the board from the depth grid. If the water is shallower than the fin (0.38 m) plus a margin, the board stops and the game offers a reset to the start spot. No collision physics. This also keeps you off Lake Sils.
-- [ ] The water area: no water may show through on land (the terrain covers the ocean mesh there); the lake surface stays at Y = 0.
+- [ ] The water area: no water may show through on land (the terrain covers the ocean mesh there); the lake surface stays at Y = 0. Watch the land lower than the lake: Lake St. Moritz (22 m lower) and the Inn valley toward Samedan lie below Y = 0, so a flat water plane around the camera would flood them. The look comes from M2: `lake.tres` (see-through) or `lake_water.tres` (the game's shader), depending on Michiel's answer to R9. The lake's water must be on render layer 2, so it mirrors the `LakeReflections` probe.
 - [ ] The compass in the HUD shows the real north, and a small map shows the lake outline with the board's position.
 - [ ] A menu choice or command-line option to start on the old open water or on Silvaplana.
 

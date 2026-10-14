@@ -40,7 +40,9 @@ func _ready() -> void:
 	camera = Camera3D.new()
 	camera.name = "Camera3D"
 	camera.current = true
-	camera.far = 3000.0
+	# 35 km, so a map's far mountains are drawn (MAP_SILVAPLANA_PLAN.md, M2: the farthest visible
+	# land at Silvaplana is 32 km away). On open water the fog hides everything past 1.5 km anyway.
+	camera.far = 35000.0
 	add_child(camera)
 	_target = get_node_or_null(target_path) as Node3D
 

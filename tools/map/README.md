@@ -19,6 +19,11 @@ Scripts that turn Swiss open data into the Silvaplana map. The plan behind them 
 | `visible.py` | Works out which land can be seen in the game, so only that gets built (plan MD4). It looks from the sailor, the orbit camera and the replay viewpoints listed in `silvaplana_area.VIEWPOINTS`. | `.map_data/work/visible_tiles.json`, `visible_50m.npz` and `visible_map.png` (a picture for the team: orange is what the sailor sees, yellow what only the cameras see) |
 | `preview_data.py` | Prepares a quick look at the real valley for Blender: the shore band at 5 m with the lakebed under the water, the surroundings at 100 m, and the aerial photos as textures. Not the game terrain. | `.map_data/work/preview/` |
 | `tools/blender/build_preview.py` (run with `tools/blender.sh`) | Builds `silvaplana_preview.blend` from that, with four cameras (on the water at the launch, above the village, a valley overview, from Corvatsch), and renders a picture from each. | `.map_data/work/preview/silvaplana_preview.blend`, `renders/*.png` |
+| `heights.py` | The game terrain's heights (plan M1, MD4, MD5), in metres above the lake. Four detail levels: 2 m in the shore band (swissALTI3D with the swissBATHY3D lakebed, the unsurveyed shallows filled in smoothly), 10 m up to 3 km from the lake, 20 m up to 8 km, 40 m beyond (swissALTIRegio), only where something can be seen. Neighbouring detail levels are stitched so the meshes meet without cracks. | `.map_data/work/terrain/` (one height grid per chunk, `chunks.json`, `zones.png`), and `Game/maps/silvaplana/terrain/shore_heights.bin` + `.json` (the shore band at 2 m for the game logic; generated, don't edit) |
+| `tests/test_heights.py` | Checks of heights.py's output: the lake at 0 m, the lake covered with water, the deepest point (77 m), Piz Corvatsch, the weather station, the camping at the shore, no holes, no cracks between chunks. | printed, one line per check |
+| `tools/blender/build_terrain.py` (run with `tools/blender.sh`) | Builds one mesh per chunk, thins out flat ground (the border stays locked), adds a hidden skirt against gaps, sets the shading normals from the height grid, and exports `.glb`. Writes `terrain.tscn` with all chunks, and renders two pictures from above. `--only=<name>` rebuilds some chunks, `--no-render` skips the pictures. About 1 minute. | `Game/maps/silvaplana/terrain/*.glb` and `terrain.tscn` (generated, don't edit), `.screenshots/terrain_blender.png` and `terrain_blender_band.png` |
+| `photos.py` | One aerial-photo texture per terrain chunk (plan M2): 8192 px per km (12 cm) on the two tiles of the camping and the launch beach, 2048 px (0.5 m) on the rest of the shore band, 512 px (2 m) up to 8 km and 128 px (8 m) further away. Where there is no Swiss photo (22 tiles in Italy), it paints the colour the Swiss photos have at that height, slope and lighting. `--only=<name>` makes some chunks. About 3 minutes. | `Game/maps/silvaplana/terrain/photos/*.webp` and their `.import` files (mipmaps, graphics-card compression; generated, don't edit), `.map_data/work/terrain/photo_fallback.png` (the learned colours) |
+| `tests/test_photos.py` | Checks of photos.py's output: every chunk has its photo at the right size, Godot makes mipmaps and compresses them, the photos line up with the lake (flipped or shifted 100 m lines up worse), no black patches. | printed, one line per check |
 | `maloja_stats.py <csv>` | Statistics of the Maloja wind and the air density from MeteoSwiss Segl-Maria. | printed; the results are in `Documentation/PHYSICS_REQUESTS_FROM_MAP.md` |
 | `silvaplana_area.py` | Not a step: the areas every script works on (lake, shore band, surroundings). | — |
 | `readers.py` | Not a step: reads the raw files into height grids. | — |
@@ -29,6 +34,16 @@ Scripts that turn Swiss open data into the Silvaplana map. The plan behind them 
 
 ## To look at
 
+- **The terrain in Godot:** double-click `tools/play.sh` and choose 2, or run `tools/play.sh silvaplana`. (It opens `res://maps/silvaplana/dev/terrain_view.tscn`.)
+  - Keys 1 to 4 jump to the viewpoints: on the water at the launch, above the village, high above the valley, straight down.
+  - Fly with W A S D, up and down with E and Q, Shift goes faster. Hold the right mouse button to look around; the mouse wheel changes the speed.
+  - The lake is a flat stand-in with the map's see-through lake water (`Game/maps/lake.gdshader`, `Game/maps/silvaplana/lake.tres`): darker with depth, ripples, the mountains mirrored. **G** switches to the game's water shader in the lake's colours (`lake_water.tres`) to compare; `-- --water=game` starts with it. The real water, with waves, comes in M3.
+  - When the view quits, Godot prints "7 RIDs of type Texture were leaked". That comes from the lake's reflection probe and is harmless.
+  - `tools/play.sh silvaplana -- --measure=1` measures the frame rate at every viewpoint and quits.
+  - `tools/play.sh silvaplana -- --at=2778600,1145000,150 --look=2758500,1128500,900` starts at any point (LV95 east, north, metres above the lake), looking at another.
+- The map's look (sun, sky, haze) is in `Game/maps/silvaplana/silvaplana.tscn`; the terrain's look (photo, slope darkening, how much the sun shades the slopes) in `Game/maps/terrain.gdshader` and the `Terrain` node (`MapTerrain`).
+- `.screenshots/terrain_blender_band.png`: the shore band from above, as Blender built it.
+- `.map_data/work/terrain/zones.png`: where the terrain has which detail.
 - `.map_data/work/visible_map.png`: what can be seen in the game. Orange: the sailor. Yellow: only the cameras.
 - `.map_data/work/preview/renders/*.png`: the valley from four viewpoints.
 - `.map_data/work/preview/silvaplana_preview.blend`: open it in Blender 4.5 and look around.
@@ -44,7 +59,7 @@ BlenderGIS (2.2.10, in Blender 4.5) also works for exploring by hand. It imports
 | `heights` | swissALTI3D 0.5 m, 25 tiles of the shore band (2023); swissBATHY3D Silvaplanersee; swissALTIRegio 10 m, 25 tiles of 10 km (east 2755 to 2805, north 1124 to 1174) | 0.54 GB |
 | `wind` | MeteoSwiss Segl-Maria (SIA), 10-minute values 2020 to 2029 | 40 MB |
 | `photos-far` | SWISSIMAGE 2 m, 332 of the 354 visible tiles of 1 km (the other 22 are in Italy) | 55 MB |
-| `photos-near` | SWISSIMAGE 10 cm, the 25 shore-band tiles | about 1.1 GB, not downloaded yet (M2) |
+| `photos-near` | SWISSIMAGE 10 cm, the 25 shore-band tiles (2025 flight) | 1.1 GB, downloaded in M2 (agreed by the team; `build.sh` passes `--yes`) |
 | `surface` | swissSURFACE3D 0.5 m, the 25 shore-band tiles | about 0.34 GB, not downloaded yet (M4) |
 
 ## Credits

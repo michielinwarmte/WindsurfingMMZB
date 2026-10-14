@@ -1,0 +1,26 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://maps/silvaplana/dev/terrain_view.gd" id="1_view"]
+[ext_resource type="PackedScene" path="res://maps/silvaplana/silvaplana.tscn" id="2_map"]
+[ext_resource type="Script" path="res://maps/fly_camera.gd" id="3_camera"]
+
+[node name="TerrainView" type="Node3D"]
+script = ExtResource("1_view")
+
+[node name="Silvaplana" parent="." instance=ExtResource("2_map")]
+
+[node name="FlyCamera" type="Camera3D" parent="."]
+near = 0.05
+far = 35000.0
+script = ExtResource("3_camera")
+
+[node name="Info" type="CanvasLayer" parent="."]
+
+[node name="Label" type="Label" parent="Info"]
+offset_left = 10.0
+offset_top = 8.0
+offset_right = 1270.0
+offset_bottom = 60.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4

@@ -62,15 +62,35 @@ else
 	echo "Blender $BLENDER_VERSION was not found, so there is no Blender preview (see tools/map/README.md)."
 fi
 
-# Later phases add their steps here: heights.py and the Blender terrain (M1), photos.py and the
-# 10 cm photos of the shore band (M2), the surface model for trees and buildings (M4).
+echo
+echo "== Terrain heights for the game, and their checks (M1)"
+"$py" tools/map/heights.py
+"$py" tools/map/tests/test_heights.py
+echo
+echo "== Terrain meshes in Blender, exported to Game/maps/silvaplana/terrain/ (M1)"
+if find_blender >/dev/null 2>&1; then
+	tools/blender.sh tools/blender/build_terrain.py 2>&1 | grep -E "^Exported|^Rendered|^Not part|Error|Traceback" || true
+else
+	echo "Blender $BLENDER_VERSION was not found, so the terrain meshes were not rebuilt (see tools/map/README.md)."
+fi
 
 echo
-echo "Map build done. Raw data: $(du -sh .map_data | cut -f1) in .map_data/"
+echo "== Aerial photos on the terrain: 10 cm photos of the shore band (1.1 GB, agreed by the team), one texture per chunk (M2)"
+"$py" tools/map/download.py photos-near --yes
+"$py" tools/map/photos.py | tail -n 1
+"$py" tools/map/tests/test_photos.py
+
+# Later phases add their steps here: the surface model for trees and buildings (M4).
+
+echo
+echo "Map build done. Raw data: $(du -sh .map_data | cut -f1) in .map_data/, game files: $(du -sh Game/maps/silvaplana | cut -f1) in Game/maps/silvaplana/"
 echo "To look at:"
+echo "  tools/play.sh silvaplana                          the terrain in Godot: fly around (keys 1-4: viewpoints)"
+echo "  .screenshots/terrain_blender_band.png             the shore band from above (Blender)"
+echo "  .map_data/work/terrain/zones.png                  where the terrain has which detail"
 echo "  .map_data/work/visible_map.png                    what can be seen (orange: the sailor, yellow: only the cameras)"
-echo "  .map_data/work/preview/renders/*.png              pictures of the valley from four viewpoints"
+echo "  .map_data/work/preview/renders/*.png              pictures of the valley from four viewpoints, with the aerial photos"
 echo "  .map_data/work/preview/silvaplana_preview.blend   open in Blender and fly around (cameras: launch_beach, ...)"
-echo "There is nothing to see in Godot yet: the 3D terrain for the game comes in phase M1."
 show_picture "$REPO_ROOT/.map_data/work/visible_map.png"
 show_picture "$preview/renders/valley_overview.png"
+show_picture "$REPO_ROOT/.screenshots/terrain_blender_band.png"

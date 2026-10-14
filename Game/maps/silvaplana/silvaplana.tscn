@@ -1,0 +1,61 @@
+[gd_scene format=3]
+
+; The Silvaplana map (Documentation/MAP_SILVAPLANA_PLAN.md): the terrain with its aerial photos,
+; and the map's light and air (M2): a clear summer afternoon at 46.4 degrees north, around 15:00.
+; The fill light (ambient) is 60 % the deep blue sky and 40 % a neutral grey-green, the light
+; bounced off the valley: all sky made the lake and the slopes too blue.
+
+[ext_resource type="PackedScene" path="res://maps/silvaplana/terrain/terrain.tscn" id="1_terrain"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_silvaplana"]
+sky_top_color = Color(0.12, 0.32, 0.7, 1)
+sky_horizon_color = Color(0.62, 0.74, 0.88, 1)
+sky_curve = 0.12
+ground_bottom_color = Color(0.6, 0.7, 0.8, 1)
+ground_horizon_color = Color(0.62, 0.74, 0.88, 1)
+
+[sub_resource type="Sky" id="Sky_silvaplana"]
+sky_material = SubResource("SkyMaterial_silvaplana")
+
+[sub_resource type="Environment" id="Environment_silvaplana"]
+background_mode = 2
+sky = SubResource("Sky_silvaplana")
+ambient_light_source = 3
+ambient_light_color = Color(0.62, 0.62, 0.56, 1)
+ambient_light_sky_contribution = 0.6
+reflected_light_source = 2
+tonemap_mode = 2
+fog_enabled = true
+fog_light_color = Color(0.7, 0.79, 0.9, 1)
+fog_sun_scatter = 0.1
+fog_density = 3.5e-05
+fog_aerial_perspective = 0.5
+fog_sky_affect = 0.0
+
+[node name="Silvaplana" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_silvaplana")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+; Mid-July, 15:00 summer time: the sun in the south-west (azimuth 225 degrees), 59 degrees up.
+; The basis is rotation_degrees (-59, -45, 0), written row by row; the light shines along its -Z,
+; toward the north-east. test_silvaplana_look.gd checks the angles.
+transform = Transform3D(0.7071068, 0.606109, -0.3641871, 0, 0.5150381, 0.8571673, 0.7071068, -0.606109, 0.3641871, 0, 0, 0)
+shadow_enabled = true
+directional_shadow_max_distance = 4000.0
+
+[node name="Terrain" parent="." instance=ExtResource("1_terrain")]
+
+[node name="LakeReflections" type="ReflectionProbe" parent="."]
+; The lake mirrors the mountains, not only the sky: from a raised viewpoint the water reflects the
+; dark slopes of the other shore. The probe takes one 360-degree picture of the valley (cull_mask:
+; render layer 1, the terrain) from the middle of the lake, 5 m up, and only the lake water uses it
+; (reflection_mask: render layer 2; the lake's water must be on that layer). No change to the
+; terrain's own light (ambient_mode 0). Far mountains count too (max_distance 40 km).
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 0)
+size = Vector3(7000, 1500, 7000)
+max_distance = 40000.0
+cull_mask = 1
+reflection_mask = 2
+ambient_mode = 0
