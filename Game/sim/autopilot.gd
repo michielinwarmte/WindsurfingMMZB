@@ -52,13 +52,17 @@ var bear_away_twa_deg: float = 70.0
 var _pointing: bool = false
 ## Depowering: the sheet is the throttle, and the sailor sheets in only to the pull they
 ## can hold. The sail is never trimmed beyond the angle of attack at which its heeling
-## torque, at this apparent wind, is hike_share of the sailor's full righting moment: a
-## little of the hike is kept in reserve for gusts and waves (0.75 held the sail at the
-## edge of the leeward-heel allowance and was slower and less steady than 0.9). This is a sailor feeling the
-## pull in the hands and the harness: more apparent wind, less sheet, at once and without
-## any loop that could pump (an earlier version integrated the hike itself and pumped the
-## sail against the sailor's own reflex at about 1 Hz).
-var hike_share: float = 0.9
+## torque, at this apparent wind, is hike_share of what the sailor's lean holds right now
+## (the weight at the body's present lever from the feet) plus ankle_share of what the
+## feet can pass to the deck. A share a little over 1 is the hike-out ratchet of getting
+## going: sheet in a little more than the lean holds, lean out to it, sheet in again
+## (at 0.95 the sailor never got out of the upright stance: the pull allowed by a small
+## lean asked for only a small lean). This is a sailor feeling the pull in the hands and
+## the harness: more apparent wind, less sheet, at once and without any loop that could
+## pump (an earlier version integrated the hike itself and pumped the sail against the
+## sailor's own reflex at about 1 Hz).
+var hike_share: float = 1.1
+var ankle_share: float = 0.3
 ## On top of that, leeward heel beyond the deliberate bank and a small allowance is
 ## answered at once by depower_alpha_per_deg per degree (the board is going over), and
 ## the push of a hard turn, felt as leeward heel, slowly (depower_rate_per_s per second
@@ -70,6 +74,15 @@ var depower_rate_per_s: float = 0.25
 var depower_urgent_rate_per_s: float = 2.0
 var depower_alpha_per_deg: float = 1.0
 var _depower: float = 0.0
+## Caught by the sheet: a body tipping back (the sail stopped pulling while the sailor
+## was hiked out: the feet asked to pass more windward moment than they can) is caught
+## by sheeting in at once, and one being pulled over the sail by letting it go at once,
+## this many degrees of angle of attack per newton metre the feet could not hold, up to
+## catch_alpha_max_deg (more than that pumped the sheet against the depowering). The
+## oldest rule of windsurfing: when in doubt, sheet in.
+var catch_alpha_per_nm: float = 0.02
+var catch_alpha_max_deg: float = 4.0
+var _catching: bool = false
 ## Nearly let fly when the hike is used up: a luffing sail carries next to nothing, and
 ## that is the sailor's last resort before being pulled over.
 var min_alpha_deg: float = 1.0
@@ -89,7 +102,7 @@ var backing_alpha_deg: float = 25.0
 ## A sailor standing at the mast can push a backed sail with the arms, bracing with the
 ## body, about this hard (half their weight); a faster board or stronger wind means a
 ## smaller backing angle, and the sailor who wants a snappier tack slows down first.
-var backing_force_max_n: float = 350.0
+var backing_force_max_n: float = 250.0
 ## A sailor backing the sail lets it go the moment the board tips to leeward past this:
 ## the push on the backed sail is what makes a skidding board trip over its fin.
 var backing_release_heel_deg: float = 25.0
@@ -171,13 +184,19 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		var deliberate_leeward_deg: float = maxf(-telemetry.wanted_bank_deg * windward, 0.0)
 		var leeward_heel_deg: float = -telemetry.heel_deg * windward - deliberate_leeward_deg
 		var felt_leeward_heel_deg: float = -telemetry.felt_heel_deg * windward - deliberate_leeward_deg
-		alpha_deg = minf(alpha_deg, _alpha_for_torque_deg(telemetry, hike_share * _max_righting_moment_nm()))
+		alpha_deg = minf(alpha_deg, _alpha_for_torque_deg(telemetry, _righting_moment_now_nm(telemetry)))
 		var over_heel: float = clampf((felt_leeward_heel_deg - depower_heel_allowance_deg) / depower_heel_span_deg, -1.0, 1.0)
 		var urgency: float = maxf(over_heel - 0.5, 0.0)
 		_depower = clampf(_depower + (depower_rate_per_s * over_heel + depower_urgent_rate_per_s * urgency) * dt, 0.0, 1.0)
 		alpha_deg = lerpf(alpha_deg, min_alpha_deg, _depower)
 		if leeward_heel_deg > depower_heel_allowance_deg:
 			alpha_deg = maxf(alpha_deg - depower_alpha_per_deg * (leeward_heel_deg - depower_heel_allowance_deg), min_alpha_deg)
+		# The excess is positive when the body is being tipped to port; tipping back is
+		# tipping to windward.
+		var tipping_back_nm: float = -telemetry.feet_moment_excess_nm * windward
+		_catching = tipping_back_nm > 0.0
+		var catch_deg: float = clampf(catch_alpha_per_nm * tipping_back_nm, -catch_alpha_max_deg, catch_alpha_max_deg)
+		alpha_deg = clampf(alpha_deg + catch_deg, min_alpha_deg, 24.0)
 		var boom_angle_deg: float = clampf(absf(telemetry.awa_deg) - alpha_deg, sheet_angle_in_deg, sheet_angle_out_deg)
 		var across: float = 0.0
 		# The apparent and true wind measured on the sail's own windward side: negative once
@@ -256,11 +275,12 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 			# to fill.
 			controls.hold_side = telemetry.sail_side
 			boom_angle_deg = clampf(awa_own_side_deg + _backing_alpha_deg(telemetry), sheet_angle_in_deg, sheet_angle_out_deg)
-		if _tack_phase == 0 and across <= 0.0:
+		if _tack_phase == 0 and across <= 0.0 and not _catching:
 			# Sheeting in is paced by the body: the pull may grow only as fast as the sailor
 			# can lean out against it (a sailor who sheets in faster than they hike is pulled
 			# over the sail). The angle of attack may rise at most by the rate at which the
-			# allowed torque rise is matched by the sail's lift slope at this wind.
+			# allowed torque rise is matched by the sail's lift slope at this wind. (Not while
+			# catching a fall: then the sheet comes in as fast as the hands can.)
 			var alpha_now_deg: float = maxf(telemetry.alpha_deg, 0.0)
 			var wanted_alpha_deg: float = absf(telemetry.awa_deg) - boom_angle_deg
 			if wanted_alpha_deg > alpha_now_deg:
@@ -318,17 +338,29 @@ static func carry_boom_across_the_flip(controls: SimControls, _in_deg: float, _o
 	controls.boom_across = 0.0
 
 
-## The sailor's full righting moment: their weight at full lean. Infinite without a sailor.
+## The largest pull (as a moment about the feet) the sailor can hold: their weight at full
+## lean, measured from the feet on the rail, plus what the feet and ankles can pass to the
+## deck (section 7.5). Infinite without a sailor.
 func _max_righting_moment_nm() -> float:
 	if sailor == null:
 		return INF
-	return sailor.mass_kg * 9.81 * sailor.lean_max_m
+	return sailor.mass_kg * 9.81 * (sailor.lean_max_m - sailor.feet_rail_m) + sailor.feet_moment_max_nm
 
 
-## The heeling torque per newton of the sail's side force, as it is now: the sail's own
-## lever about the centre of mass plus the fin's (the fin holds the sail's side force
-## under the board, and heels it the same way), or heeling_arm_default_m when the sail
-## carries nothing yet.
+## The pull the sailor can hold right now: hike_share of the weight at the body's present
+## lever from the feet (toward windward), plus ankle_share of the feet's moment. As the
+## body goes out the sheet comes in; it never runs ahead of the body.
+func _righting_moment_now_nm(telemetry: Telemetry) -> float:
+	if sailor == null:
+		return INF
+	var windward: float = 1.0 if telemetry.twa_deg >= 0.0 else -1.0
+	var lever_m: float = maxf((telemetry.sailor_position_body.x - telemetry.feet_body.x) * windward, 0.0)
+	return hike_share * sailor.mass_kg * 9.81 * lever_m + ankle_share * sailor.feet_moment_max_nm
+
+
+## The heeling torque per newton of the sail's side force, as it is now: the hands' pull
+## as a moment about the feet (the sail's lever about the mast foot, carried to the
+## sailor by the boom), or heeling_arm_default_m when the sail carries nothing yet.
 var heeling_arm_default_m: float = 2.1
 ## The heeling lever (the torque per newton of side force, sail and fin together) is felt
 ## averaged over this long: on chop the fin's load jumps every wave, and a sailor holds

@@ -29,6 +29,8 @@ var drive_n: float = 0.0
 var side_force_n: float = 0.0
 var ce_local: Vector3 = Vector3.ZERO
 var ce_world: Vector3 = Vector3.ZERO
+## Unit vector along the boom from the mast, body axes (toward the clew).
+var boom_direction_local: Vector3 = Vector3.BACK
 var is_luffing: bool = false
 ## The wind is on the sail's leeward face: the sail has inverted and pushes the other way.
 var is_backwinded: bool = false
@@ -59,7 +61,10 @@ func set_side_for_wind(apparent_wind_angle_rad: float) -> void:
 	sail_side = -1 if apparent_wind_angle_rad >= 0.0 else 1
 
 
-## Computes the sail force for the body's state and applies it to the body.
+## Computes the sail force for the body's state: force_world at ce_world. It is not applied
+## here: the simulation carries it into the hull at the mast foot and into the sailor at the
+## hands (WindsurferSim._apply_rig_forces). torque_body is its torque about the hull's
+## centre of mass, for reference.
 ## held_side: 0 lets the wind decide which side the sail is on; +1 or -1 is the sailor
 ## holding the rig on that side (through a tack, until they flip it).
 func compute(body: SimRigidBody, wind: WindField, sheet: float, rake: float, rho_air: float, rig_lean: float = 0.0, boom_across: float = 0.0, held_side: int = 0) -> void:
@@ -84,6 +89,7 @@ func compute(body: SimRigidBody, wind: WindField, sheet: float, rake: float, rho
 
 	# Boom direction and the centre of effort (section 2.2 and 2.13), in body axes.
 	var chord_local: Vector3 = Vector3(sail_side * sin(sheet_angle_rad), 0.0, cos(sheet_angle_rad))
+	boom_direction_local = chord_local
 	ce_local = mast_point_local + chord_local * (config.ce_boom_fraction * config.boom_m)
 	ce_world = body.point_world(ce_local)
 
@@ -139,7 +145,6 @@ func compute(body: SimRigidBody, wind: WindField, sheet: float, rake: float, rho
 	drive_n = force_world.dot(f)
 	side_force_n = force_world.dot(r)
 
-	body.add_force_at(ce_world, force_world)
 	torque_body = SimMath.to_body(body.basis, (ce_world - body.position).cross(force_world))
 
 

@@ -242,6 +242,8 @@ Change the layout when there is a good reason, and update this section when you 
 
 ## Phase 6: Rig visuals
 
+> Session 37 (in progress, stopped on request): the sailor is a body of their own in the physics (spec 17.13, log entry 37). The visible character (feet, legs with the knee bend, torso, arms to the boom, head, driven by `sim.sailor`, `sim.feet_body`, `sim.hand_grip_body`) is the next step, then the chop work with the new legs.
+
 **Model notes (measured in Session 28):**
 - `board.fbx` has a 2.28 m long mesh along the model's X axis, not −Z, and its origin is not at the centre. It also contains a stray camera and refers to a missing product-photo texture ("Starboard … iSonic … .jpg").
 - `sail.fbx` has a sail cloth 5.08 m tall and 2.8 m long along +X from the mast at the origin, and a boom mesh that is fine. The mast is a curve without faces (Godot reports `surfaces.is_empty()` on import), and the file refers to a missing "Severne … .png".

@@ -94,9 +94,27 @@ var felt_push_ms2: float = 0.0
 var felt_heel_deg: float = 0.0
 var hang_back_m: float = 0.0
 var knee_bend_m: float = 0.0
+## Where the sailor's centre of mass actually is, and where the posture wants it (body axes).
 var sailor_position_body: Vector3 = Vector3.ZERO
+var posture_target_body: Vector3 = Vector3.ZERO
+var feet_body: Vector3 = Vector3.ZERO
+var hand_grip_body: Vector3 = Vector3.ZERO
 var com_offset_body: Vector3 = Vector3.ZERO
 var total_mass_kg: float = 0.0
+## The sailor body (section 7.5): the pull of the rig on the hands (N, and its body-axis
+## components), the force the legs carry into the feet, the force at the mast foot, the
+## roll moment the body passes to the deck at the feet (all of it, and the hands' share),
+## and how far the body has swayed from its posture across the legs.
+var hand_force_n: float = 0.0
+var hand_force_body: Vector3 = Vector3.ZERO
+var foot_force_n: float = 0.0
+var mast_foot_force_n: float = 0.0
+var feet_moment_roll_nm: float = 0.0
+var hand_moment_roll_nm: float = 0.0
+var feet_moment_excess_nm: float = 0.0
+## Weight on a rail (-1 port, +1 starboard): where the feet press.
+var rail_press: float = 0.0
+var leg_sway_m: float = 0.0
 
 
 ## The column names of to_csv_row(), in the same order.
@@ -107,7 +125,8 @@ static func csv_header() -> String:
 		+ "buoyancy_n,submersion_ratio,wetted_area_m2,planing_lift_n,planing_ratio,trim_deg," \
 		+ "hull_friction_n,hull_residuary_n,hull_lateral_n,stance,lean,hang_back_m,knee_bend_m," \
 		+ "wetted_length_m,wetted_aft_m,spray_root_factor,heave_added_mass_kg,rig_tilt,rig_lean_deg,sailor_state,boom_across,fin_immersed," \
-		+ "bow_immersion_m,planing_cop_z_m,fall_kind,wanted_bank_deg,felt_push_ms2,felt_heel_deg,bow_drag_n,water_height_m"
+		+ "bow_immersion_m,planing_cop_z_m,fall_kind,wanted_bank_deg,felt_push_ms2,felt_heel_deg,bow_drag_n,water_height_m," \
+		+ "hand_force_n,foot_force_n,mast_foot_force_n,feet_moment_roll_nm,hand_moment_roll_nm,leg_sway_m,feet_moment_excess_nm,rail_press,sailor_x_m,sailor_y_m,target_x_m,target_y_m,feet_x_m"
 
 
 func to_csv_row() -> String:
@@ -118,7 +137,9 @@ func to_csv_row() -> String:
 		buoyancy_n, submersion_ratio, wetted_area_m2, planing_lift_n, planing_ratio, trim_deg,
 		hull_friction_n, hull_residuary_n, hull_lateral_n, stance, lean, hang_back_m, knee_bend_m,
 		wetted_length_m, wetted_aft_m, spray_root_factor, heave_added_mass_kg, rig_tilt, rig_lean_deg, sailor_state, boom_across, fin_immersed,
-		bow_immersion_m, planing_cop_z_m, fall_kind, wanted_bank_deg, felt_push_ms2, felt_heel_deg, bow_drag_n, water_height_m]
+		bow_immersion_m, planing_cop_z_m, fall_kind, wanted_bank_deg, felt_push_ms2, felt_heel_deg, bow_drag_n, water_height_m,
+		hand_force_n, foot_force_n, mast_foot_force_n, feet_moment_roll_nm, hand_moment_roll_nm, leg_sway_m, feet_moment_excess_nm, rail_press,
+		sailor_position_body.x, sailor_position_body.y, posture_target_body.x, posture_target_body.y, feet_body.x]
 	var parts: PackedStringArray = PackedStringArray()
 	for value: Variant in values:
 		if value is float:

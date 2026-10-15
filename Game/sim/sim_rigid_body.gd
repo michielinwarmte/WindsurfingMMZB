@@ -34,6 +34,10 @@ var internal_velocity: Vector3 = Vector3.ZERO
 ## added mass of the wetted bottom). It resists acceleration along that axis only; the hull
 ## model sets it every step.
 var added_mass_up_kg: float = 0.0
+## Mass that moves with the body along its own x and z axes (across and along the deck)
+## but not up and down: the sailor, who rides the hull in the horizontal plane on legs that
+## give vertically (WindsurferSim). The simulation sets it.
+var added_mass_across_kg: float = 0.0
 
 var _force_sum: Vector3 = Vector3.ZERO
 var _torque_sum: Vector3 = Vector3.ZERO
@@ -82,14 +86,16 @@ func acceleration_at(point: Vector3) -> Vector3:
 
 
 ## Acceleration of the centre of mass from the forces collected so far. Along the body's up
-## axis the water's added mass is accelerated too, so that direction responds more slowly:
-## a = F / m, minus the part of F along "up" times added / (m (m + added)).
+## axis the water's added mass is accelerated too, and across the deck the sailor's, so
+## those directions respond more slowly: in body axes a_i = F_i / (m + added_i).
 func linear_acceleration() -> Vector3:
-	var acceleration: Vector3 = _force_sum / mass_kg
-	if added_mass_up_kg > 0.0:
-		var up: Vector3 = basis.y
-		acceleration -= up * (_force_sum.dot(up) * added_mass_up_kg / (mass_kg * (mass_kg + added_mass_up_kg)))
-	return acceleration
+	var force_body: Vector3 = basis.transposed() * _force_sum
+	return basis * (force_body * _inverse_mass_body())
+
+
+## 1 / (m + added) along each body axis.
+func _inverse_mass_body() -> Vector3:
+	return Vector3(1.0 / (mass_kg + added_mass_across_kg), 1.0 / (mass_kg + added_mass_up_kg), 1.0 / (mass_kg + added_mass_across_kg))
 
 
 ## Angular velocity expressed in body axes (x = pitch, y = yaw, z = roll).
@@ -103,9 +109,9 @@ func angular_velocity_body() -> Vector3:
 ## push), the centre of a heavy one is not. Dampers use it to know how much momentum a
 ## point really has (see BuoyancyModel and the rig-in-water drag).
 func effective_mass_at(point: Vector3, direction: Vector3) -> float:
-	var up: Vector3 = basis.y
-	var along_up: float = direction.dot(up)
-	var translational: float = (1.0 - along_up * along_up * added_mass_up_kg / (mass_kg + added_mass_up_kg)) / mass_kg
+	var n_body: Vector3 = basis.transposed() * direction
+	var inverse: Vector3 = _inverse_mass_body()
+	var translational: float = n_body.x * n_body.x * inverse.x + n_body.y * n_body.y * inverse.y + n_body.z * n_body.z * inverse.z
 	var r_cross_n: Vector3 = (point - position).cross(direction)
 	var inertia_world_inv: Basis = basis * inertia_body_inv * basis.transposed()
 	var rotational: float = r_cross_n.dot(inertia_world_inv * r_cross_n)

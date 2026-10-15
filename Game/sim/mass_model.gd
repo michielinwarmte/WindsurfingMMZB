@@ -1,9 +1,14 @@
 class_name MassModel
 extends RefCounted
-## Mass, centre of mass and inertia of the whole windsurfer (board, rig and sailor) as one
-## rigid body (PHYSICS_SPEC.md section 7). The sailor is a real part of the body: their
-## stance (fore and aft) and lean (sideways) move the centre of mass, and with it the lever
-## arm of every force.
+## Mass, centre of mass and inertia of the windsurfer (PHYSICS_SPEC.md section 7). The
+## sailor's posture (stance fore and aft, lean sideways, hang-back, knee bend) decides where
+## the sailor's centre of mass is; the rig's lean decides where the rig's is.
+##
+## The simulation's rigid body is the hull alone (hull_mass_kg, hull_inertia_body): the
+## sailor is a body of their own on the legs, and the rig is held between the mast foot and
+## the hands (section 7.5). The composite figures (total_mass_kg, com_offset_body,
+## inertia_body) describe the whole as if it were rigid: they set the hull's resting depth,
+## the planing ratio, and the heeling moment the autopilot trims to.
 ##
 ## All positions are in body axes relative to the board origin (the centre of the hull box):
 ## x = starboard, y = up, z = aft.
@@ -18,12 +23,17 @@ var com_offset_body: Vector3 = Vector3.ZERO
 var inertia_body: Basis = Basis.IDENTITY
 var sailor_position_body: Vector3 = Vector3.ZERO
 var rig_position_body: Vector3 = Vector3.ZERO
+## The hull alone: what the simulation's rigid body is.
+var hull_mass_kg: float = 0.0
+var hull_inertia_body: Basis = Basis.IDENTITY
 
 
 func _init(board_config: BoardConfig, sail_config: SailConfig, sailor_config: SailorConfig) -> void:
 	board = board_config
 	sail = sail_config
 	sailor = sailor_config
+	hull_mass_kg = board.mass_kg
+	hull_inertia_body = Basis.IDENTITY.scaled(_box_inertia(board.mass_kg, board.width_m, board.thickness_m, board.length_m))
 	update(0.0, 0.0)
 
 
@@ -61,6 +71,19 @@ func update(stance: float, lean: float, hang_back_m: float = 0.0, knee_bend_m: f
 	inertia_body = _add_part(inertia_body, board.mass_kg, board_own, board_position_body - com_offset_body)
 	inertia_body = _add_part(inertia_body, sailor.mass_kg, sailor_own, sailor_position_body - com_offset_body)
 	inertia_body = _add_part(inertia_body, sail.rig_mass_kg, rig_own, rig_position_body - com_offset_body)
+
+
+## Where the feet press the deck for a stance, a lean and a rail press, body axes: on the
+## centreline up to feet_out_from_lean, out on the windward rail (feet_rail_m) from
+## feet_out_full_lean on, shifted toward the toes or the heels by the rail press
+## (toe_heel_m), at the stance's fore-and-aft position (the hang-back moves the body,
+## not the feet).
+func feet_position_body(stance: float, lean: float, rail_press: float = 0.0) -> Vector3:
+	stance = clampf(stance, -1.0, 1.0)
+	var feet_z: float = lerpf(sailor.stance_rest_z_m, sailor.stance_planing_z_m, stance) if stance >= 0.0 else lerpf(sailor.stance_rest_z_m, sailor.stance_tack_z_m, -stance)
+	var out: float = smoothstep(sailor.feet_out_from_lean, sailor.feet_out_full_lean, absf(lean))
+	var feet_x: float = sailor.feet_rail_m * out * signf(lean) + sailor.toe_heel_m * clampf(rail_press, -1.0, 1.0)
+	return Vector3(feet_x, 0.5 * board.thickness_m, feet_z)
 
 
 ## Maximum righting moment the sailor can produce by leaning: weight times full lean.

@@ -15,6 +15,42 @@ Template for new entries:
 
 ---
 
+## 15 October 2026 - Session 37 (in progress, stopped on request): the sailor as a body of their own
+
+**Phase:** between 5 and 6. The team asked for a real character model with the physics updated to include it, then chop work with it. The physics part is in and working on flat water; the visible character and the chop work are not started. Stopped mid-session on request; nothing is pushed.
+
+**Done (the physics, PHYSICS_SPEC.md 17.13):**
+- The hull is now the simulation's rigid body on its own (9 kg plus the water it drags), and the sailor is a second body: a 75 kg point mass (`SailorBody`, `Game/sim/sailor_body.gd`). The rig (8 kg) is held between the mast foot and the hands and is in balance at every instant: the sail force splits into a mast-foot force on the hull and a hand force on the sailor (the smallest force at the grip that balances the rig's moment; the twist about the grip line goes through the body to the feet). `SailModel.compute` no longer applies its force; the simulation does.
+- The legs: up and down a spring and damper (the knees) between the posture and the body, with soft stops; across the deck the body rides the hull (its mass is in the hull's sideways, fore-and-aft and yaw inertia, `SimRigidBody.added_mass_across_kg`), because a sideways spring in the legs let the body swing at 1 to 4 Hz and, with the feet aft of the board's centre, steered the board.
+- The posture (lean, stance, hang-back) is held in the apparent-gravity frame (gravity less the body's own felt acceleration, capped at 0.6 g sideways), not the deck's: the body stays upright when the board tilts under it and leans into a turn by itself. The lean answers the hands' pull averaged over 0.4 s (the balance point of the pull about the feet); the lean the controls ask for is weight on a rail: the feet press toes or heels (0.1 m) and the deck is held at the wanted bank by a toes-and-heels reflex (1500 Nm/rad, 60 Nms/rad), all within what the feet can pass to the deck (120 Nm). The feet stand on the centreline up to a lean of 0.3 and on the windward rail (0.22 m) from 0.7, following the body, never ahead of it.
+- Falls are physical: the roll moment the body cannot pass to the deck would tip it; the hips, knees and arms on the boom hold up to 400 N (plus 400 N at full lean, hooked in); more than that for 0.3 s and the sailor goes ("tipped over" toward the sail, "tipped back" away). The old heel rules remain as a backstop.
+- The autopilot (and so the beginner auto-sheet) sheets to what the body holds right now: 1.1 times the weight at the body's present lever from the feet plus 0.3 of the feet's moment (the hike-out ratchet: a little more sheet, lean to it, a little more), and catches a body tipping back by sheeting in at once (0.02 deg per Nm, at most 4 deg) or lets go when tipped over. `backing_force_max_n` 350 to 250.
+- Telemetry and CSV: hand, foot and mast-foot forces, the feet's roll moment and its excess, the hands' moment, the rail press, the body, target and feet positions. The HUD shows the hands, the feet and the feet moment. `test_sailor_body.gd` (4 tests: rest statics, lean at rest, the rig balance, a kick taken by the legs). `fixed_controls` scenario takes `--lean=` and `--sheet=`.
+
+**Verified:** `tools/check.sh` clean. Unit tests 124 of 126: `test_beginner_sails_off_by_itself...` misses by a hair (6.89 m/s against 7.0, and the left turn 5.6 deg against 10 on port tack) and the rake test's tack-mirror tolerance (8.7 against 4.7 +/- 3.2). Flat-water matrix (`tools/matrix.sh`): 1 fall in 24 cases (irons 24 kt, tipped back at 21.8 s), no NaN, 2 manoeuvres not completed (tack_stb 12 kt never crossed; gybe_beam 24 kt), straight runs 9.0, 11.5 and 11.1 m/s at 12, 18 and 24 kt with the heading within 4 deg. NOT verified: the validation suite (`tools/test.sh validation`) was not run after the rewrite; no screenshots; the waves matrix was not run; the sailor on screen is still the one capsule at the posture, not the body.
+
+**Everything tried on the way (so nobody repeats it):**
+- A soft sideways posture spring (1 Hz, damping 0.5) with its torque passed through the ankles flipped the light hull: a 5 cm sway is 140 Nm. Torque-free hips fixed the flip but the body then swung at 1 Hz against the hull's yaw (the feet 0.6 to 0.9 m aft): the course hunted at every wind, 20 to 50 heading reversals in 45 s. Stiffer (4 Hz) and force-capped was worse (chatter at 12 Hz on the 8 kg hull end). A one-step-late velocity match blew up (NaN at t = 0). Riding the hull sideways (the sailor's mass in the hull's inertia) fixed all of it.
+- The posture target measured from the feet made the body's target jump when the feet moved from rail to rail: tipped back every time. Measured from the deck centreline: fixed.
+- The feet following the lean target (not the body) got ahead of the body: the weight inboard of the feet tips toward the sail. Feet follow the body as it actually is, and only as far as the lean means to go.
+- The pilot sheeting to a fixed capacity (0.9 of weight x 1 m) pulled the body over before it was out; sheeting to the actual lean at 0.95 never got out of the upright stance (fixed point at lean 0.1); 1.1 is the ratchet that works.
+- The felt heel inflated with the tipping force made the old "fell off" rule fire in every tack; the apparent-gravity frame flipping when the hull drops faster than g made the target jump 2 m and NaN; both fixed (the frame uses only the sideways push, capped at 0.6 g; the posture's speed is capped at 3 m/s).
+- Legs at 2 Hz with damping 0.4 bounced the body against a porpoising hull at about 1 Hz; the foot force pumped the board out of the water in the gybes (planing lift 50 kN on re-entry, then NaN). Scanned 2/3/4 Hz and 0.4 to 0.9: 4 Hz is worse (NaN), 1.2 Hz with 0.9 cleared every gybe. Saved as the default.
+- Not helpful on their own: `pitch_reflex_m_per_rad_s` 1.0, `hang_back_max_m` 0.3, leg damping 0.9 alone at 2 Hz.
+
+**Decisions:**
+- The sailor rides the hull sideways and fore-and-aft; only the legs' vertical give is a real degree of freedom. The sideways freedom cost more (course hunting) than it gave; the physical falls do not need it (they come from the moment the feet cannot pass).
+- Falls are timed from the hips' limit, not from a sway distance.
+- The one-body `balance_heel_gain`, `balance_rate_gain`, `balance_felt_gain`, `posture_sway_max_m` and the sideways-spring fields are gone from `SailorConfig`.
+
+**Next:**
+1. Run `tools/test.sh validation` and `tools/matrix.sh --waves=1`; fix the two marginal unit tests (likely the 18 kt power-up pace and the rake test tolerance) and the irons 24 kt fall and the two unfinished manoeuvres.
+2. Write spec section 7.5 properly (17.13 has the summary) and update the A-table rows A-09, A-17, A-19.
+3. Build the visible character in `windsurfer.gd` from `sim.sailor.position`, `sim.feet_body` and `sim.hand_grip_body` (feet, two-segment legs with the knee bend, hips and torso, arms to the boom, head) and the fall animation from it; screenshot.
+4. Then the chop work (the matrix with `--waves=1` and the legacy chop set) with the new legs.
+
+---
+
 ## 13 October 2026 - Session 36: Phase 5, waves
 
 **Phase:** 5 done, with the chop limitation below.
