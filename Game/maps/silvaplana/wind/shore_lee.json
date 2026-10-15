@@ -1,0 +1,26 @@
+{
+ "about": "The lee along Lake Silvaplana's south-east shore, measured on the satellite photos by tools/map/shore_lee.py: don't edit. Layer 1: the lee's shape (its share of the band's lee, 1 = the band 50 to 250 m from the shore on average). Layer 2: the share of the wind the game's fixed pattern (W1) already takes off there (the photos' average lee).",
+ "file": "shore_lee.bin",
+ "format": "two float32 little-endian layers, each row by row from the north edge, each row from west to east",
+ "columns": 420,
+ "rows": 450,
+ "cell_m": 10.0,
+ "west_m": 2778400.0,
+ "north_m": 1148700.0,
+ "band_lee_at_reference": 0.0989,
+ "band_lee_per_degree_right": -0.01091,
+ "band_lee_per_lake_knot": 0.03461,
+ "reference_lake_from_deg": 220.9,
+ "reference_lake_kt": 16.38,
+ "degrees_measured": [
+  -13.0,
+  11.0
+ ],
+ "lake_knots_measured": [
+  -2.99,
+  2.83
+ ],
+ "band_lee_average": 0.0939,
+ "photos": 21,
+ "r2": 0.42
+}

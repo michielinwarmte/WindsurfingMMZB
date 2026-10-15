@@ -29,6 +29,13 @@ Local knowledge from Max, for the map track ([MAP_SILVAPLANA_PLAN.md](MAP_SILVAP
 - The better side upwind: usually the north-west side (the Julier road / village side).
 - Whether it turns left in the evening as it dies: doesn't know.
 
+**Max, later on 15 October 2026** (looking at the wind viewer's gusts, `tools/play.sh wind`), in his words, lightly edited:
+- Gusts don't come out of nothing and disappear: they come from upwind and can grow or shrink on their way; "the bigger gusts in the downwind area are good but they can progress out of the gusts more upwind".
+- A gust is not round: "it is a front that is wider".
+- What he sees on the water: mostly fronts (bands across the wind), sometimes lanes (stripes along the wind). A lane is 50 to 100 m wide.
+- The first simulated gusts stood out too much against the wind around them ("too much difference").
+- The band along the south-east (Corvatsch) shore, from the Sils end to the north-east bend: "this area has too much wind compared to real life; on competition you have to really avoid it, and only once in every 10 or so there is a gust that is favourable and goes down all the way". The rest of the simulated lake: "really good".
+
 ## The water
 - Where are the shallow areas, and where do you run aground?
 - What do the waves look like at 15 knots and at 25 knots, near the launch and in the middle?

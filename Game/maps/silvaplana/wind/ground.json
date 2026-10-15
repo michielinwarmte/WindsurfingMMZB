@@ -1,0 +1,15 @@
+{
+ "about": "The ground (or a lake's surface) under the Maloja's fixed pattern, for the wind viewer, written by tools/map/wind_ground.py: don't edit. Mean of swissALTIRegio's 10 m heights in each 50 m cell of maloja_pattern.json. height above the lake surface (m) = height_offset_m + value * height_scale_m",
+ "file": "ground.bin",
+ "format": "uint16 little-endian, row by row from the north edge, each row from west to east",
+ "columns": 440,
+ "rows": 400,
+ "cell_m": 50.0,
+ "west_m": 2768025.0,
+ "north_m": 1155995.0,
+ "x0_m": -12475.0,
+ "z0_m": -9395.0,
+ "height_scale_m": 0.05,
+ "height_offset_m": -1000.0,
+ "lake_level_m": 1790.63
+}

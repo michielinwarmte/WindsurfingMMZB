@@ -80,12 +80,17 @@ echo "== Aerial photos on the terrain: 10 cm photos of the shore band (1.1 GB, a
 "$py" tools/map/photos.py | tail -n 1
 "$py" tools/map/tests/test_photos.py
 
+echo
+echo "== The ground under the wind pattern, for the wind viewer's streaks (W2)"
+"$py" tools/map/wind_ground.py
+
 # Later phases add their steps here: the surface model for trees and buildings (M4).
 
 echo
 echo "Map build done. Raw data: $(du -sh .map_data | cut -f1) in .map_data/, game files: $(du -sh Game/maps/silvaplana | cut -f1) in Game/maps/silvaplana/"
 echo "To look at:"
 echo "  tools/play.sh silvaplana                          the terrain in Godot: fly around (keys 1-4: viewpoints)"
+echo "  tools/play.sh wind                                the wind viewer: the Maloja's streaks and speeds over the lake"
 echo "  .screenshots/terrain_blender_band.png             the shore band from above (Blender)"
 echo "  .map_data/work/terrain/zones.png                  where the terrain has which detail"
 echo "  .map_data/work/visible_map.png                    what can be seen (orange: the sailor, yellow: only the cameras)"

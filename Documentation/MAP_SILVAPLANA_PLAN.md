@@ -25,9 +25,9 @@ The branch starts from `feature/physics-sim` (Phases 1 to 5), because `main` doe
 | M4 | Details: camping and beach, village, trees, landmarks | ⬜ |
 | W0 | Wind analyser: research into how the Maloja behaves | ✅ Done (Session 42): [MALOJA_WIND_RESEARCH.md](MALOJA_WIND_RESEARCH.md). Max answered its questions on 15 October (in SILVAPLANA_SPOT_NOTES.md and the research document) |
 | W1 | Wind analyser: the fixed pattern over the terrain (WindNinja) | ✅ First version (Session 42): direction from WindNinja, strength on the lake from the satellite. Checked by Max on 15 October: the weak south-east shore, the weak Sils end, the direction along the lake and the stronger north-west side are right |
-| W2 | Wind analyser: the 3D viewer in Godot | ⬜ |
-| W3 | Wind analyser: gusts, pulses, shifts and the day | ⬜ |
-| W4 | Wind analyser: tactics tools | ⬜ |
+| W2 | Wind analyser: the 3D viewer in Godot | ✅ First version (Session 43): `tools/play.sh wind`. Max's first look: Windfinder's colours, and he missed the gusts |
+| W3 | Wind analyser: gusts, pulses, shifts and the day | 🔶 Mostly done (Session 43): gusts and lulls measured on the satellite photos (fronts across the lake, lanes along the wind), pulses and shifts, and the lee along the south-east shore. "The day" (start front, day types) postponed by Max on 15 October: W4 first |
+| W4 | Wind analyser: tactics tools | ⬜ Next (Max, 15 October), on the average day |
 | Later | Big projects for every spot, with Michiel: wind simulation, wind-driven waves, mountain-lake physics, live weather, other sailors | ⬜ (the wind patterns, L1, are now the W phases) |
 
 ## Team decisions (14 October 2026)
@@ -403,20 +403,80 @@ Asked for by Max on 14 October 2026: a simulated Maloja (speed, gusts and shifts
 **Goal:** the Windfinder view in 3D: the Silvaplana terrain, white streaks moving with the wind, the water coloured by wind speed.
 
 **Tasks (first version):**
-- [ ] A scene in `Game/maps/silvaplana/` with the terrain, the lake and a top-down and a free camera.
-- [ ] Streaks that move with the wind at a watchable speed, also over land, and the wind speed as colour on the water, with a legend.
-- [ ] A clock: pause, 1×, 10×, 60×, and a slider through the day.
-- [ ] Click a point: speed and direction there over the last minutes.
+- [x] The wind in the game, one place for both users (WD1): `MapWind` (`Game/maps/wind/map_wind.gd`) answers "what is the air doing at this point, at this time of day?"
+  - `WindPattern` reads W1's pattern. Between the 50 m cells it interpolates the wind as an arrow, not as an angle (as `windninja_pattern.py` does).
+  - `WindDay` with `Game/maps/silvaplana/wind/maloja_day.tres`: **the average Maloja day**, a stand-in until W3. The station's hourly medians from 10:00 to 21:00 (MALOJA_WIND_RESEARCH.md), times 1.3 on the water (Max: 15 to 18 kt on a medium day when the station shows 12.6). The lake keeps its own direction (222°, the pattern) and turns through the day as much as the station turns from its afternoon 244°: a little right until 16:00, about 18° left by 21:00.
+  - At 14:20 the lake's average is 16.9 kt; the pattern spreads that over about 13 to 21 kt on the lake.
+  - The shaders compute the same wind on the graphics card (`wind_pattern.gdshaderinc`, from the pattern as a texture). Checked twice: a test samples the texture the way the graphics card does, and a screenshot pixel has exactly the legend's colour for the computed speed (17.4 kt: (65, 140, 230) computed, (65, 139, 230) on the screen).
+- [x] A scene in `Game/maps/silvaplana/`: `wind_viewer.tscn`, with the terrain, the lake and two cameras. `tools/play.sh wind`, or double-click `play.sh` and choose 3.
+  - The map camera (`TopCamera`, `Game/maps/top_camera.gd`) looks straight down with north up: W A S D or the arrows move, the wheel or E and Q zoom, the right mouse drags the map.
+  - The free camera is the terrain view's `FlyCamera`. Tab switches.
+- [x] Streaks (`WindStreaks`, `Game/maps/wind/wind_streaks.gd`): 5000 particles moved by the graphics card, each drawn as a short white ribbon along its recent path (Godot's particle trails).
+  - **Watchable speed:** faster than the real wind, more the bigger the view, so they cross the screen in about the same time at every zoom: about 110× from 4.5 km up, 28× from 350 m, at least 4× from the water. [ and ] change it; the screen shows the factor.
+  - **Also over land:** a little above the ground. They need the ground everywhere the pattern has wind, so `tools/map/wind_ground.py` writes `Game/maps/silvaplana/wind/ground.json` + `.bin` (50 m, generated, 0.35 MB).
+  - **Not above the valley:** they fade out above 2100 m, where the W1 pictures stop drawing arrows too: up there the pattern is not the Maloja (a shallow wind, capped by an inversion). They are fainter in light wind (under 8 kt).
+  - About 2 pixels wide at every distance. They fly at a quarter of the camera's height (0.3 to 15 m), so seen from the water they lie on the water.
+- [x] The wind speed as colour on the water (`wind_speed_water.gdshader`) with a legend (`WindLegend`):
+  - **Windfinder's colours** (`WindColors`), as Max asked after his first look: purple for calm, blue, cyan and green up to 23 kt, yellow at 27, brown, red and pink up to 53 kt. The colours were read from a screenshot of Windfinder's legend; the legend is drawn like Windfinder's, with the knots inside the bar. (The first version had one blue, from pale to deep; Max wanted the scale sailors know.)
+  - The layer covers the water fully, and the viewer uses plain (linear) tone mapping instead of the map's filmic one. Otherwise the water's colours don't match the legend: filmic brightened and flattened them, so 13 and 19 kt looked the same. The terrain looks a little harsher than in the terrain view.
+  - C switches the colours off (the see-through water shows), V the streaks.
+- [x] A clock (`WindClock`): Pause/Play and 1×, 10×, 60× (buttons, or Space and 1, 2, 3), and a slider from 10:00 to 21:30. It stops at the end of the day. The wind is worked out from this clock, not the computer's, so any moment can be looked at again (WD2).
+- [x] Click a point: an orange marker, and a panel (`WindProbeChart`) with the speed and the direction there over the last 10 minutes, a value every 10 seconds, in two charts (different units, so not one chart with two scales). Move the mouse over a chart to read a moment. The history is computed from the clock, so it is right also after a jump with the slider.
+- [x] Start options for screenshots (`--camera=free`, `--at=`, `--look=`, `--top=`, `--time=`, `--probe=`, `--colours=off`, `--streaks=off`, `--paused`), listed at the top of `wind_viewer.gd`.
+- [x] Tests: `Game/tests/unit/maps/test_map_wind.gd`, 9 tests: the pattern reads back as written (also at the station), the Maloja blows down the lake from about 222°, the average day, the graphics card's copy of the pattern, the ground, the clock, and the colours.
+- [x] Speed: 2.2 ms per frame on the graphics card from above, 2.8 ms with the free camera (Max's RX 6950 XT, 1280 × 720); the streaks cost 0.3 ms.
+
+Notes for W3:
+- **The station and the water disagree in the model.** The pattern (WindNinja over land) puts the station's spot at 1.34 × the lake's average, while Max's numbers put the water at 1.3 × the station. So the "station" check of W3 (a simulated Segl-Maria) will read about 1.7 times too much. The pattern's land values are probably too high for a station at 10 m among buildings and trees; W3 has to decide what the simulated station reads.
+- The average day is a smooth curve: no start front, the same every day. W3 replaces `maloja_day.tres` with real days.
+- The viewer shows the wind at 5 m above the ground (the pattern's height). How it changes with height comes with W5 (WindField).
+
+**Stop:** Max checks the viewer (`tools/play.sh wind`):
+- Can you read the strong and weak places on the water, and do the streaks show the direction you know?
+- Is the streak speed comfortable from above and from the free camera (try [ and ])?
+- Is the colour scale clear, or would you rather have Windfinder's colours? (Max, 15 October: Windfinder's. Done.)
+- Does clicking a point give what you want to know for tactics?
+- What is missing before the gusts (W3)? (Max: he can't see any gusts going over the lake. W3 started.)
 
 ### Phase W3: Gusts, pulses, shifts and the day
 
 **Goal:** the moving weather on top of the pattern (WD2), matching the research numbers.
 
 **Tasks (first version):**
-- [ ] Gust patches of a few hundred metres that drift down the valley along the pattern, at least at the mean wind speed, adding about 7 kt.
-- [ ] Pulses and shifts of 10 to 30 minutes (±8 % and ±6° typical).
-- [ ] The day: start front travelling down the lake (about 15 minutes for the 3 km), build-up, the afternoon, the evening turn to the left; light, medium and strong days.
-- [ ] A check that a simulated "station" at Segl-Maria gives the measured 10-minute statistics.
+- [x] **Gusts and lulls, measured on the satellite photos** (Session 43, third version): `WindGusts` (`Game/maps/wind/wind_gusts.gd`), with the Maloja's numbers and their sources in `Game/maps/silvaplana/wind/maloja_gusts.tres`. `MapWind` adds them, and the shaders compute exactly the same.
+  - **How it got here.** First version: gust patches born and dying anywhere on the lake. Max: "gusts now come out of nothing and disappear". Second version: patches born upwind, rolling down the lake and growing. Max: "they are still round, it is a front that is wider", "too much difference", "I have the feeling you are guessing a lot". Indeed most of their numbers were estimates, fitted only to the land station's gust factor. So the third version is built on measurements: the 22 satellite photos (`tools/map/gust_shapes.py`; MALOJA_WIND_RESEARCH.md, "Gusts seen from space") and Max's answers (mostly fronts, sometimes lanes; lanes 50 to 100 m wide; the gusts stood out too much against the wind around them). The patch version is kept in `.map_data/work/wind_research/old_versions/`.
+  - **What the photos say:** the wind on the lake is one continuous pattern of stronger and lighter areas, as many lulls as gusts, not single gusts on a steady background. Two kinds: fronts across the whole lake (500 to 800 m deep, 1.6 to 1.8 km apart) and lanes along the wind (about 1.8 times as long as wide). The Sils half and the Silvaplana half are the same, and the patches don't grow on the way.
+  - **The model:** a smooth random pattern ("noise") in two parts, fronts and lanes, rolling down the lake with the air (`MapWind.travel_m()`) and slowly changing while they roll. Fronts carry 70 % of the variance, lanes 30 %. In knots the spread changes only slowly with the wind (the station's 1-second gust: 1.71 kt + 0.40 × the mean, fitted to the 12 hourly medians); at 12:28 it is 1.8 kt, 12 % of the mean. The sideways ups and downs, which turn the wind, are 0.8 times those along it (turbulence over flat ground, Panofsky and Dutton 1984). A gust adds knots, so it reaches full strength in a weak place too ("the little corner").
+  - **Fitted by measuring the model like the photos:** `Game/maps/silvaplana/dev/export_gusts.gd` writes the model on the photos' grid with the photos' sensor noise, and `gust_shapes.py --model` measures it with the same steps (results below). That matters because the analysis can't see all of a front a kilometre long: it partly looks like a tilt and is taken out. So the model's true spread (12 %) is bigger than what the analysis shows (8 %), on the photos as on the model.
+  - **Still estimates:** how long a gust lives (its size divided by the wind's spread: 210 s for lanes, 980 s for fronts), how fast they travel (1.1 times the mean wind), and how bright water turns into knots (10 % brighter = 10 % more wind, as in W1; sun-glint theory would give up to 1.7 times more wind for the same brightness).
+  - **At one point on the water** (13:00 to 15:00, a value every second): the strongest second in 10 minutes is 1.18 to 1.25 times the mean (the land station: 1.52); a gust of 2 kt or more above the mean comes every 3 minutes or so and lasts about 30 s (Max: "every few minutes for half a minute or more"); the direction swings about 21 to 25° within 10 minutes.
+- [x] **The lee along the south-east shore** (Session 43, after Max's look at the third version: the band "has too much wind compared to real life; on competition you have to really avoid it, and only once in every 10 or so there is a gust that is favourable and goes down all the way"). Measured on the photos at 10 m by `tools/map/shore_lee.py` (MALOJA_WIND_RESEARCH.md, "The lee along the south-east shore"); in the game `WindLee` (`Game/maps/wind/wind_lee.gd`) with `Game/maps/silvaplana/wind/shore_lee.json` + `.bin`.
+  - The band runs from the Sils end to the north-east bend (Max drew the same), deepest 25 to 100 m from the shore, gone by about 450 m; weaker in the middle around "the little corner"; none north of the bend.
+  - Its depth follows the photos' fit: about 10 % in the band at the usual wind, 1.1 % deeper per degree the wind comes from further left, 4.5 % per knot more. So a left shift makes the south-east side much lighter: 6 to 7° to the left, about half the wind is gone 75 m off the shore in the north-east.
+  - Only the strongest 1 in 10 gusts get in (`reach_share` in `maloja_gusts.tres`; the photos: about 1 in 8), lift the lee to the open lake's wind, and roll down the band ("goes down all the way").
+  - W1 held the photos' average lee, flattened by its smoothing; that part is taken out again (`shore_lee.bin`, second layer), so over time the band averages to the photos.
+  - `test_map_wind_lee.gd`, 6 tests. The colour check (graphics card against the game's numbers) passes with the lee: within 1 of 255.
+  - Found on the way, not built in: when the wind veers, the lee may switch to the north-west shore (on six photos the south-east band was 4 to 9 % rougher than the north-west one). For Max to check.
+- [x] Pulses and shifts (Session 43): the whole lake stronger and lighter (±10, 7 and 5 %) and turned left and right (±6, 4 and 2.5°), each as three slow waves of 13 to 45 minutes, travelling down the lake with the gusts. Together: a spread of about 9 % and 5°, as the station's 10-minute means.
+- [ ] The day: start front travelling down the lake (about 15 minutes for the 3 km), build-up, the afternoon, the evening turn to the left; light, medium and strong days. **Postponed** (Max, 15 October 2026): W4 comes first, on the average day (`maloja_day.tres`).
+- [ ] A check that a simulated "station" at Segl-Maria gives the measured 10-minute statistics. Not done: the station stands on land, gustier than the water (see the note on the station and the water under W2), and the gusts are now fitted to the water itself.
+
+The model against the photos (`python tools/map/gust_shapes.py --model .map_data/work/wind_research/model_gusts`), every number measured the same way:
+
+| | photos | model |
+|---|---|---|
+| lanes: the oval where the correlation is 0.3 (lane days; the model's lanes only) | 110 × 56 m | 115 × 61 m |
+| fronts: where the across-lake bands' correlation halves (front days; the model's fronts only) | 240 m (per day 120 to 280) | 230 m |
+| spread (front days; the whole model) | 8.1 % | 7.9 % |
+| share in across-lake bands (front days; the whole model) | 39 % (per day 39 to 45) | 35 % |
+
+Pictures: `Documentation/images/maloja/gust_photos.png` (photos) and `gust_model.png` (the model, the same steps). The model's lanes are rounder spots of 100 to 200 m; the real lanes are finer streaks. That is as far as this kind of noise goes.
+
+Done in Session 43 as well:
+- `test_map_wind_gusts.gd`, 12 tests: the random numbers are exact 32-bit arithmetic (as on the graphics card), the noise's spread is 1 everywhere (also on its grid lines, so no rhythm in the gusts), it has no jumps; the gusts keep the mean, add knots also in a weak place, fronts reach across the lake and lanes lie along the wind, they roll down the lake with the air, the sideways part is 0.8 times the part along the wind; the pulses and shifts have the station's size; the same moment always gives the same wind; nothing jumps from one tenth of a second to the next.
+- The graphics card and the game compute the same wind, gusts included: `tools/godot.sh --path Game res://maps/silvaplana/wind_viewer.tscn -- --check-colours --time=14:30` compares the water's colour at 33 points with the colour of MapWind's speed: within 1 of 255 at 11:10, 14:30, 16:05 and 19:30.
+- The click history takes a value every 2 seconds, to show single gusts.
+- Speed, with the lee: 0.6 to 0.8 ms per frame on the graphics card (Max's RX 6950 XT, 1280 × 720, the PC otherwise idle). Earlier measurements of 2 to 3 ms were taken while other calculations ran on the PC.
 
 ### Phase W4: Tactics tools
 

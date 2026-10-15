@@ -3,6 +3,7 @@
 #
 # Short names, so you don't have to type the res:// path:
 #   tools/play.sh silvaplana     the Silvaplana map: fly around the terrain (map track, M1)
+#   tools/play.sh wind           the wind viewer: the Maloja over Silvaplana (map track, W2)
 #
 # Double-clicked, it asks what to start; Enter plays the game as before.
 set -euo pipefail
@@ -22,6 +23,7 @@ trap 'status=$?; if [[ $status -ne 0 ]] && double_clicked; then read -rp "Press 
 scene_for() {
 	case "$1" in
 		silvaplana) echo "res://maps/silvaplana/dev/terrain_view.tscn" ;;
+		wind) echo "res://maps/silvaplana/wind_viewer.tscn" ;;
 		*) echo "$1" ;;
 	esac
 }
@@ -31,8 +33,10 @@ if [[ $# -eq 0 ]] && double_clicked; then
 	echo "What do you want to start?"
 	echo "  1  the game, on open water (or just press Enter)"
 	echo "  2  Silvaplana: fly around the terrain (keys 1-4: viewpoints, W A S D E Q: fly, right mouse: look)"
+	echo "  3  Silvaplana wind viewer: the Maloja's streaks and speeds (Tab: camera, click: wind at a point)"
 	read -rp "> " choice
 	if [[ "$choice" == "2" ]]; then args=(silvaplana); fi
+	if [[ "$choice" == "3" ]]; then args=(wind); fi
 fi
 if [[ ${#args[@]} -gt 0 ]]; then args[0]="$(scene_for "${args[0]}")"; fi
 

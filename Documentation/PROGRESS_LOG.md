@@ -15,6 +15,67 @@ Template for new entries:
 
 ---
 
+## 15 October 2026 - Session 43 (map track): Wind analyser W2 (the viewer) and W3's gusts and lee, measured on the satellite photos
+
+**Phase:** W2 of the map plan (the wind analyser's viewer), then most of W3 (gusts, pulses, shifts, the lee along the south-east shore). Branch `feature/map-silvaplana`. Nothing new on `feature/physics-sim` or `main` to merge.
+
+**Why:** Max: "Start phase W2 of the map plan: the wind viewer." The Windfinder view in 3D over Silvaplana, to study the Maloja for course-racing tactics. Then, look by look:
+- "use this colors for the wind strength" (a screenshot of Windfinder's legend), and "can't see any gust going over the lake now";
+- "gusts now come out of nothing and disappear", they should "progress out of the gusts more upwind";
+- "they are still round, it is a front that is wider", "too much difference", and "I have the feeling you are guessing it a lot, please be more precise";
+- his answers: mostly fronts, sometimes lanes; lanes 50 to 100 m wide; "too much difference" meant the gusts against the wind around them;
+- "the rest is really good, good job", but the band along the south-east shore "has too much wind compared to real life; on competition you have to really avoid it, and only once in every 10 or so there is a gust that is favourable and goes down all the way".
+
+**Done (what is in the game now):**
+- **The wind, one place for the viewer and later the sailing** (WD1): `MapWind` (`Game/maps/wind/`) = the fixed pattern (`WindPattern`, W1, interpolated as arrows) × the day (`WindDay`, `maloja_day.tres`: the station's hourly medians × 1.3 on the water) + the gusts, pulses and shifts (`WindGusts`, `maloja_gusts.tres`) + the lee along the south-east shore (`WindLee`, `shore_lee.json`). `MapWind.velocity_at(point, time of day)`; for many places at one moment `moment()` + `velocity_in()`.
+- **The viewer**, `tools/play.sh wind` (`Game/maps/silvaplana/wind_viewer.tscn`):
+  - a map camera looking down (`TopCamera`) and the free camera, Tab to switch;
+  - 5000 white streaks moved by the graphics card, drawn as particle trails, also over land up to 2100 m, sped up so they cross the screen in about the same time at every zoom ([ and ] to change);
+  - the wind speed as colour on the water in Windfinder's colours (read from Max's screenshot), with a legend like Windfinder's;
+  - a clock: Pause, 1×, 10×, 60×, a slider from 10:00 to 21:30;
+  - click a point: a marker, and the speed and direction there over the last 10 minutes (a value every 2 s), with a hover readout;
+  - `--check-colours`: compares the water's colour on the screen with the colour of the game's numbers.
+- **The gusts** (third version): a smooth random pattern ("noise") of fronts across the lake (70 % of the variance) and lanes along the wind (30 %), rolling down the lake with the air (`MapWind.travel_m()`) and slowly changing; as many lulls as gusts. In knots they change only slowly with the wind (the station). The sideways part, which turns the wind, is 0.8 times the part along it (Panofsky and Dutton). The same 32-bit random numbers on the CPU and the graphics card (`WindGusts.noise_3d()`), divided by their local spread so there is no rhythm on the noise's grid.
+  - Fitted by measuring the model exactly like the satellite photos: `Game/maps/silvaplana/dev/export_gusts.gd` writes the model on the photos' grid, `tools/map/gust_shapes.py --model` measures both (the table is in the plan, W3; the pictures `gust_photos.png` and `gust_model.png`).
+  - The two earlier versions (patches born anywhere; patches rolling from upwind and growing) were replaced after Max's looks: their sizes, spacing, growth and "gustier at Sils" were estimates the photos don't support. The second version's files are kept in `.map_data/work/wind_research/old_versions/`.
+- **Pulses and shifts:** three slow waves each (13 to 45 minutes), the station's size (about ±9 % and ±5°), travelling down the lake.
+- **The lee along the south-east shore:** measured on the photos at 10 m by `tools/map/shore_lee.py` (MALOJA_WIND_RESEARCH.md, "The lee along the south-east shore"): from the Sils end to the north-east bend, deepest 25 to 100 m from the shore, weaker around "the little corner", deeper when the wind comes from further left (1.1 % per degree) and when it is stronger (4.5 % per knot). Only the strongest 1 in 10 gusts get in (Max; the photos: about 1 in 8) and roll down the band. W1's smoothed version of it is taken out again, so over time the band averages to the photos.
+- **Data and scripts:** `tools/map/wind_ground.py` (the ground under the pattern, for the streaks; in `build.sh`), `gust_shapes.py`, `shore_lee.py`; `play.sh` (menu choice 3), the tools README and CLAUDE.md mention the viewer.
+- **Tests:** `test_map_wind.gd` (9: the pattern, the day, the clock, the colours, the graphics card's copy of the pattern), `test_map_wind_gusts.gd` (12: exact 32-bit random numbers, spread 1 everywhere, no jumps, the mean kept, knots added, fronts across and lanes along, rolling with the air, the sideways share, pulses and shifts), `test_map_wind_lee.gd` (6: where the lee lies, its depth, 1 in 10 gusts through, a strong gust lifts it and rolls down the band, nothing changes elsewhere).
+
+**Verified:**
+- `tools/test.sh`: 168 of 168. `tools/check.sh`: 109 files, 0 failed. `test_wind_pattern.py`: 6 of 6.
+- The graphics card computes the same wind as the game, gusts and lee included: `--check-colours` within 1 of 255 at 11:10, 14:30, 16:05 and 19:30 (33 points on the water each).
+- The model against the photos, measured the same way: lanes 115 × 61 m (photos 110 × 56), fronts' correlation halves at 230 m (240), spread 7.9 % (8.1), across-lake bands 35 % (39).
+- At one point on the open water (13:00 to 15:00): the strongest second in 10 minutes is 1.18 to 1.25 times the mean (the land station: 1.52); a gust of 2 kt or more above the mean every 3 minutes or so, for about 30 s; the direction swings 21 to 25° within 10 minutes.
+- In the lee band, 75 m off the shore in the north-east, with the wind 7° further left than usual: about half the wind is gone (8.7 kt where the open lake has about 17).
+- Screenshots: from above with and without streaks, from 350 m over the Sils end, from the water at the launch, the evening, four moments 40 s apart (the fronts roll down the lake), the lee band with a probe.
+- Speed: 0.6 to 0.8 ms per frame on the graphics card with the PC otherwise idle (1,300 to 1,500 fps); earlier measurements of 2 to 3 ms were taken while other calculations ran.
+
+Not verified:
+- How the streaks and the gusts move (screenshots are still pictures), the mouse controls, and the hover readout: Max play-tests.
+- How bright water turns into knots: taken 1 to 1 (as in W1) for the gusts' spread and for the lee; sun-glint theory allows up to 1.7 times more. Max judges.
+- How long gusts live and how fast they travel: estimates (labelled in `maloja_gusts.tres`).
+
+**Decisions:**
+- Windfinder's colours, as Max asked (the first version had one blue, readable for colour-blind people; Max chose the scale sailors know).
+- The viewer uses plain (linear) tone mapping and fully covering speed colours, so the water's colours are exactly the legend's; C shows the see-through water.
+- Streaks fade out above 2100 m (the pattern up there is not the Maloja), and fly at a quarter of the camera's height, so from the water they lie on the water.
+- Gusts add knots, not a percentage (the station; Max's "little corner").
+- The gusts are measured, not guessed: every number in `maloja_gusts.tres` and `shore_lee.json` is from the photos, the station, Max or the literature, or labelled as an estimate.
+- Max's "mostly fronts" over the photos' "mostly lanes" (19 of 22 photos): his experience on the water wins (WD3), and all photos are from 12:28, while the Maloja builds.
+- Pulses and shifts are three slow waves each, so the CPU and the graphics card compute them the same; they repeat only after many hours.
+- Found for later: the pattern puts the station at 1.34 × the lake's average, while Max puts the water at 1.3 × the station, so a simulated station would read about 1.7 times too much (plan, notes for W3).
+- Found on the photos, not built in: when the wind veers, the lee may switch to the north-west shore.
+
+**Next:**
+- **W4, the tactics tools** (Max, 15 October: W3's "the day" is postponed, W4 first, on the average day). The plan's first ideas: a course on the lake (start line, windward mark), lifts and headers relative to the course, the stronger lanes, which side paid over the last minutes. Start the session by planning W4 in detail with Max.
+- At the start, Max play-tests the latest version (`tools/play.sh wind`; V hides the streaks, 2 for 10× to see the fronts roll; click near the south-east shore for the lee). To ask him: are the gusts strong enough and the lee deep enough (the brightness-to-knots question), are the gusts visible enough in Windfinder's colours (a "difference from the average" view could help, W4), and does the lee move to the north-west shore when the wind veers?
+- Later: W3's "the day" (the start front, light, medium and strong days).
+- Committed and pushed at the end of this session: "Map W2 and W3: wind viewer, gusts and lee measured on satellite photos".
+
+---
+
 ## 14 October 2026 - Session 42 (map track): Wind analyser W0 (research) and W1 (the fixed pattern)
 
 **Phase:** new phases W0 and W1 of the map plan (the wind analyser). Branch `feature/map-silvaplana`.

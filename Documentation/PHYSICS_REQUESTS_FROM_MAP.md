@@ -96,6 +96,8 @@ It should stay deterministic (a seed), so tests and replays repeat. `WindField.v
 
 **Update, 14 October 2026 (Session 42, map track):** Max's wind analyser (map plan, phases W0 to W4) builds these patterns map-side first, as a viewer, without touching `Game/sim/`. The full research, with more stations, 2014 to 2026 and satellite photos of the lake, is in [MALOJA_WIND_RESEARCH.md](MALOJA_WIND_RESEARCH.md); its numbers replace the ones below (they agree within a few per cent). The connection to `WindField` (W5) is still this request.
 
+**Update, 15 October 2026 (Session 43, map track):** the map's wind now exists as one function, map-side: `MapWind.velocity_at(point, time_of_day_s)` in `Game/maps/wind/map_wind.gd` (the air's velocity in m/s, horizontal, at the pattern's height of 5 m; north is -Z, a velocity points where the air goes). It is the fixed pattern of the terrain, the day's mean wind, the gusts and lulls (fronts across the lake and lanes along the wind, rolling down the lake), slow pulses and shifts, and a lee along the south-east shore, all deterministic from a seed and the time of day. The wind viewer draws exactly this (its shaders compute the same sums, checked pixel by pixel). For W5, `WindField.velocity_at(point)` would ask it, with the simulation's time turned into a time of day, and add the height profile. How and when is Michiel's call.
+
 **Targets for Silvaplana, measured** (see the next section):
 - a 10-minute mean of 12 kt at the station (p10 9, p90 15),
 - the strongest 1-second gust in 10 minutes 1.55 times the mean (p10 1.42, p90 1.77), and the 3-second gust 1.48 times,

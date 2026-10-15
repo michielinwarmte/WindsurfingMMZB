@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="WindDay" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://maps/wind/wind_day.gd" id="1"]
+
+; The average Maloja day on Lake Silvaplana (MAP_SILVAPLANA_PLAN.md, W2; MALOJA_WIND_RESEARCH.md,
+; "The day"). First version: phase W3 brings real days with a start, gusts, pulses and shifts.
+; - The speeds and directions are the medians of 950 Maloja days at Segl-Maria, 2014 to 2026, hour by
+;   hour from 10:00 to 21:00. Each sits at 20 past the hour: the middle of that hour's six 10-minute
+;   values (MeteoSwiss stamps each value at its end).
+; - On the water it is stronger than at the station on land: Max sails 15 to 18 kt on a medium day
+;   when the station shows 12.6 kt, so 1.3 times (MALOJA_WIND_RESEARCH.md, "What Max says").
+; - The direction: the lake keeps its own direction (the pattern, about 222 degrees, along the lake)
+;   and turns through the day as much as the station turns away from its afternoon 244 degrees:
+;   a little right until 16:00, then left in the evening (not yet checked by Max on the water).
+
+[resource]
+script = ExtResource("1")
+hours = PackedFloat32Array(10.33, 11.33, 12.33, 13.33, 14.33, 15.33, 16.33, 17.33, 18.33, 19.33, 20.33, 21.33)
+station_speed_kt = PackedFloat32Array(5.4, 8.7, 11.3, 12.6, 13.0, 12.8, 12.2, 11.5, 10.1, 8.4, 6.2, 4.9)
+station_from_deg = PackedFloat32Array(236, 239, 241, 242, 244, 245, 245, 244, 242, 236, 229, 226)
+station_afternoon_from_deg = 244.0
+water_vs_station = 1.3

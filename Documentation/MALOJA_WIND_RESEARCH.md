@@ -21,6 +21,8 @@ The numbers here replace the first ones in [PHYSICS_REQUESTS_FROM_MAP.md](PHYSIC
 | **Shifts** | Small and slow in the 10-minute means | ±6° typical, a swing of 8° within an hour (16° on 1 in 10 hours) |
 | **Through the day** | Turns right until mid-afternoon, then left as it dies | 236° at 10:00, 245° at 15:00 to 16:00, 226° at 21:00 |
 | **On the lake** | Along the lake (about 220°); weaker in a band under the south-east shore and at the Sils end | The station's 245° is its own spot turning the wind about 20° (WindNinja); the band is 200 to 300 m wide (satellite) |
+| **Gusts on the water** | One moving pattern of stronger and lighter areas, as many lulls as gusts: fronts across the whole lake and lanes along the wind | Spread about 7 % across the lake at 12:28 (photos; the land station is gustier); fronts 500 to 800 m deep, 1.6 to 1.8 km apart; lanes about 110 × 56 m |
+| **The south-east lee** | A band to avoid from the Sils end to the north-east bend; only the strongest gusts get in | About 10 % less 50 to 250 m from the shore, deeper by 1.1 % per degree the wind comes from further left; about 1 in 8 pieces as windy as the open lake (Max: 1 in 10) |
 
 All directions are where the wind comes **from**, in degrees, as the game uses them. "Turns right" (veers) means it comes more from the west; "turns left" (backs) means more from the south.
 
@@ -238,17 +240,81 @@ For the simulation (W3) that means:
 - gust patches of 100 to 200 m on top of slower, bigger swells of wind, with no fixed rhythm (several layers of noise, each with its own size and speed);
 - each gust spreads out, so the direction depends on where you are in it.
 
+What the simulation does now (W3, after the satellite photos, next section): the gusts reach full strength in weak places (kept); fronts across the lake and lanes along the wind instead of round patches; the same gustiness at both ends, because the photos show no difference between the Sils half and the Silvaplana half; the wind turns in the gusts by measured turbulence numbers (the sideways ups and downs 0.8 times those along the wind) rather than a fan around each gust; and the south-east lee, which only the strongest gusts get into.
+
+## Gusts seen from space (W3)
+
+Max's verdict on the first simulated gusts (15 October 2026): they were round and stood out too much ("it is a front that is wider", "too much difference"), and the numbers behind them were too much guesswork. The station can't help with this: it is one point, on land. The satellite photos can. Script: `tools/map/gust_shapes.py`.
+
+<img src="images/maloja/gust_photos.png" alt="Four Maloja photos of the lake after the fixed pattern: two days with fronts across the wind, two with lanes along it" width="900">
+
+**How.** Each of the 22 clean Maloja photos (see "Seen from space") is divided by the average of all of them, which removes the lake's fixed pattern. On the open water (150 m or more from the shore, the main basin), a tilt and the day's strength of the fixed pattern are taken out too. What is left is the moving weather of that moment: gusts and lulls.
+- **Shape and size:** the correlation of what is left with itself, shifted in every direction up to 400 m. Where it is above 0.3 it forms an oval: its long axis, length and width describe the typical patch.
+- **Strength:** the spread (standard deviation) of what is left, without the sensor noise.
+
+**What it shows:**
+- **Two kinds of patches.** On 19 of the 22 photos the patches are **lanes along the wind**, typically 1.5 to 2.5 times as long as wide (all photos together: 114 × 64 m at the 0.3 level, long axis at 43°, the wind moves to 42°). On 3 photos they are **fronts across the wind**, bands that cross the whole lake (2021-09-23: about 390 m across and 150 m along the wind at the 0.3 level). The same holds in a round area in the middle of the lake, so it is not the lake's long shape.
+- **How much the wind differs across the lake at one moment:** the water's roughness has a spread of **7.3 %** (median; half the photos 4.8 to 9.1 %).
+- The simulation's first gusts (fitted to the station's gust factor) have a spread of **17 %** across the lake at the same time of day (13 to 24 %). So they stood out about twice as much as on the photos. The station at Segl-Maria, on land at Sils, is gustier than the open water.
+
+**More from the same photos** (asked after Max's answers: "mostly fronts, sometimes lanes"; lanes 50 to 100 m wide; "too much difference" meant the gusts against the wind around them):
+- **The fronts in detail.** On the front days, what is left averaged across the lake carries 39 to 45 % of the ups and downs, so these bands really reach across the whole lake. A bright band is about 500 to 800 m deep along the wind, and the next one comes 1.6 to 1.8 km later (the bands' correlation halves at 240 to 280 m and is lowest at 800 to 920 m). At about 9 m/s that is a front passing every 3 minutes, more wind for about a minute: Max's "every few minutes for half a minute or more".
+- **The Sils half and the Silvaplana half are the same.** Spread 7.0 and 7.5 %, patches 121 × 62 and 111 × 64 m. Max finds the downwind end "a little" steadier; the photos can't see a difference of more than about 10 %. The patches don't grow on their way down the lake either.
+- **As many lulls as gusts.** The 10 % of the water with the most wind is about as far above the middle as the 10 % with the least is below it (for example +9.4 and −8.4 %), and the lopsidedness is small (skewness 0.3; gusts stand out a little more than lulls). Separate gusts with calm water in between would be much more lopsided (well over 1). So the wind on the lake is one continuous pattern of stronger and lighter areas, side by side, not single gusts on a steady background.
+
+**The simulation's gusts, measured the same way** (third version, Session 43). The gusts are now a smooth random pattern of fronts across the lake and lanes along the wind, rolling down the lake with the air (map plan, W3). `Game/maps/silvaplana/dev/export_gusts.gd` writes them on the photos' grid at 40 moments around 12:28, with the photos' sensor noise, and `gust_shapes.py --model` puts them through the same steps:
+
+| | photos | model |
+|---|---|---|
+| lanes: the oval where the correlation is 0.3 (lane days; the model's lanes only) | 110 × 56 m | 115 × 61 m |
+| fronts: where the across-lake bands' correlation halves (front days; the model's fronts only) | 240 m (per day 120 to 280) | 230 m |
+| spread (front days; the whole model) | 8.1 % | 7.9 % |
+| share in across-lake bands (front days; the whole model) | 39 % (per day 39 to 45) | 35 % |
+
+Pictures: `Documentation/images/maloja/gust_photos.png` (photos) and `gust_model.png` (the model, the same steps). The model's lanes are rounder spots of 100 to 200 m; the real lanes are finer streaks. That is as far as this kind of noise goes.
+
+<img src="images/maloja/gust_model.png" alt="The simulated gusts at four moments, drawn the same way as the photos" width="900">
+
+Because the analysis takes out a tilt, it can't see all of a front a kilometre long. The model's true spread is therefore 12 % of the mean at 12:28 (1.8 kt), while the analysis shows 8 %; the same holds for the photos. At one point on the water this gives a strongest second in 10 minutes of 1.18 to 1.25 times the mean (the station on land: 1.52), a gust of 2 kt or more above the mean every 3 minutes or so, lasting about 30 s, and the direction swinging 21 to 25° within 10 minutes.
+
+**What it can't tell:**
+- **Knots.** Brightness is not wind. W1 took 10 % brighter as 10 % more wind. Sun-glint theory (Cox and Munk 1954) for a sun 60° up and a satellite looking straight down gives about 10 % brighter for 17 % more wind. So the wind's spread is **7 to 12 %**, not exactly known.
+- **Other times.** All photos are from 12:28, while the Maloja is still building.
+- **Very small patches.** With 10 m pixels, patches smaller than about 30 m are lost.
+- **Whether fronts belong to a kind of day.** The three front days had 10.7 to 13.4 kt at the station, about the same as the others; three photos are too few to say more.
+
+## The lee along the south-east shore (W3)
+
+Max on the simulated band along the south-east (Corvatsch) shore, from the Sils end to the north-east bend (15 October 2026): "this area has too much wind compared to real life; on competition you have to really avoid it, and only once in every 10 or so there is a gust that is favourable and goes down all the way". In the game the band was the photos' average (W1, smoothed over 150 m), with the gusts at full strength in it. Script: `tools/map/shore_lee.py`.
+
+**What the photos show** (the 22 Maloja photos at 10 m, Maloja divided by calm, relative to the open lake):
+- **The band is real.** Along the south-east shore the water is 17, 18 and 16 % smoother at 25 to 100 m from the shore, 13 % at 100 to 150 m, 9 % at 150 to 200 m, and the band is gone by about 450 m. Along the north-west shore, the control, it is 2 to 3 % at every distance (water near any shore is a little smoother; that is not a lee).
+- **It runs from the Sils end to the north-east bend**, as Max drew it. Measured in pieces of 200 m (the lee 50 to 250 m out, minus the north-west side): about 12 % at the Sils end, 6 to 7 % in the middle around "the little corner", 13 to 15 % in the north-east, and nothing north of the bend along the east shore.
+- **W1 had flattened it.** Its smoothing left 9.4 % at 25 to 100 m from the shore where the photos have 11.1 % (both averaged along the whole stretch).
+- **Its depth changes with the wind.** Per photo (the band 50 to 250 m out, minus the north-west side of the same photo) against the station's 10-minute wind at the photo's moment, a straight-line fit over 21 photos: **9.9 % (±2.3) at 240° and 12.6 kt, 1.1 % less (±0.4) for every degree the wind comes from further right, and 4.5 % more (±2.1) for every knot more wind**. That explains 42 % of the differences between the days. A wind from further left blows more off the south-east shore and its forest, so the lee is deeper: with the station at 227 to 240° the band had 8 to 35 % less, with 241 to 251° anything from 19 % less to 9 % more (six of those 13 days had no lee at all).
+- **When the wind veers, the lee may switch shores.** On the six photos with a wind clearly from the right, the south-east band was 4 to 9 % rougher than the north-west one. Not built in; for Max to check.
+- **Gusts that get in.** On the days with a lee, 7 of 54 pieces of band (a third of the shore on one photo) were as rough as the open lake: about 1 in 8, close to Max's "once in every 10 or so".
+- One photo is left out (2023-08-24): its whole Sils end is bright (+61 %), most likely haze or sun glint the cleanliness check didn't catch.
+
+**In the game** (`WindLee`, `Game/maps/silvaplana/wind/shore_lee.json`; map plan W3): the band's depth at each moment comes from the fit (with the moment's direction and strength, shifts and pulses included), times the shape across and along the shore. Only the strongest 1 in 10 gusts get in and lift the lee to the open lake's wind (Max), and such a gust rolls down the band with the air ("goes down all the way"). Over time it averages to the photos' band, without W1's flattening. Brightness is taken as wind 1 to 1 here too; if the lee is still too weak on the water, that is the number in doubt (sun-glint theory allows up to 1.7 times more, see "What it can't tell" above).
+
 ## What we don't know yet: questions for Max
 
-The station stands on land, at one end of the lake, and gives 10-minute averages. The rest comes from the water. Max, what do you see out there? Short answers are fine (they can go in [SILVAPLANA_SPOT_NOTES.md](SILVAPLANA_SPOT_NOTES.md)):
-1. **How much stronger** is it on the water than the station's 12 to 13 kt? (Spot guides say 15 to 25.)
-2. **Direction on the water:** along the lake (224°, straight from the Sils end to the Silvaplana end), or more from the west like the station (245°)?
-3. **Strong and weak places:** where is it strongest? Is there a lighter band under one shore (the forest on the north-west side, or under Corvatsch on the south-east side)? Near the launch?
-4. **Gusts:** do you see them coming as dark patches? How big are they (a boat length, 100 m, a few hundred metres), how often do they come, and how long does one last?
-5. **The fan:** in a gust, does the wind turn one way on one side and the other way on the other side? Or does a gust come with a typical shift?
-6. **Shifts:** do you sail on shifts there (phases of more left and more right), or is it about the pressure (the stronger and weaker lanes)? Is one side of the lake usually better?
+The station stands on land, at one end of the lake, and gives 10-minute averages. The rest comes from the water. Max's answers are in [SILVAPLANA_SPOT_NOTES.md](SILVAPLANA_SPOT_NOTES.md) and under "What Max says" above.
+
+Answered on 15 October 2026:
+1. **How much stronger on the water:** depends on the day: 12 to 14, 15 to 18 or 18 to 22 kt on a competition day.
+2. **Direction on the water:** along the lake ("pretty good").
+3. **Strong and weak places:** weaker under the south-east (Corvatsch) shore and at the Sils end, a little more wind on the north-west side; the south-east band is one to avoid in a race.
+4. **Gusts:** patches of 100 to 200 m, at all time scales; mostly fronts across the wind, sometimes lanes along it (50 to 100 m wide).
+5. **The fan:** "depends on where you are".
+6. **Shifts or pressure:** "all of it"; the north-west side usually pays upwind.
+
+Still open:
 7. **The start:** do you see it come down the lake as a line? How long from the first ripples to full strength?
-8. **The evening:** does it turn left (more from the south) as it dies, as the station says?
+8. **The evening:** does it turn left (more from the south) as it dies, as the station says? (Max doesn't know; usually off the water by then.)
+9. **How bright water turns into knots** (for the gusts' spread and the lee's depth, taken 1 to 1): are the simulated gusts strong enough, and is the south-east lee deep enough?
+10. **Does the lee switch shores when the wind veers?** On six photos with a wind clearly from the right, the north-west band was the smoother one.
 
 ## Data and how to repeat it
 
