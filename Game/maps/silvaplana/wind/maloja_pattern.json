@@ -1,0 +1,18 @@
+{
+ "about": "The Maloja's fixed pattern over the terrain, from WindNinja (tools/map/windninja_pattern.py, Documentation/MALOJA_WIND_RESEARCH.md): don't edit. Layer 1: wind speed / the lake's median speed. Layer 2: the direction the wind comes from minus the lake's mean direction, degrees, positive = turned clockwise (from further right).",
+ "file": "maloja_pattern.bin",
+ "format": "two float32 little-endian layers (speed factor, then turn), each row by row from the north edge, each row from west to east",
+ "columns": 440,
+ "rows": 400,
+ "cell_m": 50.0,
+ "west_m": 2768000.0,
+ "north_m": 1156020.0,
+ "height_above_ground_m": 5.0,
+ "run": "final_stable_220_50m",
+ "lake_direction_deg": 221.9,
+ "lake_strength": "from the satellite's roughness map (satellite_wind.py), roughness taken as wind x 1.0",
+ "station_segl_maria": {
+  "speed_factor": 1.337,
+  "turn_deg": 19.1
+ }
+}

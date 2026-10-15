@@ -23,7 +23,12 @@ The branch starts from `feature/physics-sim` (Phases 1 to 5), because `main` doe
 | M2 | The look: aerial photo, sky, the mountains you can see | ✅ Built on Windows (Sessions 40 and 41), with see-through lake water in the terrain view. Waiting for Max's check of the look, and for Michiel on R9 (the water in the game) |
 | M3 | Sailing on the lake: start spot, one Maloja weather setting, shoreline | ⬜ |
 | M4 | Details: camping and beach, village, trees, landmarks | ⬜ |
-| Later | Big projects for every spot, with Michiel: wind simulation, wind-driven waves, mountain-lake physics, live weather, other sailors | ⬜ |
+| W0 | Wind analyser: research into how the Maloja behaves | ✅ Done (Session 42): [MALOJA_WIND_RESEARCH.md](MALOJA_WIND_RESEARCH.md). Max answered its questions on 15 October (in SILVAPLANA_SPOT_NOTES.md and the research document) |
+| W1 | Wind analyser: the fixed pattern over the terrain (WindNinja) | ✅ First version (Session 42): direction from WindNinja, strength on the lake from the satellite. Checked by Max on 15 October: the weak south-east shore, the weak Sils end, the direction along the lake and the stronger north-west side are right |
+| W2 | Wind analyser: the 3D viewer in Godot | ⬜ |
+| W3 | Wind analyser: gusts, pulses, shifts and the day | ⬜ |
+| W4 | Wind analyser: tactics tools | ⬜ |
+| Later | Big projects for every spot, with Michiel: wind simulation, wind-driven waves, mountain-lake physics, live weather, other sailors | ⬜ (the wind patterns, L1, are now the W phases) |
 
 ## Team decisions (14 October 2026)
 
@@ -79,6 +84,7 @@ The station stands on land, so its speeds are probably lower than on the water. 
 | **Git + Git LFS** | Version control, big files (MD2) | ✅ installed |
 | **VS Code** + godot-tools, **Claude Code** | Writing code and scripts with AI | ✅ installed |
 | GIMP or Krita (optional) | Touch up textures, for example the camping signs | optional |
+| **WindNinja 4.0.0** (US Forest Service, free) | The wind analyser's fixed pattern (W1): the wind over the real terrain. `WindNinja_cli.exe` is run by `tools/map/windninja_pattern.py`. | ✅ unpacked with 7-Zip into `%LOCALAPPDATA%/Programs/WindNinja/4.0.0` (no admin rights needed; the official installer asks for them). The scripts find it through `$WINDNINJA`, then that folder |
 
 Everyone on the team uses the same Blender version (4.5 LTS, supported until 2027) so the scripts and the `.blend` files behave the same on every PC. The Linux PC has Blender at `/usr/bin/blender`; check its version.
 
@@ -353,6 +359,72 @@ Also in M2:
 
 **Done when:** 60 fps still holds, the map is under 300 MB, and screenshots from the launch beach and the three viewpoints show the camping, the village and the forest.
 **Stop:** Max checks: does the beach look like the real one?
+
+## The wind analyser (phases W0 to W4)
+
+Asked for by Max on 14 October 2026: a simulated Maloja (speed, gusts and shifts) that you can **watch in the game**, like the Windfinder map but in 3D over the real terrain, in real time or sped up, to work out tactics for course racing. It is the first part of L1 (the wind patterns, Max's), and it changes nothing in the physics: the sailing keeps its own wind until W5 connects the two with Michiel (R5).
+
+**What it is about:** how the Maloja behaves once it blows (its day, its gusts and shifts, where it is strong or weak), not when it comes.
+
+### Wind decisions
+
+- **WD1. One wind, two users.** The viewer and, later, the sailing ask the same code for the wind at a point and a moment. Otherwise you would see a gust coming and not feel it.
+- **WD2. Fixed pattern plus moving weather.** The terrain's effect (where it is stronger, weaker, turned) is computed once, offline, and stored as a grid. The gusts, pulses, shifts and the day's build-up are drawn on top while the game runs, from a seed, so a "day" can be replayed exactly and run at any speed.
+- **WD3. Checked against measurements.** The numbers in [MALOJA_WIND_RESEARCH.md](MALOJA_WIND_RESEARCH.md) are the targets: the station statistics, the satellite photos of the lake, and Max's experience on the water. Where they disagree, Max's experience on the water wins over the land station.
+- **WD4. Map files only** (MD7): `tools/map/`, `Game/maps/` and `Documentation/`. Nothing in `Game/sim/`.
+
+### Phase W0: Research
+
+**Goal:** know how the Maloja behaves, in numbers the simulation can be checked against.
+
+**Tasks:**
+- [x] What is written about it: weather services, an old measurement study (Mörikofer 1938, measured at Sils in 1935), spot guides, glider pilots, race reports.
+- [x] Five MeteoSwiss stations along its path (Vicosoprano, Segl-Maria, Piz Corvatsch, Samedan, Bivio), 2014 to 2026: `download.py wind-valley` and `maloja_research.py`. The day, the start and how it travels, day types, gusts, pulses, shifts.
+- [x] Sentinel-2 photos of the lake on Maloja afternoons, against calm ones: where the water is rough. `satellite_wind.py`.
+- [x] Charts and the document: [MALOJA_WIND_RESEARCH.md](MALOJA_WIND_RESEARCH.md), `maloja_charts.py`.
+
+**Stop:** Max answers the questions at the end of the research document (what he sees on the water).
+
+### Phase W1: The fixed pattern
+
+**Goal:** a map of how the terrain shapes the Maloja over the lake: how much stronger or weaker than average, and how much it is turned, at every point.
+
+**Tasks:**
+- [x] WindNinja 4.0.0 (mass-conserving solver) on the terrain from the Maloja pass to St. Moritz (swissALTIRegio at 30 m), for incoming directions 220 to 250° and three kinds of air (stable, slightly stable, neutral), wind 5 m above the ground: `tools/map/windninja_pattern.py`, 12 runs in 2 minutes.
+- [x] Compare each run with the satellite's roughness map and the station. Result ([MALOJA_WIND_RESEARCH.md](MALOJA_WIND_RESEARCH.md), "Computed over the terrain"): stable air reproduces the station's direction (the lake gets about 220°, along the lake; the station's spot reads 20° more), but no run reproduces the satellite's strength pattern (correlation 0.18 at best).
+- [x] Store the pattern for the game: `Game/maps/silvaplana/wind/maloja_pattern.json` + `.bin` (generated, don't edit), 50 m cells, speed factor and turn. **Decision:** the direction comes from WindNinja (stable, 220°), the strength on Lake Silvaplana from the satellite (10 % rougher = 10 % more wind, an assumption), elsewhere from WindNinja. Checked by `tools/map/tests/test_wind_pattern.py` (6 checks).
+- [x] Pictures for Max: `Documentation/images/maloja/pattern_game.png` (what the game uses), `pattern_lake.png` (WindNinja beside the satellite), `pattern_valley.png` (the flow down the valley).
+- [x] One run of WindNinja's momentum solver (OpenFOAM, which has inertia), as a check of the fast solver: 52 minutes on a 35 m mesh (`.map_data/work/wind_pattern/runs/momentum_230`). It agrees that the south-east side of the Silvaplana half is weaker, but it can't do stable air and doesn't reproduce the station's turn, so it is not used for the game.
+
+**Stop:** Max checks the picture: are the strong and weak places where he knows them?
+
+### Phase W2: The viewer
+
+**Goal:** the Windfinder view in 3D: the Silvaplana terrain, white streaks moving with the wind, the water coloured by wind speed.
+
+**Tasks (first version):**
+- [ ] A scene in `Game/maps/silvaplana/` with the terrain, the lake and a top-down and a free camera.
+- [ ] Streaks that move with the wind at a watchable speed, also over land, and the wind speed as colour on the water, with a legend.
+- [ ] A clock: pause, 1×, 10×, 60×, and a slider through the day.
+- [ ] Click a point: speed and direction there over the last minutes.
+
+### Phase W3: Gusts, pulses, shifts and the day
+
+**Goal:** the moving weather on top of the pattern (WD2), matching the research numbers.
+
+**Tasks (first version):**
+- [ ] Gust patches of a few hundred metres that drift down the valley along the pattern, at least at the mean wind speed, adding about 7 kt.
+- [ ] Pulses and shifts of 10 to 30 minutes (±8 % and ±6° typical).
+- [ ] The day: start front travelling down the lake (about 15 minutes for the 3 km), build-up, the afternoon, the evening turn to the left; light, medium and strong days.
+- [ ] A check that a simulated "station" at Segl-Maria gives the measured 10-minute statistics.
+
+### Phase W4: Tactics tools
+
+**Tasks (first ideas):** put a course on the lake (start line, windward mark), show lifts and headers relative to the course, the stronger lanes, and which side paid over the last minutes.
+
+### W5 (later, with Michiel)
+
+The sailing reads the same wind (R5): `WindField.velocity_at(point)` asks the map's wind.
 
 ## Later: big projects, for every spot, with Michiel
 

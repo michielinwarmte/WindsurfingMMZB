@@ -15,6 +15,61 @@ Template for new entries:
 
 ---
 
+## 14 October 2026 - Session 42 (map track): Wind analyser W0 (research) and W1 (the fixed pattern)
+
+**Phase:** new phases W0 and W1 of the map plan (the wind analyser). Branch `feature/map-silvaplana`.
+
+**Why:** Max wants the simulated Maloja (speed, gusts, shifts) as a viewer in the game, like Windfinder's map but in 3D over the terrain, real time and sped up, to work out tactics for course racing. It is about how the Maloja behaves once it blows, not when it comes. Max agreed the plan ("run everything, document carefully, first do no. 1", then "do phase 2 as well").
+
+**Done:**
+- Plan: the wind analyser's phases W0 to W4 and its decisions WD1 to WD4 in MAP_SILVAPLANA_PLAN.md; WindNinja in the Tools table; a pointer in PHYSICS_REQUESTS_FROM_MAP.md (R5).
+- W0, research: [MALOJA_WIND_RESEARCH.md](MALOJA_WIND_RESEARCH.md), with four charts in `Documentation/images/maloja/`.
+  - Sources: Mörikofer's 1938 measurements at Sils (found as a 1982 translation), the weather services, spot guides, glider pilots, race reports, papers on wind over lakes and gusts.
+  - `download.py wind-valley`: five MeteoSwiss stations, 2010 to now (0.41 GB). `maloja_research.py` and `maloja_charts.py`.
+  - Main numbers, 950 Maloja days 2014 to 2026:
+    - 12.6 to 13.0 kt mean from 13:00 to 16:00; gusts about +7 kt at every strength;
+    - pulses and shifts of 10 to 30 minutes (±8 %, ±6°);
+    - the start travels down the valley at about half the wind speed;
+    - it turns right until 16:00 and left in the evening.
+  - `satellite_wind.py`: Sentinel-2 photos of the lake on Maloja afternoons against calm ones (22 and 5 clean photos). It reads only the lake's corner of each photo (about 10 MB of 1 GB).
+    - Smoother water along the south-east shore and at the Sils end.
+    - The streak direction was tried and is not usable: the calm photos show the same direction.
+- W1, the fixed pattern: WindNinja 4.0.0, unpacked with 7-Zip into `%LOCALAPPDATA%/Programs/WindNinja/4.0.0` (the installer wants admin rights). `windninja_pattern.py` makes 12 runs and compares them with the station and the satellite.
+  - Stable air puts the lake's wind along the lake (about 220°) and turns the station's reading 20° to the right, as measured.
+  - The strength disagrees with the satellite.
+  - The game's pattern takes the direction from WindNinja and the strength on the lake from the satellite: `Game/maps/silvaplana/wind/maloja_pattern.json` + `.bin`. Pictures for Max: `pattern_game.png`, `pattern_lake.png`, `pattern_valley.png`.
+- `tools/map/tests/test_wind_pattern.py`: 6 checks of the pattern.
+- One run of WindNinja's momentum solver (OpenFOAM, 52 minutes) as a check: it also puts the weaker wind on the south-east side, but can't do stable air; not used for the game.
+
+**Verified:**
+- `tools/check.sh`: 89 files, 0 failed. `tools/test.sh`: all passed.
+- `test_wind_pattern.py`: 6 of 6.
+- The streak-direction maths, on made-up streaks at known angles (within 1°).
+- Every chart and picture looked at.
+
+Not verified:
+- whether the pattern matches the water (Max),
+- whether 10 % rougher water means 10 % more wind (an assumption).
+
+**Decisions:**
+- The near-infrared band was dropped for the red one: the atmospheric correction leaves the water at almost exactly 0 there.
+- The first satellite selection let cloud shadows and haze through and was replaced by a strict one (no clouds within 500 m, no haze).
+- Charts are PNG (light and dark versions) instead of SVG: no browser on this PC to check SVGs, and Godot's SVG reader skips text.
+- The fast solver's strength pattern was not used on the lake, because the satellite contradicts it (no inertia, no forest).
+
+**Max's check (15 October):** the pattern is right: weaker along the south-east shore and at the Sils end, the wind along the lake, a little more on the north-west side (which usually pays upwind). New for W3:
+- gusts of 100 to 200 m at all time scales, randomly;
+- gustier at the Sils end and steadier downwind;
+- full-strength gusts now and then in the weak band at the bend of the south-east shore;
+- the turn in a gust depends on where you are in it.
+
+His answers are in SILVAPLANA_SPOT_NOTES.md and in the research document, "What Max says".
+
+**Next:**
+- Then W2, the viewer.
+
+---
+
 ## 14 October 2026 - Session 41 (map track): Realistic lake water
 
 **Phase:** M2 of the map plan, the water. Branch `feature/map-silvaplana`.

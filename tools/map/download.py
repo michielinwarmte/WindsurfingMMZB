@@ -6,6 +6,8 @@ gigabytes before they are needed:
   heights      swissALTI3D 0.5 m (shore band), swissBATHY3D (lakebed), swissALTIRegio 10 m
                (surroundings)                                   about 0.5 GB, needed from M1
   wind         MeteoSwiss Segl-Maria 10-minute data 2020-2029   about 40 MB
+  wind-valley  MeteoSwiss 10-minute data 2010 to now of five stations along the Maloja's path
+               (silvaplana_area.VALLEY_STATIONS), for the wind research    about 0.4 GB
   photos-far   SWISSIMAGE 2 m for the 1 km tiles visible.py marks as visible   small, M2
   photos-near  SWISSIMAGE 10 cm for the shore band              about 1.1 GB, M2
   surface      swissSURFACE3D 0.5 m for the shore band (trees, buildings)      about 0.3 GB, M4
@@ -131,6 +133,19 @@ def stage_wind() -> list[RawFile]:
     return [RawFile(asset["href"], area.RAW_DIR / "meteoswiss" / Path(asset["href"]).name, checksum_of(asset))]
 
 
+def stage_wind_valley() -> list[RawFile]:
+    """All valley stations, 2010 to now. The 'recent' file (this year up to yesterday) changes
+    every day; delete it to fetch a newer one."""
+    files = []
+    for station in area.VALLEY_STATIONS:
+        item = fetch_json(f"{STAC}/collections/ch.meteoschweiz.ogd-smn/items/{station}")
+        for period in ("historical_2010-2019", "historical_2020-2029", "recent"):
+            asset = asset_ending(item, f"_{station}_t_{period}.csv")
+            files.append(RawFile(asset["href"], area.RAW_DIR / "meteoswiss" / Path(asset["href"]).name,
+                                 checksum_of(asset)))
+    return files
+
+
 def stage_photos_near() -> list[RawFile]:
     return tiles_1km("ch.swisstopo.swissimage-dop10", "_0.1_2056.tif", area.shore_tiles(), "swissimage_10cm")
 
@@ -157,6 +172,7 @@ def stage_surface() -> list[RawFile]:
 STAGES = {
     "heights": stage_heights,
     "wind": stage_wind,
+    "wind-valley": stage_wind_valley,
     "photos-far": stage_photos_far,
     "photos-near": stage_photos_near,
     "surface": stage_surface,

@@ -94,6 +94,8 @@ Tests could be:
 
 It should stay deterministic (a seed), so tests and replays repeat. `WindField.velocity_at(point)` already takes a position, so the interface may not need to change.
 
+**Update, 14 October 2026 (Session 42, map track):** Max's wind analyser (map plan, phases W0 to W4) builds these patterns map-side first, as a viewer, without touching `Game/sim/`. The full research, with more stations, 2014 to 2026 and satellite photos of the lake, is in [MALOJA_WIND_RESEARCH.md](MALOJA_WIND_RESEARCH.md); its numbers replace the ones below (they agree within a few per cent). The connection to `WindField` (W5) is still this request.
+
 **Targets for Silvaplana, measured** (see the next section):
 - a 10-minute mean of 12 kt at the station (p10 9, p90 15),
 - the strongest 1-second gust in 10 minutes 1.55 times the mean (p10 1.42, p90 1.77), and the 3-second gust 1.48 times,

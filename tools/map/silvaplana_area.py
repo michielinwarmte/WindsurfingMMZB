@@ -30,6 +30,17 @@ REGIO_TILES_NORTH_KM = (1124, 1134, 1144, 1154, 1164)
 # The weather station at the south-west end of the lake (MeteoSwiss Segl-Maria, SIA).
 WIND_STATION = "sia"
 
+# Stations along the Maloja's path, for the wind research (Documentation/MALOJA_WIND_RESEARCH.md).
+# Up the Val Bregaglia where the wind starts, at the lake, on the mountain above, further down
+# the valley, and behind the Julier pass. All measure wind every 10 minutes.
+VALLEY_STATIONS = {
+    "vio": "Vicosoprano, Val Bregaglia, 1089 m, 16 km south-west",
+    "sia": "Segl-Maria, at the lake, 1804 m",
+    "cov": "Piz Corvatsch, 3294 m, 4 km south-east: the wind above the valley",
+    "sam": "Samedan, 1709 m, 11 km north-east, down the valley",
+    "biv": "Bivio, 1856 m, 9 km west, behind the Julier pass",
+}
+
 # Known points for the checks (tools/map/tests/, and Game/tests/unit/maps/ uses the same numbers):
 # LV95 east and north in metres, and the published height above sea level where there is one.
 KNOWN_POINTS = {

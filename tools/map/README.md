@@ -25,6 +25,10 @@ Scripts that turn Swiss open data into the Silvaplana map. The plan behind them 
 | `photos.py` | One aerial-photo texture per terrain chunk (plan M2): 8192 px per km (12 cm) on the two tiles of the camping and the launch beach, 2048 px (0.5 m) on the rest of the shore band, 512 px (2 m) up to 8 km and 128 px (8 m) further away. Where there is no Swiss photo (22 tiles in Italy), it paints the colour the Swiss photos have at that height, slope and lighting. `--only=<name>` makes some chunks. About 3 minutes. | `Game/maps/silvaplana/terrain/photos/*.webp` and their `.import` files (mipmaps, graphics-card compression; generated, don't edit), `.map_data/work/terrain/photo_fallback.png` (the learned colours) |
 | `tests/test_photos.py` | Checks of photos.py's output: every chunk has its photo at the right size, Godot makes mipmaps and compresses them, the photos line up with the lake (flipped or shifted 100 m lines up worse), no black patches. | printed, one line per check |
 | `maloja_stats.py <csv>` | Statistics of the Maloja wind and the air density from MeteoSwiss Segl-Maria. | printed; the results are in `Documentation/PHYSICS_REQUESTS_FROM_MAP.md` |
+| `maloja_research.py` | The wind analyser's research (map plan W0): how the Maloja behaves at five stations along its path, 2014 to now: the day, the start and how it travels, day types, gusts, pulses, shifts. Needs `download.py wind-valley`. About 40 s. | printed (keep it with `> .map_data/work/wind_research/report.txt`), `.map_data/work/wind_research/results.json`; explained in `Documentation/MALOJA_WIND_RESEARCH.md` |
+| `maloja_charts.py` | The charts of the research document, from `results.json`, each in a light and a dark version. | `Documentation/images/maloja/*.png` |
+| `satellite_wind.py` | Where the lake's water is rough on Maloja afternoons: every Sentinel-2 photo since 2017 taken in a Maloja (>= 10 kt at Segl-Maria) or a calm, averaged on a 10 m grid. Downloads only the lake's corner of each photo (about 10 MB each). About 45 minutes the first time, then it reuses the cut-outs. | `.map_data/work/wind_research/satellite/` (cut-outs, `scenes.json`, `roughness.npz`, pictures) |
+| `windninja_pattern.py` | The Maloja's fixed pattern over the terrain (map plan W1): runs WindNinja for several directions and kinds of air, compares them with the satellite and the station, reruns the best at 50 m. Needs WindNinja (map plan, Tools). About 3 minutes. | `Game/maps/silvaplana/wind/maloja_pattern.json` + `.bin` (generated, don't edit), `Documentation/images/maloja/pattern_*.png`, `.map_data/work/wind_pattern/` (every run, `comparison.json`) |
 | `silvaplana_area.py` | Not a step: the areas every script works on (lake, shore band, surroundings). | — |
 | `readers.py` | Not a step: reads the raw files into height grids. | — |
 
@@ -58,10 +62,11 @@ BlenderGIS (2.2.10, in Blender 4.5) also works for exploring by hand. It imports
 |---|---|---|
 | `heights` | swissALTI3D 0.5 m, 25 tiles of the shore band (2023); swissBATHY3D Silvaplanersee; swissALTIRegio 10 m, 25 tiles of 10 km (east 2755 to 2805, north 1124 to 1174) | 0.54 GB |
 | `wind` | MeteoSwiss Segl-Maria (SIA), 10-minute values 2020 to 2029 | 40 MB |
+| `wind-valley` | MeteoSwiss Vicosoprano, Segl-Maria, Piz Corvatsch, Samedan and Bivio, 10-minute values 2010 to now (the `recent` file changes daily; delete it to get a newer one) | 0.41 GB |
 | `photos-far` | SWISSIMAGE 2 m, 332 of the 354 visible tiles of 1 km (the other 22 are in Italy) | 55 MB |
 | `photos-near` | SWISSIMAGE 10 cm, the 25 shore-band tiles (2025 flight) | 1.1 GB, downloaded in M2 (agreed by the team; `build.sh` passes `--yes`) |
 | `surface` | swissSURFACE3D 0.5 m, the 25 shore-band tiles | about 0.34 GB, not downloaded yet (M4) |
 
 ## Credits
 
-Every map built from this data must show: **"Terrain, aerial photos and lakebed: © swisstopo. Wind data: MeteoSwiss. Lake level: BAFU."** The data is free Swiss Open Government Data, and naming the source is the only condition.
+Every map built from this data must show: **"Terrain, aerial photos and lakebed: © swisstopo. Wind data: MeteoSwiss. Lake level: BAFU."** Pictures made from the satellite photos say "Contains modified Copernicus Sentinel data" with the years. The data is free Swiss Open Government Data, and naming the source is the only condition.
