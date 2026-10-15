@@ -27,7 +27,7 @@ The team are not very experienced programmers and rely on AI for most of the cod
 | Does every script, scene and resource load? | `tools/check.sh` |
 | Screenshot of the running game | `tools/screenshot.sh [res://scene.tscn] [out.png] [frames]`, then Read the PNG (default `.screenshots/latest.png`) |
 | Look up the exact Godot 4.7 API | `tools/api_docs.sh` once, then grep `.godot_api/doc/classes/<Class>.xml` |
-| Play the game / open the editor | `tools/play.sh` / `tools/edit.sh` (these open windows and are meant for the team). `tools/play.sh silvaplana` opens the Silvaplana terrain view, `tools/play.sh wind` the wind viewer; double-clicked, play.sh asks what to start |
+| Play the game / open the editor | `tools/play.sh` / `tools/edit.sh` (these open windows and are meant for the team). `tools/play.sh silvaplana` opens the Silvaplana terrain view, `tools/play.sh wind` the wind viewer (with the race course maker); double-clicked, play.sh asks what to start |
 | Anything else with Godot | `tools/godot.sh <args>` |
 
 Always go through these scripts instead of calling `godot` directly: the shell Claude Code uses is zsh without `~/.local/bin` on its PATH, and the scripts use the pinned Godot version. They exit non-zero on failure and keep logs in `.logs/`. `tools/screenshot.sh` opens a game window for a few seconds; that is expected.

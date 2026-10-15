@@ -15,6 +15,61 @@ Template for new entries:
 
 ---
 
+## 15 October 2026 - Session 44 (map track): W4 planned; W4a, the race course maker, first version
+
+**Phase:** W4 of the map plan, part a (the course maker). Branch `feature/map-silvaplana`.
+
+**Why:** Max asked what W4 includes, added the iQFOiL Notice of Race and Sailing Instructions of the 2026 U23 Worlds (Puck) "with pictures of the official courses", and then: "we are going to make this also a easy competition course maker. drag buoys in the map via an easy to use system ... so we can make all these courses ourselves and use templates". He agreed to split W4 into W4a (the course maker) and W4b (the tactics tools), to put it inside the wind viewer for now ("later in game it may be different"), and to save courses for the team. He didn't know the beat length.
+
+**Done:**
+- **The plan:** W4 split into W4a and W4b, with the sources, Max's decisions (WD5 to WD7), the class's numbers, the estimates, and a measurement of the lake.
+- **The course sizes come from the class, not from a guess:** the iQFOiL Class Race Management Guideline (2023) gives mark 1's distance per wind range (windward-leeward 0.9, 1.0 and 1.05 nm at 10 to 13, 13 to 17 and 17+ kt; trapezoid 0.85, 0.95 and 1.0 nm), the reaches, gates (70 to 80 m), lines (start: boards × 2.20 m × 3; finish 30 to 40 m) and the sprint and medal race sizes. They are in `Game/maps/course/iqfoil_courses.tres` with their sources. What the guideline doesn't give is labelled as an estimate there: the gate 150 m above the start, the trapezoid's outer gate and finish, the upwind sprint (1000 m to mark 1, from its 7-minute target time).
+- **The lake, measured** on the 2 m shore grid: along the Maloja (222°) about 2.8 km of open water, 760 to 1370 m wide. A full windward-leeward course fits; the full trapezoid's reach (1.3 to 1.5 km) doesn't.
+- **The course maker** (`Game/maps/course/`, in the wind viewer, `tools/play.sh wind`):
+  - `Course` and `CourseMark`: the marks and the mark order written as in the Notice of Race (`Start-1-4S/4P-1-4S-Finish`), the legs, moving, turning and scaling (gates and lines keep their size), the land warnings, and JSON files with LV95 positions.
+  - `CourseTemplates`: LG2, LR2, O2, I2, US3, US4, PD3, SD3, PM1 and SM1, built in the course's own frame like the diagrams and turned to the wind.
+  - `CourseEditor`, `CoursePanel`, `CourseOverlay`: choose a template (it appears in the middle of the view, squared to the lake's wind and sized for it); drag marks (a gate moves as a pair), Shift and drag the whole course; Axis, Square to wind, Size %, Boards; Undo (Ctrl+Z), Clear; Save under a name in `Game/maps/silvaplana/courses/`, Load; M hides it. The course is drawn like the diagrams: salmon marks with rounding arrows, green boats with orange and blue flags, dashed lines, black legs side by side. The panel lists the legs (length, compass course, angle to the wind now) and the warnings.
+  - Start options for screenshots: `--course=LG2` (or a saved course's name), `--course-at=<east>,<north>`.
+- **Small changes to shared map files:** `TopCamera` and `FlyCamera` ignore the keyboard while a text field has it; `tools/play.sh`'s menu and `CLAUDE.md` mention the course maker.
+
+**Verified:**
+- `tools/test.sh`: 186 of 186 (18 new: `test_course.gd` 11, `test_course_editor.gd` 7). `tools/check.sh`: 119 files, 0 failed.
+- The rounding sides read from the diagrams agree with the way each course turns, in all ten templates (a test).
+- Screenshots: the ten templates on the lake (`.screenshots/w4a_templates_sheet.png`), a close-up of a start (committee boat on the right looking upwind, 4S on the left, the finish boat at the upwind end), and the free camera low over the water.
+- 98 to 102 fps in the screenshot runs, with and without a course.
+
+Not verified:
+- Dragging with a real mouse, and how easy the panel is: Max play-tests. The editing is tested with made-up mouse events.
+
+**Decisions:**
+- Templates are set to the wind like a race committee sets a course: mark 1 dead upwind of the start, at the class's distance for the wind of the moment (WD7). "Square to wind" uses the lake's mean wind, without the moving shifts.
+- Where the guideline gives a range, the middle. The trapezoid's reach angle: 90°, because the guideline's 80 to 90° doesn't say from which line it is measured.
+- The course is drawn on the screen over the 3D view, not as 3D buoys: the same size at every zoom, and the same from both cameras. 3D buoys come with sailing a course in the game (later).
+- Saving a course under a name that exists replaces it (the panel says so); git keeps the old versions.
+
+**Max's play-test (16 October):** easy to use (pick, drag, turn, resize, save, load), and the templates look like the diagrams in the Notice of Race. Where the race committee sets the course at Silvaplana and how it would shorten the trapezoid: not important for now.
+
+**Then, Max: "I would like to add a mark to existing courses"** (dropped on a leg, "but it needs to work really well", and typed when that isn't what he wants). Added:
+- **Add mark** and a click on the water: the mark goes into the leg drawn nearest to the click (so between a beat and a run on the same line, the one on that side), and into the same leg on the other laps; Shift for only that leg; away from the legs a lone mark. The legs it will go into light up in yellow before the click. Named with the next number, left on the side the course bends round it.
+- **The order typed** in the Notice of Race's notation, checked (a wrong order is refused with the reason).
+- **A selected mark** (click it): rename (also in the order), port or starboard, delete (Delete key). Esc deselects or stops adding. A click that only selects is no Undo step any more.
+- The mouse is matched to the height the marks are drawn at (0.3 m above the lake), so a mark put down lies exactly under it.
+- `--course-new-mark=<east>,<north>` shows the Add mark preview for screenshots.
+- Verified: `tools/test.sh` 199 of 199 (13 new), `tools/check.sh` 119 files; the preview screenshot (`.screenshots/w4a_add_mark.png`): dropped beside the first run, both runs light up and the beat on the same line doesn't. Not verified: how it feels with a real mouse.
+
+**Then, Max (a screenshot of a 3137 × 1263 window): "the UI is not nice for other resolutions, and the drawing of the arrows is wrong on a gate".**
+- The viewer's panels had fixed places for 1280 × 720. A first fix scaled them as a whole; Max: "the UI is just scaled up and I can count the pixels now, it's ugly". Now each panel is anchored to its corner or edge (course panel and legend top right, clock along the bottom, wind chart left), and the viewer switches its window to Godot's "canvas items" stretch (laid out for 1280 × 720, wider windows get more room across), which draws text and lines at the window's full resolution: sharp. Only while the viewer runs; the game's screen settings are unchanged and the window's are put back on exit. Found on the way: `set_anchors_preset()` keeps a control's old size, so a full-window control needs `set_anchors_and_offsets_preset()`.
+- The course panel and the clock bar got the wind chart's look (dark, see-through, rounded, with room inside).
+- The rounding arrows were the same three-quarter turn from the top of every mark. Now they come in from the leg in, go round the mark's far side and leave along the next leg: at a gate, down between the marks and outwards, back upwind, as on the diagrams.
+- Verified: `tools/test.sh` 200 of 200 (a new test for the arrows at a gate and at mark 1), `tools/check.sh` 119 files; screenshots at 3137 × 1263 and 1280 × 720; `--check-colours` 0.8 of 255 (the course is hidden for it).
+
+**Next:**
+- Max looks at adding marks: does dropping on a leg pick the leg he means, and is the side right?
+- To commit (Max decides): the course maker, the plan, and the Notice of Race PDF in `Documentation/`, which the plan now links to.
+- Then W4b, the tactics tools, detailed with Max: lifts and headers against the course axis, the stronger lanes, laylines (they need the iQFOiL's upwind and downwind angles), which side paid.
+
+---
+
 ## 15 October 2026 - Session 43 (map track): Wind analyser W2 (the viewer) and W3's gusts and lee, measured on the satellite photos
 
 **Phase:** W2 of the map plan (the wind analyser's viewer), then most of W3 (gusts, pulses, shifts, the lee along the south-east shore). Branch `feature/map-silvaplana`. Nothing new on `feature/physics-sim` or `main` to merge.

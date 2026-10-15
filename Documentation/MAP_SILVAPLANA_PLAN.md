@@ -27,7 +27,7 @@ The branch starts from `feature/physics-sim` (Phases 1 to 5), because `main` doe
 | W1 | Wind analyser: the fixed pattern over the terrain (WindNinja) | ✅ First version (Session 42): direction from WindNinja, strength on the lake from the satellite. Checked by Max on 15 October: the weak south-east shore, the weak Sils end, the direction along the lake and the stronger north-west side are right |
 | W2 | Wind analyser: the 3D viewer in Godot | ✅ First version (Session 43): `tools/play.sh wind`. Max's first look: Windfinder's colours, and he missed the gusts |
 | W3 | Wind analyser: gusts, pulses, shifts and the day | 🔶 Mostly done (Session 43): gusts and lulls measured on the satellite photos (fronts across the lake, lanes along the wind), pulses and shifts, and the lee along the south-east shore. "The day" (start front, day types) postponed by Max on 15 October: W4 first |
-| W4 | Wind analyser: tactics tools | ⬜ Next (Max, 15 October), on the average day |
+| W4 | Wind analyser: course maker (W4a) and tactics tools (W4b) | 🔶 W4a done (Session 44): the ten iQFOiL courses as templates with the class's distances, dragging, turning, resizing, saving for the team. Checked by Max on 16 October: easy to use, and the templates look like the diagrams. Then added at his request: adding marks (dropped on a leg, or typed into the order), renaming, port or starboard, deleting; waiting for his look. W4b next. On the average day |
 | Later | Big projects for every spot, with Michiel: wind simulation, wind-driven waves, mountain-lake physics, live weather, other sailors | ⬜ (the wind patterns, L1, are now the W phases) |
 
 ## Team decisions (14 October 2026)
@@ -480,7 +480,95 @@ Done in Session 43 as well:
 
 ### Phase W4: Tactics tools
 
-**Tasks (first ideas):** put a course on the lake (start line, windward mark), show lifts and headers relative to the course, the stronger lanes, and which side paid over the last minutes.
+Asked for by Max on 15 October 2026, in two parts: first a **course maker** (W4a), so the team can put any iQFOiL course on the lake by dragging the marks, from templates; then the **tactics tools** on top of it (W4b), which need a course to measure against.
+
+**Sources for the courses:**
+- The iQFOiL Notice of Race and Sailing Instructions of the 2026 U23 Worlds in Puck, Addendum A: the course diagrams, the mark order and the side each mark is left on. Added by Max: [Document_146274_20260925081258_en.pdf](Document_146274_20260925081258_en.pdf).
+- The [iQFOiL Class Race Management Guideline](https://www.iqfoilclassofficial.org/_files/ugd/297cf0_da903893fa6a436ca1e1a103a1c8b198.pdf) (published 9 August 2023): the distances, angles, gate and line sizes. The Notice of Race gives none of these: the race committee sets them on the day.
+- The [iQFOiL Class Racing Policies](https://www.iqfoilclassofficial.org/_files/ugd/297cf0_68270a37800b4a41b4b149cab8d9e5af.pdf) (5 July 2025): course racing above 9 kt, sprints under 15 kt; in the medal series MR1 above 9 kt and the slalom MR2 below.
+
+**Decisions (Max, 15 October 2026):**
+- **WD5. The course maker lives in the wind viewer for now.** In the game it may become something else later, so the course code is its own part (`Game/maps/course/`, for every map) and the viewer only hosts it.
+- **WD6. Courses are saved in the project**, in `Game/maps/silvaplana/courses/`, so the whole team gets them through git. Positions in Swiss coordinates (LV95), so a course stays where it is whatever happens to the game's origin.
+- **WD7. Templates are shapes set to the wind**, as a race committee sets them: mark 1 straight upwind of the start line, at the class's distance for the wind of the moment. Max didn't know the beat length; the class guideline gives it per wind range, so that is the default, and a size in percent makes it smaller (the guideline: "distances should be decreased" for youth fleets and newcomers).
+
+**The class's numbers** (Race Management Guideline 2023), in `Game/maps/course/iqfoil_courses.tres`:
+
+| | Windward-leeward (LG2, LR2) | Trapezoid (O2, I2) |
+|---|---|---|
+| Mark 1 from the start | 0.90 nm at 10 to 13 kt, 1.00 nm at 13 to 17 kt, 1.05 nm above | 0.85, 0.95 and 1.00 nm |
+| The reach | to the finish: 400 to 500 m, 90 to 100° from the wind | mark 1 to 2: 0.7 to 0.8 nm, 80 to 90° (90° under 15 kt) |
+| Start line | number of boards × 2.20 m × 3 | the same |
+| Gate, finish line | 70 to 80 m, 30 to 40 m | the same |
+
+Sprint slalom (PD3 and SD3, also the medal race MR2) and the medal race MR1 (PM1 and SM1) start on a reach: mark 1 is 600 m from the pin, 90° from the wind. Mark 1 to 2 is 0.40 to 0.50 nm downwind. The slalom legs are 400 m with 25° between them, and MR1's reach to the finish is 400 to 500 m at 90 to 100°. Their start line has no bias, is at least 40 m and about 7 m per board, up to 170 m.
+
+Where the guideline gives a range, the templates take the middle. Not in the guideline, so **estimates**, labelled in the file:
+- the leeward gate 150 m upwind of the start line, clear of the starting area (75 m around the line, Sailing Instructions 18.4);
+- the trapezoid's outer gate level with the start line, and its reach to the finish (450 m, 120° from the wind): read from the diagram;
+- the trapezoid's reach at 90° from the wind: the guideline's 80 to 90° doesn't say from which line it is measured, and 90° is in the range either way;
+- MR1's gate: the course racing gate's 70 to 80 m;
+- the upwind sprint (US3, US4) has no class distances. Its shape is read from the Notice of Race's diagram, with mark 1 1000 m from the start: the 7-minute target time at the average speed that course racing's distances and 16-minute target time imply.
+
+**Silvaplana, measured** (the shore band's height grid, water at least 0.5 m deep): along the Maloja (222°) the main basin is about 2.8 km of water, and 760 to 1370 m wide. A full windward-leeward course (1852 m to mark 1 at 13 to 17 kt) fits along the lake. The full trapezoid reach (1.3 to 1.5 km across the wind) does not, so its reach has to be shortened, as the guideline allows ("variations depending on the venue").
+
+### Phase W4a: The course maker
+
+**Goal:** put any iQFOiL course on the lake in a minute: pick a template, it appears set to the wind, drag the marks where you want them, save it for the team.
+
+**Tasks (first version, Session 44):**
+- [x] The course (`Game/maps/course/`): `Course` holds the marks and the official mark order (written as in the Notice of Race, for example `Start-1-4S/4P-1-4S-Finish`), and works out the legs. `CourseMark` is a mark with its name, position and rounding side; in all ten templates a mark is left on the same side every time. Saved as JSON with LV95 positions.
+- [x] The class's numbers with their sources in a resource: `iqfoil_courses.tres` (`CourseRules`).
+- [x] Ten templates (`CourseTemplates`): LG2, LR2, O2, I2, US3, US4, PD3, SD3, PM1, SM1. Each is built in the course's own frame (up is upwind) and then turned to the wind.
+- [x] Editing in the viewer (`CourseEditor`, with `CoursePanel` and `CourseOverlay`):
+  - choose a template: it appears in the middle of the view, squared to the lake's wind of the moment and sized for its strength;
+  - drag a mark to move it (a gate moves as a pair, the ends of the start and finish lines one by one); Shift and drag moves the whole course; a click on open water still shows the wind there;
+  - Axis: turn the course to a compass direction; "Square to wind" turns it back to the lake's wind now;
+  - Size: smaller or bigger than the class's distances, in percent (the gates and lines keep their length);
+  - Boards: the number of boards, which sets the start line's length;
+  - Undo (Ctrl+Z) and Clear;
+  - Save under a name, Load the team's courses;
+  - M shows and hides the course.
+- [x] On the map: the marks with their names and which way they are rounded, the start and finish lines with the committee and finish boats, and the legs in order with arrows. Each leg is drawn just to the right of its line, so the beats and the runs lie side by side as in the diagrams. It is drawn on the screen over the 3D view (`CourseOverlay`), so it stays the same size at every zoom and works from both cameras; from the free camera, legs that run behind it are cut off.
+- [x] The panel lists the legs (length, compass course, angle to the wind now) and warns when a mark is on land or off the map, or a leg crosses land (checked every 10 m on the 2 m shore grid); those marks get a red ring.
+- [x] Tests: `test_course.gd` (11: the class's distances per wind range, mark 1 dead upwind, the committee boat on the right looking upwind, the rounding sides against the turns, the mark order, the mirror-image courses, the reaching start, the gates and lines keeping their size when the course is scaled, turning and moving, save and load to the centimetre, the land warnings, and on Silvaplana: a full windward-leeward course fits, the full trapezoid's mark 2 is on land) and `test_course_editor.gd` (7, with made-up mouse and key events: a dragged mark follows the mouse, a gate moves as a pair, Shift and drag moves the whole course, a click away from the marks goes to the wind probe, Ctrl+Z step by step, M, save and load).
+- [x] Screenshots of the ten templates on the lake (`.screenshots/w4a_templates_sheet.png`), a close-up of a start, and the free camera low over the water.
+
+Notes:
+- **The rounding sides** were read from the diagrams, and a test checks each against the way the course turns there (a board turning right leaves the mark to starboard). It found no disagreement.
+- **The cameras** read W A S D directly, so they now ignore the keyboard while a text field (the course name, a number) has it; a click on the map gives the keyboard back.
+- **Square to wind** uses the lake's mean wind of the moment (the day's direction, without the moving shifts), as a race committee averages the wind before it sets a course.
+- **Speed:** 98 to 102 fps in the screenshot runs with and without a course (their cap); the course costs nothing measurable.
+- **Not verified:** how the dragging feels with a real mouse, and whether the panel is easy to use: Max play-tests.
+
+**Added after Max's play-test (16 October): adding marks to a course.** Max: "I would like to add a mark to existing courses"; he chose "drop it on a leg, but it needs to work really well, and if I want I can type it if it won't work how I want".
+- [x] **Add mark**, then a click on the water: the new mark goes into the leg drawn nearest to the click (within 60 pixels). Legs are drawn to the right of the way they are sailed, so of a beat and a run on the same line it is the one on the side where the mark is dropped. It also goes into the same leg on the other laps: legs running the same way (within 15°) and close by (at most 40 m further away). Shift: only the leg under the mouse. Away from every leg it is a lone mark, listed as "not in the order yet".
+- [x] Before the click, the legs it will go into are lit in yellow, with a pale mark and dashed lines where it will go.
+- [x] It is named with the next number (5 after gate 4) and left on the side the course bends round it (a right turn round it is starboard; on the line, port). Example: dropped just south-east of mark 1 on a windward-leeward course, it becomes an offset mark after mark 1 on both laps, left to port.
+- [x] **The order can be typed** in the panel, as in the Notice of Race (`Start-1-5-4S/4P-1-5-4S-Finish`; spaces and small letters don't matter). A wrong order is refused with the reason, and the text stays to put right.
+- [x] **Click a mark to select it** (yellow ring): rename it (like 1a; also in the order), choose port or starboard, or delete it (also the Delete key; a gate goes as a whole, the start and finish lines stay). Esc deselects or stops adding.
+- [x] Tests: 6 more in `test_course.gd` (names, putting into legs, removing, renaming, typing the order, the side) and 7 more in `test_course_editor.gd` (beside a run into both runs, beside a beat into both beats, Shift for one leg, a lone mark typed into the order, Esc, rename, side and delete, a click that only selects is no undo step). Screenshot of the preview: `.screenshots/w4a_add_mark.png`.
+
+**Fixed after Max's look at a 3137 × 1263 window (16 October):** "the UI is not nice for other resolutions, and the drawing of the arrows is wrong on a gate".
+- [x] The viewer's panels were placed for 1280 × 720. Now each is anchored to its corner or edge (the course panel and the speed legend at the top right, the clock along the bottom, the wind chart on the left), and the viewer switches its window to Godot's "canvas items" stretch, laid out for 1280 × 720 with more room across in a wider window. Godot then draws the text, lines and panels at the window's full resolution, so they stay sharp. (A first try scaled the panels themselves: Max, "I can count the pixels now, it's ugly".) Only while the viewer runs: the game's own screen settings are unchanged, and the window's are put back when the viewer closes.
+- [x] The course panel and the clock bar now have the wind chart's look: dark, see-through, rounded, with room inside.
+- [x] The rounding arrows followed nothing: the same three-quarter turn from the top of every mark. Now each comes in beside the mark on the side the board passes (from the leg in), goes round the mark's far side, and leaves pointing along the next leg (`Course.turn_at()`, `CourseOverlay.rounding_arc()`). At a gate the boats come down between the marks and turn outwards, back upwind, as on the diagrams. A test checks it for a gate's two marks and for mark 1.
+- [x] Checked: screenshots at 3137 × 1263 and 1280 × 720 (the same as before); `--check-colours` still within 1 of 255 (the course is hidden for it).
+
+**Stop:** Max play-tests (`tools/play.sh wind`):
+- Is it easy: pick a template, drag, turn, resize, save, load? (Max, 16 October: yes.)
+- Adding marks: does dropping on a leg pick the leg you mean? Is the side right?
+- Do the templates look like the diagrams in the Notice of Race? (Max: yes.)
+- Where does the race committee put the course at Silvaplana? Save it as the team's first course. (Max: not important for now.)
+- How would a race committee shorten the trapezoid here? (Max: not important for now.)
+
+### Phase W4b: Tactics tools
+
+After W4a, detailed with Max then. First ideas:
+- **Lifts and headers relative to the course:** the water coloured by how far the wind is turned left or right of the course axis.
+- **The stronger lanes:** the water coloured by the difference from the lake's average wind (also a question from W3's look: are the gusts visible enough in Windfinder's colours?).
+- **Laylines** from the marks. They need the iQFOiL's upwind and downwind angles: from Max, or later from the physics.
+- **Which side paid** over the last minutes: two imaginary boards sail the left and the right side of the beat through the wind of the last minutes, and the panel shows who got to the mark first.
 
 ### W5 (later, with Michiel)
 

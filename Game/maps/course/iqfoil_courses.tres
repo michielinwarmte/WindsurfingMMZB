@@ -1,0 +1,53 @@
+[gd_resource type="Resource" script_class="CourseRules" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://maps/course/course_rules.gd" id="1"]
+
+; The iQFOiL's course sizes for the course maker (MAP_SILVAPLANA_PLAN.md, W4a; what each number
+; means is in course_rules.gd). Where every number comes from:
+; - the iQFOiL Class Race Management Guideline, published 9 August 2023
+;   (https://www.iqfoilclassofficial.org/_files/ugd/297cf0_da903893fa6a436ca1e1a103a1c8b198.pdf).
+;   Where it gives a range, the middle is taken:
+;   - mark 1: windward-leeward 0.9 / 1.0 / 1.05 nm, trapezoid 0.85 / 0.95 / 1.0 nm at 10-13,
+;     13-17 and 17+ kt;
+;   - the trapezoid's reach 0.7-0.8 nm at 80-90 degrees (90 under 15 kt). The guideline doesn't
+;     say from which line the angle is measured, so 90 degrees, which is in the range either way;
+;   - the windward-leeward's reach (to the finish) 400-500 m at 100-90 degrees;
+;   - start line: boards x board length (2.20 m) x 3; gate 70-80 m; finish line 30-40 m;
+;   - sprint slalom and MR1: mark 1 600 m from the pin at 90 degrees from the wind; mark 1 to 2
+;     0.40-0.50 nm; slalom legs 400 m with 25 degrees between them; start line without bias,
+;     at least 40 m, about 7 m per board, at most 170 m;
+; - ESTIMATES, not in the guideline:
+;   - gate_above_start_m: the leeward gate clear of the starting area (75 m around the start
+;     line, Sailing Instructions 18.4 of the Notice of Race in Documentation/);
+;   - outer_gate_above_start_m and the trapezoid's finish reach (450 m, 120 degrees from the
+;     wind): read from the course diagram, which is not to scale;
+;   - upwind_sprint_mark1_m: the upwind sprint has no class distances. 1000 m makes the course
+;     (its shape read from the Notice of Race's diagram) take its 7-minute target time at the
+;     average speed that course racing's distances and 16-minute target time imply;
+;   - the medal race MR1's gate and the upwind sprint's start line: the course racing ones.
+
+[resource]
+script = ExtResource("1")
+wind_steps_kt = PackedFloat32Array(13, 17)
+windward_leeward_mark1_nm = PackedFloat32Array(0.9, 1, 1.05)
+trapezoid_mark1_nm = PackedFloat32Array(0.85, 0.95, 1)
+trapezoid_reach_nm = 0.75
+trapezoid_reach_deg = 90.0
+finish_reach_m = 450.0
+finish_reach_deg = 95.0
+trapezoid_finish_m = 450.0
+trapezoid_finish_deg = 120.0
+gate_above_start_m = 150.0
+outer_gate_above_start_m = 0.0
+gate_m = 75.0
+finish_line_m = 35.0
+board_length_m = 2.2
+start_line_factor = 3.0
+upwind_sprint_mark1_m = 1000.0
+reaching_mark1_m = 600.0
+downwind_leg_nm = 0.45
+slalom_leg_m = 400.0
+slalom_turn_deg = 25.0
+reaching_start_per_board_m = 7.0
+reaching_start_min_m = 40.0
+reaching_start_max_m = 170.0

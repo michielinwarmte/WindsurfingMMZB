@@ -5,16 +5,22 @@ extends Node3D
 ## that point over the last minutes. The wind is MapWind: the fixed Maloja pattern (W1) carried by
 ## the average Maloja day, with gusts and lulls, pulses and shifts on top (W3).
 ##
+## The course maker (W4a, CourseEditor) puts an iQFOiL race course on the lake: its panel is at the
+## top right; drag a mark to move it, Shift and drag the whole course.
+##
 ## Keys: Tab switches between the map camera (looking down) and the free camera; Space pauses the
 ## clock, 1, 2 and 3 run it at 1x, 10x and 60x; C switches the speed colours on the water off and on,
-## V the streaks; [ and ] make the streaks slower and faster. Left click: the wind at that point.
+## V the streaks; [ and ] make the streaks slower and faster; M shows and hides the course, Ctrl+Z
+## undoes a change to it. Left click away from the course's marks: the wind at that point.
 ## Map camera: W A S D (or the arrows) move, the wheel (or E and Q) zooms, right mouse drags the map.
 ## Free camera: W A S D, E and Q fly, Shift is faster, hold the right mouse button to look around.
 ##
 ## Start it with tools/play.sh wind. Options for screenshots (after --):
 ##   --camera=free  --at=<east>,<north>,<m above the lake> --look=<east>,<north>,<m>  (LV95)
 ##   --top=<east>,<north>,<m above the lake>  --time=14:30  --probe=<east>,<north>  --colours=off
-##   --streaks=off  --paused
+##   --streaks=off  --paused  --course=<template, like LG2, or a saved course's name>
+##   --course-at=<east>,<north> (where a template's middle goes; else the middle of the view)
+##   --course-new-mark=<east>,<north> (Add mark, with its preview there as if the mouse were there)
 ## And a check that the graphics card computes the same wind as the game's numbers (WD1):
 ##   tools/godot.sh --path Game res://maps/silvaplana/wind_viewer.tscn -- --check-colours --time=14:30
 ## compares the water's colour on the screen with the colour MapWind gives, prints the result and quits.
@@ -27,6 +33,8 @@ const DAY_PATH: String = "res://maps/silvaplana/wind/maloja_day.tres"
 const GUSTS_PATH: String = "res://maps/silvaplana/wind/maloja_gusts.tres"
 const LEE_PATH: String = "res://maps/silvaplana/wind/shore_lee.json"
 const LAKE_PATH: String = "res://maps/silvaplana/lake.tres"
+## The team's race courses (W4a, WD6): in the project, so git shares them.
+const COURSES_PATH: String = "res://maps/silvaplana/courses"
 const SPEED_WATER_SHADER: Shader = preload("res://maps/wind/wind_speed_water.gdshader")
 
 ## Where the cameras start: the map camera above the middle of the lake, the free camera above the
@@ -41,6 +49,8 @@ const HISTORY_STEP_S: float = 2.0
 const HISTORY_PER_FRAME: int = 50
 ## The streak speed-up changes by this factor with the [ and ] keys.
 const STREAK_SPEED_STEP: float = 1.5
+## The window height the screen's panels are laid out for, pixels (see _build_ui()).
+const UI_HEIGHT_PX: float = 720.0
 
 @onready var _top_camera: TopCamera = $TopCamera
 @onready var _fly_camera: FlyCamera = $FlyCamera
@@ -58,6 +68,13 @@ var _probe_marker: Node3D
 ## The click history: speed (kt) and direction (degrees) per step number (time / HISTORY_STEP_S).
 var _history: Dictionary[int, Vector2] = {}
 
+var _course_editor: CourseEditor
+
+var _ui_layer: CanvasLayer
+## All the screen's panels, each anchored to its corner or edge (see _fit_ui()).
+var _panels: Control
+## The window's scaling before the viewer changed it: mode, aspect, size (put back on exit).
+var _window_before: Array = []
 var _info: Label
 var _pause_button: Button
 var _rate_buttons: Array[Button] = []
@@ -79,6 +96,7 @@ func _ready() -> void:
 	_probe_marker = _make_probe_marker()
 	add_child(_probe_marker)
 	_build_ui()
+	_add_course_editor()
 
 	var top: Vector3 = _game_point(TOP_START)
 	_top_camera.look_down_at(Vector2(top.x, top.z), TOP_START.z)
@@ -90,6 +108,12 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	var click: InputEventMouseButton = event as InputEventMouseButton
+	if click != null and click.pressed:
+		# A click in the view takes the keyboard back from the course panel's text fields.
+		get_viewport().gui_release_focus()
+	if _course_editor.handle_input(event):
+		return
 	var key: InputEventKey = event as InputEventKey
 	if key != null and key.pressed and not key.echo:
 		match key.physical_keycode:
@@ -206,6 +230,39 @@ func _use_top_camera(top: bool) -> void:
 	for camera: Camera3D in [_top_camera, _fly_camera]:
 		camera.set_process(camera.current)
 		camera.set_process_unhandled_input(camera.current)
+
+
+# ---------------------------------------------------------------- the course maker (W4a)
+
+func _add_course_editor() -> void:
+	_course_editor = CourseEditor.new()
+	_course_editor.name = "CourseEditor"
+	add_child(_course_editor)
+	# The land check reads the shore band's 2 m grid, which holds the whole lake.
+	var height_at: Callable = func(x: float, z: float) -> float:
+		return _shore.height_at(x, z) if _shore.contains(x, z) else NAN
+	_course_editor.setup(_ui_layer, _panels, _config, height_at, COURSES_PATH, _lake_wind_now, _view_centre)
+
+
+## The lake's wind now (the day's mean, without the moving shifts): Vector2(where it comes from in
+## degrees, its speed in knots). A race committee sets its course to this.
+func _lake_wind_now() -> Vector2:
+	var t: float = _clock.time_of_day_s
+	return Vector2(fposmod(_wind.lake_from_deg(t), 360.0), _wind.day.lake_speed_ms(t) / SimMath.KNOT_MS)
+
+
+## The game point (X, Z) in the middle of the view: below the map camera, or where the free camera
+## looks at the lake (at most 3 km ahead).
+func _view_centre() -> Vector2:
+	if _top_camera.current:
+		return _top_camera.centre
+	var at: Vector3 = _fly_camera.global_position
+	var forward: Vector3 = -_fly_camera.global_basis.z
+	var ahead_m: float = 3000.0
+	if forward.y < -0.01:
+		ahead_m = minf(at.y / -forward.y, 3000.0)
+	var point: Vector3 = at + forward * ahead_m
+	return Vector2(point.x, point.z)
 
 
 # ---------------------------------------------------------------- the clock
@@ -332,33 +389,53 @@ func _probe_sample(moment: WindMoment) -> Vector2:
 
 # ---------------------------------------------------------------- the screen
 
+## The screen's panels are laid out for a window 720 pixels high, each keeping to its corner or
+## edge. In a bigger window the window's content scale makes them all as much bigger (see _fit_ui()).
 func _build_ui() -> void:
 	var layer: CanvasLayer = CanvasLayer.new()
 	add_child(layer)
+	_ui_layer = layer
+	_panels = Control.new()
+	_panels.name = "Panels"
+	_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(_panels)
+	_panels.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 	_info = Label.new()
 	_info.position = Vector2(12.0, 8.0)
 	_info.add_theme_color_override("font_color", Color.WHITE)
 	_info.add_theme_color_override("font_outline_color", Color.BLACK)
 	_info.add_theme_constant_override("outline_size", 4)
-	layer.add_child(_info)
+	_panels.add_child(_info)
 
+	# The speed legend at the top right.
 	var legend: WindLegend = WindLegend.new()
-	legend.position = Vector2(1232.0, 90.0)
-	legend.size = Vector2(36.0, 335.0)
-	layer.add_child(legend)
+	_panels.add_child(legend)
+	legend.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	legend.offset_left = -48.0
+	legend.offset_right = -12.0
+	legend.offset_top = 90.0
+	legend.offset_bottom = 425.0
 
 	_probe_chart = WindProbeChart.new()
 	_probe_chart.position = Vector2(12.0, 300.0)
 	_probe_chart.size = Vector2(380.0, 330.0)
 	_probe_chart.visible = false
-	layer.add_child(_probe_chart)
+	_panels.add_child(_probe_chart)
 
-	# The clock: pause, the speeds, the slider through the day, the time.
+	# The clock along the bottom: pause, the speeds, the slider through the day, the time.
 	var bar: PanelContainer = PanelContainer.new()
-	bar.position = Vector2(12.0, 664.0)
-	bar.size = Vector2(1256.0, 44.0)
-	layer.add_child(bar)
+	var bar_style: StyleBoxFlat = CoursePanel.background()
+	bar_style.content_margin_top = 6.0
+	bar_style.content_margin_bottom = 6.0
+	bar.add_theme_stylebox_override("panel", bar_style)
+	_panels.add_child(bar)
+	bar.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	bar.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	bar.offset_left = 12.0
+	bar.offset_right = -12.0
+	bar.offset_top = -56.0
+	bar.offset_bottom = -12.0
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	bar.add_child(row)
@@ -381,6 +458,29 @@ func _build_ui() -> void:
 	_time_label = Label.new()
 	_time_label.custom_minimum_size = Vector2(430.0, 0.0)
 	row.add_child(_time_label)
+	_fit_ui()
+
+
+## Makes the screen's panels and the course's drawing as big, compared to the window, as in a
+## 1280 x 720 window: Godot's "canvas items" stretch, for this window and only while the viewer
+## runs (the game's own screen settings stay as they are). The panels are laid out for a window
+## 720 pixels high, a wider window gives them more room across, and Godot draws the text, lines
+## and panels at the window's full resolution, so they stay sharp.
+func _fit_ui() -> void:
+	var window: Window = get_window()
+	_window_before = [window.content_scale_mode, window.content_scale_aspect, window.content_scale_size]
+	window.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
+	window.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
+	window.content_scale_size = Vector2i(roundi(UI_HEIGHT_PX * 16.0 / 9.0), roundi(UI_HEIGHT_PX))
+
+
+## Puts the window's scaling back as it was before the viewer.
+func _exit_tree() -> void:
+	if _window_before.size() == 3:
+		var window: Window = get_window()
+		window.content_scale_mode = _window_before[0]
+		window.content_scale_aspect = _window_before[1]
+		window.content_scale_size = _window_before[2]
 
 
 func _button(text: String, parent: Control) -> Button:
@@ -405,7 +505,7 @@ func _update_ui() -> void:
 	var camera_name: String = "map camera" if _top_camera.current else "free camera"
 	_info.text = "Wind viewer, Lake Silvaplana: the Maloja's average day, with gusts and lulls (from satellite photos), pulses and shifts\n" \
 		+ "%s, streaks %.0f× real speed, %d fps\n" % [camera_name, _streaks.speed_up, Engine.get_frames_per_second()] \
-		+ "Tab camera | click: wind at a point | Space pause, 1 2 3 speed | C colours, V streaks | [ ] streak speed"
+		+ "Tab camera | click: wind at a point | Space pause, 1 2 3 speed | C colours, V streaks | [ ] streak speed | M course"
 
 
 # ---------------------------------------------------------------- start options
@@ -414,6 +514,9 @@ func _read_command_line() -> void:
 	var top: bool = true
 	var at: Vector3 = Vector3.INF
 	var look: Vector3 = Vector3.INF
+	var course: String = ""
+	var course_at: Vector3 = Vector3.INF
+	var new_mark: Vector3 = Vector3.INF
 	for arg: String in OS.get_cmdline_user_args():
 		var value: String = arg.get_slice("=", 1)
 		var numbers: PackedFloat64Array = value.split_floats(",")
@@ -440,9 +543,22 @@ func _read_command_line() -> void:
 			_streaks.visible = false
 		elif arg == "--paused":
 			_clock.paused = true
+		elif arg.begins_with("--course="):
+			course = value
+		elif arg.begins_with("--course-at=") and numbers.size() == 2:
+			course_at = _game_point(Vector3(numbers[0], numbers[1], 0.0))
+		elif arg.begins_with("--course-new-mark=") and numbers.size() == 2:
+			new_mark = _game_point(Vector3(numbers[0], numbers[1], 0.0))
 	if at != Vector3.INF and look != Vector3.INF:
 		_fly_camera.place(at, look)
 	_use_top_camera(top)
+	if course in CourseTemplates.ALL:
+		_course_editor.place_template(course, Vector2(course_at.x, course_at.z) if course_at != Vector3.INF else _view_centre())
+	elif not course.is_empty():
+		# A saved course stays where it was saved.
+		_course_editor.load_course(course)
+	if new_mark != Vector3.INF:
+		_course_editor.show_new_mark_preview(Vector2(new_mark.x, new_mark.z))
 
 
 ## --check-colours: the water's colour on the screen against the colour of the speed MapWind gives
@@ -452,6 +568,7 @@ func _check_colours() -> void:
 	_clock.paused = true
 	_streaks.visible = false
 	_probe_point = Vector3.INF
+	_course_editor.set_shown(false)
 	for i: int in 30:
 		await get_tree().process_frame
 	await RenderingServer.frame_post_draw

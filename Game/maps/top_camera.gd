@@ -48,6 +48,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _process(delta: float) -> void:
+	# While a text field on the screen has the keyboard (a name being typed), the keys aren't ours.
+	if get_viewport().gui_get_focus_owner() != null:
+		return
 	var move: Vector2 = Vector2.ZERO
 	if Input.is_physical_key_pressed(KEY_W) or Input.is_physical_key_pressed(KEY_UP):
 		move.y -= 1.0
