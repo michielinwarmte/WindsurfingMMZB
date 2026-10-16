@@ -3872,8 +3872,13 @@ Two facts about the legacy code shape this section:
 | `t` (`time_s`) | Simulation time, passed in by the caller (the simulation clock, not a wall clock) | s |
 | `base_height_m` | Still-water level, world Y of the undisturbed surface | m |
 | `enable_waves` | `false` = flat water; the whole wave model is skipped | – |
-| `wind_from_bearing_deg` | Where the wind comes from, compass bearing (only used to orient the wave set when `align_to_wind` is true) | deg (table only) |
-| Per wave `i` (up to 4): `direction_offset_deg` | Travel direction of this wave, as a compass bearing offset from the downwind direction (positive = clockwise seen from above) | deg (table only) |
+| `wind_from_bearing_deg` | Where the wind comes from, compass bearing (orients the chop, and the swell when it is relative to the wind; 9.15) | deg (table only) |
+| `swell_relative_to_wind` | `true`: the swell travels downwind, turned by `swell_offset_deg`; `false`: it comes from `swell_from_deg` (9.15) | – |
+| `swell_offset_deg` | The swell's direction as an offset from the downwind bearing (positive = clockwise seen from above) | deg (table only) |
+| `swell_from_deg` | The compass bearing the swell comes FROM when it is not relative to the wind | deg (table only) |
+| `chop_offset_deg` | The chop's direction as an offset from the downwind bearing | deg (table only) |
+| Per wave `i` (up to 4): `group` | `SWELL` or `CHOP`: which group's direction the wave takes (9.15) | – |
+| Per wave `i`: `direction_offset_deg` | Travel direction of this wave, as a compass bearing offset from its group's direction (positive = clockwise seen from above) | deg (table only) |
 | Per wave `i`: `wavelength_m` (`L_i`) | Crest-to-crest distance | m |
 | Per wave `i`: `amplitude_m` (`A_i`) | Half the crest-to-trough height | m |
 | Per wave `i`: `steepness` (`S_i`) | Crest sharpness, 0 (sine) to 1 (cusp). The sum over all waves must stay ≤ 1 | – |
@@ -3909,7 +3914,7 @@ T_i     = L_i / c_i = sqrt(2π · L_i / g)  # period, s             (legacy: Ger
 The legacy writes the phase as `k · (d·r − c·t)`, which is the same as `k·(d·r) − omega·t` because `k·c = omega`. So the dispersion relation used is the standard deep-water one, `omega² = g·k`. There is no depth term and no surface-tension term.
 
 **9.2 Travel direction (D4 frame).**
-A wave's travel direction is a compass bearing: `travel_bearing_deg = base_bearing_deg + direction_offset_deg_i`, where `base_bearing_deg = wind_from_bearing_deg + 180` when `align_to_wind` is true (waves travel *with* the wind, so away from where it comes from), and `0` (waves travel North) when it is false or there is no wind source (legacy: WaterSurface.cs:110-125).
+A wave's travel direction is a compass bearing: `travel_bearing_deg = group_bearing_deg + direction_offset_deg_i`, where `group_bearing_deg` is the direction of the wave's group (9.15): for the chop `wind_from_bearing_deg + 180 + chop_offset_deg` (waves travel *with* the wind, so away from where it comes from), for the swell the same with `swell_offset_deg`, or `swell_from_deg + 180` when the swell comes from a fixed bearing. (The legacy had one base bearing for the whole set: downwind when `_alignWavesToWind` was on, North when it was off; WaterSurface.cs:110-125.)
 
 A compass bearing `b` (clockwise from North, seen from above) becomes a unit vector in the Godot horizontal plane as
 ```
@@ -4035,7 +4040,7 @@ The legacy shader read these globals, published every frame by `WaterSurface.Pub
 
 Material properties the legacy shader exposed (rendering only, no physics meaning; OceanWater.shader:18-47): `_ShallowColor`, `_DeepColor`, `_DepthFade`, `_ScatterColor`, `_ScatterStrength`, `_RippleScale`, `_RippleStrength`, `_RippleSpeed`, `_Smoothness`, `_ReflectionStrength`, `_SpecularPower`, `_SpecularStrength`, `_RefractionStrength`, `_UseSceneDepth`, `_FoamColor`, `_EdgeFoamDistance`, `_CrestFoamThreshold`, `_CrestFoamStrength`, `_WindStreakStrength`, `_FoamScale`, `_GridEnabled`, `_GridColor`. The vertex stage also computed a rendering-only "crest factor" `Σ S_i·sin(phase_i) / Σ S_i` for foam (:163, :232); it is not part of the physics.
 
-Proposed Godot layout (one Resource, D5): `WaveSetConfig extends Resource` with `enable_waves: bool`, `base_height_m: float`, `align_to_wind: bool`, `waves: Array[GerstnerWaveConfig]` (validated to at most 4 and `Σ S ≤ 1`), where `GerstnerWaveConfig extends Resource` has `direction_offset_deg`, `wavelength_m`, `amplitude_m`, `steepness`. The `WaveField` (sim side) and the water node (visual side) both read this Resource; the water node converts it to shader uniforms named `wave_a..wave_d` (or a `vec4[4]` array), `wave_amplitudes`, `water_time_s`, `water_wind`, mirroring the table above, with `d` computed by 9.2 so the shader never converts bearings itself.
+Godot layout (one Resource, D5): `WaveSetConfig extends Resource` with `enable_waves: bool`, `waves: Array[GerstnerWaveConfig]` (validated to at most 4 and `Σ S ≤ 1`), and the group directions `swell_relative_to_wind`, `swell_offset_deg`, `swell_from_deg`, `chop_offset_deg` (9.15), where `GerstnerWaveConfig extends Resource` has `group`, `direction_offset_deg`, `wavelength_m`, `amplitude_m`, `steepness`. (The still level `base_height_m` is in `WaterConfig`.) The `WaveField` (sim side) and the water node (visual side) both read this Resource; the water node converts it to shader uniforms named `wave_a..wave_d` (or a `vec4[4]` array), `wave_amplitudes`, `water_time_s`, `water_wind`, mirroring the table above, with `d` computed by 9.2 so the shader never converts bearings itself.
 
 **9.14 Guards and clamps in the legacy code (all kept, none is a fudge).**
 - `wavelength_m` floor of 0.5 m in `k_i` (GerstnerWave.cs:48; shader :145) and inspector `[Min(0.5)]` (:26). Keep as validation in the Resource.
@@ -4043,6 +4048,39 @@ Proposed Godot layout (one Resource, D5): `WaveSetConfig extends Resource` with 
 - Shader `normalize(d + (1e-5, 0))` (:147) guards a zero direction vector; unnecessary when `d` always comes from 9.2. Drop.
 - `direction_offset_deg` range −180..180, `amplitude_m ≥ 0`, `steepness` 0..1 (:21-35): keep as `@export_range`.
 - `count = min(waves.Length, MAX_WAVES, directions.Length)` and null checks (:82-86): the Resource validation replaces them.
+
+**9.15 Two groups: the swell and the chop (Session 38).**
+Real water carries two kinds of waves. The **swell** is long waves made by wind somewhere else, hours or days ago; it can come from any direction, also across or against the wind you sail in. The **chop** is the short waves the wind on the spot makes; it travels with that wind. So every wave of the set belongs to one group (`GerstnerWaveConfig.group`), and each group has its own direction:
+```
+chop_bearing_deg  = wind_from_bearing_deg + 180 + chop_offset_deg
+swell_bearing_deg = wind_from_bearing_deg + 180 + swell_offset_deg     if swell_relative_to_wind
+                  = swell_from_deg + 180                               otherwise (a swell FROM the North travels South)
+travel_bearing_deg_i = group_bearing_deg + direction_offset_deg_i      (then d_i by 9.2)
+```
+The per-wave `direction_offset_deg` still spreads the waves of a group a little around its direction, as on real water. `WaveField.set_wind_bearing()` turns the chop, and the swell only when it is relative to the wind; a swell from a fixed bearing stays put (9.12 still applies: only the *base* wind, never the gusts and shifts). The four shader slots take the active waves in list order whatever their group, so the shader contract of 9.13 is unchanged.
+
+The default set (`waves_default.tres`) is the Session 36 sea in this form: the 14 m wave is the swell, relative to the wind with `swell_offset_deg = +12` and its own offset 0; the 7 m, 3.5 m and 1.8 m waves are the chop with their old offsets (−28, +40, −55) and `chop_offset_deg = 0`. With the wind from 270 every wave has exactly the direction, length, amplitude and steepness it had before (`test_the_default_set_has_the_same_four_waves_as_before_the_groups`), so the validation suite's sea runs did not move. The settings menu (Waves tab) sets the swell's direction (with the wind, or a compass bearing), the swell's own height scale (0 = no swell, as on a lake), the chop's offset from downwind, and offers the wind-made chop of 9.16 as the preset "From the wind".
+
+**9.16 Waves made by the wind (`WindWaves`, request R6).**
+`sim/wind_waves.gd` turns the wind speed `U` (at 10 m), the fetch `F` (the open water upwind) and the depth `d` into a chop for the set. It is the groundwork for lake maps (PHYSICS_REQUESTS_FROM_MAP.md, R6); the game offers it as a preset, not the default.
+
+1. Deep water, fetch-limited growth (JONSWAP, Hasselmann et al. 1973, in the form of the Shore Protection Manual 1984, ch. 3):
+```
+g·Hs / U² = 0.0016 · (g·F / U²)^(1/2)          significant wave height
+g·Tp / U  = 0.286  · (g·F / U²)^(1/3)          peak period
+capped at the fully developed sea: g·Hs/U² ≤ 0.2433, g·Tp/U ≤ 8.134 (SPM 1984)
+```
+`U` is used as it is, like the R6 table (the SPM first adjusts the wind for the air's stability). For Lake Silvaplana at 3 km: 12 kt 0.17 m 1.65 s 4.3 m; 16 kt 0.23 m 1.82 s 5.2 m; 20 kt 0.29 m 1.96 s 6.0 m; 25 kt 0.36 m 2.11 s 6.9 m (all within 5 % of the R6 table, `test_wind_waves.gd`).
+
+2. Shallow water: breaking keeps the significant height below about 0.6 of the depth, `Hs ≤ 0.6·d` (a coastal-engineering rule of thumb for depth-limited seas, Coastal Engineering Manual 2002, part II). The period stays; the wavelength comes from the dispersion relation with depth,
+```
+ω² = g·k·tanh(k·d),   ω = 2π / T,   L = 2π / k
+```
+solved by Newton's method from Eckart's (1952) start `k ≈ ω² / (g·sqrt(tanh(ω²·d/g)))`. Deep water (`tanh → 1`) gives `L = g·T²/2π`. Example: 35 kt over 20 km makes Hs 1.30 m and Tp 4.44 s (L 30.8 m); in 2 m of water Hs is 1.2 m and L 18.3 m.
+
+3. The chop for the set, two waves of the chop group: the peak wave (length `L(Tp)`, straight downwind) and a shorter one at 1.5 times the peak frequency (length `L(Tp/1.5)`, 1/2.25 of the peak's in deep water, turned 30° to the right because wind waves spread around the wind direction, more so the shorter ones; Mitsuyasu et al. 1975). A regular wave of height `Hs` is the usual stand-in for a sea of significant height `Hs`; its energy is split over the two, `a_peak² + a_short² = (Hs/2)²`, with `a_short = 0.33·a_peak` (the square root of the JONSWAP spectrum's density at 1.5 f_p relative to the peak, 0.11 with peak enhancement 3.3). Each steepness is the physical one, `S = k·A`, capped at the breaking limit `π/7 ≈ 0.45` (Michell 1893: H/L ≤ 1/7), so the two always sum below 1; lengths are kept at 0.5 m or more (9.14). The settings add the swell of the default set and scale the steepness of the whole set down when its sum would pass 0.9 (only at the extremes: 35 kt over 200 m at twice the height).
+
+Open: the wave field and the shader move every wave at its deep-water speed `sqrt(g/k)` (9.1). A wave shortened by shallow water is drawn with its true length and height but travels a little too fast (in 2 m of water the 18 m wave above goes at 5.3 m/s instead of 4.1); the depth term `tanh(k·d)` in 9.1 and in the shader would fix it. These waves are much steeper than the default chop (k·A about 0.13 against 0.02 at 16 kt over 3 km): whether the board rides them is the open item of 17.12 and 17.13.
 
 ### Values
 
@@ -4211,6 +4249,7 @@ Phase 5, shader contract:
 - `Legacy/WindsurfingGame/Assets/Scripts/Physics/Buoyancy/AdvancedBuoyancy.cs` :206-213, :229-236, :255-256 (how the surface is sampled); `Legacy/WindsurfingGame/ProjectSettings/TimeManager.asset` :6.
 - `Legacy/Documentation/PHYSICS_DESIGN.md` :31-65 (section 1: sine and Gerstner sketch, wave parameter table); `Legacy/Documentation/PROGRESS_LOG.md` :99-138 (Session 27, unverified); `Legacy/Documentation/KNOWN_ISSUES.md` :13-24 (verification checklist, waves on by default); `Legacy/Documentation/scene_config.json` :171-181 (2025-12-27 sine stub, history only).
 - Literature: M. Finch, "Effective Water Simulation from Physical Models", GPU Gems ch. 1 (NVIDIA, 2004): Gerstner sum (eq. 9), steepness `Q`, normal eq. 12 (single-wave exact, multi-wave approximate). Deep-water dispersion `omega² = g·k`: any fluid-mechanics text (e.g. Kundu & Cohen, *Fluid Mechanics*, ch. on surface gravity waves).
+- Wind-made waves (9.16): K. Hasselmann et al., "Measurements of wind-wave growth and swell decay during the Joint North Sea Wave Project (JONSWAP)", Deutsche Hydrographische Zeitschrift, Reihe A, 12 (1973): the fetch laws and the spectrum (peak enhancement 3.3). U.S. Army Corps of Engineers, *Shore Protection Manual* (1984), ch. 3: the fetch-limited and fully developed forms used here. U.S. Army Corps of Engineers, *Coastal Engineering Manual* (2002), part II: depth-limited seas. R. G. Dean & R. A. Dalrymple, *Water Wave Mechanics for Engineers and Scientists* (1991): the dispersion relation with depth. C. Eckart, "The propagation of gravity waves from deep to shallow water", National Bureau of Standards Circular 521 (1952): the start value. J. H. Michell, "The highest waves in water", Philosophical Magazine 36 (1893): the breaking limit H/L ≈ 1/7. H. Mitsuyasu et al., "Observations of the directional spectrum of ocean waves using a cloverleaf buoy", J. Physical Oceanography 5 (1975): directional spreading. The Lake Silvaplana table: PHYSICS_REQUESTS_FROM_MAP.md, R6.
 - Numerical checks for this section: `gerstner_check.py` in the session scratchpad (Python, 20 000 random samples for the convergence table, 3 000 for the normal comparisons).
 
 ---
@@ -5989,6 +6028,7 @@ How to add a row: date, session, the config file and field (or the section and f
 
 | Date | Session | Where | Old | New | Motivated by | Why this value | Fudge ID |
 |---|---|---|---|---|---|---|---|
+| 16 Oct 2026 | 38 | section 9.15, `waves_default.tres`: the directions | One base bearing for the set (downwind, `align_to_wind`); the 14 m wave's offset +12 | Two groups: the 14 m wave is the swell (`swell_offset_deg` +12, its own offset 0), the other three the chop (`chop_offset_deg` 0, offsets unchanged) | The team wants to set the swell's and the chop's directions apart (a swell from the North in a West wind) | Every wave keeps its direction, length, amplitude and steepness: the sea runs are unchanged | |
 | 16 Oct 2026 | 37 | section 7.5, `rig_frame.gd`: where the rig points | Fixed to the deck in every axis | Held by the sailor: the hull's heading and pitch, upright in roll; turning with the yaw and pitch rates only | Every tack at 18 and 24 kt catapulted at the entry: the hull's roll swung the sail through the wind (17.13) | The mast foot is a joint on the roll axis and the hands hold the boom still; the mast foot rises with the bow | |
 | 16 Oct 2026 | 37 | `sailor_config.gd`: `feet_roll_damping_nms_per_rad` | 150 (60 before Session 37) | 600 | A 1 Hz wobble of 2 degrees of heel and 26 deg/s of yaw at 18 kt on flat water once the rig stopped rolling with the hull (17.13) | The whole 120 Nm at 11 deg/s; 300 and 450 did not hold it, stiffer legs did not | |
 | 16 Oct 2026 | 37 | section 7.5, `windsurfer_sim.gd`: the legs' length | From the deck's centreline | From the feet | A rolling hull should press the legs on the rail | The legs run from the feet | |
