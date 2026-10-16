@@ -77,6 +77,11 @@ func time_of_day_text() -> String:
 	return clock.text()
 
 
+## The map's wind of this moment (the lake's mean and what the gusts need), for a picture of it.
+func moment() -> WindMoment:
+	return _now
+
+
 ## The lake's mean wind speed at a height above the still water.
 func speed_at_height(height_m: float) -> float:
 	return _now.lake_speed_ms * _profile_from_pattern(height_m)

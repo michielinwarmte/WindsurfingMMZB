@@ -1,10 +1,10 @@
 [gd_scene format=3]
 
-; Sailing on Lake Silvaplana (MAP_SILVAPLANA_PLAN.md, M3): the map (terrain, sky, sun, haze and the
-; lake's reflection probe) with the open-water sailing scene's parts (main.tscn), run by
-; sail_silvaplana.gd, which extends main.gd. The Ocean's far plane is shrunk to almost nothing and
-; hidden: a flat surface in the lake's shape replaces it (LakeArea), so the land lower than the lake
-; is not flooded.
+; Sailing on Lake Silvaplana (MAP_SILVAPLANA_PLAN.md, M3 and W5): the map (terrain, sky, sun, haze and
+; the lake's reflection probe) with the open-water sailing scene's parts (main.tscn), run by
+; sail_silvaplana.gd, which extends main.gd. The Ocean has the lake's look (lake_water.tres) on render
+; layer 2 (the reflection probe's); the script sets its far water to the depth grid's area, so the
+; land lower than the lake outside it is not flooded.
 
 [ext_resource type="Script" path="res://maps/silvaplana/sail_silvaplana.gd" id="1_sail"]
 [ext_resource type="PackedScene" path="res://maps/silvaplana/silvaplana.tscn" id="2_map"]
@@ -13,6 +13,7 @@
 [ext_resource type="Script" path="res://ui/hud.gd" id="5_hud"]
 [ext_resource type="Script" path="res://world/ocean.gd" id="6_ocean"]
 [ext_resource type="PackedScene" path="res://ui/pause_menu.tscn" id="7_pause"]
+[ext_resource type="Material" path="res://maps/silvaplana/lake_water.tres" id="8_lake_water"]
 
 [node name="SailSilvaplana" type="Node3D"]
 script = ExtResource("1_sail")
@@ -21,8 +22,8 @@ script = ExtResource("1_sail")
 
 [node name="Ocean" type="Node3D" parent="."]
 script = ExtResource("6_ocean")
-far_size_m = 10.0
-far_cell_m = 10.0
+look = ExtResource("8_lake_water")
+render_layers = 2
 
 [node name="Windsurfer" parent="." instance=ExtResource("3_windsurfer")]
 

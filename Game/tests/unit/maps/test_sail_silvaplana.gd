@@ -1,7 +1,7 @@
 extends GutTest
-## Sailing on Lake Silvaplana (MAP_SILVAPLANA_PLAN.md, M3): the shore stops the board (MD6), the
-## start spot is in deep water with open water ahead, the lake's own wind, the lake's water area,
-## the compass's north on the map, and the lake scene and its start menu option.
+## Sailing on Lake Silvaplana (MAP_SILVAPLANA_PLAN.md, M3 and W5): the shore stops the board (MD6),
+## the start spot is in deep water with open water ahead, the lake's own wind and environment, the
+## lake's water area, the compass's north on the map, and the lake scene and its start menu option.
 
 const SAIL_SCENE: String = "res://maps/silvaplana/sail_silvaplana.tscn"
 const GRID_PATH: String = "res://maps/silvaplana/terrain/shore_heights.json"
@@ -145,7 +145,12 @@ func test_the_lake_scene() -> void:
 	add_child_autofree(scene)
 	var windsurfer: WindsurferNode = scene.get_node("Windsurfer")
 	assert_almost_eq(windsurfer.sim.wind_config.from_bearing_deg, 222.0, 1e-6, "the lake's wind, not the settings'")
-	assert_almost_eq(windsurfer.sim.wind_config.speed_kt, 16.0, 1e-6)
+	# The lake's environment (R1 to R3, W5): thin air, fresh water, the map's wind from 14:30.
+	assert_true(windsurfer.sim.wind is MapWindField, "the map's own wind")
+	assert_almost_eq(windsurfer.sim.air_density_kg_m3, 0.98, 1e-9)
+	assert_almost_eq(windsurfer.sim.water_config.density_kg_m3, 1000.0, 1e-9)
+	assert_almost_eq(scene.map_wind_field().time_of_day_s(), 14.5 * 3600.0, 1.0)
+	assert_eq(scene.get_node("HUD").clock_text, "14:30:00", "the time of day on the HUD")
 	var start: Vector3 = scene.start_position()
 	assert_almost_eq(start, Vector3(380.0, 0.0, -910.0), Vector3.ONE * 0.01, "off the camping beach")
 	assert_almost_eq(windsurfer.sim.body.origin_world().x, start.x, 0.01)
@@ -153,15 +158,23 @@ func test_the_lake_scene() -> void:
 	assert_almost_eq(windsurfer.sim.telemetry.heading_deg, 132.0, 0.5)
 	assert_not_null(scene.shore_grid)
 	assert_false(scene.is_aground())
-	# The water: the lake's colours on render layer 2 (the reflection probe's), no far plane.
+	# The water: the lake's look on render layer 2 (the reflection probe's), the far water only
+	# over the depth grid, and the gusts on it.
+	var ocean: OceanNode = scene.get_node("Ocean")
 	var near: MeshInstance3D = scene.get_node("Ocean/NearWater")
+	var far: MeshInstance3D = scene.get_node("Ocean/FarWater")
 	assert_eq(near.layers, 2)
+	assert_eq(far.layers, 2)
 	var lake_look: ShaderMaterial = load("res://maps/silvaplana/lake_water.tres")
 	assert_eq((near.material_override as ShaderMaterial).get_shader_parameter("deep_color"), lake_look.get_shader_parameter("deep_color"))
-	assert_false((scene.get_node("Ocean/FarWater") as MeshInstance3D).visible)
-	var surface: MeshInstance3D = scene.get_node("LakeSurface")
-	assert_eq(surface.layers, 2)
-	assert_lt(surface.position.y, 0.0, "under the wave troughs")
+	assert_eq((far.material_override as ShaderMaterial).get_shader_parameter("deep_color"), lake_look.get_shader_parameter("deep_color"))
+	assert_eq(ocean.far_area_xz, Rect2(_grid.x0_m, _grid.z0_m, 5000.0, 5000.0), "the depth grid's area")
+	assert_lt(far.global_position.y, 0.0, "under the wave troughs")
+	var gust_area: Vector4 = Vector4(_grid.x0_m, _grid.z0_m, 5000.0, 5000.0)
+	for water: MeshInstance3D in [near, far]:
+		var material: ShaderMaterial = water.material_override
+		assert_eq(material.get_shader_parameter("wind_ripple_map_area"), gust_area, "the gust picture covers the grid")
+		assert_true(material.get_shader_parameter("wind_ripple_map") is ViewportTexture, "drawn by the graphics card")
 	assert_eq(scene.get_node("HUD").find_children("*", "MiniMap", true, false).size(), 1, "a small map of the lake")
 	# The settings' wind is the open water's: the lake keeps its own.
 	GameSettings.values.wind_from_deg = 90.0
@@ -171,8 +184,11 @@ func test_the_lake_scene() -> void:
 	GameSettings.values.wave_preset = SettingsValues.WavePreset.STRONG_CHOP
 	scene.get_node("PauseMenu").restart_requested.emit()
 	near = scene.get_node("Ocean/NearWater")
+	far = scene.get_node("Ocean/FarWater")
 	assert_eq(near.layers, 2)
-	assert_almost_eq(surface.position.y, -0.182 - 0.02, 1e-4, "the strong chop's troughs")
+	assert_almost_eq(far.global_position.y, -0.182 - 0.02, 1e-4, "the strong chop's troughs")
+	assert_eq((near.material_override as ShaderMaterial).get_shader_parameter("wind_ripple_map_area"), gust_area, "the gusts again")
+	assert_true(windsurfer.sim.wind is MapWindField, "still the map's wind")
 
 
 func test_the_start_menu_offers_the_lake() -> void:
