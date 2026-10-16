@@ -142,7 +142,7 @@ func _start_the_clock() -> void:
 			var parts: PackedStringArray = arg.get_slice("=", 1).split(":")
 			var minutes: float = parts[1].to_float() if parts.size() > 1 else 0.0
 			field.set_time_of_day(parts[0].to_float() * 3600.0 + minutes * 60.0)
-	_hud.clock_text = field.time_of_day_text()
+	_hud.clock_text = field.time_of_day_text().left(5)  # hours and minutes: the strip is full
 
 
 ## The gust picture (WindRippleMap) over the depth grid's area, on the water.
@@ -170,7 +170,7 @@ func _show_the_wind_of_the_moment() -> void:
 	var field: MapWindField = map_wind_field()
 	if field == null:
 		return
-	_hud.clock_text = field.time_of_day_text()
+	_hud.clock_text = field.time_of_day_text().left(5)  # hours and minutes: the strip is full
 	if _gust_picture != null:
 		_gust_picture.show_moment(field.moment())
 

@@ -150,7 +150,7 @@ func test_the_lake_scene() -> void:
 	assert_almost_eq(windsurfer.sim.air_density_kg_m3, 0.98, 1e-9)
 	assert_almost_eq(windsurfer.sim.water_config.density_kg_m3, 1000.0, 1e-9)
 	assert_almost_eq(scene.map_wind_field().time_of_day_s(), 14.5 * 3600.0, 1.0)
-	assert_eq(scene.get_node("HUD").clock_text, "14:30:00", "the time of day on the HUD")
+	assert_eq(scene.get_node("HUD").clock_text, "14:30", "the time of day on the HUD")
 	var start: Vector3 = scene.start_position()
 	assert_almost_eq(start, Vector3(380.0, 0.0, -910.0), Vector3.ONE * 0.01, "off the camping beach")
 	assert_almost_eq(windsurfer.sim.body.origin_world().x, start.x, 0.01)

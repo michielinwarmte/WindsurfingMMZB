@@ -103,7 +103,7 @@ func update_from(t: Telemetry, controller: PlayerController, camera_name: String
 		state = "%s!  waterstart in %d s (R: now)" % [t.fall_kind.to_upper(), ceili(t.waterstart_in_s)]
 	var who: String = "autopilot" if use_autopilot else controller.mode_name()
 	var manoeuvre: String = controller.manoeuvre_name()
-	_strip.text = ("%s    " % clock_text if clock_text != "" else "") + "%5.1f km/h  %4.1f kt    wind %4.1f kt at 10 m, %4.1f kt at the sail, from %03.0f    %s, %s%s    %s    camera: %s" % [
+	_strip.text = ("%s   " % clock_text if clock_text != "" else "") + "%5.1f km/h  %4.1f kt    wind %4.1f kt at 10 m, %4.1f kt at the sail, from %03.0f    %s, %s%s    %s    camera: %s" % [
 		t.speed_kmh, t.speed_kt, t.tws_10m_kt, t.tws_at_sail_kt, t.wind_from_bearing_deg,
 		tack, state, ("  " + manoeuvre) if manoeuvre != "" else "", who, camera_name]
 	_rose.heading_deg = t.heading_deg
