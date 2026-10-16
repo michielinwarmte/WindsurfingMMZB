@@ -211,3 +211,21 @@ func test_ripples_grow_with_the_wind() -> void:
 	assert_lt(OceanNode.ripple_factor_for_wind(1.0), 0.2, "Almost glassy in a calm")
 	assert_gt(OceanNode.ripple_factor_for_wind(20.0), OceanNode.ripple_factor_for_wind(10.0), "More in more wind")
 	assert_eq(OceanNode.ripple_factor_for_wind(60.0), OceanNode.RIPPLE_MAX_FACTOR, "Up to a limit")
+
+
+func test_lake_far_water_stays_in_its_area() -> void:
+	# On a map the far water covers the lake's area, fixed, wherever the camera goes.
+	var sim: WindsurferSim = WindsurferSim.create_default(true)
+	var camera: Camera3D = Camera3D.new()
+	add_child_autofree(camera)
+	camera.global_position = Vector3(900.0, 2.0, -300.0)
+	var ocean: OceanNode = OceanNode.new()
+	ocean.far_area_xz = Rect2(-2000.0, -1500.0, 4000.0, 3000.0)
+	add_child_autofree(ocean)
+	ocean.setup(sim, camera)
+	var far: MeshInstance3D = ocean.get_node("FarWater") as MeshInstance3D
+	assert_eq((far.mesh as PlaneMesh).size, Vector2(4000.0, 3000.0), "As big as the area")
+	assert_almost_eq(far.global_position.x, 0.0, 1e-3, "Centred on the area, not on the camera")
+	assert_almost_eq(far.global_position.z, 0.0, 1e-3, "Centred on the area, not on the camera")
+	var near: MeshInstance3D = ocean.get_node("NearWater") as MeshInstance3D
+	assert_almost_eq(near.global_position.x, 900.0, 1e-3, "The near water follows the camera")

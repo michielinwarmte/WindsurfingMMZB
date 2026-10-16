@@ -19,8 +19,8 @@ Written 28 September 2026 (Session 28), for the AI sessions doing the work and f
 | 3 | Playable prototype on flat water | ✅ Done (Session 30); play-tested in Sessions 31 to 33: falls, downwind trim, the helm (rake, rig tilt, rail), beginner assists, a hull that carves when banked, tacks and gybes on Space and on the keys; Session 34: trim by feel, out of irons, 12 to 24 kt all clean in `tools/matrix.sh` |
 | 4 | Autopilot, validation suite and tuning | ✅ Done (Session 35): `tools/test.sh validation`, 17 checks green, polar in `Documentation/POLAR_15KT.md` |
 | 5 | Waves and ocean | ✅ Done (Session 36): Gerstner field, shader and mesh, validation on a swell-dominated sea. Session 37: the sailor is a body of their own and the rig is held by the sailor (spec 7.5); flat water and the strong chop sail without a fall, one fall each remains on the sea and the medium chop at a landing (spec 17.13) |
-| 6 | Rig visuals: board, sail, boom, mast | ✅ Done (Session 38) except the force-vector debug view: Blender models built by `tools/blender/build_rig_models.py` from the config numbers, a sail that bends with the simulation, the sailor figure on a fixed-length skeleton. The same session gave the game its start, settings and pause menus (no phase of its own) |
-| 7 | Environment and effects | ⬜ Next |
+| 6 | Rig visuals: board, sail, boom, mast | ✅ Done (Session 38; the force-vector debug view in Phase 7): Blender models built by `tools/blender/build_rig_models.py` from the config numbers, a sail that bends with the simulation, the sailor figure on a fixed-length skeleton. The same session gave the game its start, settings and pause menus (no phase of its own) |
+| 7 | Environment and effects | 🔶 Built, team check next: one water shader for sea and lake, sky and haze, spray, wake, splashes, streamer, wind flag, force view (F3); gust patches wait for the lake scene |
 | 8 | Audio | ⬜ |
 | 9 | Gameplay: racing | ⬜ |
 
@@ -255,7 +255,7 @@ Change the layout when there is a good reason, and update this section when you 
 - [x] Clean up the models in Blender (installed at `/usr/bin/blender`): remove the camera and the texture references, set a sensible origin (for example the mast foot; pick one and document it), point the bow to −Z, and export as `.glb` into `Game/assets/models/`. If that is too fiddly, wrap the FBX in a scene with a correcting transform. (Session 38: rebuilt from scratch instead by `tools/blender/build_rig_models.py`, which reads the sizes from `Game/config/*.tres` and writes board, fin, mast, sail and boom as one `.glb` each, origins documented in the script header; the FBX files are gone.)
 - [x] A procedural mast (a cylinder), and a boom that follows the sail angle and rake. (Session 38: a tapered mast with extension and base that bends with the sail's camber; a wishbone boom with grip, harness lines and outhaul, posed with the sail.)
 - [x] Sail cloth deformation from the simulation: belly to leeward, twist, and flutter when luffing. A vertex shader driven by uniforms is the preferred way. (Session 38: `Game/windsurfer/sail_cloth.gdshader` on a 24 × 40 grid: draft 0.10 deepest at 38 % of the chord, twist 8 to 16° at the head with the pull, ripples when luffing; the belly crosses over in 0.8 s when the sail flips.)
-- [ ] A debug view you can toggle, showing force vectors (sail, fin, buoyancy, drag).
+- [x] A debug view you can toggle, showing force vectors (sail, fin, buoyancy, drag). (Phase 7 work: F3 or `--forces=1` shows arrows for the sail force at the centre of effort, the fin force, buoyancy at the centre of buoyancy, the planing lift at its centre of pressure, the hull drag and the sailor's weight, 1 m per 500 N, with a legend: `Game/world/effects/force_arrows.gd`, read from the simulation's models.)
 - [x] A placeholder sailor that changes stance: done in Session 37 as an articulated figure (feet, legs, torso, arms, head) driven by the simulation's sailor body. A real rigged character comes later. Session 38: the figure is on a skeleton with fixed bone lengths and real knees and elbows (`Game/windsurfer/figure_skeleton.gd`); a skinned mesh is still open.
 
 **Done when:** screenshots from several angles on both tacks show the sail on the leeward side and the boom where the physics says it is.
@@ -263,10 +263,13 @@ Change the layout when there is a good reason, and update this section when you 
 
 ## Phase 7: Environment and effects
 
-- [ ] Sky (procedural or physical), sun and horizon fog.
-- [ ] Distant islands (simple meshes) with a simple custom collision, so the board stops at the shoreline.
-- [ ] Spray from the rails that grows with speed and planing (GPUParticles3D), foam and wake behind the tail, and a splash on landing.
-- [ ] Wind visuals: gust patches on the water, and a flag or streamers.
+> One water shader for the open sea and the map's lake (the map's question R9 in `PHYSICS_REQUESTS_FROM_MAP.md`, option 1): `Game/world/water.gdshader` has the Gerstner waves (now in `Game/world/gerstner.gdshaderinc`, shared with the wake) and the map's see-through lake look (colour and transparency from the depth behind the water, refraction, Fresnel, ripples that tilt the wave normal). Each scene gives it a look, a material with only the parameters: `Game/world/sea_water.tres` for the open sea, `Game/maps/silvaplana/lake_water.tres` for Lake Silvaplana (`OceanNode.look`, `OceanNode.render_layers`).
+
+- [x] Sky (procedural or physical), sun and horizon fog. (The Silvaplana map's sky colours and its 15:00 summer sun, so both scenes have the same light; a summer haze of about 20 km visibility; the far water plane reaches past the horizon; the board's shadow falls on the water.)
+- [x] Distant islands (simple meshes) with a simple custom collision, so the board stops at the shoreline. Covered by the map instead, not built: Lake Silvaplana (map plan M3) has a real shore from Swiss elevation data and a depth grid (`TerrainGrid`), and the board stops at the shore in the lake scene (the scene layer first, running aground in the physics later, request R4). Made-up islands on the open sea would add nothing the real lake does not.
+- [x] Spray from the rails that grows with speed and planing (GPUParticles3D), foam and wake behind the tail, and a splash on landing. (`Game/windsurfer/effects.gd` with `Game/world/effects/`: spray off the rails at the spray root, more off the leeward and the low rail; a foam ribbon behind the tail that rides on the waves and fades in 7 s; a splash when the water's support of the hull jumps by 2.5 times the weight within 0.2 s, and on a fall.)
+- [x] Wind visuals: a flag or streamers. (A red streamer at the masthead posed from the apparent wind; an orange wind flag on a buoy near the start that streams in the true wind.)
+- [ ] Wind visuals: gust patches on the water. They need a wind that differs from place to place, which only the map has (`MapWind`). The hook is in the water shader (`wind_ripple_map` and `wind_ripple_map_area`: a picture of the ripple strength over the lake); the lake scene fills it from `MapWind` a few times a second. On the open sea the ripples follow the one wind (stronger in a gust, everywhere at once).
 
 **Done when:** screenshots look right and the game holds 60 fps with room to spare on the team's PCs (the RTX 3080 Ti machine at least).
 **Stop:** team check.

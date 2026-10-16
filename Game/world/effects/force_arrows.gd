@@ -8,9 +8,9 @@ extends Node3D
 
 ## 1 m of arrow per 500 N.
 const METRES_PER_NEWTON: float = 1.0 / 500.0
-const SHAFT_RADIUS_M: float = 0.02
-const HEAD_LENGTH_M: float = 0.16
-const HEAD_RADIUS_M: float = 0.06
+const SHAFT_RADIUS_M: float = 0.03
+const HEAD_LENGTH_M: float = 0.2
+const HEAD_RADIUS_M: float = 0.08
 
 ## The forces, in the order of the legend: name, colour, what it is.
 const FORCES: Array[Array] = [
@@ -110,7 +110,8 @@ func _make_legend() -> CanvasLayer:
 	panel.anchor_right = 1.0
 	panel.offset_left = -330.0
 	panel.offset_right = -16.0
-	panel.offset_top = 160.0
+	# Below the compass and the HUD's detail panel.
+	panel.offset_top = 230.0
 	var label: RichTextLabel = RichTextLabel.new()
 	label.bbcode_enabled = true
 	label.fit_content = true

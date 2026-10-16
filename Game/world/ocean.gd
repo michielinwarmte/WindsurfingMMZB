@@ -29,6 +29,12 @@ const RIPPLE_MIN_FACTOR: float = 0.1
 ## no sky shows between the water's edge and the horizon.
 @export var far_size_m: float = 20000.0
 @export var far_cell_m: float = 100.0
+## On a map: the area the far water covers, fixed in the world (x and z of a corner, then
+## the width and depth, m), instead of a plane around the camera. A lake needs this: its
+## water must stay within its shore band (for Silvaplana the TerrainGrid's area, as in
+## terrain_view.gd), or it would flood the valley below the lake's level. Empty = the open
+## sea's plane around the camera.
+@export var far_area_xz: Rect2 = Rect2()
 ## The water's look: a ShaderMaterial on res://world/water.gdshader (null = the open sea's).
 @export var look: ShaderMaterial = null
 ## The render layers the water is drawn on. A map whose water mirrors the valley with a
@@ -56,8 +62,8 @@ func setup(sim: WindsurferSim, camera: Camera3D) -> void:
 	_base_height_m = sim.water_config.base_height_m
 	var field: WaveField = sim.water as WaveField
 	_total_amplitude_m = field.total_amplitude_m() if field != null else 0.0
-	_near = _make_plane("NearWater", near_size_m, near_cell_m)
-	_far = _make_plane("FarWater", far_size_m, far_cell_m)
+	_near = _make_plane("NearWater", Vector2(near_size_m, near_size_m), near_cell_m)
+	_far = _make_plane("FarWater", _far_size(), far_cell_m)
 	_apply_look()
 	_follow_camera()
 
@@ -108,12 +114,15 @@ func _apply_look() -> void:
 	_far.material_override = _far_material
 
 
-func _make_plane(node_name: String, size_m: float, cell_m: float) -> MeshInstance3D:
+func _far_size() -> Vector2:
+	return far_area_xz.size if far_area_xz.has_area() else Vector2(far_size_m, far_size_m)
+
+
+func _make_plane(node_name: String, size_m: Vector2, cell_m: float) -> MeshInstance3D:
 	var plane: PlaneMesh = PlaneMesh.new()
-	plane.size = Vector2(size_m, size_m)
-	var subdivisions: int = maxi(int(round(size_m / cell_m)) - 1, 0)
-	plane.subdivide_width = subdivisions
-	plane.subdivide_depth = subdivisions
+	plane.size = size_m
+	plane.subdivide_width = maxi(int(round(size_m.x / cell_m)) - 1, 0)
+	plane.subdivide_depth = maxi(int(round(size_m.y / cell_m)) - 1, 0)
 	var instance: MeshInstance3D = MeshInstance3D.new()
 	instance.name = node_name
 	instance.mesh = plane
@@ -152,4 +161,9 @@ func _follow_wind() -> void:
 func _follow_camera() -> void:
 	var at: Vector3 = _camera.global_position
 	_near.global_position = Vector3(snappedf(at.x, near_cell_m), _base_height_m, snappedf(at.z, near_cell_m))
-	_far.global_position = Vector3(snappedf(at.x, far_cell_m), _base_height_m - _total_amplitude_m - 0.02, snappedf(at.z, far_cell_m))
+	var far_height_m: float = _base_height_m - _total_amplitude_m - 0.02
+	if far_area_xz.has_area():
+		var centre: Vector2 = far_area_xz.get_center()
+		_far.global_position = Vector3(centre.x, far_height_m, centre.y)
+	else:
+		_far.global_position = Vector3(snappedf(at.x, far_cell_m), far_height_m, snappedf(at.z, far_cell_m))
