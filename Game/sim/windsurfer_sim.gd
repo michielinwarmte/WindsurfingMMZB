@@ -1004,6 +1004,10 @@ func _fill_telemetry(controls: SimControls) -> void:
 	t.tws_10m_kt = wind.speed_at_height(wind.config.reference_height_m) / SimMath.KNOT_MS
 	t.tws_at_sail_kt = sail.true_wind_at_ce_world.length() / SimMath.KNOT_MS
 	t.twa_deg = rad_to_deg(SimMath.wind_angle_rad(body.basis, from_true))
+	# The wind the sail meets comes from where the air at the sail comes from (a map's local
+	# wind); before the sail has been computed, the mean wind.
+	var at_sail: Vector3 = sail.true_wind_at_ce_world
+	t.twa_at_sail_deg = rad_to_deg(SimMath.wind_angle_rad(body.basis, -at_sail)) if at_sail.length_squared() > 1e-6 else t.twa_deg
 	t.vmg_ms = v_h.dot(from_true)
 	t.aws_kt = sail.aws_ms / SimMath.KNOT_MS
 	t.awa_deg = rad_to_deg(sail.awa_rad)
