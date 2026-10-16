@@ -127,6 +127,7 @@ var _was_down: Dictionary[String, bool] = {}
 
 var _sail: SailModel = null
 var _sailor: SailorConfig = null
+var _air_density_kg_m3: float = 1.225
 
 
 func _init() -> void:
@@ -134,12 +135,15 @@ func _init() -> void:
 	auto_sheet_pilot.trim_sheet = true
 
 
-## Gives the controller the simulation's sail, so the auto-sheet trims for the most drive.
-func set_sail(sail: SailModel, sailor: SailorConfig = null) -> void:
+## Gives the controller the simulation's sail, so the auto-sheet trims for the most drive,
+## and the air density it sails in (WindsurferSim.air_density_kg_m3).
+func set_sail(sail: SailModel, sailor: SailorConfig = null, air_density_kg_m3: float = 1.225) -> void:
 	_sail = sail
 	_sailor = sailor
+	_air_density_kg_m3 = air_density_kg_m3
 	auto_sheet_pilot.sail = sail
 	auto_sheet_pilot.sailor = sailor
+	auto_sheet_pilot.air_density_kg_m3 = air_density_kg_m3
 
 
 ## Reads the keys and writes the controls: sheet, boom across, rake, rig tilt and lean.
@@ -374,6 +378,7 @@ func reset_controls(controls: SimControls) -> void:
 	auto_sheet_pilot.trim_sheet = true
 	auto_sheet_pilot.sail = _sail
 	auto_sheet_pilot.sailor = _sailor
+	auto_sheet_pilot.air_density_kg_m3 = _air_density_kg_m3
 	controls.sheet = 0.0
 	controls.boom_across = 0.0
 	controls.rake = 0.0

@@ -16,6 +16,9 @@ var target_alpha_deg: float = 15.0
 ## most drive at the current apparent wind angle, which is what a sailor does by feel:
 ## close to the wind that is a modest angle (drag costs), on a reach it is near the stall.
 var sail: SailModel = null
+## The air density the simulation sails in (kg/m3), for the sail force the pilot expects: set
+## with the sail (WindsurferSim.air_density_kg_m3; thinner on a mountain lake).
+var air_density_kg_m3: float = 1.225
 ## The sailor, when the pilot may use their weight, reach and lean rate to sheet in only
 ## as fast as the body can lean out against the pull.
 var sailor: SailorConfig = null
@@ -396,7 +399,7 @@ func _alpha_for_torque_deg(telemetry: Telemetry, limit_nm: float) -> float:
 	if sail == null or limit_nm == INF:
 		return INF
 	var aws_ms: float = telemetry.aws_kt * SimMath.KNOT_MS
-	var q_area: float = 0.5 * 1.225 * aws_ms * aws_ms * sail.config.area_m2
+	var q_area: float = 0.5 * air_density_kg_m3 * aws_ms * aws_ms * sail.config.area_m2
 	var awa: float = deg_to_rad(absf(telemetry.awa_deg))
 	var arm_m: float = _heeling_arm_m(telemetry)
 	var alpha_deg: float = 24.0
@@ -420,7 +423,7 @@ func _alpha_rise_limit_dps(telemetry: Telemetry) -> float:
 	if sail == null or sailor == null:
 		return INF
 	var aws_ms: float = telemetry.aws_kt * SimMath.KNOT_MS
-	var q_area: float = 0.5 * 1.225 * aws_ms * aws_ms * sail.config.area_m2
+	var q_area: float = 0.5 * air_density_kg_m3 * aws_ms * aws_ms * sail.config.area_m2
 	if q_area < 1.0:
 		return INF
 	var slope_per_deg: float = sail.lift_slope_per_rad() * PI / 180.0
@@ -435,7 +438,7 @@ func _backing_alpha_deg(telemetry: Telemetry) -> float:
 	if sail == null:
 		return backing_alpha_deg
 	var aws_ms: float = telemetry.aws_kt * SimMath.KNOT_MS
-	var q: float = 0.5 * 1.225 * aws_ms * aws_ms
+	var q: float = 0.5 * air_density_kg_m3 * aws_ms * aws_ms
 	var cl_allowed: float = backing_force_max_n / maxf(q * sail.config.area_m2, 1e-6)
 	var alpha_deg: float = backing_alpha_deg
 	while alpha_deg > 0.5 and sail.lift_coefficient(deg_to_rad(alpha_deg)) > cl_allowed:

@@ -16,15 +16,15 @@ The interfaces below are suggestions only. D8 applies: every change is a physica
 
 | # | Request | Why | Size | When the map needs it |
 |---|---|---|---|---|
-| R1 | A map can bring its own environment configs: air, water, wind | Every request below needs it | small | soon (M3 swaps the wind from the scene meanwhile) |
-| R2 | Air density as a config value instead of the fixed 1.225 | Measured 0.98 kg/m³ on Maloja afternoons, 20 % less sail force | small | after R1 |
-| R3 | Fresh water, 1000 kg/m³ | Silvaplana is a lake; `WaterConfig` already has the field | tiny (only R1) | after R1 |
+| R1 | A map can bring its own environment configs: air, water, wind | Every request below needs it | small | ✅ Done 16 October 2026: `EnvironmentConfig`, `WindsurferSim.create_for()` |
+| R2 | Air density as a config value instead of the fixed 1.225 | Measured 0.98 kg/m³ on Maloja afternoons, 20 % less sail force | small | ✅ Done 16 October 2026: 0.98 on the lake |
+| R3 | Fresh water, 1000 kg/m³ | Silvaplana is a lake; `WaterConfig` already has the field | tiny (only R1) | ✅ Done 16 October 2026: `water_silvaplana.tres` |
 | R4 | A lakebed the simulation can ask, and running aground | The fin (0.38 m) hits bottom near the shore; the depth is measured | medium | after M1 (the map delivers the depth grid) |
-| R5 | Wind that differs from place to place: moving gusts, shifts, the daily cycle. **Max builds the patterns; Michiel provides the connection in `WindField`** | Realistic Maloja; the measured statistics are below | large (mostly Max) | later, a general system for every spot. Max's patterns exist map-side since 15 October (`MapWind`); the connection is still open |
+| R5 | Wind that differs from place to place: moving gusts, shifts, the daily cycle. **Max builds the patterns; Michiel provides the connection in `WindField`** | Realistic Maloja; the measured statistics are below | large (mostly Max) | ✅ The connection is done (W5, 16 October 2026): `MapWindField`; the lake sails in `MapWind` |
 | R6 | Waves made by the wind (fetch) | Lake chop instead of the sea swell | large | the two-body sailor is done (Session 37, spec 7.5); after the crest landings of spec 17.13 |
 | R7 | Replay a measured day, or today's live wind | Fun, and a check of R5 | medium (mostly game side) | after R5 |
 | R8 | Other kiters and windsurfers on the water | Life on the lake | large | with main-plan Phase 9 |
-| R9 | Realistic water: see-through, darker with depth, ripples, mountains mirrored (a look request, not physics). The map built it for the lake; how should it meet the waves in the game? | The game's water is one colour with a sky reflection; Max found it "really bad" next to the photo terrain | small to medium | before M3 puts the board on the lake |
+| R9 | Realistic water: see-through, darker with depth, ripples, mountains mirrored (a look request, not physics). The map built it for the lake; how should it meet the waves in the game? | The game's water is one colour with a sky reflection; Max found it "really bad" next to the photo terrain | small to medium | ✅ Done 16 October 2026: one water for sea and lake (Phase 7), the lake's look on it, gusts on the water (W5) |
 
 The map track will meanwhile use what exists (map plan M3):
 - its own `WindConfig` with the current sine gusts and shifts, swapped in by the scene the way `tools/matrix.sh` does,
@@ -36,6 +36,8 @@ The map track will meanwhile use what exists (map plan M3):
 `WindsurferSim.create_default()` loads the `Game/config/*_default.tres` files, and `windsurfer.gd` calls it. A map needs to hand over its own air, water and wind settings when the simulation is made. The water config goes into `BuoyancyModel` and `HullModel` at construction, so swapping it afterwards is not enough.
 
 Suggestion: something like `WindsurferSim.create_for(environment)`, where `environment` is a small resource holding the map's `WaterConfig`, `WindConfig`, `WaveSetConfig` and air density. The open water keeps today's defaults, so every existing test and validation stays unchanged.
+
+**Status: done (16 October 2026).** `EnvironmentConfig` (`Game/sim/config/environment_config.gd`): `air_density_kg_m3`, `water`, `wind`, `waves` (null = the open water's default file) and the map's wind (a switch, the paths of its files, the start time). `WindsurferSim.create_for(environment)` builds the simulation with it, and `create_default()` is `create_for()` with an empty environment, so the open water and every test and validation are unchanged. The windsurfer node has an `environment` (null = the default); the lake scene hands it `res://maps/silvaplana/environment_silvaplana.tres`. Tests: `test_environment_config.gd`.
 
 ## R2. Thin air
 
@@ -53,9 +55,25 @@ That is 19.8 % below the 1.225 kg/m³ in the code. For comparison, the standard 
 
 **What it does.** Sail lift and drag and the sailor's windage scale with the density, so 20 % less force in the same wind. The speed loss is smaller, because the water drag doesn't change; a validation run on Silvaplana would show how much. Sailors say you need a bigger sail at altitude; Max can say from experience how much bigger.
 
+**Status: done (16 October 2026).** `WindsurferSim.air_density_kg_m3` (1.225 by default) replaces the constant, from the `EnvironmentConfig`; the sail and the windage use it, and the autopilots take it with the sail (`Autopilot.air_density_kg_m3`, set by the windsurfer node and the player's controller). `environment_silvaplana.tres` has 0.98. Spec section 16 has the row with the source.
+
+**Measured in the game** (`tools/lake_matrix.sh --compare=1`: a straight beam reach with the beginner controller, the mean speed over seconds 30 to 60, the same steady wind):
+
+| wind at 10 m | sea level, sea water | 0.98 kg/m³, sea water | 0.98 kg/m³, fresh water (the lake) |
+|---|---|---|---|
+| 10 kt | 13.6 kt | 4.2 kt (−69 %: not planing) | 4.2 kt |
+| 11 kt | 15.7 kt | 12.3 kt (−21 %) | 12.7 kt (−19 %) |
+| 12 kt | 17.0 kt | 15.7 kt (−8 %) | 15.9 kt (−6 %) |
+| 14 kt | 18.4 kt | 18.3 kt (−0.6 %) | 18.5 kt (+0.5 %) |
+| 18.2 kt (the lake's mean at 14:30) | 20.6 kt | 20.8 kt (+1.2 %) | 20.9 kt (+1.4 %) |
+
+So the thin air costs most around the planing threshold: the sail's force is 20 % lower, as if the wind were 10.6 % lighter (0.98 / 1.225 = 0.80 = 0.894²), and a board that just planes at sea level at 10 kt needs about 11 to 12 kt here. In a strong Maloja it costs nothing: the sailor is overpowered anyway and sheets in further for the same pull (the sail's force is limited by what the body can hold, not by the air), and the sailor's own windage drag is 20 % lower. That matches the sailors' rule of a bigger sail at altitude, which matters in the lighter winds.
+
 ## R3. Fresh water
 
 `WaterConfig.density_kg_m3` already exists (1025, sea water). Silvaplana needs 1000. That affects buoyancy, the fin force and the hull. The board floats about 2.5 % deeper, so it only needs R1. The viscosity at a summer lake temperature could also differ (`kinematic_viscosity_m2_s` is set for about 15 °C); Max can give the usual water temperature.
+
+**Status: done (16 October 2026).** `Game/maps/silvaplana/water_silvaplana.tres`: 1000 kg/m³ and 1.14e-6 m²/s, the viscosity of fresh water at 15 °C (ITTC fresh-water table, 2011; spot guides give 14 to 15 °C for the lake's surface in summer, Max can correct it). The buoyancy, the hull and the fin are built with it (`create_for()`). On a beam reach it gives 0 to 3 % more speed than sea water in the same wind and air (the table under R2).
 
 ## R4. The lakebed, and running aground
 
@@ -95,6 +113,10 @@ Tests could be:
 It should stay deterministic (a seed), so tests and replays repeat. `WindField.velocity_at(point)` already takes a position, so the interface may not need to change.
 
 **Update, 14 October 2026 (Session 42, map track):** Max's wind analyser (map plan, phases W0 to W4) builds these patterns map-side first, as a viewer, without touching `Game/sim/`. The full research, with more stations, 2014 to 2026 and satellite photos of the lake, is in [MALOJA_WIND_RESEARCH.md](MALOJA_WIND_RESEARCH.md); its numbers replace the ones below (they agree within a few per cent). The connection to `WindField` (W5) is still this request.
+
+**Update, 16 October 2026 (W5, physics track): connected.** `MapWindField` (`Game/sim/map_wind_field.gd`, spec section 8.10) extends `WindField` and answers with `MapWind`: the time of day runs with the simulation (from 14:30 on the lake, `--time=hh:mm`), `velocity_at(p)` is `MapWind`'s velocity at the point with the height profile from the pattern's 5 m (exponent 0.11), and the direction the simulation uses for its decisions (the sail's side, the water start, the TWA, the waves) is the lake's mean of the moment, while the sail and the windage feel the local wind. Outside the map it is the lake's mean; no NaN anywhere. The lake scene sails in it and the HUD shows the time, the lake's mean at 10 m, the local wind at the sail and the mean direction. The validation is unchanged (it sails on the open water).
+
+The lake matrix (`tools/lake_matrix.sh`: the cases of `tools/matrix.sh` from the lake scene's start, at 12:00, 14:30 and 17:00, flat water): 24 cases, no fall, no NaN, none aground; 23 of 24 manoeuvres complete (a turn on a run at 12:00 turned 58 of the 60 degrees it is judged by). The wind at the sail moves between 12 and 18.6 kt within a run while the lake's mean is 14.7 to 18.2 kt at 10 m: the gusts, lulls and the shifts of up to 15 degrees are felt. One thing to look at on the physics side (not caused by the map's wind): holding a heading on a close reach (75 to 80 degrees to the local wind) the board wags at 1.7 Hz (±15 deg/s of yaw, the planing share cycling 26 to 100 %); on the lake it shows because the local wind is often 10 to 15 degrees off the mean, and it shows the same on the open water at sea level in a steady wind from that angle (`tools/lake_matrix.sh --only=straight --wind=steady --air=1.225 --water=1025 --kt=18 --from=207`).
 
 **Update, 15 October 2026 (Session 43, map track):** the map's wind now exists as one function, map-side: `MapWind.velocity_at(point, time_of_day_s)` in `Game/maps/wind/map_wind.gd` (the air's velocity in m/s, horizontal, at the pattern's height of 5 m; north is -Z, a velocity points where the air goes). It is the fixed pattern of the terrain, the day's mean wind, the gusts and lulls (fronts across the lake and lanes along the wind, rolling down the lake), slow pulses and shifts, and a lee along the south-east shore, all deterministic from a seed and the time of day. The wind viewer draws exactly this (its shaders compute the same sums, checked pixel by pixel). For W5, `WindField.velocity_at(point)` would ask it, with the simulation's time turned into a time of day, and add the height profile. How and when is Michiel's call.
 
@@ -183,6 +205,8 @@ Max and the map track would prefer 1 or 2. It's your shader, so you decide.
 - **An opportunity for the wind patterns (R5).** The ripples' strength and direction are shader parameters. With a wind field behind them, gusts could show on the water as dark, rippled patches, the way sailors spot them coming.
 
 **Cost:** about 6 % of the frame rate on Max's PC (1,280 → 1,200 fps, both measured the same way).
+
+**Status: done (16 October 2026).** Way 1 and way 2 together (Phase 7): the game's `water.gdshader` got the see-through depth, the refraction, the Fresnel and the ripples, the wave formulas moved into `res://world/gerstner.gdshaderinc` (shared with the wake), and a look is a material with only parameters (`sea_water.tres`, the lake's `lake_water.tres`). The lake scene (W5) draws the `OceanNode` with the lake's look on render layer 2 (the reflection probe's), its far water only over the depth grid's area (`far_area_xz`), so the land lower than the lake stays dry. And the opportunity is used: `WindRippleMap` draws `MapWind` on the graphics card into a picture of the gusts over the lake every frame, and the water's ripples follow it (stronger in a gust, weaker in a lull or the lee). The effect on the screen is subtle: the ripples only tilt the surface, so the patches show mostly in the glitter and the reflections; a darker colour or roughness in the gusts would be a change to `water.gdshader`.
 
 **Sources:**
 - Godot docs, [Screen-reading shaders](https://docs.godotengine.org/en/stable/tutorials/shaders/screen-reading_shaders.html) and [Advanced post-processing](https://docs.godotengine.org/en/stable/tutorials/shaders/advanced_postprocessing.html) (depth reconstruction).

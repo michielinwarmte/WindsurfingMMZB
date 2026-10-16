@@ -45,7 +45,9 @@ var wind: WindField
 var water: WaterSurface
 var telemetry: Telemetry = Telemetry.new()
 
-const RHO_AIR: float = 1.225
+## Density of the air (kg/m3): 1.225 at sea level; a place brings its own (EnvironmentConfig,
+## create_for()). The sail's force and the sailor's windage scale with it.
+var air_density_kg_m3: float = 1.225
 
 enum SailorState { SAILING, FALLEN }
 
@@ -173,18 +175,34 @@ func _init(board: BoardConfig, sail_cfg: SailConfig, fin_cfg: FinConfig, sailor_
 	reset(Vector3.ZERO, 0.0)
 
 
-## Loads the default configuration files. with_waves = true puts the default wave set
-## on the water (the game); tests and the validation sail on flat water unless they ask.
+## Loads the default configuration files: the open water at sea level. with_waves = true
+## puts the default wave set on the water (the game); tests and the validation sail on flat
+## water unless they ask.
 static func create_default(with_waves: bool = false) -> WindsurferSim:
+	return create_for(EnvironmentConfig.new(), with_waves)
+
+
+## Builds the simulation for a place (PHYSICS_REQUESTS_FROM_MAP.md, R1): its air, its water,
+## its wind and its waves, and what it leaves empty from the open water's default files. With
+## the map's wind on, the wind is the map's own (MapWindField, PHYSICS_SPEC.md 8.10). The board,
+## the sail, the fin and the sailor are the default ones everywhere.
+static func create_for(environment: EnvironmentConfig, with_waves: bool = false) -> WindsurferSim:
+	var wind_cfg: WindConfig = environment.wind_or_default()
 	var sim: WindsurferSim = WindsurferSim.new(
 		load("res://config/board_default.tres"),
 		load("res://config/sail_default.tres"),
 		load("res://config/fin_default.tres"),
 		load("res://config/sailor_default.tres"),
-		load("res://config/water_default.tres"),
-		load("res://config/wind_default.tres"),
+		environment.water_or_default(),
+		wind_cfg,
 		load("res://config/sim_default.tres"),
-		load("res://config/waves_default.tres"))
+		environment.waves_or_default())
+	sim.air_density_kg_m3 = environment.air_density_kg_m3
+	var map_wind: MapWind = environment.map_wind()
+	if map_wind != null:
+		sim.wind = MapWindField.new(map_wind, wind_cfg, environment.start_time_of_day_s(), environment.map_wind_height_m)
+		# Again, so the sail side and the telemetry come from the map's wind.
+		sim.reset(Vector3.ZERO, 0.0)
 	sim.set_waves(with_waves)
 	return sim
 
@@ -266,7 +284,7 @@ func step(dt: float, controls: SimControls) -> void:
 		fin.compute(body, water, time_s, water_config.density_kg_m3)
 		if sailing:
 			_hold_the_rig()
-			sail.compute(rig, wind, controls.sheet, controls.rake, RHO_AIR, _rig_lean_rad(controls), controls.boom_across, controls.hold_side)
+			sail.compute(rig, wind, controls.sheet, controls.rake, air_density_kg_m3, _rig_lean_rad(controls), controls.boom_across, controls.hold_side)
 			_apply_rig_forces()
 			_apply_windage()
 			_apply_leg_forces(sub_dt)
@@ -735,7 +753,7 @@ func _apply_windage() -> void:
 	var speed: float = apparent.length()
 	if speed < 0.1:
 		return
-	var drag: float = 0.5 * RHO_AIR * sailor_config.windage_area_cd_m2 * speed * speed
+	var drag: float = 0.5 * air_density_kg_m3 * sailor_config.windage_area_cd_m2 * speed * speed
 	windage_force_world = apparent / speed * drag
 	sailor.add_force(windage_force_world)
 
