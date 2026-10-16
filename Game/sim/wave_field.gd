@@ -30,9 +30,9 @@ var dir_z: PackedFloat64Array = PackedFloat64Array()
 var wavelength: PackedFloat64Array = PackedFloat64Array()
 
 
-## wind_from_bearing_deg: the base wind's compass bearing, which orients the set when it
-## is aligned to the wind (never the gust or shift term: changing directions while the
-## game runs makes the whole surface jump, 9.12).
+## wind_from_bearing_deg: the base wind's compass bearing, which orients the chop, and the
+## swell when it is relative to the wind (never the gust or shift term: changing
+## directions while the game runs makes the whole surface jump, 9.12).
 func _init(wave_set: WaveSetConfig, water_config: WaterConfig = null, wind_from_bearing_deg: float = 0.0) -> void:
 	config = wave_set
 	if water_config != null:
@@ -40,7 +40,9 @@ func _init(wave_set: WaveSetConfig, water_config: WaterConfig = null, wind_from_
 	set_wind_bearing(wind_from_bearing_deg)
 
 
-## Computes the derived values from the config and the base wind bearing.
+## Computes the derived values from the config and the base wind bearing. A new wind
+## direction turns the chop, and the swell only when it is relative to the wind: a swell
+## from a compass bearing stays where it is (9.15).
 func set_wind_bearing(wind_from_bearing_deg: float) -> void:
 	k.clear()
 	omega.clear()
@@ -53,10 +55,9 @@ func set_wind_bearing(wind_from_bearing_deg: float) -> void:
 	count = 0
 	if config == null or not config.enable_waves:
 		return
-	var base_bearing_deg: float = wind_from_bearing_deg + 180.0 if config.align_to_wind else 0.0
 	for wave: GerstnerWaveConfig in config.active_waves():
 		var wave_k: float = wave.wave_number()
-		var direction: Vector2 = direction_for_bearing(base_bearing_deg + wave.direction_offset_deg)
+		var direction: Vector2 = direction_for_bearing(config.travel_bearing_deg(wave, wind_from_bearing_deg))
 		k.append(wave_k)
 		c.append(sqrt(G / wave_k))
 		omega.append(sqrt(G * wave_k))

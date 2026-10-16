@@ -5,13 +5,15 @@
 
 [sub_resource type="Resource" id="Wave_swell"]
 script = ExtResource("2")
-direction_offset_deg = 12.0
+group = 0
+direction_offset_deg = 0.0
 wavelength_m = 14.0
 amplitude_m = 0.08
 steepness = 0.036
 
 [sub_resource type="Resource" id="Wave_long_chop"]
 script = ExtResource("2")
+group = 1
 direction_offset_deg = -28.0
 wavelength_m = 7.0
 amplitude_m = 0.02
@@ -19,6 +21,7 @@ steepness = 0.018
 
 [sub_resource type="Resource" id="Wave_chop"]
 script = ExtResource("2")
+group = 1
 direction_offset_deg = 40.0
 wavelength_m = 3.5
 amplitude_m = 0.005
@@ -26,6 +29,7 @@ steepness = 0.009
 
 [sub_resource type="Resource" id="Wave_ripple"]
 script = ExtResource("2")
+group = 1
 direction_offset_deg = -55.0
 wavelength_m = 1.8
 amplitude_m = 0.002
@@ -34,5 +38,8 @@ steepness = 0.007
 [resource]
 script = ExtResource("1")
 enable_waves = true
-align_to_wind = true
 waves = Array[ExtResource("2")]([SubResource("Wave_swell"), SubResource("Wave_long_chop"), SubResource("Wave_chop"), SubResource("Wave_ripple")])
+swell_relative_to_wind = true
+swell_offset_deg = 12.0
+swell_from_deg = 270.0
+chop_offset_deg = 0.0
