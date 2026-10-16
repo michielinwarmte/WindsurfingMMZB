@@ -16,8 +16,12 @@ extends Node3D
 @export var use_autopilot: bool = false
 @export var autopilot_twa_deg: float = 90.0
 
-## The wind and the sea to sail in. null = the default config files. The sailing scene
-## (main.gd) sets them from the player's settings before this node is ready.
+## The place to sail in: its air, water, wind and waves (null = the open water's default
+## config files). A map scene sets it before this node is ready (sail_silvaplana.gd).
+var environment: EnvironmentConfig = null
+## The wind and the sea to sail in, on top of the environment's. null = keep the
+## environment's. The sailing scene (main.gd) sets them from the player's settings before
+## this node is ready.
 var wind_config: WindConfig = null
 var wave_set_config: WaveSetConfig = null
 
@@ -37,11 +41,15 @@ var _effects: WindsurferEffects
 
 
 func _ready() -> void:
-	sim = WindsurferSim.create_default(true)
+	if environment != null:
+		sim = WindsurferSim.create_for(environment, true)
+	else:
+		sim = WindsurferSim.create_default(true)
 	if wind_config != null or wave_set_config != null:
 		set_sea(wind_config, wave_set_config)
-	controller.set_sail(sim.sail, sim.sailor_config)
+	controller.set_sail(sim.sail, sim.sailor_config, sim.air_density_kg_m3)
 	autopilot.sail = sim.sail
+	autopilot.air_density_kg_m3 = sim.air_density_kg_m3
 	_build_visuals()
 	reset()
 

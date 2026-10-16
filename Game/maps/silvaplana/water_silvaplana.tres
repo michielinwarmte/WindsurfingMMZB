@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="WaterConfig" load_steps=2 format=3]
+
+; Lake Silvaplana's water (PHYSICS_REQUESTS_FROM_MAP.md, R3): fresh water, not the sea's.
+; - Density 1000 kg/m3 instead of the sea's 1025: the board floats about 2.5 % deeper.
+; - Kinematic viscosity of fresh water at 15 degrees, 1.14e-6 m2/s (ITTC fresh water table, 2011).
+;   The lake's surface is about 14 to 15 degrees in summer (spot guides, e.g. windsurf.co.uk's
+;   Lake Silvaplana page: "always around 14-15 C"); the sea config's 1.19e-6 is sea water at 15.
+; The rest (the level, the heave damping) is the open water's (water_default.tres).
+
+[ext_resource type="Script" path="res://sim/config/water_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+density_kg_m3 = 1000.0
+kinematic_viscosity_m2_s = 1.14e-06
+base_height_m = 0.0
+damping_linear_ns_m = 800.0
+damping_quadratic_ns2_m2 = 800.0

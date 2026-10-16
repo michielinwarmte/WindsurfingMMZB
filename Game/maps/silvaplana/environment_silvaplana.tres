@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="EnvironmentConfig" load_steps=4 format=3]
+
+; Sailing on Lake Silvaplana (PHYSICS_REQUESTS_FROM_MAP.md, R1 to R3 and R5; MAP_SILVAPLANA_PLAN.md W5):
+; - the air: 0.98 kg/m3, the median of the Maloja afternoons at Segl-Maria (MeteoSwiss station SIA,
+;   summers 2020 to 2025, moist air from pressure, temperature and vapour pressure; R2). 20 % less
+;   than the 1.225 at sea level, so 20 % less sail force in the same wind;
+; - the water: fresh, 1000 kg/m3 (water_silvaplana.tres; R3);
+; - the wind: the map's own (MapWind: the Maloja pattern over the terrain, the average day, the
+;   gusts and lulls rolling down the lake and the lee under the south-east shore), from 14:30.
+;   wind_silvaplana.tres gives its height profile and the direction the waves are lined up with;
+; - the waves: the default set (the game puts the player's choice on top).
+
+[ext_resource type="Script" path="res://sim/config/environment_config.gd" id="1"]
+[ext_resource type="Resource" path="res://maps/silvaplana/water_silvaplana.tres" id="2"]
+[ext_resource type="Resource" path="res://maps/silvaplana/wind_silvaplana.tres" id="3"]
+
+[resource]
+script = ExtResource("1")
+air_density_kg_m3 = 0.98
+water = ExtResource("2")
+wind = ExtResource("3")
+map_wind_enabled = true
+map_config_path = "res://maps/silvaplana/map_config.tres"
+map_wind_pattern_path = "res://maps/silvaplana/wind/maloja_pattern.json"
+map_wind_day_path = "res://maps/silvaplana/wind/maloja_day.tres"
+map_wind_gusts_path = "res://maps/silvaplana/wind/maloja_gusts.tres"
+map_wind_lee_path = "res://maps/silvaplana/wind/shore_lee.json"
+map_wind_height_m = 5.0
+start_hour = 14.5
