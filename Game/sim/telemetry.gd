@@ -22,6 +22,11 @@ var leeway_deg: float = 0.0
 var tws_10m_kt: float = 0.0
 var tws_at_sail_kt: float = 0.0
 var twa_deg: float = 0.0
+## The true wind angle of the wind at the sail itself (its centre of effort), degrees. On
+## open water it is twa_deg. On a map twa_deg is measured from the lake's mean wind, which
+## near a shore can come from 15 degrees elsewhere than the wind the sail meets; this one is
+## the wind the sailor feels, for the decisions about the sail in a tack.
+var twa_at_sail_deg: float = 0.0
 var aws_kt: float = 0.0
 var awa_deg: float = 0.0
 var wind_from_bearing_deg: float = 0.0
@@ -154,7 +159,7 @@ static func csv_header() -> String:
 		+ "hull_friction_n,hull_residuary_n,hull_lateral_n,stance,lean,hang_back_m,knee_bend_m," \
 		+ "wetted_length_m,wetted_aft_m,spray_root_factor,heave_added_mass_kg,rig_tilt,rig_lean_deg,sailor_state,boom_across,fin_immersed," \
 		+ "bow_immersion_m,planing_cop_z_m,fall_kind,wanted_bank_deg,felt_push_ms2,felt_heel_deg,bow_drag_n,water_height_m," \
-		+ "hand_force_n,foot_force_n,mast_foot_force_n,feet_moment_roll_nm,hand_moment_roll_nm,leg_sway_m,feet_moment_excess_nm,rail_press,sailor_x_m,sailor_y_m,target_x_m,target_y_m,feet_x_m,feet_z_m,hull_resistance_n,hand_force_up_n,mast_foot_force_up_n,pitch_from_mast_foot_nm,pitch_from_feet_force_nm,pitch_from_feet_moment_nm,attachment_x_n,attachment_z_n,harness_tension_n,yaw_fin_nm,yaw_rig_nm,yaw_sailor_nm,yaw_water_nm,yaw_net_nm,roll_fin_nm,roll_rig_nm,roll_sailor_nm,roll_water_nm,roll_net_nm,rail_grip_n,rail_yaw_nm"
+		+ "hand_force_n,foot_force_n,mast_foot_force_n,feet_moment_roll_nm,hand_moment_roll_nm,leg_sway_m,feet_moment_excess_nm,rail_press,sailor_x_m,sailor_y_m,target_x_m,target_y_m,feet_x_m,feet_z_m,hull_resistance_n,hand_force_up_n,mast_foot_force_up_n,pitch_from_mast_foot_nm,pitch_from_feet_force_nm,pitch_from_feet_moment_nm,attachment_x_n,attachment_z_n,harness_tension_n,yaw_fin_nm,yaw_rig_nm,yaw_sailor_nm,yaw_water_nm,yaw_net_nm,roll_fin_nm,roll_rig_nm,roll_sailor_nm,roll_water_nm,roll_net_nm,rail_grip_n,rail_yaw_nm,twa_at_sail_deg"
 
 
 func to_csv_row() -> String:
@@ -167,7 +172,7 @@ func to_csv_row() -> String:
 		wetted_length_m, wetted_aft_m, spray_root_factor, heave_added_mass_kg, rig_tilt, rig_lean_deg, sailor_state, boom_across, fin_immersed,
 		bow_immersion_m, planing_cop_z_m, fall_kind, wanted_bank_deg, felt_push_ms2, felt_heel_deg, bow_drag_n, water_height_m,
 		hand_force_n, foot_force_n, mast_foot_force_n, feet_moment_roll_nm, hand_moment_roll_nm, leg_sway_m, feet_moment_excess_nm, rail_press,
-		sailor_position_body.x, sailor_position_body.y, posture_target_body.x, posture_target_body.y, feet_body.x, feet_body.z, hull_resistance_n, hand_force_up_n, mast_foot_force_up_n, pitch_from_mast_foot_nm, pitch_from_feet_force_nm, pitch_from_feet_moment_nm, attachment_x_n, attachment_z_n, harness_tension_n, yaw_fin_nm, yaw_rig_nm, yaw_sailor_nm, yaw_water_nm, yaw_net_nm, roll_fin_nm, roll_rig_nm, roll_sailor_nm, roll_water_nm, roll_net_nm, rail_grip_n, rail_yaw_nm]
+		sailor_position_body.x, sailor_position_body.y, posture_target_body.x, posture_target_body.y, feet_body.x, feet_body.z, hull_resistance_n, hand_force_up_n, mast_foot_force_up_n, pitch_from_mast_foot_nm, pitch_from_feet_force_nm, pitch_from_feet_moment_nm, attachment_x_n, attachment_z_n, harness_tension_n, yaw_fin_nm, yaw_rig_nm, yaw_sailor_nm, yaw_water_nm, yaw_net_nm, roll_fin_nm, roll_rig_nm, roll_sailor_nm, roll_water_nm, roll_net_nm, rail_grip_n, rail_yaw_nm, twa_at_sail_deg]
 	var parts: PackedStringArray = PackedStringArray()
 	for value: Variant in values:
 		if value is float:

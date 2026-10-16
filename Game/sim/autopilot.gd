@@ -204,9 +204,12 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		var across: float = 0.0
 		# The apparent and true wind measured on the sail's own windward side: negative once
 		# the bow has gone through the wind while the rig is still held on the old side.
-		# Inside luff_band_deg the sail luffs even fully sheeted (the no-go zone).
+		# Inside luff_band_deg the sail luffs even fully sheeted (the no-go zone). Both are the
+		# wind the sail meets where the board is: on a map the lake's mean wind can come from
+		# 15 degrees elsewhere near a shore, and a tack judged on it stalls with the backed
+		# sail feathered short of the flip (PHYSICS_SPEC.md 17.14, the lake's tacks).
 		var awa_own_side_deg: float = telemetry.awa_deg * -float(telemetry.sail_side)
-		var twa_own_side_deg: float = telemetry.twa_deg * -float(telemetry.sail_side)
+		var twa_own_side_deg: float = telemetry.twa_at_sail_deg * -float(telemetry.sail_side)
 		var luff_band_deg: float = sheet_angle_in_deg + alpha_luff_deg
 		controls.hold_side = 0
 		controls.step_forward = 0.0
@@ -235,8 +238,8 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 			elif wanted_turn * away_from_sail < 0.0 and cannot_fill:
 				_tack_phase = 2
 		if _tack_phase == 1:
-			# The bow is clearly through the wind (the true wind, which does not swing with the
-			# turning rig as the apparent wind does) and the apparent wind on the new side is
+			# The bow is clearly through the wind (the true wind at the sail, which does not
+			# swing with the turning rig as the apparent wind does) and the apparent wind on the new side is
 			# wide enough for the sail to fill the moment it is sheeted in there: flip the rig.
 			# Flipped earlier, the sail would luff on the new side and the fin would weathervane
 			# the bow straight back.
