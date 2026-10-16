@@ -33,6 +33,7 @@ var _previous_state: WindsurferSim.SailorState = WindsurferSim.SailorState.SAILI
 
 var _rig: RigVisuals
 var _figure: SailorFigure
+var _effects: WindsurferEffects
 
 
 func _ready() -> void:
@@ -113,6 +114,7 @@ func interpolated_transform() -> Transform3D:
 func _copy_state_to_visuals() -> void:
 	var body: SimRigidBody = sim.body
 	global_transform = Transform3D(body.basis, body.origin_world())
+	_effects.update(sim)
 	if sim.sailor_state == WindsurferSim.SailorState.FALLEN:
 		# A fall picks up speed: the progress is squared.
 		var progress: float = clampf(sim.fallen_for_s / FALL_DURATION_S, 0.0, 1.0)
@@ -143,3 +145,7 @@ func _build_visuals() -> void:
 	_figure.name = "SailorFigure"
 	add_child(_figure)
 	_figure.build(sim.sailor_config)
+	# Spray, wake, splashes, the streamer, the wind flag and the force view (F3).
+	_effects = WindsurferEffects.new()
+	add_child(_effects)
+	_effects.setup(sim)

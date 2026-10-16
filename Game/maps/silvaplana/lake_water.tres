@@ -1,17 +1,45 @@
-[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+[gd_resource type="ShaderMaterial" load_steps=4 format=3]
 
-; The colours of Lake Silvaplana for the game's water shader (MAP_SILVAPLANA_PLAN.md, M2 and MD6):
-; only shader parameters, the shader itself (res://world/water.gdshader) is the physics track's.
-; The colours are measured in the 2025 aerial photo, taken in sunshine: deep water is a teal blue
-; (sRGB 45, 95, 112), shallow water near the camping lighter and greener (70, 107, 110). The
-; shader uses shallow_color toward the wave crests. A slightly rougher surface softens the mirror
-; of the deep blue sky. No grid lines on the lake.
+; Lake Silvaplana's water look (MAP_SILVAPLANA_PLAN.md, M2 and MD6) for the game's water shader
+; res://world/water.gdshader: only parameters, the shader (with the waves the board floats on) is
+; the physics track's. These are the numbers of the map's own lake water (lake.tres, Max's look,
+; October 2026): water you can see into, darker and bluer with depth (absorption per metre: red
+; 0.40, green 0.10, blue 0.08), the teal blue of the 2025 aerial photo, ripples drifting toward the
+; east-north-east, downwind of the Maloja (from 244), and a thin light line at the shore. No grid.
+; The lake's water goes on render layer 2, where the map's LakeReflections probe mirrors the valley
+; (OceanNode.render_layers).
 
 [ext_resource type="Shader" path="res://world/water.gdshader" id="1_water"]
 
+[sub_resource type="FastNoiseLite" id="Noise_ripples"]
+noise_type = 3
+frequency = 0.02
+fractal_octaves = 3
+
+[sub_resource type="NoiseTexture2D" id="Texture_ripples"]
+seamless = true
+as_normal_map = true
+bump_strength = 6.0
+noise = SubResource("Noise_ripples")
+
 [resource]
+render_priority = -1
 shader = ExtResource("1_water")
-shader_parameter/deep_color = Color(0.176, 0.373, 0.439, 1)
-shader_parameter/shallow_color = Color(0.275, 0.42, 0.431, 1)
-shader_parameter/roughness_value = 0.1
+shader_parameter/ripple_normals = SubResource("Texture_ripples")
+shader_parameter/deep_color = Color(0.05, 0.22, 0.28, 1)
+shader_parameter/shallow_color = Color(0.08, 0.28, 0.32, 1)
+shader_parameter/crest_lightening = 0.5
+shader_parameter/absorption_per_m = Vector3(0.4, 0.1, 0.08)
+shader_parameter/no_bottom_depth_m = 200.0
+shader_parameter/refraction_strength = 0.03
+shader_parameter/ripple_size_m = 7.0
+shader_parameter/ripple_strength = 0.7
+shader_parameter/ripple_drift_direction = Vector2(0.9, -0.44)
+shader_parameter/ripple_speed_ms = 0.8
+shader_parameter/ripple_fade_m = 1500.0
+shader_parameter/roughness_value = 0.05
+shader_parameter/roughness_far = 0.22
+shader_parameter/roughness_far_m = 2000.0
+shader_parameter/shore_line_depth_m = 0.15
+shader_parameter/shore_line_strength = 0.35
 shader_parameter/grid_strength = 0.0

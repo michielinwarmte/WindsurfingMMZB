@@ -1,0 +1,38 @@
+[gd_resource type="ShaderMaterial" load_steps=4 format=3]
+
+; The open sea's look for res://world/water.gdshader (the waves come from the simulation, see
+; ocean.gd). Deep ocean blue with no bottom in sight; clear sea water swallows red fastest and
+; blue slowest (about 0.45, 0.07 and 0.035 per metre, close to pure water), so the fin and the
+; hull under the surface turn blue-green. The ripples' direction and strength follow the
+; simulation's wind (ocean.gd); the faint grid shows speed and heading on flat water.
+
+[ext_resource type="Shader" path="res://world/water.gdshader" id="1_water"]
+
+[sub_resource type="FastNoiseLite" id="Noise_ripples"]
+noise_type = 3
+frequency = 0.02
+fractal_octaves = 3
+
+[sub_resource type="NoiseTexture2D" id="Texture_ripples"]
+seamless = true
+as_normal_map = true
+bump_strength = 6.0
+noise = SubResource("Noise_ripples")
+
+[resource]
+render_priority = -1
+shader = ExtResource("1_water")
+shader_parameter/ripple_normals = SubResource("Texture_ripples")
+shader_parameter/deep_color = Color(0.02, 0.13, 0.26, 1)
+shader_parameter/shallow_color = Color(0.05, 0.36, 0.44, 1)
+shader_parameter/crest_lightening = 0.6
+shader_parameter/absorption_per_m = Vector3(0.45, 0.07, 0.035)
+shader_parameter/no_bottom_depth_m = 200.0
+shader_parameter/refraction_strength = 0.03
+shader_parameter/ripple_size_m = 7.0
+shader_parameter/ripple_strength = 0.7
+shader_parameter/ripple_speed_ms = 0.8
+shader_parameter/roughness_value = 0.05
+shader_parameter/roughness_far = 0.22
+shader_parameter/shore_line_strength = 0.0
+shader_parameter/grid_strength = 0.12
