@@ -226,17 +226,18 @@ func _check_shore() -> void:
 	if shore_grid == null or _aground or _in_menu:
 		return
 	var at: Vector3 = _windsurfer.sim.body.origin_world()
-	if ShoreCheck.is_aground(shore_grid, at, _windsurfer.sim.fin_config.span_m):
-		_set_aground(true)
-		if not shore_grid.contains(at.x, at.z):
-			_hud.set_message(OFF_THE_MAP_TEXT)
+	if not ShoreCheck.is_aground(shore_grid, at, _windsurfer.sim.fin_config.span_m):
+		return
+	_set_aground(true)
+	_hud.set_message(AGROUND_TEXT if shore_grid.contains(at.x, at.z) else OFF_THE_MAP_TEXT)
 
 
-## Stops the board (the simulation no longer steps) with a message, or lets it sail again.
+## Stops the board (the simulation no longer steps), or lets it sail again.
 func _set_aground(aground: bool) -> void:
 	_aground = aground
 	_windsurfer.set_physics_process(not aground)
-	_hud.set_message(AGROUND_TEXT if aground else "")
+	if not aground:
+		_hud.set_message("")
 
 
 func is_aground() -> bool:

@@ -66,7 +66,7 @@ func lake_bounds() -> Rect2:
 ## spot is covered by a square of step_m around it, and the lake is widened by `margin_spots`
 ## spots on every side, so the water reaches in under the shore: the terrain hides it there, and
 ## no strip of dry lakebed shows between the water and the land. Squares next to each other in a
-## row are joined into one long strip, which keeps the mesh small (about 2 000 triangles).
+## row are joined into one long strip, which keeps the mesh small (about 1 000 triangles for Silvaplana).
 func build_mesh(margin_spots: int) -> ArrayMesh:
 	var wide: PackedByteArray = _widened(margin_spots)
 	var vertices: PackedVector3Array = PackedVector3Array()

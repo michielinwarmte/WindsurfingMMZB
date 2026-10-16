@@ -49,7 +49,7 @@ func _ready() -> void:
 	_rose.offset_top = 20.0
 	_rose.offset_bottom = 150.0
 
-	# A message in the middle of the screen, a third of the way down (set_message).
+	# A message across the middle of the screen, under the panels (set_message).
 	_message = _label(font, 22, Vector2.ZERO)
 	_message.add_theme_color_override("font_color", Color(1.0, 0.8, 0.4))
 	_message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
