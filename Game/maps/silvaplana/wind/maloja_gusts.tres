@@ -1,0 +1,44 @@
+[gd_resource type="Resource" script_class="WindGusts" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://maps/wind/wind_gusts.gd" id="1"]
+
+; The Maloja's moving weather on Lake Silvaplana (MAP_SILVAPLANA_PLAN.md, W3; what each number means
+; is in wind_gusts.gd). Where every number comes from:
+; - spread, fronts and lanes: fitted by running the model through the same analysis as the satellite
+;   photos (Game/maps/silvaplana/dev/export_gusts.gd, tools/map/gust_shapes.py --model) until it
+;   shows what the photos show: on the days with fronts a spread of 8.1 % and 39 % of it in bands
+;   across the lake; on the days with lanes, lanes of 110 x 56 m. Max: "mostly fronts, sometimes
+;   lanes", lanes 50 to 100 m wide. 10 % brighter water is taken as 10 % more wind (as in W1);
+; - the spread's change with the wind: the station (1-second gust = 1.71 kt + 0.40 x the mean);
+; - sideways share 0.8: turbulence over flat ground (Panofsky and Dutton 1984);
+; - lives: the cell along the wind / the spread at 12:28 (0.92 m/s), the usual estimate for turbulence: NOT measured;
+; - drift 1.1 times the mean: big eddies come from higher up (the research); how much faster: NOT measured;
+; - the same gustiness at both ends: the photos (7.0 and 7.5 % in the two halves);
+; - pulses and shifts: the station's 10-minute means (+-8 % half the time, 6 degrees typical);
+; - the lee along the south-east shore (shore_lee.json, tools/map/shore_lee.py): 1 in 10 gusts gets
+;   into it (Max; the photos: about 1 in 8); how soft a reaching gust's edge is: an estimate.
+
+[resource]
+script = ExtResource("1")
+seed = 1
+spread_base_kt = 0.48
+spread_per_knot = 0.087
+sideways_share = 0.8
+front_share = 0.7
+front_cell_along_m = 900.0
+front_cell_across_m = 4000.0
+front_life_s = 980.0
+lane_cell_along_m = 190.0
+lane_cell_across_m = 100.0
+lane_life_s = 210.0
+drift_factor = 1.1
+gustiness_upwind = 1.0
+gustiness_downwind = 1.0
+upwind_end_m = -1700.0
+downwind_end_m = 1700.0
+pulse_amplitudes = PackedFloat32Array(0.1, 0.07, 0.05)
+pulse_periods_s = PackedFloat32Array(2220, 1380, 780)
+shift_amplitudes_deg = PackedFloat32Array(6, 4, 2.5)
+shift_periods_s = PackedFloat32Array(2700, 1500, 840)
+reach_share = 0.1
+reach_width = 0.5

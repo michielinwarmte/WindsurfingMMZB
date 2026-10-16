@@ -15,6 +15,39 @@ Template for new entries:
 
 ---
 
+## 16 October 2026 - The physics and the map tracks merged
+
+**Phase:** none (branches).
+
+**Done:** `feature/physics-sim` (Sessions 30 to 37) merged into `feature/map-silvaplana` (Sessions 37 to 45 of the map track, which had started from the physics branch at Phase 5). The one conflict was this log: both tracks' entries are kept, in date order. Both branches go to `main` through pull requests #2 (the physics) and #3 (the map, which now contains the physics). The map's files need Git LFS: it was not on the Linux PC, so it is installed in `~/.local/bin` (no sudo), `git lfs install` run, and the 114 MB of terrain tiles, photos and the height grid fetched. Small edits so the documents fit together: CLAUDE.md (the map track is part of the project, not a branch; Git LFS), REBUILD_PLAN.md (the side track), MAP_SILVAPLANA_PLAN.md (merge `main` from now on), PHYSICS_REQUESTS_FROM_MAP.md (R6's precondition, the two-body sailor, is done).
+
+**Verified:** on the merged tree `tools/check.sh` 122 files, 0 failed, and `tools/test.sh` 204 of 204 (126 physics, 78 map). The physics is unchanged by the merge (the map does not touch `Game/sim/`), so the validation suite and the matrix were not rerun. Not run: the map's Python tests in `tools/map/tests` (they need `tifffile` and the other map modules, which the Linux PC does not have).
+
+**Next:** the team merges the pull requests (#2 and then #3, or #3 alone), then everyone installs Git LFS and pulls `main`; new work branches from `main`.
+
+## 16 October 2026 - Session 45 (map track): the map documents brought up to date
+
+**Phase:** none (documents only). Branch `feature/map-silvaplana`.
+
+**Why:** Max: "I see some neglected sections. See L1, this we've already done."
+
+**Done:**
+- **L1 (the wind patterns)** in MAP_SILVAPLANA_PLAN.md: a status. Max's part is mostly built as the wind analyser (W0 to W4, `MapWind`). Still open: the day types (W3, postponed) and the connection to the sailing (W5, Michiel). The Status table, "Who does what", and a note after the team decisions say the same. CLAUDE.md, REBUILD_PLAN.md and PHYSICS_REQUESTS_FROM_MAP.md no longer say "later the wind patterns".
+- **M3's wind direction:** 244° → 222°. W1 found that 244° is the station's spot turning the wind; over the lake the Maloja blows along the lake from about 222°, which Max confirmed. M3 also notes that the sailing keeps a `WindConfig` until W5.
+- **Max's verdicts written in where they were missing:** the terrain "is really good and nice" (Session 41, the M1 and M2 checks); the 10 cm photos agreed (M0); the W1 picture right; W0's questions 1 to 6 answered (7 to 10 still open); the W2 colours and gusts done.
+- **Facts that had changed since the plan was written:** the lake level (1790.63 m) and the origin, both fixed in M0; the manifest's place (`.map_data/raw/`); the grid formats (numpy for Blender and a 16-bit `.bin` for the game, not PNG or EXR); the photos go on in Godot, not in Blender; no terrain plugin needed.
+- **R4 for Michiel** gave the wrong grid format and said the shallows were "checked against the 10 cm aerial photo". Nothing in `heights.py` or its checks does that, so it now says "not yet checked".
+
+**Verified:** each changed fact against the code and the data (`map_config`, `maloja_day.tres`, `.map_data/raw/manifest.json`, `heights.py`, `build.sh`, git). Session 44's work is committed and pushed (`b9cc3a5`, "Map W4a: race course maker in the wind viewer"). No code changed, so no tests were run.
+
+**Max's looks (16 October):** adding marks to a course works well, and so does the see-through lake water (M2). So W4a is checked, and M2 waits only for Michiel's answer to R9.
+
+**Next:**
+- W4b, the tactics tools, detailed with Max first: lifts and headers against the course axis, the stronger lanes, laylines (they need the iQFOiL's upwind and downwind angles), which side paid.
+- Michiel: R9 (how the see-through water meets his waves), before M3. The small changes to CLAUDE.md and REBUILD_PLAN.md (one sentence each) are to mention to him (MD7).
+
+---
+
 ## 15 and 16 October 2026 - Session 37: the sailor as a body of their own, and the rig held by the sailor
 
 **Phase:** between 5 and 6. The team asked for a real character model with the physics updated to include it, then chop work with it. Done: the physics (spec 7.5), the visible figure, the chop runs. Stopped once mid-way on request (commit `271dbb8`); finished in the second half.
@@ -46,6 +79,445 @@ Template for new entries:
 2. The 12 kt bounce at the edge of planing (the planing ratio 0.15 to 1.0 at 1.2 Hz on flat water, there since Session 36): the heave of the light hull against the strip theory's root force.
 3. Play-test: the tacks and gybes at 18 and 24 kt, the feel of the sea, the figure.
 4. Then Phase 6 (the rig visuals) as planned.
+
+---
+
+## 15 October 2026 - Session 44 (map track): W4 planned; W4a, the race course maker, first version
+
+**Phase:** W4 of the map plan, part a (the course maker). Branch `feature/map-silvaplana`.
+
+**Why:** Max asked what W4 includes, added the iQFOiL Notice of Race and Sailing Instructions of the 2026 U23 Worlds (Puck) "with pictures of the official courses", and then: "we are going to make this also a easy competition course maker. drag buoys in the map via an easy to use system ... so we can make all these courses ourselves and use templates". He agreed to split W4 into W4a (the course maker) and W4b (the tactics tools), to put it inside the wind viewer for now ("later in game it may be different"), and to save courses for the team. He didn't know the beat length.
+
+**Done:**
+- **The plan:** W4 split into W4a and W4b, with the sources, Max's decisions (WD5 to WD7), the class's numbers, the estimates, and a measurement of the lake.
+- **The course sizes come from the class, not from a guess:** the iQFOiL Class Race Management Guideline (2023) gives mark 1's distance per wind range (windward-leeward 0.9, 1.0 and 1.05 nm at 10 to 13, 13 to 17 and 17+ kt; trapezoid 0.85, 0.95 and 1.0 nm), the reaches, gates (70 to 80 m), lines (start: boards × 2.20 m × 3; finish 30 to 40 m) and the sprint and medal race sizes. They are in `Game/maps/course/iqfoil_courses.tres` with their sources. What the guideline doesn't give is labelled as an estimate there: the gate 150 m above the start, the trapezoid's outer gate and finish, the upwind sprint (1000 m to mark 1, from its 7-minute target time).
+- **The lake, measured** on the 2 m shore grid: along the Maloja (222°) about 2.8 km of open water, 760 to 1370 m wide. A full windward-leeward course fits; the full trapezoid's reach (1.3 to 1.5 km) doesn't.
+- **The course maker** (`Game/maps/course/`, in the wind viewer, `tools/play.sh wind`):
+  - `Course` and `CourseMark`: the marks and the mark order written as in the Notice of Race (`Start-1-4S/4P-1-4S-Finish`), the legs, moving, turning and scaling (gates and lines keep their size), the land warnings, and JSON files with LV95 positions.
+  - `CourseTemplates`: LG2, LR2, O2, I2, US3, US4, PD3, SD3, PM1 and SM1, built in the course's own frame like the diagrams and turned to the wind.
+  - `CourseEditor`, `CoursePanel`, `CourseOverlay`: choose a template (it appears in the middle of the view, squared to the lake's wind and sized for it); drag marks (a gate moves as a pair), Shift and drag the whole course; Axis, Square to wind, Size %, Boards; Undo (Ctrl+Z), Clear; Save under a name in `Game/maps/silvaplana/courses/`, Load; M hides it. The course is drawn like the diagrams: salmon marks with rounding arrows, green boats with orange and blue flags, dashed lines, black legs side by side. The panel lists the legs (length, compass course, angle to the wind now) and the warnings.
+  - Start options for screenshots: `--course=LG2` (or a saved course's name), `--course-at=<east>,<north>`.
+- **Small changes to shared map files:** `TopCamera` and `FlyCamera` ignore the keyboard while a text field has it; `tools/play.sh`'s menu and `CLAUDE.md` mention the course maker.
+
+**Verified:**
+- `tools/test.sh`: 186 of 186 (18 new: `test_course.gd` 11, `test_course_editor.gd` 7). `tools/check.sh`: 119 files, 0 failed.
+- The rounding sides read from the diagrams agree with the way each course turns, in all ten templates (a test).
+- Screenshots: the ten templates on the lake (`.screenshots/w4a_templates_sheet.png`), a close-up of a start (committee boat on the right looking upwind, 4S on the left, the finish boat at the upwind end), and the free camera low over the water.
+- 98 to 102 fps in the screenshot runs, with and without a course.
+
+Not verified:
+- Dragging with a real mouse, and how easy the panel is: Max play-tests. The editing is tested with made-up mouse events.
+
+**Decisions:**
+- Templates are set to the wind like a race committee sets a course: mark 1 dead upwind of the start, at the class's distance for the wind of the moment (WD7). "Square to wind" uses the lake's mean wind, without the moving shifts.
+- Where the guideline gives a range, the middle. The trapezoid's reach angle: 90°, because the guideline's 80 to 90° doesn't say from which line it is measured.
+- The course is drawn on the screen over the 3D view, not as 3D buoys: the same size at every zoom, and the same from both cameras. 3D buoys come with sailing a course in the game (later).
+- Saving a course under a name that exists replaces it (the panel says so); git keeps the old versions.
+
+**Max's play-test (16 October):** easy to use (pick, drag, turn, resize, save, load), and the templates look like the diagrams in the Notice of Race. Where the race committee sets the course at Silvaplana and how it would shorten the trapezoid: not important for now.
+
+**Then, Max: "I would like to add a mark to existing courses"** (dropped on a leg, "but it needs to work really well", and typed when that isn't what he wants). Added:
+- **Add mark** and a click on the water: the mark goes into the leg drawn nearest to the click (so between a beat and a run on the same line, the one on that side), and into the same leg on the other laps; Shift for only that leg; away from the legs a lone mark. The legs it will go into light up in yellow before the click. Named with the next number, left on the side the course bends round it.
+- **The order typed** in the Notice of Race's notation, checked (a wrong order is refused with the reason).
+- **A selected mark** (click it): rename (also in the order), port or starboard, delete (Delete key). Esc deselects or stops adding. A click that only selects is no Undo step any more.
+- The mouse is matched to the height the marks are drawn at (0.3 m above the lake), so a mark put down lies exactly under it.
+- `--course-new-mark=<east>,<north>` shows the Add mark preview for screenshots.
+- Verified: `tools/test.sh` 199 of 199 (13 new), `tools/check.sh` 119 files; the preview screenshot (`.screenshots/w4a_add_mark.png`): dropped beside the first run, both runs light up and the beat on the same line doesn't. Not verified: how it feels with a real mouse.
+
+**Then, Max (a screenshot of a 3137 × 1263 window): "the UI is not nice for other resolutions, and the drawing of the arrows is wrong on a gate".**
+- The viewer's panels had fixed places for 1280 × 720. A first fix scaled them as a whole; Max: "the UI is just scaled up and I can count the pixels now, it's ugly". Now each panel is anchored to its corner or edge (course panel and legend top right, clock along the bottom, wind chart left), and the viewer switches its window to Godot's "canvas items" stretch (laid out for 1280 × 720, wider windows get more room across), which draws text and lines at the window's full resolution: sharp. Only while the viewer runs; the game's screen settings are unchanged and the window's are put back on exit. Found on the way: `set_anchors_preset()` keeps a control's old size, so a full-window control needs `set_anchors_and_offsets_preset()`.
+- The course panel and the clock bar got the wind chart's look (dark, see-through, rounded, with room inside).
+- The rounding arrows were the same three-quarter turn from the top of every mark. Now they come in from the leg in, go round the mark's far side and leave along the next leg: at a gate, down between the marks and outwards, back upwind, as on the diagrams.
+- Verified: `tools/test.sh` 200 of 200 (a new test for the arrows at a gate and at mark 1), `tools/check.sh` 119 files; screenshots at 3137 × 1263 and 1280 × 720; `--check-colours` 0.8 of 255 (the course is hidden for it).
+
+**Next:**
+- Max looks at adding marks: does dropping on a leg pick the leg he means, and is the side right?
+- To commit (Max decides): the course maker, the plan, and the Notice of Race PDF in `Documentation/`, which the plan now links to.
+- Then W4b, the tactics tools, detailed with Max: lifts and headers against the course axis, the stronger lanes, laylines (they need the iQFOiL's upwind and downwind angles), which side paid.
+
+---
+
+## 15 October 2026 - Session 43 (map track): Wind analyser W2 (the viewer) and W3's gusts and lee, measured on the satellite photos
+
+**Phase:** W2 of the map plan (the wind analyser's viewer), then most of W3 (gusts, pulses, shifts, the lee along the south-east shore). Branch `feature/map-silvaplana`. Nothing new on `feature/physics-sim` or `main` to merge.
+
+**Why:** Max: "Start phase W2 of the map plan: the wind viewer." The Windfinder view in 3D over Silvaplana, to study the Maloja for course-racing tactics. Then, look by look:
+- "use this colors for the wind strength" (a screenshot of Windfinder's legend), and "can't see any gust going over the lake now";
+- "gusts now come out of nothing and disappear", they should "progress out of the gusts more upwind";
+- "they are still round, it is a front that is wider", "too much difference", and "I have the feeling you are guessing it a lot, please be more precise";
+- his answers: mostly fronts, sometimes lanes; lanes 50 to 100 m wide; "too much difference" meant the gusts against the wind around them;
+- "the rest is really good, good job", but the band along the south-east shore "has too much wind compared to real life; on competition you have to really avoid it, and only once in every 10 or so there is a gust that is favourable and goes down all the way".
+
+**Done (what is in the game now):**
+- **The wind, one place for the viewer and later the sailing** (WD1): `MapWind` (`Game/maps/wind/`) = the fixed pattern (`WindPattern`, W1, interpolated as arrows) × the day (`WindDay`, `maloja_day.tres`: the station's hourly medians × 1.3 on the water) + the gusts, pulses and shifts (`WindGusts`, `maloja_gusts.tres`) + the lee along the south-east shore (`WindLee`, `shore_lee.json`). `MapWind.velocity_at(point, time of day)`; for many places at one moment `moment()` + `velocity_in()`.
+- **The viewer**, `tools/play.sh wind` (`Game/maps/silvaplana/wind_viewer.tscn`):
+  - a map camera looking down (`TopCamera`) and the free camera, Tab to switch;
+  - 5000 white streaks moved by the graphics card, drawn as particle trails, also over land up to 2100 m, sped up so they cross the screen in about the same time at every zoom ([ and ] to change);
+  - the wind speed as colour on the water in Windfinder's colours (read from Max's screenshot), with a legend like Windfinder's;
+  - a clock: Pause, 1×, 10×, 60×, a slider from 10:00 to 21:30;
+  - click a point: a marker, and the speed and direction there over the last 10 minutes (a value every 2 s), with a hover readout;
+  - `--check-colours`: compares the water's colour on the screen with the colour of the game's numbers.
+- **The gusts** (third version): a smooth random pattern ("noise") of fronts across the lake (70 % of the variance) and lanes along the wind (30 %), rolling down the lake with the air (`MapWind.travel_m()`) and slowly changing; as many lulls as gusts. In knots they change only slowly with the wind (the station). The sideways part, which turns the wind, is 0.8 times the part along it (Panofsky and Dutton). The same 32-bit random numbers on the CPU and the graphics card (`WindGusts.noise_3d()`), divided by their local spread so there is no rhythm on the noise's grid.
+  - Fitted by measuring the model exactly like the satellite photos: `Game/maps/silvaplana/dev/export_gusts.gd` writes the model on the photos' grid, `tools/map/gust_shapes.py --model` measures both (the table is in the plan, W3; the pictures `gust_photos.png` and `gust_model.png`).
+  - The two earlier versions (patches born anywhere; patches rolling from upwind and growing) were replaced after Max's looks: their sizes, spacing, growth and "gustier at Sils" were estimates the photos don't support. The second version's files are kept in `.map_data/work/wind_research/old_versions/`.
+- **Pulses and shifts:** three slow waves each (13 to 45 minutes), the station's size (about ±9 % and ±5°), travelling down the lake.
+- **The lee along the south-east shore:** measured on the photos at 10 m by `tools/map/shore_lee.py` (MALOJA_WIND_RESEARCH.md, "The lee along the south-east shore"): from the Sils end to the north-east bend, deepest 25 to 100 m from the shore, weaker around "the little corner", deeper when the wind comes from further left (1.1 % per degree) and when it is stronger (4.5 % per knot). Only the strongest 1 in 10 gusts get in (Max; the photos: about 1 in 8) and roll down the band. W1's smoothed version of it is taken out again, so over time the band averages to the photos.
+- **Data and scripts:** `tools/map/wind_ground.py` (the ground under the pattern, for the streaks; in `build.sh`), `gust_shapes.py`, `shore_lee.py`; `play.sh` (menu choice 3), the tools README and CLAUDE.md mention the viewer.
+- **Tests:** `test_map_wind.gd` (9: the pattern, the day, the clock, the colours, the graphics card's copy of the pattern), `test_map_wind_gusts.gd` (12: exact 32-bit random numbers, spread 1 everywhere, no jumps, the mean kept, knots added, fronts across and lanes along, rolling with the air, the sideways share, pulses and shifts), `test_map_wind_lee.gd` (6: where the lee lies, its depth, 1 in 10 gusts through, a strong gust lifts it and rolls down the band, nothing changes elsewhere).
+
+**Verified:**
+- `tools/test.sh`: 168 of 168. `tools/check.sh`: 109 files, 0 failed. `test_wind_pattern.py`: 6 of 6.
+- The graphics card computes the same wind as the game, gusts and lee included: `--check-colours` within 1 of 255 at 11:10, 14:30, 16:05 and 19:30 (33 points on the water each).
+- The model against the photos, measured the same way: lanes 115 × 61 m (photos 110 × 56), fronts' correlation halves at 230 m (240), spread 7.9 % (8.1), across-lake bands 35 % (39).
+- At one point on the open water (13:00 to 15:00): the strongest second in 10 minutes is 1.18 to 1.25 times the mean (the land station: 1.52); a gust of 2 kt or more above the mean every 3 minutes or so, for about 30 s; the direction swings 21 to 25° within 10 minutes.
+- In the lee band, 75 m off the shore in the north-east, with the wind 7° further left than usual: about half the wind is gone (8.7 kt where the open lake has about 17).
+- Screenshots: from above with and without streaks, from 350 m over the Sils end, from the water at the launch, the evening, four moments 40 s apart (the fronts roll down the lake), the lee band with a probe.
+- Speed: 0.6 to 0.8 ms per frame on the graphics card with the PC otherwise idle (1,300 to 1,500 fps); earlier measurements of 2 to 3 ms were taken while other calculations ran.
+
+Not verified:
+- How the streaks and the gusts move (screenshots are still pictures), the mouse controls, and the hover readout: Max play-tests.
+- How bright water turns into knots: taken 1 to 1 (as in W1) for the gusts' spread and for the lee; sun-glint theory allows up to 1.7 times more. Max judges.
+- How long gusts live and how fast they travel: estimates (labelled in `maloja_gusts.tres`).
+
+**Decisions:**
+- Windfinder's colours, as Max asked (the first version had one blue, readable for colour-blind people; Max chose the scale sailors know).
+- The viewer uses plain (linear) tone mapping and fully covering speed colours, so the water's colours are exactly the legend's; C shows the see-through water.
+- Streaks fade out above 2100 m (the pattern up there is not the Maloja), and fly at a quarter of the camera's height, so from the water they lie on the water.
+- Gusts add knots, not a percentage (the station; Max's "little corner").
+- The gusts are measured, not guessed: every number in `maloja_gusts.tres` and `shore_lee.json` is from the photos, the station, Max or the literature, or labelled as an estimate.
+- Max's "mostly fronts" over the photos' "mostly lanes" (19 of 22 photos): his experience on the water wins (WD3), and all photos are from 12:28, while the Maloja builds.
+- Pulses and shifts are three slow waves each, so the CPU and the graphics card compute them the same; they repeat only after many hours.
+- Found for later: the pattern puts the station at 1.34 × the lake's average, while Max puts the water at 1.3 × the station, so a simulated station would read about 1.7 times too much (plan, notes for W3).
+- Found on the photos, not built in: when the wind veers, the lee may switch to the north-west shore.
+
+**Next:**
+- **W4, the tactics tools** (Max, 15 October: W3's "the day" is postponed, W4 first, on the average day). The plan's first ideas: a course on the lake (start line, windward mark), lifts and headers relative to the course, the stronger lanes, which side paid over the last minutes. Start the session by planning W4 in detail with Max.
+- At the start, Max play-tests the latest version (`tools/play.sh wind`; V hides the streaks, 2 for 10× to see the fronts roll; click near the south-east shore for the lee). To ask him: are the gusts strong enough and the lee deep enough (the brightness-to-knots question), are the gusts visible enough in Windfinder's colours (a "difference from the average" view could help, W4), and does the lee move to the north-west shore when the wind veers?
+- Later: W3's "the day" (the start front, light, medium and strong days).
+- Committed and pushed at the end of this session: "Map W2 and W3: wind viewer, gusts and lee measured on satellite photos".
+
+---
+
+## 14 October 2026 - Session 42 (map track): Wind analyser W0 (research) and W1 (the fixed pattern)
+
+**Phase:** new phases W0 and W1 of the map plan (the wind analyser). Branch `feature/map-silvaplana`.
+
+**Why:** Max wants the simulated Maloja (speed, gusts, shifts) as a viewer in the game, like Windfinder's map but in 3D over the terrain, real time and sped up, to work out tactics for course racing. It is about how the Maloja behaves once it blows, not when it comes. Max agreed the plan ("run everything, document carefully, first do no. 1", then "do phase 2 as well").
+
+**Done:**
+- Plan: the wind analyser's phases W0 to W4 and its decisions WD1 to WD4 in MAP_SILVAPLANA_PLAN.md; WindNinja in the Tools table; a pointer in PHYSICS_REQUESTS_FROM_MAP.md (R5).
+- W0, research: [MALOJA_WIND_RESEARCH.md](MALOJA_WIND_RESEARCH.md), with four charts in `Documentation/images/maloja/`.
+  - Sources: Mörikofer's 1938 measurements at Sils (found as a 1982 translation), the weather services, spot guides, glider pilots, race reports, papers on wind over lakes and gusts.
+  - `download.py wind-valley`: five MeteoSwiss stations, 2010 to now (0.41 GB). `maloja_research.py` and `maloja_charts.py`.
+  - Main numbers, 950 Maloja days 2014 to 2026:
+    - 12.6 to 13.0 kt mean from 13:00 to 16:00; gusts about +7 kt at every strength;
+    - pulses and shifts of 10 to 30 minutes (±8 %, ±6°);
+    - the start travels down the valley at about half the wind speed;
+    - it turns right until 16:00 and left in the evening.
+  - `satellite_wind.py`: Sentinel-2 photos of the lake on Maloja afternoons against calm ones (22 and 5 clean photos). It reads only the lake's corner of each photo (about 10 MB of 1 GB).
+    - Smoother water along the south-east shore and at the Sils end.
+    - The streak direction was tried and is not usable: the calm photos show the same direction.
+- W1, the fixed pattern: WindNinja 4.0.0, unpacked with 7-Zip into `%LOCALAPPDATA%/Programs/WindNinja/4.0.0` (the installer wants admin rights). `windninja_pattern.py` makes 12 runs and compares them with the station and the satellite.
+  - Stable air puts the lake's wind along the lake (about 220°) and turns the station's reading 20° to the right, as measured.
+  - The strength disagrees with the satellite.
+  - The game's pattern takes the direction from WindNinja and the strength on the lake from the satellite: `Game/maps/silvaplana/wind/maloja_pattern.json` + `.bin`. Pictures for Max: `pattern_game.png`, `pattern_lake.png`, `pattern_valley.png`.
+- `tools/map/tests/test_wind_pattern.py`: 6 checks of the pattern.
+- One run of WindNinja's momentum solver (OpenFOAM, 52 minutes) as a check: it also puts the weaker wind on the south-east side, but can't do stable air; not used for the game.
+
+**Verified:**
+- `tools/check.sh`: 89 files, 0 failed. `tools/test.sh`: all passed.
+- `test_wind_pattern.py`: 6 of 6.
+- The streak-direction maths, on made-up streaks at known angles (within 1°).
+- Every chart and picture looked at.
+
+Not verified:
+- whether the pattern matches the water (Max),
+- whether 10 % rougher water means 10 % more wind (an assumption).
+
+**Decisions:**
+- The near-infrared band was dropped for the red one: the atmospheric correction leaves the water at almost exactly 0 there.
+- The first satellite selection let cloud shadows and haze through and was replaced by a strict one (no clouds within 500 m, no haze).
+- Charts are PNG (light and dark versions) instead of SVG: no browser on this PC to check SVGs, and Godot's SVG reader skips text.
+- The fast solver's strength pattern was not used on the lake, because the satellite contradicts it (no inertia, no forest).
+
+**Max's check (15 October):** the pattern is right: weaker along the south-east shore and at the Sils end, the wind along the lake, a little more on the north-west side (which usually pays upwind). New for W3:
+- gusts of 100 to 200 m at all time scales, randomly;
+- gustier at the Sils end and steadier downwind;
+- full-strength gusts now and then in the weak band at the bend of the south-east shore;
+- the turn in a gust depends on where you are in it.
+
+His answers are in SILVAPLANA_SPOT_NOTES.md and in the research document, "What Max says".
+
+**Next:**
+- Then W2, the viewer.
+
+---
+
+## 14 October 2026 - Session 41 (map track): Realistic lake water
+
+**Phase:** M2 of the map plan, the water. Branch `feature/map-silvaplana`.
+
+**Why:** Max: the terrain "is really good and nice", but the water "is really bad, a plain colour; water is semi-transparent". He asked for research.
+
+**Done:**
+- Research into realistic water in Godot 4. The findings and sources are in PHYSICS_REQUESTS_FROM_MAP.md, R9:
+  - see-through water reads the depth and the picture behind it,
+  - built-in screen-space reflections don't work on see-through materials,
+  - mountain reflections come from a reflection probe, a custom SSR or a mirror camera,
+  - the depth formula since Godot 4.3.
+- The map's own lake water, `Game/maps/lake.gdshader` with `Game/maps/silvaplana/lake.tres`:
+  - see-through, darker with depth (red goes first), so the real lakebed makes the shallows turquoise,
+  - refraction by the ripples,
+  - a Fresnel mirror,
+  - two layers of wind ripples drifting downwind, rougher far away.
+- `LakeReflections`, a reflection probe in `silvaplana.tscn`. Only the lake water mirrors it (render layer 2), so the lake reflects the mountains, not only the sky. From the village the lake looks dark now, as in reality.
+- In the terrain view, G (or `-- --water=game`) switches to the game's water shader to compare.
+- 2 new tests in `test_silvaplana_look.gd`: the lake water and the probe.
+- R9 rewritten for Michiel: how this water should meet his waves in the game.
+  - Option 1: his shader gets these features.
+  - Option 2: the wave math moves into a shared include file.
+  - It's his choice. The game's water is unchanged until then (MD7).
+
+**Verified:**
+- `tools/test.sh`: 141 of 141. `tools/check.sh`: 89 files.
+- Screenshots of the new water: from the launch, the village, a drone over the camping beach (turquoise shallows fading to deep blue), and the same view with the old water.
+- Frame rate: the new water costs about 6 % (1,280 → 1,200 fps, both measured the same way; an earlier 1,100 was low because another game window was still open).
+
+Not verified:
+- whether it looks like the real lake to Max,
+- how it looks with the physics' waves (that needs R9).
+
+**Decisions:**
+- The new water lives in map files, because the game's water shader is Michiel's (MD7).
+- Mountain reflections come from a reflection probe, not a custom SSR or a second camera: cheap, and with Maloja chop a blurred mirror is realistic. The probe makes Godot print a harmless texture-leak warning when it quits.
+
+**Next:**
+- Max looks at the water: `tools/play.sh silvaplana`, G to compare. The absorption, the colour and the ripples are numbers in `lake.tres`.
+- Michiel answers R9.
+- Then M3.
+
+---
+
+## 14 October 2026 - Session 40 (map track): Phase M2, the look
+
+**Phase:** M2 of the map plan, built on Windows. Branch `feature/map-silvaplana`. Nothing new on `feature/physics-sim` or `main` to merge.
+
+**Done:**
+- Max agreed to the 1.1 GB of 10 cm photos. `download.py photos-near` fetched the 25 shore-band tiles (2025 flight, checksums checked).
+- `tools/map/photos.py`: one WebP photo per chunk.
+  - 12 cm on the two tiles of the camping and the launch beach, 0.5 m on the rest of the shore band, 2 m up to 8 km, 8 m beyond. 50 MB.
+  - Each photo has a `.import` file, so Godot makes mipmaps and compresses it for the graphics card.
+  - The 22 visible tiles in Italy are painted in the colours the Swiss photos have at the same height, slope and lighting, with the small ridges of the 10 m heights.
+- `tools/map/tests/test_photos.py`, 4 checks, among them that every photo lines up with the lake.
+- In Godot:
+  - `terrain.gdshader`: the photo as colour, 25 % darker on cliffs. The game's sun shades the slopes only half, because the photo already has its own (morning) light.
+  - `MapTerrain` (`map_terrain.gd`): the root of `terrain.tscn`; it gives every chunk its photo.
+  - The map scene `silvaplana.tscn` got its own sky, sun (mid-July 15:00: azimuth 225°, 59° up), haze and fill light.
+  - `lake_water.tres`: the lake's colours, measured in the photo, for the game's water shader, without grid lines.
+- The skirts are separate meshes now, without shadows. They had cast long dark bands across the slopes.
+- `tools/blender/build_terrain.py` writes `terrain.tscn` with the `MapTerrain` script.
+- `Game/camera/camera_rig.gd` (shared, one line; mention it to Michiel): the far plane is 35 km instead of 3 km, so the mountains are drawn.
+- The terrain view:
+  - It uses the map's look and the game camera's near and far planes.
+  - `--at=e,n,h --look=e,n,h` starts at any viewpoint.
+- `test_silvaplana_look.gd`, 4 tests:
+  - every chunk wears its photo and the skirts cast no shadows,
+  - the sun's direction (it caught the sun pointing 37° below the horizon: tscn files list a rotation row by row),
+  - the camera's far plane,
+  - the lake uses the game's water shader.
+- `build.sh` downloads the 10 cm photos and runs `photos.py` and its checks.
+- Request R9 for Michiel (PHYSICS_REQUESTS_FROM_MAP.md): lighter water in the shallows. It needs a depth texture in `water.gdshader`, which the map track may not change.
+
+**Verified:**
+- `tools/test.sh`: 139 of 139. `tools/check.sh`: 88 files.
+- The Python checks: 8 of 8 for the heights, 4 of 4 for the photos.
+- Screenshots from the launch, the village and above (`.screenshots/m2_*.png`), and one over Sils.
+- About 1,500 fps at every viewpoint (RX 6950 XT, 1280 × 720, no vsync).
+- The open-water game still looks the same.
+
+Not verified:
+- how the lake's colour and the light compare with the real spot (Max's check),
+- lighter shallows (R9),
+- the Linux PC.
+
+**Decisions:**
+- The photos go on in Godot (shader and `MapTerrain`), not into the `.glb` in Blender. A new photo then needs no new meshes, and the shader handles the light.
+- The sun is at 15:00. The photos' morning light is softened by letting the game's sun shade the slopes only half.
+- The lake colour comes straight from the aerial photo. The first, greener try looked like the Caribbean once the sun pointed the right way.
+
+**Size:** `Game/maps/silvaplana/` is 111 MB of 300 MB.
+
+**Next:**
+- Max checks the look: `tools/play.sh silvaplana`, keys 1 to 4.
+- Then M3, sailing on the lake:
+  - the windsurfer on the map,
+  - the Maloja wind setting,
+  - the start at the camping beach,
+  - the stop at the shore (`TerrainGrid`),
+  - the game's water only on the lake. The ocean plane must not cover land below the lake level, such as St. Moritz.
+
+---
+
+## 14 October 2026 - Session 39 (map track): Phase M1, terrain and lakebed in Godot
+
+**Phase:** M1 of the map plan, built on Windows. Branch `feature/map-silvaplana`. Nothing new on `feature/physics-sim` or `main` to merge.
+
+**Done:**
+- `tools/map/heights.py` makes the terrain heights, in metres above the lake.
+  - Four detail levels, so that a grid cell looks about equally big from the water at every distance:
+    - 2 m in the shore band (swissALTI3D plus the lakebed),
+    - 10 m up to 3 km from the lake,
+    - 20 m up to 8 km,
+    - 40 m beyond (swissALTIRegio).
+  - Only visible tiles are built: 354 tiles in 80 chunks.
+  - Where two levels meet, the edges are stitched, so the meshes join without cracks.
+  - The unsurveyed shallow lake (0.16 km²) is filled in smoothly from the shoreline to the survey.
+  - It also writes the game's height grid of the shore band (2 m, `shore_heights.bin` and `.json`).
+- `tools/map/tests/test_heights.py`: 8 checks:
+  - the lake at 0 m,
+  - water over the whole lake,
+  - the deepest point 76.9 m (published: 77 m),
+  - Piz Corvatsch 3450 m (published: 3451 m),
+  - the weather station 1803.5 m (published: 1804 m),
+  - the camping at the shore,
+  - no holes,
+  - no cracks.
+- `tools/blender/build_terrain.py` builds and exports the 80 chunks as `.glb`:
+  - thinned out with Decimate, with each chunk's border locked,
+  - a hidden skirt against hairline gaps,
+  - normals taken from the height grid,
+  - `terrain.tscn`, and two pictures from above.
+  - 1.14 million vertices, 49.6 MB, about 1 minute.
+- In Godot:
+  - `silvaplana.tscn` (the map with its terrain),
+  - `TerrainGrid` (`Game/maps/terrain_grid.gd`, the ground height anywhere in the shore band, for M3),
+  - `FlyCamera` (`Game/maps/fly_camera.gd`),
+  - the view `res://maps/silvaplana/dev/terrain_view.tscn`: viewpoints 1 to 4, a flat lake stand-in, the position and height on screen, and `--measure=1` for the frame rate.
+- `test_silvaplana_terrain.gd`: 6 tests:
+  - known points,
+  - grid heights,
+  - meshes within 0.5 m of the grid,
+  - every chunk in the scene,
+  - LODs.
+- `build.sh` runs the new steps; the README describes them.
+- `tools/play.sh` (a shared file, small change; mention it to Michiel):
+  - Double-clicked, it asks what to start: Enter plays the game as before, 2 opens the Silvaplana terrain.
+  - `tools/play.sh silvaplana` opens the terrain directly.
+  - Without arguments from a terminal, nothing changed. `silvaplana_area.py` has the known points (`KNOWN_POINTS`).
+- Coordinates looked up: the church Santa Maria (OpenStreetMap), the camping area and Piz Corvatsch (swissNAMES3D, through the geo.admin.ch API).
+
+**Verified:**
+- `tools/test.sh`: 135 of 135. `tools/check.sh`: 85 files.
+- The Python checks: 8 of 8.
+- `tools/map/build.sh` from start to end, 2.5 minutes.
+- Screenshots from the four viewpoints (`.screenshots/m1_*.png`) and the Blender pictures from above.
+- Mesh against grid, at 2000 random points: median 3 cm, worst 52 cm.
+- Frame rate: about 1,500 fps at every viewpoint, on the RX 6950 XT, 1280 × 720, without vsync. Max switched off a 100 fps cap in RivaTuner for this measurement.
+
+Not verified:
+- the comparison with map.geo.admin.ch in 3D,
+- the double-click menu of `play.sh` (it needs a window to type in; the short name and the plain game start were tested),
+- how the place feels to someone who knows it (Max's check),
+- the Linux PC.
+
+**Decisions:**
+- Four detail levels instead of the planned two (10 m and 50 m). Piz Corvatsch is 4.1 km from the water and would have looked blocky at 50 m.
+- No `visibility_range` on the terrain. Everything must stay visible, and Godot's automatic LOD already makes far chunks cheap.
+- The game grid is a plain 16-bit `.bin` file, because Godot reduces 16-bit PNGs to 8 bits.
+- Lake Sils and Lake St. Moritz stay flat surfaces at their own level for now (M2/M3).
+
+**Size:** `Game/maps/silvaplana/` is 62 MB of the 300 MB budget.
+
+**Next:**
+- Max flies around the view and checks it against the real spot and map.geo.admin.ch.
+- Then M2, the look: aerial photos on the terrain, sky and sun, the far plane of the game camera. The 10 cm photos of the shore band (1.1 GB download) still need the team's go.
+
+---
+
+## 14 October 2026 - Session 38 (map track): Phase M0, tools and data
+
+**Phase:** M0 of the map plan, done on Windows. Branch `feature/map-silvaplana`. Nothing new on `feature/physics-sim` to merge.
+
+**Done:**
+- Tools on Max's PC:
+  - `tifffile`, `Pillow` and `imagecodecs` (needed for the compressed GeoTIFFs), and QGIS LTR 3.44.14.
+  - `tools/common.sh` got `find_blender`, and `tools/blender.sh` runs Blender scripts headless with factory settings.
+  - The user variable `BLENDER` is set on this PC.
+- Round-trip test:
+  - `tools/blender/roundtrip_test.py` builds a test hill and exports `.glb`.
+  - `test_map_roundtrip.gd` proves the axes come through (east +X, up +Y, north −Z).
+  - `roundtrip_view.tscn` shows it in a screenshot.
+- `tools/map/`:
+  - `download.py` (STAC v1, SHA-256 checked, in stages),
+  - `lake_level.py` (1790.63 m, writes `map_config.tres`),
+  - `visible.py` (what you can see from the water),
+  - `readers.py`, `silvaplana_area.py`, `build.sh`, `README.md`.
+- `MapConfig` (`Game/maps/map_config.gd`) converts LV95 ↔ game, with `test_map_config.gd`.
+- Git LFS rules in `Game/maps/.gitattributes` and `Art/.gitattributes`.
+- Downloaded 701 MB: heights, lakebed, swissALTIRegio, wind, and 2 m photos of the visible tiles.
+- What can be seen:
+  - From the water only, about 70 km² at first.
+  - Max pointed out that the orbit and replay cameras see more. `visible.py` now looks from the viewpoints in `silvaplana_area.VIEWPOINTS`: the sailor at 2 m, the orbit camera at 60 m, a replay drone at 150 m, and cameras on the shore at 2 m and 50 m.
+  - Result: 137 km² in 354 tiles of 1 km (the sailor alone: 76 km²), 90 % within 22 km.
+  - The surroundings grew to the west and the north until nothing visible touched the edge.
+  - The picture shows the sailor's view in orange and the camera-only land in yellow.
+- `build.sh` opens the visibility picture at the end, and keeps a double-clicked window open.
+- A Blender preview of the real valley, so the team can see the data (Max asked to see what is being done):
+  - `preview_data.py` and `build_preview.py` make `silvaplana_preview.blend`, with the shore band at 5 m with the lakebed, the surroundings at 100 m, and the photos.
+  - Four cameras render pictures. The cameras place themselves on the water, or above the ground.
+  - It runs as part of `build.sh` (about 1.5 minutes in all).
+  - The lakebed's deepest point comes out at 76.8 m, as published.
+- BlenderGIS 2.2.10 loads in Blender 4.5, without GDAL or PyProj, which we don't need.
+- Found that the game camera draws only up to 3 km (`camera_rig.gd`, `far = 3000`). For the mountains it must go to about 35 km: added to M2.
+- 22 of the visible tiles are in Italy, without Swiss aerial photos: added to M2.
+
+**Verified:** `tools/test.sh` 129 of 129, `tools/check.sh` 78 files, the round-trip screenshot (the hill's top under the red marker), and a second `tools/map/build.sh` run that downloads nothing. Not verified: the Linux PC (Blender version, Git LFS, round trip).
+
+**Decisions:**
+- Downloads come in stages. The 10 cm photos of the shore band (1.1 GB, for M2) and the surface model (0.34 GB, for M4) wait for the team: the first is over the plan's 1 GB limit, and C: has only 17 GB free.
+- `python -I` doesn't see user-installed packages on this PC, so the map scripts run normally from the repo root. Python then only loads code from `tools/map/` and the repo root, never from `.map_data/`.
+
+**Roles** (Max, 14 October 2026):
+- Michiel does the physics.
+- Max does the map, and later the wind patterns connected to it: the daily cycle, the gusts and shifts, and where the wind is strong or weak. They connect to the physics through `WindField`, agreed with Michiel.
+- Updated in the map plan, the physics requests (R5), the rebuild plan and CLAUDE.md.
+
+**Next:** the team looks at `.map_data/work/visible_map.png` and decides on the 10 cm photos. Then M1: `heights.py`, `build_terrain.py` in Blender, and the terrain in Godot. Check the Linux PC when convenient.
+
+---
+
+## 14 October 2026 - Session 37 (map track): Plan for the first map, Lake Silvaplana
+
+**Phase:** side track M (the map), planning only. Branch `feature/map-silvaplana`, started from `feature/physics-sim`.
+
+**Done:**
+- Set up Max's Windows PC (Godot 4.7.2 from the official build, SHA-512 checked; the `GODOT` variable for `tools/*.sh`; the godot-tools VS Code extension). Blender 4.5.4 LTS with BlenderGIS was already installed.
+- Wrote [MAP_SILVAPLANA_PLAN.md](MAP_SILVAPLANA_PLAN.md): phases M0 to M4, decisions MD1 to MD7, the open data and the tools, plus a "Later" section of physics requests for Michiel (wind simulation, wind-driven waves, mountain-lake physics, live weather, other sailors).
+- Wrote [SILVAPLANA_SPOT_NOTES.md](SILVAPLANA_SPOT_NOTES.md): questions for Max's local knowledge of the spot.
+- Checked in the STAC API that all the data exists for the area: swissALTI3D, swissALTIRegio (10 m, for the far mountains), SWISSIMAGE, swissSURFACE3D, swissBUILDINGS3D, swissTLM3D, the swissBATHY3D lakebed of Silvaplanersee (survey of 2019), the MeteoSwiss station Segl-Maria (SIA) at the south-west end of the lake (10-minute wind with 1 s and 3 s gusts), and the BAFU lake-level station 2073.
+- Wrote [PHYSICS_REQUESTS_FROM_MAP.md](PHYSICS_REQUESTS_FROM_MAP.md) for Michiel: requests R1 to R8 (a map's own air, water and wind; thin air; fresh water; lakebed and running aground; moving gusts; wind waves; replay and live weather; other sailors), with sources, numbers and suggested interfaces. `PHYSICS_SPEC.md` was not touched.
+- Measured the Maloja from MeteoSwiss Segl-Maria, 10-minute data of the summers 2020 to 2025 (new script `tools/map/maloja_stats.py`):
+  - from 244°, with a median 12 kt mean at the station and 1-second gusts 1.55 times the mean,
+  - 61 % of summer days are Maloja days,
+  - the air density on Maloja afternoons is 0.98 kg/m³: 20 % below the 1.225 in `WindsurferSim.RHO_AIR` and the autopilot.
+  - Worked out the expected lake waves with JONSWAP: about 0.29 m and 6 m long at 20 kt over 3 km.
+- Added `/.map_data/` (raw map downloads) to `.gitignore`.
+- No code or game files changed. A wave-size experiment was tried and undone at the team's request.
+
+**Verified:** on Windows, `tools/check.sh` (72 files), `tools/test.sh` (122 of 122) and `tools/screenshot.sh` pass on `feature/physics-sim`. `tools/map/maloja_stats.py` run from the repo reproduces the numbers in the requests document. Nothing of the map was built or tested yet. The station's wind speeds were not checked against the wind on the water.
+
+**Decisions:**
+- The team's answers (plan, "Team decisions"):
+  - only Silvaplana is sailable, and the map is as small as possible: a detailed shore band, plus only what you can see from the water,
+  - waves will come from a general wind-wave system later, and until then the current waves stay unchanged,
+  - at most 300 MB of map files,
+  - one fixed Maloja setting of 12 to 20 knots, with the existing simple gusts and shifts,
+  - Michiel makes all physics changes,
+  - other sailors on the water come later,
+  - Max is the local expert.
+- MD1 to MD7: LV95 coordinates straight into the game with the lake surface at Y = 0; Python prepares the data (numpy, tifffile, Pillow; no GDAL); Blender builds the 3D (terrain by a headless script, props by hand) and exports `.glb`, with the `.blend` sources in `Art/`; the game logic reads the grids, never the meshes; the lakebed replaces the flat lake; the map sets its own wind config and never changes `Game/sim/`, the shared configs or the ocean; Michiel's branch is merged into this branch at the start of every map phase.
+
+**Next:** Phase M0: `pip install tifffile pillow`, install QGIS, the Python → Blender → Godot round-trip test, then the download and visibility scripts. Max fills in the spot notes when there is time.
 
 ---
 

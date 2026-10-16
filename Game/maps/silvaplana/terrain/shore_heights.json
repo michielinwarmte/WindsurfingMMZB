@@ -1,0 +1,15 @@
+{
+ "about": "The shore band's heights for the game logic, written by tools/map/heights.py: don't edit. height above the lake surface (m) = height_offset_m + value * height_scale_m",
+ "file": "shore_heights.bin",
+ "format": "uint16 little-endian, row by row from the north edge, each row from west to east",
+ "columns": 2501,
+ "rows": 2501,
+ "cell_m": 2.0,
+ "west_m": 2778000.0,
+ "north_m": 1149000.0,
+ "x0_m": -2500.0,
+ "z0_m": -2400.0,
+ "height_scale_m": 0.025,
+ "height_offset_m": -100.0,
+ "lake_level_m": 1790.63
+}

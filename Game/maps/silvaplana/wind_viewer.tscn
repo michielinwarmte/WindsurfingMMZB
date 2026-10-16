@@ -1,0 +1,30 @@
+[gd_scene format=3]
+
+; The wind analyser's viewer (MAP_SILVAPLANA_PLAN.md, W2): the Silvaplana map with the wind's streaks,
+; the speed colours on the water, a map camera looking down and a free camera. wind_viewer.gd adds
+; the water, the clock and the rest of the screen. Start it with tools/play.sh wind.
+
+[ext_resource type="Script" path="res://maps/silvaplana/wind_viewer.gd" id="1_viewer"]
+[ext_resource type="PackedScene" path="res://maps/silvaplana/silvaplana.tscn" id="2_map"]
+[ext_resource type="Script" path="res://maps/top_camera.gd" id="3_top"]
+[ext_resource type="Script" path="res://maps/fly_camera.gd" id="4_fly"]
+[ext_resource type="Script" path="res://maps/wind/wind_streaks.gd" id="5_streaks"]
+
+[node name="WindViewer" type="Node3D"]
+script = ExtResource("1_viewer")
+
+[node name="Silvaplana" parent="." instance=ExtResource("2_map")]
+
+[node name="TopCamera" type="Camera3D" parent="."]
+current = true
+near = 1.0
+far = 40000.0
+script = ExtResource("3_top")
+
+[node name="FlyCamera" type="Camera3D" parent="."]
+near = 0.05
+far = 35000.0
+script = ExtResource("4_fly")
+
+[node name="WindStreaks" type="GPUParticles3D" parent="."]
+script = ExtResource("5_streaks")

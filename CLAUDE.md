@@ -4,6 +4,10 @@ Windsurfing simulator by the MMZB team, being rebuilt from scratch in **Godot 4.
 
 **What to work on:** [Documentation/REBUILD_PLAN.md](Documentation/REBUILD_PLAN.md). Check its Status table, then continue with the first unticked task of the current phase. The newest entry in [Documentation/PROGRESS_LOG.md](Documentation/PROGRESS_LOG.md) says where the last session stopped.
 
+**The map track** (the first real map, Lake Silvaplana, built from Swiss open data: `Game/maps/` and `tools/map/`) works from [Documentation/MAP_SILVAPLANA_PLAN.md](Documentation/MAP_SILVAPLANA_PLAN.md) instead. Michiel does the physics; Max does the map and the wind patterns that belong to it (the wind analyser, phases W0 to W5). It does not touch the physics in `Game/sim/`. What the map needs from the physics track is in [Documentation/PHYSICS_REQUESTS_FROM_MAP.md](Documentation/PHYSICS_REQUESTS_FROM_MAP.md). The map's big files (terrain tiles, photos, the height grid) are stored with **Git LFS**: install it and run `git lfs install` before cloning or pulling, or you get small pointer files instead of the terrain and `tools/check.sh` fails on them. Map commands:
+- `tools/map/build.sh`: download the data and prepare it. See [tools/map/README.md](tools/map/README.md).
+- `tools/blender.sh <script.py> [args]`: run a Blender script headless.
+
 ## The team
 
 The team are not very experienced programmers and rely on AI for most of the code. So:
@@ -23,7 +27,7 @@ The team are not very experienced programmers and rely on AI for most of the cod
 | Does every script, scene and resource load? | `tools/check.sh` |
 | Screenshot of the running game | `tools/screenshot.sh [res://scene.tscn] [out.png] [frames]`, then Read the PNG (default `.screenshots/latest.png`) |
 | Look up the exact Godot 4.7 API | `tools/api_docs.sh` once, then grep `.godot_api/doc/classes/<Class>.xml` |
-| Play the game / open the editor | `tools/play.sh` / `tools/edit.sh` (these open windows and are meant for the team) |
+| Play the game / open the editor | `tools/play.sh` / `tools/edit.sh` (these open windows and are meant for the team). `tools/play.sh silvaplana` opens the Silvaplana terrain view, `tools/play.sh wind` the wind viewer (with the race course maker); double-clicked, play.sh asks what to start |
 | Anything else with Godot | `tools/godot.sh <args>` |
 
 Always go through these scripts instead of calling `godot` directly: the shell Claude Code uses is zsh without `~/.local/bin` on its PATH, and the scripts use the pinned Godot version. They exit non-zero on failure and keep logs in `.logs/`. `tools/screenshot.sh` opens a game window for a few seconds; that is expected.

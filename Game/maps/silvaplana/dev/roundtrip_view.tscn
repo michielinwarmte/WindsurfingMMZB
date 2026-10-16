@@ -1,0 +1,51 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://maps/silvaplana/dev/roundtrip_view.gd" id="1_view"]
+[ext_resource type="PackedScene" path="res://maps/silvaplana/dev/roundtrip_hill.glb" id="2_hill"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_view"]
+sky_top_color = Color(0.22, 0.47, 0.82, 1)
+sky_horizon_color = Color(0.68, 0.8, 0.9, 1)
+
+[sub_resource type="Sky" id="Sky_view"]
+sky_material = SubResource("SkyMaterial_view")
+
+[sub_resource type="Environment" id="Environment_view"]
+background_mode = 2
+sky = SubResource("Sky_view")
+ambient_light_source = 3
+tonemap_mode = 2
+
+[sub_resource type="SphereMesh" id="SphereMesh_marker"]
+radius = 1.5
+height = 3.0
+
+[sub_resource type="StandardMaterial3D" id="Material_peak"]
+albedo_color = Color(0.9, 0.1, 0.1, 1)
+
+[sub_resource type="StandardMaterial3D" id="Material_north"]
+albedo_color = Color(0.1, 0.3, 0.95, 1)
+
+[node name="RoundtripView" type="Node3D"]
+script = ExtResource("1_view")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_view")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+shadow_enabled = true
+
+[node name="Camera3D" type="Camera3D" parent="."]
+far = 1000.0
+
+[node name="Hill" parent="." instance=ExtResource("2_hill")]
+
+[node name="ExpectedPeak" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 10, -30)
+mesh = SubResource("SphereMesh_marker")
+surface_material_override/0 = SubResource("Material_peak")
+
+[node name="North" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -50)
+mesh = SubResource("SphereMesh_marker")
+surface_material_override/0 = SubResource("Material_north")

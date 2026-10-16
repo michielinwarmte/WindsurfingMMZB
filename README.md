@@ -23,17 +23,20 @@ The step-by-step plan, with its current status, is in [Documentation/REBUILD_PLA
 ### Linux
 
 ```bash
+git lfs install          # Git LFS first: the Silvaplana map's terrain and photos are stored with it
 git clone https://github.com/michielinwarmte/WindsurfingMMZB.git
 cd WindsurfingMMZB
 tools/install_godot.sh   # installs Godot 4.7.2 for your user (no sudo), once
 tools/edit.sh            # open the project in the Godot editor
 ```
 
+Without Git LFS (`pacman -S git-lfs`, or a release binary in `~/.local/bin`) the map's big files come down as small pointer files and the Silvaplana scenes do not load.
+
 After installing you can also start "Godot Engine 4.7.2" from your app menu and open `Game/project.godot`.
 
 ### Windows or macOS
 
-Install **Godot 4.7.2, the standard build (not .NET)** from [godotengine.org](https://godotengine.org/download/archive/), then open `Game/project.godot` in it. To use the `tools/*.sh` scripts from Git Bash, set the `GODOT` environment variable to the Godot executable.
+Install **Godot 4.7.2, the standard build (not .NET)** from [godotengine.org](https://godotengine.org/download/archive/), then open `Game/project.godot` in it. Git for Windows includes Git LFS; run `git lfs install` once before cloning. To use the `tools/*.sh` scripts from Git Bash, set the `GODOT` environment variable to the Godot executable.
 
 ## Everyday commands
 
