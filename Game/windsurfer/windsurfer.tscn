@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://windsurfer/windsurfer.gd" id="1_windsurfer"]
+
+[node name="Windsurfer" type="Node3D"]
+script = ExtResource("1_windsurfer")

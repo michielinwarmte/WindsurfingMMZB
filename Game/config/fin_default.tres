@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="FinConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://sim/config/fin_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+area_m2 = 0.0365
+span_m = 0.38
+root_local = Vector3(0, -0.06, 0.9)
+cop_span_fraction = 0.4
+end_plate_factor = 2.0
+stall_linear_end_deg = 8.0
+stall_peak_deg = 12.0
+stall_bump_cl = 0.15
+stall_drop_end_deg = 16.0
+post_stall_fraction = 0.7
+deep_stall_deg = 25.0
+deep_stall_cl = 0.4
+min_cl = 0.1
+cd_profile = 0.008
+oswald_e = 0.9
+cd_viscous_factor = 0.5
+cd_plate = 1.2
+min_speed_ms = 0.05

@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="WaterConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://sim/config/water_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+density_kg_m3 = 1025.0
+kinematic_viscosity_m2_s = 1.19e-06
+base_height_m = 0.0
+damping_linear_ns_m = 800.0
+damping_quadratic_ns2_m2 = 800.0

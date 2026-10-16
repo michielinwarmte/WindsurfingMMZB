@@ -19,6 +19,7 @@ The team are not very experienced programmers and rely on AI for most of the cod
 | Fast unit tests, after every change | `tools/test.sh` |
 | Slow physics validation | `tools/test.sh validation` (or `tools/test.sh all`) |
 | Only some tests | `tools/test.sh unit -gselect=buoyancy` |
+| Every manoeuvre (tack, gybe, run, irons, straight) at 12, 18 and 24 kt, one line each | `tools/matrix.sh [--only=tack] [--winds=18] [--waves=1] [--pilot.field=value ...]` (45 s; the per-case CSVs land in `.sim_output/matrix/`) |
 | Does every script, scene and resource load? | `tools/check.sh` |
 | Screenshot of the running game | `tools/screenshot.sh [res://scene.tscn] [out.png] [frames]`, then Read the PNG (default `.screenshots/latest.png`) |
 | Look up the exact Godot 4.7 API | `tools/api_docs.sh` once, then grep `.godot_api/doc/classes/<Class>.xml` |
