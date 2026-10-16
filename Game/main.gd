@@ -58,7 +58,9 @@ func _ready() -> void:
 	# the windsurfer (the physics) stops.
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_windsurfer.process_mode = Node.PROCESS_MODE_PAUSABLE
-	_sun.rotation_degrees = Vector3(-50.0, 30.0, 0.0)
+	# The Silvaplana map's sun (maps/silvaplana/silvaplana.tscn): mid-July, 15:00 summer time, in
+	# the south-west (azimuth 225 degrees), 59 degrees up, so both scenes have the same light.
+	_sun.rotation_degrees = Vector3(-59.0, -45.0, 0.0)
 	_ocean.setup(_windsurfer.sim, _camera_rig.camera)
 	_apply_start_settings()
 	_pause_menu.resume_requested.connect(_set_paused.bind(false))

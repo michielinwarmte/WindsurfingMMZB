@@ -25,9 +25,10 @@ const RIPPLE_MIN_FACTOR: float = 0.1
 @export var near_size_m: float = 400.0
 @export var near_cell_m: float = 1.0
 ## The far plane, flat, this wide; it sits below the deepest trough so it never shows
-## through the near mesh.
-@export var far_size_m: float = 6000.0
-@export var far_cell_m: float = 25.0
+## through the near mesh. 20 km reaches past the horizon (5 km away for an eye 2 m up), so
+## no sky shows between the water's edge and the horizon.
+@export var far_size_m: float = 20000.0
+@export var far_cell_m: float = 100.0
 ## The water's look: a ShaderMaterial on res://world/water.gdshader (null = the open sea's).
 @export var look: ShaderMaterial = null
 ## The render layers the water is drawn on. A map whose water mirrors the valley with a
