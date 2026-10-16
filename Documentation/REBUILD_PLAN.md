@@ -273,11 +273,23 @@ Change the layout when there is a good reason, and update this section when you 
 
 ## Phase 8: Audio
 
-- [ ] Procedural sounds, as in the legacy `ProceduralAudioClips`: generate looping noise buffers (`AudioStreamWAV`) at startup, shape them with audio bus effects (filters), and drive volume and pitch from the simulation.
-- [ ] Wind ambience from the apparent wind, hull lapping versus planing hiss, splashes on impacts, and sail flapping when luffing and during tacks.
-- [ ] A volume setting.
+> Branch `feature/audio`: all the sound code is in `Game/audio/`; the buses are in `Game/default_bus_layout.tres` and the tuning numbers in `Game/config/sound_mix_default.tres`. No sound files: everything is generated from noise when the game starts (about 0.6 s, once per run).
+
+- [x] Procedural sounds, as in the legacy `ProceduralAudioClips`: generate looping noise buffers (`AudioStreamWAV`) at startup, shape them with audio bus effects (filters), and drive volume and pitch from the simulation. (`SoundBank`, `sound_bank.gd`: wind, hiss, whistle, lapping, rumble and flutter loops, and splash, crack and swoosh one-shots, 16-bit 44.1 kHz from a seeded random generator. Buses Wind, Water and Sail with filter sub-buses; `SoundMix`, `sound_mix.gd`, turns the telemetry into levels, pitch and filter cutoffs; `GameAudio`, `game_audio.gd`, plays them.)
+- [x] Wind ambience from the apparent wind, hull lapping versus planing hiss, splashes on impacts, and sail flapping when luffing and during tacks. (Wind +12 dB per doubling of the apparent wind with a low-pass that opens up and a whistle above 16 kt; lapping and rumble cross over to the hiss with the smoothed planing ratio; splashes on slams of 1 m/s or more, a nose digging in, a fall and a water start; the sail flaps inside its luff zone, louder and faster in more wind, cracks when it fills, and swooshes when the rig changes sides; silence from the sail while the sailor is in the water; 8 dB quieter behind the start menu; the board's sounds a little quieter with a far camera.)
+- [x] A volume setting. (Master, Wind, Water and Sail sliders on the Audio tab, saved with the other settings.)
 
 **Done when:** unit tests confirm the logic (volume and pitch against speed). The AI can't listen, so the team checks the sound by ear.
+(`Game/tests/unit/test_audio.gd`, 28 tests. `res://audio/print_levels.tscn` prints the levels the mix asks for and what comes out of each bus over a run with the autopilot; see its header for `--tack` and `--fall`.)
+
+**What to listen for (team check):**
+- Does the wind roar grow and brighten as the board speeds up, and does a whistle come in above about 16 kt of apparent wind? Is it too loud or too dull?
+- Slogging (not planing): a gurgle and low rumble of water. On the plane: a steady hiss that takes over from the gurgle. Does the change feel right, and is it too fast or too slow?
+- Ease the sheet until the sail flaps: a rattle that gets faster in more wind. Sheet in: a crack as it fills. In a tack: the sail rattles, swooshes across and cracks on the new side.
+- Splashes when the board slams on the swell (about one a second on the default beam reach: too many?), a big splash in a catapult (sheet in hard in a strong wind to get one), a small one at the water start.
+- The levels of the four sliders, and the quieter sound behind the start menu. Nothing should click or crackle.
+- A harmless warning "ObjectDB instances were leaked at exit" now appears when the game quits: Godot does not free sounds that are still playing at that moment.
+
 **Stop:** team check.
 
 ## Phase 9: Gameplay: racing
