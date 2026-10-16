@@ -16,6 +16,9 @@
 //   cloth, bigger toward the leech (`flutter`, 0 to 1);
 // - twist: above the boom the leech falls off to leeward, more toward the head (a few degrees
 //   just above the boom, `twist_head_rad` at the head). It turns the cloth about the mast.
+// Then the whole cloth moves with the mast's bend (mast_bend.gdshaderinc).
+
+#include "res://windsurfer/mast_bend.gdshaderinc"
 
 // Which way the belly bulges: +1 toward the sail's +z, -1 toward -z. RigVisuals moves it
 // smoothly through 0 (a flat sail) when the sail goes over to the other side.
@@ -103,5 +106,6 @@ void bend_sail(inout vec3 vertex, inout vec3 normal, vec2 uv, vec2 uv2, bool sha
 	} else {
 		normal = vec3(normal.x * c - normal.z * s, normal.y, normal.x * s + normal.z * c);
 	}
-	vertex = bent;
+	// The whole sail moves with the bent mast.
+	vertex = bent + mast_bend(vertex.y);
 }

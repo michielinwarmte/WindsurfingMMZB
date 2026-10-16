@@ -169,6 +169,8 @@ func test_shape_sail_follows_the_simulation() -> void:
 	assert_almost_eq(rig.cloth_value("flutter"), 0.0, 1e-6, "No flutter at 15 degrees")
 	assert_almost_eq(rig.cloth_value("camber"), sail_config.camber, 1e-6, "Full belly")
 	assert_between(rad_to_deg(rig.cloth_value("twist_head_rad")), RigVisuals.TWIST_LIGHT_DEG, RigVisuals.TWIST_LOADED_DEG)
+	assert_lt(rig.cloth_value("mast_bend_across_m"), 0.0, "The mast bends to leeward with the belly")
+	assert_gt(rig.cloth_value("mast_bend_aft_m"), 0.0, "The masthead falls back")
 	# Luffing: the flutter builds up and the belly goes slack.
 	sail.alpha_rad = 0.0
 	for i: int in 30:

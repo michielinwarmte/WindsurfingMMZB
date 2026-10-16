@@ -193,10 +193,8 @@ def get_material(name: str) -> bpy.types.Material:
     color, roughness, metallic = MATERIALS[name]
     linear = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in color]
     material = bpy.data.materials.new(name)
-    try:
-        material.use_nodes = True
-    except AttributeError:
-        pass  # newer Blender: materials always use nodes
+    if bpy.app.version < (5, 0, 0):
+        material.use_nodes = True  # Blender 5 materials always use nodes
     shader = material.node_tree.nodes["Principled BSDF"]
     shader.inputs["Base Color"].default_value = (*linear, 1.0)
     shader.inputs["Roughness"].default_value = roughness
@@ -592,12 +590,11 @@ def build_fin() -> bpy.types.Object:
         rings.append([b.vertex(p) for p in upper + lower])
     loft(b, rings, "fin")
     cap(b, rings[0], vec(0, 1, 0), "fin")
-    tip_s = 1.0
     point_cap(b, rings[-1], vec(0, -FIN_SPAN, -0.45 * FIN_ROOT_CHORD + FIN_SWEEP + 0.004), "fin")
     for i in range(200):
         area += fin_chord((i + 0.5) / 200) * FIN_SPAN / 200
     print(f"Fin: span {FIN_SPAN:.2f} m, root chord {FIN_ROOT_CHORD:.3f} m, area {area:.4f} m2 "
-          f"(config {FIN['area_m2']:.4f}), tip at s = {tip_s}")
+          f"(config {FIN['area_m2']:.4f})")
     return b.build()
 
 
@@ -712,12 +709,27 @@ def sail_point(u, v) -> np.ndarray:
     return luff_point(v) + u * (outer_point(v) - luff_point(v))
 
 
-def sail_area() -> float:
+def sail_outline() -> np.ndarray:
+    """The flat sail's outline: down the luff, then along the foot and up the leech."""
     outline = [luff_point(row_v(r)) for r in range(FOOT_ROWS + UPPER_ROWS, -1, -1)]
     outline += [outer_point(row_v(r)) for r in range(0, FOOT_ROWS + UPPER_ROWS + 1)]
-    pts = np.array(outline)
-    x, y = pts[:, 0], pts[:, 1]
+    return np.array(outline)
+
+
+def sail_area() -> float:
+    x, y = sail_outline()[:, 0], sail_outline()[:, 1]
     return 0.5 * abs(np.dot(x, np.roll(y, -1)) - np.dot(y, np.roll(x, -1)))
+
+
+def sail_centroid() -> tuple:
+    """The centre of the sail's area (x along the boom, y up the mast), m: where the wind's
+    push acts on a flat sail (PHYSICS_SPEC.md, OPEN 2.4 asks for it)."""
+    pts = sail_outline()
+    x, y = pts[:, 0], pts[:, 1]
+    x1, y1 = np.roll(x, -1), np.roll(y, -1)
+    cross = x * y1 - x1 * y
+    area = 0.5 * np.sum(cross)
+    return float(np.sum((x + x1) * cross) / (6 * area)), float(np.sum((y + y1) * cross) / (6 * area))
 
 
 def in_window(r: int, k: int) -> bool:
@@ -751,6 +763,9 @@ def build_sail_cloth() -> bpy.types.Object:
         if b.face_normal(f)[2] < 0.0:
             b.faces[f].reverse()
     build_sleeve(b)
+    centre_x, centre_y = sail_centroid()
+    print(f"Sail: area centre {centre_y:.2f} m up the mast ({centre_y / SAIL['luff_m']:.2f} of the luff) and "
+          f"{centre_x:.2f} m back ({centre_x / BOOM_M:.2f} of the boom)")
     print(f"Sail: outline area {sail_area():.2f} m2 (config {SAIL['area_m2']:.2f}), "
           f"lowest point of the foot {float(np.min(FOOT.at(np.linspace(0, 1, 200))[:, 1])):.2f} m above the deck")
     return b.build(uv2=True)

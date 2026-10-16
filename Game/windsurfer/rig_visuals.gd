@@ -16,7 +16,8 @@ extends Node3D
 ## - boom.glb: the mast at boom height. It is a child of the sail, so it follows the sail
 ##   angle and the rake.
 ## The sail cloth bends in a vertex shader (sail_cloth.gdshader): belly to leeward, twist,
-## and flutter when luffing, from the instance uniforms that shape_sail() sets.
+## and flutter when luffing, from the instance uniforms that shape_sail() sets. The mast
+## (mast.gdshader) and the sail bend together: the top back and, with the pull, to leeward.
 
 const BOARD_MODEL: PackedScene = preload("res://assets/models/board.glb")
 const FIN_MODEL: PackedScene = preload("res://assets/models/fin.glb")
@@ -26,6 +27,7 @@ const BOOM_MODEL: PackedScene = preload("res://assets/models/boom.glb")
 const SAIL_PANELS: Texture2D = preload("res://assets/models/sail_panels.png")
 const SAIL_CLOTH_SHADER: Shader = preload("res://windsurfer/sail_cloth.gdshader")
 const SAIL_WINDOW_SHADER: Shader = preload("res://windsurfer/sail_window.gdshader")
+const MAST_SHADER: Shader = preload("res://windsurfer/mast.gdshader")
 
 ## The sail's head sits this far below the mast top (TOP_Y in build_rig_models.py), m.
 const SAIL_HEAD_BELOW_MAST_TOP_M: float = 0.02
@@ -43,6 +45,10 @@ const TWIST_LIGHT_DEG: float = 8.0
 const TWIST_LOADED_DEG: float = 16.0
 ## Sail lift at which the twist reaches TWIST_LOADED_DEG, N.
 const TWIST_FULL_LIFT_N: float = 1200.0
+## How far the masthead is bent back (the luff curve the downhaul pulls in), m, and how far
+## it bends to leeward with a strong pull, m.
+const MAST_BEND_AFT_M: float = 0.22
+const MAST_BEND_LEEWARD_M: float = 0.12
 ## A time step long enough for the cloth to reach its shape in one go, s.
 const SNAP_STEP_S: float = 10.0
 
@@ -52,6 +58,7 @@ var _mast: Node3D
 var _sail: Node3D
 var _boom: Node3D
 var _cloth: MeshInstance3D
+var _mast_tube: MeshInstance3D
 
 var _sail_config: SailConfig
 # The pose at the last sailing tick, from which a fall starts.
@@ -77,8 +84,10 @@ func build(_board_config: BoardConfig, sail_config: SailConfig, fin_config: FinC
 	_boom = _add_model(BOOM_MODEL, "Boom", _sail)
 	_boom.position = Vector3(0.0, sail_config.boom_height_m, 0.0)
 	_cloth = _sail.find_child("SailCloth", true, false) as MeshInstance3D
+	_mast_tube = _mast.find_child("Mast", true, false) as MeshInstance3D
 	_set_up_cloth(sail_config)
-	_set_cloth(_belly_side, sail_config.camber, deg_to_rad(TWIST_LIGHT_DEG), 0.0)
+	_set_up_mast(sail_config)
+	_set_cloth(_belly_side, sail_config.camber, deg_to_rad(TWIST_LIGHT_DEG), 0.0, 0.0)
 
 
 ## The rig while sailing: the mast from the mast foot along `mast_dir`, the sail and the
@@ -108,7 +117,7 @@ func shape_sail(sail: SailModel, time_s: float) -> void:
 	var twist_rad: float = deg_to_rad(lerpf(TWIST_LIGHT_DEG, TWIST_LOADED_DEG, pull))
 	# A luffing sail loses most of its belly.
 	var camber: float = sail.config.camber * (1.0 - 0.6 * _flutter)
-	_set_cloth(_belly_side, camber, twist_rad, _flutter)
+	_set_cloth(_belly_side, camber, twist_rad, _flutter, pull)
 
 
 ## The fall on screen: the rig pivots about the mast foot until it lies on the water on the
@@ -119,7 +128,7 @@ func pose_fallen(eased: float, side: float) -> void:
 	var mast_dir: Vector3 = _last_mast_dir.slerp(flat, eased).normalized()
 	_pose_rig(mast_dir, _last_boom_dir)
 	var camber: float = _sail_config.camber * lerpf(1.0, 0.3, eased)
-	_set_cloth(_belly_side, camber, deg_to_rad(TWIST_LIGHT_DEG) * (1.0 - eased), 0.0)
+	_set_cloth(_belly_side, camber, deg_to_rad(TWIST_LIGHT_DEG) * (1.0 - eased), 0.0, 0.0)
 	_flutter = 0.0
 	_last_cloth_time_s = NAN
 
@@ -153,7 +162,8 @@ func sail_cloth() -> MeshInstance3D:
 
 
 ## A value last given to the cloth's shader ("belly_side", "camber", "twist_head_rad",
-## "flutter", "flutter_phase_rad"), for tests and dev views.
+## "flutter", "flutter_phase_rad", "mast_bend_aft_m", "mast_bend_across_m"), for tests and
+## dev views.
 func cloth_value(parameter: String) -> float:
 	return _cloth_values.get(parameter, NAN)
 
@@ -202,21 +212,41 @@ func _set_up_cloth(sail_config: SailConfig) -> void:
 	_cloth.extra_cull_margin = 0.5
 
 
+## Gives the mast's carbon tube the shader that bends it (the extension below stays straight).
+func _set_up_mast(sail_config: SailConfig) -> void:
+	var material: ShaderMaterial = ShaderMaterial.new()
+	material.shader = MAST_SHADER
+	material.set_shader_parameter("mast_length_m", sail_config.mast_m)
+	var mesh: Mesh = _mast_tube.mesh
+	for surface: int in mesh.get_surface_count():
+		var imported: Material = mesh.surface_get_material(surface)
+		if imported != null and imported.resource_name == "carbon":
+			_mast_tube.set_surface_override_material(surface, material)
+	_mast_tube.extra_cull_margin = 0.3
+
+
 func _cloth_material(shader: Shader, sail_config: SailConfig) -> ShaderMaterial:
 	var material: ShaderMaterial = ShaderMaterial.new()
 	material.shader = shader
+	material.set_shader_parameter("mast_length_m", sail_config.mast_m)
 	material.set_shader_parameter("boom_height_m", sail_config.boom_height_m)
 	material.set_shader_parameter("head_height_m", sail_config.mast_m - SAIL_HEAD_BELOW_MAST_TOP_M)
 	return material
 
 
-func _set_cloth(belly_side: float, camber: float, twist_head_rad: float, flutter: float) -> void:
+## Sets the cloth's shape, and the mast's bend: back by the luff curve, and to leeward (the
+## belly's side) by `pull` (0 to 1) of the full sideways bend.
+func _set_cloth(belly_side: float, camber: float, twist_head_rad: float, flutter: float, pull: float) -> void:
+	var bend_across_m: float = belly_side * MAST_BEND_LEEWARD_M * pull
 	_cloth_values = {
 		"belly_side": belly_side, "camber": camber, "twist_head_rad": twist_head_rad,
 		"flutter": flutter, "flutter_phase_rad": _flutter_phase_rad,
+		"mast_bend_aft_m": MAST_BEND_AFT_M, "mast_bend_across_m": bend_across_m,
 	}
 	for parameter: String in _cloth_values:
 		_cloth.set_instance_shader_parameter(parameter, _cloth_values[parameter])
+	_mast_tube.set_instance_shader_parameter("mast_bend_aft_m", MAST_BEND_AFT_M)
+	_mast_tube.set_instance_shader_parameter("mast_bend_across_m", bend_across_m)
 
 
 ## The time since the last shape_sail call by the simulation clock, so the cloth eases at the
