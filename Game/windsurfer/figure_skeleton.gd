@@ -56,7 +56,8 @@ const HIPS_BELOW_COM_M: float = 0.06
 ## over its head. A hiked windsurfer's hips are higher, with the legs reaching out from the
 ## rail, so the figure's hips are kept at least this high above the deck.
 const HIPS_MIN_HEIGHT_M: float = 0.65
-## The hips go at most this far from where the simulation's centre of mass puts them.
+## The hips go at most this far from where the simulation's centre of mass (and the
+## minimum height and the crouch) put them.
 const HIPS_OFFSET_MAX_M: float = 0.4
 ## The hips stay within this share of the full reach of the torso and the arms from the
 ## hands, so the torso can stay fairly upright and the arms reach forward to the boom
@@ -171,8 +172,8 @@ var head_basis: Basis = Basis.IDENTITY
 var hooked: bool = false
 var hook: Vector3 = Vector3.ZERO
 var harness_line_ends: PackedVector3Array = PackedVector3Array([Vector3.ZERO, Vector3.ZERO])
-## How far the hips had to move from the simulation's centre of mass for the arms and the
-## legs to reach (metres): the price of fixed limbs (see _place_pelvis).
+## How far the hip joints are from where the simulation's centre of mass puts them
+## (metres): the price of fixed limbs (see _place_pelvis), and the crouch in a manoeuvre.
 var pelvis_offset_m: float = 0.0
 ## Where the feet stand on the deck, between the two feet: the pivot of the fall.
 var feet_centre: Vector3 = Vector3(0.0, 0.06, 0.15)
@@ -227,7 +228,7 @@ func solve(sim: WindsurferSim, boom_dir: Vector3) -> void:
 	var wanted: Vector3 = com - Vector3.UP * HIPS_BELOW_COM_M
 	wanted.y = maxf(wanted.y, sim.feet_body.y + HIPS_MIN_HEIGHT_M) - MANOEUVRE_CROUCH_M * turning
 	_place_pelvis(wanted, hike)
-	pelvis_offset_m = (pelvis - wanted).length()
+	pelvis_offset_m = pelvis.distance_to(com - Vector3.UP * HIPS_BELOW_COM_M)
 	_place_torso(hike)
 	_place_arms()
 	_place_legs()
@@ -339,13 +340,13 @@ func _place_hands(sim: WindsurferSim, boom_dir: Vector3, tack: float, com: Vecto
 
 
 ## The hips. They start at the simulation's centre of mass (a little below it, at the hip
-## joints), and move only as far as fixed limbs need: the legs must reach the ankles and
-## the torso and the arms the hands. Hanging out in the harness at speed the simulation
-## puts the centre of mass about a metre out and only a third of a metre above the deck,
-## further from the boom than a torso and two arms reach; the hips are then drawn toward
-## the boom (about 0.4 m at 18 kt). That is the one place the figure leaves the
-## simulation's numbers, so that the hands stay on the boom and the limbs keep their
-## length; pelvis_offset_m says how far it went.
+## joints; at least HIPS_MIN_HEIGHT_M above the deck), and move only as far as fixed limbs
+## need: the legs must reach the ankles and the torso and the arms the hands. Hanging out
+## in the harness at speed the simulation puts the centre of mass about a metre out and
+## only a third of a metre above the deck, further from the boom than a torso and two arms
+## reach; the hips then end up about 0.3 m higher and 0.25 m further in (at 18 kt). That
+## is the one place the figure leaves the simulation's numbers, so that the hands stay on
+## the boom and the limbs keep their length; pelvis_offset_m says how far it went.
 func _place_pelvis(wanted: Vector3, hike: float) -> void:
 	pelvis = wanted
 	_set_pelvis_axes()
