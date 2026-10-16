@@ -23,6 +23,7 @@ var _frames: Dictionary[String, int] = {}
 var _causes: Array[String] = []
 var _next_print_s: float = 1.0
 var _tack_at_s: float = -1.0
+## Space is held down.
 var _release_tack: bool = false
 
 
@@ -65,16 +66,19 @@ func _process(_delta: float) -> void:
 		get_tree().quit()
 
 
-## Space for one frame at --tack, with the player's controls instead of the autopilot.
+## The player's controls take over 1.5 s before --tack (so the auto-sheet settles), then
+## Space is held for 0.2 s (long enough for the controller's next physics step to see it).
 func _press_tack(time_s: float) -> void:
-	if _release_tack:
-		Input.action_release("tack")
-		_release_tack = false
-	if _tack_at_s >= 0.0 and time_s >= _tack_at_s:
-		_tack_at_s = -1.0
+	if _tack_at_s < 0.0:
+		return
+	if time_s >= _tack_at_s - 1.5:
 		_windsurfer.use_autopilot = false
+	if time_s >= _tack_at_s and not _release_tack:
 		Input.action_press("tack")
 		_release_tack = true
+	if _release_tack and time_s >= _tack_at_s + 0.2:
+		Input.action_release("tack")
+		_tack_at_s = -1.0
 
 
 func _measure() -> void:

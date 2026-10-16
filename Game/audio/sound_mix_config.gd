@@ -55,8 +55,9 @@ extends Resource
 ## rumble_full_speed_ms in displacement, gone when planing.
 @export var rumble_max_db: float = -10.0
 @export var rumble_full_speed_ms: float = 3.5
-## The nose digging in (bow immersion, m) adds rumble: this much bow depth doubles it.
-@export var rumble_bow_depth_m: float = 0.08
+## The nose digging in (bow immersion, m) adds rumble: this much bow depth doubles it
+## (and that is the most it adds).
+@export var rumble_bow_depth_m: float = 0.1
 
 @export_group("Water: planing hiss")
 ## The hiss of spray off the planing hull at hiss_ref_speed_ms, and how much louder it gets
@@ -94,7 +95,7 @@ extends Resource
 @export var flutter_pitch_min: float = 0.5
 @export var flutter_pitch_max: float = 2.0
 ## During a tack or a gybe the sail flaps at least this much (0 to 1).
-@export var manoeuvre_flutter: float = 0.5
+@export var manoeuvre_flutter: float = 0.3
 ## The low-pass on the flutter: softer in light air, a hard rattle in a blow.
 @export var flutter_cutoff_low_hz: float = 900.0
 @export var flutter_cutoff_high_hz: float = 3500.0

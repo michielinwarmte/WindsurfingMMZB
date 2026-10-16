@@ -235,7 +235,7 @@ func test_the_sail_flaps_when_luffing_and_not_when_powered() -> void:
 	edge.is_luffing = true
 	edge.alpha_deg = 3.0
 	var half: SoundMix = _settled(edge)
-	assert_lt(half.flutter.volume_db, flapping.flutter.volume_db, "half way: some flapping")
+	assert_lt(half.flutter.volume_db, flapping.flutter.volume_db - 9.0, "half way into the luff zone: a ripple, not a flog")
 	assert_gt(half.flutter.volume_db, SoundMix.SILENT_DB)
 
 

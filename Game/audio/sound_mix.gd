@@ -192,8 +192,8 @@ func _update_water(speed_ms: float, planing: float, bow_m: float, dt: float) -> 
 		log_lerp(c.lapping_cutoff_rest_hz, c.lapping_cutoff_fast_hz, pace),
 		dt, c.water_smoothing_s, c.tone_smoothing_s)
 
-	# The nose ploughing into the water (bow immersion) makes the rumble louder, up to 3x.
-	var plough: float = clampf(1.0 + maxf(bow_m, 0.0) / c.rumble_bow_depth_m, 1.0, 3.0)
+	# The nose ploughing into the water (bow immersion) makes the rumble louder, up to 2x.
+	var plough: float = clampf(1.0 + maxf(bow_m, 0.0) / c.rumble_bow_depth_m, 1.0, 2.0)
 	var rumble_amplitude: float = db_to_linear(c.rumble_max_db) * clampf(speed_ms / c.rumble_full_speed_ms, 0.0, 1.0)
 	rumble_amplitude = minf(rumble_amplitude * plough * displacing, 1.0)
 	rumble.follow(rumble_amplitude, lerpf(0.9, 1.1, pace), 200.0, dt, c.water_smoothing_s, c.tone_smoothing_s)
@@ -223,13 +223,16 @@ func _update_flutter(t: Telemetry, aws_kt: float, sailing: bool, manoeuvre: Stri
 
 
 ## How much the sail luffs: nothing unless the simulation says it luffs; then 1 below the
-## full-flutter angle of attack, 0 at the edge of the luff zone, a straight line between.
+## full-flutter angle of attack and 0 at the edge of the luff zone. In between it falls
+## with the square: half way into the zone the sail still gives about half its lift and
+## only its luff ripples (a quarter of the flapping); it flogs only near zero.
 ## A sail pressed from the wrong side (backwinded) is full and does not flap.
 func _luff_share(t: Telemetry) -> float:
 	if not t.is_luffing:
 		return 0.0
 	var alpha_deg: float = absf(_finite(t.alpha_deg))
-	return 1.0 - _ramp(alpha_deg, config.flutter_full_below_alpha_deg, config.flutter_none_above_alpha_deg)
+	var share: float = 1.0 - _ramp(alpha_deg, config.flutter_full_below_alpha_deg, config.flutter_none_above_alpha_deg)
+	return share * share
 
 
 # --- The one-shots --------------------------------------------------------------------
