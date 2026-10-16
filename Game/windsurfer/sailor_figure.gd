@@ -11,6 +11,13 @@ extends Node3D
 ## joint to joint and never scaled, so they cannot stretch; their round ends make the bends
 ## at the knees and the elbows look continuous.
 ##
+## The torso is one body: three tapered tubes (belly, ribs, chest) laid end to end along one
+## smooth curve of the spine from the pelvis to the shoulders (FigureSkeleton.spine_point),
+## turning gradually from the hips' line to the shoulders' line, with a ball at each joint
+## between them (as at the knees) so the bends stay closed, a bar across the shoulders and
+## the harness belt round the bottom of the belly. A torso is wider than it is deep, so these
+## parts are stretched sideways by TORSO_WIDTH.
+##
 ## Everything is in the board's own axes (x starboard, y up, z aft; the bow is -z), because
 ## the figure is a child of the windsurfer node, which carries the board's transform.
 
@@ -25,14 +32,34 @@ const CAP: Color = Color(0.98, 0.78, 0.12)
 const GLASSES: Color = Color(0.02, 0.02, 0.03)
 const LINE: Color = Color(0.1, 0.1, 0.1)
 
+## The torso's pieces along the spine (t = 0 at the pelvis, 1 at the shoulder line): piece
+## i runs from TORSO_STATIONS_T[i] to TORSO_STATIONS_T[i + 1], tapering from the radius at
+## one station to the next (half the body's depth, front to back, m: a narrow waist, a full
+## chest). The chest stops below the shoulder line so that the ball on its top makes the
+## top of the shoulders.
+const TORSO_NAMES: Array[String] = ["Belly", "Ribs", "Chest"]
+const TORSO_STATIONS_T: Array[float] = [0.0, 0.38, 0.68, 0.84]
+const TORSO_RADII_M: Array[float] = [0.105, 0.1, 0.118, 0.115]
+## How much wider than deep the torso is (a man's chest is about 0.33 m wide and 0.23 m
+## deep, his waist about 0.29 m by 0.2 m).
+const TORSO_WIDTH: float = 1.42
+## The harness belt: around the belly this far up the spine, this much bigger than the belly
+## all round, m, and this tall, m.
+const BELT_T: float = 0.1
+const BELT_MARGIN_M: float = 0.02
+const BELT_HEIGHT_M: float = 0.11
+## The bar across the shoulders, between the two shoulder balls: its radius, m.
+const SHOULDER_BAR_RADIUS_M: float = 0.062
+
 ## The skeleton the figure is posed from (public so the tests can measure it).
 var skeleton: FigureSkeleton
 
 ## The figure's root, which the fall animates, and its parts.
 var _root: Node3D
 var _pelvis: MeshInstance3D
-var _belly: MeshInstance3D
-var _chest: MeshInstance3D
+var _torso: Array[MeshInstance3D] = []
+var _torso_joints: Array[MeshInstance3D] = []
+var _shoulder_bar: MeshInstance3D
 var _neck: MeshInstance3D
 var _head: Node3D
 var _harness: MeshInstance3D
@@ -59,10 +86,15 @@ func build(sailor_config: SailorConfig) -> void:
 	add_child(_root)
 	var s: FigureSkeleton = skeleton
 	_pelvis = _add_capsule("Pelvis", 0.1, 2.0 * s.hip_half_m, WETSUIT)
-	_belly = _add_capsule("Belly", 0.12, 0.5 * s.torso_m, LYCRA)
-	_chest = _add_box("Chest", Vector3(2.0 * s.shoulder_half_m, 0.3, 0.21), LYCRA)
+	for piece: int in TORSO_NAMES.size():
+		_torso.append(_add_tube(TORSO_NAMES[piece], TORSO_RADII_M[piece], TORSO_RADII_M[piece + 1], _torso_piece_length_m(piece), LYCRA))
+	for station: int in TORSO_STATIONS_T.size():
+		# The ball at the bottom is in the shorts, under the harness belt.
+		var color: Color = WETSUIT if station == 0 else LYCRA
+		_torso_joints.append(_add_sphere("TorsoJoint%d" % station, TORSO_RADII_M[station], color))
+	_shoulder_bar = _add_capsule("Shoulders", SHOULDER_BAR_RADIUS_M, 2.0 * s.shoulder_half_m, LYCRA)
 	_neck = _add_capsule("Neck", 0.05, 0.6 * s.neck_m, SKIN)
-	_harness = _add_box("Harness", Vector3(2.0 * s.hip_half_m + 0.19, 0.1, 0.22), HARNESS)
+	_harness = _add_belt()
 	_hook = _add_box("Hook", Vector3(0.12, 0.035, 0.05), HOOK)
 	_head = _build_head()
 	for side: int in [FigureSkeleton.LEFT, FigureSkeleton.RIGHT]:
@@ -88,13 +120,14 @@ func pose_sailing(sim: WindsurferSim, boom_dir: Vector3, grip_offset: Vector3 = 
 	s.grip_offset_body = grip_offset
 	s.solve(sim, boom_dir)
 
-	# The pelvis lies across the hips; the belly and the chest go up the back to the neck.
+	# The pelvis lies across the hips; the torso follows the spine up to the shoulders.
 	_place_between(_pelvis, s.hips[FigureSkeleton.LEFT], s.hips[FigureSkeleton.RIGHT])
-	_place_from(_belly, s.pelvis, s.spine, 0.5 * s.torso_m)
-	_chest.transform = Transform3D(s.chest_basis, s.neck - s.chest_basis.y * 0.15)
+	_place_torso(s)
+	_place_between(_shoulder_bar, s.shoulders[FigureSkeleton.LEFT], s.shoulders[FigureSkeleton.RIGHT])
 	_place_from(_neck, s.neck, s.head, 0.6 * s.neck_m)
 	_head.transform = Transform3D(s.head_basis, s.head)
-	_harness.transform = Transform3D(s.pelvis_basis, s.pelvis + s.pelvis_basis.y * 0.06)
+	var belt_basis: Basis = s.spine_basis(0.0, TORSO_STATIONS_T[1])
+	_harness.transform = Transform3D(_wider(belt_basis), s.spine_point(BELT_T))
 	var hook_basis: Basis = s.pelvis_basis
 	_hook.transform = Transform3D(hook_basis, s.hook)
 
@@ -130,6 +163,35 @@ func pose_fallen(sim: WindsurferSim, eased: float) -> void:
 	_root.transform = Transform3D(tip, pivot - tip * pivot + carried)
 	_harness_lines[0].visible = false
 	_harness_lines[1].visible = false
+
+
+## The torso's pieces, each laid from station to station on the spine's curve and turned
+## with it, and the balls at the stations.
+func _place_torso(s: FigureSkeleton) -> void:
+	for piece: int in _torso.size():
+		var t_from: float = TORSO_STATIONS_T[piece]
+		var t_to: float = TORSO_STATIONS_T[piece + 1]
+		var bottom: Vector3 = s.spine_point(t_from)
+		var top: Vector3 = s.spine_point(t_to)
+		# An arched back makes the curve a few millimetres longer than straight: the tube
+		# follows, so the pieces always meet.
+		var stretch: float = bottom.distance_to(top) / _torso_piece_length_m(piece)
+		var basis: Basis = _wider(s.spine_basis(t_from, t_to)).scaled_local(Vector3(1.0, stretch, 1.0))
+		_torso[piece].transform = Transform3D(basis, 0.5 * (bottom + top))
+	for station: int in _torso_joints.size():
+		var t: float = TORSO_STATIONS_T[station]
+		var around: Basis = s.spine_basis(maxf(t - 0.1, 0.0), minf(t + 0.1, 1.0))
+		_torso_joints[station].transform = Transform3D(_wider(around), s.spine_point(t))
+
+
+## The length of a torso piece along a straight back, m.
+func _torso_piece_length_m(piece: int) -> float:
+	return (TORSO_STATIONS_T[piece + 1] - TORSO_STATIONS_T[piece]) * skeleton.torso_m
+
+
+## A torso part's orientation, stretched sideways: the body is wider than it is deep.
+func _wider(basis: Basis) -> Basis:
+	return basis.scaled_local(Vector3(TORSO_WIDTH, 1.0, 1.0))
 
 
 ## A capsule of fixed `length` (between the centres of its round ends) laid from `from`
@@ -217,6 +279,30 @@ func _add_sphere(node_name: String, radius: float, color: Color) -> MeshInstance
 	sphere.radius = radius
 	sphere.height = 2.0 * radius
 	instance.mesh = sphere
+	instance.material_override = VisualMath.plain_material(color)
+	_root.add_child(instance)
+	return instance
+
+
+## The harness belt: a short tube round the bottom of the belly (made round here, stretched
+## sideways like the belly when it is placed).
+func _add_belt() -> MeshInstance3D:
+	var radius: float = TORSO_RADII_M[0] + BELT_MARGIN_M
+	return _add_tube("Harness", radius, radius, BELT_HEIGHT_M, HARNESS)
+
+
+## A tube along its y axis, `length` long, from `bottom_radius` to `top_radius`, open at
+## both ends (the balls at the torso's joints close it).
+func _add_tube(node_name: String, bottom_radius: float, top_radius: float, length: float, color: Color) -> MeshInstance3D:
+	var instance: MeshInstance3D = MeshInstance3D.new()
+	instance.name = node_name
+	var tube: CylinderMesh = CylinderMesh.new()
+	tube.bottom_radius = bottom_radius
+	tube.top_radius = top_radius
+	tube.height = length
+	tube.cap_top = false
+	tube.cap_bottom = false
+	instance.mesh = tube
 	instance.material_override = VisualMath.plain_material(color)
 	_root.add_child(instance)
 	return instance

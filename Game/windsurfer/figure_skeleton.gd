@@ -456,6 +456,34 @@ func _place_torso(hike: float) -> void:
 	pelvis_basis = Basis(pelvis_right, pelvis_up, pelvis_back)
 
 
+## A point on the spine: one smooth curve (a quadratic Bezier curve) from the pelvis (t = 0)
+## through the middle of the back (spine, t = 0.5) to the point between the shoulders (neck,
+## t = 1). The figure lays the torso's pieces along it.
+func spine_point(t: float) -> Vector3:
+	# The curve's control point, chosen so that the curve passes through `spine` half way.
+	var control: Vector3 = 2.0 * spine - 0.5 * (pelvis + neck)
+	var u: float = 1.0 - t
+	return u * u * pelvis + 2.0 * u * t * control + t * t * neck
+
+
+## The torso's orientation along the piece of the spine from `t_from` to `t_to`: up along
+## that piece of the curve, the right side turned gradually from the hip line (pelvis_basis)
+## at the bottom to the shoulder line (chest_basis) at the top. A real back twists over its
+## whole length, not at one joint.
+func spine_basis(t_from: float, t_to: float) -> Basis:
+	var up: Vector3 = spine_point(t_to) - spine_point(t_from)
+	if up.length() < 1e-5:
+		up = chest_basis.y
+	up = up.normalized()
+	var t_middle: float = 0.5 * (t_from + t_to)
+	var turned: Basis = Basis(Quaternion(pelvis_basis).slerp(Quaternion(chest_basis), t_middle))
+	var right: Vector3 = turned.x - up * turned.x.dot(up)
+	if right.length() < 1e-5:
+		right = turned.z.cross(up)
+	right = right.normalized()
+	return Basis(right, up, right.cross(up))
+
+
 ## The arms: from each shoulder to its hand, the elbow pointing down and out.
 func _place_arms() -> void:
 	for side: int in [LEFT, RIGHT]:
