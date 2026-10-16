@@ -184,7 +184,7 @@ static func create_default(with_waves: bool = false) -> WindsurferSim:
 
 ## Builds the simulation for a place (PHYSICS_REQUESTS_FROM_MAP.md, R1): its air, its water,
 ## its wind and its waves, and what it leaves empty from the open water's default files. With
-## the map's wind on, the wind is the map's own (MapWindField, PHYSICS_SPEC.md 8.6). The board,
+## the map's wind on, the wind is the map's own (MapWindField, PHYSICS_SPEC.md 8.10). The board,
 ## the sail, the fin and the sailor are the default ones everywhere.
 static func create_for(environment: EnvironmentConfig, with_waves: bool = false) -> WindsurferSim:
 	var wind_cfg: WindConfig = environment.wind_or_default()

@@ -1,6 +1,6 @@
 class_name MapWindField
 extends WindField
-## A map's own wind, for the simulation (PHYSICS_SPEC.md 8.6; MAP_SILVAPLANA_PLAN.md W5;
+## A map's own wind, for the simulation (PHYSICS_SPEC.md 8.10; MAP_SILVAPLANA_PLAN.md W5;
 ## PHYSICS_REQUESTS_FROM_MAP.md R5). The simulation asks it the same questions as the one wind
 ## for the whole world (WindField), and gets the map's answer: MapWind, the terrain's pattern
 ## carried by the day's mean wind, with the gusts and lulls that roll down the lake, the pulses,

@@ -1,5 +1,5 @@
 extends GutTest
-## The map's wind in the simulation (PHYSICS_SPEC.md 8.6, MAP_SILVAPLANA_PLAN.md W5): MapWindField
+## The map's wind in the simulation (PHYSICS_SPEC.md 8.10, MAP_SILVAPLANA_PLAN.md W5): MapWindField
 ## answers what MapWind says, with the height profile from the pattern's 5 m; its direction is the
 ## lake's mean; it never gives NaN, even far off the map; its clock runs with the simulation; and
 ## the day's cycle changes the wind.
