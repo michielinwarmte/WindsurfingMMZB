@@ -75,10 +75,16 @@ func set_look(new_look: ShaderMaterial) -> void:
 		_apply_look()
 
 
-## The material of the near water (for tests and for a scene that drives a parameter, such
-## as a map's gust picture: wind_ripple_map and wind_ripple_map_area).
+## The material of the near water (for tests).
 func near_material() -> ShaderMaterial:
 	return _near_material
+
+
+## Sets a look parameter on all the water, near and far: for a scene that drives one, such
+## as a map's gust picture (wind_ripple_map and wind_ripple_map_area in water.gdshader).
+func set_water_parameter(parameter: String, value: Variant) -> void:
+	_near_material.set_shader_parameter(parameter, value)
+	_far_material.set_shader_parameter(parameter, value)
 
 
 ## The open sea's look, loaded when no other is given.

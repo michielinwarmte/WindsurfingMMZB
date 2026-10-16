@@ -229,3 +229,8 @@ func test_lake_far_water_stays_in_its_area() -> void:
 	assert_almost_eq(far.global_position.z, 0.0, 1e-3, "Centred on the area, not on the camera")
 	var near: MeshInstance3D = ocean.get_node("NearWater") as MeshInstance3D
 	assert_almost_eq(near.global_position.x, 900.0, 1e-3, "The near water follows the camera")
+	# A map's gust picture goes onto all of the water.
+	ocean.set_water_parameter("wind_ripple_map_area", Vector4(-2000.0, -1500.0, 4000.0, 3000.0))
+	for plane: MeshInstance3D in [near, far]:
+		var material: ShaderMaterial = plane.material_override as ShaderMaterial
+		assert_eq(material.get_shader_parameter("wind_ripple_map_area"), Vector4(-2000.0, -1500.0, 4000.0, 3000.0))
