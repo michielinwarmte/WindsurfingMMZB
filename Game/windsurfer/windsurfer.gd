@@ -13,6 +13,11 @@ extends Node3D
 @export var use_autopilot: bool = false
 @export var autopilot_twa_deg: float = 90.0
 
+## The wind and the sea to sail in. null = the default config files. The sailing scene
+## (main.gd) sets them from the player's settings before this node is ready.
+var wind_config: WindConfig = null
+var wave_set_config: WaveSetConfig = null
+
 var sim: WindsurferSim
 var controls: SimControls = SimControls.new()
 var controller: PlayerController = PlayerController.new()
@@ -29,6 +34,8 @@ var _figure: SailorFigure
 
 func _ready() -> void:
 	sim = WindsurferSim.create_default(true)
+	if wind_config != null or wave_set_config != null:
+		set_sea(wind_config, wave_set_config)
 	controller.set_sail(sim.sail, sim.sailor_config)
 	autopilot.sail = sim.sail
 	_build_visuals()
@@ -44,6 +51,20 @@ func reset() -> void:
 	autopilot.target_twa_deg = autopilot_twa_deg
 	_copy_state_to_visuals()
 	reset_physics_interpolation()
+
+
+## Puts the simulation in another wind and on another sea (null keeps the current one).
+## The waves are lined up with the new wind. Call reset() afterwards: the water changes
+## under the board.
+func set_sea(wind: WindConfig, waves: WaveSetConfig) -> void:
+	if wind != null:
+		wind_config = wind
+		sim.wind_config = wind
+		sim.wind = WindField.new(wind)
+	if waves != null:
+		wave_set_config = waves
+		sim.wave_set_config = waves
+	sim.set_waves(true)
 
 
 ## Skips the rest of the time in the water.
