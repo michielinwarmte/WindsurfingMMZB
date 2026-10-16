@@ -74,6 +74,9 @@ var hull_friction_n: float = 0.0
 var hull_residuary_n: float = 0.0
 var hull_lateral_n: float = 0.0
 var bow_drag_n: float = 0.0
+## Sideways force of the rails' edges in a skid, and its yaw moment (HullModel).
+var rail_grip_n: float = 0.0
+var rail_yaw_nm: float = 0.0
 ## Height of the water surface under the hull's origin (the still level on flat water).
 var water_height_m: float = 0.0
 var hull_resistance_n: float = 0.0
@@ -151,7 +154,7 @@ static func csv_header() -> String:
 		+ "hull_friction_n,hull_residuary_n,hull_lateral_n,stance,lean,hang_back_m,knee_bend_m," \
 		+ "wetted_length_m,wetted_aft_m,spray_root_factor,heave_added_mass_kg,rig_tilt,rig_lean_deg,sailor_state,boom_across,fin_immersed," \
 		+ "bow_immersion_m,planing_cop_z_m,fall_kind,wanted_bank_deg,felt_push_ms2,felt_heel_deg,bow_drag_n,water_height_m," \
-		+ "hand_force_n,foot_force_n,mast_foot_force_n,feet_moment_roll_nm,hand_moment_roll_nm,leg_sway_m,feet_moment_excess_nm,rail_press,sailor_x_m,sailor_y_m,target_x_m,target_y_m,feet_x_m,feet_z_m,hull_resistance_n,hand_force_up_n,mast_foot_force_up_n,pitch_from_mast_foot_nm,pitch_from_feet_force_nm,pitch_from_feet_moment_nm,attachment_x_n,attachment_z_n,harness_tension_n,yaw_fin_nm,yaw_rig_nm,yaw_sailor_nm,yaw_water_nm,yaw_net_nm,roll_fin_nm,roll_rig_nm,roll_sailor_nm,roll_water_nm,roll_net_nm"
+		+ "hand_force_n,foot_force_n,mast_foot_force_n,feet_moment_roll_nm,hand_moment_roll_nm,leg_sway_m,feet_moment_excess_nm,rail_press,sailor_x_m,sailor_y_m,target_x_m,target_y_m,feet_x_m,feet_z_m,hull_resistance_n,hand_force_up_n,mast_foot_force_up_n,pitch_from_mast_foot_nm,pitch_from_feet_force_nm,pitch_from_feet_moment_nm,attachment_x_n,attachment_z_n,harness_tension_n,yaw_fin_nm,yaw_rig_nm,yaw_sailor_nm,yaw_water_nm,yaw_net_nm,roll_fin_nm,roll_rig_nm,roll_sailor_nm,roll_water_nm,roll_net_nm,rail_grip_n,rail_yaw_nm"
 
 
 func to_csv_row() -> String:
@@ -164,7 +167,7 @@ func to_csv_row() -> String:
 		wetted_length_m, wetted_aft_m, spray_root_factor, heave_added_mass_kg, rig_tilt, rig_lean_deg, sailor_state, boom_across, fin_immersed,
 		bow_immersion_m, planing_cop_z_m, fall_kind, wanted_bank_deg, felt_push_ms2, felt_heel_deg, bow_drag_n, water_height_m,
 		hand_force_n, foot_force_n, mast_foot_force_n, feet_moment_roll_nm, hand_moment_roll_nm, leg_sway_m, feet_moment_excess_nm, rail_press,
-		sailor_position_body.x, sailor_position_body.y, posture_target_body.x, posture_target_body.y, feet_body.x, feet_body.z, hull_resistance_n, hand_force_up_n, mast_foot_force_up_n, pitch_from_mast_foot_nm, pitch_from_feet_force_nm, pitch_from_feet_moment_nm, attachment_x_n, attachment_z_n, harness_tension_n, yaw_fin_nm, yaw_rig_nm, yaw_sailor_nm, yaw_water_nm, yaw_net_nm, roll_fin_nm, roll_rig_nm, roll_sailor_nm, roll_water_nm, roll_net_nm]
+		sailor_position_body.x, sailor_position_body.y, posture_target_body.x, posture_target_body.y, feet_body.x, feet_body.z, hull_resistance_n, hand_force_up_n, mast_foot_force_up_n, pitch_from_mast_foot_nm, pitch_from_feet_force_nm, pitch_from_feet_moment_nm, attachment_x_n, attachment_z_n, harness_tension_n, yaw_fin_nm, yaw_rig_nm, yaw_sailor_nm, yaw_water_nm, yaw_net_nm, roll_fin_nm, roll_rig_nm, roll_sailor_nm, roll_water_nm, roll_net_nm, rail_grip_n, rail_yaw_nm]
 	var parts: PackedStringArray = PackedStringArray()
 	for value: Variant in values:
 		if value is float:

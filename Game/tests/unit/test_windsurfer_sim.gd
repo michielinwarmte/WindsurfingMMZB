@@ -284,10 +284,18 @@ func test_beginner_gybes_with_space_and_settles_on_the_new_course() -> void:
 	# Settling: five seconds later the heading hardly moves any more.
 	_play(sim, controller, controls, 5.0)
 	var heading_a: float = sim.telemetry.heading_deg
-	_play(sim, controller, controls, 3.0)
+	_play(sim, controller, controls, 2.0)
+	# The turn rate averaged over the last second: at 12 m/s on the broad reach the board
+	# skips on the flat water and its yaw rate swings by +-10 degrees a second from one
+	# bounce to the next, so a single sample says little about whether it still turns.
+	var yaw_sum: float = 0.0
+	for i: int in int(1.0 / DT):
+		controller.update(sim.telemetry, controls, DT)
+		sim.step(DT, controls)
+		yaw_sum += sim.telemetry.yaw_rate_dps * DT
 	var drift: float = absf(wrapf(sim.telemetry.heading_deg - heading_a, -180.0, 180.0))
 	assert_lt(drift, 10.0, "steady on the new course")
-	assert_lt(absf(sim.telemetry.yaw_rate_dps), 6.0)
+	assert_lt(absf(yaw_sum), 6.0, "no longer turning (%.1f degrees a second on average)" % yaw_sum)
 	assert_gt(sim.telemetry.speed_ms, 4.0, "and still moving")
 
 
@@ -391,4 +399,5 @@ func test_identical_runs_are_identical() -> void:
 	_run(b, 5.0, _eased(), _pilot(90.0, b))
 	assert_eq(a.body.position, b.body.position)
 	assert_eq(a.body.basis, b.body.basis)
+
 

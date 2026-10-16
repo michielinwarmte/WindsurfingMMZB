@@ -32,13 +32,16 @@ func _models() -> Array:
 	return [buoyancy, hull]
 
 
-## A board with the default size but a flat bottom and no taper: a prismatic planing plate,
-## for which Savitsky's formula is the reference.
+## A board with the default size but a flat bottom and a straight outline: a prismatic
+## planing plate, for which Savitsky's formula is the reference.
 func _flat_board() -> BoardConfig:
 	var board: BoardConfig = _board().duplicate()
 	board.nose_rocker_m = 0.0
 	board.tail_rocker_m = 0.0
-	board.width_taper = 0.0
+	board.tail_width_m = board.width_m
+	board.nose_width_m = board.width_m
+	board.tail_thickness_m = board.thickness_m
+	board.nose_thickness_m = board.thickness_m
 	return board
 
 
@@ -237,16 +240,21 @@ func test_wet_bottom_near_the_tail_is_narrower_and_carries_added_water() -> void
 	_evaluate(hull, buoyancy, body)
 	assert_lt(hull.wetted_length_m, 1.5, "a short wet length")
 	assert_eq(hull.wetted_aft_m, 0.0, "starting at the transom")
-	assert_lt(hull.planing_beam_m, 0.68, "narrower than the board's full width of 0.72 m")
-	assert_gt(hull.planing_beam_m, 0.5, "but wider than the 0.504 m transom")
-	var expected_added: float = 1025.0 * PI * hull.planing_beam_m * hull.planing_beam_m / 8.0 * hull.wetted_length_m
-	assert_almost_eq(hull.heave_added_mass_kg, expected_added, 0.1 * expected_added, "about rho pi b^2 / 8 per metre")
+	assert_lt(hull.planing_beam_m, 0.6, "narrower than the board's full width of 0.72 m")
+	assert_gt(hull.planing_beam_m, 0.3, "but wider than the 0.243 m transom")
+	# rho pi b^2 / 8 per metre, with b the outline's width along the wet length.
+	var expected_added: float = 0.0
+	var pieces: int = 100
+	for k: int in pieces:
+		var b: float = hull.board.width_at(hull.wetted_aft_m + (float(k) + 0.5) / float(pieces) * hull.wetted_length_m)
+		expected_added += 1025.0 * PI * b * b / 8.0 * hull.wetted_length_m / float(pieces)
+	assert_almost_eq(hull.heave_added_mass_kg, expected_added, 0.05 * expected_added, "about rho pi b^2 / 8 per metre")
 	assert_gt(hull.pitch_added_inertia_kgm2, 0.0)
 	# Level and deep in the water: the whole centreline is wet.
 	var level: SimRigidBody = _floating_body(2.0)
 	_evaluate(hull, buoyancy, level)
 	assert_almost_eq(hull.wetted_length_m, 2.4, 1e-6)
-	assert_almost_eq(hull.planing_beam_m, 0.72 * (1.0 - 0.3 / 3.0), 0.02, "the mean width of the whole tapered bottom (9-point average)")
+	assert_almost_eq(hull.planing_beam_m, 0.524, 0.005, "the mean width of the whole outline (9-point average)")
 
 
 func test_bow_down_board_planes_on_its_middle_with_a_dry_tail() -> void:
@@ -313,3 +321,146 @@ func test_a_heeled_planing_plate_carries_its_lift_on_the_low_rail() -> void:
 	assert_gt(float(heeled["side_force"]), 0.1 * float(heeled["lift"]), "heeled: pushed toward the low rail")
 	assert_lt(float(heeled["roll_torque"]), -50.0, "heeled: the lift on the low rail rights the board")
 	assert_lt(float(heeled["cop_z"]), float(level["cop_z"]) - 0.1, "heeled: the force acts further forward")
+
+
+## A board planing at 8 m/s, trimmed 4 degrees with its transom 7.5 cm deep, skidding at
+## slip_deg (its velocity turned toward starboard) and turning at yaw_rate_rads (positive
+## turns the bow to port), heeled heel_deg (positive: starboard rail down). Returns the
+## rails' force and yaw moment and the hull's sideways force in the world.
+func _skidding_board(slip_deg: float, yaw_rate_rads: float = 0.0, heel_deg: float = 0.0, board: BoardConfig = null) -> Dictionary:
+	var b: BoardConfig = board if board != null else _board()
+	var buoyancy: BuoyancyModel = BuoyancyModel.new(b, _water())
+	var hull: HullModel = HullModel.new(b, _water())
+	var body: SimRigidBody = _trimmed_body(8.0, 4.0)
+	body.basis = Basis(Vector3.RIGHT, deg_to_rad(4.0)) * Basis(Vector3.FORWARD, deg_to_rad(heel_deg))
+	var transom_local: Vector3 = Vector3(0.0, -0.5 * b.thickness_m, 0.5 * b.length_m)
+	body.position.y -= body.point_world(transom_local).y + 0.075
+	var slip: float = deg_to_rad(slip_deg)
+	body.velocity = Vector3(8.0 * sin(slip), 0.0, -8.0 * cos(slip))
+	body.angular_velocity = Vector3(0.0, yaw_rate_rads, 0.0)
+	body.clear_forces()
+	buoyancy.apply(body, FlatWater.new(), 0.0, G, DT)
+	body.clear_forces()
+	hull.compute(body, buoyancy, FlatWater.new(), 0.0, G, body.mass_kg, DT)
+	return {"grip": hull.rail_grip_n, "yaw": hull.rail_yaw_nm, "side": body._force_sum.x}
+
+
+func test_the_rails_carry_nothing_until_the_board_skids_past_the_inception_angle() -> void:
+	# NACA TN 4187: a flat planing bottom at a yaw angle carries no sideways force of its
+	# own; the flow wets the leading rail's edge from about 7.5 degrees of yaw (level).
+	assert_eq(float(_skidding_board(0.0)["grip"]), 0.0, "no skid, no grip")
+	assert_eq(float(_skidding_board(5.0)["grip"]), 0.0, "5 degrees: the flow breaks clear of the edge")
+	var nine: Dictionary = _skidding_board(9.0)
+	var twelve: Dictionary = _skidding_board(12.0)
+	assert_gt(float(nine["grip"]), 50.0, "9 degrees: the leading rail grips")
+	assert_gt(float(twelve["grip"]), float(nine["grip"]), "and more at 12")
+	# Fully engaged, about the dynamic pressure on the wetted edge (Ce' 1.0 to 1.3): at
+	# 8 m/s, 1.15 x 33 kPa x the 3 cm edge wet over most of a metre of tail.
+	assert_between(float(twelve["grip"]), 400.0, 1500.0)
+	assert_lt(float(twelve["side"]), float(_skidding_board(5.0)["side"]) - 300.0, "it pushes back against the skid (to port)")
+	gut.p("rail grip at 9 and 12 degrees of skid: %.0f and %.0f N" % [float(nine["grip"]), float(twelve["grip"])])
+
+
+func test_a_spinning_hull_is_damped_by_its_rails() -> void:
+	# Turning at 2 rad/s (115 degrees a second) at 8 m/s, the tail skids at up to 15
+	# degrees: its rail grips and the moment opposes the spin, whichever way it turns.
+	var to_port: Dictionary = _skidding_board(0.0, 2.0)
+	var to_starboard: Dictionary = _skidding_board(0.0, -2.0)
+	assert_lt(float(to_port["yaw"]), -100.0, "a spin to port is held back")
+	assert_gt(float(to_starboard["yaw"]), 100.0, "a spin to starboard too")
+	assert_almost_eq(float(to_port["yaw"]), -float(to_starboard["yaw"]), 0.05 * absf(float(to_port["yaw"])), "symmetric")
+	gut.p("rail moment against a spin of 2 rad/s: %.0f N m (grip %.0f N)" % [float(to_port["yaw"]), float(to_port["grip"])])
+	assert_eq(float(_skidding_board(0.0, 0.3)["grip"]), 0.0, "a slow carve (17 degrees a second) does not skid the rail")
+
+
+func test_a_lowered_rail_grips_earlier_and_a_soft_rail_not_at_all() -> void:
+	# TN 4187 figure 26a: with the leading edge rolled down the flow reaches it at a
+	# smaller yaw angle (7.5 degrees level, about 5.7 with 5 degrees of roll).
+	assert_eq(float(_skidding_board(6.5)["grip"]), 0.0, "level: not yet at 6.5 degrees")
+	assert_gt(float(_skidding_board(6.5, 0.0, 5.0)["grip"]), 0.0, "starboard rail down, skidding to starboard: it grips")
+	var soft: BoardConfig = _board().duplicate()
+	soft.hard_rail_to_m = 0.0
+	soft.soft_rail_from_m = 0.01
+	assert_eq(float(_skidding_board(12.0, 0.0, 0.0, soft)["grip"]), 0.0, "a tucked rail lets the flow wrap round it")
+
+
+## The default board with its tail one foot off (OFO) set to tail_width_m, planing at
+## 7 m/s, trimmed 4 degrees with the transom 7.5 cm deep: the planing lift and the wetted
+## length-to-beam ratio.
+func _planing_with_tail(tail_width_m: float) -> Dictionary:
+	var board: BoardConfig = _board().duplicate()
+	board.tail_width_m = tail_width_m
+	var buoyancy: BuoyancyModel = BuoyancyModel.new(board, _water())
+	var hull: HullModel = HullModel.new(board, _water())
+	var body: SimRigidBody = _trimmed_body(7.0, 4.0)
+	body.position.y -= body.point_world(Vector3(0.0, -0.5 * board.thickness_m, 0.5 * board.length_m)).y + 0.075
+	body.clear_forces()
+	buoyancy.apply(body, FlatWater.new(), 0.0, G)
+	hull.compute(body, buoyancy, FlatWater.new(), 0.0, G, body.mass_kg, 1.0)
+	return {"lift": hull.planing_lift_n, "lambda": hull.lambda_ratio, "beam": hull.planing_beam_m}
+
+
+func test_a_wider_tail_lifts_more_at_the_same_speed_and_trim() -> void:
+	# Savitsky: the lift of a planing surface grows with its beam (C_L is per beam squared
+	# and grows with the root of the wetted length-to-beam ratio, so at a given wetted
+	# length the lift goes with the beam to the power 1.5), and a wider surface has a lower
+	# length-to-beam ratio. Two boards 10 cm apart in tail width, the same in everything
+	# else, at the same speed, trim and transom depth.
+	var narrow: Dictionary = _planing_with_tail(0.40)
+	var wide: Dictionary = _planing_with_tail(0.50)
+	assert_gt(float(wide["beam"]), float(narrow["beam"]) + 0.04, "the wet bottom is wider")
+	assert_lt(float(wide["lambda"]), float(narrow["lambda"]), "with a lower length-to-beam ratio")
+	var beam_ratio: float = float(wide["beam"]) / float(narrow["beam"])
+	assert_gt(float(wide["lift"]) / float(narrow["lift"]), pow(beam_ratio, 1.2), "and lifts more, about as the beam to the power 1.5 (%.0f against %.0f N)" % [float(wide["lift"]), float(narrow["lift"])])
+
+
+## The bare hull loaded like the windsurfer getting onto the plane (92 kg, the centre of
+## mass 0.15 m up and 0.45 m aft: the sailor back in the straps), towed at a steady speed
+## on a straight course, free to rise and pitch: its resistance once settled (the mean
+## over the last second of three).
+func _towed_resistance_n(board: BoardConfig, speed_ms: float) -> float:
+	var buoyancy: BuoyancyModel = BuoyancyModel.new(board, _water())
+	var hull: HullModel = HullModel.new(board, _water())
+	var body: SimRigidBody = _floating_body(speed_ms)
+	body.set_mass_properties(92.0, Basis.IDENTITY.scaled(Vector3(50.0, 6.0, 46.0)), Vector3(0.0, 0.15, 0.45))
+	var water: FlatWater = FlatWater.new()
+	var drag_sum: float = 0.0
+	var samples: int = 0
+	for i: int in int(3.0 / DT):
+		body.add_force(Vector3(0.0, -G * body.mass_kg, 0.0))
+		buoyancy.apply(body, water, i * DT, G, DT)
+		hull.compute(body, buoyancy, water, i * DT, G, body.mass_kg, DT)
+		body.integrate(DT)
+		# The tow holds the course and the speed; heave and pitch are free.
+		body.velocity.x = 0.0
+		body.velocity.z = -speed_ms
+		body.angular_velocity = Vector3(body.angular_velocity.x, 0.0, 0.0)
+		if i * DT >= 2.0:
+			drag_sum += hull.resistance_n
+			samples += 1
+	return drag_sum / float(samples)
+
+
+## The highest resistance between 3 and 5 m/s: the hump a sail has to pull the board over.
+func _hump_resistance_n(board: BoardConfig) -> float:
+	var hump: float = 0.0
+	for speed: float in [3.0, 3.5, 4.0, 4.5, 5.0]:
+		hump = maxf(hump, _towed_resistance_n(board, speed))
+	return hump
+
+
+func test_a_wider_tail_needs_less_thrust_over_the_hump() -> void:
+	# "A wider tail planes earlier": with the same sail, a board gets onto the plane when
+	# the sail's drive exceeds the hull's resistance through the hump. Two boards 10 cm
+	# apart in tail width (one foot off the tail), the same in everything else, towed with
+	# the sailor's weight aft as when getting going: the wider tail lifts more, sits less
+	# deep and trims less steeply (a narrow tail squats to 12 to 14 degrees at 3 m/s), and
+	# needs less thrust.
+	var narrow: BoardConfig = _board().duplicate()
+	narrow.tail_width_m = 0.40
+	var wide: BoardConfig = _board().duplicate()
+	wide.tail_width_m = 0.50
+	var narrow_hump: float = _hump_resistance_n(narrow)
+	var wide_hump: float = _hump_resistance_n(wide)
+	gut.p("hump resistance 3 to 5 m/s: tail 0.40 m %.0f N, tail 0.50 m %.0f N" % [narrow_hump, wide_hump])
+	assert_lt(wide_hump, 0.9 * narrow_hump, "the wide tail needs at least 10 %% less thrust (%.0f against %.0f N)" % [wide_hump, narrow_hump])

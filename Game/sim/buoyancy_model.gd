@@ -27,6 +27,8 @@ var sample_areas_m2: PackedFloat64Array = PackedFloat64Array()
 var sample_rows: PackedInt32Array = PackedInt32Array()
 var tail_centre_index: int = 0
 var bow_centre_index: int = 0
+## Area of the bottom seen from below, from the outline (computed once with the grid).
+var planform_area_m2: float = 0.0
 
 ## Results of the last apply().
 var point_depths_m: PackedFloat64Array = PackedFloat64Array()
@@ -47,18 +49,6 @@ var wet_centroid_world: Vector3 = Vector3.ZERO
 const WET_RAMP_M: float = 0.02
 
 
-## Extra inertia about the yaw axis from the water the immersed hull drags along when it
-## turns (added mass of a thin plate of the hull's draft, integrated over the wetted length:
-## rho * pi * (draft/2)^2 per metre, times L^3/12). About 9 kg m2 at rest for the default
-## board, almost nothing when planing on the tail.
-func yaw_added_inertia_kgm2() -> float:
-	if not is_floating:
-		return 0.0
-	var draft: float = minf(mean_immersion_m, board.thickness_m)
-	var per_metre: float = water.density_kg_m3 * PI * 0.25 * draft * draft
-	return per_metre * pow(wetted_length_m, 3.0) / 12.0
-
-
 func _init(board_config: BoardConfig, water_config: WaterConfig) -> void:
 	board = board_config
 	water = water_config
@@ -66,13 +56,15 @@ func _init(board_config: BoardConfig, water_config: WaterConfig) -> void:
 
 
 ## Builds the grid: rows from the tail (z = +L/2) to the bow (z = -L/2), with the bottom
-## curving up toward both ends (rocker), the rows narrowing toward the ends (width taper)
-## and the rows carrying less volume toward the ends (volume taper). Section 6.1.
+## curving up toward both ends (rocker) and the rows as wide as the board's outline there
+## (BoardConfig.width_at). Each row carries a share of the volume in proportion to its
+## cross-section, the outline's width times the board's thickness there (thickest at the
+## widest point, thin at the nose and tail); the shares add up to the board's volume.
+## Section 6.1.
 func _build_grid() -> void:
 	var n_len: int = maxi(board.length_samples, 2)
 	var n_wid: int = maxi(board.width_samples, 1)
 	var half_length: float = 0.5 * board.length_m
-	var half_width: float = 0.5 * board.width_m
 	var weights: PackedFloat64Array = PackedFloat64Array()
 	var area_weights: PackedFloat64Array = PackedFloat64Array()
 	var total_weight: float = 0.0
@@ -82,22 +74,22 @@ func _build_grid() -> void:
 
 	for i: int in n_len:
 		var t: float = float(i) / float(n_len - 1)  # 0 at the tail, 1 at the bow
-		var z: float = half_length - board.length_m * t
-		var d: float = absf(t - 0.5) * 2.0  # 0 in the middle, 1 at either end
-		var rocker: float = board.bottom_rise_m(board.length_m * t)
-		var width_factor: float = 1.0 - board.width_taper * d * d
-		var volume_factor: float = 1.0 - board.volume_taper * d
-		var row_half_width: float = half_width * width_factor
+		var from_transom: float = board.length_m * t
+		var z: float = half_length - from_transom
+		var rocker: float = board.bottom_rise_m(from_transom)
+		var row_width: float = board.width_at(from_transom)
+		var row_section: float = row_width * board.thickness_at(from_transom)
+		var row_half_width: float = 0.5 * row_width
 		for j: int in n_wid:
 			var x: float = 0.0
 			if n_wid > 1:
 				x = lerpf(-row_half_width, row_half_width, float(j) / float(n_wid - 1))
 			sample_points.append(Vector3(x, -0.5 * board.thickness_m + rocker, z))
 			sample_rows.append(i)
-			weights.append(volume_factor * width_factor)
-			area_weights.append(width_factor)
-			total_weight += volume_factor * width_factor
-			total_area_weight += width_factor
+			weights.append(row_section)
+			area_weights.append(row_width)
+			total_weight += row_section
+			total_area_weight += row_width
 			if j == n_wid / 2:
 				if i == 0:
 					tail_centre_index = sample_points.size() - 1
@@ -107,10 +99,10 @@ func _build_grid() -> void:
 	sample_volumes_m3.resize(sample_points.size())
 	sample_areas_m2.resize(sample_points.size())
 	point_depths_m.resize(sample_points.size())
-	var planform: float = board.planform_area_m2()
+	planform_area_m2 = board.planform_area_m2()
 	for k: int in sample_points.size():
 		sample_volumes_m3[k] = board.volume_m3 * weights[k] / total_weight
-		sample_areas_m2[k] = planform * area_weights[k] / total_area_weight
+		sample_areas_m2[k] = planform_area_m2 * area_weights[k] / total_area_weight
 
 
 ## Computes the buoyancy and damping forces for the body's current state and applies them.
@@ -151,7 +143,7 @@ func apply(body: SimRigidBody, surface: WaterSurface, time_s: float, gravity_ms2
 		# damping stands in for the waves a heaving hull radiates, which depend on how much
 		# surface it works against, not on how deep it sits; a light hull floating high is
 		# damped like a loaded one as long as its bottom is wet.
-		var wet_share: float = sample_areas_m2[k] * clampf(depth / WET_RAMP_M, 0.0, 1.0) / board.planform_area_m2()
+		var wet_share: float = sample_areas_m2[k] * clampf(depth / WET_RAMP_M, 0.0, 1.0) / planform_area_m2
 		var relative_velocity: Vector3 = body.point_velocity(point_world) - surface.velocity_at(point_world.x, point_world.z, time_s)
 		var normal_speed: float = relative_velocity.dot(normal)
 		var damping: float = -(water.damping_linear_ns_m * normal_speed

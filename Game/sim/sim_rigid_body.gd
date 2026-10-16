@@ -38,6 +38,9 @@ var added_mass_up_kg: float = 0.0
 ## but not up and down: the sailor, who rides the hull in the horizontal plane on legs that
 ## give vertically (WindsurferSim). The simulation sets it.
 var added_mass_across_kg: float = 0.0
+## Water that moves with the hull when it moves sideways (along its own x axis only): the
+## sway added mass of the immersed hull sides and of the fin. The simulation sets it.
+var added_mass_sway_kg: float = 0.0
 
 var _force_sum: Vector3 = Vector3.ZERO
 var _torque_sum: Vector3 = Vector3.ZERO
@@ -77,6 +80,19 @@ func take_water_along(new_added_mass_up_kg: float, new_inertia_body: Basis) -> v
 			changed = true
 	if changed:
 		angular_velocity = basis * omega_body
+
+
+## The same for the water taken along sideways (added_mass_sway_kg): when more of the hull
+## side goes under (a landing), the sideways momentum is shared with that water. Call
+## before setting the new value.
+func take_water_along_sideways(new_added_mass_sway_kg: float) -> void:
+	if new_added_mass_sway_kg <= added_mass_sway_kg:
+		return
+	var across: Vector3 = basis.x
+	var v_across: float = velocity.dot(across)
+	var before: float = mass_kg + added_mass_across_kg + added_mass_sway_kg
+	var after: float = mass_kg + added_mass_across_kg + new_added_mass_sway_kg
+	velocity += across * (v_across * (before / after - 1.0))
 
 
 ## World position of the board origin.
@@ -123,7 +139,7 @@ func linear_acceleration() -> Vector3:
 
 ## 1 / (m + added) along each body axis.
 func _inverse_mass_body() -> Vector3:
-	return Vector3(1.0 / (mass_kg + added_mass_across_kg), 1.0 / (mass_kg + added_mass_up_kg), 1.0 / (mass_kg + added_mass_across_kg))
+	return Vector3(1.0 / (mass_kg + added_mass_across_kg + added_mass_sway_kg), 1.0 / (mass_kg + added_mass_up_kg), 1.0 / (mass_kg + added_mass_across_kg))
 
 
 ## Angular velocity expressed in body axes (x = pitch, y = yaw, z = roll).

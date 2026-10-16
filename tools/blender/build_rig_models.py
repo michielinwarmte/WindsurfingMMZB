@@ -77,9 +77,13 @@ def read_config(file_name: str, defaults: dict) -> dict:
 
 BOARD = read_config("board_default.tres", {
     "length_m": 2.40, "width_m": 0.72, "thickness_m": 0.12,
+    "widest_point_from_tail_m": 1.10, "tail_width_m": 0.45, "nose_width_m": 0.45,
+    "tail_thickness_m": 0.055, "nose_thickness_m": 0.04,
+    "hard_rail_to_m": 1.2, "soft_rail_from_m": 2.0,
     "nose_rocker_m": 0.08, "nose_rocker_length_m": 0.9,
     "tail_rocker_m": 0.01, "tail_rocker_length_m": 0.35,
 })
+ONE_FOOT_M = 0.3048  # where a shaper measures the nose and tail widths (BoardConfig.ONE_FOOT_M)
 SAIL = read_config("sail_default.tres", {
     "area_m2": 6.5, "luff_m": 4.60, "boom_m": 1.95, "boom_height_m": 1.40,
     "mast_foot_local": (0.0, 0.06, -0.10), "mast_m": 4.60, "camber": 0.10,
@@ -362,16 +366,35 @@ def bottom_rise(t: float) -> float:
     return 0.0
 
 
-def half_width(t: float) -> float:
-    """The outline seen from above: widest a little behind the middle, a squared-off tail
-    with rounded corners, a rounded pointed nose."""
-    widest_t = 0.46 * BOARD_L
-    tail_half = 0.56 * BOARD_HALF_W
-    if t < widest_t:
-        w = BOARD_HALF_W - (BOARD_HALF_W - tail_half) * ((widest_t - t) / widest_t) ** 2
+def outline_width(t: float) -> float:
+    """The physics' outline, the same formula as BoardConfig.width_at: a parabola from the
+    widest point to the widths one foot off the tail and the nose, straight on along its
+    tangent from there to the tips."""
+    widest = BOARD["widest_point_from_tail_m"]
+    if t <= widest:
+        reference_width, reference_distance, distance = BOARD["tail_width_m"], widest - ONE_FOOT_M, widest - t
     else:
-        s = min(1.0, (t - widest_t) / (BOARD_L - widest_t))
-        w = BOARD_HALF_W * max(0.0, 1.0 - s ** 2.3) ** 0.6
+        reference_width, reference_distance, distance = BOARD["nose_width_m"], BOARD_L - ONE_FOOT_M - widest, t - widest
+    reference_distance = max(reference_distance, 0.01)
+    narrowing = BOARD["width_m"] - reference_width
+    if distance <= reference_distance:
+        return BOARD["width_m"] - narrowing * (distance / reference_distance) ** 2
+    slope = 2.0 * narrowing / reference_distance
+    return max(reference_width - slope * (distance - reference_distance), 0.0)
+
+
+def half_width(t: float) -> float:
+    """The outline seen from above: the physics' outline (a square pin tail, widest at
+    widest_point_from_tail_m), with the tail's corners rounded and the nose closing to a
+    rounded point over its last foot. (The physics runs the outline straight on from the
+    one-foot point to a 0.285 m nose tip, its coarsest row; a real nose curves to a point
+    there, out of the water when planing. The cap times the physics' width is 1, with no
+    kink, at the one-foot point and 0 at the tip.)"""
+    w = 0.5 * outline_width(t)
+    cap_start = BOARD_L - ONE_FOOT_M
+    if t > cap_start:
+        a = (t - cap_start) / ONE_FOOT_M
+        w *= max(0.0, 1.0 - a * a)
     corner = 0.04
     if t < corner:
         w = w - corner + math.sqrt(max(0.0, corner * corner - (corner - t) ** 2))
@@ -379,16 +402,14 @@ def half_width(t: float) -> float:
 
 
 def thickness(t: float) -> float:
-    """Full thickness in the middle (around the mast foot), thinner toward the tail and nose."""
-    middle_start = 0.375 * BOARD_L
-    middle_end = 0.667 * BOARD_L
-    if t < middle_start:
-        a = (middle_start - t) / middle_start
-        return BOARD_THICK * (1.0 - 0.55 * a * a)
-    if t > middle_end:
-        s = (t - middle_end) / (BOARD_L - middle_end)
-        return BOARD_THICK * (1.0 - 0.72 * s ** 1.6)
-    return BOARD_THICK
+    """The physics' thickness profile (BoardConfig.thickness_at): full at the widest point,
+    a parabola down to the tail and nose thicknesses at the tips."""
+    widest = BOARD["widest_point_from_tail_m"]
+    if t <= widest:
+        s = min(1.0, max(0.0, (widest - t) / max(widest, 0.01)))
+        return BOARD_THICK - (BOARD_THICK - BOARD["tail_thickness_m"]) * s * s
+    n = min(1.0, max(0.0, (t - widest) / max(BOARD_L - widest, 0.01)))
+    return BOARD_THICK - (BOARD_THICK - BOARD["nose_thickness_m"]) * n * n
 
 
 def tip_factor(t: float) -> float:
@@ -401,9 +422,10 @@ def tip_factor(t: float) -> float:
 
 
 def bottom_exponent(t: float) -> float:
-    """The shape of the lower rail: hard (boxy, 6) in the tail for a clean release of the
-    water, softer (3) in the nose."""
-    a = min(1.0, max(0.0, (t - 0.33 * BOARD_L) / (0.4 * BOARD_L)))
+    """The shape of the lower rail: hard (boxy, 6) where the physics' rail is hard (up to
+    hard_rail_to_m from the tail), soft (3) from soft_rail_from_m (BoardConfig.rail_hardness)."""
+    hard, soft = BOARD["hard_rail_to_m"], BOARD["soft_rail_from_m"]
+    a = min(1.0, max(0.0, (t - hard) / max(soft - hard, 0.01)))
     return 6.0 - 3.0 * a
 
 
