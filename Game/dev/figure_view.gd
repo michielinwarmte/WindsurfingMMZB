@@ -15,7 +15,12 @@ extends Node3D
 ##                      starts the manoeuvre at --start (default 25 s); --times are then
 ##                      seconds after the start
 ##   --fall=1           a catapult at --start; --times are seconds after it
-##   --out=<prefix>     where to save: <prefix>_<moment>.png (default ../.screenshots/figure)
+##   --views=close,stern  only these views (default all six)
+##   --sequence=bow     instead of six views per moment, one view (bow, stern, windward,
+##                      leeward, close, top, or high: above the starboard quarter, which
+##                      does not change sides in a manoeuvre) at each of up to six moments
+##   --out=<prefix>     where to save: <prefix>_<moment>.png, or <prefix>_<view>.png for a
+##                      sequence (default ../.screenshots/figure)
 ##   --screenshot=<file> also save the first sheet there (lets tools/screenshot.sh run it)
 
 const DT: float = 1.0 / 60.0
@@ -65,17 +70,44 @@ func _run() -> void:
 	times.sort()
 	var out_prefix: String = _options.get("out", ProjectSettings.globalize_path("res://").path_join("../.screenshots/figure"))
 	DirAccess.make_dir_recursive_absolute(out_prefix.get_base_dir())
+	if _options.has("sequence"):
+		await _save_sequence(times, start_s, relative, out_prefix)
+	else:
+		await _save_moments(times, start_s, relative, out_prefix)
+	get_tree().quit(0)
+
+
+## One sheet of six views for each moment.
+func _save_moments(times: PackedFloat64Array, start_s: float, relative: bool, out_prefix: String) -> void:
 	var first: bool = true
 	for moment_s: float in times:
 		_sail_until(moment_s, start_s)
-		var sheet: Image = await _contact_sheet(moment_s)
+		var views: PackedStringArray = _options.get("views", ",".join(VIEWS)).split(",")
+		var sheet: Image = _new_sheet(views.size())
+		for index: int in views.size():
+			var view: Image = await _render_view(views[index], moment_s)
+			_put_on_sheet(sheet, view, index)
 		var path: String = "%s_%s.png" % [out_prefix, _moment_name(moment_s, start_s, relative)]
-		sheet.save_png(path)
-		print("Saved ", path)
-		if first and _options.has("screenshot"):
-			sheet.save_png(_options["screenshot"])
+		_save(sheet, path, first)
 		first = false
-	get_tree().quit(0)
+
+
+## One view at up to six moments, on one sheet.
+func _save_sequence(times: PackedFloat64Array, start_s: float, relative: bool, out_prefix: String) -> void:
+	var view_name: String = _options["sequence"]
+	var sheet: Image = _new_sheet(mini(times.size(), 6))
+	for index: int in mini(times.size(), 6):
+		_sail_until(times[index], start_s)
+		var view: Image = await _render_view(view_name, times[index])
+		_put_on_sheet(sheet, view, index)
+	_save(sheet, "%s_%s.png" % [out_prefix, view_name], true)
+
+
+func _save(sheet: Image, path: String, first: bool) -> void:
+	sheet.save_png(path)
+	print("Saved ", path)
+	if first and _options.has("screenshot"):
+		sheet.save_png(_options["screenshot"])
 
 
 ## Steps the simulation (and the figure, so its smoothing sees every tick) up to `until_s`.
@@ -108,24 +140,30 @@ func _press_keys(manoeuvre: String, now: float, start_s: float) -> void:
 		Input.action_release("tack")
 
 
-## Renders the six views and puts them side by side, two columns and three rows.
-func _contact_sheet(moment_s: float) -> Image:
-	var sheet: Image = Image.create(2 * VIEW_WIDTH, 3 * VIEW_HEIGHT, false, Image.FORMAT_RGBA8)
-	for index: int in VIEWS.size():
-		var view: String = VIEWS[index]
-		_place_camera(view)
-		_label.text = "%s   %s" % [view, _status_line(moment_s)]
-		var sail: GeometryInstance3D = _windsurfer.find_child("Sail", true, false) as GeometryInstance3D
-		if sail != null:
-			sail.transparency = 0.85 if view == "leeward" else 0.0
-		for frame: int in 3:
-			await get_tree().process_frame
-		await RenderingServer.frame_post_draw
-		var image: Image = get_viewport().get_texture().get_image()
-		image.convert(Image.FORMAT_RGBA8)
-		image.resize(VIEW_WIDTH, VIEW_HEIGHT, Image.INTERPOLATE_LANCZOS)
-		sheet.blit_rect(image, Rect2i(0, 0, VIEW_WIDTH, VIEW_HEIGHT), Vector2i((index % 2) * VIEW_WIDTH, (index / 2) * VIEW_HEIGHT))
-	return sheet
+## A blank sheet for `count` views, two to a row.
+func _new_sheet(count: int) -> Image:
+	var rows: int = maxi((count + 1) / 2, 1)
+	return Image.create(2 * VIEW_WIDTH, rows * VIEW_HEIGHT, false, Image.FORMAT_RGBA8)
+
+
+func _put_on_sheet(sheet: Image, view: Image, index: int) -> void:
+	sheet.blit_rect(view, Rect2i(0, 0, VIEW_WIDTH, VIEW_HEIGHT), Vector2i((index % 2) * VIEW_WIDTH, (index / 2) * VIEW_HEIGHT))
+
+
+## Renders one view, with its name and the state of the simulation written on it.
+func _render_view(view: String, moment_s: float) -> Image:
+	_place_camera(view)
+	_label.text = "%s   %s" % [view, _status_line(moment_s)]
+	var sail: GeometryInstance3D = _windsurfer.find_child("Sail", true, false) as GeometryInstance3D
+	if sail != null:
+		sail.transparency = 0.85 if view == "leeward" else 0.0
+	for frame: int in 3:
+		await get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	var image: Image = get_viewport().get_texture().get_image()
+	image.convert(Image.FORMAT_RGBA8)
+	image.resize(VIEW_WIDTH, VIEW_HEIGHT, Image.INTERPOLATE_LANCZOS)
+	return image
 
 
 ## Puts the camera for one view, in the board's axes, aimed at the sailor's middle.
@@ -148,6 +186,9 @@ func _place_camera(view: String) -> void:
 			offset = Vector3(1.6 * windward, 0.5, -1.6)
 		"top":
 			offset = Vector3(0.3 * windward, 4.5, 0.6)
+		"high":
+			# Fixed to the starboard quarter, above: does not jump sides in a manoeuvre.
+			offset = Vector3(2.6, 2.6, 2.6)
 	var target: Vector3 = board * middle
 	# Level cameras: the board's heading, not its heel and pitch.
 	var yaw: Basis = Basis(Vector3.UP, board.basis.get_euler().y)

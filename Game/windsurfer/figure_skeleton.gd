@@ -54,20 +54,22 @@ const HIPS_BELOW_COM_M: float = 0.06
 ## deck (com_height_m falls to half at full lean), while the boom stays at standing height:
 ## a body of fixed size with its hips there could only sit on the deck with its arms up
 ## over its head. A hiked windsurfer's hips are higher, with the legs reaching out from the
-## rail, so the figure's hips are raised this much at full lean.
-const HIKED_HIPS_RAISE_M: float = 0.25
+## rail, so the figure's hips are kept at least this high above the deck.
+const HIPS_MIN_HEIGHT_M: float = 0.65
+## The hips go at most this far from where the simulation's centre of mass puts them.
+const HIPS_OFFSET_MAX_M: float = 0.4
 ## The hips stay within this share of the full reach of the torso and the arms from the
 ## hands, so the torso can stay fairly upright and the arms reach forward to the boom
 ## (at full reach the torso and the arms would make one straight line up to the boom).
 const UPPER_REACH_SHARE: float = 0.9
 ## Where the feet stand, fore and aft of the stance point: standing at rest the front foot
 ## is just behind the mast foot and the back foot across the board behind it; in the straps
-## the front strap is about half a metre ahead of the back strap; in a tack the feet are
+## the front strap is about 0.55 m ahead of the back strap; in a tack the feet are
 ## close together by the mast.
 const FRONT_FOOT_STANDING_M: float = 0.2
 const BACK_FOOT_STANDING_M: float = 0.28
-const FRONT_FOOT_STRAPS_M: float = 0.3
-const BACK_FOOT_STRAPS_M: float = 0.2
+const FRONT_FOOT_STRAPS_M: float = 0.28
+const BACK_FOOT_STRAPS_M: float = 0.28
 const FOOT_TACK_M: float = 0.15
 ## When the sailor faces the bow (half way round in a tack or a gybe) the feet stand side
 ## by side, this far either side of the centre.
@@ -81,9 +83,9 @@ const BACK_TOES_FORWARD: float = 0.25
 const FRONT_HAND_FROM_GRIP_M: float = 0.2
 const BACK_HAND_FROM_GRIP_M: float = 0.24
 ## The hands hold the boom up to this far toward the mast or the clew from where the harness
-## lines are, so that they are across from the body (the simulation's centre of mass can
-## be a quarter of a metre forward of its grip point).
-const HAND_SLIDE_MAX_M: float = 0.15
+## lines are, so that they are across from the body (hanging out to windward, the body is
+## well toward the mast, measured along a boom that points to leeward).
+const HAND_SLIDE_MAX_M: float = 0.25
 ## In a tack the front hand goes onto the mast this far below the boom and the back hand
 ## onto the boom this far from the mast.
 const TACK_HAND_BELOW_BOOM_M: float = 0.2
@@ -100,8 +102,12 @@ const ARM_STANDING_SHARE: float = 0.71
 const ARM_HIKED_SHARE: float = 0.97
 ## Hanging in the harness the back arches: the middle of the back comes this far toward the sail.
 const SPINE_ARCH_M: float = 0.06
-## In a tack or a gybe the sailor crouches this much lower than the centre of mass says.
-const MANOEUVRE_CROUCH_M: float = 0.1
+## In a tack or a gybe the sailor crouches this much lower than the centre of mass says:
+## stepping round the mast, turning round, or carving at more than CARVE_START_DPS of
+## yaw rate (fully at CARVE_START_DPS + CARVE_FULL_DPS).
+const MANOEUVRE_CROUCH_M: float = 0.12
+const CARVE_START_DPS: float = 6.0
+const CARVE_FULL_DPS: float = 14.0
 ## The harness: the hook this far in front of the hips and above them, the two lines this
 ## far either side of the grip on the boom. Hooked in above the first tension, unhooked
 ## below the second (the gap stops it flickering).
@@ -110,6 +116,7 @@ const HOOK_UP_M: float = 0.05
 const HARNESS_LINE_SPREAD_M: float = 0.11
 const HOOK_IN_TENSION_N: float = 250.0
 const HOOK_OUT_TENSION_N: float = 150.0
+const HOOKED_MIN_LEAN: float = 0.3
 ## The head turns at most this far from the way the chest faces, and looks this many
 ## seconds ahead into a turn.
 const HEAD_TURN_MAX_RAD: float = 1.396  # 80 degrees
@@ -209,13 +216,16 @@ func solve(sim: WindsurferSim, boom_dir: Vector3) -> void:
 	var stance: float = sim.stance
 	# In a tack the sailor steps forward round the mast (the stance goes below zero).
 	var tack: float = clampf(-2.0 * stance, 0.0, 1.0)
-	var turning: float = maxf(tack, 1.0 - absf(facing_side))
+	# Carving a turn (a gybe, the start of a tack): the sailor bends the knees and sinks.
+	var carving: float = clampf((absf(sim.telemetry.yaw_rate_dps) - CARVE_START_DPS) / CARVE_FULL_DPS, 0.0, 1.0)
+	var turning: float = maxf(maxf(tack, carving), 1.0 - absf(facing_side))
 	# Hanging out in the harness: how far the body is out (0 standing, 1 fully hiked).
 	var hike: float = clampf(absf(sim.lean) * 1.2, 0.0, 1.0) * (1.0 - turning)
 
 	_place_feet(sim, stance)
 	_place_hands(sim, boom_dir, tack, com)
-	var wanted: Vector3 = com + Vector3.UP * (HIKED_HIPS_RAISE_M * hike - HIPS_BELOW_COM_M - MANOEUVRE_CROUCH_M * turning)
+	var wanted: Vector3 = com - Vector3.UP * HIPS_BELOW_COM_M
+	wanted.y = maxf(wanted.y, sim.feet_body.y + HIPS_MIN_HEIGHT_M) - MANOEUVRE_CROUCH_M * turning
 	_place_pelvis(wanted, hike)
 	pelvis_offset_m = (pelvis - wanted).length()
 	_place_torso(hike)
@@ -356,6 +366,10 @@ func _place_pelvis(wanted: Vector3, hike: float) -> void:
 		var arm: Vector3 = hand_targets[side] - shoulders[side]
 		if arm.length() > arm_reach:
 			pelvis += arm.normalized() * (arm.length() - arm_reach)
+	# Never further than HIPS_OFFSET_MAX_M from the centre of mass: when the boom swings
+	# across in a gybe the hands let go and reach for it (they stop short) rather than drag
+	# the body after it.
+	pelvis = wanted + (pelvis - wanted).limit_length(HIPS_OFFSET_MAX_M)
 	_keep_legs_in_reach()
 
 
@@ -483,7 +497,8 @@ func _place_harness(sim: WindsurferSim, boom_dir: Vector3, tack: float) -> void:
 		hooked = sim.harness_tension_n > HOOK_OUT_TENSION_N
 	else:
 		hooked = sim.harness_tension_n > HOOK_IN_TENSION_N
-	hooked = hooked and tack < 0.01 and absf(facing_side) > 0.99
+	# A sailor hooks in to hang out against the pull, not while standing up by the mast.
+	hooked = hooked and absf(sim.lean) > HOOKED_MIN_LEAN and tack < 0.01 and absf(facing_side) > 0.99
 	hook = pelvis - pelvis_basis.z * HOOK_FORWARD_M + pelvis_basis.y * HOOK_UP_M
 	var grip: Vector3 = sim.hand_grip_body
 	harness_line_ends[0] = grip - boom_dir * HARNESS_LINE_SPREAD_M
