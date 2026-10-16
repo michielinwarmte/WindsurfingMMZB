@@ -43,6 +43,8 @@ var planing_beam_m: float = 0.0  # mean width of the wet part of the bottom
 ## the surface carries rho pi b^2 / 8 per metre of length) and its inertia about the centre
 ## of mass in pitch. Strip theory (Wagner, Zarnick), the same physics as the slamming term.
 var heave_added_mass_kg: float = 0.0
+## The lagged planing normal force (BoardConfig.planing_lift_lag_s).
+var _lagged_normal_n: float = 0.0
 var pitch_added_inertia_kgm2: float = 0.0
 ## And in roll: a plate of width b rolling on the surface carries rho pi b^4 / 256 per metre
 ## (Newman, Marine Hydrodynamics, table 4.3, halved for the free surface like the heave
@@ -90,13 +92,19 @@ func compute(body: SimRigidBody, buoyancy: BuoyancyModel, surface: WaterSurface,
 
 	if speed_h > 0.01:
 		var flow_dir: Vector3 = v_h / speed_h
-		var reference_length: float = maxf(buoyancy.wetted_length_m, 0.3)
+		# The wetted bottom of a planing hull runs from the spray root to the transom: the
+		# wet span of the strip theory times the mean width there, which at a low trim is
+		# far more than the still-water grid wets (a flat bottom at 1 degree of trim wets
+		# half a metre of length per centimetre of depth). Whichever is larger.
+		var dynamic_area_m2: float = wetted_length_m * planing_beam_m
+		var wetted_area_m2: float = maxf(buoyancy.wetted_area_m2, dynamic_area_m2)
+		var reference_length: float = maxf(maxf(buoyancy.wetted_length_m, wetted_length_m), 0.3)
 
 		# 1. Skin friction on the wetted bottom (ITTC 1957 line).
 		reynolds_number = maxf(speed_h * reference_length / water.kinematic_viscosity_m2_s, 1e5)
 		var cf: float = 0.075 / pow(log(reynolds_number) / log(10.0) - 2.0, 2.0)
 		var q_h: float = 0.5 * rho * speed_h * speed_h
-		friction_n = cf * q_h * buoyancy.wetted_area_m2
+		friction_n = cf * q_h * wetted_area_m2
 		body.add_force_at(wet_point, -flow_dir * friction_n)
 
 		# 2. Wave-making drag while the hull pushes water aside: a hump around a Froude
@@ -277,9 +285,22 @@ func _apply_planing_lift(body: SimRigidBody, buoyancy: BuoyancyModel, aft: float
 	var flow_dir: Vector3 = SimMath.horizontal(body.velocity)
 	flow_dir = flow_dir.normalized() if flow_dir.length() > 0.01 else Vector3.ZERO
 	var weighted_position: Vector3 = Vector3.ZERO
+	# The unsteady lag (BoardConfig.planing_lift_lag_s): the quasi-steady total is followed
+	# with a first-order lag, and every strip is scaled by the same factor.
+	var quasi_steady_n: float = 0.0
+	for k: int in STRIPS:
+		var share_k: float = root_force * weights[k] / weight_sum if weight_sum > 0.0 else 0.0
+		quasi_steady_n += maxf(three_d_factor * (strip_forces[k] + share_k), 0.0)
+	var lag_factor: float = 1.0
+	if board.planing_lift_lag_s > 0.0 and quasi_steady_n > 0.0:
+		var blend: float = clampf(_dt / board.planing_lift_lag_s, 0.0, 1.0)
+		_lagged_normal_n = lerpf(_lagged_normal_n, quasi_steady_n, blend)
+		lag_factor = _lagged_normal_n / quasi_steady_n
+	else:
+		_lagged_normal_n = quasi_steady_n
 	for k: int in STRIPS:
 		var share: float = root_force * weights[k] / weight_sum if weight_sum > 0.0 else 0.0
-		var magnitude: float = three_d_factor * (strip_forces[k] + share)
+		var magnitude: float = three_d_factor * (strip_forces[k] + share) * lag_factor
 		if magnitude <= 0.0:
 			continue
 		var force: Vector3 = normals_world[k] * magnitude

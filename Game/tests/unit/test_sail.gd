@@ -71,11 +71,11 @@ func test_sheet_mapping() -> void:
 	var sail: SailModel = SailModel.new(_legacy_sail())
 	var body: SimRigidBody = _body()
 	var wind: WindField = _constant_wind(0.0, 270.0)
-	sail.compute(body, wind, 1.0, 0.0, 1.225)
+	sail.compute(RigFrame.rigid_on(body, sail.config.mast_foot_local), wind, 1.0, 0.0, 1.225)
 	assert_almost_eq(rad_to_deg(sail.sheet_angle_rad), 12.0, 1e-4)
-	sail.compute(body, wind, 0.0, 0.0, 1.225)
+	sail.compute(RigFrame.rigid_on(body, sail.config.mast_foot_local), wind, 0.0, 0.0, 1.225)
 	assert_almost_eq(rad_to_deg(sail.sheet_angle_rad), 85.0, 1e-4)
-	sail.compute(body, wind, 0.5, 0.0, 1.225)
+	sail.compute(RigFrame.rigid_on(body, sail.config.mast_foot_local), wind, 0.5, 0.0, 1.225)
 	assert_almost_eq(rad_to_deg(sail.sheet_angle_rad), 48.5, 1e-4)
 
 
@@ -86,7 +86,7 @@ func test_worked_example_beam_wind_from_starboard() -> void:
 	var body: SimRigidBody = _body()
 	var wind: WindField = _constant_wind(10.0, 90.0)
 	var sheet: float = 1.0 - (75.0 - 12.0) / 73.0
-	sail.compute(body, wind, sheet, 0.0, 1.225)
+	sail.compute(RigFrame.rigid_on(body, sail.config.mast_foot_local), wind, sheet, 0.0, 1.225)
 	assert_eq(sail.sail_side, -1, "boom to port when the wind is from starboard")
 	assert_almost_eq(rad_to_deg(sail.awa_rad), 90.0, 1e-3)
 	assert_almost_eq(rad_to_deg(sail.alpha_rad), 15.0, 1e-3)
@@ -106,7 +106,7 @@ func test_close_reach_drive_and_side_force() -> void:
 	var body: SimRigidBody = _body()
 	var wind: WindField = _constant_wind(10.0, 45.0)
 	var sheet: float = 1.0 - (30.0 - 12.0) / 73.0
-	sail.compute(body, wind, sheet, 0.0, 1.225)
+	sail.compute(RigFrame.rigid_on(body, sail.config.mast_foot_local), wind, sheet, 0.0, 1.225)
 	assert_almost_eq(rad_to_deg(sail.awa_rad), 45.0, 1e-3)
 	assert_almost_eq(rad_to_deg(sail.alpha_rad), 15.0, 1e-3)
 	var l: float = sail.lift_n
@@ -120,8 +120,8 @@ func test_mirror_symmetry() -> void:
 	var sail_b: SailModel = SailModel.new(_legacy_sail())
 	var body: SimRigidBody = _body()
 	var sheet: float = 1.0 - (30.0 - 12.0) / 73.0
-	sail_a.compute(body, _constant_wind(10.0, 45.0), sheet, 0.0, 1.225)
-	sail_b.compute(body, _constant_wind(10.0, 315.0), sheet, 0.0, 1.225)
+	sail_a.compute(RigFrame.rigid_on(body, sail_a.config.mast_foot_local), _constant_wind(10.0, 45.0), sheet, 0.0, 1.225)
+	sail_b.compute(RigFrame.rigid_on(body, sail_b.config.mast_foot_local), _constant_wind(10.0, 315.0), sheet, 0.0, 1.225)
 	assert_eq(sail_b.sail_side, 1)
 	assert_almost_eq(sail_b.drive_n, sail_a.drive_n, 1e-3)
 	assert_almost_eq(sail_b.side_force_n, -sail_a.side_force_n, 1e-3)
@@ -133,7 +133,7 @@ func test_backwinded_when_eased_too_far() -> void:
 	var body: SimRigidBody = _body()
 	# Wind from 60 degrees to starboard, boom eased to 75 degrees: alpha = -15, the wind on
 	# the sail's leeward face. The sail inverts and pushes to windward with 0.7 of its lift.
-	sail.compute(body, _constant_wind(10.0, 60.0), 1.0 - (75.0 - 12.0) / 73.0, 0.0, 1.225)
+	sail.compute(RigFrame.rigid_on(body, sail.config.mast_foot_local), _constant_wind(10.0, 60.0), 1.0 - (75.0 - 12.0) / 73.0, 0.0, 1.225)
 	assert_almost_eq(rad_to_deg(sail.alpha_rad), -15.0, 1e-3)
 	assert_true(sail.is_backwinded)
 	assert_false(sail.is_luffing)
@@ -141,7 +141,7 @@ func test_backwinded_when_eased_too_far() -> void:
 	var backwinded_lift: float = sail.lift_n
 	# The same wind with the boom at 45 degrees: alpha = +15, the normal face.
 	var normal: SailModel = SailModel.new(_legacy_sail())
-	normal.compute(_body(), _constant_wind(10.0, 60.0), 1.0 - (45.0 - 12.0) / 73.0, 0.0, 1.225)
+	normal.compute(RigFrame.rigid_on(_body(), normal.config.mast_foot_local), _constant_wind(10.0, 60.0), 1.0 - (45.0 - 12.0) / 73.0, 0.0, 1.225)
 	assert_almost_eq(rad_to_deg(normal.alpha_rad), 15.0, 1e-3)
 	assert_lt(normal.side_force_n, 0.0, "a sail on port tack... wind from starboard pushes to port (leeward)")
 	assert_gt(backwinded_side, 0.0, "backwinded it pushes to starboard (windward)")
@@ -155,10 +155,10 @@ func test_the_boom_pushed_across_the_centreline() -> void:
 	# 12 degrees to port and the sail luffs. Pushed all the way across it is 35 degrees to
 	# starboard, the wind meets its starboard face at 40 degrees and it pushes to port and aft:
 	# the push that takes the bow through the wind in a tack.
-	sail.compute(body, _constant_wind(8.0, 5.0), 1.0, 0.0, 1.225, 0.0, 0.0)
+	sail.compute(RigFrame.rigid_on(body, sail.config.mast_foot_local), _constant_wind(8.0, 5.0), 1.0, 0.0, 1.225, 0.0, 0.0)
 	assert_true(sail.is_luffing or sail.is_backwinded, "nearly head to wind the sheeted sail cannot fill (alpha -7)")
 	assert_almost_eq(rad_to_deg(sail.sail_angle_rad()), -12.0, 1e-6, "clew 12 degrees to port")
-	sail.compute(body, _constant_wind(8.0, 5.0), 1.0, 0.0, 1.225, 0.0, 1.0)
+	sail.compute(RigFrame.rigid_on(body, sail.config.mast_foot_local), _constant_wind(8.0, 5.0), 1.0, 0.0, 1.225, 0.0, 1.0)
 	assert_almost_eq(rad_to_deg(sail.sail_angle_rad()), 35.0, 1e-6, "clew 35 degrees to starboard")
 	assert_almost_eq(rad_to_deg(sail.alpha_rad), 40.0, 1e-3)
 	assert_gt(sail.ce_local.x, 0.0, "the centre of effort went to starboard with the clew")
@@ -186,14 +186,14 @@ func test_centre_of_effort_moves_with_rake_and_boom() -> void:
 	var sail: SailModel = SailModel.new(_legacy_sail())
 	var body: SimRigidBody = _body()
 	var wind: WindField = _constant_wind(10.0, 90.0)
-	sail.compute(body, wind, 1.0, 0.0, 1.225)
+	sail.compute(RigFrame.rigid_on(body, sail.config.mast_foot_local), wind, 1.0, 0.0, 1.225)
 	var neutral: Vector3 = sail.ce_local
 	assert_almost_eq(neutral.y, 0.06 + 1.88, 1e-6, "0.40 of a 4.7 m luff above the mast foot")
-	sail.compute(body, wind, 1.0, 1.0, 1.225)
+	sail.compute(RigFrame.rigid_on(body, sail.config.mast_foot_local), wind, 1.0, 1.0, 1.225)
 	var raked_back: Vector3 = sail.ce_local
 	assert_almost_eq(raked_back.z - neutral.z, 1.88 * sin(sail.config.max_rake_rad()), 1e-6, "rake back moves the centre of effort aft")
 	assert_lt(raked_back.y, neutral.y)
-	sail.compute(body, wind, 0.0, 0.0, 1.225)
+	sail.compute(RigFrame.rigid_on(body, sail.config.mast_foot_local), wind, 0.0, 0.0, 1.225)
 	var eased: Vector3 = sail.ce_local
 	assert_lt(eased.x, neutral.x, "easing the sheet swings the clew out to port")
 	assert_lt(eased.z, neutral.z, "and forward")
@@ -202,6 +202,6 @@ func test_centre_of_effort_moves_with_rake_and_boom() -> void:
 func test_no_force_without_wind() -> void:
 	var sail: SailModel = SailModel.new(_legacy_sail())
 	var body: SimRigidBody = _body()
-	sail.compute(body, _constant_wind(0.3, 90.0), 0.5, 0.0, 1.225)
+	sail.compute(RigFrame.rigid_on(body, sail.config.mast_foot_local), _constant_wind(0.3, 90.0), 0.5, 0.0, 1.225)
 	assert_eq(sail.force_world, Vector3.ZERO)
 	assert_eq(sail.lift_n, 0.0)

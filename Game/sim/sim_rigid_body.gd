@@ -34,6 +34,10 @@ var internal_velocity: Vector3 = Vector3.ZERO
 ## added mass of the wetted bottom). It resists acceleration along that axis only; the hull
 ## model sets it every step.
 var added_mass_up_kg: float = 0.0
+## Mass that moves with the body along its own x and z axes (across and along the deck)
+## but not up and down: the sailor, who rides the hull in the horizontal plane on legs that
+## give vertically (WindsurferSim). The simulation sets it.
+var added_mass_across_kg: float = 0.0
 
 var _force_sum: Vector3 = Vector3.ZERO
 var _torque_sum: Vector3 = Vector3.ZERO
@@ -49,6 +53,30 @@ func set_mass_properties(new_mass_kg: float, new_inertia_body: Basis, new_com_of
 	mass_kg = new_mass_kg
 	inertia_body = new_inertia_body
 	inertia_body_inv = new_inertia_body.inverse()
+
+
+## Water taken along keeps its momentum with the hull: when the water that moves with the
+## hull grows (the wet bottom lengthens as the hull settles, a wave meets it), the hull's
+## momentum along that axis is shared with it and the hull slows, which is the slam of a
+## hull meeting water. Water left behind keeps its own momentum and gives none back, so
+## nothing changes when the added mass or inertia falls. Without this the hull kept its
+## angular velocity while its pitch inertia tripled on every immersion, and the energy
+## that put in drove a planing hull into porpoising. Call before setting the new values.
+func take_water_along(new_added_mass_up_kg: float, new_inertia_body: Basis) -> void:
+	if new_added_mass_up_kg > added_mass_up_kg:
+		var up: Vector3 = basis.y
+		var v_up: float = velocity.dot(up)
+		velocity += up * (v_up * ((mass_kg + added_mass_up_kg) / (mass_kg + new_added_mass_up_kg) - 1.0))
+	var omega_body: Vector3 = angular_velocity_body()
+	var changed: bool = false
+	for i: int in 3:
+		var old_i: float = inertia_body[i][i]
+		var new_i: float = new_inertia_body[i][i]
+		if new_i > old_i and old_i > 0.0:
+			omega_body[i] *= old_i / new_i
+			changed = true
+	if changed:
+		angular_velocity = basis * omega_body
 
 
 ## World position of the board origin.
@@ -74,22 +102,28 @@ func point_velocity(point: Vector3) -> Vector3:
 ## Acceleration a point of the body is about to get from the forces collected so far,
 ## as if the body were rigid: linear, angular and centripetal parts.
 func acceleration_at(point: Vector3) -> Vector3:
+	var r: Vector3 = point - position
+	return linear_acceleration() + angular_acceleration().cross(r) + angular_velocity.cross(angular_velocity.cross(r))
+
+
+## Angular acceleration (world frame) from the torques collected so far.
+func angular_acceleration() -> Vector3:
 	var inertia_world: Basis = basis * inertia_body * basis.transposed()
 	var gyroscopic: Vector3 = angular_velocity.cross(inertia_world * angular_velocity)
-	var angular_acceleration: Vector3 = inertia_world.inverse() * (_torque_sum - gyroscopic)
-	var r: Vector3 = point - position
-	return linear_acceleration() + angular_acceleration.cross(r) + angular_velocity.cross(angular_velocity.cross(r))
+	return inertia_world.inverse() * (_torque_sum - gyroscopic)
 
 
 ## Acceleration of the centre of mass from the forces collected so far. Along the body's up
-## axis the water's added mass is accelerated too, so that direction responds more slowly:
-## a = F / m, minus the part of F along "up" times added / (m (m + added)).
+## axis the water's added mass is accelerated too, and across the deck the sailor's, so
+## those directions respond more slowly: in body axes a_i = F_i / (m + added_i).
 func linear_acceleration() -> Vector3:
-	var acceleration: Vector3 = _force_sum / mass_kg
-	if added_mass_up_kg > 0.0:
-		var up: Vector3 = basis.y
-		acceleration -= up * (_force_sum.dot(up) * added_mass_up_kg / (mass_kg * (mass_kg + added_mass_up_kg)))
-	return acceleration
+	var force_body: Vector3 = basis.transposed() * _force_sum
+	return basis * (force_body * _inverse_mass_body())
+
+
+## 1 / (m + added) along each body axis.
+func _inverse_mass_body() -> Vector3:
+	return Vector3(1.0 / (mass_kg + added_mass_across_kg), 1.0 / (mass_kg + added_mass_up_kg), 1.0 / (mass_kg + added_mass_across_kg))
 
 
 ## Angular velocity expressed in body axes (x = pitch, y = yaw, z = roll).
@@ -103,17 +137,35 @@ func angular_velocity_body() -> Vector3:
 ## push), the centre of a heavy one is not. Dampers use it to know how much momentum a
 ## point really has (see BuoyancyModel and the rig-in-water drag).
 func effective_mass_at(point: Vector3, direction: Vector3) -> float:
-	var up: Vector3 = basis.y
-	var along_up: float = direction.dot(up)
-	var translational: float = (1.0 - along_up * along_up * added_mass_up_kg / (mass_kg + added_mass_up_kg)) / mass_kg
+	var n_body: Vector3 = basis.transposed() * direction
+	var inverse: Vector3 = _inverse_mass_body()
+	var translational: float = n_body.x * n_body.x * inverse.x + n_body.y * n_body.y * inverse.y + n_body.z * n_body.z * inverse.z
 	var r_cross_n: Vector3 = (point - position).cross(direction)
 	var inertia_world_inv: Basis = basis * inertia_body_inv * basis.transposed()
 	var rotational: float = r_cross_n.dot(inertia_world_inv * r_cross_n)
 	return 1.0 / maxf(translational + rotational, 1e-9)
 
 
+## How much a unit force along v at world point `at` accelerates world point `of` along
+## u: the translational part along each body axis plus what the lever arms let it rotate,
+## (r_of x u) . I^-1 (r_at x v). The mobility between two points; mobility(p, p, n, n)
+## is 1 / effective_mass_at(p, n).
+func mobility(of: Vector3, at: Vector3, u: Vector3, v: Vector3) -> float:
+	var u_body: Vector3 = basis.transposed() * u
+	var v_body: Vector3 = basis.transposed() * v
+	var inverse: Vector3 = _inverse_mass_body()
+	var translational: float = u_body.x * v_body.x * inverse.x + u_body.y * v_body.y * inverse.y + u_body.z * v_body.z * inverse.z
+	var inertia_world_inv: Basis = basis * inertia_body_inv * basis.transposed()
+	return translational + (of - position).cross(u).dot(inertia_world_inv * ((at - position).cross(v)))
+
+
 ## A force (world frame) acting at a world point. The torque about the centre of mass
 ## follows from the lever arm; nothing else decides which way the body turns.
+## The torque collected so far this step (world), about the centre of mass.
+func torque_sum() -> Vector3:
+	return _torque_sum
+
+
 func add_force_at(point: Vector3, force: Vector3) -> void:
 	_force_sum += force
 	_torque_sum += (point - position).cross(force)

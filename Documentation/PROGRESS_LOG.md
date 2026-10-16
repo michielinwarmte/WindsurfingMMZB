@@ -38,6 +38,40 @@ Template for new entries:
 
 ---
 
+## 15 and 16 October 2026 - Session 37: the sailor as a body of their own, and the rig held by the sailor
+
+**Phase:** between 5 and 6. The team asked for a real character model with the physics updated to include it, then chop work with it. Done: the physics (spec 7.5), the visible figure, the chop runs. Stopped once mid-way on request (commit `271dbb8`); finished in the second half.
+
+**Done (spec 7.5 and 17.13):**
+- Two bodies: the hull (`SimRigidBody`, 9 kg plus the water it drags) and the sailor (`SailorBody`, `Game/sim/sailor_body.gd`, 75 kg at the centre of mass). The rig (8 kg) is in balance between the mast foot (a joint) and the hands; the harness line is in that balance, so the line carries about 400 N of the sailor's weight at 18 kt and the mast foot gets it as mast foot pressure. The legs are a vertical spring and damper (1.2 Hz, 0.9) measured from the feet; across the deck the body rides the hull through the force at the deck point under it. The posture (lean, stance, hang-back) is held in the apparent-gravity frame; the lean answers the hands' pull about the feet; the feet go to the windward rail as the body goes out and press a rail when the controls ask; over the hump the feet trim the board to 2 degrees.
+- What the feet pass to the deck: the moment the body cannot balance itself, at most 120 Nm in roll, with the toes-and-heels reflex (1500 Nm/rad, 600 Nm s/rad) in what is left. Falls are physical: the excess tips the body; the hips hold 400 N (plus 400 hooked in) for 0.3 s, then "tipped over" or "tipped back". The old heel rules remain as a backstop.
+- The rig is held by the sailor, not the deck (`RigFrame`, `Game/sim/rig_frame.gd`): the hull's heading and pitch, upright in roll. This is what fixed the tack catapults at 18 and 24 kt (the whole chain is in 17.13: the light hull snapped upright under the sailor, the rig fixed to the deck swung the sail 15 degrees through the wind in one step, the sail force spiked, the pull went through the feet into yaw, the board spun to 100 deg/s and flung the sailor). The sail model now computes from the rig frame; the scene poses the rig from it.
+- The autopilot sheets to what the body holds right now (hike share 1.1, ankle share 0.8) and catches a body tipping back by sheeting in. Telemetry: hand, foot and mast-foot forces, the harness tension, the feet's roll moment and its excess, the attachment force, and the yaw and roll moments on the hull by source (fin, rig, sailor, water, net), which is how the catapult was found.
+- Smaller physics: the hull's friction on the dynamically wet bottom; the hull keeps its momentum when the added water grows (`take_water_along`); the posture's own moves capped at a walking pace; the body follows the stepping feet at a walking pace in a tack.
+- The visible sailor (`windsurfer.gd`): an articulated figure from the simulation's body: feet on the deck where they press, two-segment legs with the knee bend, torso, head, arms to the boom either side of the grip, the harness line when it carries load; the fall animation pivots the figure about its feet and the rig about the mast foot. Screenshot `.screenshots/rig_9s.png`: 39 km/h, the sailor hiked out horizontally, the rig upright over a board heeled 4 degrees.
+- Tests: `test_sailor_body.gd` (4), `test_sail.gd` on `RigFrame.rigid_on`, the legs test, the friction test on the dynamic area, the polar test's fin bound (650 N) and trim floor (0.5 deg), the upwind-on-waves tolerance 35 % to 15 %.
+
+**Verified:**
+- `tools/check.sh` 75 files clean. `tools/test.sh` 126 of 126. `tools/test.sh validation` 20 of 20: the polar within the real-world range at every angle, planing onset in range at 15 kt, the sea within 1.2 % of flat water at 60, 90 and 120 degrees (upwind was 28 % slower in Session 36).
+- `tools/matrix.sh` flat: 24 of 24, no fall, no NaN, every manoeuvre complete; straight 8.75, 10.54 and 11.75 m/s at 12, 18 and 24 kt; the 18 kt run holds its heading within 0.1 degree and 0.7 deg/s of yaw. `--waves=1`: 23 of 24 (gybe_beam 24 kt catapults at 40 s, after the gybe, from a yaw spike at a landing). Medium chop (`--wave2.amplitude_m=0.04 --wave2.steepness=0.036 --wave3.amplitude_m=0.015 --wave3.steepness=0.027 --wave4.amplitude_m=0.006 --wave4.steepness=0.021`): 23 of 24 (gybe_broad 24 kt). The strong chop of the old game (0.06/0.054, 0.03/0.054, 0.012/0.042): no falls (five in the morning's runs), one gybe at 12 kt tacked instead; speed loss 6, 24 and 19 % at 12, 18 and 24 kt.
+- NOT verified: how it feels to sail (the wobble and the bounce are judged from numbers), the figure in motion beyond screenshots, the sound of nothing (there is none yet).
+
+**Everything tried on the way (so nobody repeats it):** the sideways leg spring in every form (soft, torque-free, stiff and capped, velocity-matched, the mass lumped into the hull, the constraint force at the feet, at the sailor's height), the target measured from the feet, the feet ahead of the body, the fixed sheet capacity, the inflated felt heel, the frame flipping under g, 2 Hz legs, the weight at the feet without the harness (porpoising), a rope with a length between the hips and the boom (worse on chop, broke tacks; in the code, off), a lag on the planing lift (no help; off), the rig held in the apparent-gravity frame (a 1 Hz yaw wobble on flat water), feet roll damping 300 and 450 (not enough), stiffer legs 2.0 and 2.5 Hz (no help, worse at 24 kt), the pilot's hike and ankle shares (no effect on the wobble), a rate cap on the posture (kept, harmless). The pilot's depower integrator reacts to the push of the turn the controller asked for and eases the sail while the sailor is fully hiked at a tack's entry; it did not need changing once the rig stopped swinging, but it is a candidate if tacks at speed feel wrong.
+
+**Decisions:**
+- The rig is held by the sailor: it pitches with the hull (the mast foot is a metre forward of the centre) and does not roll with it. A rig fixed to the deck is wrong and it is what catapulted the tacks.
+- The sailor rides the hull across the deck; only the legs' vertical give is a real degree of freedom; falls are timed from the hips' limit.
+- The sailor's roll control is one reflex at the feet, 600 Nm s/rad within 120 Nm; the one-body `balance_heel_gain`, `balance_rate_gain`, `balance_felt_gain`, `posture_sway_max_m`, `toe_heel_m` and the sideways-spring fields are gone.
+- The default sea stays the Session 36 swell; the medium chop is nearly clean and can become the default once the landings are fixed.
+
+**Next:**
+1. The hull landing off a crest: the yaw rate spikes to 90 to 120 deg/s for a step or two (16 to 25 reversals in 15 s on the medium chop) and that is where the two remaining falls come from. The breakdown (17.13) says the hull's yaw inertia about its centre is 5 kg m2 when it skims, the fin's lift jumps at the landing, and nothing resists the hull spinning under the sailor's feet. Give the planing hull its lateral and yaw resistance in sideslip (Brown and Klosinski 1994) and the legs a lateral stiffness at the feet; then the medium chop as the default sea.
+2. The 12 kt bounce at the edge of planing (the planing ratio 0.15 to 1.0 at 1.2 Hz on flat water, there since Session 36): the heave of the light hull against the strip theory's root force.
+3. Play-test: the tacks and gybes at 18 and 24 kt, the feel of the sea, the figure.
+4. Then Phase 6 (the rig visuals) as planned.
+
+---
+
 ## 15 October 2026 - Session 44 (map track): W4 planned; W4a, the race course maker, first version
 
 **Phase:** W4 of the map plan, part a (the course maker). Branch `feature/map-silvaplana`.

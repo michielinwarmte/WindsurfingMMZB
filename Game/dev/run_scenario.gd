@@ -8,7 +8,7 @@ extends SceneTree
 ## [--kick_pitch=<rad/s> --kick_at=<s>: a sudden bow-up pitch rate at that time]
 ## [--pilot.<field>=<n> --sailor.<field>=<n> --sail.<field>=<n>: try another value of a
 ## tuning field without editing code] [--gradient=0: the same wind at every height, as
-## the validation suite uses] [--waves=1: the default wave set on the water]
+## the validation suite uses; --steady=1 also turns the gusts and shifts off] [--waves=1: the default wave set on the water]
 
 const DT: float = 1.0 / 60.0
 
@@ -66,6 +66,11 @@ func _initialize() -> void:
 		target.set(parts[1], (number != 0.0) if current is bool else (int(number) if current is int else number))
 	if options.get("gradient", "1") == "0":
 		sim.wind_config.height_gradient_enabled = false
+	# --steady=1: the validation suite's wind (no gradient, gusts or shifts).
+	if options.get("steady", "0") == "1":
+		sim.wind_config.height_gradient_enabled = false
+		sim.wind_config.gusts_enabled = false
+		sim.wind_config.shifts_enabled = false
 		sim.wind = WindField.new(sim.wind_config)
 	if options.has("wave_scale"):
 		for wave: GerstnerWaveConfig in sim.wave_set_config.waves:

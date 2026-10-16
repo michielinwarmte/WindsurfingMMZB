@@ -71,7 +71,7 @@ func update_from(t: Telemetry, controller: PlayerController, camera_name: String
 		"heading %5.1f   TWA %6.1f   AWA %6.1f   AWS %4.1f kt   VMG %5.2f m/s   leeway %4.1f\n" % [t.heading_deg, t.twa_deg, t.awa_deg, t.aws_kt, t.vmg_ms, t.leeway_deg]
 		+ "pitch %5.1f   heel %5.1f   yaw rate %5.1f deg/s\n" % [t.pitch_deg, t.heel_deg, t.yaw_rate_dps]
 		+ "sheet %3.0f %%  boom %4.0f deg%s   rake %5.2f   rig tilt %5.2f (%4.0f deg)   alpha %5.1f deg%s   helm %5.2f\n" % [t.sheet * 100.0, t.sail_angle_deg, "  across %3.0f %%" % (t.boom_across * 100.0) if t.boom_across > 0.005 else "", t.rake, t.rig_tilt, t.rig_lean_deg, t.alpha_deg, "  BACKWINDED" if t.is_backwinded else "", controller.helm_right]
-		+ "lean %5.2f   stance %4.2f   hang-back %4.2f m   knees %5.2f m\n" % [t.lean, t.stance, t.hang_back_m, t.knee_bend_m]
+		+ "lean %5.2f   stance %4.2f   hang-back %4.2f m   knees %5.2f m   sway %4.2f m   hands %4.0f N   feet %4.0f N   feet moment %5.0f Nm\n" % [t.lean, t.stance, t.hang_back_m, t.knee_bend_m, t.leg_sway_m, t.hand_force_n, t.foot_force_n, t.feet_moment_roll_nm]
 		+ "sail  lift %5.0f N  drag %4.0f N  drive %5.0f N  side %5.0f N\n" % [t.sail_lift_n, t.sail_drag_n, t.drive_n, t.side_force_n]
 		+ "fin   lift %5.0f N  drag %4.0f N  slip %5.1f deg%s\n" % [t.fin_lift_n, t.fin_drag_n, t.fin_slip_deg, "  STALLED" if t.fin_stalled else ""]
 		+ "hull  planing %3.0f %% (%4.0f N)  buoyancy %4.0f N  submersion %3.0f %%  wetted %4.2f m2  resistance %4.0f N  trim %4.1f deg\n" % [t.planing_ratio * 100.0, t.planing_lift_n, t.buoyancy_n, t.submersion_ratio * 100.0, t.wetted_area_m2, t.hull_resistance_n, t.trim_deg]

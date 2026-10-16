@@ -3,8 +3,11 @@ extends Node3D
 ## The windsurfer in the scene. Owns a WindsurferSim, steps it once per physics tick with
 ## the player's (or the autopilot's) controls, and copies the result onto simple visuals:
 ## a box for the board, a fin, a mast, a sail that turns with the sheet, the rake and the
-## rig lean, and a capsule for the sailor that stands where the sailor's weight is.
-## Nothing visual feeds back into the physics (CLAUDE.md, architecture rule 2).
+## rig lean, and a sailor built from the simulation's own sailor body (section 7.5): the
+## feet where they press the deck, two-segment legs that bend at the knee as the legs
+## give, the hips at the body's centre of mass, a torso along the body line, arms to the
+## hands on the boom, a head, and the harness line from the hips to the boom when the
+## sailor hangs in it. Nothing visual feeds back into the physics (CLAUDE.md, rule 2).
 
 ## Compass heading at the start, degrees. 180 (South) with the default wind from the West
 ## puts the board on a beam reach on starboard tack.
@@ -24,10 +27,18 @@ const FALL_DURATION_S: float = 0.9
 var _previous_state: WindsurferSim.SailorState = WindsurferSim.SailorState.SAILING
 # The pose at the last sailing tick, from which a fall starts.
 var _last_mast_dir: Vector3 = Vector3.UP
-var _last_boom_angle: float = 0.0
-var _last_sailor_com: Vector3 = Vector3(0.0, 1.0, 0.15)
-var _last_sailor_axis: Vector3 = Vector3.UP
+var _last_boom_dir: Vector3 = Vector3.BACK
 var _last_feet: Vector3 = Vector3(0.0, 0.06, 0.15)
+
+## Body sizes for the figure (metres).
+const FOOT_LENGTH_M: float = 0.26
+const ANKLE_HEIGHT_M: float = 0.08
+const THIGH_M: float = 0.45
+const SHIN_M: float = 0.45
+const TORSO_M: float = 0.5
+const HEAD_M: float = 0.24
+const FEET_APART_M: float = 0.4
+const HANDS_APART_M: float = 0.6
 
 var _board: MeshInstance3D
 var _nose: MeshInstance3D
@@ -35,7 +46,19 @@ var _fin: MeshInstance3D
 var _mast: MeshInstance3D
 var _sail: MeshInstance3D
 var _boom: MeshInstance3D
-var _sailor: MeshInstance3D
+## The figure: a root the fall animates, and its limbs posed from the simulation.
+var _sailor_root: Node3D
+var _foot_front: MeshInstance3D
+var _foot_back: MeshInstance3D
+var _shin_front: MeshInstance3D
+var _shin_back: MeshInstance3D
+var _thigh_front: MeshInstance3D
+var _thigh_back: MeshInstance3D
+var _torso: MeshInstance3D
+var _arm_front: MeshInstance3D
+var _arm_back: MeshInstance3D
+var _head: MeshInstance3D
+var _harness_line: MeshInstance3D
 
 
 func _ready() -> void:
@@ -105,31 +128,98 @@ func _copy_state_to_visuals() -> void:
 		return
 
 	# The rig: mast from the mast foot along the mast direction, sail and boom in the plane
-	# of the mast and the boom.
-	var sailor_config: SailorConfig = sim.sailor_config
-	var mast_dir: Vector3 = sim.sail.mast_direction()
+	# of the mast and the boom. The simulation holds the rig in the sailor's frame, not the
+	# deck's (RigFrame), so its directions are brought into the board's axes here.
+	var rig_to_board: Basis = body.basis.transposed() * sim.rig.basis
+	var mast_dir: Vector3 = rig_to_board * sim.sail.mast_direction()
 	var boom_angle: float = sim.sail.sail_angle_rad()
-	_pose_rig(mast_dir, boom_angle)
+	var boom_dir: Vector3 = rig_to_board * Vector3(sin(boom_angle), 0.0, cos(boom_angle))
+	_pose_rig(mast_dir, boom_dir)
 
-	# The sailor: a capsule from the feet up to and beyond the centre of mass.
-	var com: Vector3 = sim.mass_model.sailor_position_body
-	var feet_z: float = lerpf(sailor_config.stance_rest_z_m, sailor_config.stance_planing_z_m, sim.stance) if sim.stance >= 0.0 else lerpf(sailor_config.stance_rest_z_m, sailor_config.stance_tack_z_m, -sim.stance)
-	var feet: Vector3 = Vector3(0.22 * clampf(sim.lean * 3.0, -1.0, 1.0), 0.06, feet_z)
-	var axis: Vector3 = (com - feet).normalized()
-	_sailor.transform = Transform3D(_basis_with_up(axis), feet + axis * (0.5 * sailor_config.height_m))
+	_sailor_root.transform = Transform3D.IDENTITY
+	_pose_sailor(boom_dir)
 
 	_last_mast_dir = mast_dir
-	_last_boom_angle = boom_angle
-	_last_sailor_com = com
-	_last_sailor_axis = axis
-	_last_feet = feet
+	_last_boom_dir = boom_dir
+	_last_feet = sim.feet_body
 
 
-func _pose_rig(mast_dir: Vector3, boom_angle: float) -> void:
+## The figure, in the board's own axes, from the simulation's sailor body: the hips at the
+## centre of mass, the feet where they press the deck (the front foot forward of the
+## stance point, the back foot behind it), the knees bent as far as the legs have given,
+## the torso along the body line, the hands on the boom either side of the grip.
+func _pose_sailor(boom_dir: Vector3) -> void:
+	var body: SimRigidBody = sim.body
+	var hips: Vector3 = SimMath.to_body(body.basis, sim.sailor.position - body.origin_world())
+	var feet: Vector3 = sim.feet_body
+	var foot_front: Vector3 = feet + Vector3(0.0, 0.0, -0.5 * FEET_APART_M)
+	var foot_back: Vector3 = feet + Vector3(0.0, 0.0, 0.5 * FEET_APART_M)
+	var grip: Vector3 = sim.hand_grip_body
+	# The sailor faces the sail: the knees bend toward the boom.
+	var facing: Vector3 = grip - hips
+	facing.y = 0.0
+	if facing.length() < 0.1:
+		facing = Vector3(-float(sim.sail.sail_side), 0.0, 0.0) * -1.0
+	facing = facing.normalized()
+
+	# Feet: flat on the deck, pointing across the board toward the sail.
+	var foot_basis: Basis = Basis(facing, Vector3.UP, facing.cross(Vector3.UP))
+	_foot_front.transform = Transform3D(foot_basis, foot_front + Vector3(0.0, 0.03, 0.0) + facing * (0.3 * FOOT_LENGTH_M))
+	_foot_back.transform = Transform3D(foot_basis, foot_back + Vector3(0.0, 0.03, 0.0) + facing * (0.3 * FOOT_LENGTH_M))
+
+	# Legs: two segments from the ankle to the hips, the knee out toward the sail.
+	_pose_leg(_shin_front, _thigh_front, foot_front + Vector3(0.0, ANKLE_HEIGHT_M, 0.0), hips, facing)
+	_pose_leg(_shin_back, _thigh_back, foot_back + Vector3(0.0, ANKLE_HEIGHT_M, 0.0), hips, facing)
+
+	# Torso along the body line (feet to hips, carried on), head above it.
+	var body_line: Vector3 = (hips - feet).normalized()
+	var shoulders: Vector3 = hips + body_line * TORSO_M
+	_segment(_torso, hips, shoulders)
+	_head.position = shoulders + body_line * (0.5 * HEAD_M + 0.05)
+
+	# Arms from the shoulders to the hands on the boom, either side of the grip.
+	var shoulder_front: Vector3 = shoulders - boom_dir * 0.18
+	var shoulder_back: Vector3 = shoulders + boom_dir * 0.18
+	_segment(_arm_front, shoulder_front, grip - boom_dir * (0.5 * HANDS_APART_M))
+	_segment(_arm_back, shoulder_back, grip + boom_dir * (0.5 * HANDS_APART_M))
+
+	# The harness line, from the hips to the boom, drawn when the sailor hangs in it.
+	_harness_line.visible = sim.harness_tension_n > 20.0
+	if _harness_line.visible:
+		_segment(_harness_line, hips, grip)
+
+
+## A leg from the ankle to the hip with the knee where a thigh and a shin of fixed length
+## meet, bulged out along `bend_dir` when the leg is shorter than straight.
+func _pose_leg(shin: MeshInstance3D, thigh: MeshInstance3D, ankle: Vector3, hip: Vector3, bend_dir: Vector3) -> void:
+	var leg: Vector3 = hip - ankle
+	var length: float = minf(leg.length(), THIGH_M + SHIN_M - 0.01)
+	var along: Vector3 = leg.normalized()
+	var side: Vector3 = bend_dir - along * bend_dir.dot(along)
+	if side.length() < 0.05:
+		side = Vector3.FORWARD - along * Vector3.FORWARD.dot(along)
+	side = side.normalized()
+	# With the thigh and the shin equal, the knee sits halfway along the leg line, out by
+	# the height of the isosceles triangle.
+	var half: float = 0.5 * length
+	var out: float = sqrt(maxf(THIGH_M * THIGH_M - half * half, 0.0))
+	var knee: Vector3 = ankle + along * half + side * out
+	_segment(shin, ankle, knee)
+	_segment(thigh, knee, hip)
+
+
+## Lays a unit-height cylinder between two points.
+func _segment(node: MeshInstance3D, from: Vector3, to: Vector3) -> void:
+	var length: float = maxf((to - from).length(), 0.01)
+	var basis: Basis = _basis_with_up(to - from)
+	node.transform = Transform3D(basis.scaled(Vector3(1.0, length, 1.0)), 0.5 * (from + to))
+
+
+## Mast and sail from the mast foot, both directions in the board's axes.
+func _pose_rig(mast_dir: Vector3, boom_dir: Vector3) -> void:
 	var sail_config: SailConfig = sim.sail_config
 	var foot: Vector3 = sail_config.mast_foot_local
 	_mast.transform = Transform3D(_basis_with_up(mast_dir), foot + mast_dir * (0.5 * sail_config.mast_m))
-	var boom_dir: Vector3 = Vector3(sin(boom_angle), 0.0, cos(boom_angle))
 	var sail_normal: Vector3 = boom_dir.cross(mast_dir)
 	if sail_normal.length() < 0.05:
 		sail_normal = Vector3.UP
@@ -145,15 +235,18 @@ func _pose_fallen() -> void:
 	var side: float = float(sim.fall_side)
 	var flat: Vector3 = Vector3(side, 0.03, 0.0).normalized()
 	var mast_dir: Vector3 = _last_mast_dir.slerp(flat, eased).normalized()
-	_pose_rig(mast_dir, _last_boom_angle)
+	_pose_rig(mast_dir, _last_boom_dir)
 
-	var catapult: bool = sim.fall_kind == "catapult"
-	var reach: float = sim.sail_config.mast_m + 1.0 if catapult else 1.8
-	var landing: Vector3 = Vector3(side * reach, -0.05, _last_feet.z)
-	var arc: float = (1.5 if catapult else 0.3) * sin(PI * eased)
-	var com: Vector3 = _last_sailor_com.lerp(landing, eased) + Vector3(0.0, arc, 0.0)
-	var axis: Vector3 = _last_sailor_axis.slerp(Vector3(side, 0.05, 0.0).normalized(), eased).normalized()
-	_sailor.transform = Transform3D(_basis_with_up(axis), com)
+	# The figure keeps its last pose and goes over as one: pivoting about the feet onto
+	# its side, carried toward the landing with a little arc.
+	var over: bool = sim.fall_kind == "catapult" or sim.fall_kind == "tipped over"
+	var reach: float = sim.sail_config.mast_m + 1.0 if over else 1.8
+	var landing: Vector3 = Vector3(side * reach, -0.9, 0.0)
+	var arc: float = (1.5 if over else 0.3) * sin(PI * eased)
+	var pivot: Vector3 = _last_feet
+	var tip: Basis = Basis(Vector3.BACK, -side * eased * 0.5 * PI)
+	var carried: Vector3 = landing * eased + Vector3(0.0, arc, 0.0)
+	_sailor_root.transform = Transform3D(tip, pivot - tip * pivot + carried)
 
 
 func _build_visuals() -> void:
@@ -187,14 +280,43 @@ func _build_visuals() -> void:
 	add_child(_sail)
 	_boom = _add_box("Boom", Vector3(sail_config.boom_m, 0.04, 0.04), Vector3(0.5 * sail_config.boom_m, sail_config.boom_height_m, 0.0), Color(0.05, 0.05, 0.05), _sail)
 
-	_sailor = MeshInstance3D.new()
-	_sailor.name = "Sailor"
-	var capsule: CapsuleMesh = CapsuleMesh.new()
-	capsule.radius = 0.75 * sailor_config.torso_radius_m
-	capsule.height = sailor_config.height_m
-	_sailor.mesh = capsule
-	_sailor.material_override = _material(Color(0.12, 0.12, 0.14))
-	add_child(_sailor)
+	_sailor_root = Node3D.new()
+	_sailor_root.name = "Sailor"
+	add_child(_sailor_root)
+	var suit: Color = Color(0.12, 0.12, 0.14)
+	var skin: Color = Color(0.85, 0.65, 0.5)
+	_foot_front = _add_box("FootFront", Vector3(FOOT_LENGTH_M, 0.06, 0.1), Vector3.ZERO, Color(0.05, 0.05, 0.05), _sailor_root)
+	_foot_back = _add_box("FootBack", Vector3(FOOT_LENGTH_M, 0.06, 0.1), Vector3.ZERO, Color(0.05, 0.05, 0.05), _sailor_root)
+	_shin_front = _add_limb("ShinFront", 0.055, suit)
+	_shin_back = _add_limb("ShinBack", 0.055, suit)
+	_thigh_front = _add_limb("ThighFront", 0.07, suit)
+	_thigh_back = _add_limb("ThighBack", 0.07, suit)
+	_torso = _add_limb("Torso", 0.9 * sailor_config.torso_radius_m, Color(0.75, 0.15, 0.1))
+	_arm_front = _add_limb("ArmFront", 0.04, suit)
+	_arm_back = _add_limb("ArmBack", 0.04, suit)
+	_harness_line = _add_limb("HarnessLine", 0.008, Color(0.2, 0.2, 0.2))
+	_head = MeshInstance3D.new()
+	_head.name = "Head"
+	var skull: SphereMesh = SphereMesh.new()
+	skull.radius = 0.5 * HEAD_M
+	skull.height = HEAD_M
+	_head.mesh = skull
+	_head.material_override = _material(skin)
+	_sailor_root.add_child(_head)
+
+
+## A unit-height cylinder for a limb; _segment() stretches it between two points.
+func _add_limb(node_name: String, radius: float, color: Color) -> MeshInstance3D:
+	var instance: MeshInstance3D = MeshInstance3D.new()
+	instance.name = node_name
+	var cylinder: CylinderMesh = CylinderMesh.new()
+	cylinder.height = 1.0
+	cylinder.top_radius = radius
+	cylinder.bottom_radius = radius
+	instance.mesh = cylinder
+	instance.material_override = _material(color)
+	_sailor_root.add_child(instance)
+	return instance
 
 
 ## The sail as a flat four-cornered cloth in its own frame: x along the boom, y up the mast.
