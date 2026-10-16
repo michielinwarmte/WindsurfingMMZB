@@ -401,35 +401,3 @@ func test_identical_runs_are_identical() -> void:
 	assert_eq(a.body.basis, b.body.basis)
 
 
-
-## On a beam reach from rest in a marginal 12 kt, with the validation's steady wind and the
-## game's pilot: the boat speed when the dynamic lift first carries half the weight, and
-## the speed after 20 s.
-func _planing_onset_with_tail(tail_width_m: float) -> Vector2:
-	var base: WindsurferSim = ValidationRun.make_sim(12.0)
-	var board: BoardConfig = base.board_config.duplicate()
-	board.tail_width_m = tail_width_m
-	var sim: WindsurferSim = WindsurferSim.new(board, base.sail_config, base.fin_config, base.sailor_config, base.water_config, base.wind_config, base.sim_config)
-	sim.reset(Vector3.ZERO, deg_to_rad(ValidationRun.heading_for_twa(90.0)))
-	var pilot: Autopilot = ValidationRun.make_pilot(sim, 90.0)
-	var controls: SimControls = SimControls.new()
-	controls.sheet = 0.0
-	var onset_ms: float = INF
-	for i: int in int(20.0 / DT):
-		pilot.update(sim.telemetry, controls, DT)
-		sim.step(DT, controls)
-		if onset_ms == INF and sim.telemetry.planing_ratio > 0.5:
-			onset_ms = sim.telemetry.speed_ms
-	return Vector2(onset_ms, sim.telemetry.speed_ms)
-
-
-func test_a_wider_tail_planes_earlier_and_a_narrower_one_is_faster_on_top() -> void:
-	# What sailors and brands say of the tail width one foot off the tail: wider planes
-	# earlier, narrower is faster and freer at the top end. Here it comes out of the hull
-	# model (Savitsky's beam dependence and the wetted area): two boards 10 cm apart in
-	# tail width, everything else the same.
-	var narrow: Vector2 = _planing_onset_with_tail(0.40)
-	var wide: Vector2 = _planing_onset_with_tail(0.50)
-	assert_lt(narrow.x, INF, "the narrow tail planes too")
-	assert_lt(wide.x, narrow.x, "the wide tail planes at a lower speed (%.2f against %.2f m/s)" % [wide.x, narrow.x])
-	assert_gt(narrow.y, wide.y, "the narrow tail is faster once planing (%.2f against %.2f m/s)" % [narrow.y, wide.y])

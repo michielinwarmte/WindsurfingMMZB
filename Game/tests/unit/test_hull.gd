@@ -412,3 +412,55 @@ func test_a_wider_tail_lifts_more_at_the_same_speed_and_trim() -> void:
 	assert_lt(float(wide["lambda"]), float(narrow["lambda"]), "with a lower length-to-beam ratio")
 	var beam_ratio: float = float(wide["beam"]) / float(narrow["beam"])
 	assert_gt(float(wide["lift"]) / float(narrow["lift"]), pow(beam_ratio, 1.2), "and lifts more, about as the beam to the power 1.5 (%.0f against %.0f N)" % [float(wide["lift"]), float(narrow["lift"])])
+
+
+## The bare hull loaded like the windsurfer getting onto the plane (92 kg, the centre of
+## mass 0.15 m up and 0.45 m aft: the sailor back in the straps), towed at a steady speed
+## on a straight course, free to rise and pitch: its resistance once settled (the mean
+## over the last second of three).
+func _towed_resistance_n(board: BoardConfig, speed_ms: float) -> float:
+	var buoyancy: BuoyancyModel = BuoyancyModel.new(board, _water())
+	var hull: HullModel = HullModel.new(board, _water())
+	var body: SimRigidBody = _floating_body(speed_ms)
+	body.set_mass_properties(92.0, Basis.IDENTITY.scaled(Vector3(50.0, 6.0, 46.0)), Vector3(0.0, 0.15, 0.45))
+	var water: FlatWater = FlatWater.new()
+	var drag_sum: float = 0.0
+	var samples: int = 0
+	for i: int in int(3.0 / DT):
+		body.add_force(Vector3(0.0, -G * body.mass_kg, 0.0))
+		buoyancy.apply(body, water, i * DT, G, DT)
+		hull.compute(body, buoyancy, water, i * DT, G, body.mass_kg, DT)
+		body.integrate(DT)
+		# The tow holds the course and the speed; heave and pitch are free.
+		body.velocity.x = 0.0
+		body.velocity.z = -speed_ms
+		body.angular_velocity = Vector3(body.angular_velocity.x, 0.0, 0.0)
+		if i * DT >= 2.0:
+			drag_sum += hull.resistance_n
+			samples += 1
+	return drag_sum / float(samples)
+
+
+## The highest resistance between 3 and 5 m/s: the hump a sail has to pull the board over.
+func _hump_resistance_n(board: BoardConfig) -> float:
+	var hump: float = 0.0
+	for speed: float in [3.0, 3.5, 4.0, 4.5, 5.0]:
+		hump = maxf(hump, _towed_resistance_n(board, speed))
+	return hump
+
+
+func test_a_wider_tail_needs_less_thrust_over_the_hump() -> void:
+	# "A wider tail planes earlier": with the same sail, a board gets onto the plane when
+	# the sail's drive exceeds the hull's resistance through the hump. Two boards 10 cm
+	# apart in tail width (one foot off the tail), the same in everything else, towed with
+	# the sailor's weight aft as when getting going: the wider tail lifts more, sits less
+	# deep and trims less steeply (a narrow tail squats to 12 to 14 degrees at 3 m/s), and
+	# needs less thrust.
+	var narrow: BoardConfig = _board().duplicate()
+	narrow.tail_width_m = 0.40
+	var wide: BoardConfig = _board().duplicate()
+	wide.tail_width_m = 0.50
+	var narrow_hump: float = _hump_resistance_n(narrow)
+	var wide_hump: float = _hump_resistance_n(wide)
+	gut.p("hump resistance 3 to 5 m/s: tail 0.40 m %.0f N, tail 0.50 m %.0f N" % [narrow_hump, wide_hump])
+	assert_lt(wide_hump, 0.9 * narrow_hump, "the wide tail needs at least 10 %% less thrust (%.0f against %.0f N)" % [wide_hump, narrow_hump])

@@ -295,12 +295,19 @@ func _apply_planing_lift(body: SimRigidBody, buoyancy: BuoyancyModel, aft: float
 	var cl_flat: float = 0.012 * pow(minf(tau_ref_deg, 15.0), 1.1) * sqrt(lambda_ratio)
 	var cl_dynamic: float = maxf(cl_flat - 0.0065 * board.deadrise_deg * pow(cl_flat, 0.6), 0.0)
 	var savitsky_lift: float = cl_dynamic * 0.5 * rho * u * u * beam * beam
-	# The slender-body total for the plate is the momentum flux at a full-width root. On a
-	# heeled board the forward strip is wet only at its rail and carries next to nothing;
-	# the full width there is still the right reference (the 2D total is the same force,
-	# spread along the oblique spray root), and it keeps the scaling finite.
-	var root_full_width: float = _width_at(x_k[last])
-	var slender_lift: float = rho * PI * root_full_width * root_full_width / 8.0 * u * u * sin(deg_to_rad(tau_ref_deg))
+	# The slender-body total for the plate is the momentum flux of the water set moving
+	# under its widest wet section: the root's push, plus the push where the hull widens
+	# going aft (a nose), with nothing taken back where it narrows (the water lets go). So
+	# the reference is the full width of the widest wet strip. (The width at the root was
+	# used before; with the whole hull wet the root is in the narrow nose, and that inflated
+	# the lift of a submerged or slow hull by the square of the width ratio: 6 times for
+	# the 0.285 m nose tip, Session 39.) On a heeled board the forward strips are wet only
+	# at the rail; the full width is still the right reference (the 2D total is the same
+	# force, spread along the oblique spray root), and it keeps the scaling finite.
+	var widest_full_width: float = 0.0
+	for k: int in STRIPS:
+		widest_full_width = maxf(widest_full_width, _width_at(x_k[k]))
+	var slender_lift: float = rho * PI * widest_full_width * widest_full_width / 8.0 * u * u * sin(deg_to_rad(tau_ref_deg))
 	var three_d_factor: float = savitsky_lift / maxf(slender_lift, 1e-6)
 
 	# 5. Where the root's force acts: the pressure peaks just behind the spray root and
