@@ -127,7 +127,8 @@ func _copy_state_to_visuals() -> void:
 	var boom_dir: Vector3 = rig_to_board * Vector3(sin(boom_angle), 0.0, cos(boom_angle))
 	_rig.pose_sailing(mast_dir, boom_dir)
 	_rig.shape_sail(sim.sail, sim.time_s)
-	_figure.pose_sailing(sim, boom_dir)
+	# The sailor holds the windward arm of the wishbone boom, not the boom's centre line.
+	_figure.pose_sailing(sim, boom_dir, _rig.windward_arm_offset())
 
 
 func _build_visuals() -> void:

@@ -208,6 +208,13 @@ func arm_length_m() -> float:
 	return upper_arm_m + forearm_m + hand_m
 
 
+## Where the hands really hold: the physics puts the grip on the boom's centre line, but a
+## wishbone boom has two arms and the sailor holds the windward one, about 0.28 m to
+## windward of that line. The figure sets this from the rig (RigVisuals.windward_arm_offset);
+## zero without a rig. Board axes.
+var grip_offset_body: Vector3 = Vector3.ZERO
+
+
 ## Poses the whole skeleton from the simulation. `boom_dir` is the boom's direction from the
 ## mast in the board's axes (a unit vector), as the rig is drawn.
 func solve(sim: WindsurferSim, boom_dir: Vector3) -> void:
@@ -322,6 +329,8 @@ func _place_feet(sim: WindsurferSim, stance: float) -> void:
 func _place_hands(sim: WindsurferSim, boom_dir: Vector3, tack: float, com: Vector3) -> void:
 	var grip: Vector3 = sim.hand_grip_body
 	var boom_root: Vector3 = grip - boom_dir * sim.sailor_config.hand_grip_m
+	# Onto the windward arm of the wishbone (the boom root above stays on the mast).
+	grip += grip_offset_body
 	# The hands go a little way along the boom toward the body.
 	grip += boom_dir * clampf((com - grip).dot(boom_dir), -HAND_SLIDE_MAX_M, HAND_SLIDE_MAX_M)
 	var mast_foot: Vector3 = sim.sail_config.mast_foot_local
@@ -501,6 +510,6 @@ func _place_harness(sim: WindsurferSim, boom_dir: Vector3, tack: float) -> void:
 	# A sailor hooks in to hang out against the pull, not while standing up by the mast.
 	hooked = hooked and absf(sim.lean) > HOOKED_MIN_LEAN and tack < 0.01 and absf(facing_side) > 0.99
 	hook = pelvis - pelvis_basis.z * HOOK_FORWARD_M + pelvis_basis.y * HOOK_UP_M
-	var grip: Vector3 = sim.hand_grip_body
+	var grip: Vector3 = sim.hand_grip_body + grip_offset_body
 	harness_line_ends[0] = grip - boom_dir * HARNESS_LINE_SPREAD_M
 	harness_line_ends[1] = grip + boom_dir * HARNESS_LINE_SPREAD_M

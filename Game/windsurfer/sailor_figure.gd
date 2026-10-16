@@ -80,10 +80,12 @@ func build(sailor_config: SailorConfig) -> void:
 
 
 ## The figure while sailing, from the simulation's sailor body. `boom_dir` is the boom's
-## direction from the mast in the board's axes (a unit vector).
-func pose_sailing(sim: WindsurferSim, boom_dir: Vector3) -> void:
+## direction from the mast in the board's axes (a unit vector); `grip_offset` moves the
+## hands from the boom's centre line onto the windward arm of the wishbone (zero without a rig).
+func pose_sailing(sim: WindsurferSim, boom_dir: Vector3, grip_offset: Vector3 = Vector3.ZERO) -> void:
 	_root.transform = Transform3D.IDENTITY
 	var s: FigureSkeleton = skeleton
+	s.grip_offset_body = grip_offset
 	s.solve(sim, boom_dir)
 
 	# The pelvis lies across the hips; the belly and the chest go up the back to the neck.
