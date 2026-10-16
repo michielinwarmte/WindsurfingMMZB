@@ -16,6 +16,7 @@ extends Node3D
 ##                      seconds after the start
 ##   --fall=1           a catapult at --start; --times are seconds after it
 ##   --views=close,stern  only these views (default all six)
+##   --zoom=2.5         bring the cameras this many times closer (to look at the torso)
 ##   --sequence=bow     instead of six views per moment, one view (bow, stern, windward,
 ##                      leeward, close, top, or high: above the starboard quarter, which
 ##                      does not change sides in a manoeuvre) at each of up to six moments
@@ -189,6 +190,7 @@ func _place_camera(view: String) -> void:
 		"high":
 			# Fixed to the starboard quarter, above: does not jump sides in a manoeuvre.
 			offset = Vector3(2.6, 2.6, 2.6)
+	offset /= maxf(_options.get("zoom", "1").to_float(), 0.1)
 	var target: Vector3 = board * middle
 	# Level cameras: the board's heading, not its heel and pitch.
 	var yaw: Basis = Basis(Vector3.UP, board.basis.get_euler().y)

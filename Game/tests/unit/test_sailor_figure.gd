@@ -101,6 +101,35 @@ func _assert_finite(s: FigureSkeleton, where: String) -> void:
 		assert_almost_eq(basis.determinant(), 1.0, 1e-3, "orientation is a rotation, " + where)
 
 
+## The torso is one body: its pieces follow one curve of the spine through the pelvis, the
+## middle of the back and the neck, each piece meets the next, the body turns gradually from
+## the hips to the shoulders (the twist between the hip line and the shoulder line is shared
+## out along the back: no piece turns by more than half of it from the next, plus a little
+## for the back's bend, where a broken torso would turn all of it at one joint), and the
+## harness belt sits on the pelvis. A body
+## folded in half by odd inputs has no sensible twist: `check_turn` false skips that.
+func _assert_torso_is_one_body(s: FigureSkeleton, figure: SailorFigure, where: String, check_turn: bool = true) -> void:
+	assert_almost_eq(s.spine_point(0.0).distance_to(s.pelvis), 0.0, 1e-4, "spine starts at the pelvis, " + where)
+	assert_almost_eq(s.spine_point(0.5).distance_to(s.spine), 0.0, 1e-4, "spine through the back, " + where)
+	assert_almost_eq(s.spine_point(1.0).distance_to(s.neck), 0.0, 1e-4, "spine ends at the neck, " + where)
+	var ends_t: Array[float] = SailorFigure.TORSO_STATIONS_T
+	var last_right: Vector3 = Vector3.ZERO
+	var twist_deg: float = rad_to_deg(s.pelvis_basis.x.angle_to(s.chest_basis.x))
+	for piece: int in SailorFigure.TORSO_NAMES.size():
+		var node: Node3D = figure.find_child(SailorFigure.TORSO_NAMES[piece], true, false) as Node3D
+		var half_length: float = 0.5 * (ends_t[piece + 1] - ends_t[piece]) * s.torso_m
+		var bottom: Vector3 = node.transform * Vector3(0.0, -half_length, 0.0)
+		var top: Vector3 = node.transform * Vector3(0.0, half_length, 0.0)
+		assert_almost_eq(bottom.distance_to(s.spine_point(ends_t[piece])), 0.0, 1e-3, "%s starts on the spine, %s" % [node.name, where])
+		assert_almost_eq(top.distance_to(s.spine_point(ends_t[piece + 1])), 0.0, 1e-3, "%s ends on the spine, %s" % [node.name, where])
+		var right: Vector3 = node.transform.basis.x.normalized()
+		if piece > 0 and check_turn:
+			assert_lt(rad_to_deg(right.angle_to(last_right)), 0.5 * twist_deg + 10.0, "%s turned gradually, %s" % [node.name, where])
+		last_right = right
+	var belt: Node3D = figure.find_child("Harness", true, false) as Node3D
+	assert_lt(belt.position.distance_to(s.pelvis), 0.1, "the harness belt on the pelvis, " + where)
+
+
 func _assert_figure_finite(figure: SailorFigure, where: String) -> void:
 	for child: Node in figure.find_children("*", "Node3D", true, false):
 		assert_true((child as Node3D).transform.is_finite(), "%s is a number, %s" % [child.name, where])
@@ -135,6 +164,7 @@ func test_planing_hooked_in_on_both_tacks() -> void:
 		_assert_hands_on_boom(sim, s, where)
 		_assert_finite(s, where)
 		_assert_figure_finite(figure, where)
+		_assert_torso_is_one_body(s, figure, where)
 		# Hanging out to windward: the hips beyond the windward rail, toward the side the
 		# simulation leans to, the body facing the sail, hooked in.
 		var windward: float = signf(sim.lean)
@@ -164,6 +194,7 @@ func test_standing_at_low_speed() -> void:
 	_assert_knees_over_toes(s, "standing")
 	_assert_hands_on_boom(sim, s, "standing")
 	_assert_finite(s, "standing")
+	_assert_torso_is_one_body(s, figure, "standing")
 	# Upright over the board, knees soft, elbows bent, the shoulders below the boom's height.
 	assert_lt(absf(s.pelvis.x), 0.5 * sim.board_config.width_m, "hips over the board")
 	assert_gt(s.neck.y - s.pelvis.y, 0.85 * s.torso_m, "upright")
@@ -206,6 +237,7 @@ func test_tack_turns_the_body_round_without_breaking_it() -> void:
 			_assert_bones_keep_length(s, where)
 			_assert_knees_over_toes(s, where)
 			_assert_finite(s, where)
+			_assert_torso_is_one_body(s, figure, where)
 	Input.action_release("tack")
 	assert_eq(facing_at_start, -1.0, "faces port on starboard tack")
 	assert_true(saw_facing_bow, "turns round through facing the bow")
@@ -225,6 +257,7 @@ func test_odd_inputs_never_stretch_or_break_the_body() -> void:
 	_assert_bones_keep_length(s, "grip at the feet")
 	_assert_finite(s, "grip at the feet")
 	_assert_figure_finite(figure, "grip at the feet")
+	_assert_torso_is_one_body(s, figure, "grip at the feet", false)
 
 
 func test_fall_poses_without_error() -> void:

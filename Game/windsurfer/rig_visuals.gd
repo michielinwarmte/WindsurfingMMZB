@@ -16,8 +16,9 @@ extends Node3D
 ## - boom.glb: the mast at boom height. It is a child of the sail, so it follows the sail
 ##   angle and the rake.
 ## The sail cloth bends in a vertex shader (sail_cloth.gdshader): belly to leeward, twist,
-## and flutter when it has no pressure in it, from the instance uniforms that shape_sail() sets. The mast
-## (mast.gdshader) and the sail bend together: the top back and, with the pull, to leeward.
+## and flutter when it has no pressure in it, from the instance uniforms that shape_sail()
+## sets. The mast (mast.gdshader) and the sail bend together: the top back and, with the
+## pull, to leeward.
 
 const BOARD_MODEL: PackedScene = preload("res://assets/models/board.glb")
 const FIN_MODEL: PackedScene = preload("res://assets/models/fin.glb")
