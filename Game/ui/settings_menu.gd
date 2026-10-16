@@ -277,11 +277,12 @@ func _chop_direction_text(offset_deg: float) -> String:
 	return "%+.0f° off the wind: from %03.0f° %s" % [offset_deg, from_deg, SettingsValues.compass_name(from_deg)]
 
 
-## "Hs 23 cm, 5.2 m long": the sea the wind makes over the chosen fetch and depth.
+## "16 kt: waves of 23 cm, 5.2 m long": the significant height and the peak wavelength the
+## wind makes over the chosen fetch and depth.
 func _wind_chop_text() -> String:
 	var s: SettingsValues = GameSettings.values
 	var wind_ms: float = s.wind_speed_kt * SimMath.KNOT_MS
-	var depth_m: float = WindWaves.DEEP_WATER if s.water_depth_m >= SettingsValues.DEPTH_DEEP_M else s.water_depth_m
+	var depth_m: float = s.wind_wave_depth_m()
 	var height_m: float = WindWaves.significant_height_m(wind_ms, s.fetch_km * 1000.0, depth_m)
 	var length_m: float = WindWaves.wavelength_m(WindWaves.peak_period_s(wind_ms, s.fetch_km * 1000.0), depth_m)
 	return "%.0f kt: waves of %.0f cm, %.1f m long" % [s.wind_speed_kt, height_m * 100.0, length_m]

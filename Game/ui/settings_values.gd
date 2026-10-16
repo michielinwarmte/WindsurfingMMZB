@@ -234,9 +234,13 @@ func _set_chop(config: WaveSetConfig, amplitudes_m: Array[float], steepness: Arr
 ## makes over this fetch and depth (WindWaves, PHYSICS_SPEC.md 9.16).
 func _set_chop_from_wind(config: WaveSetConfig) -> void:
 	var waves: Array[GerstnerWaveConfig] = config.waves_in_group(GerstnerWaveConfig.Group.SWELL)
-	var depth_m: float = WindWaves.DEEP_WATER if water_depth_m >= DEPTH_DEEP_M else water_depth_m
-	waves.append_array(WindWaves.chop_waves(wind_speed_kt * SimMath.KNOT_MS, fetch_km * 1000.0, depth_m))
+	waves.append_array(WindWaves.chop_waves(wind_speed_kt * SimMath.KNOT_MS, fetch_km * 1000.0, wind_wave_depth_m()))
 	config.waves = waves
+
+
+## The depth WindWaves gets: the slider's value, or deep water at the top of its range.
+func wind_wave_depth_m() -> float:
+	return WindWaves.DEEP_WATER if water_depth_m >= DEPTH_DEEP_M else water_depth_m
 
 
 func _scale_wave(wave: GerstnerWaveConfig, scale: float) -> void:
