@@ -52,6 +52,16 @@ var pitch_added_inertia_kgm2: float = 0.0
 ## the bare board's own roll inertia, which is what keeps a board without its sailor from
 ## being flipped over by the first push on its fin.
 var roll_added_inertia_kgm2: float = 0.0
+## And sideways: each metre of hull side under water to a draft d (the deepest point of
+## that part of the bottom) carries rho pi d^2 / 2 of water when it moves sideways, a
+## vertical plate of span d with its mirror image in the free surface (the low-frequency,
+## rigid-lid value used for manoeuvring: Newman, Marine Hydrodynamics, 1977, section 4.13;
+## Clarke, Gedling and Hine 1983, the slender-body sway derivative pi (T/L)^2). About 6 kg
+## at rest, a few hundred grams when planing; the fin's water is added by WindsurferSim.
+var sway_added_mass_kg: float = 0.0
+## The same water about the yaw axis through the centre of mass (each strip's sway added
+## mass times its lever squared): about 3 kg m2 at rest, next to nothing when planing.
+var yaw_added_inertia_kgm2: float = 0.0
 var spray_root_factor: float = 1.0  # unsteady lift factor from the spray root running along the hull
 var lambda_ratio: float = 0.0
 var froude_number: float = 0.0
@@ -79,7 +89,7 @@ func compute(body: SimRigidBody, buoyancy: BuoyancyModel, surface: WaterSurface,
 	wetted_aft_m = span[0]
 	wetted_length_m = span[1] - span[0]
 	planing_beam_m = _mean_width(span[0], span[1])
-	_compute_added_mass(span[0], span[1], body)
+	_compute_added_mass(span[0], span[1], body, buoyancy)
 
 	# The flow relative to the wet part of the hull.
 	var wet_point: Vector3 = buoyancy.wet_centroid_world
@@ -413,11 +423,10 @@ func _wet_width(buoyancy: BuoyancyModel, from_transom: float) -> Vector2:
 	return Vector2((b - a) / (2.0 * half_width), moment / area)
 
 
-## Width of the bottom at a distance forward of the transom: the same taper as the
-## buoyancy grid (full width in the middle, (1 - width_taper) of it at the ends).
+## Width of the bottom at a distance forward of the transom: the board's outline, the same
+## one the buoyancy grid uses (BoardConfig.width_at).
 func _width_at(from_transom: float) -> float:
-	var d: float = absf(from_transom / board.length_m - 0.5) * 2.0
-	return board.width_m * (1.0 - board.width_taper * d * d)
+	return board.width_at(from_transom)
 
 
 ## Mean width of the bottom between two points along the length (9-point average).
@@ -431,11 +440,15 @@ func _mean_width(aft: float, forward: float) -> float:
 ## Heave added mass and pitch added inertia of the wet bottom, from strip theory: each metre
 ## of a flat bottom of width b on the surface drags rho pi b^2 / 8 of water with it when it
 ## moves up or down. Summed over the wet length, and with the lever arm squared about the
-## centre of mass for pitch.
-func _compute_added_mass(aft: float, forward: float, body: SimRigidBody) -> void:
+## centre of mass for pitch. Sideways, the hull's immersed side to its draft d drags
+## rho pi d^2 / 2 per metre (sway_added_mass_kg), and about the yaw axis that water times
+## the lever squared.
+func _compute_added_mass(aft: float, forward: float, body: SimRigidBody, buoyancy: BuoyancyModel) -> void:
 	heave_added_mass_kg = 0.0
 	pitch_added_inertia_kgm2 = 0.0
 	roll_added_inertia_kgm2 = 0.0
+	sway_added_mass_kg = 0.0
+	yaw_added_inertia_kgm2 = 0.0
 	var length: float = forward - aft
 	if length <= 0.0:
 		return
@@ -445,10 +458,26 @@ func _compute_added_mass(aft: float, forward: float, body: SimRigidBody) -> void
 	for k: int in strips:
 		var x: float = aft + (float(k) + 0.5) * strip_length
 		var width: float = _width_at(x)
+		var lever: float = x - com_from_transom
 		var strip_mass: float = water.density_kg_m3 * PI * width * width / 8.0 * strip_length
 		heave_added_mass_kg += strip_mass
-		pitch_added_inertia_kgm2 += strip_mass * (x - com_from_transom) * (x - com_from_transom)
+		pitch_added_inertia_kgm2 += strip_mass * lever * lever
 		roll_added_inertia_kgm2 += water.density_kg_m3 * PI * pow(width, 4.0) / 256.0 * strip_length
+		var draft: float = clampf(_draft_at(buoyancy, x), 0.0, board.thickness_m)
+		var side_mass: float = water.density_kg_m3 * PI * draft * draft / 2.0 * strip_length
+		sway_added_mass_kg += side_mass
+		yaw_added_inertia_kgm2 += side_mass * lever * lever
+
+
+## How deep the hull is at a distance forward of the transom: the deepest point of the
+## buoyancy grid's rows there (the low rail of a heeled board), between the two nearest
+## rows.
+func _draft_at(buoyancy: BuoyancyModel, from_transom: float) -> float:
+	var rows: int = maxi(board.length_samples, 2)
+	var spacing: float = board.length_m / float(rows - 1)
+	var position: float = clampf(from_transom / spacing, 0.0, float(rows - 1))
+	var i0: int = mini(int(floor(position)), rows - 2)
+	return lerpf(_row_max_depth(buoyancy, i0), _row_max_depth(buoyancy, i0 + 1), position - float(i0))
 
 
 ## Height of the bottom in body axes at a distance forward of the transom (the same rocker
@@ -493,6 +522,8 @@ func _clear() -> void:
 	heave_added_mass_kg = 0.0
 	pitch_added_inertia_kgm2 = 0.0
 	roll_added_inertia_kgm2 = 0.0
+	sway_added_mass_kg = 0.0
+	yaw_added_inertia_kgm2 = 0.0
 	spray_root_factor = 1.0
 	lambda_ratio = 0.0
 	froude_number = 0.0

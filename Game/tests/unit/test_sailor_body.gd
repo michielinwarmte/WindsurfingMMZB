@@ -48,7 +48,12 @@ func test_a_sailor_leaning_to_starboard_at_rest_heels_the_board_to_starboard() -
 	assert_eq(sim.sailor_state, WindsurferSim.SailorState.SAILING, "still standing")
 	assert_almost_eq(t.sailor_position_body.x, 0.1, 0.04, "the body is 0.1 m to starboard")
 	assert_between(t.heel_deg, 0.5, 15.0, "the starboard rail goes down (heel positive), held by the toes")
-	assert_lt(t.feet_moment_roll_nm, 0.0, "the feet press the starboard side")
+	# The sailor presses the starboard side down: the feet stand under the body, off the
+	# centreline, and the toes press back against the heel. On the board's real outline
+	# (narrow ends, a tippy 8 N m per degree at rest) the board heels about 2 degrees and
+	# the toes' moment nearly cancels the legs' own, so the check is on all the sailor
+	# puts into the hull in roll, which is what heels it.
+	assert_lt(t.roll_sailor_nm, -5.0, "the sailor presses the starboard side")
 
 
 func test_the_rig_balance_splits_the_sail_force_between_mast_foot_and_hands() -> void:

@@ -32,13 +32,16 @@ func _models() -> Array:
 	return [buoyancy, hull]
 
 
-## A board with the default size but a flat bottom and no taper: a prismatic planing plate,
-## for which Savitsky's formula is the reference.
+## A board with the default size but a flat bottom and a straight outline: a prismatic
+## planing plate, for which Savitsky's formula is the reference.
 func _flat_board() -> BoardConfig:
 	var board: BoardConfig = _board().duplicate()
 	board.nose_rocker_m = 0.0
 	board.tail_rocker_m = 0.0
-	board.width_taper = 0.0
+	board.tail_width_m = board.width_m
+	board.nose_width_m = board.width_m
+	board.tail_thickness_m = board.thickness_m
+	board.nose_thickness_m = board.thickness_m
 	return board
 
 
@@ -237,16 +240,21 @@ func test_wet_bottom_near_the_tail_is_narrower_and_carries_added_water() -> void
 	_evaluate(hull, buoyancy, body)
 	assert_lt(hull.wetted_length_m, 1.5, "a short wet length")
 	assert_eq(hull.wetted_aft_m, 0.0, "starting at the transom")
-	assert_lt(hull.planing_beam_m, 0.68, "narrower than the board's full width of 0.72 m")
-	assert_gt(hull.planing_beam_m, 0.5, "but wider than the 0.504 m transom")
-	var expected_added: float = 1025.0 * PI * hull.planing_beam_m * hull.planing_beam_m / 8.0 * hull.wetted_length_m
-	assert_almost_eq(hull.heave_added_mass_kg, expected_added, 0.1 * expected_added, "about rho pi b^2 / 8 per metre")
+	assert_lt(hull.planing_beam_m, 0.6, "narrower than the board's full width of 0.72 m")
+	assert_gt(hull.planing_beam_m, 0.3, "but wider than the 0.243 m transom")
+	# rho pi b^2 / 8 per metre, with b the outline's width along the wet length.
+	var expected_added: float = 0.0
+	var pieces: int = 100
+	for k: int in pieces:
+		var b: float = hull.board.width_at(hull.wetted_aft_m + (float(k) + 0.5) / float(pieces) * hull.wetted_length_m)
+		expected_added += 1025.0 * PI * b * b / 8.0 * hull.wetted_length_m / float(pieces)
+	assert_almost_eq(hull.heave_added_mass_kg, expected_added, 0.05 * expected_added, "about rho pi b^2 / 8 per metre")
 	assert_gt(hull.pitch_added_inertia_kgm2, 0.0)
 	# Level and deep in the water: the whole centreline is wet.
 	var level: SimRigidBody = _floating_body(2.0)
 	_evaluate(hull, buoyancy, level)
 	assert_almost_eq(hull.wetted_length_m, 2.4, 1e-6)
-	assert_almost_eq(hull.planing_beam_m, 0.72 * (1.0 - 0.3 / 3.0), 0.02, "the mean width of the whole tapered bottom (9-point average)")
+	assert_almost_eq(hull.planing_beam_m, 0.524, 0.005, "the mean width of the whole outline (9-point average)")
 
 
 func test_bow_down_board_planes_on_its_middle_with_a_dry_tail() -> void:

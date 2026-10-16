@@ -262,6 +262,8 @@ func step(dt: float, controls: SimControls) -> void:
 		hull.compute(body, buoyancy, water, time_s, sim_config.gravity_ms2, mass_model.total_mass_kg, sub_dt)
 		body.take_water_along(hull.heave_added_mass_kg, _inertia_with_added_water(mass_model.hull_inertia_body))
 		body.added_mass_up_kg = hull.heave_added_mass_kg
+		body.take_water_along_sideways(_sway_added_mass_kg())
+		body.added_mass_sway_kg = _sway_added_mass_kg()
 		_set_hull_mass_properties()
 		fin.compute(body, water, time_s, water_config.density_kg_m3)
 		if sailing:
@@ -670,12 +672,30 @@ func _update_sailor(dt: float, controls: SimControls) -> void:
 	_set_posture()
 
 
+## The water the fin carries when it moves broadside: a flat plate of chord c moving
+## normal to itself carries rho pi c^2 / 4 per metre of span (Newman, Marine Hydrodynamics,
+## 1977, table 4.3, a = c / 2); the hull bottom is a wall at its root, a mirror, so the
+## two-dimensional value holds along the span. 2.8 kg for the 38 cm fin: about a third of
+## the board's own mass, and the one part of the water around the hull that is still
+## there when the hull skims. Times the part of the span under water.
+func _fin_added_mass_kg() -> float:
+	var chord: float = fin_config.area_m2 / maxf(fin_config.span_m, 0.01)
+	return water_config.density_kg_m3 * PI * chord * chord / 4.0 * fin_config.span_m * fin.immersed_fraction
+
+
+## All the water that moves with the hull sideways: its immersed sides and the fin.
+func _sway_added_mass_kg() -> float:
+	return hull.sway_added_mass_kg + _fin_added_mass_kg()
+
+
 ## The inertia of the hull plus the water it drags along when it turns (yaw), pitches and
 ## rolls (the wet bottom's added inertias, from the last hull computation).
 func _inertia_with_added_water(base: Basis) -> Basis:
 	var inertia: Basis = base
 	inertia.x = Vector3(inertia.x.x + hull.pitch_added_inertia_kgm2, inertia.x.y, inertia.x.z)
-	inertia.y = Vector3(inertia.y.x, inertia.y.y + buoyancy.yaw_added_inertia_kgm2(), inertia.y.z)
+	var fin_lever: float = fin_config.root_local.z - body.com_offset_body.z
+	var yaw_added: float = hull.yaw_added_inertia_kgm2 + _fin_added_mass_kg() * fin_lever * fin_lever
+	inertia.y = Vector3(inertia.y.x, inertia.y.y + yaw_added, inertia.y.z)
 	inertia.z = Vector3(inertia.z.x, inertia.z.y, inertia.z.z + hull.roll_added_inertia_kgm2)
 	return inertia
 
@@ -849,7 +869,10 @@ func _apply_leg_forces(dt: float) -> void:
 ## the rig balance (_apply_rig_forces); this is only the jolt.
 func _pull_the_harness_line(hands_world: Vector3, target_world: Vector3, dt: float) -> void:
 	harness_jolt_n = 0.0
-	if harness_tension_n <= 0.0:
+	# A line without stiffness is not there (the rope is off, section 7.5): its damper on
+	# its own acted as a rigid strut against the boom rising and jolted the body with up
+	# to 700 N when the board was kicked up at rest.
+	if harness_tension_n <= 0.0 or sailor_config.harness_line_stiffness_n_m <= 0.0:
 		return
 	var line: Vector3 = hands_world - sailor.position
 	var length: float = line.length()
