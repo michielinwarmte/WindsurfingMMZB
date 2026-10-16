@@ -12,7 +12,7 @@ The wind patterns describe what the air does; the physics decides what the board
 
 The map track does not change the physics files (MD7). Everything the map needs from the physics is listed under "Later", as a request to Michiel.
 
-The branch starts from `feature/physics-sim` (Phases 1 to 5), because `main` does not have the playable game yet. Merge Michiel's work into this branch regularly (MD7).
+The branch starts from `feature/physics-sim` (Phases 1 to 5), because `main` does not have the playable game yet. Merge Michiel's work into this branch regularly (MD7). (16 October 2026: the physics branch, up to Session 37, was merged into this one, and both go to `main` through pull requests #2 and #3; from then on merge `main`.)
 
 ## Status
 

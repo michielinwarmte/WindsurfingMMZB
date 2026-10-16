@@ -21,7 +21,7 @@ The interfaces below are suggestions only. D8 applies: every change is a physica
 | R3 | Fresh water, 1000 kg/m³ | Silvaplana is a lake; `WaterConfig` already has the field | tiny (only R1) | after R1 |
 | R4 | A lakebed the simulation can ask, and running aground | The fin (0.38 m) hits bottom near the shore; the depth is measured | medium | after M1 (the map delivers the depth grid) |
 | R5 | Wind that differs from place to place: moving gusts, shifts, the daily cycle. **Max builds the patterns; Michiel provides the connection in `WindField`** | Realistic Maloja; the measured statistics are below | large (mostly Max) | later, a general system for every spot. Max's patterns exist map-side since 15 October (`MapWind`); the connection is still open |
-| R6 | Waves made by the wind (fetch) | Lake chop instead of the sea swell | large | after the two-body sailor (A-17, spec 17.12) |
+| R6 | Waves made by the wind (fetch) | Lake chop instead of the sea swell | large | the two-body sailor is done (Session 37, spec 7.5); after the crest landings of spec 17.13 |
 | R7 | Replay a measured day, or today's live wind | Fun, and a check of R5 | medium (mostly game side) | after R5 |
 | R8 | Other kiters and windsurfers on the water | Life on the lake | large | with main-plan Phase 9 |
 | R9 | Realistic water: see-through, darker with depth, ripples, mountains mirrored (a look request, not physics). The map built it for the lake; how should it meet the waves in the game? | The game's water is one colour with a sky reflection; Max found it "really bad" next to the photo terrain | small to medium | before M3 puts the board on the lake |
@@ -123,6 +123,8 @@ Lake waves grow with the wind speed and the distance over open water upwind (fet
 The waves are almost flat near Sils, at the upwind end, and biggest at the camping beach, at the downwind end where the map launches. Formulas: g·Hs/U² = 0.0016·(g·F/U²)^0.5 and g·Tp/U = 0.286·(g·F/U²)^(1/3), with L = g·Tp²/2π.
 
 **This is the hard part.** These waves are shorter and much steeper than the 7 m, 6 cm wave that already halved the speed in Session 36 (spec 17.12). So R6 depends on 17.12's open items 1 and 2: the two-body sailor with compliant legs (A-17), and the strip theory's slam on waves shorter than about three hull lengths. The same system would give every spot, sea or lake, waves that fit its wind.
+
+**Update, 16 October 2026 (Session 37, physics track):** the two-body sailor exists (spec 7.5: compliant legs, the rig held by the sailor, physical falls). On the strong chop of 17.12 nobody falls any more and the speed loss is 6 to 24 %. What remains before R6 is the hull landing off a crest (spec 17.13: a yaw spike at the landing, where the two remaining falls on chop come from).
 
 ## R7. Replay and live weather
 

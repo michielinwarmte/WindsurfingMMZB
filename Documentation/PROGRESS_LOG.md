@@ -15,6 +15,16 @@ Template for new entries:
 
 ---
 
+## 16 October 2026 - The physics and the map tracks merged
+
+**Phase:** none (branches).
+
+**Done:** `feature/physics-sim` (Sessions 30 to 37) merged into `feature/map-silvaplana` (Sessions 37 to 45 of the map track, which had started from the physics branch at Phase 5). The one conflict was this log: both tracks' entries are kept, in date order. Both branches go to `main` through pull requests #2 (the physics) and #3 (the map, which now contains the physics). The map's files need Git LFS: it was not on the Linux PC, so it is installed in `~/.local/bin` (no sudo), `git lfs install` run, and the 114 MB of terrain tiles, photos and the height grid fetched. Small edits so the documents fit together: CLAUDE.md (the map track is part of the project, not a branch; Git LFS), REBUILD_PLAN.md (the side track), MAP_SILVAPLANA_PLAN.md (merge `main` from now on), PHYSICS_REQUESTS_FROM_MAP.md (R6's precondition, the two-body sailor, is done).
+
+**Verified:** on the merged tree `tools/check.sh` 122 files, 0 failed, and `tools/test.sh` 204 of 204 (126 physics, 78 map). The physics is unchanged by the merge (the map does not touch `Game/sim/`), so the validation suite and the matrix were not rerun. Not run: the map's Python tests in `tools/map/tests` (they need `tifffile` and the other map modules, which the Linux PC does not have).
+
+**Next:** the team merges the pull requests (#2 and then #3, or #3 alone), then everyone installs Git LFS and pulls `main`; new work branches from `main`.
+
 ## 16 October 2026 - Session 45 (map track): the map documents brought up to date
 
 **Phase:** none (documents only). Branch `feature/map-silvaplana`.
