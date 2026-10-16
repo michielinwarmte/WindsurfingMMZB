@@ -1,8 +1,11 @@
 [gd_resource type="Resource" script_class="WindConfig" load_steps=2 format=3]
 
 ; The wind for sailing on Lake Silvaplana (MAP_SILVAPLANA_PLAN.md, M3 and team decision 4): a
-; Maloja afternoon, using only what WindConfig already has. The map's own wind model (MapWind,
-; W2 and W3) replaces this when W5 connects it to the physics.
+; Maloja afternoon, using only what WindConfig already has.
+; Since W5 (16 October 2026) the lake sails in the map's own wind (MapWind, through
+; environment_silvaplana.tres): then only this file's height profile and its direction (which
+; the waves are lined up with) are used. The speed, the gusts and the shifts below are the
+; wind for the lake when the map's wind is switched off (map_wind_enabled = false).
 ; - 16 kt with gusts of 25 %: about 12 to 20 kt (the station: a 12 kt median, gusts 1.55 times
 ;   the mean; on the water it blows harder, Max: 12 to 22 kt on a competition day).
 ; - From 222 degrees: along the lake from the south-west (W1; the station's 244 is turned by
