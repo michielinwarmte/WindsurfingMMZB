@@ -68,6 +68,8 @@ func _ready() -> void:
 	if start_in_menu:
 		_enter_menu_mode()
 	_apply_command_line_options()
+	# The sounds (audio/game_audio.gd): they follow the windsurfer's telemetry every frame.
+	add_child(GameAudio.create(_windsurfer, _camera_rig, func() -> bool: return _in_menu))
 
 
 func _unhandled_input(event: InputEvent) -> void:
