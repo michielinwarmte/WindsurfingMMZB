@@ -186,6 +186,22 @@ func test_shape_sail_follows_the_simulation() -> void:
 	assert_eq(rig.cloth_value("belly_side"), 1.0, "On the new leeward side")
 
 
+func test_windward_arm_is_on_the_side_the_wind_comes_from() -> void:
+	var rig: RigVisuals = _rig()
+	var sail: SailModel = SailModel.new(sail_config)
+	var time_s: float = 0.0
+	for sail_side: int in [-1, 1]:
+		sail.sail_side = sail_side
+		var boom_dir: Vector3 = Vector3(sail_side * sin(deg_to_rad(20.0)), 0.0, cos(deg_to_rad(20.0)))
+		rig.pose_sailing(Vector3.UP, boom_dir)
+		for i: int in 15:  # 1.5 s: the belly has gone over
+			time_s += 0.1
+			rig.shape_sail(sail, time_s)
+		var offset: Vector3 = rig.windward_arm_offset()
+		assert_eq(signf(offset.x), -float(sail_side), "Windward is away from the boom's side")
+		assert_almost_eq(offset.length(), RigVisuals.BOOM_ARM_HALF_WIDTH_AT_GRIP_M, 1e-4)
+
+
 func test_fall_lays_the_rig_on_the_water() -> void:
 	var rig: RigVisuals = _rig()
 	rig.pose_sailing(Vector3.UP, Vector3(0.3, 0.0, 0.95).normalized())
