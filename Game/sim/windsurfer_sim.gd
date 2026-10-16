@@ -1025,6 +1025,8 @@ func _fill_telemetry(controls: SimControls) -> void:
 	t.hull_lateral_n = hull.lateral_n
 	t.hull_resistance_n = hull.resistance_n
 	t.bow_drag_n = hull.bow_drag_n
+	t.rail_grip_n = hull.rail_grip_n
+	t.rail_yaw_nm = hull.rail_yaw_nm
 	var origin: Vector3 = body.origin_world()
 	t.water_height_m = water.height_at(origin.x, origin.z, time_s)
 

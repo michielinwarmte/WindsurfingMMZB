@@ -321,3 +321,94 @@ func test_a_heeled_planing_plate_carries_its_lift_on_the_low_rail() -> void:
 	assert_gt(float(heeled["side_force"]), 0.1 * float(heeled["lift"]), "heeled: pushed toward the low rail")
 	assert_lt(float(heeled["roll_torque"]), -50.0, "heeled: the lift on the low rail rights the board")
 	assert_lt(float(heeled["cop_z"]), float(level["cop_z"]) - 0.1, "heeled: the force acts further forward")
+
+
+## A board planing at 8 m/s, trimmed 4 degrees with its transom 7.5 cm deep, skidding at
+## slip_deg (its velocity turned toward starboard) and turning at yaw_rate_rads (positive
+## turns the bow to port), heeled heel_deg (positive: starboard rail down). Returns the
+## rails' force and yaw moment and the hull's sideways force in the world.
+func _skidding_board(slip_deg: float, yaw_rate_rads: float = 0.0, heel_deg: float = 0.0, board: BoardConfig = null) -> Dictionary:
+	var b: BoardConfig = board if board != null else _board()
+	var buoyancy: BuoyancyModel = BuoyancyModel.new(b, _water())
+	var hull: HullModel = HullModel.new(b, _water())
+	var body: SimRigidBody = _trimmed_body(8.0, 4.0)
+	body.basis = Basis(Vector3.RIGHT, deg_to_rad(4.0)) * Basis(Vector3.FORWARD, deg_to_rad(heel_deg))
+	var transom_local: Vector3 = Vector3(0.0, -0.5 * b.thickness_m, 0.5 * b.length_m)
+	body.position.y -= body.point_world(transom_local).y + 0.075
+	var slip: float = deg_to_rad(slip_deg)
+	body.velocity = Vector3(8.0 * sin(slip), 0.0, -8.0 * cos(slip))
+	body.angular_velocity = Vector3(0.0, yaw_rate_rads, 0.0)
+	body.clear_forces()
+	buoyancy.apply(body, FlatWater.new(), 0.0, G, DT)
+	body.clear_forces()
+	hull.compute(body, buoyancy, FlatWater.new(), 0.0, G, body.mass_kg, DT)
+	return {"grip": hull.rail_grip_n, "yaw": hull.rail_yaw_nm, "side": body._force_sum.x}
+
+
+func test_the_rails_carry_nothing_until_the_board_skids_past_the_inception_angle() -> void:
+	# NACA TN 4187: a flat planing bottom at a yaw angle carries no sideways force of its
+	# own; the flow wets the leading rail's edge from about 7.5 degrees of yaw (level).
+	assert_eq(float(_skidding_board(0.0)["grip"]), 0.0, "no skid, no grip")
+	assert_eq(float(_skidding_board(5.0)["grip"]), 0.0, "5 degrees: the flow breaks clear of the edge")
+	var nine: Dictionary = _skidding_board(9.0)
+	var twelve: Dictionary = _skidding_board(12.0)
+	assert_gt(float(nine["grip"]), 50.0, "9 degrees: the leading rail grips")
+	assert_gt(float(twelve["grip"]), float(nine["grip"]), "and more at 12")
+	# Fully engaged, about the dynamic pressure on the wetted edge (Ce' 1.0 to 1.3): at
+	# 8 m/s, 1.15 x 33 kPa x the 3 cm edge wet over most of a metre of tail.
+	assert_between(float(twelve["grip"]), 400.0, 1500.0)
+	assert_lt(float(twelve["side"]), float(_skidding_board(5.0)["side"]) - 300.0, "it pushes back against the skid (to port)")
+	gut.p("rail grip at 9 and 12 degrees of skid: %.0f and %.0f N" % [float(nine["grip"]), float(twelve["grip"])])
+
+
+func test_a_spinning_hull_is_damped_by_its_rails() -> void:
+	# Turning at 2 rad/s (115 degrees a second) at 8 m/s, the tail skids at up to 15
+	# degrees: its rail grips and the moment opposes the spin, whichever way it turns.
+	var to_port: Dictionary = _skidding_board(0.0, 2.0)
+	var to_starboard: Dictionary = _skidding_board(0.0, -2.0)
+	assert_lt(float(to_port["yaw"]), -100.0, "a spin to port is held back")
+	assert_gt(float(to_starboard["yaw"]), 100.0, "a spin to starboard too")
+	assert_almost_eq(float(to_port["yaw"]), -float(to_starboard["yaw"]), 0.05 * absf(float(to_port["yaw"])), "symmetric")
+	gut.p("rail moment against a spin of 2 rad/s: %.0f N m (grip %.0f N)" % [float(to_port["yaw"]), float(to_port["grip"])])
+	assert_eq(float(_skidding_board(0.0, 0.3)["grip"]), 0.0, "a slow carve (17 degrees a second) does not skid the rail")
+
+
+func test_a_lowered_rail_grips_earlier_and_a_soft_rail_not_at_all() -> void:
+	# TN 4187 figure 26a: with the leading edge rolled down the flow reaches it at a
+	# smaller yaw angle (7.5 degrees level, about 5.7 with 5 degrees of roll).
+	assert_eq(float(_skidding_board(6.5)["grip"]), 0.0, "level: not yet at 6.5 degrees")
+	assert_gt(float(_skidding_board(6.5, 0.0, 5.0)["grip"]), 0.0, "starboard rail down, skidding to starboard: it grips")
+	var soft: BoardConfig = _board().duplicate()
+	soft.hard_rail_to_m = 0.0
+	soft.soft_rail_from_m = 0.01
+	assert_eq(float(_skidding_board(12.0, 0.0, 0.0, soft)["grip"]), 0.0, "a tucked rail lets the flow wrap round it")
+
+
+## The default board with its tail one foot off (OFO) set to tail_width_m, planing at
+## 7 m/s, trimmed 4 degrees with the transom 7.5 cm deep: the planing lift and the wetted
+## length-to-beam ratio.
+func _planing_with_tail(tail_width_m: float) -> Dictionary:
+	var board: BoardConfig = _board().duplicate()
+	board.tail_width_m = tail_width_m
+	var buoyancy: BuoyancyModel = BuoyancyModel.new(board, _water())
+	var hull: HullModel = HullModel.new(board, _water())
+	var body: SimRigidBody = _trimmed_body(7.0, 4.0)
+	body.position.y -= body.point_world(Vector3(0.0, -0.5 * board.thickness_m, 0.5 * board.length_m)).y + 0.075
+	body.clear_forces()
+	buoyancy.apply(body, FlatWater.new(), 0.0, G)
+	hull.compute(body, buoyancy, FlatWater.new(), 0.0, G, body.mass_kg, 1.0)
+	return {"lift": hull.planing_lift_n, "lambda": hull.lambda_ratio, "beam": hull.planing_beam_m}
+
+
+func test_a_wider_tail_lifts_more_at_the_same_speed_and_trim() -> void:
+	# Savitsky: the lift of a planing surface grows with its beam (C_L is per beam squared
+	# and grows with the root of the wetted length-to-beam ratio, so at a given wetted
+	# length the lift goes with the beam to the power 1.5), and a wider surface has a lower
+	# length-to-beam ratio. Two boards 10 cm apart in tail width, the same in everything
+	# else, at the same speed, trim and transom depth.
+	var narrow: Dictionary = _planing_with_tail(0.40)
+	var wide: Dictionary = _planing_with_tail(0.50)
+	assert_gt(float(wide["beam"]), float(narrow["beam"]) + 0.04, "the wet bottom is wider")
+	assert_lt(float(wide["lambda"]), float(narrow["lambda"]), "with a lower length-to-beam ratio")
+	var beam_ratio: float = float(wide["beam"]) / float(narrow["beam"])
+	assert_gt(float(wide["lift"]) / float(narrow["lift"]), pow(beam_ratio, 1.2), "and lifts more, about as the beam to the power 1.5 (%.0f against %.0f N)" % [float(wide["lift"]), float(narrow["lift"])])
