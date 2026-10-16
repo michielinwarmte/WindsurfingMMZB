@@ -17,6 +17,10 @@ run/main_scene="res://ui/start_menu.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"
 
+[audio]
+
+buses/default_bus_layout="res://default_bus_layout.tres"
+
 [autoload]
 
 DevCapture="*res://dev/dev_capture.gd"
