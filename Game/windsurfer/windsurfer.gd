@@ -9,6 +9,9 @@ extends Node3D
 ## Compass heading at the start, degrees. 180 (South) with the default wind from the West
 ## puts the board on a beam reach on starboard tack.
 @export var start_heading_deg: float = 180.0
+## Where the board starts (only X and Z count; it floats at the water level). The open water
+## starts at the origin; a map scene sets its start spot (sail_silvaplana.gd).
+@export var start_position: Vector3 = Vector3.ZERO
 ## Let the test autopilot sail instead of the keys (for screenshots and demos).
 @export var use_autopilot: bool = false
 @export var autopilot_twa_deg: float = 90.0
@@ -46,7 +49,7 @@ func _ready() -> void:
 func reset() -> void:
 	controls = SimControls.new()
 	controller.reset_controls(controls)
-	sim.reset(Vector3.ZERO, deg_to_rad(start_heading_deg))
+	sim.reset(start_position, deg_to_rad(start_heading_deg))
 	_previous_state = sim.sailor_state
 	autopilot.target_twa_deg = autopilot_twa_deg
 	_copy_state_to_visuals()

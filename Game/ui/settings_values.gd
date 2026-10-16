@@ -124,7 +124,8 @@ var water_volume: float
 var sail_volume: float
 
 # --- The start menu (section "menu") ---
-## The play option chosen last time (0 open water, 1 Silvaplana terrain, 2 wind viewer).
+## The play option chosen last time (0 open water, 1 Silvaplana fly-over, 2 wind viewer,
+## 3 sailing on Lake Silvaplana: StartMenu.PlayOption).
 var last_play_option: int
 
 
@@ -360,7 +361,7 @@ func read_from(config: ConfigFile) -> void:
 	wind_volume = clampf(_float(config, "audio", "wind_volume", wind_volume), 0.0, 1.0)
 	water_volume = clampf(_float(config, "audio", "water_volume", water_volume), 0.0, 1.0)
 	sail_volume = clampf(_float(config, "audio", "sail_volume", sail_volume), 0.0, 1.0)
-	last_play_option = clampi(_int(config, "menu", "last_play_option", last_play_option), 0, 2)
+	last_play_option = clampi(_int(config, "menu", "last_play_option", last_play_option), 0, 3)
 
 
 ## Saves to a file (for example user://settings.cfg). Returns OK or the error.

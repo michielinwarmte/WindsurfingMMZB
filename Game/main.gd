@@ -14,18 +14,29 @@ extends Node3D
 ## --fall=<seconds> (the sailor is catapulted at that time), --pause=<seconds> (the pause
 ## menu opens at that time), --page=settings/<tab>|controls|howto (and that page of it).
 ## --settings=<file.cfg> or --settings=defaults: see ui/game_settings.gd.
+##
+## A map scene sails with this script too (maps/silvaplana/sail_silvaplana.gd extends it): the
+## map brings its own sun and sky (so Sun is optional), its own wind and start (it overrides
+## _build_wind_config() and _start_heading_deg()), and a depth grid for the shore (shore_grid).
 
 const START_MENU_SCENE: String = "res://ui/start_menu.tscn"
 ## How fast the camera circles the board behind the start menu, radians per second.
 const MENU_ORBIT_RATE: float = 0.08
+const AGROUND_TEXT: String = "Aground off the shore. R: back to the start"
+const OFF_THE_MAP_TEXT: String = "The end of the map. R: back to the start"
 
 ## Set by the start menu: the scene is the menu's moving backdrop until start_playing().
 @export var start_in_menu: bool = false
 
+## A map's depth grid, for the shore (MAP_SILVAPLANA_PLAN.md, MD6); null on the open water.
+## Set by the map scene's script (sail_silvaplana.gd) before the first physics tick.
+var shore_grid: TerrainGrid = null
+
 @onready var _windsurfer: WindsurferNode = $Windsurfer
 @onready var _camera_rig: CameraRig = $CameraRig
 @onready var _hud: Hud = $HUD
-@onready var _sun: DirectionalLight3D = $Sun
+## The open water's sun; null in a map scene, which brings the map's own light.
+@onready var _sun: DirectionalLight3D = get_node_or_null("Sun")
 @onready var _ocean: OceanNode = $Ocean
 @onready var _pause_menu: PauseMenu = $PauseMenu
 
@@ -40,6 +51,8 @@ var _sea_signature: String = ""
 ## player changed there (and not a mode they picked with Tab while sailing).
 var _applied_mode: PlayerController.Mode = PlayerController.Mode.BEGINNER
 var _applied_auto_sheet: bool = true
+## The board ran into the shallows (or off the map) and waits for R (_check_shore()).
+var _aground: bool = false
 
 
 func _enter_tree() -> void:
@@ -47,9 +60,9 @@ func _enter_tree() -> void:
 	# hand it the wind, the sea and the start heading now.
 	var windsurfer: WindsurferNode = $Windsurfer
 	var settings: SettingsValues = GameSettings.values
-	windsurfer.wind_config = settings.build_wind_config()
+	windsurfer.wind_config = _build_wind_config()
 	windsurfer.wave_set_config = settings.build_wave_set_config()
-	windsurfer.start_heading_deg = settings.start_heading_deg
+	windsurfer.start_heading_deg = _start_heading_deg()
 	_sea_signature = settings.sea_signature()
 
 
@@ -58,7 +71,8 @@ func _ready() -> void:
 	# the windsurfer (the physics) stops.
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_windsurfer.process_mode = Node.PROCESS_MODE_PAUSABLE
-	_sun.rotation_degrees = Vector3(-50.0, 30.0, 0.0)
+	if _sun != null:
+		_sun.rotation_degrees = Vector3(-50.0, 30.0, 0.0)
 	_ocean.setup(_windsurfer.sim, _camera_rig.camera)
 	_apply_start_settings()
 	_pause_menu.resume_requested.connect(_set_paused.bind(false))
@@ -79,7 +93,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause"):
 		_set_paused(true)
 	elif event.is_action_pressed("reset"):
-		if _windsurfer.is_fallen():
+		if _windsurfer.is_fallen() and not _aground:
 			_windsurfer.waterstart_now()
 		else:
 			_restart_run()
@@ -93,6 +107,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		_camera_rig.set_mode(CameraRig.Mode.TOP_DOWN)
 	elif event.is_action_pressed("camera_4"):
 		_camera_rig.set_mode(CameraRig.Mode.FREE)
+
+
+func _physics_process(_delta: float) -> void:
+	_check_shore()
 
 
 func _process(delta: float) -> void:
@@ -129,12 +147,11 @@ func start_playing() -> void:
 ## restart (behind the start menu they come at once).
 func apply_settings_live() -> void:
 	var settings: SettingsValues = GameSettings.values
-	var wind: WindField = _windsurfer.sim.wind
-	settings.apply_wind_to(wind.config)
-	wind.set_wind(deg_to_rad(settings.wind_from_deg), settings.wind_speed_kt * SimMath.KNOT_MS)
+	_apply_wind_settings_live()
 	if settings.control_mode != _applied_mode or settings.auto_sheet != _applied_auto_sheet:
 		_apply_control_settings()
-	_sun.shadow_enabled = settings.shadow_quality > 0
+	if _sun != null:
+		_sun.shadow_enabled = settings.shadow_quality > 0
 	if _in_menu and settings.sea_signature() != _sea_signature:
 		_restart_run()
 	_pause_menu.set_note(_waiting_for_restart_text())
@@ -146,7 +163,7 @@ func _waiting_for_restart_text() -> String:
 	var waiting: Array[String] = []
 	if settings.sea_signature() != _sea_signature:
 		waiting.append("the new waves")
-	if not is_equal_approx(settings.start_heading_deg, _windsurfer.start_heading_deg):
+	if not is_equal_approx(_start_heading_deg(), _windsurfer.start_heading_deg):
 		waiting.append("the new start heading")
 	if waiting.is_empty():
 		return ""
@@ -156,17 +173,18 @@ func _waiting_for_restart_text() -> String:
 ## Puts the board back at the start; builds the water again first if the waves changed.
 func _restart_run() -> void:
 	var settings: SettingsValues = GameSettings.values
-	_windsurfer.start_heading_deg = settings.start_heading_deg
+	_windsurfer.start_heading_deg = _start_heading_deg()
 	if settings.sea_signature() != _sea_signature:
 		_rebuild_sea()
 	_windsurfer.reset()
+	_set_aground(false)
 	_pause_menu.set_note("")
 
 
 ## A new wind and wave set from the settings, for the physics and for the water you see.
 func _rebuild_sea() -> void:
 	var settings: SettingsValues = GameSettings.values
-	_windsurfer.set_sea(settings.build_wind_config(), settings.build_wave_set_config())
+	_windsurfer.set_sea(_build_wind_config(), settings.build_wave_set_config())
 	_sea_signature = settings.sea_signature()
 	# OceanNode.setup() adds new water meshes, so the old ones go first. (They are plain
 	# meshes without scripts, so they can be freed at once.)
@@ -181,7 +199,51 @@ func _apply_start_settings() -> void:
 	_apply_control_settings()
 	_camera_rig.set_mode(settings.start_camera)
 	_hud.set_detail_visible(settings.show_hud_panel)
-	_sun.shadow_enabled = settings.shadow_quality > 0
+	if _sun != null:
+		_sun.shadow_enabled = settings.shadow_quality > 0
+
+
+## The wind the board sails in: the settings' wind. A map scene has its own (sail_silvaplana.gd).
+func _build_wind_config() -> WindConfig:
+	return GameSettings.values.build_wind_config()
+
+
+## The start heading: the settings' one. A map scene has its own (sail_silvaplana.gd).
+func _start_heading_deg() -> float:
+	return GameSettings.values.start_heading_deg
+
+
+## The settings' wind blows at once, with its gusts and shifts. A map scene keeps its own wind.
+func _apply_wind_settings_live() -> void:
+	var settings: SettingsValues = GameSettings.values
+	var wind: WindField = _windsurfer.sim.wind
+	settings.apply_wind_to(wind.config)
+	wind.set_wind(deg_to_rad(settings.wind_from_deg), settings.wind_speed_kt * SimMath.KNOT_MS)
+
+
+## The shore on a map (MD6): where the water under the board is shallower than the fin plus a
+## margin, or off the map, the board has run aground. The simulation stops and R takes the board
+## back to the start. No collision physics: nothing pushes on the board (rule 2).
+func _check_shore() -> void:
+	if shore_grid == null or _aground or _in_menu:
+		return
+	var at: Vector3 = _windsurfer.sim.body.origin_world()
+	if not ShoreCheck.is_aground(shore_grid, at, _windsurfer.sim.fin_config.span_m):
+		return
+	_set_aground(true)
+	_hud.set_message(AGROUND_TEXT if shore_grid.contains(at.x, at.z) else OFF_THE_MAP_TEXT)
+
+
+## Stops the board (the simulation no longer steps), or lets it sail again.
+func _set_aground(aground: bool) -> void:
+	_aground = aground
+	_windsurfer.set_physics_process(not aground)
+	if not aground:
+		_hud.set_message("")
+
+
+func is_aground() -> bool:
+	return _aground
 
 
 func _apply_control_settings() -> void:

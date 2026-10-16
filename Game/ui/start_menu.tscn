@@ -98,19 +98,19 @@ layout_mode = 2
 theme_type_variation = &"HintLabel"
 text = "18 kt from W (270), swell"
 
-[node name="SilvaplanaButton" type="Button" parent="Menu/Root/MainPage/Layout"]
+[node name="SailSilvaplanaButton" type="Button" parent="Menu/Root/MainPage/Layout"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(520, 0)
 layout_mode = 2
 size_flags_horizontal = 0
 theme_type_variation = &"BigButton"
-text = "Lake Silvaplana: fly over the map"
+text = "Sail on Lake Silvaplana"
 alignment = 0
 
-[node name="SilvaplanaHint" type="Label" parent="Menu/Root/MainPage/Layout"]
+[node name="SailSilvaplanaHint" type="Label" parent="Menu/Root/MainPage/Layout"]
 layout_mode = 2
 theme_type_variation = &"HintLabel"
-text = "The real lake and mountains, from Swiss open data. No sailing there yet."
+text = "The real lake in the Engadin, a Maloja wind from the south-west."
 
 [node name="WindButton" type="Button" parent="Menu/Root/MainPage/Layout"]
 unique_name_in_owner = true
@@ -125,6 +125,20 @@ alignment = 0
 layout_mode = 2
 theme_type_variation = &"HintLabel"
 text = "The Maloja wind over the lake through the day, and the race course maker."
+
+[node name="SilvaplanaButton" type="Button" parent="Menu/Root/MainPage/Layout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+theme_type_variation = &"BigButton"
+text = "Lake Silvaplana: fly over the map"
+alignment = 0
+
+[node name="SilvaplanaHint" type="Label" parent="Menu/Root/MainPage/Layout"]
+layout_mode = 2
+theme_type_variation = &"HintLabel"
+text = "The real lake and mountains from Swiss open data, seen from the air."
 
 [node name="Separator" type="HSeparator" parent="Menu/Root/MainPage/Layout"]
 custom_minimum_size = Vector2(520, 0)
