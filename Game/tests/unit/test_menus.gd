@@ -77,3 +77,23 @@ func test_the_start_menu_hands_the_board_to_the_player() -> void:
 	assert_false(windsurfer.use_autopilot, "the player sails")
 	assert_true(hud.visible)
 	assert_eq(GameSettings.values.last_play_option, 0, "the choice is remembered")
+
+
+func test_every_settings_tab_can_be_walked_with_the_keyboard() -> void:
+	# From the tabs, Down goes through every row to the buttons at the bottom (the way a
+	# keyboard or gamepad player moves), on each tab.
+	var settings: SettingsMenu = (load("res://ui/settings_menu.tscn") as PackedScene).instantiate()
+	add_child_autofree(settings)
+	settings.open()
+	var tabs: TabContainer = settings.get_node("%Tabs")
+	var reset_button: Button = settings.get_node("%ResetButton")
+	for tab: int in tabs.get_tab_count():
+		tabs.current_tab = tab
+		await wait_frames(2)
+		var at: Control = tabs.get_tab_bar()
+		var steps: int = 0
+		while at != null and at != reset_button and steps < 20:
+			at = at.find_valid_focus_neighbor(SIDE_BOTTOM)
+			steps += 1
+		assert_eq(at, reset_button, "tab %s: Down reaches the buttons" % tabs.get_tab_title(tab))
+		assert_gt(steps, 1, "and passes the rows on the way")
