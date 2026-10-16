@@ -6,7 +6,7 @@ The map track builds the first real spot, Lake Silvaplana (1791 m, Upper Engadin
 
 **Who does what.**
 - **Michiel** does the physics.
-- **Max** does the map, and later the wind patterns that belong to it (R5): the daily cycle, the gusts, the shifts, and where the wind is strong or weak on the lake.
+- **Max** does the map, and the wind patterns that belong to it (R5): the daily cycle, the gusts, the shifts, and where the wind is strong or weak on the lake. Most of that is built map-side now, as the wind analyser (see the updates under R5).
 
 The wind patterns describe what the air does; the physics decides what the board does with it. So for R5, Max builds the patterns and Michiel only provides the connection, a way for a map to give `WindField` its own pattern, and checks that the physics stays valid. Everything else in this document is physics, and Michiel decides it.
 
@@ -20,7 +20,7 @@ The interfaces below are suggestions only. D8 applies: every change is a physica
 | R2 | Air density as a config value instead of the fixed 1.225 | Measured 0.98 kg/m³ on Maloja afternoons, 20 % less sail force | small | after R1 |
 | R3 | Fresh water, 1000 kg/m³ | Silvaplana is a lake; `WaterConfig` already has the field | tiny (only R1) | after R1 |
 | R4 | A lakebed the simulation can ask, and running aground | The fin (0.38 m) hits bottom near the shore; the depth is measured | medium | after M1 (the map delivers the depth grid) |
-| R5 | Wind that differs from place to place: moving gusts, shifts, the daily cycle. **Max builds the patterns; Michiel provides the connection in `WindField`** | Realistic Maloja; the measured statistics are below | large (mostly Max) | later, a general system for every spot |
+| R5 | Wind that differs from place to place: moving gusts, shifts, the daily cycle. **Max builds the patterns; Michiel provides the connection in `WindField`** | Realistic Maloja; the measured statistics are below | large (mostly Max) | later, a general system for every spot. Max's patterns exist map-side since 15 October (`MapWind`); the connection is still open |
 | R6 | Waves made by the wind (fetch) | Lake chop instead of the sea swell | large | after the two-body sailor (A-17, spec 17.12) |
 | R7 | Replay a measured day, or today's live wind | Fun, and a check of R5 | medium (mostly game side) | after R5 |
 | R8 | Other kiters and windsurfers on the water | Life on the lake | large | with main-plan Phase 9 |
@@ -61,8 +61,8 @@ That is 19.8 % below the 1.225 kg/m³ in the code. For comparison, the standard 
 
 **What the map provides** (map plan M1):
 - A depth grid of the lake and its shore band, built from swissBATHY3D (1 m survey of 2019, ±0.5 m; it covers the water deeper than about 1 m) and swissALTI3D (the shore, 0.5 m).
-- Between the shoreline and the first surveyed point the depth is blended, and checked against the 10 cm aerial photo.
-- Format: a 16-bit PNG or EXR with a JSON file for the scale, the offset and the cell size, in the game frame of map plan MD1. Y = 0 is the lake surface, north is −Z.
+- Between the shoreline and the first surveyed point the depth is blended smoothly (0.16 km² of shallows, M1). Not yet checked against the 10 cm aerial photo.
+- Format (built in M1): `Game/maps/silvaplana/terrain/shore_heights.bin`, a 2 m grid of 2501 × 2501 16-bit heights, with `shore_heights.json` for the scale, the offset and the position, in the game frame of map plan MD1. Y = 0 is the lake surface, north is −Z. `TerrainGrid` (`Game/maps/terrain_grid.gd`) reads it. (First planned as a 16-bit PNG, but Godot reads those only as 8-bit.)
 - The game reads this grid, never the terrain meshes, so the looks can't change the sailing.
 
 **What happens in reality.** In the shallows the fin touches the bottom first. Its tip is 0.38 m below the hull (`fin_default.tres`), so you run aground in about half a metre of water. The board stops hard, the fin may pop out or break, and the sailor steps off or is thrown forward. On the beach the hull grounds as well.
@@ -105,7 +105,7 @@ It should stay deterministic (a seed), so tests and replays repeat. `WindField.v
 
 The station can't show what happens inside the 10 minutes, or where a gust is on the lake. That part is a model, tuned until its 10-minute statistics match these numbers.
 
-**Caveat.** The station stands on land at the upwind end of the lake. Spot guides give 16 to 25 knots on the water, more than the station's 12 kt median. The wind over open water is probably stronger. Max's experience is the check here.
+**Caveat.** The station stands on land at the upwind end of the lake. Spot guides give 16 to 25 knots on the water, more than the station's 12 kt median. The wind over open water is probably stronger. Max's experience is the check here. (Max, 15 October: a competition day on the water is 12 to 14, 15 to 18 or 18 to 22 kt, depending on the day. The wind analyser takes 1.3 times the station.)
 
 ## R6. Waves made by the wind
 
@@ -153,6 +153,7 @@ Added 14 October 2026 (Sessions 40 and 41, map track, phase M2). Not physics, bu
   - Without it, the water could only mirror the sky. From a raised viewpoint that made the lake pale, where the real lake mirrors the dark mountainsides.
   - It changes nothing else, but Godot prints a harmless "7 RIDs of type Texture were leaked" warning when it quits.
 - Cost: about 6 % of the frame rate (see below).
+- Max's look (16 October 2026): it works well. So the question below is the only thing left before M3.
 
 **What the research found** (October 2026):
 - **Built-in screen-space reflections don't work on see-through water.** A material that reads the screen texture counts as transparent, and Godot 4's SSR only works on opaque surfaces.
@@ -209,6 +210,8 @@ Script: `tools/map/maloja_stats.py`.
 | share from the Maloja sector | 58 % | 81 % | 92 % | 97 % | 99 % | 100 % | 98 % | 97 % | 90 % | 82 % | 69 % |
 
 **Direction on the lake.** The station reads 244°. The lake's long axis runs from about 224° to 44°, so a valley wind along the lake would come from about 224°. The station near Sils may be turned by the local terrain. The map starts from the station's value, and Max checks it on the water.
+
+**Update (Session 42, W1):** it is. WindNinja over the terrain, in stable air, puts the lake's wind along the lake at about 222° and turns the station's spot about 20° to the right, as measured. Max confirmed the wind blows along the lake. The map now uses 222° on the lake.
 
 ## Coordination
 

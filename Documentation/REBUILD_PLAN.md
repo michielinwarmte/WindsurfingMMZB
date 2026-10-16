@@ -24,7 +24,7 @@ Written 28 September 2026 (Session 28), for the AI sessions doing the work and f
 | 8 | Audio | ⬜ |
 | 9 | Gameplay: racing | ⬜ |
 
-Side track (branch `feature/map-silvaplana`): the first real map, Lake Silvaplana, from Swiss open data. See [MAP_SILVAPLANA_PLAN.md](MAP_SILVAPLANA_PLAN.md). It covers the parts of Phase 7 (sky, fog, shoreline) that belong to that map, and it doesn't change the physics. Michiel does the physics; Max does the map, and later the wind patterns that belong to it (connected to the physics through `WindField`). What the map would need from the physics is in [PHYSICS_REQUESTS_FROM_MAP.md](PHYSICS_REQUESTS_FROM_MAP.md): map-specific air, water and wind; thin air at 1791 m; a lakebed and running aground; moving gusts; wind waves. Each request comes with measured numbers.
+Side track (branch `feature/map-silvaplana`): the first real map, Lake Silvaplana, from Swiss open data. See [MAP_SILVAPLANA_PLAN.md](MAP_SILVAPLANA_PLAN.md). It covers the parts of Phase 7 (sky, fog, shoreline) that belong to that map, and it doesn't change the physics. Michiel does the physics; Max does the map and the wind patterns that belong to it (built first as a wind analyser, phases W0 to W4; connected to the physics through `WindField` in W5). What the map would need from the physics is in [PHYSICS_REQUESTS_FROM_MAP.md](PHYSICS_REQUESTS_FROM_MAP.md): map-specific air, water and wind; thin air at 1791 m; a lakebed and running aground; moving gusts; wind waves. Each request comes with measured numbers.
 
 ## What we are building
 

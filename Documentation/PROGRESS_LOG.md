@@ -15,6 +15,29 @@ Template for new entries:
 
 ---
 
+## 16 October 2026 - Session 45 (map track): the map documents brought up to date
+
+**Phase:** none (documents only). Branch `feature/map-silvaplana`.
+
+**Why:** Max: "I see some neglected sections. See L1, this we've already done."
+
+**Done:**
+- **L1 (the wind patterns)** in MAP_SILVAPLANA_PLAN.md: a status. Max's part is mostly built as the wind analyser (W0 to W4, `MapWind`). Still open: the day types (W3, postponed) and the connection to the sailing (W5, Michiel). The Status table, "Who does what", and a note after the team decisions say the same. CLAUDE.md, REBUILD_PLAN.md and PHYSICS_REQUESTS_FROM_MAP.md no longer say "later the wind patterns".
+- **M3's wind direction:** 244° → 222°. W1 found that 244° is the station's spot turning the wind; over the lake the Maloja blows along the lake from about 222°, which Max confirmed. M3 also notes that the sailing keeps a `WindConfig` until W5.
+- **Max's verdicts written in where they were missing:** the terrain "is really good and nice" (Session 41, the M1 and M2 checks); the 10 cm photos agreed (M0); the W1 picture right; W0's questions 1 to 6 answered (7 to 10 still open); the W2 colours and gusts done.
+- **Facts that had changed since the plan was written:** the lake level (1790.63 m) and the origin, both fixed in M0; the manifest's place (`.map_data/raw/`); the grid formats (numpy for Blender and a 16-bit `.bin` for the game, not PNG or EXR); the photos go on in Godot, not in Blender; no terrain plugin needed.
+- **R4 for Michiel** gave the wrong grid format and said the shallows were "checked against the 10 cm aerial photo". Nothing in `heights.py` or its checks does that, so it now says "not yet checked".
+
+**Verified:** each changed fact against the code and the data (`map_config`, `maloja_day.tres`, `.map_data/raw/manifest.json`, `heights.py`, `build.sh`, git). Session 44's work is committed and pushed (`b9cc3a5`, "Map W4a: race course maker in the wind viewer"). No code changed, so no tests were run.
+
+**Max's looks (16 October):** adding marks to a course works well, and so does the see-through lake water (M2). So W4a is checked, and M2 waits only for Michiel's answer to R9.
+
+**Next:**
+- W4b, the tactics tools, detailed with Max first: lifts and headers against the course axis, the stronger lanes, laylines (they need the iQFOiL's upwind and downwind angles), which side paid.
+- Michiel: R9 (how the see-through water meets his waves), before M3. The small changes to CLAUDE.md and REBUILD_PLAN.md (one sentence each) are to mention to him (MD7).
+
+---
+
 ## 15 October 2026 - Session 44 (map track): W4 planned; W4a, the race course maker, first version
 
 **Phase:** W4 of the map plan, part a (the course maker). Branch `feature/map-silvaplana`.

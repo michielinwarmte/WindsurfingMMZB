@@ -214,6 +214,8 @@ The last row is WindNinja's slower **momentum solver** (OpenFOAM), which, unlike
 - Does it blow along the lake, straight from the Sils end to the Silvaplana end?
 - Is it about the same strength along the lake (the satellite), or clearly weaker at the Silvaplana end (WindNinja alone)?
 
+(Answered on 15 October 2026: the first three yes. The fourth wasn't answered directly; the game uses the satellite's strength, W1. See the next section.)
+
 ## What Max says (15 October 2026)
 
 Max checked the first pattern ([SILVAPLANA_SPOT_NOTES.md](SILVAPLANA_SPOT_NOTES.md) has his words):
