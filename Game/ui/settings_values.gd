@@ -11,15 +11,18 @@ extends RefCounted
 ## never written to (the tests and the validation suite load them).
 
 ## The sea states the menu offers. Flat is water without waves; Swell is the default wave
-## set; the two chops are the sets used in the physics sessions (PROGRESS_LOG.md, Session 37).
-enum WavePreset { FLAT, SWELL, MEDIUM_CHOP, STRONG_CHOP }
+## set; the two chops are the sets used in the physics sessions (PROGRESS_LOG.md, Session 37);
+## From the wind makes the chop from the wind speed, the fetch and the depth (WindWaves).
+## New presets go at the end: the settings file stores the number.
+enum WavePreset { FLAT, SWELL, MEDIUM_CHOP, STRONG_CHOP, FROM_WIND }
 
 const WIND_DEFAULT_PATH: String = "res://config/wind_default.tres"
 const WAVES_DEFAULT_PATH: String = "res://config/waves_default.tres"
 
-## The chop presets change waves 2, 3 and 4 of the default set (the 7 m long chop, the 3.5 m
-## chop and the 1.8 m ripple); wave 1, the 14 m swell, stays. Each steepness is the physical
-## one for that wave (2 pi x amplitude / wavelength), as in the matrix runs of Session 37.
+## The chop presets change the chop waves of the default set (the 7 m long chop, the 3.5 m
+## chop and the 1.8 m ripple, in that order); the 14 m swell stays. Each steepness is the
+## physical one for that wave (2 pi x amplitude / wavelength), as in the matrix runs of
+## Session 37.
 const MEDIUM_CHOP_AMPLITUDES_M: Array[float] = [0.04, 0.015, 0.006]
 const MEDIUM_CHOP_STEEPNESS: Array[float] = [0.036, 0.027, 0.021]
 const STRONG_CHOP_AMPLITUDES_M: Array[float] = [0.06, 0.03, 0.012]
@@ -38,6 +41,21 @@ const SHIFT_PERIOD_MIN_S: float = 15.0
 const SHIFT_PERIOD_MAX_S: float = 300.0
 const WAVE_SCALE_MIN: float = 0.5
 const WAVE_SCALE_MAX: float = 2.0
+## The swell's own height scale: 0 is no swell (a lake), 3 a big one.
+const SWELL_SCALE_MIN: float = 0.0
+const SWELL_SCALE_MAX: float = 3.0
+## How far the chop may be turned from straight downwind, degrees either way.
+const CHOP_OFFSET_MAX_DEG: float = 90.0
+## The fetch of the From the wind sea: the open water upwind, km.
+const FETCH_MIN_KM: float = 0.2
+const FETCH_MAX_KM: float = 20.0
+## The water depth of the From the wind sea, m. The top of the range means deep water:
+## 20 m is deep for every wave this menu can make.
+const DEPTH_MIN_M: float = 0.5
+const DEPTH_DEEP_M: float = 20.0
+## The sum of the steepness of all waves is kept below this, so the crests never fold over
+## (section 9.8), however the menu's scales are set.
+const MAX_TOTAL_STEEPNESS: float = 0.9
 const RENDER_SCALE_MIN: float = 0.5
 const RENDER_SCALE_MAX: float = 1.0
 ## Frame-rate caps the menu offers; 0 means no cap.
@@ -62,6 +80,18 @@ var waves_enabled: bool
 var wave_preset: WavePreset
 ## Multiplies the height (and with it the steepness) of every wave of the preset.
 var wave_height_scale: float
+## true: the swell follows the wind (at the default file's offset); false: it comes from
+## swell_from_deg.
+var swell_follows_wind: bool
+## Compass bearing the swell comes FROM when it does not follow the wind, degrees.
+var swell_from_deg: float
+## Multiplies the height (and the steepness) of the swell only, on top of wave_height_scale.
+var swell_height_scale: float
+## The chop's direction as an offset from straight downwind, degrees (positive = clockwise).
+var chop_offset_deg: float
+## From the wind: the open water upwind (km) and the depth (m; DEPTH_DEEP_M = deep water).
+var fetch_km: float
+var water_depth_m: float
 
 # --- Sailing (section "sailing") ---
 var control_mode: PlayerController.Mode
@@ -110,9 +140,16 @@ func reset_to_defaults() -> void:
 	max_shift_deg = wind.max_shift_deg
 	shift_period_s = wind.shift_period_s
 
+	var waves: WaveSetConfig = load(WAVES_DEFAULT_PATH)
 	waves_enabled = true
 	wave_preset = WavePreset.SWELL
 	wave_height_scale = 1.0
+	swell_follows_wind = waves.swell_relative_to_wind
+	swell_from_deg = waves.swell_from_deg
+	swell_height_scale = 1.0
+	chop_offset_deg = waves.chop_offset_deg
+	fetch_km = 3.0
+	water_depth_m = DEPTH_DEEP_M
 
 	control_mode = PlayerController.Mode.BEGINNER
 	auto_sheet = true
@@ -156,7 +193,7 @@ func apply_wind_to(config: WindConfig) -> void:
 
 
 ## A new WaveSetConfig for the simulation and the ocean: the default wave set, changed to
-## the chosen preset and height.
+## the chosen preset, directions and heights.
 func build_wave_set_config() -> WaveSetConfig:
 	var base: WaveSetConfig = load(WAVES_DEFAULT_PATH)
 	# duplicate(true) also copies the waves inside the set, so the numbers below change the
@@ -168,29 +205,65 @@ func build_wave_set_config() -> WaveSetConfig:
 			_set_chop(config, MEDIUM_CHOP_AMPLITUDES_M, MEDIUM_CHOP_STEEPNESS)
 		WavePreset.STRONG_CHOP:
 			_set_chop(config, STRONG_CHOP_AMPLITUDES_M, STRONG_CHOP_STEEPNESS)
+		WavePreset.FROM_WIND:
+			_set_chop_from_wind(config)
+	# The directions: the swell from the wind (at the file's offset) or from a bearing, the
+	# chop turned from downwind.
+	config.swell_relative_to_wind = swell_follows_wind
+	config.swell_from_deg = swell_from_deg
+	config.chop_offset_deg = chop_offset_deg
 	# A higher wave of the same length is steeper in proportion (steepness = 2 pi A / L), so
-	# both scale together. At 2x the strong chop sums to a steepness of about 0.37, well
-	# below the 1.0 where the crests would fold over.
+	# both scale together.
+	for wave: GerstnerWaveConfig in config.waves_in_group(GerstnerWaveConfig.Group.SWELL):
+		_scale_wave(wave, swell_height_scale)
 	for wave: GerstnerWaveConfig in config.waves:
-		wave.amplitude_m *= wave_height_scale
-		wave.steepness = minf(wave.steepness * wave_height_scale, 1.0)
+		_scale_wave(wave, wave_height_scale)
+	_keep_crests_from_folding(config)
 	return config
 
 
-## Puts the chop numbers on waves 2, 3 and 4 (array index 1 to 3).
+## Puts the chop numbers on the chop waves of the set, in order.
 func _set_chop(config: WaveSetConfig, amplitudes_m: Array[float], steepness: Array[float]) -> void:
-	for i: int in amplitudes_m.size():
-		var index: int = i + 1
-		if index < config.waves.size():
-			config.waves[index].amplitude_m = amplitudes_m[i]
-			config.waves[index].steepness = steepness[i]
+	var chop: Array[GerstnerWaveConfig] = config.waves_in_group(GerstnerWaveConfig.Group.CHOP)
+	for i: int in mini(amplitudes_m.size(), chop.size()):
+		chop[i].amplitude_m = amplitudes_m[i]
+		chop[i].steepness = steepness[i]
 
 
-## A short text that changes whenever the sea would come out different: the waves, and the
-## wind direction they are lined up with. The sailing scene compares it to decide whether
-## the water must be built again.
+## From the wind: the default set's swell, and in place of its chop the waves this wind
+## makes over this fetch and depth (WindWaves, PHYSICS_SPEC.md 9.16).
+func _set_chop_from_wind(config: WaveSetConfig) -> void:
+	var waves: Array[GerstnerWaveConfig] = config.waves_in_group(GerstnerWaveConfig.Group.SWELL)
+	var depth_m: float = WindWaves.DEEP_WATER if water_depth_m >= DEPTH_DEEP_M else water_depth_m
+	waves.append_array(WindWaves.chop_waves(wind_speed_kt * SimMath.KNOT_MS, fetch_km * 1000.0, depth_m))
+	config.waves = waves
+
+
+func _scale_wave(wave: GerstnerWaveConfig, scale: float) -> void:
+	wave.amplitude_m *= scale
+	wave.steepness = minf(wave.steepness * scale, 1.0)
+
+
+## Scales every steepness down when their sum is above MAX_TOTAL_STEEPNESS: the crests get
+## a bit rounder, the heights stay. Only the extremes need it (a strong wind over a short
+## fetch at twice the height); the presets at 2x sum to about 0.4.
+func _keep_crests_from_folding(config: WaveSetConfig) -> void:
+	var total: float = config.total_steepness()
+	if total <= MAX_TOTAL_STEEPNESS:
+		return
+	for wave: GerstnerWaveConfig in config.waves:
+		wave.steepness *= MAX_TOTAL_STEEPNESS / total
+
+
+## A short text that changes whenever the sea would come out different: the waves, their
+## directions, and the wind they are lined up with (and made by, for From the wind). The
+## sailing scene compares it to decide whether the water must be built again.
 func sea_signature() -> String:
-	return "%s/%d/%.2f/%.0f" % [waves_enabled, wave_preset, wave_height_scale, wind_from_deg]
+	var signature: String = "%s/%d/%.2f/%.0f" % [waves_enabled, wave_preset, wave_height_scale, wind_from_deg]
+	signature += "/swell %s %.0f %.2f/chop %.0f" % [swell_follows_wind, swell_from_deg, swell_height_scale, chop_offset_deg]
+	if wave_preset == WavePreset.FROM_WIND:
+		signature += "/made by %.0f kt over %.1f km, %.1f m deep" % [wind_speed_kt, fetch_km, water_depth_m]
+	return signature
 
 
 # --- Saving and loading -------------------------------------------------------------
@@ -209,6 +282,12 @@ func write_to(config: ConfigFile) -> void:
 	config.set_value("waves", "enabled", waves_enabled)
 	config.set_value("waves", "preset", int(wave_preset))
 	config.set_value("waves", "height_scale", wave_height_scale)
+	config.set_value("waves", "swell_follows_wind", swell_follows_wind)
+	config.set_value("waves", "swell_from_deg", swell_from_deg)
+	config.set_value("waves", "swell_height_scale", swell_height_scale)
+	config.set_value("waves", "chop_offset_deg", chop_offset_deg)
+	config.set_value("waves", "fetch_km", fetch_km)
+	config.set_value("waves", "depth_m", water_depth_m)
 
 	config.set_value("sailing", "control_mode", int(control_mode))
 	config.set_value("sailing", "auto_sheet", auto_sheet)
@@ -242,6 +321,12 @@ func read_from(config: ConfigFile) -> void:
 	waves_enabled = _bool(config, "waves", "enabled", waves_enabled)
 	wave_preset = clampi(_int(config, "waves", "preset", wave_preset), 0, WavePreset.size() - 1) as WavePreset
 	wave_height_scale = clampf(_float(config, "waves", "height_scale", wave_height_scale), WAVE_SCALE_MIN, WAVE_SCALE_MAX)
+	swell_follows_wind = _bool(config, "waves", "swell_follows_wind", swell_follows_wind)
+	swell_from_deg = fposmod(_float(config, "waves", "swell_from_deg", swell_from_deg), 360.0)
+	swell_height_scale = clampf(_float(config, "waves", "swell_height_scale", swell_height_scale), SWELL_SCALE_MIN, SWELL_SCALE_MAX)
+	chop_offset_deg = clampf(_float(config, "waves", "chop_offset_deg", chop_offset_deg), -CHOP_OFFSET_MAX_DEG, CHOP_OFFSET_MAX_DEG)
+	fetch_km = clampf(_float(config, "waves", "fetch_km", fetch_km), FETCH_MIN_KM, FETCH_MAX_KM)
+	water_depth_m = clampf(_float(config, "waves", "depth_m", water_depth_m), DEPTH_MIN_M, DEPTH_DEEP_M)
 
 	control_mode = clampi(_int(config, "sailing", "control_mode", control_mode), 0, PlayerController.Mode.size() - 1) as PlayerController.Mode
 	auto_sheet = _bool(config, "sailing", "auto_sheet", auto_sheet)
@@ -334,6 +419,8 @@ static func wave_preset_name(preset: WavePreset) -> String:
 			return "Medium chop"
 		WavePreset.STRONG_CHOP:
 			return "Strong chop"
+		WavePreset.FROM_WIND:
+			return "From the wind"
 	return "Swell"
 
 
@@ -342,8 +429,12 @@ func conditions_text() -> String:
 	var sea: String = "flat water"
 	if waves_enabled and wave_preset != WavePreset.FLAT:
 		sea = wave_preset_name(wave_preset).to_lower()
+		if wave_preset == WavePreset.FROM_WIND:
+			sea = "wind chop over %.1f km" % fetch_km
 		if not is_equal_approx(wave_height_scale, 1.0):
 			sea += " x%.1f" % wave_height_scale
+		if not swell_follows_wind and swell_height_scale > 0.0:
+			sea += ", swell from %s" % compass_name(swell_from_deg)
 	var extras: String = ""
 	if gusts_enabled:
 		extras += ", gusty"

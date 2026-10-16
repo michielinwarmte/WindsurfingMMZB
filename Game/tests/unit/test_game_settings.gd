@@ -21,6 +21,11 @@ func test_defaults_match_the_default_wind_file() -> void:
 	assert_eq(settings.wave_preset, SettingsValues.WavePreset.SWELL, "the default sea is the default wave file")
 	assert_true(settings.waves_enabled)
 	assert_almost_eq(settings.wave_height_scale, 1.0, TOL)
+	assert_true(settings.swell_follows_wind, "the default file's swell follows the wind")
+	assert_almost_eq(settings.swell_height_scale, 1.0, TOL)
+	assert_almost_eq(settings.chop_offset_deg, 0.0, TOL)
+	assert_almost_eq(settings.fetch_km, 3.0, TOL)
+	assert_almost_eq(settings.water_depth_m, SettingsValues.DEPTH_DEEP_M, TOL, "deep water")
 	assert_eq(settings.control_mode, PlayerController.Mode.BEGINNER)
 	assert_true(settings.auto_sheet)
 	assert_almost_eq(settings.start_heading_deg, 180.0, TOL)
@@ -50,6 +55,12 @@ func test_round_trip_through_a_file() -> void:
 	saved.shift_period_s = 90.0
 	saved.wave_preset = SettingsValues.WavePreset.STRONG_CHOP
 	saved.wave_height_scale = 1.5
+	saved.swell_follows_wind = false
+	saved.swell_from_deg = 0.0
+	saved.swell_height_scale = 2.5
+	saved.chop_offset_deg = -30.0
+	saved.fetch_km = 1.5
+	saved.water_depth_m = 2.0
 	saved.control_mode = PlayerController.Mode.ADVANCED
 	saved.auto_sheet = false
 	saved.start_heading_deg = 90.0
@@ -77,6 +88,12 @@ func test_round_trip_through_a_file() -> void:
 	assert_almost_eq(loaded.shift_period_s, 90.0, TOL)
 	assert_eq(loaded.wave_preset, SettingsValues.WavePreset.STRONG_CHOP)
 	assert_almost_eq(loaded.wave_height_scale, 1.5, TOL)
+	assert_false(loaded.swell_follows_wind)
+	assert_almost_eq(loaded.swell_from_deg, 0.0, TOL)
+	assert_almost_eq(loaded.swell_height_scale, 2.5, TOL)
+	assert_almost_eq(loaded.chop_offset_deg, -30.0, TOL)
+	assert_almost_eq(loaded.fetch_km, 1.5, TOL)
+	assert_almost_eq(loaded.water_depth_m, 2.0, TOL)
 	assert_eq(loaded.control_mode, PlayerController.Mode.ADVANCED)
 	assert_false(loaded.auto_sheet)
 	assert_almost_eq(loaded.start_heading_deg, 90.0, TOL)
@@ -104,12 +121,18 @@ func test_a_broken_file_is_clamped_and_falls_back() -> void:
 	config.set_value("wind", "from_deg", -90.0)
 	config.set_value("wind", "gusts_enabled", "yes please")
 	config.set_value("waves", "preset", 99)
+	config.set_value("waves", "chop_offset_deg", 400.0)
+	config.set_value("waves", "fetch_km", 0.0)
+	config.set_value("waves", "swell_from_deg", -45.0)
 	var settings: SettingsValues = SettingsValues.new()
 	settings.read_from(config)
 	assert_almost_eq(settings.wind_speed_kt, SettingsValues.WIND_SPEED_MAX_KT, TOL, "clamped to the slider's range")
 	assert_almost_eq(settings.wind_from_deg, 270.0, TOL, "-90 is 270")
 	assert_false(settings.gusts_enabled, "not a bool: the old value stays")
-	assert_eq(settings.wave_preset, SettingsValues.WavePreset.STRONG_CHOP, "clamped to the last preset")
+	assert_eq(settings.wave_preset, SettingsValues.WavePreset.FROM_WIND, "clamped to the last preset")
+	assert_almost_eq(settings.chop_offset_deg, SettingsValues.CHOP_OFFSET_MAX_DEG, TOL)
+	assert_almost_eq(settings.fetch_km, SettingsValues.FETCH_MIN_KM, TOL)
+	assert_almost_eq(settings.swell_from_deg, 315.0, TOL, "-45 is 315")
 
 
 func test_wind_config_from_the_settings() -> void:
@@ -202,6 +225,82 @@ func test_the_simulation_sails_in_the_chosen_wind_and_sea() -> void:
 	assert_almost_eq(windsurfer.sim.wind_config.from_bearing_deg, 0.0, TOL)
 	assert_true(windsurfer.sim.has_waves(), "waves on the water")
 	assert_almost_eq((windsurfer.sim.water as WaveField).total_amplitude_m(), 0.08 + 0.06 + 0.03 + 0.012, 1e-5)
+
+
+func test_the_swell_and_the_chop_get_their_own_directions_and_heights() -> void:
+	var settings: SettingsValues = SettingsValues.new()
+	settings.wind_from_deg = 270.0
+	settings.swell_follows_wind = false
+	settings.swell_from_deg = 0.0
+	settings.swell_height_scale = 2.0
+	settings.chop_offset_deg = 20.0
+	var waves: WaveSetConfig = settings.build_wave_set_config()
+	assert_false(waves.swell_relative_to_wind)
+	assert_almost_eq(waves.swell_from_deg, 0.0, TOL)
+	assert_almost_eq(waves.chop_offset_deg, 20.0, TOL)
+	_assert_wave(waves, 0, 0.16, 0.072, "the swell doubled")
+	_assert_wave(waves, 1, 0.02, 0.018, "the chop unchanged")
+	var field: WaveField = WaveField.new(waves, null, settings.wind_from_deg)
+	assert_almost_eq(field.dir_z[0], 1.0, 1e-9, "a swell from the North travels South")
+	var chop: Vector2 = WaveField.direction_for_bearing(90.0 + 20.0 - 28.0)
+	assert_almost_eq(field.dir_x[1], chop.x, 1e-9, "the long chop: downwind + 20 - 28")
+	assert_almost_eq(field.dir_z[1], chop.y, 1e-9)
+	settings.swell_height_scale = 0.0
+	assert_eq(WaveField.new(settings.build_wave_set_config(), null, 270.0).count, 3, "no swell: only the chop")
+
+
+func test_the_from_the_wind_preset_makes_the_chop_of_this_wind() -> void:
+	var settings: SettingsValues = SettingsValues.new()
+	settings.wave_preset = SettingsValues.WavePreset.FROM_WIND
+	settings.wind_speed_kt = 16.0
+	settings.fetch_km = 3.0
+	var waves: WaveSetConfig = settings.build_wave_set_config()
+	assert_true(waves.enable_waves)
+	assert_eq(waves.validate().size(), 0, "a valid wave set")
+	assert_eq(waves.waves.size(), 3, "the swell and two wind waves")
+	assert_eq(waves.waves[0].group, GerstnerWaveConfig.Group.SWELL)
+	var made: Array[GerstnerWaveConfig] = WindWaves.chop_waves(16.0 * SimMath.KNOT_MS, 3000.0)
+	for i: int in made.size():
+		assert_eq(waves.waves[i + 1].group, GerstnerWaveConfig.Group.CHOP)
+		assert_almost_eq(waves.waves[i + 1].wavelength_m, made[i].wavelength_m, TOL)
+		assert_almost_eq(waves.waves[i + 1].amplitude_m, made[i].amplitude_m, TOL)
+	settings.water_depth_m = 0.5
+	var shallow: WaveSetConfig = settings.build_wave_set_config()
+	assert_lt(shallow.waves[1].wavelength_m, waves.waves[1].wavelength_m, "shallow water: shorter waves")
+	# The strongest wind over the shortest fetch at twice the height: still no folded crests.
+	settings.wind_speed_kt = SettingsValues.WIND_SPEED_MAX_KT
+	settings.fetch_km = SettingsValues.FETCH_MIN_KM
+	settings.wave_height_scale = SettingsValues.WAVE_SCALE_MAX
+	settings.swell_height_scale = SettingsValues.SWELL_SCALE_MAX
+	var extreme: WaveSetConfig = settings.build_wave_set_config()
+	assert_true(extreme.total_steepness() <= SettingsValues.MAX_TOTAL_STEEPNESS + 1e-9, "the steepness is kept below 0.9")
+	assert_eq(extreme.validate().size(), 0)
+
+
+func test_the_sea_signature_changes_with_every_wave_setting() -> void:
+	var settings: SettingsValues = SettingsValues.new()
+	var signatures: Array[String] = [settings.sea_signature()]
+	settings.wind_speed_kt = 25.0
+	assert_eq(settings.sea_signature(), signatures[0], "the wind speed does not change the default sea")
+	settings.swell_follows_wind = false
+	signatures.append(settings.sea_signature())
+	settings.swell_from_deg = 10.0
+	signatures.append(settings.sea_signature())
+	settings.swell_height_scale = 0.5
+	signatures.append(settings.sea_signature())
+	settings.chop_offset_deg = 15.0
+	signatures.append(settings.sea_signature())
+	settings.wave_preset = SettingsValues.WavePreset.FROM_WIND
+	signatures.append(settings.sea_signature())
+	settings.wind_speed_kt = 12.0
+	signatures.append(settings.sea_signature())
+	settings.fetch_km = 1.0
+	signatures.append(settings.sea_signature())
+	settings.water_depth_m = 2.0
+	signatures.append(settings.sea_signature())
+	for i: int in signatures.size():
+		for j: int in range(i + 1, signatures.size()):
+			assert_ne(signatures[i], signatures[j], "signatures %d and %d differ" % [i, j])
 
 
 func test_compass_names_and_points_of_sail() -> void:

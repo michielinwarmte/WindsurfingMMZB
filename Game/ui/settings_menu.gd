@@ -32,10 +32,17 @@ const VALUE_WIDTH: float = 330.0
 @onready var _reset_button: Button = %ResetButton
 @onready var _back_button: Button = %BackButton
 
-## The wave rows' texts depend on each other (the height depends on the preset), so they
-## are kept to update them.
+## The wave rows' texts and whether they can be changed depend on each other (the height
+## depends on the preset, the swell's bearing only counts when the swell does not follow
+## the wind), so they are kept to update them together (_update_wave_rows()).
 var _wave_height_row: Row
 var _sea_state_row: Row
+var _swell_mode_row: Row
+var _swell_bearing_row: Row
+var _swell_height_row: Row
+var _chop_direction_row: Row
+var _fetch_row: Row
+var _depth_row: Row
 
 
 ## One row of a tab: the name on the left, the control, and the text on the right.
@@ -157,29 +164,75 @@ func _build_wind_rows(s: SettingsValues) -> void:
 
 func _build_wave_rows(s: SettingsValues) -> void:
 	var grid: GridContainer = _wave_rows
-	var waves_on: Row = _add_switch(grid, "Waves", s.waves_enabled, "Off: flat water",
-		func(on: bool) -> void:
-			s.waves_enabled = on
-			_update_wave_texts())
+	_add_switch(grid, "Waves", s.waves_enabled, "Off: flat water",
+		func(on: bool) -> void: s.waves_enabled = on)
 	var presets: Array[String] = []
 	for preset: int in SettingsValues.WavePreset.size():
 		presets.append(SettingsValues.wave_preset_name(preset as SettingsValues.WavePreset))
 	_sea_state_row = _add_list(grid, "Sea state", presets, s.wave_preset, "",
-		func(index: int) -> void:
-			s.wave_preset = index as SettingsValues.WavePreset
-			_update_wave_texts())
+		func(index: int) -> void: s.wave_preset = index as SettingsValues.WavePreset)
 	# The height's text is the highest wave of the whole set, which the other rows change too.
 	_wave_height_row = _add_slider(grid, "Wave height", SettingsValues.WAVE_SCALE_MIN, SettingsValues.WAVE_SCALE_MAX, 0.1, s.wave_height_scale,
 		func(_v: float) -> String: return _wave_height_text(),
 		func(v: float) -> void: s.wave_height_scale = v)
-	_enable_with(waves_on, [_sea_state_row, _wave_height_row])
-	_update_wave_texts()
-	_add_note(grid, "The waves roll downwind, lined up with the wind direction.")
+	# The swell: long waves from far away, from the wind's direction or from a bearing.
+	_swell_mode_row = _add_list(grid, "Swell comes from", ["The wind's direction", "A compass bearing"], 0 if s.swell_follows_wind else 1, "",
+		func(index: int) -> void: s.swell_follows_wind = index == 0)
+	_swell_bearing_row = _add_slider(grid, "Swell from", 0.0, 355.0, 5.0, s.swell_from_deg,
+		func(v: float) -> String: return "%03.0f°  %s" % [v, SettingsValues.compass_name(v)],
+		func(v: float) -> void: s.swell_from_deg = v)
+	_swell_height_row = _add_slider(grid, "Swell height", SettingsValues.SWELL_SCALE_MIN, SettingsValues.SWELL_SCALE_MAX, 0.1, s.swell_height_scale,
+		func(_v: float) -> String: return _swell_height_text(),
+		func(v: float) -> void: s.swell_height_scale = v)
+	# The chop: the waves the wind makes, turned from straight downwind.
+	_chop_direction_row = _add_slider(grid, "Chop direction", -SettingsValues.CHOP_OFFSET_MAX_DEG, SettingsValues.CHOP_OFFSET_MAX_DEG, 5.0, s.chop_offset_deg,
+		func(v: float) -> String: return _chop_direction_text(v),
+		func(v: float) -> void: s.chop_offset_deg = v)
+	# From the wind: how far the wind blows over open water, and how deep it is.
+	_fetch_row = _add_slider(grid, "Fetch", SettingsValues.FETCH_MIN_KM, SettingsValues.FETCH_MAX_KM, 0.1, s.fetch_km,
+		func(v: float) -> String: return "%.1f km of open water upwind" % v,
+		func(v: float) -> void: s.fetch_km = v)
+	_depth_row = _add_slider(grid, "Water depth", SettingsValues.DEPTH_MIN_M, SettingsValues.DEPTH_DEEP_M, 0.5, s.water_depth_m,
+		func(v: float) -> String: return "Deep water" if v >= SettingsValues.DEPTH_DEEP_M else "%.1f m deep: waves at most %.0f cm" % [v, 60.0 * v],
+		func(v: float) -> void: s.water_depth_m = v)
+	# Every change, here or on another tab (the wind's speed and direction), updates the
+	# wave rows' texts and greys out the rows that do not count.
+	if not GameSettings.changed.is_connected(_update_wave_rows):
+		GameSettings.changed.connect(_update_wave_rows)
+	_update_wave_rows()
+	_add_note(grid, "The swell is long waves from far away; the chop is the short waves the wind makes here. Fetch and depth are for From the wind.")
 
 
-func _update_wave_texts() -> void:
-	_sea_state_row.value_label.text = _sea_state_hint(GameSettings.values.wave_preset)
+## The texts that depend on other rows, and which rows can be changed: nothing without
+## waves, the swell's bearing only when the swell does not follow the wind, the fetch and
+## the depth only for From the wind.
+func _update_wave_rows() -> void:
+	var s: SettingsValues = GameSettings.values
+	_sea_state_row.value_label.text = _sea_state_hint(s.wave_preset)
 	_wave_height_row.value_label.text = _wave_height_text()
+	_swell_mode_row.value_label.text = "Turns with the wind" if s.swell_follows_wind else "Stays when the wind turns"
+	_swell_height_row.value_label.text = _swell_height_text()
+	_chop_direction_row.value_label.text = _chop_direction_text(s.chop_offset_deg)
+	var has_waves: bool = s.waves_enabled and s.wave_preset != SettingsValues.WavePreset.FLAT
+	_set_wave_row_enabled(_sea_state_row, s.waves_enabled)
+	for row: Row in [_wave_height_row, _swell_mode_row, _swell_height_row, _chop_direction_row]:
+		_set_wave_row_enabled(row, has_waves)
+	_set_wave_row_enabled(_swell_bearing_row, has_waves and not s.swell_follows_wind)
+	var from_wind: bool = has_waves and s.wave_preset == SettingsValues.WavePreset.FROM_WIND
+	_set_wave_row_enabled(_fetch_row, from_wind)
+	_set_wave_row_enabled(_depth_row, from_wind)
+
+
+## A row that cannot be changed now is greyed out (like the rows below a switch that is off).
+func _set_wave_row_enabled(row: Row, on: bool) -> void:
+	var slider: HSlider = row.control as HSlider
+	if slider != null:
+		slider.editable = on
+	var list: OptionButton = row.control as OptionButton
+	if list != null:
+		list.disabled = not on
+	row.control.modulate.a = 1.0 if on else 0.4
+	row.value_label.modulate.a = 1.0 if on else 0.4
 
 
 func _sea_state_hint(preset: SettingsValues.WavePreset) -> String:
@@ -190,6 +243,8 @@ func _sea_state_hint(preset: SettingsValues.WavePreset) -> String:
 			return "Short waves on the swell"
 		SettingsValues.WavePreset.STRONG_CHOP:
 			return "Steep short waves: bumpy"
+		SettingsValues.WavePreset.FROM_WIND:
+			return _wind_chop_text()
 	return "Long, gentle waves (the default)"
 
 
@@ -201,6 +256,35 @@ func _wave_height_text() -> String:
 	if not waves.enable_waves:
 		return "%.1f x  (flat water)" % s.wave_height_scale
 	return "%.1f x  (crest to trough up to %.0f cm)" % [s.wave_height_scale, waves.total_amplitude_m() * 2.0 * 100.0]
+
+
+## "1.0 x  (16 cm crest to trough)": the swell's own height, or "no swell" at 0.
+func _swell_height_text() -> String:
+	var s: SettingsValues = GameSettings.values
+	var swell_m: float = 0.0
+	for wave: GerstnerWaveConfig in s.build_wave_set_config().waves_in_group(GerstnerWaveConfig.Group.SWELL):
+		swell_m += 2.0 * wave.amplitude_m
+	if swell_m <= 0.0:
+		return "%.1f x  (no swell)" % s.swell_height_scale
+	return "%.1f x  (%.0f cm crest to trough)" % [s.swell_height_scale, swell_m * 100.0]
+
+
+## "+20° off the wind: from 290° WNW": where the chop comes from with this offset.
+func _chop_direction_text(offset_deg: float) -> String:
+	var from_deg: float = fposmod(GameSettings.values.wind_from_deg + offset_deg, 360.0)
+	if is_zero_approx(offset_deg):
+		return "Straight downwind: from %03.0f° %s" % [from_deg, SettingsValues.compass_name(from_deg)]
+	return "%+.0f° off the wind: from %03.0f° %s" % [offset_deg, from_deg, SettingsValues.compass_name(from_deg)]
+
+
+## "Hs 23 cm, 5.2 m long": the sea the wind makes over the chosen fetch and depth.
+func _wind_chop_text() -> String:
+	var s: SettingsValues = GameSettings.values
+	var wind_ms: float = s.wind_speed_kt * SimMath.KNOT_MS
+	var depth_m: float = WindWaves.DEEP_WATER if s.water_depth_m >= SettingsValues.DEPTH_DEEP_M else s.water_depth_m
+	var height_m: float = WindWaves.significant_height_m(wind_ms, s.fetch_km * 1000.0, depth_m)
+	var length_m: float = WindWaves.wavelength_m(WindWaves.peak_period_s(wind_ms, s.fetch_km * 1000.0), depth_m)
+	return "%.0f kt: waves of %.0f cm, %.1f m long" % [s.wind_speed_kt, height_m * 100.0, length_m]
 
 
 func _build_sailing_rows(s: SettingsValues) -> void:
