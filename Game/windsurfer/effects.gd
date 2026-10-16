@@ -64,11 +64,10 @@ static func spray_side_shares(awa_deg: float, heel_deg: float) -> Vector2:
 
 ## Where the spray root meets a rail (side -1 port, +1 starboard), in the board's axes: the
 ## forward end of the wet part of the bottom, wetted_aft_m + wetted_length_m forward of the
-## transom (hull_model.gd), at the edge of the bottom there (the same width taper as the hull).
+## transom (hull_model.gd), at the edge of the bottom there (the board's outline, BoardConfig.width_at).
 static func spray_root_local(board: BoardConfig, wetted_aft_m: float, wetted_length_m: float, side: float) -> Vector3:
 	var from_transom: float = clampf(wetted_aft_m + wetted_length_m, 0.3, board.length_m * 0.85)
-	var d: float = absf(from_transom / board.length_m - 0.5) * 2.0
-	var half_width: float = 0.5 * board.width_m * (1.0 - board.width_taper * d * d)
+	var half_width: float = 0.5 * board.width_at(from_transom)
 	return Vector3(side * half_width, -0.5 * board.thickness_m, 0.5 * board.length_m - from_transom)
 
 
