@@ -2,7 +2,11 @@ class_name Hud
 extends CanvasLayer
 ## The telemetry on the screen: a one-line strip that is always there (speed, wind, mode),
 ## a detail panel with the forces and the controls (F1), a wind rose and the key help.
-## Everything is read from the simulation's Telemetry; nothing is computed here.
+## On a map (sail_silvaplana.tscn) also a small map of the lake, and a message line for the
+## shore ("Aground ...").
+## Everything is read from the simulation's Telemetry; nothing is computed here. The pause
+## menu (pause_menu.gd) is separate; the sailing scene (main.gd) hides this whole layer
+## behind the start menu.
 
 var detail_visible: bool = true
 var _strip: Label
@@ -10,7 +14,11 @@ var _panel: PanelContainer
 var _detail: Label
 var _help: Label
 var _rose: WindRose
-var _pause_label: Label
+## Only in a map scene (show_mini_map).
+var _mini_map: MiniMap = null
+var _message: Label
+## On a map with its own day of wind: the time of day, at the start of the strip ("" = none).
+var clock_text: String = ""
 
 
 func _ready() -> void:
@@ -27,29 +35,65 @@ func _ready() -> void:
 	_detail = _label(font, 15, Vector2.ZERO)
 	_panel.add_child(_detail)
 
-	_help = _label(font, 12, Vector2(16.0, 692.0))
-	_help.text = "W/S sheet  A/D turn (beginner) / weight (advanced)  Q/E rake  Left/Right rig tilt (adv.)  Space tack/gybe  T auto-sheet  Tab mode  1-4 camera  R reset  Esc pause  F1 panel"
+	# The key help sits at the bottom and the wind rose at the top right of any window size
+	# (anchored to those corners), not only at the default 1280 x 720.
+	_help = _label(font, 12, Vector2.ZERO)
+	_help.text = "W/S sheet  A/D turn (beginner) / weight (advanced)  Q/E rake  Left/Right rig tilt (adv.)  Space tack/gybe  T auto-sheet  Tab mode  1-4 camera  R reset  Esc menu  F1 panel"
 	add_child(_help)
+	_help.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 12)
+	_help.offset_left = 16.0
 
 	_rose = WindRose.new()
-	_rose.position = Vector2(1130.0, 20.0)
-	_rose.size = Vector2(130.0, 130.0)
 	add_child(_rose)
+	_rose.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_rose.offset_left = -150.0
+	_rose.offset_right = -20.0
+	_rose.offset_top = 20.0
+	_rose.offset_bottom = 150.0
 
-	_pause_label = _label(font, 40, Vector2(540.0, 320.0))
-	_pause_label.text = "PAUSED"
-	_pause_label.visible = false
-	add_child(_pause_label)
+	# A message across the middle of the screen, under the panels (set_message).
+	_message = _label(font, 22, Vector2.ZERO)
+	_message.add_theme_color_override("font_color", Color(1.0, 0.8, 0.4))
+	_message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	add_child(_message)
+	_message.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	_message.offset_left = -400.0
+	_message.offset_right = 400.0
+	_message.offset_top = 200.0
+	_message.hide()
 
 
-func set_paused(paused: bool) -> void:
-	_pause_label.visible = paused
+## A small map of the lake in the bottom right corner, above the key help (map scenes only).
+func show_mini_map(area: LakeArea, start: Vector3) -> void:
+	_mini_map = MiniMap.new()
+	add_child(_mini_map)
+	_mini_map.setup(area, start)
+	_mini_map.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	_mini_map.offset_left = -_mini_map.size.x - 20.0
+	_mini_map.offset_right = -20.0
+	_mini_map.offset_top = -_mini_map.size.y - 40.0
+	_mini_map.offset_bottom = -40.0
+
+
+## A short message in the middle of the screen; an empty text hides it.
+func set_message(text: String) -> void:
+	_message.text = text
+	_message.visible = text != ""
+
+
+func message() -> String:
+	return _message.text if _message.visible else ""
 
 
 func toggle_detail() -> void:
-	detail_visible = not detail_visible
-	_panel.visible = detail_visible
-	_help.visible = detail_visible
+	set_detail_visible(not detail_visible)
+
+
+## Shows or hides the detail panel and the key help line (F1).
+func set_detail_visible(shown: bool) -> void:
+	detail_visible = shown
+	_panel.visible = shown
+	_help.visible = shown
 
 
 func update_from(t: Telemetry, controller: PlayerController, camera_name: String, use_autopilot: bool) -> void:
@@ -59,12 +103,17 @@ func update_from(t: Telemetry, controller: PlayerController, camera_name: String
 		state = "%s!  waterstart in %d s (R: now)" % [t.fall_kind.to_upper(), ceili(t.waterstart_in_s)]
 	var who: String = "autopilot" if use_autopilot else controller.mode_name()
 	var manoeuvre: String = controller.manoeuvre_name()
-	_strip.text = "%5.1f km/h  %4.1f kt    wind %4.1f kt at 10 m, %4.1f kt at the sail, from %03.0f    %s, %s%s    %s    camera: %s" % [
+	_strip.text = ("%s   " % clock_text if clock_text != "" else "") + "%5.1f km/h  %4.1f kt    wind %4.1f kt at 10 m, %4.1f kt at the sail, from %03.0f    %s, %s%s    %s    camera: %s" % [
 		t.speed_kmh, t.speed_kt, t.tws_10m_kt, t.tws_at_sail_kt, t.wind_from_bearing_deg,
 		tack, state, ("  " + manoeuvre) if manoeuvre != "" else "", who, camera_name]
 	_rose.heading_deg = t.heading_deg
 	_rose.wind_from_deg = t.wind_from_bearing_deg
 	_rose.queue_redraw()
+	if _mini_map != null:
+		_mini_map.board_position = t.position
+		_mini_map.heading_deg = t.heading_deg
+		_mini_map.wind_from_deg = t.wind_from_bearing_deg
+		_mini_map.queue_redraw()
 	if not detail_visible:
 		return
 	_detail.text = (

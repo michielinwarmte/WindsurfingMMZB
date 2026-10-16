@@ -4,14 +4,31 @@ extends Resource
 ## Every number is a real-world value for a 120 L freeride board (PHYSICS_SPEC.md section 14).
 ## Units are in the names. Change values in the .tres file, not here.
 
+## Where a shaper measures the nose and tail widths: one foot (30.48 cm) in from the tip.
+## Brands and test magazines quote the tail width there as "1ft off" (OFO).
+const ONE_FOOT_M: float = 0.3048
+
 @export_group("Shape")
 ## Length from nose to tail.
 @export var length_m: float = 2.40
-## Width at the widest point.
+## Width at the widest point of the outline.
 @export var width_m: float = 0.72
-## Thickness of the hull box. Also the depth over which one buoyancy sample point goes from
-## dry to fully under water (section 6.3).
+## Where the widest point is, measured forward from the tail. Freeride boards are widest a
+## little behind the middle, under the front footstraps and the mast foot.
+@export var widest_point_from_tail_m: float = 1.10
+## The tail width one foot in from the tail ("1ft off", OFO): what sets how early and how
+## loose a board planes. A wider tail lifts more at the same speed (Savitsky: lift grows
+## with the beam squared) and planes earlier; a narrower one is more controlled in chop.
+@export var tail_width_m: float = 0.45
+## The nose width one foot in from the nose tip.
+@export var nose_width_m: float = 0.45
+## Thickness at the thickest point (at the widest point). Also the depth over which one
+## buoyancy sample point goes from dry to fully under water (section 6.3).
 @export var thickness_m: float = 0.12
+## Thickness at the tail end (the transom).
+@export var tail_thickness_m: float = 0.055
+## Thickness at the nose tip.
+@export var nose_thickness_m: float = 0.04
 ## Total volume of the board. A 120 L board is written as 0.120.
 @export var volume_m3: float = 0.120
 ## Mass of the bare board with straps and fin.
@@ -27,15 +44,25 @@ extends Resource
 ## Over what length from the tail the kick builds up (quadratic).
 @export var tail_rocker_length_m: float = 0.35
 
+@export_group("Rails")
+## A shaper calls a rail "hard" when the bottom meets the side in a sharp edge, and "soft"
+## or "tucked" when the side curves round under the board. Freeride boards have hard rails
+## in the tail (the water lets go cleanly at speed) that soften toward the nose (forgiving
+## in chop). The rail is hard from the tail up to this distance from the tail...
+@export var hard_rail_to_m: float = 1.2
+## ...and fully soft from this distance from the tail to the nose, with a gradual change
+## between the two.
+@export var soft_rail_from_m: float = 2.0
+## Height of the near-vertical face of a hard rail, from the bottom edge up to where the
+## rail starts to round into the deck. When the board skids sideways, water meets this face
+## (the "chine edge" of a planing hull, NACA TN 4187).
+@export var rail_edge_height_m: float = 0.03
+
 @export_group("Buoyancy sampling")
 ## Rows of sample points along the length (section 6.1).
 @export var length_samples: int = 7
 ## Sample points across each row (rail, centre, rail).
 @export var width_samples: int = 3
-## The half-width at the tips is (1 - width_taper) times the half-width in the middle.
-@export var width_taper: float = 0.3
-## The volume per row at the tips is (1 - volume_taper) times the volume in the middle.
-@export var volume_taper: float = 0.4
 
 @export_group("Hull hydrodynamics")
 ## Sideways drag coefficient of the immersed hull side, like a flat plate (section 5 F10).
@@ -89,7 +116,54 @@ func bottom_slope(from_transom_m: float) -> float:
 	return 0.0
 
 
-## Planform area of the bottom, from the tapered width: the average width factor over the
-## length is 1 - width_taper / 3 for a quadratic taper.
+## Width of the outline at a distance forward of the transom. Between the widest point and
+## the two one-foot points the outline is a parabola (flat at the widest point, curving more
+## toward the ends); from the one-foot points to the tips it carries straight on along the
+## parabola's tangent, as the nearly straight rail lines of a tail and nose do. Through the
+## three numbers a shaper quotes: the widest point, the tail width and the nose width.
+func width_at(from_transom_m: float) -> float:
+	var reference_width: float = tail_width_m
+	var reference_distance: float = widest_point_from_tail_m - ONE_FOOT_M
+	var distance: float = widest_point_from_tail_m - from_transom_m
+	if from_transom_m > widest_point_from_tail_m:
+		reference_width = nose_width_m
+		reference_distance = length_m - ONE_FOOT_M - widest_point_from_tail_m
+		distance = from_transom_m - widest_point_from_tail_m
+	reference_distance = maxf(reference_distance, 0.01)
+	var narrowing: float = width_m - reference_width
+	if distance <= reference_distance:
+		var s: float = distance / reference_distance
+		return width_m - narrowing * s * s
+	var slope: float = 2.0 * narrowing / reference_distance
+	return maxf(reference_width - slope * (distance - reference_distance), 0.0)
+
+
+## Thickness of the board at a distance forward of the transom: full at the widest point,
+## falling off as a parabola to the tail and nose thicknesses at the tips.
+func thickness_at(from_transom_m: float) -> float:
+	if from_transom_m <= widest_point_from_tail_m:
+		var s: float = clampf((widest_point_from_tail_m - from_transom_m) / maxf(widest_point_from_tail_m, 0.01), 0.0, 1.0)
+		return thickness_m - (thickness_m - tail_thickness_m) * s * s
+	var n: float = clampf((from_transom_m - widest_point_from_tail_m) / maxf(length_m - widest_point_from_tail_m, 0.01), 0.0, 1.0)
+	return thickness_m - (thickness_m - nose_thickness_m) * n * n
+
+
+## How hard the rail is at a distance forward of the transom: 1 for a sharp edge, 0 for a
+## soft (tucked) rail, changing linearly between hard_rail_to_m and soft_rail_from_m.
+func rail_hardness(from_transom_m: float) -> float:
+	if from_transom_m <= hard_rail_to_m:
+		return 1.0
+	if from_transom_m >= soft_rail_from_m:
+		return 0.0
+	return (soft_rail_from_m - from_transom_m) / maxf(soft_rail_from_m - hard_rail_to_m, 0.01)
+
+
+## Planform area of the bottom: the outline's width integrated over the length (midpoint
+## rule; 1.346 m2 for the default board). Not cheap: models compute it once and keep it.
 func planform_area_m2() -> float:
-	return length_m * width_m * (1.0 - width_taper / 3.0)
+	var steps: int = 240
+	var step_length: float = length_m / float(steps)
+	var area: float = 0.0
+	for i: int in steps:
+		area += width_at((float(i) + 0.5) * step_length) * step_length
+	return area

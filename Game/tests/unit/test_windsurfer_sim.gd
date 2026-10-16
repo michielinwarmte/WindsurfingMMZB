@@ -217,6 +217,49 @@ func test_beginner_tacks_with_space_from_a_beam_reach_on_both_tacks() -> void:
 		assert_gt(sim.telemetry.speed_ms, 3.0, "and got going again (start %s)" % heading)
 
 
+## A wind whose air at every point comes from a few degrees elsewhere than the mean wind it
+## reports, as the lake's wind does near a shore (on Lake Silvaplana at 14:30 the wind off the
+## camping beach comes from 206 while the lake's mean is from 222).
+class OffsetWind extends WindField:
+	var offset_rad: float = 0.0
+
+	func _init(wind_config: WindConfig, offset_deg: float) -> void:
+		offset_rad = deg_to_rad(offset_deg)
+		super(wind_config)
+
+	func velocity_at(point: Vector3) -> Vector3:
+		return -SimMath.dir_from_bearing(current_from_bearing_rad + offset_rad) * speed_at_height(point.y)
+
+
+func test_beginner_tacks_in_a_local_wind_that_differs_from_the_mean() -> void:
+	# The local wind comes from 16 degrees to the left of the mean: the board on starboard
+	# tack turns right through it, so the bow is through the local wind 16 degrees before it
+	# is through the mean. The backed sail stops pushing once the boom, fully across (35
+	# degrees on the new side), lies along the wind it meets; judged on the mean wind the rig
+	# would only be flipped 41 degrees past the local wind, and the board stalled there.
+	var sim: WindsurferSim = _sim(18.0)
+	sim.wind = OffsetWind.new(sim.wind_config, -16.0)
+	sim.reset(Vector3.ZERO, deg_to_rad(180.0))
+	var controller: PlayerController = PlayerController.new()
+	controller.set_sail(sim.sail, sim.sailor_config)
+	var controls: SimControls = _eased()
+	_play(sim, controller, controls, 25.0)
+	var t: Telemetry = sim.telemetry
+	assert_almost_eq(t.twa_at_sail_deg, t.twa_deg - 16.0, 0.5, "the sail meets the local wind, 16 degrees closer to the bow")
+	_press_once("tack", sim, controller, controls)
+	var done_at: float = -1.0
+	var fell: bool = false
+	for i: int in int(20.0 / DT):
+		controller.update(sim.telemetry, controls, DT)
+		sim.step(DT, controls)
+		fell = fell or sim.sailor_state == WindsurferSim.SailorState.FALLEN
+		if sim.telemetry.twa_deg < -50.0:
+			done_at = sim.time_s
+			break
+	assert_gt(done_at, 0.0, "the tack completes onto port tack (the mean TWA past 50 degrees), ended at TWA %.1f" % sim.telemetry.twa_deg)
+	assert_false(fell, "without falling")
+
+
 func test_beginner_tacks_by_holding_the_turn_key() -> void:
 	# Starboard tack, D held: heading up through the wind and on round onto port tack.
 	var parts: Array = _beginner_sim(180.0)
@@ -284,10 +327,18 @@ func test_beginner_gybes_with_space_and_settles_on_the_new_course() -> void:
 	# Settling: five seconds later the heading hardly moves any more.
 	_play(sim, controller, controls, 5.0)
 	var heading_a: float = sim.telemetry.heading_deg
-	_play(sim, controller, controls, 3.0)
+	_play(sim, controller, controls, 2.0)
+	# The turn rate averaged over the last second: at 12 m/s on the broad reach the board
+	# skips on the flat water and its yaw rate swings by +-10 degrees a second from one
+	# bounce to the next, so a single sample says little about whether it still turns.
+	var yaw_sum: float = 0.0
+	for i: int in int(1.0 / DT):
+		controller.update(sim.telemetry, controls, DT)
+		sim.step(DT, controls)
+		yaw_sum += sim.telemetry.yaw_rate_dps * DT
 	var drift: float = absf(wrapf(sim.telemetry.heading_deg - heading_a, -180.0, 180.0))
 	assert_lt(drift, 10.0, "steady on the new course")
-	assert_lt(absf(sim.telemetry.yaw_rate_dps), 6.0)
+	assert_lt(absf(yaw_sum), 6.0, "no longer turning (%.1f degrees a second on average)" % yaw_sum)
 	assert_gt(sim.telemetry.speed_ms, 4.0, "and still moving")
 
 
@@ -391,4 +442,5 @@ func test_identical_runs_are_identical() -> void:
 	_run(b, 5.0, _eased(), _pilot(90.0, b))
 	assert_eq(a.body.position, b.body.position)
 	assert_eq(a.body.basis, b.body.basis)
+
 

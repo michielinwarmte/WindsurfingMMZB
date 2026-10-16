@@ -1,0 +1,219 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://ui/start_menu.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://main.tscn" id="2_sailing"]
+[ext_resource type="Theme" path="res://ui/theme.tres" id="3_theme"]
+[ext_resource type="PackedScene" path="res://ui/settings_menu.tscn" id="4_settings"]
+[ext_resource type="PackedScene" path="res://ui/controls_page.tscn" id="5_controls"]
+[ext_resource type="PackedScene" path="res://ui/howto_page.tscn" id="6_howto"]
+[ext_resource type="PackedScene" path="res://ui/confirm_dialog.tscn" id="7_confirm"]
+
+[sub_resource type="Gradient" id="Gradient_shade"]
+offsets = PackedFloat32Array(0, 0.36, 0.62)
+colors = PackedColorArray(0.015, 0.04, 0.08, 0.86, 0.015, 0.04, 0.08, 0.66, 0.015, 0.04, 0.08, 0)
+
+[sub_resource type="GradientTexture2D" id="Texture_shade"]
+gradient = SubResource("Gradient_shade")
+width = 256
+height = 4
+fill_to = Vector2(1, 0)
+
+[node name="StartMenu" type="Node"]
+script = ExtResource("1_script")
+
+[node name="Sailing" parent="." instance=ExtResource("2_sailing")]
+start_in_menu = true
+
+[node name="Menu" type="CanvasLayer" parent="."]
+layer = 5
+
+[node name="Root" type="Control" parent="Menu"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("3_theme")
+
+[node name="Shade" type="TextureRect" parent="Menu/Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("Texture_shade")
+expand_mode = 1
+
+[node name="MainPage" type="MarginContainer" parent="Menu/Root"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 9
+anchor_bottom = 1.0
+offset_right = 660.0
+grow_vertical = 2
+theme_override_constants/margin_left = 64
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 40
+
+[node name="Layout" type="VBoxContainer" parent="Menu/Root/MainPage"]
+layout_mode = 2
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="Title" type="Label" parent="Menu/Root/MainPage/Layout"]
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+text = "Windsurfing"
+
+[node name="Subtitle" type="Label" parent="Menu/Root/MainPage/Layout"]
+layout_mode = 2
+theme_type_variation = &"SubtitleLabel"
+text = "Simulator  ·  by the MMZB team"
+
+[node name="Gap" type="Control" parent="Menu/Root/MainPage/Layout"]
+custom_minimum_size = Vector2(0, 22)
+layout_mode = 2
+
+[node name="PlayTitle" type="Label" parent="Menu/Root/MainPage/Layout"]
+layout_mode = 2
+theme_type_variation = &"SectionLabel"
+text = "Play"
+
+[node name="OpenWaterButton" type="Button" parent="Menu/Root/MainPage/Layout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+theme_type_variation = &"BigButton"
+text = "Sail on open water"
+alignment = 0
+
+[node name="OpenWaterHint" type="Label" parent="Menu/Root/MainPage/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HintLabel"
+text = "18 kt from W (270), swell"
+
+[node name="SailSilvaplanaButton" type="Button" parent="Menu/Root/MainPage/Layout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+theme_type_variation = &"BigButton"
+text = "Sail on Lake Silvaplana"
+alignment = 0
+
+[node name="SailSilvaplanaHint" type="Label" parent="Menu/Root/MainPage/Layout"]
+layout_mode = 2
+theme_type_variation = &"HintLabel"
+text = "The real lake in the Engadin, a Maloja wind from the south-west."
+
+[node name="WindButton" type="Button" parent="Menu/Root/MainPage/Layout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+theme_type_variation = &"BigButton"
+text = "Silvaplana wind viewer"
+alignment = 0
+
+[node name="WindHint" type="Label" parent="Menu/Root/MainPage/Layout"]
+layout_mode = 2
+theme_type_variation = &"HintLabel"
+text = "The Maloja wind over the lake through the day, and the race course maker."
+
+[node name="SilvaplanaButton" type="Button" parent="Menu/Root/MainPage/Layout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+theme_type_variation = &"BigButton"
+text = "Lake Silvaplana: fly over the map"
+alignment = 0
+
+[node name="SilvaplanaHint" type="Label" parent="Menu/Root/MainPage/Layout"]
+layout_mode = 2
+theme_type_variation = &"HintLabel"
+text = "The real lake and mountains from Swiss open data, seen from the air."
+
+[node name="Separator" type="HSeparator" parent="Menu/Root/MainPage/Layout"]
+custom_minimum_size = Vector2(520, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+
+[node name="MoreButtons" type="HBoxContainer" parent="Menu/Root/MainPage/Layout"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="SettingsButton" type="Button" parent="Menu/Root/MainPage/Layout/MoreButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Settings"
+
+[node name="ControlsButton" type="Button" parent="Menu/Root/MainPage/Layout/MoreButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Controls"
+
+[node name="HowToButton" type="Button" parent="Menu/Root/MainPage/Layout/MoreButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "How to sail"
+
+[node name="QuitButton" type="Button" parent="Menu/Root/MainPage/Layout/MoreButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Quit"
+
+[node name="Status" type="Label" parent="Menu/Root/MainPage/Layout"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(520, 0)
+layout_mode = 2
+theme_type_variation = &"HintLabel"
+theme_override_colors/font_color = Color(1, 0.72, 0.35, 1)
+text = "Loading..."
+autowrap_mode = 3
+
+[node name="Version" type="Label" parent="Menu/Root"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -700.0
+offset_top = -38.0
+offset_right = -20.0
+offset_bottom = -12.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_type_variation = &"HintLabel"
+theme_override_font_sizes/font_size = 14
+text = "v0.5"
+horizontal_alignment = 2
+
+[node name="Settings" parent="Menu/Root" instance=ExtResource("4_settings")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+
+[node name="Controls" parent="Menu/Root" instance=ExtResource("5_controls")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+
+[node name="HowTo" parent="Menu/Root" instance=ExtResource("6_howto")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+
+[node name="QuitConfirm" parent="Menu/Root" instance=ExtResource("7_confirm")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1

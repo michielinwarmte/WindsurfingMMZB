@@ -31,7 +31,7 @@ func update(sim: WindsurferSim, dt: float) -> void:
 	sim.fin.compute(body, sim.water, sim.time_s, sim.water_config.density_kg_m3)
 	var tau_f: Vector3 = body._torque_sum
 	body.clear_forces()
-	sim.sail.compute(sim.rig, sim.wind, controls.sheet, controls.rake, WindsurferSim.RHO_AIR, sim.lean * deg_to_rad(sim.sailor_config.max_rig_lean_deg))
+	sim.sail.compute(sim.rig, sim.wind, controls.sheet, controls.rake, sim.air_density_kg_m3, sim.lean * deg_to_rad(sim.sailor_config.max_rig_lean_deg))
 	var tau_s: Vector3 = body._torque_sum
 	var f_s: Vector3 = body._force_sum
 	body.clear_forces()

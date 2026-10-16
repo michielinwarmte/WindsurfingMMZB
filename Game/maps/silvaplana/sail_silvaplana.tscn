@@ -1,0 +1,37 @@
+[gd_scene format=3]
+
+; Sailing on Lake Silvaplana (MAP_SILVAPLANA_PLAN.md, M3 and W5): the map (terrain, sky, sun, haze and
+; the lake's reflection probe) with the open-water sailing scene's parts (main.tscn), run by
+; sail_silvaplana.gd, which extends main.gd. The Ocean has the lake's look (lake_water.tres) on render
+; layer 2 (the reflection probe's); the script sets its far water to the depth grid's area, so the
+; land lower than the lake outside it is not flooded.
+
+[ext_resource type="Script" path="res://maps/silvaplana/sail_silvaplana.gd" id="1_sail"]
+[ext_resource type="PackedScene" path="res://maps/silvaplana/silvaplana.tscn" id="2_map"]
+[ext_resource type="PackedScene" path="res://windsurfer/windsurfer.tscn" id="3_windsurfer"]
+[ext_resource type="Script" path="res://camera/camera_rig.gd" id="4_camera"]
+[ext_resource type="Script" path="res://ui/hud.gd" id="5_hud"]
+[ext_resource type="Script" path="res://world/ocean.gd" id="6_ocean"]
+[ext_resource type="PackedScene" path="res://ui/pause_menu.tscn" id="7_pause"]
+[ext_resource type="Material" path="res://maps/silvaplana/lake_water.tres" id="8_lake_water"]
+
+[node name="SailSilvaplana" type="Node3D"]
+script = ExtResource("1_sail")
+
+[node name="Silvaplana" parent="." instance=ExtResource("2_map")]
+
+[node name="Ocean" type="Node3D" parent="."]
+script = ExtResource("6_ocean")
+look = ExtResource("8_lake_water")
+render_layers = 2
+
+[node name="Windsurfer" parent="." instance=ExtResource("3_windsurfer")]
+
+[node name="CameraRig" type="Node3D" parent="."]
+script = ExtResource("4_camera")
+target_path = NodePath("../Windsurfer")
+
+[node name="HUD" type="CanvasLayer" parent="."]
+script = ExtResource("5_hud")
+
+[node name="PauseMenu" parent="." instance=ExtResource("7_pause")]

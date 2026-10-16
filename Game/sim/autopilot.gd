@@ -16,6 +16,9 @@ var target_alpha_deg: float = 15.0
 ## most drive at the current apparent wind angle, which is what a sailor does by feel:
 ## close to the wind that is a modest angle (drag costs), on a reach it is near the stall.
 var sail: SailModel = null
+## The air density the simulation sails in (kg/m3), for the sail force the pilot expects: set
+## with the sail (WindsurferSim.air_density_kg_m3; thinner on a mountain lake).
+var air_density_kg_m3: float = 1.225
 ## The sailor, when the pilot may use their weight, reach and lean rate to sheet in only
 ## as fast as the body can lean out against the pull.
 var sailor: SailorConfig = null
@@ -201,9 +204,12 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		var across: float = 0.0
 		# The apparent and true wind measured on the sail's own windward side: negative once
 		# the bow has gone through the wind while the rig is still held on the old side.
-		# Inside luff_band_deg the sail luffs even fully sheeted (the no-go zone).
+		# Inside luff_band_deg the sail luffs even fully sheeted (the no-go zone). Both are the
+		# wind the sail meets where the board is: on a map the lake's mean wind can come from
+		# 15 degrees elsewhere near a shore, and a tack judged on it stalls with the backed
+		# sail feathered short of the flip (PHYSICS_SPEC.md 17.14, the lake's tacks).
 		var awa_own_side_deg: float = telemetry.awa_deg * -float(telemetry.sail_side)
-		var twa_own_side_deg: float = telemetry.twa_deg * -float(telemetry.sail_side)
+		var twa_own_side_deg: float = telemetry.twa_at_sail_deg * -float(telemetry.sail_side)
 		var luff_band_deg: float = sheet_angle_in_deg + alpha_luff_deg
 		controls.hold_side = 0
 		controls.step_forward = 0.0
@@ -232,8 +238,8 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 			elif wanted_turn * away_from_sail < 0.0 and cannot_fill:
 				_tack_phase = 2
 		if _tack_phase == 1:
-			# The bow is clearly through the wind (the true wind, which does not swing with the
-			# turning rig as the apparent wind does) and the apparent wind on the new side is
+			# The bow is clearly through the wind (the true wind at the sail, which does not
+			# swing with the turning rig as the apparent wind does) and the apparent wind on the new side is
 			# wide enough for the sail to fill the moment it is sheeted in there: flip the rig.
 			# Flipped earlier, the sail would luff on the new side and the fin would weathervane
 			# the bow straight back.
@@ -396,7 +402,7 @@ func _alpha_for_torque_deg(telemetry: Telemetry, limit_nm: float) -> float:
 	if sail == null or limit_nm == INF:
 		return INF
 	var aws_ms: float = telemetry.aws_kt * SimMath.KNOT_MS
-	var q_area: float = 0.5 * 1.225 * aws_ms * aws_ms * sail.config.area_m2
+	var q_area: float = 0.5 * air_density_kg_m3 * aws_ms * aws_ms * sail.config.area_m2
 	var awa: float = deg_to_rad(absf(telemetry.awa_deg))
 	var arm_m: float = _heeling_arm_m(telemetry)
 	var alpha_deg: float = 24.0
@@ -420,7 +426,7 @@ func _alpha_rise_limit_dps(telemetry: Telemetry) -> float:
 	if sail == null or sailor == null:
 		return INF
 	var aws_ms: float = telemetry.aws_kt * SimMath.KNOT_MS
-	var q_area: float = 0.5 * 1.225 * aws_ms * aws_ms * sail.config.area_m2
+	var q_area: float = 0.5 * air_density_kg_m3 * aws_ms * aws_ms * sail.config.area_m2
 	if q_area < 1.0:
 		return INF
 	var slope_per_deg: float = sail.lift_slope_per_rad() * PI / 180.0
@@ -435,7 +441,7 @@ func _backing_alpha_deg(telemetry: Telemetry) -> float:
 	if sail == null:
 		return backing_alpha_deg
 	var aws_ms: float = telemetry.aws_kt * SimMath.KNOT_MS
-	var q: float = 0.5 * 1.225 * aws_ms * aws_ms
+	var q: float = 0.5 * air_density_kg_m3 * aws_ms * aws_ms
 	var cl_allowed: float = backing_force_max_n / maxf(q * sail.config.area_m2, 1e-6)
 	var alpha_deg: float = backing_alpha_deg
 	while alpha_deg > 0.5 and sail.lift_coefficient(deg_to_rad(alpha_deg)) > cl_allowed:

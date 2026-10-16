@@ -2,6 +2,7 @@ extends GutTest
 ## The Gerstner wave field against the hand-calculated values of PHYSICS_SPEC.md section 9
 ## ("Tests Phase 2 should write"): one wave of 10 m, 0.1 m and steepness 0.25 travelling
 ## North unless a test says otherwise; the default set of waves_default.tres for the bounds.
+## The swell and the chop each have their own direction (9.15).
 
 const TOL: float = 1e-4
 
@@ -12,8 +13,11 @@ func _one_wave(wavelength_m: float = 10.0, amplitude_m: float = 0.1, steepness: 
 	wave.amplitude_m = amplitude_m
 	wave.steepness = steepness
 	wave.direction_offset_deg = offset_deg
+	wave.group = GerstnerWaveConfig.Group.SWELL
 	var set_config: WaveSetConfig = WaveSetConfig.new()
-	set_config.align_to_wind = false  # offsets from North
+	# A swell from the South travels North, so the offset is measured from North.
+	set_config.swell_relative_to_wind = false
+	set_config.swell_from_deg = 180.0
 	set_config.waves = [wave]
 	return set_config
 
@@ -47,7 +51,7 @@ func test_bearings_become_d4_directions() -> void:
 	assert_almost_eq(WaveField.direction_for_bearing(270.0).x, -1.0, 1e-9, "West is -X")
 	# Wind from the West, offset +12: the wave travels at bearing 102, East and a little South.
 	var field: WaveField = WaveField.new(_one_wave(10.0, 0.1, 0.25, 12.0), null, 270.0)
-	field.config.align_to_wind = true
+	field.config.swell_relative_to_wind = true
 	field.set_wind_bearing(270.0)
 	assert_almost_eq(field.dir_x[0], 0.9781, 1e-4)
 	assert_almost_eq(field.dir_z[0], 0.2079, 1e-4)
@@ -223,3 +227,85 @@ func test_default_set_is_physical_and_the_shader_gets_the_same_numbers() -> void
 	var off: WaveField = WaveField.new(set_config, null, 270.0)
 	var off_amplitudes: Vector4 = off.shader_parameters()["wave_amplitudes"]
 	assert_eq(off_amplitudes, Vector4.ZERO, "waves off: every slot empty")
+
+
+## The default set as it was before the waves were split into a swell and a chop group
+## (Session 37): the same four waves in the same directions, so the validation suite's sea
+## runs do not move. Each row: the offset from downwind (deg), length, amplitude, steepness.
+const SESSION_37_WAVES: Array[Array] = [
+	[12.0, 14.0, 0.08, 0.036],
+	[-28.0, 7.0, 0.02, 0.018],
+	[40.0, 3.5, 0.005, 0.009],
+	[-55.0, 1.8, 0.002, 0.007],
+]
+
+
+func test_the_default_set_has_the_same_four_waves_as_before_the_groups() -> void:
+	var field: WaveField = _default_set()  # wind from 270: downwind is bearing 90 (East)
+	assert_eq(field.count, 4)
+	for i: int in SESSION_37_WAVES.size():
+		var old: Array = SESSION_37_WAVES[i]
+		var direction: Vector2 = WaveField.direction_for_bearing(90.0 + float(old[0]))
+		assert_almost_eq(field.dir_x[i], direction.x, 1e-9, "wave %d direction x" % (i + 1))
+		assert_almost_eq(field.dir_z[i], direction.y, 1e-9, "wave %d direction z" % (i + 1))
+		assert_almost_eq(field.wavelength[i], float(old[1]), 1e-9, "wave %d length" % (i + 1))
+		assert_almost_eq(field.amplitude[i], float(old[2]), 1e-9, "wave %d amplitude" % (i + 1))
+		assert_almost_eq(field.steepness[i], float(old[3]), 1e-9, "wave %d steepness" % (i + 1))
+	var set_config: WaveSetConfig = field.config
+	assert_eq(set_config.waves_in_group(GerstnerWaveConfig.Group.SWELL).size(), 1, "one swell: the 14 m wave")
+	assert_eq(set_config.waves_in_group(GerstnerWaveConfig.Group.CHOP).size(), 3, "three chop waves")
+	assert_eq(set_config.waves[0].group, GerstnerWaveConfig.Group.SWELL)
+
+
+func test_a_swell_from_a_compass_bearing_stays_when_the_wind_turns() -> void:
+	var set_config: WaveSetConfig = _swell_and_chop()
+	set_config.swell_relative_to_wind = false
+	set_config.swell_from_deg = 0.0  # from the North: it travels South, +Z
+	var field: WaveField = WaveField.new(set_config, null, 270.0)
+	assert_almost_eq(field.dir_x[0], 0.0, 1e-9, "the swell travels South")
+	assert_almost_eq(field.dir_z[0], 1.0, 1e-9)
+	assert_almost_eq(field.dir_x[1], 1.0, 1e-9, "the chop travels East, downwind of a West wind")
+	assert_almost_eq(field.dir_z[1], 0.0, 1e-9)
+	field.set_wind_bearing(180.0)  # the wind turns to the South
+	assert_almost_eq(field.dir_z[0], 1.0, 1e-9, "the swell has not moved")
+	assert_almost_eq(field.dir_x[1], 0.0, 1e-9, "the chop now travels North")
+	assert_almost_eq(field.dir_z[1], -1.0, 1e-9)
+
+
+func test_a_swell_relative_to_the_wind_turns_with_it() -> void:
+	var set_config: WaveSetConfig = _swell_and_chop()
+	set_config.swell_relative_to_wind = true
+	set_config.swell_offset_deg = 90.0  # a quarter turn clockwise from downwind
+	var field: WaveField = WaveField.new(set_config, null, 270.0)
+	assert_almost_eq(field.dir_z[0], 1.0, 1e-9, "downwind East + 90: South")
+	field.set_wind_bearing(0.0)  # wind from the North: downwind is South, + 90 is West
+	assert_almost_eq(field.dir_x[0], -1.0, 1e-9, "the swell turned with the wind")
+	assert_almost_eq(field.dir_z[1], 1.0, 1e-9, "the chop travels South")
+
+
+func test_the_chop_offset_turns_only_the_chop() -> void:
+	var set_config: WaveSetConfig = _swell_and_chop()
+	set_config.chop_offset_deg = -45.0
+	var field: WaveField = WaveField.new(set_config, null, 270.0)
+	assert_almost_eq(field.dir_x[0], 1.0, 1e-9, "the swell still travels East")
+	var chop: Vector2 = WaveField.direction_for_bearing(45.0)
+	assert_almost_eq(field.dir_x[1], chop.x, 1e-9, "the chop travels North-East: 45 degrees left of downwind")
+	assert_almost_eq(field.dir_z[1], chop.y, 1e-9)
+	assert_almost_eq(set_config.chop_travel_bearing_deg(270.0), 405.0, 1e-9)
+
+
+## One swell wave and one chop wave, both without a per-wave offset.
+func _swell_and_chop() -> WaveSetConfig:
+	var swell: GerstnerWaveConfig = GerstnerWaveConfig.new()
+	swell.group = GerstnerWaveConfig.Group.SWELL
+	swell.wavelength_m = 20.0
+	swell.amplitude_m = 0.1
+	swell.steepness = 0.03
+	var chop: GerstnerWaveConfig = GerstnerWaveConfig.new()
+	chop.group = GerstnerWaveConfig.Group.CHOP
+	chop.wavelength_m = 4.0
+	chop.amplitude_m = 0.05
+	chop.steepness = 0.08
+	var set_config: WaveSetConfig = WaveSetConfig.new()
+	set_config.waves = [swell, chop]
+	return set_config

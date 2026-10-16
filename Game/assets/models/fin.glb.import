@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://c2ky0qo02cnub"
-path="res://.godot/imported/sail.fbx-8d3a2a7c2b16a24010572a7913a977e4.scn"
+uid="uid://beag0e3qj8pn8"
+path="res://.godot/imported/fin.glb-cb6354244620d166af5c5ea5294cdca7.scn"
 
 [deps]
 
-source_file="res://assets/models/sail.fbx"
-dest_files=["res://.godot/imported/sail.fbx-8d3a2a7c2b16a24010572a7913a977e4.scn"]
+source_file="res://assets/models/fin.glb"
+dest_files=["res://.godot/imported/fin.glb-cb6354244620d166af5c5ea5294cdca7.scn"]
 
 [params]
 
@@ -32,7 +32,7 @@ meshes/force_disable_compression=false
 skins/use_named_skins=true
 animation/import=true
 animation/fps=30
-animation/trimming=true
+animation/trimming=false
 animation/remove_immutable_tracks=true
 animation/import_rest_as_RESET=false
 import_script/path=""
@@ -40,7 +40,6 @@ materials/extract=0
 materials/extract_format=0
 materials/extract_path=""
 _subresources={}
-fbx/importer=0
-fbx/allow_geometry_helper_nodes=false
-fbx/embedded_image_handling=1
-fbx/naming_version=2
+gltf/naming_version=2
+gltf/embedded_image_handling=1
+gltf/texture_map_mode=1

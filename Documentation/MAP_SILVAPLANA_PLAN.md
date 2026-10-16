@@ -21,14 +21,14 @@ The branch starts from `feature/physics-sim` (Phases 1 to 5), because `main` doe
 | M0 | Tools, round-trip test, data download | ✅ Done on Windows (Session 38). The 10 cm photos were agreed and downloaded in M2. Still open: the Linux PC check, and the surface model (M4) |
 | M1 | Terrain and lakebed in Godot | ✅ Built on Windows (Session 39). Max's look, with the photos of M2 (Session 41): the terrain "is really good and nice" |
 | M2 | The look: aerial photo, sky, the mountains you can see | ✅ Built on Windows (Sessions 40 and 41), with see-through lake water in the terrain view. Max's look (Session 41): the terrain really good, the first water "really bad", so the see-through water was built. Max, 16 October: the new water works well. Waiting for Michiel on R9 (the water in the game) |
-| M3 | Sailing on the lake: start spot, one Maloja weather setting, shoreline | ⬜ |
+| M3 | Sailing on the lake: start spot, one Maloja weather setting, shoreline | 🔶 Built (16 October 2026): `tools/play.sh lake` or the start menu's "Sail on Lake Silvaplana": the board off the camping beach in the map's own wind (`MapWind`, W5, from 14:30 with the time on the HUD), the thin air (0.98 kg/m³), the fresh water, the shore stop, the game's see-through water in the lake's look with the gusts on it, and a small map. Next: the team's play-test |
 | M4 | Details: camping and beach, village, trees, landmarks | ⬜ |
 | W0 | Wind analyser: research into how the Maloja behaves | ✅ Done (Session 42): [MALOJA_WIND_RESEARCH.md](MALOJA_WIND_RESEARCH.md). Max answered its questions on 15 October (in SILVAPLANA_SPOT_NOTES.md and the research document) |
 | W1 | Wind analyser: the fixed pattern over the terrain (WindNinja) | ✅ First version (Session 42): direction from WindNinja, strength on the lake from the satellite. Checked by Max on 15 October: the weak south-east shore, the weak Sils end, the direction along the lake and the stronger north-west side are right |
 | W2 | Wind analyser: the 3D viewer in Godot | ✅ First version (Session 43): `tools/play.sh wind`. Max's first look: Windfinder's colours, and he missed the gusts (both done: the colours in W2, the gusts in W3) |
 | W3 | Wind analyser: gusts, pulses, shifts and the day | 🔶 Mostly done (Session 43): gusts and lulls measured on the satellite photos (fronts across the lake, lanes along the wind), pulses and shifts, and the lee along the south-east shore. "The day" (start front, day types) postponed by Max on 15 October: W4 first |
 | W4 | Wind analyser: course maker (W4a) and tactics tools (W4b) | 🔶 W4a done (Session 44): the ten iQFOiL courses as templates with the class's distances, dragging, turning, resizing, saving for the team. Checked by Max on 16 October: easy to use, and the templates look like the diagrams. Then added at his request: adding marks (dropped on a leg, or typed into the order), renaming, port or starboard, deleting; and after his look at a wide window, panels that fit any window size and rounding arrows that follow the course. Max, 16 October: adding marks works well, so W4a is checked. W4b next. On the average day |
-| Later | Big projects for every spot, with Michiel: wind patterns, wind-driven waves, mountain-lake physics, live weather, other sailors | L1, the wind patterns: 🔶 Max's part mostly built as the wind analyser (W0 to W4); still open: the day types (W3) and the connection to the sailing (W5, Michiel). L2 to L5: ⬜ |
+| Later | Big projects for every spot, with Michiel: wind patterns, wind-driven waves, mountain-lake physics, live weather, other sailors | L1, the wind patterns: 🔶 Max's part mostly built as the wind analyser (W0 to W4) and connected to the sailing (W5, 16 October 2026); still open: the day types (W3). L3, mountain-lake physics: 🔶 the thin air and the fresh water done (16 October 2026); running aground on the lakebed (R4) open. L2, L4, L5: ⬜ |
 
 ## Team decisions (14 October 2026)
 
@@ -40,7 +40,7 @@ The branch starts from `feature/physics-sim` (Phases 1 to 5), because `main` doe
 6. **Other kiters and windsurfers on the water:** later, nice to have (Later L5).
 7. **Local knowledge:** Max knows the spot. His notes are the check for M2 to M4, and for the wind later.
 
-**Since then (16 October 2026):** the wind patterns (L1, decisions 4 and 5) didn't wait: Max asked for the wind analyser on 14 October, and phases W0 to W4 built most of his part of L1. Decision 4 is still the plan for M3: the sailing keeps a fixed `WindConfig` setting until W5 connects it to the analyser's wind (R5, Michiel).
+**Since then (16 October 2026):** the wind patterns (L1, decisions 4 and 5) didn't wait: Max asked for the wind analyser on 14 October, and phases W0 to W4 built most of his part of L1. Decision 4 (one fixed `WindConfig` setting) was the plan for M3 until W5 connected the sailing to the analyser's wind (R5, Michiel), on 16 October: the lake now sails in `MapWind`.
 
 ## The open data we use
 
@@ -329,7 +329,7 @@ Max's look (Session 41): the terrain "is really good and nice"; the first water 
 **Tasks:**
 - [x] The wind direction (done in Session 37): the Maloja at Segl-Maria comes from **244°** (summers 2020 to 2025, 13:00 to 18:00), very steadily. The lake's long axis would give about 224°. Start with 244° and let Max judge on the water. The method and all numbers: [PHYSICS_REQUESTS_FROM_MAP.md](PHYSICS_REQUESTS_FROM_MAP.md), "The Maloja, measured"; the script is `tools/map/maloja_stats.py`.
   - **Changed by W1 (Session 42):** the 244° is the station's spot turning the wind about 20°. Over the lake the Maloja blows along the lake, from about 222° (WindNinja in stable air; Max, 15 October: "pretty good"). So the weather setting below uses 222°.
-- [ ] The weather setting (team decision 4), in `Game/maps/silvaplana/wind_silvaplana.tres`, using only the options `WindConfig` already has:
+- [x] The weather setting (team decision 4), in `Game/maps/silvaplana/wind_silvaplana.tres`, using only the options `WindConfig` already has:
   - `speed_kt = 16` with `gusts_enabled = true` and `gust_intensity = 0.25`, which gives 12 to 20 knots,
   - `shifts_enabled = true`, with `max_shift_deg` and `shift_period_s` set by feel (start at 10 degrees and 60 seconds),
   - `from_bearing_deg = 222` (the lake's direction, W1; first planned as the station's 244°).
@@ -337,11 +337,20 @@ Max's look (Session 41): the terrain "is really good and nice"; the first water 
   For reference, the station measures a 12 kt median 10-minute mean, with 1-second gusts 1.55 times the mean (about 19 kt). The 10-minute direction barely moves (median change 2°). The station is on land, though, and the wind on the water is probably stronger (Max: 12 to 22 kt on a competition day, depending on the day). Max tunes the gusts and the shifts by feel, from experience on the water there.
 
   The map already has a much better wind, `MapWind` (W2 and W3), but the sailing can't use it until W5 connects it to `WindField` (R5, Michiel). Until then M3 uses this `WindConfig` setting (team decision 4).
-- [ ] The start spot: the beach at Camping Silvaplana at the north end of the lake (find it on the aerial photo). Start in the water just off the beach, with the board pointing across the wind.
-- [ ] The shoreline (MD6): read the water depth under the board from the depth grid. If the water is shallower than the fin (0.38 m) plus a margin, the board stops and the game offers a reset to the start spot. No collision physics. This also keeps you off Lake Sils.
-- [ ] The water area: no water may show through on land (the terrain covers the ocean mesh there); the lake surface stays at Y = 0. Watch the land lower than the lake: Lake St. Moritz (22 m lower) and the Inn valley toward Samedan lie below Y = 0, so a flat water plane around the camera would flood them. The look comes from M2: `lake.tres` (see-through) or `lake_water.tres` (the game's shader), depending on Michiel's answer to R9. The lake's water must be on render layer 2, so it mirrors the `LakeReflections` probe.
-- [ ] The compass in the HUD shows the real north, and a small map shows the lake outline with the board's position.
-- [ ] A menu choice or command-line option to start on the old open water or on Silvaplana.
+
+  **Done (16 October 2026):** the file has exactly these numbers. The lake scene hands it to the windsurfer (`sail_silvaplana.gd`, `_build_wind_config()`), so the settings' Wind tab does not change the lake's wind (it is the open water's); the settings' waves and sailing options do apply. Connecting `MapWind` (W5), the thin air and the fresh water are left for the next step.
+- [x] The map's own wind, the thin air and the fresh water (W5; R1, R2, R3, R5), 16 October 2026: the lake scene gives the windsurfer `environment_silvaplana.tres`: 0.98 kg/m³ air, fresh water (1000 kg/m³) and `MapWind` (`MapWindField`, PHYSICS_SPEC.md 8.10). The day runs from 14:30 in real time (`--time=hh:mm` for screenshots), and the HUD's strip starts with the time. `wind_silvaplana.tres` now only gives the height profile and the direction the waves line up with (222); its speed, gusts and shifts are not used while the map's wind is on. The water is the game's own (the `OceanNode` with `lake_water.tres` on render layer 2, the far water over the depth grid's area) and shows the gusts (`WindRippleMap`).
+- [x] The start spot: the beach at Camping Silvaplana at the north end of the lake (find it on the aerial photo). Start in the water just off the beach, with the board pointing across the wind.
+  **Done (16 October 2026):** 40 m off the camping beach, LV95 (2780880, 1147510), where the water is 23 m deep (the terrain view's "launch" viewpoint). Heading 132: a beam reach on starboard tack out over the widest part of the lake, with 1.2 km of open water ahead; the other beam reach, 312, runs onto the beach after 30 m.
+- [x] The shoreline (MD6): read the water depth under the board from the depth grid. If the water is shallower than the fin (0.38 m) plus a margin, the board stops and the game offers a reset to the start spot. No collision physics. This also keeps you off Lake Sils.
+  **Done (16 October 2026):** `ShoreCheck` (`Game/maps/shore_check.gd`) with a margin of 0.12 m, checked every physics tick by the sailing scene (`main.gd`, `_check_shore()`). Aground (or off the grid) the simulation stops, the HUD says "Aground off the shore. R: back to the start", and R restarts at the start spot. The board can sail through the narrows into Lake Champfer; the grid ends in the middle of Lake Champfer, and that is the end of the map.
+- [x] The water area: no water may show through on land (the terrain covers the ocean mesh there); the lake surface stays at Y = 0. Watch the land lower than the lake: Lake St. Moritz (22 m lower) and the Inn valley toward Samedan lie below Y = 0, so a flat water plane around the camera would flood them. The look comes from M2: `lake.tres` (see-through) or `lake_water.tres` (the game's shader), depending on Michiel's answer to R9. The lake's water must be on render layer 2, so it mirrors the `LakeReflections` probe.
+  **Done (16 October 2026), with the game's shader for now:** the water with the waves (the `OceanNode`'s 400 m near mesh) gets the colours of `lake_water.tres` and render layer 2; its 6 km far plane is hidden, and a flat surface in the lake's shape takes its place (`LakeArea`, `Game/maps/lake_area.gd`: the grid every 8 m, the spots below the lake level joined to the start spot, widened by 16 m so it reaches under the shore; about 1 000 triangles, built in half a second when the scene loads). Screenshots from above and toward St. Moritz show no water on land. The colours and the layer are set from `sail_silvaplana.gd` on the `OceanNode`'s meshes, because `ocean.gd` had no settings for them; the unified see-through water is the next step. Known limits: past the grid's north edge, in the north half of Lake Champfer, only the terrain's photo shows the lake; and from high up the near mesh shows as a slightly lighter square.
+  **Changed by W5 (16 October 2026): the unified water.** The lake scene now uses the `OceanNode`'s own settings (Phase 7): `look = lake_water.tres`, `render_layers = 2`, and `far_area_xz` = the depth grid's 5 × 5 km, where the terrain hides it on land; `LakeSurface` and the hand-dressed meshes are gone (`LakeArea` stays for the small map). A shot from 450 m up toward St. Moritz shows the water only in the lakes. The near mesh still shows as a slightly different square from above.
+- [x] The compass in the HUD shows the real north, and a small map shows the lake outline with the board's position.
+  **Done (16 October 2026):** the wind rose already used North = -Z, which is the real north on the map (MD1; a test checks that heading 132 sails toward the real south-east). The small map (`Game/ui/mini_map.gd`, bottom right) shows the lake from `LakeArea`, the start spot as a ring, the board as a dot with a heading tick, and the wind as an arrow.
+- [x] A menu choice or command-line option to start on the old open water or on Silvaplana.
+  **Done (16 October 2026):** "Sail on Lake Silvaplana" is the start menu's second option, the fly-over the fourth; `tools/play.sh lake` starts it straight away.
 
 **Done when:** all existing tests still pass (the physics didn't change), the map loads, and a screenshot from the launch spot shows the board on the water with the right wind direction.
 **Stop:** play-test checklist for the team (Max as the local expert):
@@ -441,7 +450,7 @@ Asked for by Max on 14 October 2026: a simulated Maloja (speed, gusts and shifts
 Notes for W3:
 - **The station and the water disagree in the model.** The pattern (WindNinja over land) puts the station's spot at 1.34 × the lake's average, while Max's numbers put the water at 1.3 × the station. So the "station" check of W3 (a simulated Segl-Maria) will read about 1.7 times too much. The pattern's land values are probably too high for a station at 10 m among buildings and trees; W3 has to decide what the simulated station reads.
 - The average day is a smooth curve: no start front, the same every day. W3 replaces `maloja_day.tres` with real days. (Postponed by Max on 15 October: W4 first, on the average day.)
-- The viewer shows the wind at 5 m above the ground (the pattern's height). How it changes with height comes with W5 (WindField).
+- The viewer shows the wind at 5 m above the ground (the pattern's height). How it changes with height comes with W5 (WindField). (Done: the sailing applies the power law from 5 m, PHYSICS_SPEC.md 8.10.)
 
 **Stop:** Max checks the viewer (`tools/play.sh wind`):
 - Can you read the strong and weak places on the water, and do the streaks show the direction you know?
@@ -582,9 +591,19 @@ After W4a, detailed with Max then. First ideas:
 - **Laylines** from the marks. They need the iQFOiL's upwind and downwind angles: from Max, or later from the physics.
 - **Which side paid** over the last minutes: two imaginary boards sail the left and the right side of the beat through the wind of the last minutes, and the panel shows who got to the mark first.
 
-### W5 (later, with Michiel)
+### W5 (with Michiel): the sailing feels the map's wind ✅
 
 The sailing reads the same wind (R5): `WindField.velocity_at(point)` asks the map's wind.
+
+- [x] **Done (16 October 2026).** `MapWindField` (`Game/sim/map_wind_field.gd`, PHYSICS_SPEC.md 8.10) is a `WindField` that asks `MapWind`:
+  - the time of day runs with the simulation (from 14:30; `--time=hh:mm`), within the Maloja's day (10:00 to 21:30);
+  - the wind at a point is `MapWind`'s at that point, with the height profile from the pattern's 5 m (the sail at 2 m feels about 10 % less, 10 m about 8 % more);
+  - the direction the board's decisions use (the sail's side, the water start, the true wind angle on the HUD) is the lake's mean of the moment; the sail and the sailor feel the local gusts and shifts;
+  - outside the map: the lake's mean.
+- [x] The lake's environment (R1 to R3): `EnvironmentConfig`, `environment_silvaplana.tres`.
+- [x] The gusts on the water (R9's opportunity): `WindRippleMap` draws the map's wind on the graphics card (the viewer's `wind_pattern.gdshaderinc`) into a 256 × 256 picture over the lake every frame; the water's ripples are stronger in a gust and weaker in a lull or the lee. `--check-gusts=1` compares the picture with `MapWind` (within one 8-bit step). It is subtle on the screen (glitter and reflections).
+- [x] The physics tested in it: `tools/lake_matrix.sh` (the manoeuvres at 12:00, 14:30 and 17:00) and `--compare=1` (the thin air). The results: PHYSICS_REQUESTS_FROM_MAP.md, R2 and R5.
+- Play-test (Max and the team): does the wind on the lake feel like the Maloja (the gusts, the lulls, the shifts, the lee under the south-east shore)? Is the time of day useful on the HUD? Can you see the gusts coming on the water?
 
 ## Later: big projects, for every spot, with Michiel
 
@@ -600,8 +619,9 @@ Most of these change the physics (`Game/sim/`), so Michiel leads them, on the ph
 
     All of it is one function, `MapWind.velocity_at(point, time_of_day_s)`, and the wind viewer shows it (`tools/play.sh wind`). Still open:
     - W3: the day types (light, medium, strong) and the start front, postponed by Max;
-    - W5: Michiel's part, the connection to `WindField` (R5). Until then the sailing doesn't feel any of this wind.
+    - ~~W5: Michiel's part, the connection to `WindField` (R5).~~ Done 16 October 2026: the sailing on the lake feels this wind (`MapWindField`).
 - **L2. Waves made by the wind** (R6). They wait for the two-body sailor, because the lake chop is the short, steep kind the physics can't handle yet.
 - **L3. Mountain-lake physics:** thin air (measured 0.98 kg/m³, 20 % less sail force), fresh water, and running aground on the lakebed (R2 to R4). All of it needs R1 first: a map brings its own air, water and wind settings.
+  - **Status, 16 October 2026:** R1 (`EnvironmentConfig`), the thin air (R2) and the fresh water (R3) are done and the lake sails with them. The thin air costs most around the planing threshold (a 10 kt beam reach that planes at sea level does not plane here) and nothing in a strong Maloja (PHYSICS_REQUESTS_FROM_MAP.md, R2). Still open: running aground on the lakebed (R4); the scene's shore stop stands in for it.
 - **L4. Replay and live weather** (R7).
 - **L5. Other kiters and windsurfers on the water** (R8).

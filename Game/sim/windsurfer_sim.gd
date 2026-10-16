@@ -45,7 +45,9 @@ var wind: WindField
 var water: WaterSurface
 var telemetry: Telemetry = Telemetry.new()
 
-const RHO_AIR: float = 1.225
+## Density of the air (kg/m3): 1.225 at sea level; a place brings its own (EnvironmentConfig,
+## create_for()). The sail's force and the sailor's windage scale with it.
+var air_density_kg_m3: float = 1.225
 
 enum SailorState { SAILING, FALLEN }
 
@@ -173,18 +175,34 @@ func _init(board: BoardConfig, sail_cfg: SailConfig, fin_cfg: FinConfig, sailor_
 	reset(Vector3.ZERO, 0.0)
 
 
-## Loads the default configuration files. with_waves = true puts the default wave set
-## on the water (the game); tests and the validation sail on flat water unless they ask.
+## Loads the default configuration files: the open water at sea level. with_waves = true
+## puts the default wave set on the water (the game); tests and the validation sail on flat
+## water unless they ask.
 static func create_default(with_waves: bool = false) -> WindsurferSim:
+	return create_for(EnvironmentConfig.new(), with_waves)
+
+
+## Builds the simulation for a place (PHYSICS_REQUESTS_FROM_MAP.md, R1): its air, its water,
+## its wind and its waves, and what it leaves empty from the open water's default files. With
+## the map's wind on, the wind is the map's own (MapWindField, PHYSICS_SPEC.md 8.10). The board,
+## the sail, the fin and the sailor are the default ones everywhere.
+static func create_for(environment: EnvironmentConfig, with_waves: bool = false) -> WindsurferSim:
+	var wind_cfg: WindConfig = environment.wind_or_default()
 	var sim: WindsurferSim = WindsurferSim.new(
 		load("res://config/board_default.tres"),
 		load("res://config/sail_default.tres"),
 		load("res://config/fin_default.tres"),
 		load("res://config/sailor_default.tres"),
-		load("res://config/water_default.tres"),
-		load("res://config/wind_default.tres"),
+		environment.water_or_default(),
+		wind_cfg,
 		load("res://config/sim_default.tres"),
-		load("res://config/waves_default.tres"))
+		environment.waves_or_default())
+	sim.air_density_kg_m3 = environment.air_density_kg_m3
+	var map_wind: MapWind = environment.map_wind()
+	if map_wind != null:
+		sim.wind = MapWindField.new(map_wind, wind_cfg, environment.start_time_of_day_s(), environment.map_wind_height_m)
+		# Again, so the sail side and the telemetry come from the map's wind.
+		sim.reset(Vector3.ZERO, 0.0)
 	sim.set_waves(with_waves)
 	return sim
 
@@ -262,11 +280,13 @@ func step(dt: float, controls: SimControls) -> void:
 		hull.compute(body, buoyancy, water, time_s, sim_config.gravity_ms2, mass_model.total_mass_kg, sub_dt)
 		body.take_water_along(hull.heave_added_mass_kg, _inertia_with_added_water(mass_model.hull_inertia_body))
 		body.added_mass_up_kg = hull.heave_added_mass_kg
+		body.take_water_along_sideways(_sway_added_mass_kg())
+		body.added_mass_sway_kg = _sway_added_mass_kg()
 		_set_hull_mass_properties()
 		fin.compute(body, water, time_s, water_config.density_kg_m3)
 		if sailing:
 			_hold_the_rig()
-			sail.compute(rig, wind, controls.sheet, controls.rake, RHO_AIR, _rig_lean_rad(controls), controls.boom_across, controls.hold_side)
+			sail.compute(rig, wind, controls.sheet, controls.rake, air_density_kg_m3, _rig_lean_rad(controls), controls.boom_across, controls.hold_side)
 			_apply_rig_forces()
 			_apply_windage()
 			_apply_leg_forces(sub_dt)
@@ -450,10 +470,14 @@ func _apply_rig_in_water_drag(dt: float) -> void:
 		return
 	var direction: Vector3 = v / speed
 	var k: float = 0.5 * water_config.density_kg_m3 * sailor_config.rig_in_water_drag_m2
-	var m_eff: float = body.effective_mass_at(at, direction)
+	# The rig in the water moves with the water under the mast foot, but it pulls on the
+	# board through the mast foot, a joint: a force there and no moment. (Applied at the
+	# water surface below the foot, as until Session 39, a board thrown clear of the water
+	# after a catapult got the drag on a lever of half a metre and was spun over in the air.)
+	var m_eff: float = body.effective_mass_at(foot, direction)
 	var speed_after: float = speed / (1.0 + k * speed * dt / m_eff)
 	var impulse: float = m_eff * (speed - speed_after)
-	body.add_force_at(at, -direction * impulse / dt)
+	body.add_force_at(foot, -direction * impulse / dt)
 
 
 ## The bank a sailor who leans this much wants: the bank of a coordinated turn at
@@ -595,11 +619,15 @@ func _rig_lean_rad(controls: SimControls) -> float:
 func _update_sailor(dt: float, controls: SimControls) -> void:
 	var forward_speed: float = -SimMath.to_body(body.basis, body.velocity).z
 	var stance_target: float = smoothstep(sailor_config.stance_speed_start_ms, sailor_config.stance_speed_full_ms, forward_speed)
-	# Through the hump the weight goes aft to keep the bow up (SailorConfig.hump_trim_deg).
+	# Through the hump the weight goes aft as long as the bow is below the hump attitude
+	# (SailorConfig.hump_trim_deg), and stays there once the bow is up: a sailor steps back
+	# until the nose lifts and does not walk forward again while the board climbs onto the
+	# plane. (Until Session 39 the stance followed the bow in proportion, so the sailor
+	# walked forward as soon as the bow began to rise and pressed it down again mid-hump.)
 	var hump_speed: float = board_config.residuary_peak_froude * sqrt(sim_config.gravity_ms2 * board_config.length_m)
 	if forward_speed > hump_speed:
-		var bow_low: float = clampf((sailor_config.hump_trim_deg - rad_to_deg(SimMath.pitch_rad(body.basis))) / sailor_config.hump_trim_deg, 0.0, 1.0)
-		stance_target = maxf(stance_target, bow_low)
+		var bow_low: bool = rad_to_deg(SimMath.pitch_rad(body.basis)) < sailor_config.hump_trim_deg
+		stance_target = maxf(stance_target, 1.0 if bow_low else stance)
 	# In a tack the sailor steps round the front of the mast instead, and quickly, but only
 	# as far as the nose allows: a board still carrying speed buries its nose under a sailor
 	# who steps forward too early, so the sailor stops stepping (and backs off) as the
@@ -670,12 +698,30 @@ func _update_sailor(dt: float, controls: SimControls) -> void:
 	_set_posture()
 
 
+## The water the fin carries when it moves broadside: a flat plate of chord c moving
+## normal to itself carries rho pi c^2 / 4 per metre of span (Newman, Marine Hydrodynamics,
+## 1977, table 4.3, a = c / 2); the hull bottom is a wall at its root, a mirror, so the
+## two-dimensional value holds along the span. 2.8 kg for the 38 cm fin: about a third of
+## the board's own mass, and the one part of the water around the hull that is still
+## there when the hull skims. Times the part of the span under water.
+func _fin_added_mass_kg() -> float:
+	var chord: float = fin_config.area_m2 / maxf(fin_config.span_m, 0.01)
+	return water_config.density_kg_m3 * PI * chord * chord / 4.0 * fin_config.span_m * fin.immersed_fraction
+
+
+## All the water that moves with the hull sideways: its immersed sides and the fin.
+func _sway_added_mass_kg() -> float:
+	return hull.sway_added_mass_kg + _fin_added_mass_kg()
+
+
 ## The inertia of the hull plus the water it drags along when it turns (yaw), pitches and
 ## rolls (the wet bottom's added inertias, from the last hull computation).
 func _inertia_with_added_water(base: Basis) -> Basis:
 	var inertia: Basis = base
 	inertia.x = Vector3(inertia.x.x + hull.pitch_added_inertia_kgm2, inertia.x.y, inertia.x.z)
-	inertia.y = Vector3(inertia.y.x, inertia.y.y + buoyancy.yaw_added_inertia_kgm2(), inertia.y.z)
+	var fin_lever: float = fin_config.root_local.z - body.com_offset_body.z
+	var yaw_added: float = hull.yaw_added_inertia_kgm2 + _fin_added_mass_kg() * fin_lever * fin_lever
+	inertia.y = Vector3(inertia.y.x, inertia.y.y + yaw_added, inertia.y.z)
 	inertia.z = Vector3(inertia.z.x, inertia.z.y, inertia.z.z + hull.roll_added_inertia_kgm2)
 	return inertia
 
@@ -735,7 +781,7 @@ func _apply_windage() -> void:
 	var speed: float = apparent.length()
 	if speed < 0.1:
 		return
-	var drag: float = 0.5 * RHO_AIR * sailor_config.windage_area_cd_m2 * speed * speed
+	var drag: float = 0.5 * air_density_kg_m3 * sailor_config.windage_area_cd_m2 * speed * speed
 	windage_force_world = apparent / speed * drag
 	sailor.add_force(windage_force_world)
 
@@ -849,7 +895,10 @@ func _apply_leg_forces(dt: float) -> void:
 ## the rig balance (_apply_rig_forces); this is only the jolt.
 func _pull_the_harness_line(hands_world: Vector3, target_world: Vector3, dt: float) -> void:
 	harness_jolt_n = 0.0
-	if harness_tension_n <= 0.0:
+	# A line without stiffness is not there (the rope is off, section 7.5): its damper on
+	# its own acted as a rigid strut against the boom rising and jolted the body with up
+	# to 700 N when the board was kicked up at rest.
+	if harness_tension_n <= 0.0 or sailor_config.harness_line_stiffness_n_m <= 0.0:
 		return
 	var line: Vector3 = hands_world - sailor.position
 	var length: float = line.length()
@@ -955,6 +1004,10 @@ func _fill_telemetry(controls: SimControls) -> void:
 	t.tws_10m_kt = wind.speed_at_height(wind.config.reference_height_m) / SimMath.KNOT_MS
 	t.tws_at_sail_kt = sail.true_wind_at_ce_world.length() / SimMath.KNOT_MS
 	t.twa_deg = rad_to_deg(SimMath.wind_angle_rad(body.basis, from_true))
+	# The wind the sail meets comes from where the air at the sail comes from (a map's local
+	# wind); before the sail has been computed, the mean wind.
+	var at_sail: Vector3 = sail.true_wind_at_ce_world
+	t.twa_at_sail_deg = rad_to_deg(SimMath.wind_angle_rad(body.basis, -at_sail)) if at_sail.length_squared() > 1e-6 else t.twa_deg
 	t.vmg_ms = v_h.dot(from_true)
 	t.aws_kt = sail.aws_ms / SimMath.KNOT_MS
 	t.awa_deg = rad_to_deg(sail.awa_rad)
@@ -1002,6 +1055,8 @@ func _fill_telemetry(controls: SimControls) -> void:
 	t.hull_lateral_n = hull.lateral_n
 	t.hull_resistance_n = hull.resistance_n
 	t.bow_drag_n = hull.bow_drag_n
+	t.rail_grip_n = hull.rail_grip_n
+	t.rail_yaw_nm = hull.rail_yaw_nm
 	var origin: Vector3 = body.origin_world()
 	t.water_height_m = water.height_at(origin.x, origin.z, time_s)
 

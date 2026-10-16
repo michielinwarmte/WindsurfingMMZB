@@ -19,9 +19,9 @@ Written 28 September 2026 (Session 28), for the AI sessions doing the work and f
 | 3 | Playable prototype on flat water | ✅ Done (Session 30); play-tested in Sessions 31 to 33: falls, downwind trim, the helm (rake, rig tilt, rail), beginner assists, a hull that carves when banked, tacks and gybes on Space and on the keys; Session 34: trim by feel, out of irons, 12 to 24 kt all clean in `tools/matrix.sh` |
 | 4 | Autopilot, validation suite and tuning | ✅ Done (Session 35): `tools/test.sh validation`, 17 checks green, polar in `Documentation/POLAR_15KT.md` |
 | 5 | Waves and ocean | ✅ Done (Session 36): Gerstner field, shader and mesh, validation on a swell-dominated sea. Session 37: the sailor is a body of their own and the rig is held by the sailor (spec 7.5); flat water and the strong chop sail without a fall, one fall each remains on the sea and the medium chop at a landing (spec 17.13) |
-| 6 | Rig visuals: board, sail, boom, mast | ⬜ Next |
-| 7 | Environment and effects | ⬜ |
-| 8 | Audio | ⬜ |
+| 6 | Rig visuals: board, sail, boom, mast | ✅ Done (Session 38; the force-vector debug view in Phase 7): Blender models built by `tools/blender/build_rig_models.py` from the config numbers, a sail that bends with the simulation, the sailor figure on a fixed-length skeleton. The same session gave the game its start, settings and pause menus (no phase of its own) |
+| 7 | Environment and effects | 🔶 Built (Session 39), team check next: one water shader for sea and lake, sky and haze, spray, wake, splashes, streamer, wind flag, force view (F3), gust patches on the lake from the map's wind; islands are covered by the real lake |
+| 8 | Audio | 🔶 Built (Session 39), team listens next: every sound made from noise at startup, Wind, Water and Sail buses driven by the simulation, sliders on the Audio tab; nobody has heard it yet |
 | 9 | Gameplay: racing | ⬜ |
 
 Side track (the map: `Game/maps/` and `tools/map/`, developed on `feature/map-silvaplana` and merged with the physics on 16 October 2026): the first real map, Lake Silvaplana, from Swiss open data. See [MAP_SILVAPLANA_PLAN.md](MAP_SILVAPLANA_PLAN.md). It covers the parts of Phase 7 (sky, fog, shoreline) that belong to that map, and it doesn't change the physics. Michiel does the physics; Max does the map and the wind patterns that belong to it (built first as a wind analyser, phases W0 to W4; connected to the physics through `WindField` in W5). What the map would need from the physics is in [PHYSICS_REQUESTS_FROM_MAP.md](PHYSICS_REQUESTS_FROM_MAP.md): map-specific air, water and wind; thin air at 1791 m; a lakebed and running aground; moving gusts; wind waves. Each request comes with measured numbers.
@@ -252,32 +252,47 @@ Change the layout when there is a good reason, and update this section when you 
 - Godot prints errors about those missing textures when it imports the files. They are harmless. Don't add the brand images (copyright and trademarks); make our own textures.
 
 **Tasks:**
-- [ ] Clean up the models in Blender (installed at `/usr/bin/blender`): remove the camera and the texture references, set a sensible origin (for example the mast foot; pick one and document it), point the bow to −Z, and export as `.glb` into `Game/assets/models/`. If that is too fiddly, wrap the FBX in a scene with a correcting transform.
-- [ ] A procedural mast (a cylinder), and a boom that follows the sail angle and rake.
-- [ ] Sail cloth deformation from the simulation: belly to leeward, twist, and flutter when luffing. A vertex shader driven by uniforms is the preferred way.
-- [ ] A debug view you can toggle, showing force vectors (sail, fin, buoyancy, drag).
-- [x] A placeholder sailor that changes stance: done in Session 37 as an articulated figure (feet, legs, torso, arms, head) driven by the simulation's sailor body. A real rigged character comes later.
+- [x] Clean up the models in Blender (installed at `/usr/bin/blender`): remove the camera and the texture references, set a sensible origin (for example the mast foot; pick one and document it), point the bow to −Z, and export as `.glb` into `Game/assets/models/`. If that is too fiddly, wrap the FBX in a scene with a correcting transform. (Session 38: rebuilt from scratch instead by `tools/blender/build_rig_models.py`, which reads the sizes from `Game/config/*.tres` and writes board, fin, mast, sail and boom as one `.glb` each, origins documented in the script header; the FBX files are gone.)
+- [x] A procedural mast (a cylinder), and a boom that follows the sail angle and rake. (Session 38: a tapered mast with extension and base that bends with the sail's camber; a wishbone boom with grip, harness lines and outhaul, posed with the sail.)
+- [x] Sail cloth deformation from the simulation: belly to leeward, twist, and flutter when luffing. A vertex shader driven by uniforms is the preferred way. (Session 38: `Game/windsurfer/sail_cloth.gdshader` on a 24 × 40 grid: draft 0.10 deepest at 38 % of the chord, twist 8 to 16° at the head with the pull, ripples when luffing; the belly crosses over in 0.8 s when the sail flips.)
+- [x] A debug view you can toggle, showing force vectors (sail, fin, buoyancy, drag). (Phase 7 work: F3 or `--forces=1` shows arrows for the sail force at the centre of effort, the fin force, buoyancy at the centre of buoyancy, the planing lift at its centre of pressure, the hull drag and the sailor's weight, 1 m per 500 N, with a legend: `Game/world/effects/force_arrows.gd`, read from the simulation's models.)
+- [x] A placeholder sailor that changes stance: done in Session 37 as an articulated figure (feet, legs, torso, arms, head) driven by the simulation's sailor body. A real rigged character comes later. Session 38: the figure is on a skeleton with fixed bone lengths and real knees and elbows (`Game/windsurfer/figure_skeleton.gd`); a skinned mesh is still open.
 
 **Done when:** screenshots from several angles on both tacks show the sail on the leeward side and the boom where the physics says it is.
 **Stop:** team check.
 
 ## Phase 7: Environment and effects
 
-- [ ] Sky (procedural or physical), sun and horizon fog.
-- [ ] Distant islands (simple meshes) with a simple custom collision, so the board stops at the shoreline.
-- [ ] Spray from the rails that grows with speed and planing (GPUParticles3D), foam and wake behind the tail, and a splash on landing.
-- [ ] Wind visuals: gust patches on the water, and a flag or streamers.
+> One water shader for the open sea and the map's lake (the map's question R9 in `PHYSICS_REQUESTS_FROM_MAP.md`, option 1): `Game/world/water.gdshader` has the Gerstner waves (now in `Game/world/gerstner.gdshaderinc`, shared with the wake) and the map's see-through lake look (colour and transparency from the depth behind the water, refraction, Fresnel, ripples that tilt the wave normal). Each scene gives it a look, a material with only the parameters: `Game/world/sea_water.tres` for the open sea, `Game/maps/silvaplana/lake_water.tres` for Lake Silvaplana (`OceanNode.look`, `OceanNode.render_layers`).
+
+- [x] Sky (procedural or physical), sun and horizon fog. (The Silvaplana map's sky colours and its 15:00 summer sun, so both scenes have the same light; a summer haze of about 20 km visibility; the far water plane reaches past the horizon; the board's shadow falls on the water.)
+- [x] Distant islands (simple meshes) with a simple custom collision, so the board stops at the shoreline. Covered by the map instead, not built: Lake Silvaplana (map plan M3) has a real shore from Swiss elevation data and a depth grid (`TerrainGrid`), and the board stops at the shore in the lake scene (the scene layer first, running aground in the physics later, request R4). Made-up islands on the open sea would add nothing the real lake does not.
+- [x] Spray from the rails that grows with speed and planing (GPUParticles3D), foam and wake behind the tail, and a splash on landing. (`Game/windsurfer/effects.gd` with `Game/world/effects/`: spray off the rails at the spray root, more off the leeward and the low rail; a foam ribbon behind the tail that rides on the waves and fades in 7 s; a splash when the water's support of the hull jumps by 2.5 times the weight within 0.2 s, and on a fall.)
+- [x] Wind visuals: a flag or streamers. (A red streamer at the masthead posed from the apparent wind; an orange wind flag on a buoy near the start that streams in the true wind.)
+- [x] Wind visuals: gust patches on the water. They need a wind that differs from place to place, which only the map has (`MapWind`). The hook is in the water shader (`wind_ripple_map` and `wind_ripple_map_area`: a picture of the ripple strength over the lake); the lake scene fills it from `MapWind` (Session 39: `WindRippleMap` draws it on the graphics card every frame, checked against MapWind's numbers with `--check-gusts=1`; the gusts show mostly in the glitter, a stronger look needs the shader). On the open sea the ripples follow the one wind (stronger in a gust, everywhere at once).
 
 **Done when:** screenshots look right and the game holds 60 fps with room to spare on the team's PCs (the RTX 3080 Ti machine at least).
 **Stop:** team check.
 
 ## Phase 8: Audio
 
-- [ ] Procedural sounds, as in the legacy `ProceduralAudioClips`: generate looping noise buffers (`AudioStreamWAV`) at startup, shape them with audio bus effects (filters), and drive volume and pitch from the simulation.
-- [ ] Wind ambience from the apparent wind, hull lapping versus planing hiss, splashes on impacts, and sail flapping when luffing and during tacks.
-- [ ] A volume setting.
+> Branch `feature/audio`: all the sound code is in `Game/audio/`; the buses are in `Game/default_bus_layout.tres` and the tuning numbers in `Game/config/sound_mix_default.tres`. No sound files: everything is generated from noise when the game starts (about 0.6 s, once per run).
+
+- [x] Procedural sounds, as in the legacy `ProceduralAudioClips`: generate looping noise buffers (`AudioStreamWAV`) at startup, shape them with audio bus effects (filters), and drive volume and pitch from the simulation. (`SoundBank`, `sound_bank.gd`: wind, hiss, whistle, lapping, rumble and flutter loops, and splash, crack and swoosh one-shots, 16-bit 44.1 kHz from a seeded random generator. Buses Wind, Water and Sail with filter sub-buses; `SoundMix`, `sound_mix.gd`, turns the telemetry into levels, pitch and filter cutoffs; `GameAudio`, `game_audio.gd`, plays them.)
+- [x] Wind ambience from the apparent wind, hull lapping versus planing hiss, splashes on impacts, and sail flapping when luffing and during tacks. (Wind +12 dB per doubling of the apparent wind with a low-pass that opens up and a whistle above 16 kt; lapping and rumble cross over to the hiss with the smoothed planing ratio; splashes on slams of 1 m/s or more, a nose digging in, a fall and a water start; the sail flaps inside its luff zone, louder and faster in more wind, cracks when it fills, and swooshes when the rig changes sides; silence from the sail while the sailor is in the water; 8 dB quieter behind the start menu; the board's sounds a little quieter with a far camera.)
+- [x] A volume setting. (Master, Wind, Water and Sail sliders on the Audio tab, saved with the other settings.)
 
 **Done when:** unit tests confirm the logic (volume and pitch against speed). The AI can't listen, so the team checks the sound by ear.
+(`Game/tests/unit/test_audio.gd`, 28 tests. `res://audio/print_levels.tscn` prints the levels the mix asks for and what comes out of each bus over a run with the autopilot; see its header for `--tack` and `--fall`.)
+
+**What to listen for (team check):**
+- Does the wind roar grow and brighten as the board speeds up, and does a whistle come in above about 16 kt of apparent wind? Is it too loud or too dull?
+- Slogging (not planing): a gurgle and low rumble of water. On the plane: a steady hiss that takes over from the gurgle. Does the change feel right, and is it too fast or too slow?
+- Ease the sheet until the sail flaps: a rattle that gets faster in more wind. Sheet in: a crack as it fills. In a tack: the sail rattles, swooshes across and cracks on the new side.
+- Splashes when the board slams on the swell (about one a second on the default beam reach: too many?), a big splash in a catapult (sheet in hard in a strong wind to get one), a small one at the water start.
+- The levels of the four sliders, and the quieter sound behind the start menu. Nothing should click or crackle.
+- A harmless warning "ObjectDB instances were leaked at exit" now appears when the game quits: Godot does not free sounds that are still playing at that moment.
+
 **Stop:** team check.
 
 ## Phase 9: Gameplay: racing

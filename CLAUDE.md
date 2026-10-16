@@ -24,10 +24,13 @@ The team are not very experienced programmers and rely on AI for most of the cod
 | Slow physics validation | `tools/test.sh validation` (or `tools/test.sh all`) |
 | Only some tests | `tools/test.sh unit -gselect=buoyancy` |
 | Every manoeuvre (tack, gybe, run, irons, straight) at 12, 18 and 24 kt, one line each | `tools/matrix.sh [--only=tack] [--winds=18] [--waves=1] [--pilot.field=value ...]` (45 s; the per-case CSVs land in `.sim_output/matrix/`) |
+| The same manoeuvres on Lake Silvaplana in the map's own wind (12:00, 14:30 and 17:00), thin air and fresh water | `tools/lake_matrix.sh [--only=straight] [--compare=1]` (the thin-air comparison; options in `Game/dev/run_lake.gd`) |
 | Does every script, scene and resource load? | `tools/check.sh` |
-| Screenshot of the running game | `tools/screenshot.sh [res://scene.tscn] [out.png] [frames]`, then Read the PNG (default `.screenshots/latest.png`) |
+| Screenshot of the running game | `tools/screenshot.sh [res://scene.tscn] [out.png] [frames] [--options]`, then Read the PNG (default `.screenshots/latest.png`). With no scene it shows the start menu; `res://main.tscn --autopilot=1 --camera=2` is the sailing scene, `--pause=<s> --page=settings/wind` opens a menu page, `--settings=<file.cfg>` plays with those settings (otherwise the defaults) |
 | Look up the exact Godot 4.7 API | `tools/api_docs.sh` once, then grep `.godot_api/doc/classes/<Class>.xml` |
-| Play the game / open the editor | `tools/play.sh` / `tools/edit.sh` (these open windows and are meant for the team). `tools/play.sh silvaplana` opens the Silvaplana terrain view, `tools/play.sh wind` the wind viewer (with the race course maker); double-clicked, play.sh asks what to start |
+| Play the game / open the editor | `tools/play.sh` (the start menu) / `tools/edit.sh` (these open windows and are meant for the team). `tools/play.sh res://main.tscn` goes straight to sailing on open water, `tools/play.sh lake` to sailing on Lake Silvaplana, `tools/play.sh silvaplana` opens the Silvaplana terrain view, `tools/play.sh wind` the wind viewer (with the race course maker); double-clicked, play.sh asks what to start |
+| Contact sheets of the sailor figure, or the rig from eleven cameras | `tools/godot.sh --path Game --resolution 1280x720 --audio-driver Dummy res://dev/figure_view.tscn -- --wind=18 --times=8` and `tools/screenshot.sh res://dev/rig_view.tscn .screenshots/rig/view.png 600` (the options are in the two scripts' headers) |
+| Rebuild the board, sail, boom, mast and fin models after a size changed in `Game/config/` | `tools/blender.sh tools/blender/build_rig_models.py` (about 2 s; writes `Game/assets/models/*.glb`) |
 | Anything else with Godot | `tools/godot.sh <args>` |
 
 Always go through these scripts instead of calling `godot` directly: the shell Claude Code uses is zsh without `~/.local/bin` on its PATH, and the scripts use the pinned Godot version. They exit non-zero on failure and keep logs in `.logs/`. `tools/screenshot.sh` opens a game window for a few seconds; that is expected.

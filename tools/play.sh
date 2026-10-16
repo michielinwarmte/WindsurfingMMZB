@@ -2,10 +2,11 @@
 # Plays the game. Optionally start in a specific scene: tools/play.sh res://world/test.tscn
 #
 # Short names, so you don't have to type the res:// path:
+#   tools/play.sh lake           sail on Lake Silvaplana, off the camping beach in a Maloja wind (map track, M3)
 #   tools/play.sh silvaplana     the Silvaplana map: fly around the terrain (map track, M1)
 #   tools/play.sh wind           the wind viewer: the Maloja over Silvaplana, with the course maker (map track, W2, W4a)
 #
-# Double-clicked, it asks what to start; Enter plays the game as before.
+# Double-clicked, it asks what to start; Enter opens the game's start menu.
 set -euo pipefail
 source "$(dirname "$0")/common.sh"
 
@@ -22,6 +23,7 @@ trap 'status=$?; if [[ $status -ne 0 ]] && double_clicked; then read -rp "Press 
 # The scene behind a short name; anything else is passed on unchanged.
 scene_for() {
 	case "$1" in
+		lake) echo "res://maps/silvaplana/sail_silvaplana.tscn" ;;
 		silvaplana) echo "res://maps/silvaplana/dev/terrain_view.tscn" ;;
 		wind) echo "res://maps/silvaplana/wind_viewer.tscn" ;;
 		*) echo "$1" ;;
@@ -31,12 +33,14 @@ scene_for() {
 args=("$@")
 if [[ $# -eq 0 ]] && double_clicked; then
 	echo "What do you want to start?"
-	echo "  1  the game, on open water (or just press Enter)"
-	echo "  2  Silvaplana: fly around the terrain (keys 1-4: viewpoints, W A S D E Q: fly, right mouse: look)"
-	echo "  3  Silvaplana wind viewer: the Maloja's streaks and speeds, and the course maker (Tab: camera, click: wind at a point, M: course)"
+	echo "  1  the game: the start menu (or just press Enter)"
+	echo "  2  Sail on Lake Silvaplana: off the camping beach in a Maloja wind (R: back to the start)"
+	echo "  3  Silvaplana: fly around the terrain (keys 1-4: viewpoints, W A S D E Q: fly, right mouse: look)"
+	echo "  4  Silvaplana wind viewer: the Maloja's streaks and speeds, and the course maker (Tab: camera, click: wind at a point, M: course)"
 	read -rp "> " choice
-	if [[ "$choice" == "2" ]]; then args=(silvaplana); fi
-	if [[ "$choice" == "3" ]]; then args=(wind); fi
+	if [[ "$choice" == "2" ]]; then args=(lake); fi
+	if [[ "$choice" == "3" ]]; then args=(silvaplana); fi
+	if [[ "$choice" == "4" ]]; then args=(wind); fi
 fi
 if [[ ${#args[@]} -gt 0 ]]; then args[0]="$(scene_for "${args[0]}")"; fi
 

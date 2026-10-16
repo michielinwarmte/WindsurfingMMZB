@@ -5,12 +5,21 @@
 [ext_resource type="Script" path="res://camera/camera_rig.gd" id="3_camera"]
 [ext_resource type="Script" path="res://ui/hud.gd" id="4_hud"]
 [ext_resource type="Script" path="res://world/ocean.gd" id="5_ocean"]
+[ext_resource type="PackedScene" path="res://ui/pause_menu.tscn" id="6_pause"]
 
+; The open sea's light and air: the same sky and sun as the Silvaplana map (a clear summer
+; afternoon, around 15:00; main.gd turns the sun), so the two scenes feel like the same game.
+; The fill light is 75 % the sky and 25 % a neutral grey (all sky made the sail too blue). The
+; haze of a summer afternoon: you see about 20 km (fog density 0.0002 per metre: 18 % haze at
+; 1 km, 63 % at the horizon 5 km away), half in the colour of the sky behind it
+; (aerial perspective), so the sea fades into a pale horizon. The sky itself is not fogged.
 [sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_main"]
-sky_top_color = Color(0.22, 0.47, 0.82, 1)
-sky_horizon_color = Color(0.68, 0.8, 0.9, 1)
+sky_top_color = Color(0.12, 0.32, 0.7, 1)
+sky_horizon_color = Color(0.62, 0.74, 0.88, 1)
+sky_curve = 0.12
 ground_bottom_color = Color(0.06, 0.2, 0.33, 1)
-ground_horizon_color = Color(0.68, 0.8, 0.9, 1)
+ground_horizon_color = Color(0.62, 0.74, 0.88, 1)
+ground_curve = 0.3
 
 [sub_resource type="Sky" id="Sky_main"]
 sky_material = SubResource("SkyMaterial_main")
@@ -19,15 +28,16 @@ sky_material = SubResource("SkyMaterial_main")
 background_mode = 2
 sky = SubResource("Sky_main")
 ambient_light_source = 3
+ambient_light_color = Color(0.62, 0.64, 0.66, 1)
+ambient_light_sky_contribution = 0.75
 reflected_light_source = 2
 tonemap_mode = 2
 fog_enabled = true
-fog_mode = 1
-fog_light_color = Color(0.68, 0.78, 0.88, 1)
-fog_sky_affect = 0.25
-fog_depth_curve = 1.5
-fog_depth_begin = 120.0
-fog_depth_end = 1500.0
+fog_light_color = Color(0.62, 0.74, 0.88, 1)
+fog_sun_scatter = 0.1
+fog_density = 0.0002
+fog_aerial_perspective = 0.5
+fog_sky_affect = 0.0
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_main")
@@ -49,3 +59,5 @@ target_path = NodePath("../Windsurfer")
 
 [node name="HUD" type="CanvasLayer" parent="."]
 script = ExtResource("4_hud")
+
+[node name="PauseMenu" parent="." instance=ExtResource("6_pause")]

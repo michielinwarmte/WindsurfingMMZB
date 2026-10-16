@@ -137,15 +137,23 @@ func test_no_go_zone() -> void:
 
 
 func test_planing_onset_and_fully_planing() -> void:
-	# On a beam reach from rest the dynamic lift carries half the weight between 15 and
-	# 17 km/h; at 25 km/h the board is well clear of the water.
+	# On a beam reach from rest the dynamic lift carries half the weight between 8 and
+	# 10 kn of board speed; at 25 km/h the board is well clear of the water.
 	for sign: float in [1.0, -1.0]:
 		var run: ValidationRun = _run(sign * 90.0)
 		var onset_s: float = run.first_time_above(run.planing_ratio, 0.5)
 		assert_gt(onset_s, 0.0, "the board planes at TWA %.0f" % (sign * 90.0))
 		var speed_at_onset: float = run.value_at(run.speed_ms, onset_s)
-		# 14 km/h (PHYSICS_DESIGN.md:384-392, "onset 14 km/h") to 17 km/h (Legacy/README.md:214).
-		assert_between(speed_at_onset, 3.89, 4.72, "planing onset at %.2f m/s = %.1f km/h (14 to 17)" % [speed_at_onset, speed_at_onset * 3.6])
+		# Real boards (PHYSICS_SPEC.md section 14, Part B; DECISION FOR MICHIEL, Session 39):
+		# GPS tracks put the planing threshold of slalom and freeride boards at 9 to 10 kn
+		# of board speed (seabreeze.com.au forum, "GPS and speed talk: Planning": a 75 cm
+		# wide 122 L iSonic at 9 to 10 kn, a 94 L board at about 10; "most boards get
+		# planing at roughly the same board speed"), and a planing board drops off the
+		# plane below about 8 kn (The Windsurf Loop, "Maximum speed", 2015), which bounds
+		# getting onto it from below: 8 to 10 kn, 4.12 to 5.14 m/s. The old band, 14 to
+		# 17 km/h, came from the legacy game's documents (PHYSICS_DESIGN.md:384-392,
+		# Legacy/README.md:214), not from measurements.
+		assert_between(speed_at_onset, 4.12, 5.14, "planing onset at %.2f m/s = %.1f kn (8 to 10)" % [speed_at_onset, speed_at_onset / SimMath.KNOT_MS])
 		var fast_s: float = run.first_time_above(run.speed_ms, 6.94)
 		assert_gt(fast_s, 0.0, "reaches 25 km/h")
 		assert_lt(run.value_at(run.submersion, fast_s + 2.0), 0.25, "submersion below 25 %% two seconds after reaching 25 km/h (%.2f)" % run.value_at(run.submersion, fast_s + 2.0))

@@ -1,10 +1,17 @@
 class_name GerstnerWaveConfig
 extends Resource
-## One Gerstner wave of the wave set (PHYSICS_SPEC.md section 9): where it travels, how
-## long and how high it is, and how sharp its crests are. Change values in the .tres.
+## One Gerstner wave of the wave set (PHYSICS_SPEC.md section 9): which group it belongs
+## to, where it travels, how long and how high it is, and how sharp its crests are.
+## Change values in the .tres.
 
-## Travel direction as a compass bearing offset from the base direction of the set
-## (downwind when the set is aligned to the wind), positive = clockwise seen from above.
+## SWELL: long waves made by wind far away, with their own direction (in the .tres: 0).
+## CHOP: the waves the local wind makes, which travel with the wind (in the .tres: 1).
+enum Group { SWELL, CHOP }
+
+## The group this wave belongs to; the group sets its main direction (WaveSetConfig).
+@export var group: Group = Group.CHOP
+## Travel direction as a compass bearing offset from its group's direction, positive =
+## clockwise seen from above. Spreads the waves of a group a little, as on real water.
 @export_range(-180.0, 180.0) var direction_offset_deg: float = 0.0
 ## Crest-to-crest distance. The deep-water dispersion relation gives the speed from this.
 @export_range(0.5, 1000.0) var wavelength_m: float = 10.0
