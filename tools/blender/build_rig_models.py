@@ -385,14 +385,16 @@ def outline_width(t: float) -> float:
 
 def half_width(t: float) -> float:
     """The outline seen from above: the physics' outline (a square pin tail, widest at
-    widest_point_from_tail_m), with the tail's corners rounded and the nose closed in a
-    round cap over its last tip-width / 2 (the physics samples the nose tip as one row,
-    0.285 m wide)."""
+    widest_point_from_tail_m), with the tail's corners rounded and the nose closing to a
+    rounded point over its last foot. (The physics runs the outline straight on from the
+    one-foot point to a 0.285 m nose tip, its coarsest row; a real nose curves to a point
+    there, out of the water when planing. The cap times the physics' width is 1, with no
+    kink, at the one-foot point and 0 at the tip.)"""
     w = 0.5 * outline_width(t)
-    nose_radius = 0.5 * 0.5 * outline_width(BOARD_L)
-    if t > BOARD_L - nose_radius:
-        a = (t - (BOARD_L - nose_radius)) / nose_radius
-        w *= math.sqrt(max(0.0, 1.0 - a * a))
+    cap_start = BOARD_L - ONE_FOOT_M
+    if t > cap_start:
+        a = (t - cap_start) / ONE_FOOT_M
+        w *= max(0.0, 1.0 - a * a)
     corner = 0.04
     if t < corner:
         w = w - corner + math.sqrt(max(0.0, corner * corner - (corner - t) ** 2))
