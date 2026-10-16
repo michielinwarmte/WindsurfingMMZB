@@ -24,6 +24,7 @@ The team are not very experienced programmers and rely on AI for most of the cod
 | Slow physics validation | `tools/test.sh validation` (or `tools/test.sh all`) |
 | Only some tests | `tools/test.sh unit -gselect=buoyancy` |
 | Every manoeuvre (tack, gybe, run, irons, straight) at 12, 18 and 24 kt, one line each | `tools/matrix.sh [--only=tack] [--winds=18] [--waves=1] [--pilot.field=value ...]` (45 s; the per-case CSVs land in `.sim_output/matrix/`) |
+| The same manoeuvres on Lake Silvaplana in the map's own wind (12:00, 14:30 and 17:00), thin air and fresh water | `tools/lake_matrix.sh [--only=straight] [--compare=1]` (the thin-air comparison; options in `Game/dev/run_lake.gd`) |
 | Does every script, scene and resource load? | `tools/check.sh` |
 | Screenshot of the running game | `tools/screenshot.sh [res://scene.tscn] [out.png] [frames] [--options]`, then Read the PNG (default `.screenshots/latest.png`). With no scene it shows the start menu; `res://main.tscn --autopilot=1 --camera=2` is the sailing scene, `--pause=<s> --page=settings/wind` opens a menu page, `--settings=<file.cfg>` plays with those settings (otherwise the defaults) |
 | Look up the exact Godot 4.7 API | `tools/api_docs.sh` once, then grep `.godot_api/doc/classes/<Class>.xml` |

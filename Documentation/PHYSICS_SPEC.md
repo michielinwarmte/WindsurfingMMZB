@@ -4085,7 +4085,7 @@ Godot layout (one Resource, D5): `WaveSetConfig extends Resource` with `enable_w
 - `direction_offset_deg` range −180..180, `amplitude_m ≥ 0`, `steepness` 0..1 (:21-35): keep as `@export_range`.
 - `count = min(waves.Length, MAX_WAVES, directions.Length)` and null checks (:82-86): the Resource validation replaces them.
 
-**9.15 Two groups: the swell and the chop (Session 38).**
+**9.15 Two groups: the swell and the chop (Session 39).**
 Real water carries two kinds of waves. The **swell** is long waves made by wind somewhere else, hours or days ago; it can come from any direction, also across or against the wind you sail in. The **chop** is the short waves the wind on the spot makes; it travels with that wind. So every wave of the set belongs to one group (`GerstnerWaveConfig.group`), and each group has its own direction:
 ```
 chop_bearing_deg  = wind_from_bearing_deg + 180 + chop_offset_deg
