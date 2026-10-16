@@ -117,6 +117,11 @@ var max_fps: int
 # --- Audio (section "audio") ---
 ## Master volume, 0 (silent) to 1 (full).
 var master_volume: float
+## The volume of each group of sounds, 0 to 1, on top of the master (audio/game_audio.gd):
+## the wind in the ears, the water (lapping, hiss, splashes), the sail (flapping, the tack).
+var wind_volume: float
+var water_volume: float
+var sail_volume: float
 
 # --- The start menu (section "menu") ---
 ## The play option chosen last time (0 open water, 1 Silvaplana terrain, 2 wind viewer).
@@ -165,6 +170,9 @@ func reset_to_defaults() -> void:
 	max_fps = 0
 
 	master_volume = 1.0
+	wind_volume = 1.0
+	water_volume = 1.0
+	sail_volume = 1.0
 	last_play_option = 0
 
 
@@ -307,6 +315,9 @@ func write_to(config: ConfigFile) -> void:
 	config.set_value("graphics", "max_fps", max_fps)
 
 	config.set_value("audio", "master_volume", master_volume)
+	config.set_value("audio", "wind_volume", wind_volume)
+	config.set_value("audio", "water_volume", water_volume)
+	config.set_value("audio", "sail_volume", sail_volume)
 	config.set_value("menu", "last_play_option", last_play_option)
 
 
@@ -346,6 +357,9 @@ func read_from(config: ConfigFile) -> void:
 	max_fps = maxi(_int(config, "graphics", "max_fps", max_fps), 0)
 
 	master_volume = clampf(_float(config, "audio", "master_volume", master_volume), 0.0, 1.0)
+	wind_volume = clampf(_float(config, "audio", "wind_volume", wind_volume), 0.0, 1.0)
+	water_volume = clampf(_float(config, "audio", "water_volume", water_volume), 0.0, 1.0)
+	sail_volume = clampf(_float(config, "audio", "sail_volume", sail_volume), 0.0, 1.0)
 	last_play_option = clampi(_int(config, "menu", "last_play_option", last_play_option), 0, 2)
 
 

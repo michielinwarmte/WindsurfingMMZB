@@ -325,10 +325,16 @@ func _build_graphics_rows(s: SettingsValues) -> void:
 
 func _build_audio_rows(s: SettingsValues) -> void:
 	var grid: GridContainer = _audio_rows
-	_add_slider(grid, "Master volume", 0.0, 1.0, 0.05, s.master_volume,
-		func(v: float) -> String: return "%.0f %%" % (v * 100.0),
+	var percent: Callable = func(v: float) -> String: return "%.0f %%" % (v * 100.0)
+	_add_slider(grid, "Master volume", 0.0, 1.0, 0.05, s.master_volume, percent,
 		func(v: float) -> void: s.master_volume = v)
-	_add_note(grid, "There are no sounds yet. They come in a later phase and will use this volume.")
+	_add_slider(grid, "Wind", 0.0, 1.0, 0.05, s.wind_volume, percent,
+		func(v: float) -> void: s.wind_volume = v)
+	_add_slider(grid, "Water", 0.0, 1.0, 0.05, s.water_volume, percent,
+		func(v: float) -> void: s.water_volume = v)
+	_add_slider(grid, "Sail", 0.0, 1.0, 0.05, s.sail_volume, percent,
+		func(v: float) -> void: s.sail_volume = v)
+	_add_note(grid, "Wind: the apparent wind in your ears. Water: lapping, the planing hiss and splashes. Sail: flapping when it luffs, the crack when it fills and the swoosh in a tack. All sounds are made by the game itself, from noise.")
 
 
 # --- Row helpers ------------------------------------------------------------------------
