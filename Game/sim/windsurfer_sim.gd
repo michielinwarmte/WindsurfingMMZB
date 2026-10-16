@@ -452,10 +452,14 @@ func _apply_rig_in_water_drag(dt: float) -> void:
 		return
 	var direction: Vector3 = v / speed
 	var k: float = 0.5 * water_config.density_kg_m3 * sailor_config.rig_in_water_drag_m2
-	var m_eff: float = body.effective_mass_at(at, direction)
+	# The rig in the water moves with the water under the mast foot, but it pulls on the
+	# board through the mast foot, a joint: a force there and no moment. (Applied at the
+	# water surface below the foot, as until Session 39, a board thrown clear of the water
+	# after a catapult got the drag on a lever of half a metre and was spun over in the air.)
+	var m_eff: float = body.effective_mass_at(foot, direction)
 	var speed_after: float = speed / (1.0 + k * speed * dt / m_eff)
 	var impulse: float = m_eff * (speed - speed_after)
-	body.add_force_at(at, -direction * impulse / dt)
+	body.add_force_at(foot, -direction * impulse / dt)
 
 
 ## The bank a sailor who leans this much wants: the bank of a coordinated turn at
@@ -597,11 +601,15 @@ func _rig_lean_rad(controls: SimControls) -> float:
 func _update_sailor(dt: float, controls: SimControls) -> void:
 	var forward_speed: float = -SimMath.to_body(body.basis, body.velocity).z
 	var stance_target: float = smoothstep(sailor_config.stance_speed_start_ms, sailor_config.stance_speed_full_ms, forward_speed)
-	# Through the hump the weight goes aft to keep the bow up (SailorConfig.hump_trim_deg).
+	# Through the hump the weight goes aft as long as the bow is below the hump attitude
+	# (SailorConfig.hump_trim_deg), and stays there once the bow is up: a sailor steps back
+	# until the nose lifts and does not walk forward again while the board climbs onto the
+	# plane. (Until Session 39 the stance followed the bow in proportion, so the sailor
+	# walked forward as soon as the bow began to rise and pressed it down again mid-hump.)
 	var hump_speed: float = board_config.residuary_peak_froude * sqrt(sim_config.gravity_ms2 * board_config.length_m)
 	if forward_speed > hump_speed:
-		var bow_low: float = clampf((sailor_config.hump_trim_deg - rad_to_deg(SimMath.pitch_rad(body.basis))) / sailor_config.hump_trim_deg, 0.0, 1.0)
-		stance_target = maxf(stance_target, bow_low)
+		var bow_low: bool = rad_to_deg(SimMath.pitch_rad(body.basis)) < sailor_config.hump_trim_deg
+		stance_target = maxf(stance_target, 1.0 if bow_low else stance)
 	# In a tack the sailor steps round the front of the mast instead, and quickly, but only
 	# as far as the nose allows: a board still carrying speed buries its nose under a sailor
 	# who steps forward too early, so the sailor stops stepping (and backs off) as the
