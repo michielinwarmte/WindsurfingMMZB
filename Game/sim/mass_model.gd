@@ -75,14 +75,16 @@ func update(stance: float, lean: float, hang_back_m: float = 0.0, knee_bend_m: f
 
 ## Where the feet press the deck for a stance, a lean and a rail press, body axes: on the
 ## centreline up to feet_out_from_lean, out on the windward rail (feet_rail_m) from
-## feet_out_full_lean on, shifted toward the toes or the heels by the rail press
-## (toe_heel_m), at the stance's fore-and-aft position (the hang-back moves the body,
-## not the feet).
-func feet_position_body(stance: float, lean: float, rail_press: float = 0.0) -> Vector3:
+## feet_out_full_lean on, shifted toward the pressed rail by the rail press (rail_step_m,
+## never beyond the rails), at the stance's fore-and-aft position (the hang-back moves
+## the body, not the feet).
+func feet_position_body(stance: float, lean: float, rail_press: float = 0.0, trim_press_m: float = 0.0) -> Vector3:
 	stance = clampf(stance, -1.0, 1.0)
-	var feet_z: float = lerpf(sailor.stance_rest_z_m, sailor.stance_planing_z_m, stance) if stance >= 0.0 else lerpf(sailor.stance_rest_z_m, sailor.stance_tack_z_m, -stance)
+	var feet_z: float = (lerpf(sailor.stance_rest_z_m, sailor.stance_planing_z_m, stance) if stance >= 0.0 else lerpf(sailor.stance_rest_z_m, sailor.stance_tack_z_m, -stance)) + trim_press_m
 	var out: float = smoothstep(sailor.feet_out_from_lean, sailor.feet_out_full_lean, absf(lean))
-	var feet_x: float = sailor.feet_rail_m * out * signf(lean) + sailor.toe_heel_m * clampf(rail_press, -1.0, 1.0)
+	var standing_x: float = sailor.feet_rail_m * out * signf(lean)
+	var press: float = clampf(rail_press, -1.0, 1.0)
+	var feet_x: float = lerpf(standing_x, sailor.rail_step_m * signf(press), absf(press))
 	return Vector3(feet_x, 0.5 * board.thickness_m, feet_z)
 
 

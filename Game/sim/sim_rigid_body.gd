@@ -55,6 +55,30 @@ func set_mass_properties(new_mass_kg: float, new_inertia_body: Basis, new_com_of
 	inertia_body_inv = new_inertia_body.inverse()
 
 
+## Water taken along keeps its momentum with the hull: when the water that moves with the
+## hull grows (the wet bottom lengthens as the hull settles, a wave meets it), the hull's
+## momentum along that axis is shared with it and the hull slows, which is the slam of a
+## hull meeting water. Water left behind keeps its own momentum and gives none back, so
+## nothing changes when the added mass or inertia falls. Without this the hull kept its
+## angular velocity while its pitch inertia tripled on every immersion, and the energy
+## that put in drove a planing hull into porpoising. Call before setting the new values.
+func take_water_along(new_added_mass_up_kg: float, new_inertia_body: Basis) -> void:
+	if new_added_mass_up_kg > added_mass_up_kg:
+		var up: Vector3 = basis.y
+		var v_up: float = velocity.dot(up)
+		velocity += up * (v_up * ((mass_kg + added_mass_up_kg) / (mass_kg + new_added_mass_up_kg) - 1.0))
+	var omega_body: Vector3 = angular_velocity_body()
+	var changed: bool = false
+	for i: int in 3:
+		var old_i: float = inertia_body[i][i]
+		var new_i: float = new_inertia_body[i][i]
+		if new_i > old_i and old_i > 0.0:
+			omega_body[i] *= old_i / new_i
+			changed = true
+	if changed:
+		angular_velocity = basis * omega_body
+
+
 ## World position of the board origin.
 func origin_world() -> Vector3:
 	return position - basis * com_offset_body
@@ -78,11 +102,15 @@ func point_velocity(point: Vector3) -> Vector3:
 ## Acceleration a point of the body is about to get from the forces collected so far,
 ## as if the body were rigid: linear, angular and centripetal parts.
 func acceleration_at(point: Vector3) -> Vector3:
+	var r: Vector3 = point - position
+	return linear_acceleration() + angular_acceleration().cross(r) + angular_velocity.cross(angular_velocity.cross(r))
+
+
+## Angular acceleration (world frame) from the torques collected so far.
+func angular_acceleration() -> Vector3:
 	var inertia_world: Basis = basis * inertia_body * basis.transposed()
 	var gyroscopic: Vector3 = angular_velocity.cross(inertia_world * angular_velocity)
-	var angular_acceleration: Vector3 = inertia_world.inverse() * (_torque_sum - gyroscopic)
-	var r: Vector3 = point - position
-	return linear_acceleration() + angular_acceleration.cross(r) + angular_velocity.cross(angular_velocity.cross(r))
+	return inertia_world.inverse() * (_torque_sum - gyroscopic)
 
 
 ## Acceleration of the centre of mass from the forces collected so far. Along the body's up
@@ -118,8 +146,26 @@ func effective_mass_at(point: Vector3, direction: Vector3) -> float:
 	return 1.0 / maxf(translational + rotational, 1e-9)
 
 
+## How much a unit force along v at world point `at` accelerates world point `of` along
+## u: the translational part along each body axis plus what the lever arms let it rotate,
+## (r_of x u) . I^-1 (r_at x v). The mobility between two points; mobility(p, p, n, n)
+## is 1 / effective_mass_at(p, n).
+func mobility(of: Vector3, at: Vector3, u: Vector3, v: Vector3) -> float:
+	var u_body: Vector3 = basis.transposed() * u
+	var v_body: Vector3 = basis.transposed() * v
+	var inverse: Vector3 = _inverse_mass_body()
+	var translational: float = u_body.x * v_body.x * inverse.x + u_body.y * v_body.y * inverse.y + u_body.z * v_body.z * inverse.z
+	var inertia_world_inv: Basis = basis * inertia_body_inv * basis.transposed()
+	return translational + (of - position).cross(u).dot(inertia_world_inv * ((at - position).cross(v)))
+
+
 ## A force (world frame) acting at a world point. The torque about the centre of mass
 ## follows from the lever arm; nothing else decides which way the body turns.
+## The torque collected so far this step (world), about the centre of mass.
+func torque_sum() -> Vector3:
+	return _torque_sum
+
+
 func add_force_at(point: Vector3, force: Vector3) -> void:
 	_force_sum += force
 	_torque_sum += (point - position).cross(force)

@@ -43,11 +43,31 @@ extends Resource
 @export var hump_trim_deg: float = 3.0
 ## How fast the sailor can move fore and aft (fraction of the full stance per second).
 @export var stance_rate_per_s: float = 1.0
-## Hanging back against the sail's pull: the boom pulls the sailor forward at about this
-## height above the feet, and the sailor leans back until their weight balances it.
-@export var hang_height_m: float = 1.0
-## The furthest the sailor's weight can hang back behind the feet.
-@export var hang_back_max_m: float = 0.5
+## Trimming with the feet once over the hump: the sailor presses the back foot to free the
+## nose when the bow is below running_trim_deg and the front foot when it rises above it,
+## moving the feet's pressure this far aft or forward of the stance (the two feet are
+## half a metre apart) without moving the body. The weight that goes into the board at
+## the feet is what sets a planing board's trim; without this the board ran nose-down
+## at a degree of trim and, with next to no induced drag, far too fast off the wind.
+@export var trim_press_max_m: float = 0.3
+## The running trim the feet hold while planing, degrees of pitch bow up. A planing
+## bottom porpoises above a critical trim that falls as the load coefficient falls with
+## speed (Savitsky 1964): about 2 degrees for this board at 10 m/s. Held at 3 the board
+## launched and splashed once a second.
+@export var running_trim_deg: float = 2.0
+## The press is full this many degrees of pitch away from hump_trim_deg, and it moves at
+## trim_press_rate_ms: slowly, for the running trim, never chasing a bounce (a quick press
+## lags a 1 Hz bounce by a quarter of a cycle and pumps it; the pitch reflex of the
+## hang-back is what damps a bounce).
+@export var trim_press_band_deg: float = 1.0
+@export var trim_press_rate_ms: float = 0.1
+## Hanging back against the sail's pull: the boom pulls the sailor forward, and the sailor
+## leans back until their weight's moment about the feet balances the pull's (the same
+## balance as the sideways lean, fore and aft). The furthest the weight can hang back
+## behind the feet: a sailor hanging back hard against a strong pull is nearly horizontal
+## (at 0.5 m the drive of a powered sail at the hump could not be balanced, and the rest
+## went bow-down into the deck: the board planed late).
+@export var hang_back_max_m: float = 0.8
 
 @export_group("Legs")
 ## The legs are the sailor's suspension. A person standing still on a moving floor behaves
@@ -81,14 +101,30 @@ extends Resource
 @export var feet_rail_m: float = 0.22
 @export var feet_out_from_lean: float = 0.3
 @export var feet_out_full_lean: float = 0.7
-## Weight on a rail (the lean the controls ask for) moves the feet's pressure from the
-## heels to the toes or back: this far either way (a foot is 0.25 m long and stands across
-## the board). It banks the board without moving the body.
-@export var toe_heel_m: float = 0.1
+## Weight on a rail (the lean the controls ask for) moves the feet's pressure toward the
+## pressed rail, all the way onto it at a full press (the back foot steps onto the rail:
+## a carving gybe is entered that way): the pressure goes from where the feet stand to
+## this far out on the pressed side. It banks the board without moving the body. A planing
+## hull resists heel with its lift only as far as the lift can move across the wet bottom,
+## about 270 Nm on the tail; the whole weight on a rail (220 Nm) with the feet's moment
+## (120 Nm) is what gets past that and carves.
+@export var rail_step_m: float = 0.3
+## How fast the feet's pressure moves to a rail (fraction of the full press per second):
+## a foot presses in a third of a second, where the hips take a second.
+@export var rail_press_rate_per_s: float = 3.0
 ## A change in the pull of the sail is taken up by the body over this time (a reflex): a
 ## gust yanks the sailor toward the sail before the legs and the hips have set themselves
 ## against it.
 @export var hold_feel_time_s: float = 0.1
+## The harness line as a rope (off at zero): it would pull when the boom moves away from
+## the hips (the board rising under a hooked-in sailor) and go slack when the boom comes
+## closer. Tried in Session 37 against the launching of the hull on chop: its pull lands
+## on the mast foot, a metre forward, and slammed the bow into the next wave (the pitch
+## swing on 6 cm chop doubled), and the rig flip in a tack made the line length jump.
+## The steady hanging in the line is in the rig balance already. Kept for a later look
+## with a rig that has mass of its own.
+@export var harness_line_stiffness_n_m: float = 0.0
+@export var harness_line_damping_ns_m: float = 800.0
 ## The lean follows the pull averaged over this longer time: the hike answers the mean
 ## pull, the brace and the hips take the ripple of every wave and wobble (a hike that
 ## chased the ripple swung the body at 1 Hz and yawed the board with it).
@@ -102,9 +138,12 @@ extends Resource
 ## The feet hold the board at the bank the sailor wants (flat, or the bank of the turn
 ## asked for): this many newton metres per radian of heel away from it and per radian per
 ## second of heel rate, within feet_moment_max_nm. A standing person's ankles stiffen
-## against a tilting floor within a tenth of a second.
+## against a tilting floor within a tenth of a second, and answer the rate of the tilt
+## first of all: the rate term gives the whole feet_moment_max_nm at 0.2 rad/s (11 degrees
+## a second). With less (150) the board rolled, lost its planing lift on the heel, carved,
+## and the helm chased it: a 1 Hz wobble of 2 degrees of heel at 18 kt on flat water.
 @export var feet_roll_stiffness_nm_per_rad: float = 1500.0
-@export var feet_roll_damping_nms_per_rad: float = 60.0
+@export var feet_roll_damping_nms_per_rad: float = 600.0
 ## Balance from the hips: bending at the hips and swinging the arms moves the body's centre
 ## back over the feet without pressing the deck any harder on one side (the hip strategy
 ## of standing balance, Horak and Nashner 1986), and so do bending the knees and pulling

@@ -72,9 +72,12 @@ func test_friction_follows_the_ittc_line() -> void:
 	_evaluate(models[1], models[0], body)
 	var hull: HullModel = models[1]
 	var buoyancy: BuoyancyModel = models[0]
-	var re: float = 2.0 * maxf(buoyancy.wetted_length_m, 0.3) / 1.19e-6
+	# The friction acts on the dynamically wetted bottom (the wet span of the strip theory
+	# times its mean width) when that is more than the still-water grid wets.
+	var area: float = maxf(buoyancy.wetted_area_m2, hull.wetted_length_m * hull.planing_beam_m)
+	var re: float = 2.0 * maxf(maxf(buoyancy.wetted_length_m, hull.wetted_length_m), 0.3) / 1.19e-6
 	var cf: float = 0.075 / pow(log(re) / log(10.0) - 2.0, 2.0)
-	assert_almost_eq(hull.friction_n, cf * 0.5 * 1025.0 * 4.0 * buoyancy.wetted_area_m2, 1e-3)
+	assert_almost_eq(hull.friction_n, cf * 0.5 * 1025.0 * 4.0 * area, 1e-3)
 	assert_between(hull.friction_n, 3.0, 20.0, "a few newtons at 2 m/s")
 
 

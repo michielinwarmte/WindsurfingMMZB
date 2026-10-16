@@ -18,7 +18,7 @@ Written 28 September 2026 (Session 28), for the AI sessions doing the work and f
 | 2 | Core simulation, headless and tested | ✅ Done (Session 30) |
 | 3 | Playable prototype on flat water | ✅ Done (Session 30); play-tested in Sessions 31 to 33: falls, downwind trim, the helm (rake, rig tilt, rail), beginner assists, a hull that carves when banked, tacks and gybes on Space and on the keys; Session 34: trim by feel, out of irons, 12 to 24 kt all clean in `tools/matrix.sh` |
 | 4 | Autopilot, validation suite and tuning | ✅ Done (Session 35): `tools/test.sh validation`, 17 checks green, polar in `Documentation/POLAR_15KT.md` |
-| 5 | Waves and ocean | ✅ Done (Session 36): Gerstner field, shader and mesh, validation on a swell-dominated sea; short chop waits for a sailor with compliant legs (spec 17.12) |
+| 5 | Waves and ocean | ✅ Done (Session 36): Gerstner field, shader and mesh, validation on a swell-dominated sea. Session 37: the sailor is a body of their own and the rig is held by the sailor (spec 7.5); flat water and the strong chop sail without a fall, one fall each remains on the sea and the medium chop at a landing (spec 17.13) |
 | 6 | Rig visuals: board, sail, boom, mast | ⬜ Next |
 | 7 | Environment and effects | ⬜ |
 | 8 | Audio | ⬜ |
@@ -242,7 +242,7 @@ Change the layout when there is a good reason, and update this section when you 
 
 ## Phase 6: Rig visuals
 
-> Session 37 (in progress, stopped on request): the sailor is a body of their own in the physics (spec 17.13, log entry 37). The visible character (feet, legs with the knee bend, torso, arms to the boom, head, driven by `sim.sailor`, `sim.feet_body`, `sim.hand_grip_body`) is the next step, then the chop work with the new legs.
+> Session 37: the sailor is a body of their own in the physics (spec 7.5, log entry 37) and the figure on screen is built from it (feet, legs with the knee bend, torso, arms to the boom, head, the harness line). The rig on screen is posed from `sim.rig` (`RigFrame`), which the sailor holds upright; the mast and sail meshes below can replace the placeholder cylinder and triangle as they are.
 
 **Model notes (measured in Session 28):**
 - `board.fbx` has a 2.28 m long mesh along the model's X axis, not −Z, and its origin is not at the centre. It also contains a stray camera and refers to a missing product-photo texture ("Starboard … iSonic … .jpg").
@@ -254,7 +254,7 @@ Change the layout when there is a good reason, and update this section when you 
 - [ ] A procedural mast (a cylinder), and a boom that follows the sail angle and rake.
 - [ ] Sail cloth deformation from the simulation: belly to leeward, twist, and flutter when luffing. A vertex shader driven by uniforms is the preferred way.
 - [ ] A debug view you can toggle, showing force vectors (sail, fin, buoyancy, drag).
-- [ ] A placeholder sailor (a capsule) that changes stance. A real rigged character comes later.
+- [x] A placeholder sailor that changes stance: done in Session 37 as an articulated figure (feet, legs, torso, arms, head) driven by the simulation's sailor body. A real rigged character comes later.
 
 **Done when:** screenshots from several angles on both tacks show the sail on the leeward side and the boom where the physics says it is.
 **Stop:** team check.

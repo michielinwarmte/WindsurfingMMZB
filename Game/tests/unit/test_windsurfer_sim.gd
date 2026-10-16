@@ -212,7 +212,7 @@ func test_beginner_tacks_with_space_from_a_beam_reach_on_both_tacks() -> void:
 		assert_gt(crossed_at, 0.0, "the bow went through the wind (start %s)" % heading)
 		assert_gt(away_at, 0.0, "and the board bore away on the new tack (start %s)" % heading)
 		assert_lt(away_at - 25.0, 15.0, "within 15 s (start %s)" % heading)
-		assert_false(fell, "without falling (start %s)" % heading)
+		assert_false(fell, "without falling (start %s): %s at %.1f s" % [heading, sim.fall_kind, sim.time_s])
 		_play(sim, controller, controls, 8.0)
 		assert_gt(sim.telemetry.speed_ms, 3.0, "and got going again (start %s)" % heading)
 
@@ -391,3 +391,4 @@ func test_identical_runs_are_identical() -> void:
 	_run(b, 5.0, _eased(), _pilot(90.0, b))
 	assert_eq(a.body.position, b.body.position)
 	assert_eq(a.body.basis, b.body.basis)
+

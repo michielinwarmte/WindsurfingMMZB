@@ -1,9 +1,9 @@
 extends GutTest
 ## Phase 5: the validation sailed again on the default sea (a 14 m swell of 8 cm with a
 ## little 7 m chop, crests about 0.1 m above the still level). On and off the wind the
-## numbers stay close to flat water; upwind the hull meets the swell head on and loses
-## more (PHYSICS_SPEC.md 17.12 says why and what the next model step is). The board must
-## sit on the surface and nobody falls.
+## numbers stay close to flat water, upwind too since the rig stopped rolling with the hull
+## (PHYSICS_SPEC.md 7.5: a rig fixed to the deck swung through the wind on every wave and
+## lost a quarter of the speed upwind). The board must sit on the surface and nobody falls.
 
 const RUN_S: float = 50.0
 
@@ -37,6 +37,6 @@ func test_broad_reach_on_waves() -> void:
 
 
 func test_upwind_on_waves() -> void:
-	# Into the swell the hull slams on every face and loses up to a third of its speed; a
-	# sailor with compliant legs (the next model step) would lose less.
-	_sail_flat_and_on_waves(60.0, 0.35)
+	# Into the swell the hull slams on every face; with the rig held still by the sailor it
+	# loses only a few percent (it lost a quarter when the rig rolled with the hull).
+	_sail_flat_and_on_waves(60.0, 0.15)

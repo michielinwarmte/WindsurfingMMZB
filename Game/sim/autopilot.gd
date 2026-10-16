@@ -62,7 +62,7 @@ var _pointing: bool = false
 ## pump (an earlier version integrated the hike itself and pumped the sail against the
 ## sailor's own reflex at about 1 Hz).
 var hike_share: float = 1.1
-var ankle_share: float = 0.3
+var ankle_share: float = 0.8
 ## On top of that, leeward heel beyond the deliberate bank and a small allowance is
 ## answered at once by depower_alpha_per_deg per degree (the board is going over), and
 ## the push of a hard turn, felt as leeward heel, slowly (depower_rate_per_s per second
@@ -380,8 +380,11 @@ func _feel_the_pull(telemetry: Telemetry, dt: float) -> void:
 
 
 func _heeling_arm_m(_telemetry: Telemetry) -> float:
-	if absf(_felt_side_force_n) > 30.0:
-		return clampf(absf(_felt_heeling_torque_nm) / absf(_felt_side_force_n), 0.5, 4.0)
+	# A sail eased far out on a broad reach pulls almost straight forward through hands
+	# held well to leeward: its side force heels the sailor hardly at all, so the arm may
+	# be nearly nothing (a fixed arm eased the sail right off at 135 degrees).
+	if absf(_felt_side_force_n) > 15.0:
+		return clampf(absf(_felt_heeling_torque_nm) / absf(_felt_side_force_n), 0.2, 4.0)
 	return heeling_arm_default_m
 
 

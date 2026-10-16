@@ -61,13 +61,14 @@ func set_side_for_wind(apparent_wind_angle_rad: float) -> void:
 	sail_side = -1 if apparent_wind_angle_rad >= 0.0 else 1
 
 
-## Computes the sail force for the body's state: force_world at ce_world. It is not applied
+## Computes the sail force for the rig's state: force_world at ce_world. It is not applied
 ## here: the simulation carries it into the hull at the mast foot and into the sailor at the
 ## hands (WindsurferSim._apply_rig_forces). torque_body is its torque about the hull's
-## centre of mass, for reference.
+## centre of mass, in the rig's axes, for reference. The rig frame says where the mast foot
+## is, which way the rig points (the axes the sailor holds it in) and how it moves.
 ## held_side: 0 lets the wind decide which side the sail is on; +1 or -1 is the sailor
 ## holding the rig on that side (through a tack, until they flip it).
-func compute(body: SimRigidBody, wind: WindField, sheet: float, rake: float, rho_air: float, rig_lean: float = 0.0, boom_across: float = 0.0, held_side: int = 0) -> void:
+func compute(rig: RigFrame, wind: WindField, sheet: float, rake: float, rho_air: float, rig_lean: float = 0.0, boom_across: float = 0.0, held_side: int = 0) -> void:
 	rake_rad = clampf(rake, -1.0, 1.0) * config.max_rake_rad()
 	rig_lean_rad = rig_lean
 	# The boom angle on the sail's side; pushed across the centreline it goes negative.
@@ -78,32 +79,32 @@ func compute(body: SimRigidBody, wind: WindField, sheet: float, rake: float, rho
 	# on the mast, which does not depend on the side; the chord offset is added after.
 	var ce_height: float = config.ce_height_fraction * config.luff_m
 	var mast_point_local: Vector3 = config.mast_foot_local + mast_direction() * ce_height
-	var mast_point_world: Vector3 = body.point_world(mast_point_local)
+	var mast_point_world: Vector3 = rig.point_world(mast_point_local)
 	true_wind_at_ce_world = wind.velocity_at(mast_point_world)
-	var apparent_at_mast: Vector3 = true_wind_at_ce_world - body.point_velocity(mast_point_world)
+	var apparent_at_mast: Vector3 = true_wind_at_ce_world - rig.point_velocity(mast_point_world)
 	var apparent_h: Vector3 = SimMath.horizontal(apparent_at_mast)
 	if held_side != 0:
 		sail_side = held_side
 	elif apparent_h.length() >= config.min_apparent_wind_ms:
-		update_side(SimMath.wind_angle_rad(body.basis, -apparent_h))
+		update_side(SimMath.wind_angle_rad(rig.basis, -apparent_h))
 
 	# Boom direction and the centre of effort (section 2.2 and 2.13), in body axes.
 	var chord_local: Vector3 = Vector3(sail_side * sin(sheet_angle_rad), 0.0, cos(sheet_angle_rad))
 	boom_direction_local = chord_local
 	ce_local = mast_point_local + chord_local * (config.ce_boom_fraction * config.boom_m)
-	ce_world = body.point_world(ce_local)
+	ce_world = rig.point_world(ce_local)
 
-	apparent_wind_world = wind.velocity_at(ce_world) - body.point_velocity(ce_world)
+	apparent_wind_world = wind.velocity_at(ce_world) - rig.point_velocity(ce_world)
 	var w: Vector3 = SimMath.horizontal(apparent_wind_world)
 	aws_ms = w.length()
 	if aws_ms < config.min_apparent_wind_ms:
 		_clear_forces()
 		return
-	awa_rad = SimMath.wind_angle_rad(body.basis, -w)
+	awa_rad = SimMath.wind_angle_rad(rig.basis, -w)
 
 	# Everything else happens in the horizontal "heading frame": f = bow, r = starboard.
 	# A board standing on its nose or tail has no heading frame; then there is no sail force.
-	var f: Vector3 = SimMath.horizontal(SimMath.forward(body.basis))
+	var f: Vector3 = SimMath.horizontal(SimMath.forward(rig.basis))
 	if f.length() < 0.1:
 		_clear_forces()
 		return
@@ -145,7 +146,7 @@ func compute(body: SimRigidBody, wind: WindField, sheet: float, rake: float, rho
 	drive_n = force_world.dot(f)
 	side_force_n = force_world.dot(r)
 
-	torque_body = SimMath.to_body(body.basis, (ce_world - body.position).cross(force_world))
+	torque_body = SimMath.to_body(rig.basis, (ce_world - rig.position).cross(force_world))
 
 
 ## Forgets the last forces (the rig is in the water).

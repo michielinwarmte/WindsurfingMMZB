@@ -53,6 +53,11 @@ extends Resource
 ## slamming part of planing, section 5) is held at most at this: a flat bottom meeting
 ## rising water at a small angle would otherwise see an unbounded root speed.
 @export var spray_root_factor_max: float = 2.0
+## The planing lift answers a change of the water under the bottom over this time, not
+## at once: a planing surface meeting waves at a reduced frequency near 1 (a 7 m chop at
+## 10 m/s) lifts with a lag and well below its quasi-steady value (the unsteady planing
+## models of Zarnick 1978 and Fridsma 1969 carry this). Zero takes it as instant.
+@export var planing_lift_lag_s: float = 0.0
 ## Drag coefficient of the nose and deck when the bow goes under water (a blunt body
 ## meeting the water face-on: 0.8 to 1.0 for a box section; 0.8 as section 14 assumes).
 ## This is what stops a board that pearls, and what pitches it over the nose.

@@ -168,14 +168,18 @@ func test_stable_at_speed_on_the_broad_reach() -> void:
 	assert_lt(run.settled_spread(run.height_m), 0.05, "heave peak to peak below 5 cm (%.3f m)" % run.settled_spread(run.height_m))
 	assert_lt(run.settled_spread(run.submersion), 0.10, "submersion within a 0.10 band (%.3f)" % run.settled_spread(run.submersion))
 	assert_lt(run.settled_max(run.submersion), 0.35, "and never above 0.35")
-	assert_between(run.settled(run.pitch_deg), 1.0, 6.0, "trim at speed between 1 and 6 degrees bow up (%.1f)" % run.settled(run.pitch_deg))
+	# A sailor hanging in the harness presses the mast foot down (Session 37): the board
+	# runs flat at speed, as the fast ones do, so the floor is half a degree.
+	assert_between(run.settled(run.pitch_deg), 0.5, 6.0, "trim at speed between 0.5 and 6 degrees bow up (%.1f)" % run.settled(run.pitch_deg))
 
 
 func test_force_sanity_on_the_beam_reach() -> void:
 	var t: Telemetry = _run(90.0).telemetry
 	var sail_force: float = sqrt(t.sail_lift_n * t.sail_lift_n + t.sail_drag_n * t.sail_drag_n)
 	assert_between(sail_force, 300.0, 800.0, "total sail force %.0f N" % sail_force)
-	assert_between(t.fin_lift_n, 100.0, 500.0, "fin side force %.0f N" % t.fin_lift_n)
+	# With the harness lift helping the balance the sailor holds a little more sail than
+	# the one-body model did; the fin carries it (Session 37).
+	assert_between(t.fin_lift_n, 100.0, 650.0, "fin side force %.0f N" % t.fin_lift_n)
 	assert_between(absf(t.leeway_deg), 1.0, 8.0, "leeway %.1f degrees" % t.leeway_deg)
 
 
