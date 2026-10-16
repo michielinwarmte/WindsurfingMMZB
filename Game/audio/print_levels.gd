@@ -7,6 +7,10 @@ extends Node
 ## (the Dummy audio driver still mixes). For tuning the levels with numbers:
 ##
 ##   tools/godot.sh --headless --path Game res://audio/print_levels.tscn -- --seconds=20 [--wind_kt=18] [--twa=90]
+##
+## --tack=<s>: at that time the player's controls take over and Space is pressed (a tack
+## from upwind of a beam reach, a gybe from downwind of it). The sailing scene's own options
+## work too, for example --fall=<s> (a catapult at that time).
 
 const MEASURED_BUSES: Array[String] = ["WindNoise", "WindWhistle", "WaterLap", "WaterHiss", "Water", "Sail", "Master"]
 
@@ -18,6 +22,8 @@ var _power: Dictionary[String, float] = {}
 var _frames: Dictionary[String, int] = {}
 var _causes: Array[String] = []
 var _next_print_s: float = 1.0
+var _tack_at_s: float = -1.0
+var _release_tack: bool = false
 
 
 func _ready() -> void:
@@ -27,6 +33,7 @@ func _ready() -> void:
 			var parts: PackedStringArray = arg.trim_prefix("--").split("=", true, 1)
 			options[parts[0]] = parts[1]
 	_seconds = options.get("seconds", "20").to_float()
+	_tack_at_s = options.get("tack", "-1").to_float()
 	GameSettings.path = ""
 	GameSettings.values.wind_speed_kt = options.get("wind_kt", "18").to_float()
 	var scene: SailingScene = (load("res://main.tscn") as PackedScene).instantiate()
@@ -47,14 +54,27 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	_measure()
-	if not _audio.mix.one_shots.is_empty():
-		_causes.append(_audio.mix.last_event)
 	var time_s: float = _windsurfer.sim.time_s
+	if not _audio.mix.one_shots.is_empty():
+		_causes.append("%.1f %s" % [time_s, _audio.mix.last_event])
+	_press_tack(time_s)
 	if time_s >= _next_print_s:
 		_print_row(time_s)
 		_next_print_s += 1.0
 	if time_s >= _seconds:
 		get_tree().quit()
+
+
+## Space for one frame at --tack, with the player's controls instead of the autopilot.
+func _press_tack(time_s: float) -> void:
+	if _release_tack:
+		Input.action_release("tack")
+		_release_tack = false
+	if _tack_at_s >= 0.0 and time_s >= _tack_at_s:
+		_tack_at_s = -1.0
+		_windsurfer.use_autopilot = false
+		Input.action_press("tack")
+		_release_tack = true
 
 
 func _measure() -> void:
