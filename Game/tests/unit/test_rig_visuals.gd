@@ -161,7 +161,7 @@ func test_shape_sail_follows_the_simulation() -> void:
 	var rig: RigVisuals = _rig()
 	var sail: SailModel = SailModel.new(sail_config)
 	sail.sail_side = 1
-	sail.alpha_rad = deg_to_rad(15.0)
+	_set_alpha(sail, 15.0)
 	sail.aws_ms = 9.0
 	sail.lift_n = 600.0
 	rig.shape_sail(sail, 0.0)
@@ -172,7 +172,7 @@ func test_shape_sail_follows_the_simulation() -> void:
 	assert_lt(rig.cloth_value("mast_bend_across_m"), 0.0, "The mast bends to leeward with the belly")
 	assert_gt(rig.cloth_value("mast_bend_aft_m"), 0.0, "The masthead falls back")
 	# Luffing: the flutter builds up and the belly goes slack.
-	sail.alpha_rad = 0.0
+	_set_alpha(sail, 0.0)
 	for i: int in 30:
 		rig.shape_sail(sail, 0.1 * (i + 1))
 	assert_almost_eq(rig.cloth_value("flutter"), 1.0, 1e-6, "Luffing hard")
@@ -216,11 +216,53 @@ func test_fall_lays_the_rig_on_the_water() -> void:
 		assert_true((rig.get_node("Sail") as Node3D).transform.is_finite(), "No NaN")
 
 
-func test_luff_amount() -> void:
-	assert_eq(RigVisuals.luff_amount(0.0, 5.0), 1.0)
-	assert_eq(RigVisuals.luff_amount(-4.0, 5.0), 1.0)
-	assert_eq(RigVisuals.luff_amount(13.0, 5.0), 0.0)
-	assert_between(RigVisuals.luff_amount(8.0, 5.0), 0.01, 0.99)
+func test_flutter_follows_the_pressure_in_the_sail() -> void:
+	var sail: SailModel = SailModel.new(sail_config)
+	sail.aws_ms = 9.0
+	# A sail with lift in it is a taut membrane: no flutter at any normal angle of attack,
+	# on either side, and none on a run where the stalled sail is pushed full by the drag.
+	for alpha_deg: float in [6.0, 10.0, 15.0, 18.0, 30.0, 90.0, -10.0]:
+		_set_alpha(sail, alpha_deg)
+		assert_eq(RigVisuals.flutter_for(sail), 0.0, "No flutter at %.0f degrees" % alpha_deg)
+	# Nearly luffing: only a little (the shader keeps it to a ripple behind the mast).
+	_set_alpha(sail, 3.5)
+	assert_between(RigVisuals.flutter_for(sail), 0.05, 0.35, "A ripple in the luff at 3.5 degrees")
+	# No pressure at all: the whole cloth flaps.
+	for alpha_deg: float in [0.0, 0.5, -0.5]:
+		_set_alpha(sail, alpha_deg)
+		assert_gt(RigVisuals.flutter_for(sail), 0.9, "Flapping at %.1f degrees" % alpha_deg)
+	# In a breath of air the cloth just hangs.
+	sail.aws_ms = 0.3
+	assert_lt(RigVisuals.flutter_for(sail), 0.15, "Hangs in no wind")
+
+
+func test_flutter_for_load() -> void:
+	assert_eq(RigVisuals.flutter_for_load(0.0), 1.0)
+	assert_eq(RigVisuals.flutter_for_load(RigVisuals.FLUTTER_FULL_LOAD), 1.0)
+	assert_eq(RigVisuals.flutter_for_load(RigVisuals.FLUTTER_NONE_LOAD), 0.0)
+	assert_eq(RigVisuals.flutter_for_load(1.2), 0.0)
+	assert_between(RigVisuals.flutter_for_load(0.3), 0.01, 0.99)
+	assert_almost_eq(RigVisuals.sail_load(0.6, 0.8), 1.0, 1e-6, "Lift and drag together")
+
+
+func test_flutter_flaps_faster_in_more_wind() -> void:
+	var rig: RigVisuals = _rig()
+	var sail: SailModel = SailModel.new(sail_config)
+	var phase_steps: Array[float] = []
+	for aws_ms: float in [5.0, 10.0]:
+		sail.aws_ms = aws_ms
+		rig.shape_sail(sail, 10.0)
+		var before: float = rig.cloth_value("flutter_phase_rad")
+		rig.shape_sail(sail, 10.05)
+		phase_steps.append(fposmod(rig.cloth_value("flutter_phase_rad") - before, TAU))
+	assert_almost_eq(phase_steps[1], 2.0 * phase_steps[0], 1e-4, "Twice the wind, twice the flapping")
+
+
+## Gives the sail the simulation's lift and drag coefficients at an angle of attack.
+func _set_alpha(sail: SailModel, alpha_deg: float) -> void:
+	sail.alpha_rad = deg_to_rad(alpha_deg)
+	sail.cl = sail.lift_coefficient(sail.alpha_rad)
+	sail.cd = sail.drag_coefficient(sail.cl, sail.alpha_rad)
 
 
 # --- Helpers -----------------------------------------------------------------------------

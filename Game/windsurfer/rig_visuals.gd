@@ -16,7 +16,7 @@ extends Node3D
 ## - boom.glb: the mast at boom height. It is a child of the sail, so it follows the sail
 ##   angle and the rake.
 ## The sail cloth bends in a vertex shader (sail_cloth.gdshader): belly to leeward, twist,
-## and flutter when luffing, from the instance uniforms that shape_sail() sets. The mast
+## and flutter when it has no pressure in it, from the instance uniforms that shape_sail() sets. The mast
 ## (mast.gdshader) and the sail bend together: the top back and, with the pull, to leeward.
 
 const BOARD_MODEL: PackedScene = preload("res://assets/models/board.glb")
@@ -39,6 +39,18 @@ const BOOM_ARM_HALF_WIDTH_AT_GRIP_M: float = 0.285
 const BELLY_SWITCH_RATE: float = 2.5
 ## How fast the flutter comes and goes, per second.
 const FLUTTER_RATE: float = 3.0
+## The sail's load as a force coefficient (the aerodynamic force over the dynamic pressure
+## of the apparent wind times the sail area): at or below FLUTTER_FULL_LOAD the cloth has no
+## pressure in it and flaps all over; from FLUTTER_NONE_LOAD up it is a taut membrane and
+## does not move. A powered sail (angle of attack 10 to 18 degrees) has 1.0 to 1.4; the
+## luff starts to collapse below about 0.6 (angle of attack 4 to 5 degrees).
+const FLUTTER_FULL_LOAD: float = 0.1
+const FLUTTER_NONE_LOAD: float = 0.55
+## How fast the cloth flaps per m/s of apparent wind, Hz. A flapping flag keeps a nearly
+## constant Strouhal number (frequency x length / wind speed, about 0.2 to 0.3), so its
+## frequency grows in step with the wind (Virot et al. 2013; arXiv 2602.06237): with the
+## shader's 0.9 m ripple length that is about 0.3 Hz per m/s, 3 Hz at 10 m/s.
+const FLAP_HZ_PER_MS: float = 0.3
 ## Twist at the head, degrees: with a light pull and with a strong pull (the leech opens in
 ## a gust, as a real sail's does).
 const TWIST_LIGHT_DEG: float = 8.0
@@ -101,18 +113,15 @@ func pose_sailing(mast_dir: Vector3, boom_dir: Vector3) -> void:
 
 ## The sail's cloth from the simulation: the belly on the leeward side (the side the boom is
 ## on, or the other side when the wind is on the sail's back), the twist from the pull, and
-## flutter when the angle of attack is close to zero. `time_s` is the simulation clock.
+## flutter when there is little pressure in the sail. `time_s` is the simulation clock.
 func shape_sail(sail: SailModel, time_s: float) -> void:
 	var dt: float = _cloth_time_step(time_s)
 	var target_side: float = belly_side_for(sail.sail_side, sail.is_backwinded)
 	_belly_side = move_toward(_belly_side, target_side, BELLY_SWITCH_RATE * dt)
-	# In very light air the cloth just hangs: little flutter.
-	var air: float = clampf(sail.aws_ms / 3.0, 0.0, 1.0)
-	var target_flutter: float = luff_amount(rad_to_deg(sail.alpha_rad), sail.config.alpha_luff_deg) * air
-	_flutter = move_toward(_flutter, target_flutter, FLUTTER_RATE * dt)
-	# Ripples run faster in more wind.
-	var ripple_hz: float = 1.0 + 0.3 * sail.aws_ms
-	_flutter_phase_rad = fposmod(_flutter_phase_rad + TAU * ripple_hz * dt, TAU)
+	_flutter = move_toward(_flutter, flutter_for(sail), FLUTTER_RATE * dt)
+	# A sail flaps faster in more wind.
+	var flap_hz: float = FLAP_HZ_PER_MS * sail.aws_ms
+	_flutter_phase_rad = fposmod(_flutter_phase_rad + TAU * flap_hz * dt, TAU)
 	var pull: float = clampf(absf(sail.lift_n) / TWIST_FULL_LIFT_N, 0.0, 1.0)
 	var twist_rad: float = deg_to_rad(lerpf(TWIST_LIGHT_DEG, TWIST_LOADED_DEG, pull))
 	# A luffing sail loses most of its belly.
@@ -142,11 +151,31 @@ static func belly_side_for(sail_side: int, backwinded: bool) -> float:
 	return -leeward if backwinded else leeward
 
 
-## How much the sail flutters (0 to 1) at an angle of attack: fully within alpha_luff of
-## zero, where the simulation's lift fades out (SailModel.luff_factor), none from 2.5 times
-## that.
-static func luff_amount(alpha_deg: float, alpha_luff_deg: float) -> float:
-	return 1.0 - smoothstep(alpha_luff_deg, 2.5 * alpha_luff_deg, absf(alpha_deg))
+## How much the sail's cloth flutters (0 to 1) from the simulation's sail. Sail cloth is a
+## membrane: the pressure difference across it is what pulls it tight (like the skin of a
+## balloon), so a sail with lift in it holds its shape and does not move. It flaps when that
+## pressure is gone: when the sail is eased until the wind runs along both faces, the luff
+## collapses first (the "bubble" behind the mast that sailors trim by), and with no pressure
+## left the whole cloth flogs like a flag (https://en.wikipedia.org/wiki/Luffing).
+## The shader shows a small flutter value as ripples near the luff only and a large one as
+## the whole cloth flapping. In very light air the cloth just hangs.
+static func flutter_for(sail: SailModel) -> float:
+	var air: float = clampf(sail.aws_ms / 3.0, 0.0, 1.0)
+	return flutter_for_load(sail_load(sail.cl, sail.cd)) * air
+
+
+## The sail's load as a force coefficient: the lift and drag together over the dynamic
+## pressure of the apparent wind times the area (the simulation's cl and cd are exactly
+## that: lift_n = 0.5 rho aws^2 area cl). It compares the pull with what the apparent wind
+## could give, so it means the same in light air and in a gale.
+static func sail_load(cl: float, cd: float) -> float:
+	return Vector2(cl, cd).length()
+
+
+## The flutter (0 to 1) at a load coefficient: all over at FLUTTER_FULL_LOAD and below, none
+## from FLUTTER_NONE_LOAD.
+static func flutter_for_load(load_coefficient: float) -> float:
+	return 1.0 - smoothstep(FLUTTER_FULL_LOAD, FLUTTER_NONE_LOAD, load_coefficient)
 
 
 ## From the boom's centre line to the windward arm at the hand grip, in the board's axes:
