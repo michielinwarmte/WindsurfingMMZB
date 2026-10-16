@@ -2,7 +2,9 @@ class_name Hud
 extends CanvasLayer
 ## The telemetry on the screen: a one-line strip that is always there (speed, wind, mode),
 ## a detail panel with the forces and the controls (F1), a wind rose and the key help.
-## Everything is read from the simulation's Telemetry; nothing is computed here.
+## Everything is read from the simulation's Telemetry; nothing is computed here. The pause
+## menu (pause_menu.gd) is separate; the sailing scene (main.gd) hides this whole layer
+## behind the start menu.
 
 var detail_visible: bool = true
 var _strip: Label
@@ -10,7 +12,6 @@ var _panel: PanelContainer
 var _detail: Label
 var _help: Label
 var _rose: WindRose
-var _pause_label: Label
 
 
 func _ready() -> void:
@@ -27,29 +28,32 @@ func _ready() -> void:
 	_detail = _label(font, 15, Vector2.ZERO)
 	_panel.add_child(_detail)
 
-	_help = _label(font, 12, Vector2(16.0, 692.0))
-	_help.text = "W/S sheet  A/D turn (beginner) / weight (advanced)  Q/E rake  Left/Right rig tilt (adv.)  Space tack/gybe  T auto-sheet  Tab mode  1-4 camera  R reset  Esc pause  F1 panel"
+	# The key help sits at the bottom and the wind rose at the top right of any window size
+	# (anchored to those corners), not only at the default 1280 x 720.
+	_help = _label(font, 12, Vector2.ZERO)
+	_help.text = "W/S sheet  A/D turn (beginner) / weight (advanced)  Q/E rake  Left/Right rig tilt (adv.)  Space tack/gybe  T auto-sheet  Tab mode  1-4 camera  R reset  Esc menu  F1 panel"
 	add_child(_help)
+	_help.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 12)
+	_help.offset_left = 16.0
 
 	_rose = WindRose.new()
-	_rose.position = Vector2(1130.0, 20.0)
-	_rose.size = Vector2(130.0, 130.0)
 	add_child(_rose)
-
-	_pause_label = _label(font, 40, Vector2(540.0, 320.0))
-	_pause_label.text = "PAUSED"
-	_pause_label.visible = false
-	add_child(_pause_label)
-
-
-func set_paused(paused: bool) -> void:
-	_pause_label.visible = paused
+	_rose.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_rose.offset_left = -150.0
+	_rose.offset_right = -20.0
+	_rose.offset_top = 20.0
+	_rose.offset_bottom = 150.0
 
 
 func toggle_detail() -> void:
-	detail_visible = not detail_visible
-	_panel.visible = detail_visible
-	_help.visible = detail_visible
+	set_detail_visible(not detail_visible)
+
+
+## Shows or hides the detail panel and the key help line (F1).
+func set_detail_visible(shown: bool) -> void:
+	detail_visible = shown
+	_panel.visible = shown
+	_help.visible = shown
 
 
 func update_from(t: Telemetry, controller: PlayerController, camera_name: String, use_autopilot: bool) -> void:

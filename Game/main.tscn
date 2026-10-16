@@ -5,6 +5,7 @@
 [ext_resource type="Script" path="res://camera/camera_rig.gd" id="3_camera"]
 [ext_resource type="Script" path="res://ui/hud.gd" id="4_hud"]
 [ext_resource type="Script" path="res://world/ocean.gd" id="5_ocean"]
+[ext_resource type="PackedScene" path="res://ui/pause_menu.tscn" id="6_pause"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_main"]
 sky_top_color = Color(0.22, 0.47, 0.82, 1)
@@ -49,3 +50,5 @@ target_path = NodePath("../Windsurfer")
 
 [node name="HUD" type="CanvasLayer" parent="."]
 script = ExtResource("4_hud")
+
+[node name="PauseMenu" parent="." instance=ExtResource("6_pause")]

@@ -1,0 +1,162 @@
+extends Node
+## The start menu, the game's main scene (project.godot). Behind it the sailing scene runs as
+## a moving backdrop (main.tscn with start_in_menu: the autopilot sails, the camera circles).
+## The three ways to play:
+##   Sail on open water: the backdrop becomes the game (main.gd, start_playing()).
+##   Lake Silvaplana: fly over the map (the map track's terrain view).
+##   Silvaplana wind viewer, with the race course maker (the map track's wind viewer).
+## And Settings, Controls, How to sail and Quit. The menu remembers the play option chosen
+## last time and puts the focus on it.
+##
+## Keys: arrows (or the gamepad's stick/d-pad) move, Enter (or A) chooses, Esc (or B) goes
+## back, and on the main page asks whether to quit.
+## For screenshots (after "--"): --page=settings/<tab>|controls|howto|quit opens that page.
+
+const SILVAPLANA_SCENE: String = "res://maps/silvaplana/dev/terrain_view.tscn"
+const WIND_VIEWER_SCENE: String = "res://maps/silvaplana/wind_viewer.tscn"
+
+## The play options, in the order of last_play_option in the settings.
+enum PlayOption { OPEN_WATER, SILVAPLANA, WIND_VIEWER }
+
+@onready var _sailing: SailingScene = $Sailing
+@onready var _menu: CanvasLayer = $Menu
+@onready var _main_page: Control = %MainPage
+@onready var _open_water_button: Button = %OpenWaterButton
+@onready var _silvaplana_button: Button = %SilvaplanaButton
+@onready var _wind_button: Button = %WindButton
+@onready var _settings_button: Button = %SettingsButton
+@onready var _controls_button: Button = %ControlsButton
+@onready var _howto_button: Button = %HowToButton
+@onready var _quit_button: Button = %QuitButton
+@onready var _conditions: Label = %OpenWaterHint
+@onready var _status: Label = %Status
+@onready var _version: Label = %Version
+@onready var _settings: SettingsMenu = %Settings
+@onready var _controls: ControlsPage = %Controls
+@onready var _howto: HowToPage = %HowTo
+@onready var _quit_confirm: ConfirmDialog = %QuitConfirm
+
+
+func _ready() -> void:
+	_open_water_button.pressed.connect(_on_open_water_pressed)
+	_silvaplana_button.pressed.connect(_open_map_scene.bind(PlayOption.SILVAPLANA, SILVAPLANA_SCENE, "Lake Silvaplana"))
+	_wind_button.pressed.connect(_open_map_scene.bind(PlayOption.WIND_VIEWER, WIND_VIEWER_SCENE, "the wind viewer"))
+	_settings_button.pressed.connect(_open_page.bind(_settings))
+	_controls_button.pressed.connect(_open_page.bind(_controls))
+	_howto_button.pressed.connect(_open_page.bind(_howto))
+	_quit_button.pressed.connect(_open_page.bind(_quit_confirm))
+	_quit_confirm.confirmed.connect(_on_quit_confirmed)
+	for page: MenuPage in [_settings, _controls, _howto, _quit_confirm]:
+		page.closed.connect(_on_page_closed.bind(page))
+	MenuFocus.setup_buttons([_open_water_button, _silvaplana_button, _wind_button,
+		_settings_button, _controls_button, _howto_button, _quit_button])
+	_version.text = _version_text()
+	_show_main_page(_play_buttons()[GameSettings.values.last_play_option])
+	_apply_command_line_options()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	# Esc on the main page asks whether to quit (the pages handle their own Esc first).
+	if _main_page.is_visible_in_tree() and event.is_action_pressed("ui_cancel"):
+		get_viewport().set_input_as_handled()
+		_open_page(_quit_confirm)
+
+
+func _play_buttons() -> Array[Button]:
+	return [_open_water_button, _silvaplana_button, _wind_button]
+
+
+## Sail on open water: the menu goes away and the backdrop becomes the game.
+func _on_open_water_pressed() -> void:
+	_remember_choice(PlayOption.OPEN_WATER)
+	set_process_unhandled_input(false)
+	_menu.queue_free()
+	_sailing.start_playing()
+
+
+## One of the map track's scenes. Loading the terrain takes a moment, so a line says so
+## first; when it fails (the big map files come with Git LFS) the line says why.
+func _open_map_scene(choice: PlayOption, path: String, title: String) -> void:
+	_remember_choice(choice)
+	_status.text = "Loading %s..." % title
+	_status.show()
+	# Two frames, so the line is on the screen before the loading holds everything up.
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var error: Error = get_tree().change_scene_to_file(path)
+	if error != OK:
+		_status.text = "Could not open %s (error %d). Its files come with Git LFS: see CLAUDE.md." % [title, error]
+
+
+func _remember_choice(choice: PlayOption) -> void:
+	GameSettings.values.last_play_option = choice
+	GameSettings.save()
+
+
+func _on_quit_confirmed() -> void:
+	get_tree().quit()
+
+
+func _open_page(page: MenuPage) -> void:
+	_main_page.hide()
+	page.open()
+
+
+func _on_page_closed(page: MenuPage) -> void:
+	if page == _settings:
+		# The new wind and waves show behind the menu at once.
+		_sailing.apply_settings_live()
+	var buttons: Dictionary[MenuPage, Button] = {
+		_settings: _settings_button, _controls: _controls_button, _howto: _howto_button, _quit_confirm: _quit_button}
+	_show_main_page(buttons[page])
+
+
+func _show_main_page(focus: Button) -> void:
+	_conditions.text = "%s  ·  change it in Settings" % GameSettings.values.conditions_text()
+	_main_page.show()
+	focus.grab_focus()
+
+
+## "v0.5  ·  Godot 4.7.2  ·  feature/ui @ 3d9a8d6" in the bottom right corner.
+func _version_text() -> String:
+	var version: String = str(ProjectSettings.get_setting("application/config/version", ""))
+	var godot: Dictionary = Engine.get_version_info()
+	var text: String = "v%s  ·  Godot %d.%d.%d" % [version, godot["major"], godot["minor"], godot["patch"]]
+	var git: String = _git_description()
+	if git != "":
+		text += "  ·  " + git
+	return text
+
+
+## The git branch and commit when the game runs from the team's repository with the editor's
+## Godot (tools/play.sh); empty in an exported game, which has no repository.
+func _git_description() -> String:
+	if not OS.has_feature("editor"):
+		return ""
+	var folder: String = ProjectSettings.globalize_path("res://")
+	var output: Array = []
+	if OS.execute("git", ["-C", folder, "rev-parse", "--abbrev-ref", "HEAD"], output) != 0 or output.is_empty():
+		return ""
+	var branch: String = str(output[0]).strip_edges()
+	output.clear()
+	if OS.execute("git", ["-C", folder, "rev-parse", "--short", "HEAD"], output) != 0 or output.is_empty():
+		return branch
+	return "%s @ %s" % [branch, str(output[0]).strip_edges()]
+
+
+func _apply_command_line_options() -> void:
+	for arg: String in OS.get_cmdline_user_args():
+		if not arg.begins_with("--page="):
+			continue
+		var parts: PackedStringArray = arg.trim_prefix("--page=").split("/")
+		match parts[0]:
+			"settings":
+				_open_page(_settings)
+				if parts.size() > 1:
+					_settings.show_tab(parts[1])
+			"controls":
+				_open_page(_controls)
+			"howto":
+				_open_page(_howto)
+			"quit":
+				_open_page(_quit_confirm)
