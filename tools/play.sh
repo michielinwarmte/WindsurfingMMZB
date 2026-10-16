@@ -5,7 +5,7 @@
 #   tools/play.sh silvaplana     the Silvaplana map: fly around the terrain (map track, M1)
 #   tools/play.sh wind           the wind viewer: the Maloja over Silvaplana, with the course maker (map track, W2, W4a)
 #
-# Double-clicked, it asks what to start; Enter plays the game as before.
+# Double-clicked, it asks what to start; Enter opens the game's start menu.
 set -euo pipefail
 source "$(dirname "$0")/common.sh"
 
@@ -31,7 +31,7 @@ scene_for() {
 args=("$@")
 if [[ $# -eq 0 ]] && double_clicked; then
 	echo "What do you want to start?"
-	echo "  1  the game, on open water (or just press Enter)"
+	echo "  1  the game: the start menu (or just press Enter)"
 	echo "  2  Silvaplana: fly around the terrain (keys 1-4: viewpoints, W A S D E Q: fly, right mouse: look)"
 	echo "  3  Silvaplana wind viewer: the Maloja's streaks and speeds, and the course maker (Tab: camera, click: wind at a point, M: course)"
 	read -rp "> " choice

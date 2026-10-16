@@ -1,0 +1,99 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://ui/controls_page.gd" id="1_script"]
+[ext_resource type="Theme" path="res://ui/theme.tres" id="2_theme"]
+
+[node name="ControlsPage" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+script = ExtResource("1_script")
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="Center"]
+layout_mode = 2
+
+[node name="Layout" type="VBoxContainer" parent="Center/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="Center/Panel/Layout"]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+text = "Controls"
+
+[node name="Columns" type="HBoxContainer" parent="Center/Panel/Layout"]
+layout_mode = 2
+theme_override_constants/separation = 40
+
+[node name="KeyTable" type="GridContainer" parent="Center/Panel/Layout/Columns"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/h_separation = 16
+theme_override_constants/v_separation = 9
+columns = 2
+
+[node name="Modes" type="VBoxContainer" parent="Center/Panel/Layout/Columns"]
+custom_minimum_size = Vector2(390, 0)
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="BeginnerTitle" type="Label" parent="Center/Panel/Layout/Columns/Modes"]
+layout_mode = 2
+theme_type_variation = &"SectionLabel"
+text = "Beginner mode"
+
+[node name="BeginnerText" type="Label" parent="Center/Panel/Layout/Columns/Modes"]
+custom_minimum_size = Vector2(390, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 17
+text = "A and D turn the board left and right on the screen, whichever way you sail; the sailor does the rest. The auto-sheet trims the sail for you (W and S take over for a moment)."
+autowrap_mode = 3
+
+[node name="AdvancedTitle" type="Label" parent="Center/Panel/Layout/Columns/Modes"]
+layout_mode = 2
+theme_type_variation = &"SectionLabel"
+text = "Advanced mode"
+
+[node name="AdvancedText" type="Label" parent="Center/Panel/Layout/Columns/Modes"]
+custom_minimum_size = Vector2(390, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 17
+text = "Steer like a real windsurfer: Q and E rake the rig forward and back (forward bears away, back heads up), Left and Right tilt it sideways, A and D move your weight, W and S sheet in and out."
+autowrap_mode = 3
+
+[node name="GamepadTitle" type="Label" parent="Center/Panel/Layout/Columns/Modes"]
+layout_mode = 2
+theme_type_variation = &"SectionLabel"
+text = "Gamepad"
+
+[node name="GamepadText" type="Label" parent="Center/Panel/Layout/Columns/Modes"]
+custom_minimum_size = Vector2(390, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 17
+text = "In the menus: stick or d-pad to move, A to choose, B to go back, Start to pause, the shoulder buttons switch the settings tabs. Sailing with a gamepad comes later."
+autowrap_mode = 3
+
+[node name="Buttons" type="HBoxContainer" parent="Center/Panel/Layout"]
+layout_mode = 2
+
+[node name="Spacer" type="Control" parent="Center/Panel/Layout/Buttons"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="BackButton" type="Button" parent="Center/Panel/Layout/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+text = "Back"

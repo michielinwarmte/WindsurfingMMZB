@@ -1,0 +1,134 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://ui/pause_menu.gd" id="1_script"]
+[ext_resource type="Theme" path="res://ui/theme.tres" id="2_theme"]
+[ext_resource type="PackedScene" path="res://ui/settings_menu.tscn" id="3_settings"]
+[ext_resource type="PackedScene" path="res://ui/controls_page.tscn" id="4_controls"]
+[ext_resource type="PackedScene" path="res://ui/howto_page.tscn" id="5_howto"]
+[ext_resource type="PackedScene" path="res://ui/confirm_dialog.tscn" id="6_confirm"]
+
+[node name="PauseMenu" type="CanvasLayer"]
+layer = 10
+script = ExtResource("1_script")
+
+[node name="Root" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+
+[node name="Dim" type="ColorRect" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.01, 0.03, 0.06, 0.5)
+
+[node name="List" type="CenterContainer" parent="Root"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="Root/List"]
+custom_minimum_size = Vector2(440, 0)
+layout_mode = 2
+
+[node name="Layout" type="VBoxContainer" parent="Root/List/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="Root/List/Panel/Layout"]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+text = "Paused"
+horizontal_alignment = 1
+
+[node name="Conditions" type="Label" parent="Root/List/Panel/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HintLabel"
+text = "18 kt from W (270), swell"
+horizontal_alignment = 1
+
+[node name="Note" type="Label" parent="Root/List/Panel/Layout"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(376, 0)
+layout_mode = 2
+theme_type_variation = &"HintLabel"
+theme_override_colors/font_color = Color(1, 0.72, 0.35, 1)
+text = "Restart (R) to sail with the new waves."
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Gap" type="Control" parent="Root/List/Panel/Layout"]
+custom_minimum_size = Vector2(0, 4)
+layout_mode = 2
+
+[node name="ResumeButton" type="Button" parent="Root/List/Panel/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"BigButton"
+text = "Resume"
+
+[node name="RestartButton" type="Button" parent="Root/List/Panel/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Restart"
+
+[node name="SettingsButton" type="Button" parent="Root/List/Panel/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Settings"
+
+[node name="ControlsButton" type="Button" parent="Root/List/Panel/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Controls"
+
+[node name="HowToButton" type="Button" parent="Root/List/Panel/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "How to sail"
+
+[node name="StartMenuButton" type="Button" parent="Root/List/Panel/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Back to the start menu"
+
+[node name="QuitButton" type="Button" parent="Root/List/Panel/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Quit"
+
+[node name="Settings" parent="Root" instance=ExtResource("3_settings")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+note_text = "The new wind blows as soon as you resume. New waves and a new start heading come when you restart (R)."
+
+[node name="Controls" parent="Root" instance=ExtResource("4_controls")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+
+[node name="HowTo" parent="Root" instance=ExtResource("5_howto")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+
+[node name="QuitConfirm" parent="Root" instance=ExtResource("6_confirm")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
