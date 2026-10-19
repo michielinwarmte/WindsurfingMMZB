@@ -6216,6 +6216,94 @@ Sources for this table (read on 19 October 2026):
 
 Source for this table: [H5] surfertoday.com, "How to hook into the harness lines in windsurfing" (read 19 October 2026): https://www.surfertoday.com/windsurfing/how-to-hook-into-the-harness-lines-in-windsurfing
 
+### U2: the fin's stiffness, its size and its flex (agent 1, sources found 19 October 2026)
+
+The numbers the bending fin needs (PLAYTEST_UPGRADES.md, U2, agent 1). Reliability as in U1's tables: **measured**, **theory** (here also a validated model), **expert**, **estimate** (worked out here from the sources named). The beam sums are the brief's cantilever (Euler-Bernoulli, `EI` proportional to the chord or the thickness to the fourth power, elliptic loading), done in a short script outside the game. None of these numbers is in a config file yet: agent 3 (`fin_physics`) decides.
+
+**The flex test, which sets the stiffness scale `S`.**
+
+| What | Number | Reliability | Source, or how it was worked out |
+|---|---|---|---|
+| **The recommended default:** a 37 cm carbon slalom fin (F-Hot), bolted in its box, a point load on the quarter-chord line at **80 % of the span** | **5.00 N/mm at the load point**: 100 N (10.2 kg) moves the load point **20 mm**. Linear (R² 0.93), no permanent set | measured (one fin, one lab) | [F1] §4.2, Fig. 4.6 (a hydraulic cylinder at 0.1 mm/s, up to about 100 N and 20 mm). The same test calibrates the FEA models of [F2] (to about 7 %) and [F3] |
+| The same fin, the load at **40 % of the span** | 55.24 N/mm at the load point (R² 0.997), up to about 700 N and 12 mm | measured | [F1] Fig. 4.5 |
+| The 80 % test as a tip deflection | 100 N at 0.8 of the span: **28 mm at the tip** (the fin's own taper) to **30 mm** (the game's chord law); the tip turns about 6.6° | estimate (beam) | beyond the load there is no moment, so the tip only turns with the load point: the tip moves 1.43 to 1.50 times as far |
+| 10 kg hung at the very tip of the same fin (a test Max can do at home) | about 44 mm | estimate (beam) | calibrated on the 80 % test |
+| The fin's root stiffness `EI` | 51 N·m² (from the 80 % test) to 61 N·m² (from the 40 % test): an effective modulus of 30 to 36 GPa for its carbon-and-glass laminate | estimate (beam) | `EI` proportional to t⁴ along the span, with the measured thickness ([F2] Table 3.1: 7.51 mm at the root, 4.72 mm at 80 %, 3.11 mm at 95 %); a NACA 00xx section has I = 0.0394·c·t³; at the root c = 0.10 m, t = 7.55 mm |
+| Does `EI` ∝ c⁴ hold? | the measured ratio of the 80 % to the 40 % compliance is **11.0**; the real fin's thickness⁴ gives 9.2, the game's chord⁴ law 11.7 | measured ratio; the others estimate | the brief's c⁴ law is within 6 % of the measurement for this fin |
+| The check against sailing loads | the same fin's FEA (calibrated on [F1]) under its own CFD pressure: the tip moves **0.106 mm per newton of lift** (20 kn, 4°: 506 N, 53.6 mm, the rigid fin's pressures) and 0.103 mm/N with two-way FSI (594 N, 61.1 mm). Over 10 to 35 kn and 2 to 6°: 8 to 269 mm, linear in the lift | theory (validated FEA) | [F2] Tables B.1 to B.6. The beam calibrated on the 80 % test, with elliptic loading, gives 0.112 mm/N: **within 6 % of the FEA**. The brief's beam is good enough |
+| 62 to 70 cm carbon Formula fins, 20 kg hung 2 cm from the tip | the tip bends 14.1 to 22.8 cm (20 to 33 % of the length); 15 fins, 2008 | measured (an amateur's repeatable test) | [F4]. An underwater video shows these fins bending mostly about 20 cm when sailing, up to 30 cm, so the test bends them by 50 to 75 % of a sailing load. Too long a fin to be the default |
+| A G10 fin of 36 to 44 cm | **not found.** No maker publishes a flex number; they use words (K4: "Dynamic Flex" and "Super Stiff" [C2]; Gasoil: hard, medium, soft [L1]) | - | Max's own test (below) fills this |
+| A G10 freeride fin of the game's planform | 100 N at 0.8 of the span: 5 to 11 mm there, so 2 to 4 times stiffer than the F-Hot | estimate | G10's modulus is 10.3 GPa (flexural, lengthwise) to 24 GPa (tensile) [M1]; the game's 0.14 m root at 10 % is 14 mm thick, 1.9 times the F-Hot's. The thickness is itself an estimate and the stiffness goes with its cube: a 12 mm root gives 8 to 18 mm |
+| **Max's own fins (37 and 44 cm)** | *to be filled in:* brand and model; his home test: the base clamped, a known weight (5 to 10 kg) hung at the tip, the tip's displacement (and, if he can, the displacement at 80 % of the span) | measured, when Max has done it | - |
+
+**Why the F-Hot test is the default.** It is the only measured flex test found for a fin of the right size (36 to 44 cm). The same fin's FEA, calibrated on this test, gives its bend under real sailing pressure, and the brief's beam reproduces that bend within 6 %: the test and the model agree. It is a carbon slalom fin, slimmer than a freeride fin (root chord 10 cm, 7.5 mm thick), so for the game's 38 cm freeride fin it is probably the soft end; a thicker G10 freeride fin is likely stiffer (the estimate above). Max's measurement replaces it.
+
+**How to set it.** `flex_test_load_n = 100.0`, `flex_test_position = 0.8`, and 0.020 m as the deflection **of the load point**, since that is what was measured: the calibration should compare the beam's deflection at the load station. If it compares the tip instead, use 0.030 m (the tip equivalent for the game's chord law).
+
+A preview, an estimate with the brief's beam, the game's chord law calibrated this way and no cap: at the 18 kt beam reach's 527 N the 38 cm fin's tip bends 58 mm and turns 13.9°, its force tilts 7.7° on average, so the bend adds about 70 N upward; at 800 N: 88 mm, 21°, 161 N. Agent 3 measures the real numbers.
+
+**The catalogue fins.**
+
+| What | Number | Reliability | Source, or how it was worked out |
+|---|---|---|---|
+| Unifiber Freeride G10 (the source of the game's fin) | 26 cm 242 cm²; 32 cm 294; **38 cm 365**; **44 cm 411**; 46 cm 435 | expert (maker) | [C1] |
+| K4 Fang (freeride) | 34 cm 290 cm²; 36 cm 324; 38 cm 343; 40 cm 365 | expert (maker) | [C2] |
+| A 37 cm freeride fin | about 350 cm² | estimate | Unifiber between 32 and 38 cm; K4's 36 to 38 cm have 324 to 343 |
+| The F-Hot 37 cm slalom fin | root chord 10 cm, tip 2.3 cm, rake 2° aft, a NACA-like section 8.1 to 8.25 % thick with the thickest point at 40 % of the chord, mean chord 8.12 cm, so about 300 cm² | measured (in the papers) | [F2] §3.1, [F5]; the area is 37 cm × 8.12 cm |
+| A 40.5 cm course fin (1993) | root chord 10.8 cm, a fairly straight trailing edge | measured | [S1] p. 47 |
+| Thickness ratio | 8 % (the F-Hot, measured); 9 % (the RS:X fin, close to NACA 65-009 [F6]); NACA 0008 to 0009 assumed for 1990s blades and course fins [S1] | measured, theory | the game's model fin, 10 % at the root to 8 % at the tip (`build_rig_models.py`), is at the thick end, as a freeride G10 fin is (Gunsails: "Thicker profile" [C3]) |
+| Root chords of 37 and 44 cm freeride fins | **not published** by any maker found. The mean chord is 9.6 cm for 38 cm and 365 cm², 9.3 cm for 44 cm and 411 cm². The game's law has a mean-to-root ratio of 0.69 (wide base, narrow tip), the F-Hot 0.81 (nearly elliptic), so a freeride root is 12 to 14 cm at 38 cm and 11.5 to 13.5 cm at 44 cm | estimate | the area divided by the span and by 0.69 to 0.81 |
+| Rake or sweep | the F-Hot slalom fin 2° aft; MFC HF-Ride: "the smaller sizes (28-42) offer more rake than the larger sizes (44-52)"; Select weed fins 40° or 50° | expert | [F2], [C4], [C5]. The game's leading edge sweeps back 0.30 of the span at the tip (`FIN_SWEEP`): a freeride shape |
+
+**How close the game's fin is.** 38 cm and 365 cm² are Unifiber's 38 cm exactly. Its root chord of 0.14 m is plausible for a freeride fin but 40 % wider than the F-Hot slalom fin. Its tip at 37 % of the root, rounded beyond 0.82 of the span, gives a chord of 0.069 m at 0.82, where the nearly elliptic F-Hot has about 0.063 m at 0.8: close.
+
+**A catch in the chord law for the 44 cm fin.** `c_root = 0.14 * sqrt(area_m2 / 0.0365)` keeps the area right only when the span grows with the square root of the area as well. With `span_m = 0.44` and `area_m2 = 0.0411` it gives a root of 0.149 m and a planform of 447 cm², 9 % more than the area, and through c⁴ a fin 1.4 times too stiff. `c_root = area_m2 / (0.686 * span_m)`, where 0.686 is the law's own mean-to-root ratio, gives exactly 0.14 m for the default fin and 0.136 m for the 44 cm fin. A preview with that law (estimate): at 527 N the 44 cm fin's tip bends 100 mm and turns 21°, 105 N upward (74 N with the square-root law); at 800 N 152 mm, 32° (close to the brief's 35° cap), 238 N.
+
+**What is written on flex, twist and lift.**
+
+| What | Finding | Reliability | Source |
+|---|---|---|---|
+| The fin's upward force comes from its bend | "the lift is mostly horizontal, only having vertical components due to the deflection of the fin" | theory | [F2] §1.1 |
+| A soft fin lifts the board | Gasoil Fins, three hardnesses. Hard: "will not bend easily ... the effect of lift is limited and the board is less free on the water". Medium: "bends moderately in tip ... an easily perceptible and usable foil effect". Soft: "The bottom third of the fin bends with an important angle, and provides a strong lift effect. The board will sail on the fin with a reduction of the wet surface area, but board control will suffer ... especially if the wind rises" | expert (a maker, translated by a forum member) | [L1] |
+| A maker on twist and the tip | Select Edge G10 (freeride): "Rigid fin base ... Blocked twist for increasing the lift ... Soft tip for comfortable riding. Generates a good amount of lift." | expert | [C5] |
+| The other view | "soft fins like techtronic/vector stop the board lifting excessive in big gusts but at the expense of upwind performance"; "the G10 will feel softer underfoot than carbon but not faster" | expert (forum, 6 November 2010) | [L2] |
+| Twist | a fin's twist balances each section's own moment (which raises the local angle of attack, the centre of pressure being ahead of the shear centre) against the rake (which lowers it): Chiu et al. 1995, photogrammetry, as summarised in [S2]. On the F-Hot, two-way FSI gives under 1° of tip twist, raising the angle [F2] Tables B.7 to B.9; an earlier FSI study of the same fin found the opposite, the tip's angle lowered by up to half at 25 kn [F5] §6.3 | theory, contradictory | the brief leaves twist out, which these support |
+| Does the bend change the side force? | two-way FSI lift 4 to 25 % above the rigid fin's (most at 2° and 35 kn) [F2] Tables B.1 to B.3; the earlier study of the same fin found up to 21 % less [F5] §6.1 | theory, contradictory | not to be used |
+| Tip flexibility and performance | "a slight increase in tip flexibility resulted in higher performance comparatively to using rigid tips" | measured (as summarised; not read) | Chiu, Van den Bersselaar, Broers, Buckingham & Pourzanjani 1992 [S3], via [F2] §1.2 |
+| Cantilever tests as a guide | "Inexpensive cantilever tests appear to be sufficient to make qualitative comparisons between the sailing responses of fins with different layups" | theory | [F3], the abstract |
+| A number for the bend's upward force | **not found** in any source. The beam with the default test, on the F-Hot itself: at 527 N the tip turns 13° and the force tilts 8° on average, 76 N up; at 860 N 22° and 200 N | estimate | above |
+| The 2024 Ocean Engineering windsurf VPP (Hou et al., vol. 312, 119070) | the abstract could not be read (none at Crossref or Semantic Scholar; ScienceDirect refused); its conference version is Chan et al., HPYD 8 (2024) | - | [V1] |
+
+**Spin-out.**
+
+| What | Number | Reliability | Source |
+|---|---|---|---|
+| Five fins in a towing tank (2 m/s) | the lift is linear at low angles, "followed by stall at between 10 and 15 degrees"; the slalom blades stall earlier and harder than a "dolphin" speed fin | measured | [S1] p. 65 |
+| The RS:X fin (66 cm), wind tunnel | separation starts at about 10°, fully stalled by 16°; about 14° from the tests | measured | [F6], the conclusions |
+| The F-Hot 37 cm slalom fin, Newcastle cavitation tunnel | "the fin enters in stall at 8° of AoA"; the lift falls after 13.5°; the tip's bend does not drop after the stall | measured (as reported) | [F7] pp. 60 to 61 |
+| Ventilation | spin-out "can occur when planing in any wind conditions" and is affected by ventilation (Swales et al. 1974; Broers et al. 1992). No ventilation angle was found | expert, citing measurements | [S2] §1 |
+| The game's fin | linear to 8°, its peak at 12°, half the lift by 16° (`fin_default.tres`) | - | inside the measured 8 to 16° |
+
+Sources for these tables (all read on 19 October 2026):
+- [F1] Nascimento, F.A.M.R. (2017), *Windsurf fin: numerical and experimental analysis of ultimate strength*, extended abstract, MSc thesis, Instituto Superior Técnico, Lisbon: https://fenix.tecnico.ulisboa.pt/downloadFile/1689244997257679/ResumoAlargado_73133.pdf. Published as Nascimento, Sutherland & Garbatov (2018), "Experimental and numerical structural analysis of a windsurf fin", *Progress in Maritime Technology and Engineering*, CRC Press, pp. 387-393, doi:10.1201/9780429505294-44 (not read).
+- [F2] Cardoso de Brito, M.A. (2021), *An integrated FSI analysis of a windsurfer fin*, MSc thesis, Instituto Superior Técnico (supervisor L.S. Sutherland): https://fenix.tecnico.ulisboa.pt/downloadFile/281870113705481/Master_Thesis_83711.pdf
+- [F3] Cardoso de Brito, M., Sutherland, L.S., Pereira, J.M.C. & Arruda, M.R. (2022), "Fluid-Structure Interaction Analyses for Hydro-Elastic Tailoring of a Windsurfer Fin", *J. Mar. Sci. Eng.* 10(10), 1371, doi:10.3390/jmse10101371 (the abstract, via Crossref; the full text refused the download).
+- [F4] peterman.dk, "Measuring the bend of some formula fins" and its results table (2008): http://www.peterman.dk/windsurf-fins-flex-start01.htm and http://www.peterman.dk/windsurf-fins-flex-results01.htm
+- [F5] Saldanha, A. (2019), *Hydrodynamic and Fluid-Structure Interaction analysis of a Windsurf Fin*, extended abstract, Instituto Superior Técnico: https://fenix.tecnico.ulisboa.pt/downloadFile/563345090418190/Extended_Abstract_Andre_Saldanha.pdf
+- [F6] Hansen, K. (2011), *Analysis of flow around an RS:X Racing 66 windsurfing fin*, Curtin University (CMST): https://cmst.curtin.edu.au/wp-content/uploads/sites/4/2016/05/khansen_analysis_of_flow_around_an_RSX_Racing_66_windsurfing_fin_2011.pdf
+- [F7] Santos, A.M.R. (2018), *Hydrodynamic analysis of a slalom fin of windsurf board*, MSc thesis, Instituto Superior Técnico: https://fenix.tecnico.ulisboa.pt/downloadFile/1970719973968155/full_doc_-_9178_eco_version.pdf
+- [M1] G10/FR-4: 15 × 10⁵ psi flexural modulus, lengthwise (ASTM D790), Trident Plastics: https://plastics.tridentplastics.com/compare/phenolic-laminate/nema-fr4-g-10-glass-epoxy-sheet ; 24 GPa Young's modulus, lengthwise, Wikipedia "FR-4": https://en.wikipedia.org/wiki/FR-4 (both as returned by search)
+- [C1] Unifiber Freeride G10: 38 cm Power Box https://www.unifiber.net/products/freeride-g10-38-cm-power-box ; 44 cm Tuttle Box https://www.unifiber.net/products/freeride-g10-44-cm-tuttle-box ; 46 cm https://www.unifiber.net/products/freeride-g10-46-cm-power-box ; 26 and 32 cm (US box pages, as returned by search)
+- [C2] K4 Fins, fin specifications: https://www.k4fins.com/fin-specs/
+- [C3] Gunsails, Ride Fin: https://gunsails.com/en/ride-fin-dt
+- [C4] MFC HF-Ride, NB Windsurfing: https://www.nbwindsurfing.com/shop/c/p/MFC-HF-Ride-Freeride-Fin-Power-Box-x34031708.htm
+- [C5] Select Edge G10, easy-surfshop: https://easy-surfshop.com/do/item/N_SM-1805-POWEREDGE/ ; the 40° and 50° rakes from the Select Progression and Shock pages there (as returned by search)
+- [L1] seabreeze.com.au forum, "Fins - stiffness", ClausF quoting Gasoil Fins, 20 December 2018: https://www.seabreeze.com.au/forums/Windsurfing/Review/Fins-stiffness
+- [L2] seabreeze.com.au forum, "G10 fin vs Carbon fin in choppy water", 6 November 2010: https://www.seabreeze.com.au/forums/Windsurfing/Gps/G10-fin-vs-Carbon-fin-in-choppy-water
+- [S1], [S2]: as in "U1: the harness" above (Sutherland 1993; Gourlay & Martellotta 2011).
+- [S3] Chiu, T.W., Van den Bersselaar, T., Broers, C.A.M., Buckingham, D.J. & Pourzanjani, M.M.A. (1992), "The Effect of Tip Flexibility on the Performance of a Blade Type Windsurfer Fin", *Manoeuvring and Control of Marine Craft*, pp. 261-273; and Chiu, T.W., Kalaugher, P.G. & Broers, C.A.M. (1995), "The application of photogrammetry in the study of the effects of sailboard fin flexibility", *Proc. IMechE Part C* 209(C6), 373-381. Neither was read.
+- [V1] Hou, J. et al. (2024), *Ocean Engineering* 312, 119070, doi:10.1016/j.oceaneng.2024.119070; Chan, K.Y. et al. (2024), "A Hierarchical Approach for Windsurfing Performance Analysis and Velocity Prediction", HPYD 8: https://aantc.ust.hk/publications/199/
+
 ### Sources
 
 Legacy code (all under `Legacy/WindsurfingGame/Assets/`):
