@@ -3,7 +3,7 @@
 The live state of U2, "the fin bends, and its size". The plan and its execution brief are in [PLAYTEST_UPGRADES.md](PLAYTEST_UPGRADES.md). **The lead updates and commits this file after every launch, report and merge.** A lead who takes over starts here; U1's take-over prompt in [U1_PROGRESS.md](U1_PROGRESS.md) applies with U2 in place of U1.
 
 - **Branch:** `feature/u2-fin` (from `feature/u1-planing-wet-area` at c1eee63). Agents work on `u2/<name>` branches, made from it in their own worktrees.
-- **Last update:** 19 October 2026. Agent 4 (the look) merged; the lead calibrated the trim by speed for the game's gusty wind (one number). **Stop 2 waits for Michiel; Stop 3, Max's play-test, is ready.**
+- **Last update:** 19 October 2026, end of the day (Session 49). Everything is merged on `feature/u2-fin`. Max play-tested: "feels quite nice now". **Stop 2 waits for Michiel; the team decides the open items; then the manoeuvre matrix and the pull requests.** The team builds other things next.
 
 ## State
 
@@ -20,24 +20,15 @@ The live state of U2, "the fin bends, and its size". The plan and its execution 
 |---|---|
 | Stop 1, the lead: agents 1 and 2 in, the stiffness sourced | **passed** on 19 October 2026: the flex test is measured (IST Lisbon), the baseline is pinned, nothing regressed (verified by the lead: see Numbers) |
 | Stop 2, the lead reviews agent 3's diff, then Michiel | the lead's reviews **passed** (four rounds); **waits for Michiel** on the whole package |
-| Stop 3, Max's play-test | **ready**: the look is merged, the checklist is in agent 4's report and in Next action |
+| Stop 3, Max's play-test | **a first play-test done** on 19 October 2026: "feels quite nice now"; the fin's upward push wanted as an arrow (added); the mast foot's 400 N asked about (the sailor's own weight through the boom); the mast track aft tested |
 
 ## Next action
 
-**Two things at once: Michiel's review (Stop 2) and Max's play-test (Stop 3).** Everything is merged on `feature/u2-fin`.
-
-**Max's play-test** (`tools/play.sh res://main.tscn`, then `tools/play.sh lake`; the HUD's fin line reads "fin ... N, ... % of stall, bend ... deg, up ... N"):
-1. The fin is under water: use the orbit camera low behind the tail to see it bend to windward, most at the tip. Powered up, expect 15 to 23 deg of bend, a quarter of its stall, 80 to 230 N up.
-2. Powered up on a beam reach: do you feel the push on the fin and a looser board? In gusts the board now moves with the fin's load (the bending fin's upward push pulses with the gusts), which is the "looseness" the model can give; say whether it feels alive or bouncy.
-3. The board rails 2 deg by itself now (was 4.5). Does it feel right on a beam reach, and would you rail more to load the fin?
-4. Overdo it at 24 kt: spin-out (the HUD shows STALLED)? The fin reaches its stall in the gusts at 18 kt already.
-5. Is the wet part shorter, the nose freer, the weight on the back foot?
-6. No 44 cm fin in the game yet (overrides only); the team decides whether the fin's size becomes a setup choice.
-7. Anything that feels wrong, and in which wind and course.
-
-**Michiel's review:** the list and the questions are in the Notes ("Stop 2 package"), plus the lead's one-number gust calibration (`running_trim_fastest_speed_ms` 16.0 to 13.5 m/s, tuning log).
-
-**After both:** the team's decisions (the bank on a beam reach, the fin's size as a setup choice, the pending wet-area targets, the onset band), then the pull requests (U1, then U2) after the full manoeuvre matrix. Known gust behaviour that U1 already had: the 18 kt beam reach pitches about 0.3 deg and the 24 kt broad reach about 0.45 deg in the default gusty wind (U1's settings: 0.28 and 0.51).
+**The day ended here (19 October 2026).** U2 is built and verified; the team builds other things next. What remains for U1 and U2, in order:
+1. **Michiel reviews the U2 physics** (Stop 2): the bending fin, the heeled hull's lift, the sailor's technique, the gust calibration, the critical trim reported, the probe. The list and the questions are in the Notes ("Stop 2 package") and in the brief's U2 subsections. His answers go into the brief and here.
+2. **The team's calls:** Max's rail on a beam reach (the map: flat 1.12 m, 2 deg 1.34 m, 4.5 deg 1.63 m of wet front at a 2 deg trim); the fin's size and the mast track as player settings; U1's wet-area targets (0.6 to 1.0 m against 1.35 to 1.59; reaching 1.0 m needs a flat board, which the 32 kn broad reach does not allow on this hull: is that the 1 deg vee's limit?); the onset band (13.4 kn against 8 to 10; the buoyancy factor is built but off); the hands' share of the boom force; Max's own fins' flex test.
+3. **Before the pull requests:** the full manoeuvre matrix (`tools/matrix.sh`, `tools/lake_matrix.sh`) on `feature/u2-fin`; no manoeuvre was run in U1 or U2 and the stance, the rig's lean, the fin and the hull changed. Then the pull requests: U1 first (`feature/u1-planing-wet-area`), then U2.
+4. **Small follow-ups** (any session): `windsurfer.gd` could call `_rig.bend_fin(...)` instead of the rig reading its parent's `sim` (agent 4's note); `board.glb` needs a Blender rebuild (the flat tail); the 44 cm fin's look is unverified; spray drag is missing (U1.7).
 
 ## Numbers
 
@@ -147,3 +138,11 @@ Decisions and surprises along the way, newest first.
 - 19 October 2026 (agent 1): the stiffness has a measured source: a 37 cm F-Hot carbon slalom fin, 100 N at 80 % of the span moves the load point 20 mm (Nascimento 2017, IST Lisbon); its FEA bends the tip 0.106 mm per newton of sailing lift, the brief's beam 0.112 mm, within 6 %. No G10 test found (G10 probably 2 to 4 times stiffer, estimate). Unifiber G10 freeride: 38 cm 365 cm², 44 cm 411 cm². Makers say a soft tip lifts the board and shrinks the wet area; no number anywhere for the upward force. Spin-out at 8 to 16° in three measurements. Twist findings contradict each other: left out, as planned. Preview with the beam: 70 N up from the bend at 527 N on the 38 cm fin, 161 N at 800 N; the 44 cm fin 105 and 238 N (tip angle 32° at 800 N, near the 35° cap). **The lead corrected the chord law:** `c_root = area / (0.686 × span)` keeps the area right for every span.
 
 - 19 October 2026 (the lead): the fin's upward push has two parts, the board's heel (in the model, 41 N today) and the fin's bend (not in the model). A fin bent toward its force tilts that force upward on both tacks. The bend is a cantilever with the stiffness falling as the chord to the fourth power, so the tip does the bending; one flex test sets the scale. Details in the brief.
+
+## Prompts
+
+**To continue** (any session; Fable 5.1 or Opus 5.5 at extra-high effort, in `C:\source\WindsurfingMMZB`):
+
+```
+Continue U2 in WindsurfingMMZB on the branch feature/u2-fin. Read CLAUDE.md, Documentation/U2_PROGRESS.md (start at Next action) and the U2 execution brief in Documentation/PLAYTEST_UPGRADES.md. Michiel's answers to the Stop 2 questions and the team's calls are: <paste them>. Apply them with Opus 5.5 sub-agents (model opus, effort xhigh, isolation worktree, at most 3 at a time) on u2/<name> branches made from feature/u2-fin, merge and verify each (tools/check.sh, tools/test.sh, tools/test.sh validation, tools/reach_check.sh), and update and commit U2_PROGRESS.md after every launch, report and merge. Keep your own reading and writing short. Stop at the brief's stops and tell me in plain language.
+```

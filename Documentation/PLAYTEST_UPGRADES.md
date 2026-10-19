@@ -6,8 +6,8 @@ From 19 October 2026 the team play-tests the game and writes down what should im
 
 | # | What | From | Status |
 |---|---|---|---|
-| U1 | Planing on a smaller wet area | Max, 19 October 2026 | ✅ Go-ahead from Michiel (19 October 2026, given to Max), on the branch `feature/u1-planing-wet-area`. Ready to build (Fable 5.1 leading Opus 5.5 agents, reaches only), not started. Live state: [U1_PROGRESS.md](U1_PROGRESS.md) |
-| U2 | The fin bends, and its size | Max, 19 October 2026 (from U1) | 📝 Idea with a first estimate. After U1 |
+| U1 | Planing on a smaller wet area | Max, 19 October 2026 | Built on `feature/u1-planing-wet-area` (Sessions 47 to 48): the porpoising fixed with a 1 deg tail vee, the flat tail, the stance and the rig's lean. Max: "a little better". Targets 3 to 5 (the wet part 0.6 to 1.0 m, the harness) pending; the cause was found in U2. Pull request after the manoeuvre matrix; the onset check is red on purpose |
+| U2 | The fin bends, and its size | Max, 19 October 2026 (from U1) | Built on `feature/u2-fin` (Session 49): the fin bends as a beam, the heeled hull's lift fixed (the cause of the long wet part), the sailor's technique, the bending fin drawn. Max: "feels quite nice now". Waits for Michiel's review (Stop 2) and the team's calls; the wet part 1.35 to 1.59 m on the planing reaches |
 
 ---
 

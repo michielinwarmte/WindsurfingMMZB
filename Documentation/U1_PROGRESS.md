@@ -2,6 +2,7 @@
 
 The live state of U1, "planing on a smaller wet area". The plan and its execution brief are in [PLAYTEST_UPGRADES.md](PLAYTEST_UPGRADES.md). **The lead updates and commits this file after every launch, report and merge.** A lead who takes over starts here.
 
+- **U2 continues from this branch** on `feature/u2-fin` (see [U2_PROGRESS.md](U2_PROGRESS.md)); U2 found the cause of U1's long wet part (the heeled hull's lift). The pull requests go U1 first, then U2, after the manoeuvre matrix.
 - **Branch:** `feature/u1-planing-wet-area` (from `main` at 561849c). Agents work on `u1/<name>` branches, made from it in their own worktrees.
 - **Last update:** 19 October 2026. All five agents are merged. **Stop 3: Max's play-test**, then the team's decision on the pull request.
 
