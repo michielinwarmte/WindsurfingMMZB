@@ -16,6 +16,7 @@ const HEAD_RADIUS_M: float = 0.08
 const FORCES: Array[Array] = [
 	["sail", Color(1.0, 0.55, 0.1), "sail force, at the centre of effort"],
 	["fin", Color(0.1, 0.85, 0.95), "fin force, at the fin"],
+	["fin up", Color(0.6, 1.0, 1.0), "the upward part of the fin force (the heel and the bend, U2)"],
 	["buoyancy", Color(0.3, 0.45, 1.0), "buoyancy, at the centre of buoyancy"],
 	["planing", Color(0.35, 0.9, 0.3), "planing lift, at its centre of pressure"],
 	["drag", Color(0.95, 0.2, 0.2), "hull drag, at the wet bottom"],

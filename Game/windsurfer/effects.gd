@@ -262,6 +262,9 @@ func _update_forces() -> void:
 	var g: float = sim.sim_config.gravity_ms2
 	_forces.set_force("sail", sim.sail.ce_world, sim.sail.force_world)
 	_forces.set_force("fin", sim.fin.cop_world, sim.fin.force_world)
+	# The fin force tilts up by only 8 to 12 degrees, too little to see on its own arrow:
+	# its upward part gets an arrow of its own (U2).
+	_forces.set_force("fin up", sim.fin.cop_world, Vector3.UP * maxf(sim.fin.force_world.y, 0.0))
 	# Buoyancy pushes along the water's normal, at the centre of the immersed volume.
 	var centre: Vector3 = sim.buoyancy.centre_of_buoyancy_world
 	var normal: Vector3 = sim.water.normal_at(centre.x, centre.z, sim.time_s)
