@@ -346,14 +346,14 @@ Pushing with the back foot and pulling with the front acts between the sailor an
 Who does what, in which order, and the stops: the execution brief's agent table. Each step's boxes:
 
 **U1.1. Measure it first, and keep measuring it** (agent 1)
-- [ ] The reach check as one command (9 cases, one line each), and the baseline with it, written into U1_PROGRESS.md before any change.
-- [ ] A validation check, `Game/tests/validation/test_planing_wet_area.gd`, on the reach check's conditions through `validation_run.gd`, in the 9 cases.
+- [x] The reach check as one command (9 cases, one line each), and the baseline with it, written into U1_PROGRESS.md before any change.
+- [x] A validation check, `Game/tests/validation/test_planing_wet_area.gd`, on the reach check's conditions through `validation_run.gd`, in the 9 cases.
   - It checks targets 2 to 4 of the execution brief.
   - Until agent 4 meets them it calls `pending()` with the measured numbers, so the suite stays green and the numbers stay visible.
   - Agent 4 turns it into a real check.
-- [ ] Telemetry: the area the friction uses (for example `friction_area_m2`), the front of the wet part from the tail, and the centre of the push from the tail. The mast-foot load and the harness tension are already in the telemetry.
-- [ ] HUD: "wetted" shows the friction's area instead of the buoyancy grid's, plus the front of the wet part, the harness tension and the mast-foot load (in `hud.gd`'s detail panel).
-- [ ] The grid check: build the simulation with a `BoardConfig` whose `length_samples` is 13, and compare it with 7 at 18 kt. If the front of the wet part moves by more than 5 cm, report it (a finer grid is not in U1's scope without the team).
+- [x] Telemetry: the area the friction uses (for example `friction_area_m2`), the front of the wet part from the tail, and the centre of the push from the tail. The mast-foot load and the harness tension are already in the telemetry.
+- [x] HUD: "wetted" shows the friction's area instead of the buoyancy grid's, plus the front of the wet part, the harness tension and the mast-foot load (in `hud.gd`'s detail panel).
+- [x] The grid check: build the simulation with a `BoardConfig` whose `length_samples` is 13, and compare it with 7 at 18 kt. If the front of the wet part moves by more than 5 cm, report it (a finer grid is not in U1's scope without the team).
 
 **U1.2. The harness load** (agent 4; spec 7.5)
 - [ ] Target: at 18 kt with the 6.5 m² sail, a harness line tension of 350 to 480 N (Walls & Gale 2001), and the rig carrying at most 50 % of the sailor's weight.
@@ -378,7 +378,7 @@ Two kinds of bouncing must not be confused (Max asked, 19 October 2026):
 - **Riding over waves:** the water surface moves, and the board pitches and slams with it. Waves force this motion; it is real and stays (the sea and chop settings).
 - **Porpoising:** on flat water, in steady wind, the board starts bouncing by itself and keeps going. A small bounce makes the lift move forward and back along the bottom, which feeds the next bounce. Real boards can do this too, usually as a setup problem: a mast foot too far back, a fin that is too big, too little mast-foot pressure. Sailors cure it with the mast foot or the stance. The game's 1.8 Hz bounce is this kind: it happens in steady wind with no waves at all.
 
-- [ ] Diagnosis (agent 3): find what makes the board bounce at 1.8 Hz once the mast foot is lighter. The candidates, each switched on its own with the overrides in the execution brief:
+- [x] Diagnosis (agent 3): find what makes the board bounce at 1.8 Hz once the mast foot is lighter. The candidates, each switched on its own with the overrides in the execution brief:
   - the sailor's legs: a spring at 1.2 Hz (`leg_natural_frequency_hz`), close to the bounce;
   - the sailor's reflexes chasing the bounce (`trim_press_*`, `pitch_reflex_m_per_rad_s`, the hang-back);
   - the planing strips' own damping in pitch and heave, the transom relief (`TRANSOM_RELIEF_BEAMS`), the lift lag;
