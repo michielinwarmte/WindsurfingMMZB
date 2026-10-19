@@ -3,7 +3,7 @@
 The live state of U2, "the fin bends, and its size". The plan and its execution brief are in [PLAYTEST_UPGRADES.md](PLAYTEST_UPGRADES.md). **The lead updates and commits this file after every launch, report and merge.** A lead who takes over starts here; U1's take-over prompt in [U1_PROGRESS.md](U1_PROGRESS.md) applies with U2 in place of U1.
 
 - **Branch:** `feature/u2-fin` (from `feature/u1-planing-wet-area` at c1eee63). Agents work on `u2/<name>` branches, made from it in their own worktrees.
-- **Last update:** 19 October 2026. The heeled hull's lift fix is merged (reviewed by the lead). Agent 3 relaunched on the sailor's technique (the brief's subsection). Michiel's review still pending.
+- **Last update:** 19 October 2026. The technique round merged (reviewed by the lead). **Stop 2: the whole U2 physics package waits for Michiel.** The lead's verification of the merge: see Numbers when it lands.
 
 ## State
 
@@ -11,7 +11,7 @@ The live state of U2, "the fin bends, and its size". The plan and its execution 
 |---|---|---|---|---|---|
 | 1 | `fin_sources` | the stiffness, the catalogue fins, the literature | merged | `u2/fin_sources` | [fin_sources.md](u2_reports/fin_sources.md) |
 | 2 | `fin_measure` | the fin's baseline, the overrides, the telemetry, the what-ifs, the pending check | merged | `u2/fin_measure` | [fin_measure.md](u2_reports/fin_measure.md) |
-| 3 | `fin_physics` | the bending fin: merged. The heeled hull's lift: **merged** (Wagner's climb across the heeled strips, the camber sign, the heel hold). **Now: the sailor's technique** (the bank by point of sail, the trim by speed) | running (technique) | `u2/fin_physics` | [fin_physics.md](u2_reports/fin_physics.md), [fin_ride_physics.md](u2_reports/fin_ride_physics.md) |
+| 3 | `fin_physics` | all merged: the bending fin, the riding round (reported only), the heeled hull's lift, the sailor's technique | merged (b84060c) | `u2/fin_physics`, `u2/fin_physics_heel`, `u2/fin_technique` | [fin_physics.md](u2_reports/fin_physics.md), [fin_ride_physics.md](u2_reports/fin_ride_physics.md), [fin_heel_physics.md](u2_reports/fin_heel_physics.md), [fin_technique.md](u2_reports/fin_technique.md) |
 | 4 | `fin_look` | the bending mesh, the HUD, the screenshots, the checklist | waits for Stop 2 | `u2/fin_look` | |
 | 5 | `fin_ride` | experiments: the sailor riding the fin (weight aft, rail down, fin size), no game file changed | merged | `u2/fin_ride` | [fin_ride.md](u2_reports/fin_ride.md) |
 | 6 | `hull_lift` | diagnosis: the hull's planing lift against Savitsky, level and heeled; the literature on heeled planing | merged | `u2/hull_lift` | [hull_lift.md](u2_reports/hull_lift.md) |
@@ -19,12 +19,21 @@ The live state of U2, "the fin bends, and its size". The plan and its execution 
 | Stop | State |
 |---|---|
 | Stop 1, the lead: agents 1 and 2 in, the stiffness sourced | **passed** on 19 October 2026: the flex test is measured (IST Lisbon), the baseline is pinned, nothing regressed (verified by the lead: see Numbers) |
-| Stop 2, the lead reviews agent 3's diff, then Michiel | the lead's review **passed** on 19 October 2026; **waits for Michiel** |
+| Stop 2, the lead reviews agent 3's diff, then Michiel | the lead's reviews **passed** (four rounds); **waits for Michiel** on the whole package |
 | Stop 3, Max's play-test | not reached |
 
 ## Next action
 
-**Agent 3 is running** (relaunched on `u2/fin_physics`): the brief's "The sailor's technique", points 1 to 4 (the map of bank x trim against steadiness, then the bank by point of sail and the trim by speed). When it reports: the lead reads the diff, merges if sound, verifies, writes the numbers, then **Stop 2 for Michiel** (the bending fin, the heeled hull's lift, the technique, the critical trim reported, the probe). After his OK: agent 4 (`fin_look`), then Stop 3.
+**Stop 2: Michiel reviews the U2 physics**, all on `feature/u2-fin` (from U1's c1eee63): 
+1. the bending fin (`fin_model.gd`, `fin_config.gd`, `fin_default.tres`; spec 4 "The fin bends (U2)", 14 "U2" x2, 16);
+2. the heeled hull's lift (`hull_model.gd` `_wet_width`: Wagner's climb across the heeled strips, NACA TN 4187 eq. 2; the camber sign; spec 5 F23);
+3. the sailor's heel hold and technique (`windsurfer_sim.gd`: `_fin_load_bank_rad`, `_rail_share_by_point_of_sail`, `_running_trim_target_deg`; `sailor_config.gd`, `sailor_default.tres`: `fin_load_bank_deg` 4.5 to 2.0, `running_trim_deg` 1.5 to 2.0 falling to 1.5 at 31 kn, `fin_load_twa_max_deg` 180 (the flattening off the wind, built but off); spec 7.5, 10, 14 "U2: the sailor's technique");
+4. reported only: the critical trim (spec 5 F22), the hull's planing share, the probe `Game/dev/hull_probe.gd`.
+The reports are in `Documentation/u2_reports/`. **Questions for Michiel:** (a) the stiffness calibrated on the test fin's size, so the 44 cm fin is the same material; (b) the 35 deg cap on the bend (an estimate); (c) the trim-by-speed and the 2 deg bank are calibrated on this hull's own measured steadiness and labelled so: technique or tuning? The alternative, a sailor who backs off at the first bounce, would not settle a flat board at 32 kn; (d) the hull wants heel at 32 kn on a broad reach to stay steady, against the instruction's "flat off the wind": real, or a weakness of the 1 deg vee / the model's damping? (e) the onset moved 11.6 to 13.4 kn (red check, the band stays as decided). **Question for Max:** on a powered 18 kt beam reach, how much does he rail the board (the map: flat 1.12 m, 2 deg 1.34 m, 4.5 deg 1.63 m of wet front at a 2 deg trim)?
+
+After Michiel's OK: agent 4 (`fin_look`: the bending fin mesh, the HUD, the screenshots, the checklist), then **Stop 3**, Max's play-test, then the pull requests (U1, then U2) after the manoeuvre matrix.
+
+**Where the targets stand:** the wet front on the four planing reaches 1.37, 1.32, 1.32, 1.58 m (U1's end: 1.76, 1.42, 1.71, 1.71; the target 0.6 to 1.0), the push 1.02 to 1.08 m (0.45 to 0.75), the trim 0.82 to 1.35 deg (1.5 up): U1's targets 3 and 4 stay pending. The map says the 18 kt beam reach can reach 1.0 m flat at a 2.5 deg trim, steady; the 24 kt broad reach cannot go below about 1.5 m without bouncing. Getting further needs either a bank that depends on speed (flat when the hull allows, railed at 32 kn: the opposite of the instruction), or more steadiness in the hull at 32 kn (the vee, the damping), both for the team.
 
 ## Numbers
 
@@ -88,6 +97,8 @@ Up = the world-upward part of the fin's force (today only from the heel); Stall 
 ## Notes
 
 Decisions and surprises along the way, newest first.
+
+- 19 October 2026 (agent 3, the technique, reviewed by the lead): the map of bank (0, 2, 4.5 deg) x trim target (1.5, 2.0, 2.5 deg) on the 9 cases. Less bank shortens every planing reach; flat is shortest on the beam reaches but the 24 kt broad reach (32 kn) bounces flat at every trim, and the trim limit falls with speed (the 18 kt beam reach bounces from 2.2 deg at 2 deg of bank). Defaults now: bank 2 deg; trim 2.0 deg up to 24 kn falling to 1.5 at 31 kn (calibrated on this hull, labelled); the flattening off the wind built but off (`fin_load_twa_max_deg` 180): with it the 24 kt broad reach fell or bounced. Result: the wet front 1.37, 1.32, 1.32, 1.58 m on the planing reaches, 2.3 % faster over the nine, all steady (worst 0.24 deg); hips dropped 8 of 9 (the 24 kt broad reach 0.36 deg, as before). The onset 12.7 to 13.4 kn. The 12 kt close reach settles long and low (2.24 m, 0.67 deg), slightly faster.
 
 - 19 October 2026 (agent 3, the heel fix, reviewed by the lead): Wagner's climb across the heeled strips (`_wet_width`: each section's depth flattened by 2/pi about its deepest point; the level vee exactly as before; TN 4187 eq. 2); the camber sign flipped (rocker lifts less: Anderson; Savitsky 1964); the sailor's feet now aim past level against the fin's roll within the moments they already have (no new number). The 18 kt beam reach: bank 0 / 2 / 4.5 deg gives heel 0 / 2 / 4.5 deg and a wet front of **1.20** / 1.46 / 1.70 m. The 24 kt broad reach bounces flat (0.72 deg) and at a 2.0 deg trim (0.39 deg), so the defaults stayed (4.5 deg, 1.5 deg): the wet part is now the sailor's technique. The onset moved 12.0 to 12.7 kn (in the hump the wet part reaches the nose rocker and lifts less). The railing-out sweep now holds every aim up to 24 deg and catapults at 30 deg. All 9 steady; the hips-dropped case 0.002 deg.
 
