@@ -193,6 +193,9 @@ func test_a_board_far_from_the_course_is_done() -> void:
 	env.reset(1)
 	env.tick()
 	assert_true(env.done(0))
+	# Out early, it pays for the decisions it would have made up to the time limit (240 s, ten a
+	# second): giving up must not be cheaper than sailing on.
+	assert_almost_eq(env.reward(0), -0.01 * 2400.0, 0.011, "the rest of the time is charged")
 
 
 func test_a_board_that_stops_gaining_is_done_when_asked() -> void:

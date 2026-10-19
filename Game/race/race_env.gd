@@ -24,7 +24,10 @@ extends RefCounted
 ## Collisions and running aground are not counted yet (one board on open water).
 ## A board's episode ends when it finishes, at the time limit, or when it is more than
 ## bounds_margin_m from the course; and, if stall_s is set, when it has gained nothing toward the
-## course for that long (a trainer's saving: a board going nowhere is not sailed to the end).
+## course for that long (a trainer's saving: a board going nowhere is not sailed to the end). A
+## board that is out of the race early (out of bounds or stalled) is charged the decisions it would
+## have made up to the time limit: otherwise giving up would be cheaper than sailing on, and the
+## trainer would breed quitters. Only finishing early saves time.
 
 const DT: float = 1.0 / 60.0
 
@@ -220,7 +223,10 @@ func tick() -> void:
 			b.best_progress_m = b.progress_m
 			b.best_progress_at_s = time_s
 		var stalled: bool = options.stall_s > 0.0 and time_s - b.best_progress_at_s > options.stall_s
-		b.done = race.is_finished(i) or time_s >= options.episode_s - 0.5 * DT or not _bounds.has_point(_where(b)) or stalled
+		var out: bool = not _bounds.has_point(_where(b))
+		b.done = race.is_finished(i) or time_s >= options.episode_s - 0.5 * DT or out or stalled
+		if b.done and not race.is_finished(i):
+			_charge_the_rest_of_the_time(b)
 
 
 ## The reward board `index` earned since the last call.
@@ -301,6 +307,14 @@ func _count_progress(index: int, b: Board) -> void:
 	_add_reward(b, gained_m * options.progress_per_m)
 	b.last_distance_m = distance_now_m
 	b.last_steps = steps_now
+
+
+## The decisions a board out of the race early would still have made before the time limit, each
+## at decision_cost (nothing at the time limit itself).
+func _charge_the_rest_of_the_time(b: Board) -> void:
+	var decision_s: float = decision_ticks * DT
+	var left: int = maxi(ceili((options.episode_s - time_s) / decision_s - 0.001), 0)
+	_add_reward(b, -options.decision_cost * left)
 
 
 func _add_reward(b: Board, amount: float) -> void:
