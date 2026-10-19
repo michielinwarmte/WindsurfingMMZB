@@ -3,7 +3,7 @@
 The live state of U2, "the fin bends, and its size". The plan and its execution brief are in [PLAYTEST_UPGRADES.md](PLAYTEST_UPGRADES.md). **The lead updates and commits this file after every launch, report and merge.** A lead who takes over starts here; U1's take-over prompt in [U1_PROGRESS.md](U1_PROGRESS.md) applies with U2 in place of U1.
 
 - **Branch:** `feature/u2-fin` (from `feature/u1-planing-wet-area` at c1eee63). Agents work on `u2/<name>` branches, made from it in their own worktrees.
-- **Last update:** 19 October 2026. Stop 2 waits for Michiel on the whole physics package. Agent 4 (`fin_look`, visuals only) launched meanwhile so the play-test is ready sooner.
+- **Last update:** 19 October 2026. Agent 4 (the look) merged; the lead calibrated the trim by speed for the game's gusty wind (one number). **Stop 2 waits for Michiel; Stop 3, Max's play-test, is ready.**
 
 ## State
 
@@ -12,7 +12,7 @@ The live state of U2, "the fin bends, and its size". The plan and its execution 
 | 1 | `fin_sources` | the stiffness, the catalogue fins, the literature | merged | `u2/fin_sources` | [fin_sources.md](u2_reports/fin_sources.md) |
 | 2 | `fin_measure` | the fin's baseline, the overrides, the telemetry, the what-ifs, the pending check | merged | `u2/fin_measure` | [fin_measure.md](u2_reports/fin_measure.md) |
 | 3 | `fin_physics` | all merged: the bending fin, the riding round (reported only), the heeled hull's lift, the sailor's technique | merged (b84060c) | `u2/fin_physics`, `u2/fin_physics_heel`, `u2/fin_technique` | [fin_physics.md](u2_reports/fin_physics.md), [fin_ride_physics.md](u2_reports/fin_ride_physics.md), [fin_heel_physics.md](u2_reports/fin_heel_physics.md), [fin_technique.md](u2_reports/fin_technique.md) |
-| 4 | `fin_look` | the bending mesh, the HUD, the screenshots, the checklist | running (launched before Michiel's review: visuals only) | `u2/fin_look` | |
+| 4 | `fin_look` | the bending mesh, the HUD, the screenshots, the checklist | merged (de0a6e8) | `u2/fin_look` | [fin_look.md](u2_reports/fin_look.md) |
 | 5 | `fin_ride` | experiments: the sailor riding the fin (weight aft, rail down, fin size), no game file changed | merged | `u2/fin_ride` | [fin_ride.md](u2_reports/fin_ride.md) |
 | 6 | `hull_lift` | diagnosis: the hull's planing lift against Savitsky, level and heeled; the literature on heeled planing | merged | `u2/hull_lift` | [hull_lift.md](u2_reports/hull_lift.md) |
 
@@ -20,20 +20,24 @@ The live state of U2, "the fin bends, and its size". The plan and its execution 
 |---|---|
 | Stop 1, the lead: agents 1 and 2 in, the stiffness sourced | **passed** on 19 October 2026: the flex test is measured (IST Lisbon), the baseline is pinned, nothing regressed (verified by the lead: see Numbers) |
 | Stop 2, the lead reviews agent 3's diff, then Michiel | the lead's reviews **passed** (four rounds); **waits for Michiel** on the whole package |
-| Stop 3, Max's play-test | not reached |
+| Stop 3, Max's play-test | **ready**: the look is merged, the checklist is in agent 4's report and in Next action |
 
 ## Next action
 
-**Stop 2: Michiel reviews the U2 physics**, all on `feature/u2-fin` (from U1's c1eee63): 
-1. the bending fin (`fin_model.gd`, `fin_config.gd`, `fin_default.tres`; spec 4 "The fin bends (U2)", 14 "U2" x2, 16);
-2. the heeled hull's lift (`hull_model.gd` `_wet_width`: Wagner's climb across the heeled strips, NACA TN 4187 eq. 2; the camber sign; spec 5 F23);
-3. the sailor's heel hold and technique (`windsurfer_sim.gd`: `_fin_load_bank_rad`, `_rail_share_by_point_of_sail`, `_running_trim_target_deg`; `sailor_config.gd`, `sailor_default.tres`: `fin_load_bank_deg` 4.5 to 2.0, `running_trim_deg` 1.5 to 2.0 falling to 1.5 at 31 kn, `fin_load_twa_max_deg` 180 (the flattening off the wind, built but off); spec 7.5, 10, 14 "U2: the sailor's technique");
-4. reported only: the critical trim (spec 5 F22), the hull's planing share, the probe `Game/dev/hull_probe.gd`.
-The reports are in `Documentation/u2_reports/`. **Questions for Michiel:** (a) the stiffness calibrated on the test fin's size, so the 44 cm fin is the same material; (b) the 35 deg cap on the bend (an estimate); (c) the trim-by-speed and the 2 deg bank are calibrated on this hull's own measured steadiness and labelled so: technique or tuning? The alternative, a sailor who backs off at the first bounce, would not settle a flat board at 32 kn; (d) the hull wants heel at 32 kn on a broad reach to stay steady, against the instruction's "flat off the wind": real, or a weakness of the 1 deg vee / the model's damping? (e) the onset moved 11.6 to 13.4 kn (red check, the band stays as decided). **Question for Max:** on a powered 18 kt beam reach, how much does he rail the board (the map: flat 1.12 m, 2 deg 1.34 m, 4.5 deg 1.63 m of wet front at a 2 deg trim)?
+**Two things at once: Michiel's review (Stop 2) and Max's play-test (Stop 3).** Everything is merged on `feature/u2-fin`.
 
-Agent 4 (`fin_look`: the bending fin mesh, the HUD, the screenshots, the checklist) runs meanwhile (visuals only; the lead launched it before Michiel's review to save time); merge it when it reports. After Michiel's OK: **Stop 3**, Max's play-test, then the pull requests (U1, then U2) after the manoeuvre matrix.
+**Max's play-test** (`tools/play.sh res://main.tscn`, then `tools/play.sh lake`; the HUD's fin line reads "fin ... N, ... % of stall, bend ... deg, up ... N"):
+1. The fin is under water: use the orbit camera low behind the tail to see it bend to windward, most at the tip. Powered up, expect 15 to 23 deg of bend, a quarter of its stall, 80 to 230 N up.
+2. Powered up on a beam reach: do you feel the push on the fin and a looser board? In gusts the board now moves with the fin's load (the bending fin's upward push pulses with the gusts), which is the "looseness" the model can give; say whether it feels alive or bouncy.
+3. The board rails 2 deg by itself now (was 4.5). Does it feel right on a beam reach, and would you rail more to load the fin?
+4. Overdo it at 24 kt: spin-out (the HUD shows STALLED)? The fin reaches its stall in the gusts at 18 kt already.
+5. Is the wet part shorter, the nose freer, the weight on the back foot?
+6. No 44 cm fin in the game yet (overrides only); the team decides whether the fin's size becomes a setup choice.
+7. Anything that feels wrong, and in which wind and course.
 
-**Where the targets stand:** the wet front on the four planing reaches 1.37, 1.32, 1.32, 1.58 m (U1's end: 1.76, 1.42, 1.71, 1.71; the target 0.6 to 1.0), the push 1.02 to 1.08 m (0.45 to 0.75), the trim 0.82 to 1.35 deg (1.5 up): U1's targets 3 and 4 stay pending. The map says the 18 kt beam reach can reach 1.0 m flat at a 2.5 deg trim, steady; the 24 kt broad reach cannot go below about 1.5 m without bouncing. Getting further needs either a bank that depends on speed (flat when the hull allows, railed at 32 kn: the opposite of the instruction), or more steadiness in the hull at 32 kn (the vee, the damping), both for the team.
+**Michiel's review:** the list and the questions are in the Notes ("Stop 2 package"), plus the lead's one-number gust calibration (`running_trim_fastest_speed_ms` 16.0 to 13.5 m/s, tuning log).
+
+**After both:** the team's decisions (the bank on a beam reach, the fin's size as a setup choice, the pending wet-area targets, the onset band), then the pull requests (U1, then U2) after the full manoeuvre matrix. Known gust behaviour that U1 already had: the 18 kt beam reach pitches about 0.3 deg and the 24 kt broad reach about 0.45 deg in the default gusty wind (U1's settings: 0.28 and 0.51).
 
 ## Numbers
 
@@ -113,6 +117,8 @@ Up = the world-upward part of the fin's force (today only from the heel); Stall 
 ## Notes
 
 Decisions and surprises along the way, newest first.
+
+- 19 October 2026 (agent 4, the look; the lead): the fin mesh bends by the beam's own shape (`fin_bend.gdshader`, a 21-value table from `beam_deflections`; `material_override` in `rig_visuals.gd`), the HUD shows the bend, the screenshots are in `.screenshots/u2/` (the water hides the fin from the stern camera; seen under water it curves to windward). A departure: the rig reads its parent's `sim` in `_process`; a one-line call from `windsurfer.gd` would be cleaner (the team). The 44 cm look is not verified (no `--fin.` override in the figure view). **The gusty wind, checked by the lead** (`simulate.sh` without `--steady`): no fall at 24 kt in 60 s (the figure view's fall is its own setup), but the 24 kt beam reach pitched 0.39 deg where U1's settings gave 0.01: the bending fin's upward push pulses with the gusts. Fixed by one number: the trim by speed reaches 1.5 deg by 26 kn instead of 31 (0.02 deg in gusts; the steady reach check loses 5 cm at 18 and 24 kt on the beam reach: 1.42 and 1.35 m). The 18 kt beam reach (0.33) and the 24 kt broad reach (0.43) pitch in gusts as they did with U1's settings (0.28, 0.51): not new.
 
 - 19 October 2026 (agent 3, the technique, reviewed by the lead): the map of bank (0, 2, 4.5 deg) x trim target (1.5, 2.0, 2.5 deg) on the 9 cases. Less bank shortens every planing reach; flat is shortest on the beam reaches but the 24 kt broad reach (32 kn) bounces flat at every trim, and the trim limit falls with speed (the 18 kt beam reach bounces from 2.2 deg at 2 deg of bank). Defaults now: bank 2 deg; trim 2.0 deg up to 24 kn falling to 1.5 at 31 kn (calibrated on this hull, labelled); the flattening off the wind built but off (`fin_load_twa_max_deg` 180): with it the 24 kt broad reach fell or bounced. Result: the wet front 1.37, 1.32, 1.32, 1.58 m on the planing reaches, 2.3 % faster over the nine, all steady (worst 0.24 deg); hips dropped 8 of 9 (the 24 kt broad reach 0.36 deg, as before). The onset 12.7 to 13.4 kn. The 12 kt close reach settles long and low (2.24 m, 0.67 deg), slightly faster.
 
