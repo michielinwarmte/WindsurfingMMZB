@@ -9,7 +9,7 @@ render_mode world_vertex_coords, blend_mix, cull_disabled, depth_draw_never, uns
 
 uniform float base_height_m = 0.0;
 // Lifted this much above the surface, so the water does not cover it.
-uniform float lift_m = 0.04;
+uniform float lift_m = 0.06;
 uniform vec4 line_color : source_color = vec4(1.0, 1.0, 1.0, 0.45);
 
 void vertex() {

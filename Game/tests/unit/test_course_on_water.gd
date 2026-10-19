@@ -107,3 +107,28 @@ func test_the_parts_share_their_meshes() -> void:
 	var boat_hull: MeshInstance3D = on_water.part_at(CourseMark.START_BOAT).get_node("Hull")
 	var finish_hull: MeshInstance3D = on_water.part_at(CourseMark.FINISH_BOAT).get_node("Hull")
 	assert_same(boat_hull.mesh, finish_hull.mesh, "One hull mesh for both boats")
+
+
+## The HUD (ui/hud.gd) names the course, and on the open water (no lake's map) it makes a small map
+## of the course's water: the course and 200 m around it.
+func test_the_hud_names_the_course_and_maps_it_on_the_open_water() -> void:
+	var hud: Hud = Hud.new()
+	add_child_autofree(hud)
+	var course: Course = RaceCourses.t1_loop(270.0, Vector2(0.0, -150.0))
+	hud.show_course(course)
+	assert_eq(hud.course_text(), "Course: T1 training loop")
+	var maps: Array[Node] = hud.find_children("*", "MiniMap", false, false)
+	assert_eq(maps.size(), 1, "One small map")
+	if maps.is_empty():
+		return
+	var mini_map: MiniMap = maps[0] as MiniMap
+	assert_same(mini_map.course, course, "The course is on it")
+	# Every mark lies inside the map, at least 200 m from its edges.
+	for mark: CourseMark in course.marks:
+		var at: Vector2 = mini_map.map_point(Vector3(mark.position.x, 0.0, mark.position.y))
+		assert_true(Rect2(Vector2.ZERO, mini_map.size).has_point(at), mark.id + " on the map")
+	var box: Rect2 = course.bounds()
+	var top_left: Vector2 = mini_map.map_point(Vector3(box.position.x, 0.0, box.position.y))
+	var pixels_per_metre: float = mini_map.size.x / (box.size.x + 400.0)
+	assert_almost_eq(top_left.x, 200.0 * pixels_per_metre, 0.5, "200 m of water west of the course")
+	assert_almost_eq(top_left.y, 200.0 * pixels_per_metre, 0.5, "and north of it")

@@ -49,7 +49,7 @@ static func t2_stand_in(wind_from_deg: float, centre: Vector2) -> Course:
 	var rules: CourseRules = load(RULES_PATH) as CourseRules
 	var course: Course = CourseTemplates.build("PD3", rules, T1_WIND_KT, CourseTemplates.default_boards("PD3"), wind_from_deg, Vector2.ZERO)
 	course.move_by(centre - course.bounds().get_center())
-	course.name = "T2 sprint slalom (stand-in, not fitted to the water)"
+	course.name = "T2 sprint slalom (stand-in)"
 	return course
 
 
