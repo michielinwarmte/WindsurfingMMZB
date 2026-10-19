@@ -57,18 +57,20 @@ var lateral_n: float = 0.0
 var resistance_n: float = 0.0  # friction + residuary + pressure drag, along the flow
 var planing_lift_n: float = 0.0  # vertical component of the planing force
 var planing_normal_force_n: float = 0.0
-## The planing lift as a share of the whole weight of board, rig and sailor: what the onset
-## check and the HUD read. The fin and the rig carry part of the weight too, so a planing
-## hull can show well under 1 here.
+## The planing lift as a share of the whole weight of board, rig and sailor: what the trim
+## press, the onset check and the HUD read. The fin and the rig carry part of the weight
+## too, so a planing hull can show well under 1 here.
 var planing_ratio: float = 0.0
 ## What the hull itself carries, upward: its planing lift plus the buoyancy it keeps.
 var hull_load_n: float = 0.0
 ## How much of what the hull carries is dynamic: planing_lift_n / hull_load_n. It says
 ## whether the hull planes, whoever carries the rest of the weight (U2): a hull riding on
 ## its planing lift alone is at 1, whether the fin and the rig carry nothing or a third.
+## Reported only: tried as the trim press's scale and not kept (PHYSICS_SPEC.md section 16).
 var planing_share: float = 0.0
 ## Savitsky's porpoising limit for the hull's load at its speed (critical_trim_deg_for),
-## degrees; 90 when the hull is out of the water or still.
+## degrees; 90 when the hull is out of the water or still. Reported only: it does not say
+## where this hull porpoises, which is well above it (PHYSICS_SPEC.md section 5 F22).
 var critical_trim_deg: float = 90.0
 var trim_deg: float = 0.0  # angle of the planing surface to the flow, degrees
 var wetted_length_m: float = 0.0  # of the planing surface (the wet part of the centreline)
