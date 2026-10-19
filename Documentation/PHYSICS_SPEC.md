@@ -36,7 +36,7 @@ Chosen in section 14 as a real, common freeride setup (section 15, Q3). Every te
 
 | Item | Value |
 |---|---|
-| Board | 120 L, 2.40 m × 0.72 m × 0.12 m, nose rocker 0.08 m, tail rocker 0.02 m, 9 kg |
+| Board | 120 L, 2.40 m × 0.72 m × 0.12 m, nose rocker 0.08 m, flat tail (U1.4), 9 kg |
 | Sail | 6.5 m², luff 4.60 m, boom 1.95 m, mast 4.60 m, camber 0.10, boom 1.40 m above the mast foot |
 | Mast foot | (0, +0.06, −0.05) m in the body frame: on the deck, 0.05 m forward of the board centre |
 | Fin | 38 cm, 0.0365 m², mean chord 0.096 m, aspect ratio 3.96, root at (0, −0.06, +0.90) m |
@@ -2369,6 +2369,16 @@ The strips' lift is scaled to Savitsky's by the ratio of Savitsky's lift (mean w
 - *The spray root across a sinking bottom.* Where only part of a strip's width is wet, behind the root of a vee or across a heeled bottom (the wet part runs obliquely from the low rail forward), the water reaches further across a sinking strip and less far across a rising one. The added mass gained from strip to strip from the wetting is scaled by the same advance factor as the root's, `1 + (sinking speed / tan(bottom angle)) / u`, between 0 and `spray_root_factor_max` (step 3 of 17.2; Zarnick 1978: the force is the rate of change of the added mass's momentum, and a section's added mass grows with its immersion). In steady planing the factor is 1 and nothing changes; a level flat bottom is wet across its whole width and nothing changes either. The gains between two strips are now shared by the two (the front strip's gain from nothing is the root's): the old central difference, one-sided at the front, counted the gain just behind the root one and a half times, 20 % too much lift on the vee plate of `test_hull.gd`.
 - *What it does.* The board heels 2 to 4° to leeward on every reach, so its wet bottom always has an oblique root. With the sinking term the five reach cases that bounced in the baseline (the close reaches, the 12 kt beam reach, the 18 kt broad reach) are steady, and the 1° vee keeps the board steady when the mast foot is lighter (`--sailor.lean_height_drop_m=0.15`: on a flat bottom four of nine cases bounce at 0.5 to 0.7° of pitch; on 1° none does). A heeled flat bottom behaves like a vee on its low side; deadrise raising the critical trim is what Day and Haag (1952) and Savitsky (1964) measured. Tests: `test_a_heeled_plate_meets_more_water_when_it_sinks_as_a_level_one_does` (sinking at 0.1 m/s adds 45 % lift, level and heeled alike), `test_a_vee_bottom_is_wet_near_its_keel_behind_the_spray_root`.
 
+#### F20. A flat tail (U1.4)
+
+The strips read the bottom's rocker line (section 6, `BoardConfig.bottom_rise_m` and `bottom_slope`): the trim they meet is the pitch, plus the angle of the chord from the tail to the front of the wet part, plus that part's camber (`HullModel._apply_planing_lift`). Session 30's 1 cm tail kick over the last 0.35 m faced the bottom down by up to 3.3° at the transom. At the game's 1° of pitch, the last 20 to 25 cm then carried nothing (a strip may not pull), and the chord of a short wet part tilted down by about 1°. Since U1.4 the tail is flat (`tail_rocker_m` 0, section 14). Measured with `tools/reach_check.sh` on 19 October 2026:
+- the trim rises by about 0.3° on the beam and broad reaches at 18 and 24 kt;
+- the close reaches and the 12 kt beam reach bounce less (pitch SD 0.30 to 0.40° instead of 0.70 to 1.21°);
+- the front of the wet part does not move on the beam reaches (1.88 m at 18 kt): the push stays where the loads put it (the mast foot, section 7.5; U1.2);
+- on the 18 kt broad reach the board settles bow-down (pitch −1.05° instead of +0.91°, the feet's moment −167 instead of −127 N·m), wet to 2.12 m and 0.9 m/s slower.
+
+Agent 1 reverted it (two buoyancy unit tests); agent 4 brought it back after the 1° vee and the spray root across a sinking bottom (above), and updated the tests (the tail point 1 cm lower; the undamped board's "still moving after 4 s" now reads the swing in height or pitch, which does not depend on the phase of its tumble). On that physics (reach check, 19 October 2026): all nine cases steady (pitch SD at most 0.29°, the 24 kt broad reach); the trim up by 0.2 to 0.3° on the beam reaches (1.10 to 1.34° at 18 kt, 0.98 to 1.25° at 24 kt); the wet front unchanged (2.00 m at 18 kt). The 18 kt broad reach sits nearly level and slow already on the vee physics, before the flat tail (11.24 m/s, trim 0.49°; flat tail: 11.23 m/s, 0.39°, pitch −0.97°, wet to 2.24 m with 344 N still on buoyancy): its sailor stands nearly upright (lean 0.67, heel 0.3°), so the harness lifts less (537 N) and the board rides on its nose rocker. Its feet press the bow down with 127 N·m, the same as on the beam reach: U1.3. The planing onset of the validation (15 kt from rest) moves from 12.0 to 13.3 kn.
+
 ### Values
 
 Board and mass values (`HullConfiguration`, `SailingState.cs:203-242`; set by `WindsurferSetup.cs:764-770`; saved in `MainScene.unity:272-279`):
@@ -2665,12 +2675,13 @@ The grid has `n_len` = 7 rows along the length and `n_wid` = 3 points across eac
    z_i   = +L/2 − L · t_i                        # body z: tail = +1.25 m, bow = −1.25 m   [flip: Unity uses z = −L/2 + L·t, bow at +Z]
    d_i   = |t_i − 0.5| · 2                       # 0 in the middle, 1 at either end
    ```
-2. Rocker (the bottom curves up quadratically toward each end). The bow half uses the nose rocker, the tail half the tail rocker; the middle row (t = 0.5) has d = 0 so the choice does not matter there:
+2. Rocker: the freeride rocker line of `BoardConfig.bottom_rise_m` (Session 30; the tail flat since U1.4). With `x_i = L · t_i` the distance forward of the transom:
    ```
-   rocker_i = nose_rocker_m · d_i²    if t_i > 0.5   (bow half, z_i < 0)
-            = tail_rocker_m · d_i²    otherwise      (tail half, z_i ≥ 0)
+   rocker_i = tail_rocker_m · ((tail_rocker_length_m − x_i) / tail_rocker_length_m)²            if x_i < tail_rocker_length_m       (the tail kick: 0 since U1.4)
+            = nose_rocker_m · ((x_i − (L − nose_rocker_length_m)) / nose_rocker_length_m)²     if x_i > L − nose_rocker_length_m   (8 cm over the front 0.9 m)
+            = 0                                                                                 otherwise                           (the flat planing section)
    ```
-   Source: AdvancedBuoyancy.cs:159-170.
+   The planing strips (section 5, F20) read the same line and its slope (`bottom_slope`). The legacy line was quadratic over each half of the board (`rocker_i = nose_rocker_m · d_i²` toward the bow, `tail_rocker_m · d_i²` toward the tail; AdvancedBuoyancy.cs:159-170); Session 30 replaced it because it trimmed the board bow-down at speed. U1.4 took out the 1 cm tail kick of Session 30 (it had no source): freeride and slalom boards are flat from the tail forward (section 14, `tail_rocker_m`).
 3. Width taper: the half-width of the row shrinks quadratically toward the ends, to 70 % at the tips:
    ```
    width_factor_i   = 1 − 0.3 · d_i²
@@ -5783,7 +5794,7 @@ Three candidate sets exist for the default equipment. The table shows them side 
 | Width | 0.6 m (`PhysicsConstants.cs:31`; wizard :711,765,784; scene :248,274,471) | 0.80 m (plan Phase 6 notes) | Futura 120: 76 cm; Super Ride 124: 76 cm; task brief: 0.70 to 0.75 m | **0.72 m** |
 | Thickness | 0.12 m (`PhysicsConstants.cs:32`; wizard :712,766,785; scene :249,275,472) | not measured | Futura 105: 11.5 cm | **0.12 m** |
 | Nose rocker | 0.08 m (`AdvancedBuoyancy.cs:45`; wizard :713; scene :250) | - | - | **0.08 m** |
-| Tail rocker | 0.02 m (`AdvancedBuoyancy.cs:48`; wizard :714; scene :251) | - | - | **0.02 m** |
+| Tail rocker | 0.02 m (`AdvancedBuoyancy.cs:48`; wizard :714; scene :251) | - | flat "from the tail to beyond your front foot" (Starboard Carve 2025); "planing straight", no rocker from the tail forward (Carbon Art); a flat section of about 80 cm that the sailor rides on (Gnigler, JP-Australia, surf-magazin 2025) | **0, a flat tail** (U1.4; Session 30 had a 1 cm kick over 0.35 m, without a source) |
 | Board mass | 8 kg (`PhysicsConstants.cs:34`; `HullConfiguration` `SailingState.cs:220`; `BoardMassConfiguration.cs:27`; wizard :768,780; scene :277,465); 15 kg in `PHYSICS_DESIGN.md:555` | - | Super Ride 124: 8.8 kg; task brief: 8 to 10 kg | **9 kg** |
 
 Reasons: 120 L is the classic volume for a 75 kg sailor (the "add about 50 L to your weight" rule quoted in the Mistral Quikslide search result) and matches all legacy sources. The legacy 0.6 m width is too narrow for a modern 120 L freeride board; 0.72 m is in the real range and gives the buoyancy and planing models a realistic beam. 2.40 m is a compromise between the legacy 2.5 m and modern 2.28 to 2.44 m boards; it also removes the legacy 2.4/2.5 disagreement by choosing one number everywhere. The old `board.fbx` (2.28 x 0.80 m) is closer to a 135 L board (Futura 135: 229 x 83 cm); Phase 6 should scale the model to the config (about +5 % in length and -10 % in width, which is visually harmless) or replace it. The physics never reads the model.
@@ -5864,7 +5875,8 @@ The spec removes this by having **one** `total_mass_kg` computed from the three 
 | `board_width_m` | 0.72 | m | real 120 L boards are 0.70 to 0.76 m (Starboard Futura 120, JP Super Ride 124); legacy 0.6 m too narrow |
 | `board_thickness_m` | 0.12 | m | legacy (`PhysicsConstants.cs:32`) |
 | `nose_rocker_m` | 0.08 | m | legacy (`AdvancedBuoyancy.cs:45`) |
-| `tail_rocker_m` | 0.02 | m | legacy (`AdvancedBuoyancy.cs:48`) |
+| `tail_rocker_m` | 0.0 | m | flat from the tail forward, as freeride and slalom boards are (Starboard 2025 Carve; Carbon Art, Boardology; Gnigler, surf-magazin 2025). U1.4; it was 0.01 over 0.35 m from Session 30 (no source), 0.02 in the legacy (`AdvancedBuoyancy.cs:48`) |
+| `tail_rocker_length_m` | 0.35 | m | how far forward a tail kick would reach; no effect while `tail_rocker_m` is 0. Estimate (Session 30), no source |
 | `board_mass_kg` | 9.0 | kg | JP Super Ride 124: 8.8 kg; legacy 8 kg |
 | `sail_area_m2` | 6.5 | m2 | legacy code and scene (`SailingState.cs:130`, scene :334) |
 | `luff_m` | 4.60 | m | real 6.5 m2 sails: 4.43 to 4.68 m; legacy 4.7 |
@@ -6183,6 +6195,7 @@ How to add a row: date, session, the config file and field (or the section and f
 
 | Date | Session | Where | Old | New | Motivated by | Why this value | Fudge ID |
 |---|---|---|---|---|---|---|---|
+| 19 Oct 2026 | U1 (agent 1) | sections 5 F20, 6 and 14, `board_default.tres`: `tail_rocker_m` | 0.01 m over the last 0.35 m (3.3° at the transom) | 0, a flat tail | Max's play-test (PLAYTEST_UPGRADES.md, U1): the board planes on a far too long wet part; the kick faced the last 20 to 25 cm of the bottom down at 1° of pitch, so they carried nothing | Freeride and slalom boards are flat from the tail forward (Starboard 2025 Carve; Carbon Art; Gnigler, surf-magazin 2025); Session 30's 1 cm had no source | |
 | 19 Oct 2026 | U1 (agent 4) | section 5 ("The tail vee"), 17.2 step 3, `hull_model.gd`: the added mass gained between strips | The central difference of `m'`, one-sided at the two ends: the gain just behind the spray root was counted one and a half times | Each gain between two neighbouring strips is shared by the two (the front strip's gain from nothing stays the root's) | The vee plate of `test_hull.gd` came out 20 % above Savitsky's lift; the same over-count inflated a heeled board's lift and the lift through the hump (the root in the narrow nose) | Conservation: the gains now add up to the added mass of the widest wet section, the slender-body total that the Savitsky scaling assumes. No number. Side effect: the planing onset (validation, 15 kt from rest) moves from 9.8 to 10.8 kn on its own | |
 | 19 Oct 2026 | U1 (agent 4) | section 5 ("The tail vee"), `hull_model.gd`: the spray root across a sinking strip | The root's advance factor (sinking speed over the bottom angle) at the front strip only | Also on the added mass each strip gains as the water reaches across it (behind the root of a vee, across a heeled bottom); the same factor, limits and minimum angle | U1.5: the porpoising (agent 3's report). The board heels 2 to 4° on every reach, so its root always runs obliquely across the bottom, and none of it answered sinking | Zarnick (1978): the force is `d(m'V)/dt` and a section's added mass grows with its immersion; the same physics as the root's factor (17.2 step 4), no new number. In steady planing the factor is 1. Effect: the five reach cases that bounced in the baseline are steady (pitch SD 0.70 to 1.21° to at most 0.16°); with the hips at 0.15 m (the 1.78 Hz bounce) all nine are steady on the 1° vee. The planing onset moves from 10.8 to 11.3 kn (the board rises through the hump) | |
 | 19 Oct 2026 | U1 (agent 4) | `board_default.tres`, `board_config.gd`: `deadrise_deg`; `hull_model.gd`: the vee's geometry | 2.0° in Savitsky's lift only; a flat bottom everywhere else | **1.0°**, and the vee given its shape: the rails' points lifted, the water's reach across the vee (`π/2`, Wagner), the chine-dry length (Savitsky's `L_k − L_c`) in `λ` and the friction area | Stop 1 decision 1: a slight tail vee with a source, modelled physically | The median of ten 2024 freeride boards measured by surf-magazin (0.5 to 2.0°; section 14 "U1: the tail vee"). 2.0 was unsourced and is the range's top. With the hips at 0.15 m, a flat bottom bounces in four of nine reach cases, 1° in none, 2° in one (the 18 kt broad reach). 5° (agent 3's suggestion for a higher Savitsky limit) is outside the measured range. The onset moves from 11.3 to 12.0 kn | |
