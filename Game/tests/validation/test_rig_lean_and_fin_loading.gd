@@ -7,8 +7,9 @@ extends GutTest
 ## so the heading-up helm a planing reach needs also stands the rig up. The rake-first hold
 ## (Autopilot.trim_with_rake_first) keeps the rig leaned as the hike leans it.
 ## Loading the fin: planing and hooked in, the sailor lets the board heel a few degrees to
-## leeward (SailorConfig.fin_load_bank_deg), banking it only by what the heel does not give
-## already, so the fin's sideways push also lifts.
+## leeward (SailorConfig.fin_load_bank_deg) and holds it there with the feet, pressing the
+## windward rail where the fin would heel the board further (U2), so the fin's sideways push
+## also lifts.
 ## The railing-out test is information for the team (a player control is a later decision):
 ## the heel the sailor aims for is raised step by step and the first one at which the board
 ## loses control is printed. Nothing in the game depends on it.
@@ -84,6 +85,11 @@ func test_the_default_fin_loading_keeps_the_board_steady_on_course() -> void:
 
 
 func test_the_sailor_heels_the_board_as_far_as_aimed_and_the_fin_lifts_more() -> void:
+	# U2: with no heel wanted the feet hold the board level against the fin's roll moment
+	# (before U2 it heeled 3.4 degrees: the sailor only ever added bank), and the default
+	# is held where it is aimed.
+	assert_almost_eq(_banks[0.0].heel_deg, 0.0, 0.5, "no heel wanted: held level against the fin")
+	assert_almost_eq(_banks[4.5].heel_deg, -4.5, 0.5, "the default 4.5 degrees, held")
 	var lift_before: float = _banks[0.0].fin_up_n
 	for bank: float in [6.0, 9.0, 12.0]:
 		var run: Settled = _banks[bank]

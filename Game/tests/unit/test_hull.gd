@@ -322,7 +322,11 @@ func test_a_heeled_planing_plate_carries_its_lift_on_the_low_rail() -> void:
 	assert_almost_eq(float(heeled["heel_deg"]), 15.0, 0.2, "the test body is heeled 15 degrees")
 	assert_almost_eq(float(level["side_force"]), 0.0, 1.0, "level: no sideways force")
 	assert_almost_eq(float(level["roll_torque"]), 0.0, 1.0, "level: no roll torque from the planing lift")
-	assert_between(float(heeled["lift"]), 0.6 * float(level["lift"]), 1.3 * float(level["lift"]), "heeled: about the same lift")
+	# Held at the same transom depth, the heeled plate's low rail is twice as deep and wet
+	# twice as far forward, and the water climbs from it across the bottom (Wagner's pi/2,
+	# NACA TN 4187 equation 2), so it carries a little more than the level plate: 1.32
+	# times since U2 (0.91 with the still surface's wet width).
+	assert_between(float(heeled["lift"]), 0.6 * float(level["lift"]), 1.4 * float(level["lift"]), "heeled: about the same lift")
 	assert_gt(float(heeled["side_force"]), 0.1 * float(heeled["lift"]), "heeled: pushed toward the low rail")
 	assert_lt(float(heeled["roll_torque"]), -50.0, "heeled: the lift on the low rail rights the board")
 	assert_lt(float(heeled["cop_z"]), float(level["cop_z"]) - 0.1, "heeled: the force acts further forward")

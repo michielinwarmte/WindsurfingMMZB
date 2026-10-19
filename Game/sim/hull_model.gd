@@ -23,6 +23,9 @@ extends RefCounted
 const MIN_SPRAY_ROOT_ANGLE_RAD: float = 0.01745  # one degree
 const STRIPS: int = 12  # strips along the wet bottom
 const TRANSOM_RELIEF_BEAMS: float = 0.5  # the pressure falls to nothing over this many beams before the aft end
+## A section entering the water is wet pi/2 times as far out from its deepest point as the
+## still surface cuts it (Wagner 1932): the still surface's cut is 2/pi of the water's reach.
+const WAGNER_CUT: float = 2.0 / PI
 ## The rail in a skid, from NACA TN 4187 (Savitsky, Prowse and Lueders 1958, flat planing
 ## plates with chine edges of 0.09 and 0.18 beams at trim 6 to 30 degrees, roll -15 to 15,
 ## yaw 0 to 20). Level, at a trim of 6 degrees (the lowest tested, the nearest to a board's
@@ -141,7 +144,7 @@ func compute(body: SimRigidBody, buoyancy: BuoyancyModel, surface: WaterSurface,
 	# forward; when the tail has lifted clear and the nose is down, it is the middle of the
 	# hull and the nose rocker that are wet. Everything below works on this span.
 	_vee_rise_per_m = tan(deg_to_rad(board.deadrise_deg))
-	_vee_wetting_per_m = 2.0 / PI * _vee_rise_per_m
+	_vee_wetting_per_m = WAGNER_CUT * _vee_rise_per_m
 	var span: PackedFloat64Array = _wetted_span(buoyancy)
 	wetted_aft_m = span[0]
 	wetted_length_m = span[1] - span[0]
@@ -274,10 +277,14 @@ func _apply_planing_lift(body: SimRigidBody, buoyancy: BuoyancyModel, aft: float
 	lambda_ratio = clampf((length - 0.5 * chine_dry_length_m) / beam, 0.2, board.length_m / beam)
 
 	# The wet bottom seen as one cambered plate, for the reference trim: its chord is
-	# inclined to the board by the rocker and the bottom bulges below the chord, which acts
-	# like camber on a wing (two sag-over-length of extra angle, thin-airfoil theory).
+	# inclined to the board by the rocker and the bottom bulges below the chord, toward the
+	# water, which is the pressure side. That is camber the wrong way up for lift: thin-
+	# airfoil theory moves the zero-lift angle by two sag-over-length, so the plate lifts
+	# as if trimmed that much less (Anderson, Fundamentals of Aerodynamics; a planing
+	# bottom with convex buttocks, rocker, lifts less than a flat one at the same trim, and
+	# a concave one, hook, more: Savitsky 1964, Savitsky and Brown 1976).
 	var chord_angle: float = _chord_angle(aft, forward)
-	var camber_angle: float = 2.0 * _camber_sag(aft, forward) / length
+	var camber_angle: float = -2.0 * _camber_sag(aft, forward) / length
 	var trim_geometric: float = pitch + chord_angle + camber_angle
 
 	# 1. The strips: where each is, which way its bottom faces, how fast it moves into the
@@ -607,11 +614,18 @@ func _row_max_depth(buoyancy: BuoyancyModel, row: int) -> float:
 ## x = the wet fraction of the width (0 to 1), y = the depth-weighted centre of the wet
 ## part in body x (metres, positive to starboard). The depth across the width is taken as
 ## linear between the rail points of the two nearest grid rows (a flat bottom heeled is a
-## plane), less the vee's rise from the keel toward each rail as the water wets it
-## (_vee_wetting_per_m). A level flat board gives (1, 0); a board heeled to starboard gives
-## a centre on the starboard side and, toward the bow, a strip wet only at that rail; a
-## level vee is wet only near the keel just behind the spray root, and across its whole
-## width further aft, where the keel is deep enough for the water to reach the chines.
+## plane), less the vee's rise from the keel toward each rail. The water does not stop
+## where the still surface cuts that section: entering the water it piles up the bottom's
+## sides and wets pi/2 times as far out from the deepest point (Wagner 1932). Across a
+## level vee that is from the keel; across a heeled bottom it is from the low rail up
+## toward the high one, which NACA TN 4187 measured on rolled flat plates (Savitsky,
+## Prowse and Lueders 1958, equation 2: the high chine is dry over 2 b tan(roll) /
+## (pi tan(trim)) of the length, not the still surface's b tan(roll) / tan(trim)). So the
+## section's depth is flattened by 2/pi about its deepest point. A level flat board gives
+## (1, 0); a board heeled to starboard gives a centre on the starboard side and, toward the
+## bow, a strip wet only near that rail; a level vee is wet only near the keel just behind
+## the spray root, and across its whole width further aft, where the keel is deep enough
+## for the water to reach the chines.
 func _wet_width(buoyancy: BuoyancyModel, from_transom: float) -> Vector2:
 	var rows: int = maxi(board.length_samples, 2)
 	var columns: int = maxi(board.width_samples, 1)
@@ -630,8 +644,18 @@ func _wet_width(buoyancy: BuoyancyModel, from_transom: float) -> Vector2:
 	# the vee's rise toward the rail on each half: two planes that meet at the keel.
 	var middle: float = 0.5 * (port + starboard)
 	var slope: float = (starboard - port) / (2.0 * half_width)
-	var port_half: Vector3 = _wet_part(middle, slope + _vee_wetting_per_m, -half_width, 0.0)
-	var starboard_half: Vector3 = _wet_part(middle, slope - _vee_wetting_per_m, 0.0, half_width)
+	# The deepest point of the section: the keel, or the low rail when the heel is more
+	# than the vee. The water climbs from there: the depth the water sees is the deepest
+	# depth less 2/pi of how far each point is above it (WAGNER_CUT), which is the same two
+	# planes with 2/pi of their slopes. On a level vee that is the keel's depth and the
+	# vee's wetting slope (_vee_wetting_per_m) exactly, as before.
+	var port_rail: float = middle - (slope + _vee_rise_per_m) * half_width
+	var starboard_rail: float = middle + (slope - _vee_rise_per_m) * half_width
+	var deepest: float = maxf(middle, maxf(port_rail, starboard_rail))
+	var climbed_middle: float = deepest - WAGNER_CUT * (deepest - middle)
+	var climbed_slope: float = WAGNER_CUT * slope
+	var port_half: Vector3 = _wet_part(climbed_middle, climbed_slope + _vee_wetting_per_m, -half_width, 0.0)
+	var starboard_half: Vector3 = _wet_part(climbed_middle, climbed_slope - _vee_wetting_per_m, 0.0, half_width)
 	var wet_width: float = port_half.x + starboard_half.x
 	var area: float = port_half.y + starboard_half.y
 	if wet_width <= 0.0 or area <= 1e-9:

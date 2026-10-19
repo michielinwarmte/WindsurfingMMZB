@@ -127,14 +127,23 @@ func test_a_hiked_sailor_in_the_straps_heels_the_board_to_leeward_to_load_the_fi
 	assert_almost_eq(sim._fin_load_bank_rad(1.0), 0.0, 1e-6, "not while the controls ask for a turn")
 	sim.stance = 0.0
 	assert_almost_eq(sim._fin_load_bank_rad(0.0), 0.0, 1e-6, "not when standing by the mast, off the plane")
-	# The angle is the board's heel: the sailor banks only by what the heel beyond the
-	# bank (the soft feet giving to the hiked weight) does not give already.
+	# The angle is the board's heel, and the sailor holds it: the feet aim that much
+	# further the other way as the board heels beyond their aim (the soft feet giving to
+	# the fin's roll moment), so the heel ends where it is wanted.
 	sim.stance = 1.0
 	sim.lean = 1.0
 	sim._felt_heel_beyond_rad = 0.4 * bank_rad
 	assert_almost_eq(sim._fin_load_bank_rad(0.0), -0.6 * bank_rad, 1e-6, "the board already heels 40 % of the way: bank the rest")
+	# U2: where the fin heels the board further than wanted, the heels press the windward
+	# rail down (before U2 the aim stopped at level, and the fin heeled the board 3.4
+	# degrees on the 18 kt beam reach with no bank wanted at all).
 	sim._felt_heel_beyond_rad = 2.0 * bank_rad
-	assert_almost_eq(sim._fin_load_bank_rad(0.0), 0.0, 1e-6, "already heeled further than aimed: no bank on top, and none to windward")
+	assert_almost_eq(sim._fin_load_bank_rad(0.0), bank_rad, 1e-6, "already heeled further than aimed: the feet press the windward rail")
+	# Never further than the feet's reflex reaches, from its full moment one way to its
+	# full moment the other.
+	var reach_rad: float = 2.0 * sim.sailor_config.feet_moment_max_nm / sim.sailor_config.feet_roll_stiffness_nm_per_rad
+	sim._felt_heel_beyond_rad = 1.0
+	assert_almost_eq(sim._fin_load_bank_rad(0.0), reach_rad - bank_rad, 1e-6, "railed out: the feet's aim stops at their reach")
 
 
 func test_pressing_the_back_foot_moves_the_weight_aft_with_it() -> void:
