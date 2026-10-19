@@ -41,6 +41,8 @@ The live state of U2, "the fin bends, and its size". The plan and its execution 
 
 ## Numbers
 
+**Final state of the branch (b7186c6), verified by the lead:** `tools/check.sh` 196 files, 0 failed; `tools/test.sh` 360 of 360; `tools/test.sh validation` 30 pass, 1 fail (U1's onset check, 13.4 kn, red on Michiel's decision), 2 pending (U1's targets 3 and 4: the wet front 1.42, 1.51, 1.35, 1.54 m against 0.6 to 1.0; the push 1.04 to 1.09 m against 0.45 to 0.75; the trim 0.81 to 1.26 deg against 1.5 up). The steady reach check after the gust calibration: all 9 steady (worst 0.25 deg), the wet front 1.42, 1.35, 1.35, 1.59 m on the planing reaches (U1's end: 1.76, 1.42, 1.71, 1.71). The gusty default wind: no fall at 12, 18 or 24 kt in 60 s; pitch SD 0.33 (18 kt beam), 0.02 (24 kt beam), 0.43 (24 kt broad).
+
 **Latest, verified by the lead on the merged branch with the technique (b84060c):** `tools/check.sh` 195 files, 0 failed; `tools/test.sh` 356 of 356; `tools/test.sh validation` 30 pass, 1 fail (U1's onset check, 13.4 kn), 2 pending (U1's targets 3 and 4). The hips-dropped case: no fall in 9 of 9 (agent 3: 8 of 9 steady, the 24 kt broad reach 0.36 deg as before). The reach check (fin columns slip, lift N, roll N m, up N, stall %, heel):
 
 | Case | Speed m/s | Front m | Push m | Trim | Pitch SD | Harness N | Rig % | Fin slip | Fin N | Roll | Up N | Stall % | Heel |
