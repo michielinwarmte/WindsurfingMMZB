@@ -9,9 +9,12 @@
 #   tools/reach_check.sh --sailor.lean_height_drop_m=0.15 --board.tail_rocker_m=0
 #   tools/reach_check.sh --board.length_samples=13    the grid check (a finer buoyancy grid)
 #   tools/reach_check.sh --csv=1                      also write each case's CSV to .sim_output/reach/
+#   tools/reach_check.sh --fin.span_m=0.44 --fin.area_m2=0.0489   another fin (any plain number of FinConfig)
 #
 # The cases are set up as `tools/simulate.sh beam_reach 40 --wind_kt=W --twa=A --steady=1
 # --gradient=0` sets them up; a --board.<field> override here also reaches the buoyancy grid.
+# The fin columns at the end of each line: the slip, the lift, the fin's roll moment, the
+# upward part of its force, its share of the stall, and the heel.
 # The options are in Game/dev/run_reach.gd.
 set -euo pipefail
 source "$(dirname "$0")/common.sh"

@@ -9,10 +9,16 @@ extends SceneTree
 ## One difference: a --board.<field> override is applied before the simulation is built,
 ## so the buoyancy grid sees it too (simulate.sh changes it afterwards, when the grid
 ## already has its shape). That also makes --board.length_samples=<n> work: the grid check.
+## A --fin.<field> override is applied before the build here and in simulate.sh alike.
+##
+## The fin columns (U2): the slip angle the fin meets the water at, its lift, the roll
+## moment its force puts on the hull about the centre of mass, the world-upward part of its
+## force (from the board's heel, and in U2 from the fin's bend), its lift coefficient as a
+## share of the peak before it stalls, and the board's heel that tilts it.
 ##
 ## Arguments after "--": [--winds=12,18,24] [--twas=60,100,135] [--seconds=40] [--from=25]
 ## [--out_dir=<absolute dir>: write each case's CSV there, one row per 0.1 s]
-## [--pilot.<field>=<n> --sailor.<field>=<n> --sail.<field>=<n> --board.<field>=<n>]
+## [--pilot.<field>=<n> --sailor.<field>=<n> --sail.<field>=<n> --board.<field>=<n> --fin.<field>=<n>]
 
 const DT: float = 1.0 / 60.0
 const CSV_EVERY_STEPS: int = 6
@@ -40,6 +46,12 @@ class CaseResult:
 	var friction_n: float = 0.0
 	var drive_n: float = 0.0
 	var friction_area_m2: float = 0.0
+	var fin_slip_deg: float = 0.0
+	var fin_lift_n: float = 0.0
+	var fin_roll_nm: float = 0.0
+	var fin_up_n: float = 0.0
+	var fin_load_share: float = 0.0
+	var heel_deg: float = 0.0
 
 
 func _initialize() -> void:
@@ -53,14 +65,14 @@ func _initialize() -> void:
 		if key.contains("."):
 			overrides.append("%s=%s" % [key, _options[key]])
 	print("Reach check: beam_reach scenario, flat water, steady wind, %.0f s per case, means over t >= %.0f s%s" % [seconds, from_s, ("; overrides " + ", ".join(overrides)) if not overrides.is_empty() else ""])
-	print("wind  TWA   speed m/s (kt)  plan  front  wet   push  trim  pitchSD  harness  rig%  mast   fric  drive  area   fell/NaN")
+	print("wind  TWA   speed m/s (kt)  plan  front  wet   push  trim  pitchSD  harness  rig%  mast   fric  drive  area  | slip  finN  roll   up  stall%  heel | fell/NaN")
 	var bad: bool = false
 	for wind_kt: float in winds:
 		for twa_deg: float in twas:
 			var result: CaseResult = _run_case(wind_kt, twa_deg, seconds, from_s)
 			print(_format(result))
 			bad = bad or result.fell or result.nan
-	print("Columns: front = front of the wet part from the tail (m), wet = wet length (m), push = centre of the water's push from the tail (m), trim (deg), pitchSD = steadiness (deg), harness = harness tension (N), rig% = the rig's share of the sailor's weight, mast = mast foot pushing down (N), fric/drive (N), area = the area the friction acts on (m2).")
+	print("Columns: front = front of the wet part from the tail (m), wet = wet length (m), push = centre of the water's push from the tail (m), trim (deg), pitchSD = steadiness (deg), harness = harness tension (N), rig% = the rig's share of the sailor's weight, mast = mast foot pushing down (N), fric/drive (N), area = the area the friction acts on (m2). Fin: slip (deg), finN = its lift (N), roll = its roll moment on the hull (N m), up = the upward part of its force (N), stall% = its lift coefficient as a share of the peak, heel = the board's heel (deg, minus = to port).")
 	quit(1 if bad else 0)
 
 
@@ -121,6 +133,13 @@ func _run_case(wind_kt: float, twa_deg: float, seconds: float, from_s: float) ->
 		result.friction_n += t.hull_friction_n
 		result.drive_n += t.drive_n
 		result.friction_area_m2 += t.friction_area_m2
+		# The slip and the roll moment change sign with the tack; their size is what counts.
+		result.fin_slip_deg += absf(t.fin_slip_deg)
+		result.fin_lift_n += t.fin_lift_n
+		result.fin_roll_nm += absf(t.roll_fin_nm)
+		result.fin_up_n += t.fin_up_n
+		result.fin_load_share += t.fin_load_share
+		result.heel_deg += t.heel_deg
 		pitch_sum += t.pitch_deg
 		pitch_square_sum += t.pitch_deg * t.pitch_deg
 	if file != null:
@@ -130,14 +149,16 @@ func _run_case(wind_kt: float, twa_deg: float, seconds: float, from_s: float) ->
 
 
 ## The default open-water simulation, as tools/simulate.sh builds it. With --board.<field>
-## overrides it is built again on a copy of the board with those values, so that the
-## buoyancy grid (built in the constructor) has the overridden shape too.
+## or --fin.<field> overrides it is built again on copies of the board and the fin with
+## those values, so that what is built in the constructor (the buoyancy grid, and in U2 the
+## fin's bending) has the overridden shape too.
 func _make_sim() -> WindsurferSim:
 	var sim: WindsurferSim = WindsurferSim.create_default(false)
 	var board: BoardConfig = sim.board_config.duplicate() as BoardConfig
-	if not _apply_overrides({"board": board}):
+	var fin: FinConfig = sim.fin_config.duplicate() as FinConfig
+	if not _apply_overrides({"board": board, "fin": fin}):
 		return sim
-	var rebuilt: WindsurferSim = WindsurferSim.new(board, sim.sail_config, sim.fin_config, sim.sailor_config,
+	var rebuilt: WindsurferSim = WindsurferSim.new(board, sim.sail_config, fin, sim.sailor_config,
 		sim.water_config, sim.wind_config, sim.sim_config, sim.wave_set_config)
 	rebuilt.air_density_kg_m3 = sim.air_density_kg_m3
 	return rebuilt
@@ -177,16 +198,23 @@ func _finish_means(result: CaseResult, pitch_sum: float, pitch_square_sum: float
 	result.friction_n /= n
 	result.drive_n /= n
 	result.friction_area_m2 /= n
+	result.fin_slip_deg /= n
+	result.fin_lift_n /= n
+	result.fin_roll_nm /= n
+	result.fin_up_n /= n
+	result.fin_load_share /= n
+	result.heel_deg /= n
 	var mean_pitch: float = pitch_sum / n
 	result.pitch_sd_deg = sqrt(maxf(pitch_square_sum / n - mean_pitch * mean_pitch, 0.0))
 
 
 func _format(r: CaseResult) -> String:
-	return "%4.0f  %3.0f   %5.2f (%4.1f)    %4.2f  %5.2f  %4.2f  %4.2f  %4.2f  %5.2f    %5.0f    %3.0f   %5.0f  %4.0f  %5.0f  %4.2f   %s" % [
+	return "%4.0f  %3.0f   %5.2f (%4.1f)    %4.2f  %5.2f  %4.2f  %4.2f  %4.2f  %5.2f    %5.0f    %3.0f   %5.0f  %4.0f  %5.0f  %4.2f  | %4.1f  %4.0f  %4.0f  %4.0f   %3.0f  %5.1f | %s" % [
 		r.wind_kt, r.twa_deg, r.speed_ms, r.speed_ms / SimMath.KNOT_MS, r.planing_ratio,
 		r.wet_front_m, r.wet_length_m, r.push_centre_m, r.trim_deg, r.pitch_sd_deg,
 		r.harness_n, r.rig_share * 100.0, r.mast_foot_down_n, r.friction_n, r.drive_n,
-		r.friction_area_m2, _health(r)]
+		r.friction_area_m2, r.fin_slip_deg, r.fin_lift_n, r.fin_roll_nm, r.fin_up_n,
+		r.fin_load_share * 100.0, r.heel_deg, _health(r)]
 
 
 ## "ok", or what went wrong: the sailor fell, or a number blew up.
