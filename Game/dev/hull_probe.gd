@@ -18,7 +18,8 @@ extends SceneTree
 ##
 ## Three what-ifs, computed here only (the model is not changed):
 ##   wag  the water climbs the heeled bottom pi/2 times as far from the low rail as the
-##        still surface cuts it (Wagner 1932), as HullModel already does for the vee;
+##        still surface cuts it (Wagner 1932), as HullModel already does for the vee
+##        (since U2's heel fix HullModel does it across the heel too, so wag equals the model);
 ##   wet  the 3D factor anchored on the widest *wet* strip instead of the widest full width,
 ##        so the strip theory's total is Savitsky's at every heel;
 ##   tn   that, scaled to the lift of a rolled flat plate as NACA TN 4187 has it (Savitsky,
