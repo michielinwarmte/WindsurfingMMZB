@@ -250,6 +250,15 @@ Agent 4's file list is widened by: `Game/config/board_config.gd`, `Game/config/b
 
 Still open for Max: his own estimate of the flat-water rail-down angle (agent 2 found no source; the spec holds a 3 to 6° placeholder). Agent 5 needs it for U1.6.
 
+#### Decisions at Stop 2 (Michiel, 19 October 2026)
+
+Michiel accepted agent 4's physics (`u1/physics`, merged). He decided:
+
+1. **The planing onset at 13.3 kn is too fast; a real board planes at about 10 kn. Do not move the band: look for what the model is missing** (hump lift, or whatever lets a real board plane at 10 kn), with a source. Agent 4 (relaunched, on `u1/physics`) does this first; its report is `Documentation/u1_reports/physics_onset.md`.
+2. **Fix the rig's lean and the helm first** (U1.6, agent 5, on `u1/finish`, report `Documentation/u1_reports/finish_u16.md`), so the harness line's geometry becomes real (today it runs 1.45 m from the hiked body to the grip because the weather helm tilts the rig back to 8°). U1.2 and U1.3 follow after U1.6 is merged, by agent 4 relaunched. U1.7 and U1.8 follow after that, by agent 5 relaunched.
+3. **1° of vee** stays for now.
+4. **Riding above Savitsky's flat-bottom limit is accepted, and Michiel wants a plain-language explanation** of why the board is steady there. Agent 4 writes it, at most 200 words, as a section of `physics_onset.md` and in PHYSICS_SPEC.md section 17.2.
+
 **The agent prompt.** The lead launches every agent with this text, filled in:
 
 > You are agent <n>, `<name>`, of U1 in WindsurfingMMZB (Godot 4.7). Read CLAUDE.md and the U1 execution brief in Documentation/PLAYTEST_UPGRADES.md, then do your package from the brief's agent table and the U1.x boxes it names. Work in your worktree on the branch `u1/<name>`: make it from `feature/u1-planing-wet-area`, or continue on it if it already exists. Commit as you go, and change only the files your row allows. Follow the brief's rules, targets and stop rules, and be careful with tokens. Finish with your report (at most 300 words and one table) committed as Documentation/u1_reports/<name>.md, and return the same text.

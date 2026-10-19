@@ -3,7 +3,7 @@
 The live state of U1, "planing on a smaller wet area". The plan and its execution brief are in [PLAYTEST_UPGRADES.md](PLAYTEST_UPGRADES.md). **The lead updates and commits this file after every launch, report and merge.** A lead who takes over starts here.
 
 - **Branch:** `feature/u1-planing-wet-area` (from `main` at 561849c). Agents work on `u1/<name>` branches, made from it in their own worktrees.
-- **Last update:** 19 October 2026. Agent 4 reported on `u1/physics` (18e2a82), held unmerged; **Stop 2: waiting for Michiel.**
+- **Last update:** 19 October 2026. Stop 2 passed; agent 4 merged. Agent 4 relaunched (the planing onset) and agent 5 launched (U1.6), in parallel. All 5 agents are now used; only relaunches remain.
 
 ## State
 
@@ -12,26 +12,24 @@ The live state of U1, "planing on a smaller wet area". The plan and its executio
 | 1 | `measure` | baseline, the reach check, U1.1, then U1.4 (flat tail) | merged (U1.4 reverted) | `u1/measure` | [measure.md](u1_reports/measure.md) |
 | 2 | `sources` | the four numbers that need a source | merged | `u1/sources` | [sources.md](u1_reports/sources.md) |
 | 3 | `porpoising` | U1.5's diagnosis | merged | `u1/porpoising` | [porpoising.md](u1_reports/porpoising.md) |
-| 4 | `physics` | U1.5's fix with a slight tail vee, the grid trial, U1.4 back, U1.2, U1.3 | reported, **not merged** (one validation check fails: the planing onset) | `u1/physics` | `git show u1/physics:Documentation/u1_reports/physics.md` |
-| 5 | `finish` | U1.6, U1.7, U1.8's screenshots | waits for Stop 2 | `u1/finish` | |
+| 4 | `physics` | U1.5 fix, grid, U1.4 back: **merged** (5 of 5 reach targets not yet; see Numbers). Relaunched for the planing onset and Michiel's explanation; then U1.2, U1.3 after U1.6 | running (onset) | `u1/physics` | [physics.md](u1_reports/physics.md); next `physics_onset.md` |
+| 5 | `finish` | U1.6 now; U1.7 and U1.8 in a relaunch after U1.2 and U1.3 | running (U1.6) | `u1/finish` | next `finish_u16.md` |
 
 The possible states are: not started → running → reported → merged.
 
 | Stop | State |
 |---|---|
 | Stop 1, the lead: agents 1 to 3 in, the go/no-go for agent 4 | **passed** on 19 October 2026 with four team decisions (in the brief, "Decisions at Stop 1") |
-| Stop 2, Michiel reviews agent 4's physics | **reached** on 19 October 2026; waits for Michiel (the questions are in Next action) |
+| Stop 2, Michiel reviews agent 4's physics | **passed** on 19 October 2026 with four decisions (in the brief, "Decisions at Stop 2") |
 | Stop 3, Max's play-test | not reached |
 
 ## Next action
 
-**Stop 2: Michiel reviews agent 4's physics on `u1/physics`** (18e2a82, four commits on top of e51a4b5). The branch is held unmerged because its validation is not green: the planing-onset check fails (onset 13.3 kn against the 8 to 10 kn band), and a stop rule fired on U1.2. To review: `git diff e51a4b5 u1/physics` (hull_model.gd, board_config.gd, board_default.tres, the tests), PHYSICS_SPEC.md sections 5, 7.5, 14, 16 and 17.2, and the report. Michiel decides:
-1. **The planing onset.** It moved from 9.8 kn (which rode a 5.9° bouncing bow-up overshoot) to 13.3 kn. Move the band in the validation check (and write it in the tuning log), or look for missing hump lift first?
-2. **U1.2's route.** The harness stays at 956 N because the line runs 1.45 m from the hiked body to the grip (real: 0.30 to 0.40 m): the pilot's weather helm tilts the rig back to 8°. Options: fix the rig's lean and the helm first (that is U1.6, agent 5's package) and then U1.2; or give the arms a share of the boom force (no source). 415 N needs the arms to take a third.
-3. **The vee: 1° (sourced, median of ten 2024 freeride boards) or 2°.** 2° also steadies the 24 kt broad reach (0.46 to 0.50° now, just above target 2's 0.3°) but slows the 12 kt broad reach by 10 %.
-4. **OK with the board riding above Savitsky's flat-bottom limit?** The vee raised the limit, which is the physical reason it is steady now.
+Two agents are running in parallel: agent 4 on `u1/physics` (the planing onset, plus Michiel's explanation; report `physics_onset.md`) and agent 5 on `u1/finish` (U1.6: the rig's lean, the helm, the fin loading, the railing-out test; report `finish_u16.md`). For each that reports: merge its branch (expect a small conflict in PHYSICS_SPEC.md's sections 14 and 16 if both edited them; keep both), run `tools/check.sh`, `tools/test.sh`, `tools/test.sh validation` and `tools/reach_check.sh`, write the numbers under Numbers, commit. Validation is red on `test_planing_onset_and_fully_planing` until agent 4's onset work lands; any other failure is a stop.
 
-After Michiel's OK: merge `u1/physics` into `feature/u1-planing-wet-area`, apply his decision on the onset check so validation is green, run `tools/check.sh`, `tools/test.sh`, `tools/test.sh validation` and `tools/reach_check.sh`, update Numbers, then launch agent 5 (`finish`: U1.6, U1.7, U1.8) with agent 4's report and Michiel's decisions. U1.2 and U1.3 are still open: agent 5 or a relaunch of agent 4 after U1.6, as the team decides. Note that the wet front is still long (1.9 to 2.2 m against the 0.6 to 1.0 m target): U1's main goal is not reached yet; the bounce is fixed.
+Then, round 3: relaunch agent 4 on `u1/physics` for U1.2 and U1.3 (with agent 5's U1.6 report). Then round 4: relaunch agent 5 on `u1/finish` for U1.7 and U1.8 (with agent 4's reports). Then **Stop 3: Max's play-test**. Relaunches don't count toward the 5; all 5 are used.
+
+The branch `feature/u1-planing-wet-area` is at the merge of `u1/physics` plus these notes. The known red check is the planing onset (13.3 kn against 8 to 10 kn), on purpose until fixed.
 
 ## Numbers
 
@@ -105,6 +103,8 @@ After Michiel's OK: merge `u1/physics` into `feature/u1-planing-wet-area`, apply
 ## Notes
 
 Decisions and surprises along the way, newest first.
+
+- 19 October 2026 (Michiel, via Max): Stop 2 decisions. (1) The onset at 13.3 kn is too fast, real is about 10 kn: find what the model is missing, don't move the band. (2) Fix the rig's lean and the helm first, then the harness. (3) 1° vee is fine for now. (4) Riding above the flat-bottom limit accepted, with a plain-language explanation to follow.
 
 - 19 October 2026 (agent 4): the bounce is fixed with no new constant. A strip of bottom that is sinking meets more water across its oblique spray root than a rising one (Zarnick 1978); with a 1° tail vee (median of ten measured 2024 freeride boards) that gives the steadying the flat strips lacked. Also fixed: the gain behind the spray root was counted 1.5 times. 9 of 9 reach cases steady, also with the hips dropped 0.15 m. The grid (7 to 13 rows) moves the wet front at most 4 cm now that the bounce is gone; default kept at 7. The flat tail is back. **But:** the wet front got longer (2.0 to 2.2 m), the trim stays under 1.5°, the harness stays at 956 N, and the planing onset moved to 13.3 kn, failing the validation's 8 to 10 kn band. U1.2 stopped (stop rule: no source for an arms' share), U1.3 diagnosed only (the bow-down 116 N·m is the arms' forward pull; the legs carry 4 N).
 
