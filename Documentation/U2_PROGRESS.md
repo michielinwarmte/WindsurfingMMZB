@@ -3,7 +3,7 @@
 The live state of U2, "the fin bends, and its size". The plan and its execution brief are in [PLAYTEST_UPGRADES.md](PLAYTEST_UPGRADES.md). **The lead updates and commits this file after every launch, report and merge.** A lead who takes over starts here; U1's take-over prompt in [U1_PROGRESS.md](U1_PROGRESS.md) applies with U2 in place of U1.
 
 - **Branch:** `feature/u2-fin` (from `feature/u1-planing-wet-area` at c1eee63). Agents work on `u2/<name>` branches, made from it in their own worktrees.
-- **Last update:** 19 October 2026. The technique round merged (reviewed by the lead). **Stop 2: the whole U2 physics package waits for Michiel.** Verified by the lead: see Numbers.
+- **Last update:** 19 October 2026. Stop 2 waits for Michiel on the whole physics package. Agent 4 (`fin_look`, visuals only) launched meanwhile so the play-test is ready sooner.
 
 ## State
 
@@ -12,7 +12,7 @@ The live state of U2, "the fin bends, and its size". The plan and its execution 
 | 1 | `fin_sources` | the stiffness, the catalogue fins, the literature | merged | `u2/fin_sources` | [fin_sources.md](u2_reports/fin_sources.md) |
 | 2 | `fin_measure` | the fin's baseline, the overrides, the telemetry, the what-ifs, the pending check | merged | `u2/fin_measure` | [fin_measure.md](u2_reports/fin_measure.md) |
 | 3 | `fin_physics` | all merged: the bending fin, the riding round (reported only), the heeled hull's lift, the sailor's technique | merged (b84060c) | `u2/fin_physics`, `u2/fin_physics_heel`, `u2/fin_technique` | [fin_physics.md](u2_reports/fin_physics.md), [fin_ride_physics.md](u2_reports/fin_ride_physics.md), [fin_heel_physics.md](u2_reports/fin_heel_physics.md), [fin_technique.md](u2_reports/fin_technique.md) |
-| 4 | `fin_look` | the bending mesh, the HUD, the screenshots, the checklist | waits for Stop 2 | `u2/fin_look` | |
+| 4 | `fin_look` | the bending mesh, the HUD, the screenshots, the checklist | running (launched before Michiel's review: visuals only) | `u2/fin_look` | |
 | 5 | `fin_ride` | experiments: the sailor riding the fin (weight aft, rail down, fin size), no game file changed | merged | `u2/fin_ride` | [fin_ride.md](u2_reports/fin_ride.md) |
 | 6 | `hull_lift` | diagnosis: the hull's planing lift against Savitsky, level and heeled; the literature on heeled planing | merged | `u2/hull_lift` | [hull_lift.md](u2_reports/hull_lift.md) |
 
@@ -31,7 +31,7 @@ The live state of U2, "the fin bends, and its size". The plan and its execution 
 4. reported only: the critical trim (spec 5 F22), the hull's planing share, the probe `Game/dev/hull_probe.gd`.
 The reports are in `Documentation/u2_reports/`. **Questions for Michiel:** (a) the stiffness calibrated on the test fin's size, so the 44 cm fin is the same material; (b) the 35 deg cap on the bend (an estimate); (c) the trim-by-speed and the 2 deg bank are calibrated on this hull's own measured steadiness and labelled so: technique or tuning? The alternative, a sailor who backs off at the first bounce, would not settle a flat board at 32 kn; (d) the hull wants heel at 32 kn on a broad reach to stay steady, against the instruction's "flat off the wind": real, or a weakness of the 1 deg vee / the model's damping? (e) the onset moved 11.6 to 13.4 kn (red check, the band stays as decided). **Question for Max:** on a powered 18 kt beam reach, how much does he rail the board (the map: flat 1.12 m, 2 deg 1.34 m, 4.5 deg 1.63 m of wet front at a 2 deg trim)?
 
-After Michiel's OK: agent 4 (`fin_look`: the bending fin mesh, the HUD, the screenshots, the checklist), then **Stop 3**, Max's play-test, then the pull requests (U1, then U2) after the manoeuvre matrix.
+Agent 4 (`fin_look`: the bending fin mesh, the HUD, the screenshots, the checklist) runs meanwhile (visuals only; the lead launched it before Michiel's review to save time); merge it when it reports. After Michiel's OK: **Stop 3**, Max's play-test, then the pull requests (U1, then U2) after the manoeuvre matrix.
 
 **Where the targets stand:** the wet front on the four planing reaches 1.37, 1.32, 1.32, 1.58 m (U1's end: 1.76, 1.42, 1.71, 1.71; the target 0.6 to 1.0), the push 1.02 to 1.08 m (0.45 to 0.75), the trim 0.82 to 1.35 deg (1.5 up): U1's targets 3 and 4 stay pending. The map says the 18 kt beam reach can reach 1.0 m flat at a 2.5 deg trim, steady; the 24 kt broad reach cannot go below about 1.5 m without bouncing. Getting further needs either a bank that depends on speed (flat when the hull allows, railed at 32 kn: the opposite of the instruction), or more steadiness in the hull at 32 kn (the vee, the damping), both for the team.
 
