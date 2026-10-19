@@ -123,7 +123,7 @@ func test_planing_lift_matches_savitsky_at_a_known_state() -> void:
 	assert_almost_eq(hull.trim_deg, 4.0, 0.05, "the water meets the flat bottom at the pitch angle")
 	var lambda: float = hull.lambda_ratio
 	var cl_flat: float = 0.012 * pow(4.0, 1.1) * sqrt(lambda)
-	var cl: float = cl_flat - 0.0065 * 2.0 * pow(cl_flat, 0.6)
+	var cl: float = cl_flat - 0.0065 * board.deadrise_deg * pow(cl_flat, 0.6)
 	# Savitsky's speed is the speed along the keel: 7 m/s horizontal at 4 degrees of trim.
 	var u: float = hull.forward_speed_ms
 	assert_almost_eq(u, 7.0 * cos(deg_to_rad(4.0)), 1e-3)
@@ -285,11 +285,16 @@ func test_identical_inputs_identical_outputs() -> void:
 ## the world (the board heads along world -Z, so +X is to starboard), the roll torque about
 ## the bow axis (positive heels to starboard) and where the planing force acts along the
 ## board.
-func _heeled_plate(heel_deg: float) -> Dictionary:
-	var models: Array = _flat_models()
-	var hull: HullModel = models[1]
-	var buoyancy: BuoyancyModel = models[0]
+## The flat plate at 7 m/s, trimmed 4 degrees, its transom 7.5 cm deep, heeled heel_deg to
+## starboard and sinking at sink_ms (negative: rising). Without a vee, so that the heel is
+## all there is to the shape of its wet bottom.
+func _heeled_plate(heel_deg: float, sink_ms: float = 0.0) -> Dictionary:
+	var board_config: BoardConfig = _flat_board()
+	board_config.deadrise_deg = 0.0
+	var hull: HullModel = HullModel.new(board_config, _water())
+	var buoyancy: BuoyancyModel = BuoyancyModel.new(board_config, _water())
 	var body: SimRigidBody = _trimmed_body(7.0, 4.0)
+	body.velocity.y = -sink_ms
 	body.basis = Basis(Vector3.RIGHT, deg_to_rad(4.0)) * Basis(Vector3.FORWARD, deg_to_rad(heel_deg))
 	var board: BoardConfig = hull.board
 	var transom_local: Vector3 = Vector3(0.0, -0.5 * board.thickness_m, 0.5 * board.length_m)
@@ -321,6 +326,66 @@ func test_a_heeled_planing_plate_carries_its_lift_on_the_low_rail() -> void:
 	assert_gt(float(heeled["side_force"]), 0.1 * float(heeled["lift"]), "heeled: pushed toward the low rail")
 	assert_lt(float(heeled["roll_torque"]), -50.0, "heeled: the lift on the low rail rights the board")
 	assert_lt(float(heeled["cop_z"]), float(level["cop_z"]) - 0.1, "heeled: the force acts further forward")
+
+
+func test_a_heeled_plate_meets_more_water_when_it_sinks_as_a_level_one_does() -> void:
+	# Heeled 10 degrees, the spray root runs obliquely across the bottom, and most strips
+	# are wet only toward the low rail. Sinking, the water reaches further across every one
+	# of them, as it runs further along a level plate's root (Zarnick 1978: a section's
+	# added mass grows with its immersion). So the lift grows with the sinking speed about
+	# as much as on the level plate, and falls as much when the plate rises.
+	var level: float = float(_heeled_plate(0.0)["lift"])
+	var level_sinking: float = float(_heeled_plate(0.0, 0.1)["lift"])
+	var heeled: float = float(_heeled_plate(10.0)["lift"])
+	var heeled_sinking: float = float(_heeled_plate(10.0, 0.1)["lift"])
+	var heeled_rising: float = float(_heeled_plate(10.0, -0.1)["lift"])
+	var level_gain: float = level_sinking / level - 1.0
+	var heeled_gain: float = heeled_sinking / heeled - 1.0
+	gut.p("sinking at 0.1 m/s: level +%.0f %%, heeled 10 deg +%.0f %%; rising heeled %.0f %%" % [100.0 * level_gain, 100.0 * heeled_gain, 100.0 * (heeled_rising / heeled - 1.0)])
+	assert_gt(level_gain, 0.2, "level: sinking adds lift (the root runs forward)")
+	assert_between(heeled_gain, 0.75 * level_gain, 1.25 * level_gain, "heeled: about as much")
+	assert_lt(heeled_rising, heeled * (1.0 - 0.5 * heeled_gain), "and rising takes it away")
+
+
+## The flat plate of the Savitsky test with a vee of deadrise_deg, at 7 m/s and trim_deg,
+## its transom 7.5 cm deep.
+func _vee_plate(deadrise_deg: float, trim_deg: float) -> HullModel:
+	var board: BoardConfig = _flat_board()
+	board.deadrise_deg = deadrise_deg
+	var hull: HullModel = HullModel.new(board, _water())
+	var buoyancy: BuoyancyModel = BuoyancyModel.new(board, _water())
+	var body: SimRigidBody = _trimmed_body(7.0, trim_deg)
+	var transom_local: Vector3 = Vector3(0.0, -0.5 * board.thickness_m, 0.5 * board.length_m)
+	body.position.y -= body.point_world(transom_local).y + 0.075
+	_evaluate(hull, buoyancy, body)
+	return hull
+
+
+func test_a_vee_bottom_is_wet_near_its_keel_behind_the_spray_root() -> void:
+	# A vee meets the water at its keel first: just behind the spray root only the middle
+	# of the bottom is wet, and the chines are reached where the keel is deep enough for
+	# the water piled up the vee (pi/2 of the still surface's cut, Wagner) to get there.
+	# Savitsky (1964): the keel is wet b tan(beta) / (pi tan(tau)) further forward than the
+	# chines, and his lift takes the mean of the two lengths. A flat bottom has none of it.
+	var flat: HullModel = _vee_plate(0.0, 4.0)
+	var vee: HullModel = _vee_plate(3.0, 4.0)
+	var beam: float = 0.72
+	var expected: float = beam * tan(deg_to_rad(3.0)) / (PI * tan(deg_to_rad(4.0)))
+	assert_almost_eq(flat.chine_dry_length_m, 0.0, 1e-9, "flat: the chines are wet as far forward as the keel")
+	assert_almost_eq(vee.chine_dry_length_m, expected, 0.02 * expected, "vee: Savitsky's L_k - L_c")
+	assert_almost_eq(vee.wetted_length_m, flat.wetted_length_m, 0.01, "the keel is wet as far forward on both")
+	assert_almost_eq(vee.lambda_ratio, flat.lambda_ratio - 0.5 * expected / beam, 0.01, "the mean wetted length is half the chine-dry part shorter")
+	var front: float = vee.wetted_aft_m + vee.wetted_length_m
+	var buoyancy: BuoyancyModel = BuoyancyModel.new(vee.board, _water())
+	var body: SimRigidBody = _trimmed_body(7.0, 4.0)
+	var transom_local: Vector3 = Vector3(0.0, -0.5 * vee.board.thickness_m, 0.5 * vee.board.length_m)
+	body.position.y -= body.point_world(transom_local).y + 0.075
+	_evaluate(vee, buoyancy, body)
+	var near_root: Vector2 = vee._wet_width(buoyancy, front - 0.25 * expected)
+	var behind: Vector2 = vee._wet_width(buoyancy, front - 1.5 * expected)
+	assert_almost_eq(near_root.x, 0.25, 0.05, "a quarter of the chine-dry part behind the root: a quarter of the width wet")
+	assert_almost_eq(near_root.y, 0.0, 1e-6, "around the keel")
+	assert_almost_eq(behind.x, 1.0, 1e-6, "further aft: the whole width")
 
 
 ## A board planing at 8 m/s, trimmed 4 degrees with its transom 7.5 cm deep, skidding at
