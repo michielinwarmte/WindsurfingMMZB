@@ -51,13 +51,29 @@ extends Resource
 ## is what sets a planing board's trim; without this the board ran nose-down at a degree
 ## of trim and, with next to no induced drag, far too fast off the wind.
 @export var trim_press_max_m: float = 0.3
-## The running trim the feet hold while planing, degrees of pitch bow up. A planing
-## bottom porpoises above a critical trim that falls as the load coefficient falls with
-## speed (Savitsky 1964). Gourlay and Martellotta (2011) give 3 degrees at 12 kn, 2 at 14
-## kn and less toward 24 kn; the targets' reaches plane at 23 to 31 kn. Held at 3 the
-## board launched and splashed once a second; at 2, once the weight went aft with the
-## feet (U1.3), the 18 kt broad reach bounced (0.66 degrees of pitch at 1.64 degrees).
-@export var running_trim_deg: float = 1.5
+## The running trim the feet hold while planing, degrees of pitch bow up, up to
+## running_trim_fast_speed_ms. A planing bottom porpoises above a critical trim that falls
+## as the load coefficient falls with speed (Savitsky 1964). Gourlay and Martellotta (2011)
+## give 3 degrees at 12 kn, 2 at 14 kn and less toward 24 kn. Savitsky's chart does not
+## cover this hull's loading (PHYSICS_SPEC.md section 5 F22), so the value is this hull's
+## own: the 18 kt beam reach bounces from a 2.2 degree target (U2, Session 49), and 2.0
+## keeps 0.2 degrees below that. (U1 held 1.5: at 2, once the weight went aft with the
+## feet, the 18 kt broad reach bounced; the heeled hull's lift and the smaller bank since
+## then made 2.0 steady.)
+@export var running_trim_deg: float = 2.0
+## The trim by speed (U2): a sailor rides the board with the weight back while it is
+## steady and moves the weight forward as the speed rises, because a planing board at
+## speed tail-walks (bounces) with too much trim. The wanted trim is running_trim_deg up
+## to running_trim_fast_speed_ms (24 kn) and falls linearly to running_trim_fast_deg at
+## running_trim_fastest_speed_ms (31 kn), held beyond: the speeds of the 18 kt reaches
+## and of the 24 kt broad reach in the reach check. The fast trim is U1's 1.5 degrees: on
+## the 24 kt broad reach (31 to 33 kn) the bounce grows steadily with the target (pitch
+## SD 0.24 degrees at 1.5, 0.28 at 1.75, 0.30 at 2.0), so 2.0 is the limit there and 1.8
+## would leave next to no margin. Measured on this hull in Session 49 (PHYSICS_SPEC.md
+## section 14 "U2: the sailor's technique"); Savitsky's chart does not cover this loading.
+@export var running_trim_fast_speed_ms: float = 12.3
+@export var running_trim_fastest_speed_ms: float = 16.0
+@export var running_trim_fast_deg: float = 1.5
 ## The press is full this many degrees of pitch away from hump_trim_deg, and it moves at
 ## trim_press_rate_ms: slowly, for the running trim, never chasing a bounce (a quick press
 ## lags a 1 Hz bounce by a quarter of a cycle and pumps it; the pitch reflex of the
@@ -230,7 +246,25 @@ extends Resource
 ## from "a few degrees of heel" (Sutherland 1993; PHYSICS_SPEC.md section 14, "U1: the
 ## harness, the feet and the rail angle"); 4.5 is its middle, until Max gives his own.
 ## Too much and the board rails out (between 21 and 24 degrees on the 18 kt beam reach).
-@export var fin_load_bank_deg: float = 4.5
+## U2 (Session 49): 2 degrees, measured on this hull. Against 4.5 it shortens the wet part
+## of the 18 and 24 kt beam reaches by about 0.3 m while they stay steady; flat (0) is
+## shorter still on the beam reaches, but slow and long at 12 kt and on the close reaches,
+## and the 24 kt broad reach bounces flat at every trim target from 1.5 to 2.5 degrees.
+## Max will say what he does on a beam reach.
+@export var fin_load_bank_deg: float = 2.0
+## The bank by point of sail (U2): a sailor rails the board to load the fin across and
+## toward the wind and keeps it flat off the wind (windsurfing instruction: railing
+## upwind, a flat board on a broad reach and at top speed; PHYSICS_SPEC.md section 14 "U2:
+## the sailor's technique"). The bank wanted is fin_load_bank_deg up to
+## fin_load_twa_max_deg less fin_load_twa_fade_deg, none from fin_load_twa_max_deg on,
+## fading linearly between: the true wind angle, as the sailor feels it at the sail. The
+## instruction's border is about 110 degrees (a beam to a broad reach; 120 keeps the full
+## bank on the reach check's 100 degree beam reach), but on this hull a flat board on the
+## 24 kt broad reach bounces (pitch SD 0.35 degrees) or falls, so the default keeps the
+## bank to a run: full to 160 degrees, flat at 180 (an estimate; on a run the sailor
+## stands over the centreline anyway). 120 is the setting to try the instruction's rule.
+@export var fin_load_twa_max_deg: float = 180.0
+@export var fin_load_twa_fade_deg: float = 20.0
 ## The sailor leans against the pull in the hands: this many times the lean that balances
 ## the hands' moment about the feet with the body's weight (1 = exactly in balance). The
 ## posture is held in the apparent gravity (gravity less the body's own felt acceleration,

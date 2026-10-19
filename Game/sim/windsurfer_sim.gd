@@ -512,13 +512,51 @@ func _bank_for_turn(lean_asked: float, forward_speed: float) -> float:
 ## a target beyond which only winds up. _apply_leg_forces keeps what the feet pass within
 ## feet_moment_max_nm, so a board the feet cannot hold heels further and is not held. The
 ## lean is positive with the weight out to starboard, so the bank is to port: negative.
+## The bank wanted depends on the point of sail (U2, _rail_share_by_point_of_sail): the
+## full fin_load_bank_deg across and toward the wind, a flat board off it, which the feet
+## then hold flat against the fin's roll the same way.
 func _fin_load_bank_rad(asked: float) -> float:
 	var in_the_straps: float = clampf(stance, 0.0, 1.0)
 	var not_turning: float = 1.0 - clampf(absf(asked), 0.0, 1.0)
 	var planing_stance: float = absf(clampf(lean, -1.0, 1.0)) * in_the_straps * not_turning
-	var aim: float = deg_to_rad(sailor_config.fin_load_bank_deg) * planing_stance
+	var aim: float = deg_to_rad(sailor_config.fin_load_bank_deg) * planing_stance * _rail_share_by_point_of_sail()
 	var feet_reach: float = 2.0 * sailor_config.feet_moment_max_nm / sailor_config.feet_roll_stiffness_nm_per_rad * planing_stance
 	return -signf(lean) * clampf(aim - _felt_heel_beyond_rad, aim - feet_reach, aim)
+
+
+## The bank by point of sail (U2): how much of fin_load_bank_deg the sailor wants on this
+## course: all of it up to fin_load_twa_max_deg less fin_load_twa_fade_deg, none from
+## fin_load_twa_max_deg on, fading linearly between so nothing jumps. A sailor rails the
+## board to load the fin when powered up across or toward the wind, and keeps it flat off
+## the wind. The wind angle is the true wind the sail met a moment ago (what the sailor
+## feels and sees on the water, not the pilot's target), the same on either tack.
+func _rail_share_by_point_of_sail() -> float:
+	var twa_deg: float = absf(rad_to_deg(SimMath.wind_angle_rad(body.basis, _felt_true_wind_from())))
+	var flat_from: float = sailor_config.fin_load_twa_max_deg
+	var fade: float = sailor_config.fin_load_twa_fade_deg
+	if fade <= 0.0:
+		return 1.0 if twa_deg < flat_from else 0.0
+	return clampf((flat_from - twa_deg) / fade, 0.0, 1.0)
+
+
+## Where the true wind comes from as the sailor feels it: the air at the sail on the last
+## step (a map's local wind), or the mean wind before the sail has met any.
+func _felt_true_wind_from() -> Vector3:
+	var at_sail: Vector3 = sail.true_wind_at_ce_world
+	return -at_sail if at_sail.length_squared() > 1e-6 else wind.from_direction()
+
+
+## The trim by speed (U2): the trim the feet's press aims for while planing. A sailor
+## keeps the weight back for the trim that lifts the board free, and moves it forward as
+## the board gets faster, because a planing board at speed tail-walks (bounces) with too
+## much trim: running_trim_deg up to running_trim_fast_speed_ms, falling linearly to
+## running_trim_fast_deg at running_trim_fastest_speed_ms. The two trims are this hull's
+## own measured steadiness, less a margin (SailorConfig, PHYSICS_SPEC.md section 14).
+func _running_trim_target_deg(forward_speed: float) -> float:
+	var slow: float = sailor_config.running_trim_fast_speed_ms
+	var span: float = sailor_config.running_trim_fastest_speed_ms - slow
+	var share: float = clampf((forward_speed - slow) / span, 0.0, 1.0) if span > 0.0 else (1.0 if forward_speed >= slow else 0.0)
+	return lerpf(sailor_config.running_trim_deg, sailor_config.running_trim_fast_deg, share)
 
 
 ## Feels how far the board heels past the bank the sailor works toward, on the side away
@@ -692,7 +730,9 @@ func _update_sailor(dt: float, controls: SimControls) -> void:
 	if forward_speed > hump_speed and not stepping and controls.balance_reflex:
 		# Only as far as the board is planing: standing on the tail of a board that has
 		# dropped off the plane sinks the stern and rears the nose.
-		press_target = clampf((sailor_config.running_trim_deg - rad_to_deg(SimMath.pitch_rad(body.basis))) / sailor_config.trim_press_band_deg, -1.0, 1.0) * sailor_config.trim_press_max_m * clampf(hull.planing_ratio, 0.0, 1.0)
+		# The trim aimed for falls with the speed (_running_trim_target_deg).
+		var trim_target_deg: float = _running_trim_target_deg(forward_speed)
+		press_target = clampf((trim_target_deg - rad_to_deg(SimMath.pitch_rad(body.basis))) / sailor_config.trim_press_band_deg, -1.0, 1.0) * sailor_config.trim_press_max_m * clampf(hull.planing_ratio, 0.0, 1.0)
 	if not controls.freeze_fore_aft:
 		trim_press_m = move_toward(trim_press_m, press_target, sailor_config.trim_press_rate_ms * dt)
 

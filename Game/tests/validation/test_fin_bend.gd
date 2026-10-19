@@ -23,12 +23,15 @@ const WIND_KT: float = 18.0
 const TWA_DEG: float = 100.0
 
 ## The stiff fin on the 18 kt beam reach, 19 October 2026, and how far each may move.
-const STIFF_SLIP_DEG: float = 1.98
+## Re-pinned in Session 49 (U2, the sailor's technique): the sailor banks 2 degrees instead
+## of 4.5 (SailorConfig.fin_load_bank_deg), so the heel's upward part is smaller (it was
+## 40.9 N at a 1.98 degree slip and 526 N of lift).
+const STIFF_SLIP_DEG: float = 1.64
 const SLIP_TOLERANCE_DEG: float = 0.25
-const STIFF_LIFT_N: float = 526.0
+const STIFF_LIFT_N: float = 475.0
 ## A share of the lift.
 const LIFT_TOLERANCE: float = 0.05
-const STIFF_UP_N: float = 40.9
+const STIFF_UP_N: float = 16.0
 const UP_TOLERANCE_N: float = 10.0
 ## A stiff fin's force has no part out of the board's plane, and its tip does not turn.
 const STIFF_TILT_MAX_DEG: float = 0.01

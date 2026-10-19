@@ -146,6 +146,50 @@ func test_a_hiked_sailor_in_the_straps_heels_the_board_to_leeward_to_load_the_fi
 	assert_almost_eq(sim._fin_load_bank_rad(0.0), reach_rad - bank_rad, 1e-6, "railed out: the feet's aim stops at their reach")
 
 
+## U2: the bank by point of sail. The sailor rails the board to load the fin across and
+## toward the wind and keeps it flat off the wind, fading over fin_load_twa_fade_deg so
+## nothing jumps, on either tack, by the true wind the sail meets.
+func test_the_sailor_rails_the_board_across_the_wind_and_keeps_it_flat_off_it() -> void:
+	var sim: WindsurferSim = _sim(15.0)
+	sim.sailor_config = sim.sailor_config.duplicate()
+	sim.sailor_config.fin_load_twa_max_deg = 120.0
+	sim.sailor_config.fin_load_twa_fade_deg = 20.0
+	var from_deg: float = rad_to_deg(sim.wind.current_from_bearing_rad)
+	var shares: Dictionary[float, float] = {60.0: 1.0, 100.0: 1.0, 110.0: 0.5, 120.0: 0.0, 135.0: 0.0, -100.0: 1.0, -110.0: 0.5, -135.0: 0.0}
+	for twa_deg: float in shares:
+		sim.reset(Vector3.ZERO, deg_to_rad(from_deg - twa_deg))
+		assert_almost_eq(sim._rail_share_by_point_of_sail(), shares[twa_deg], 1e-3, "the share of the bank at a true wind angle of %.0f deg" % twa_deg)
+	# The wind is the one the sail met, not the mean wind: on a beam reach by the mean
+	# wind, a local wind at the sail from 40 degrees further aft means a broad reach.
+	sim.reset(Vector3.ZERO, deg_to_rad(from_deg - 95.0))
+	sim.sail.true_wind_at_ce_world = -SimMath.dir_from_bearing(deg_to_rad(from_deg + 40.0)) * 7.0
+	assert_almost_eq(sim._rail_share_by_point_of_sail(), 0.0, 1e-3, "the wind at the sail says broad reach: flat")
+	# The bank aimed for follows the share: half the bank at 110 degrees.
+	sim.reset(Vector3.ZERO, deg_to_rad(from_deg - 110.0))
+	sim.sail.true_wind_at_ce_world = Vector3.ZERO
+	sim.stance = 1.0
+	sim.lean = 1.0
+	assert_almost_eq(sim._fin_load_bank_rad(0.0), -0.5 * deg_to_rad(sim.sailor_config.fin_load_bank_deg), 1e-4, "half the bank at the border")
+	# The default rails the board on every reach and is flat only on a run.
+	var defaults: SailorConfig = load("res://config/sailor_default.tres") as SailorConfig
+	assert_gt(defaults.fin_load_twa_max_deg - defaults.fin_load_twa_fade_deg, 135.0, "the default keeps the bank on the 135 deg broad reach")
+
+
+## U2: the trim by speed. The sailor's wanted trim is running_trim_deg up to
+## running_trim_fast_speed_ms and falls linearly to running_trim_fast_deg at
+## running_trim_fastest_speed_ms, held beyond.
+func test_the_trim_aimed_for_falls_with_speed() -> void:
+	var sim: WindsurferSim = _sim(15.0)
+	var c: SailorConfig = sim.sailor_config
+	assert_gt(c.running_trim_deg, c.running_trim_fast_deg, "the weight goes forward as the board gets faster")
+	assert_almost_eq(sim._running_trim_target_deg(5.0), c.running_trim_deg, 1e-6, "slow: the running trim")
+	assert_almost_eq(sim._running_trim_target_deg(c.running_trim_fast_speed_ms), c.running_trim_deg, 1e-6, "up to the fast speed")
+	var middle_ms: float = 0.5 * (c.running_trim_fast_speed_ms + c.running_trim_fastest_speed_ms)
+	assert_almost_eq(sim._running_trim_target_deg(middle_ms), 0.5 * (c.running_trim_deg + c.running_trim_fast_deg), 1e-6, "halfway: halfway")
+	assert_almost_eq(sim._running_trim_target_deg(c.running_trim_fastest_speed_ms), c.running_trim_fast_deg, 1e-6, "at the fastest speed: the fast trim")
+	assert_almost_eq(sim._running_trim_target_deg(30.0), c.running_trim_fast_deg, 1e-6, "and held beyond")
+
+
 func test_pressing_the_back_foot_moves_the_weight_aft_with_it() -> void:
 	# U1.3: the board feels the sailor's weight at the centre of mass, so a press that
 	# moved only the feet would trim nothing; the weight has to go over the back foot.
