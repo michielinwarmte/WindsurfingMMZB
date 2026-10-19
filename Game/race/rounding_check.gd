@@ -110,7 +110,7 @@ static func round_mark(previous: Vector2, current: Vector2, mark: Vector2, in_di
 ## goes straight past (bending less than STRAIGHT_ON_DEG) is passed, not rounded: half-way past,
 ## the board is abeam of it, on the side away from the side the mark is left on.
 static func rounding_ray(in_dir: Vector2, out_dir: Vector2, side: CourseMark.Rounding) -> Vector2:
-	if in_dir.dot(out_dir) < cos(deg_to_rad(STRAIGHT_ON_DEG)):
+	if in_dir.dot(out_dir) <= cos(deg_to_rad(STRAIGHT_ON_DEG)):
 		return (in_dir - out_dir).normalized()
 	# A board going round clockwise (the mark to starboard, on its right) is on the mark's left:
 	# the leg's direction turned a quarter anticlockwise, which orthogonal() does in these axes.
