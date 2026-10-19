@@ -26,9 +26,23 @@ The live state of U2, "the fin bends, and its size". The plan and its execution 
 
 **Agent 3 is running** (relaunched on `u2/fin_physics`): the brief's "The sailor's technique", points 1 to 4 (the map of bank x trim against steadiness, then the bank by point of sail and the trim by speed). When it reports: the lead reads the diff, merges if sound, verifies, writes the numbers, then **Stop 2 for Michiel** (the bending fin, the heeled hull's lift, the technique, the critical trim reported, the probe). After his OK: agent 4 (`fin_look`), then Stop 3.
 
-**The lead's verification of the heel fix** (bc24451 + the merge): see Numbers when it lands.
-
 ## Numbers
+
+**Latest, verified by the lead on the merged branch with the heel fix (394fb4d):** `tools/check.sh` 195 files, 0 failed; `tools/test.sh` 354 of 354; `tools/test.sh validation` 30 pass, 1 fail (U1's onset check, 12.7 kn), 2 pending (U1's targets 3 and 4). The reach check (fin columns slip, lift N, roll N m, up N, stall %, heel):
+
+| Case | Speed m/s | Front m | Push m | Trim | Pitch SD | Harness N | Rig % | Fin slip | Fin N | Roll | Up N | Stall % | Heel |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 12 kt 60 | 7.53 | 1.86 | 1.55 | 1.91 | 0.00 | 711 | 81 | 5.1 | 473 | 99 | 94 | 53 | -4.5 |
+| 12 kt 100 | 10.33 | 1.79 | 1.40 | 1.48 | 0.01 | 700 | 78 | 2.9 | 506 | 106 | 104 | 30 | -4.5 |
+| 12 kt 135 | 6.43 | 2.00 | 0.84 | 2.70 | 0.06 | 186 | 16 | 1.1 | 74 | 16 | 2 | 11 | -0.8 |
+| 18 kt 60 | 8.70 | 1.73 | 1.31 | 1.84 | 0.01 | 657 | 70 | 4.0 | 492 | 103 | 100 | 41 | -4.5 |
+| 18 kt 100 | 12.82 | 1.70 | 1.18 | 1.29 | 0.05 | 683 | 62 | 2.0 | 538 | 112 | 115 | 21 | -4.5 |
+| 18 kt 135 | 12.56 | 1.39 | 1.12 | 1.47 | 0.10 | 498 | 55 | 1.3 | 327 | 69 | 35 | 13 | -1.3 |
+| 24 kt 60 | 9.13 | 1.69 | 1.22 | 1.76 | 0.01 | 645 | 64 | 3.8 | 517 | 108 | 108 | 39 | -4.5 |
+| 24 kt 100 | 14.34 | 1.63 | 1.13 | 1.34 | 0.01 | 687 | 55 | 1.6 | 551 | 115 | 119 | 17 | -4.5 |
+| 24 kt 135 | 16.03 | 1.66 | 1.19 | 1.14 | 0.20 | 702 | 58 | 1.3 | 529 | 110 | 110 | 13 | -4.2 |
+
+  Against the bending-fin Latest: the wet front 1.70, 1.39, 1.63, 1.66 m on the four planing reaches (was 1.76, 1.42, 1.71, 1.71), speeds up to 1 % higher, all 9 steady. With the board flat (bank 0) the 18 kt beam reach's front is 1.20 m (agent 3's run), but the 24 kt broad reach bounces flat: the technique round decides the bank and the trim.
 
 **Latest, verified by the lead on the merged branch with the bending fin (b02b728):** `tools/check.sh` 194 files, 0 failed; `tools/test.sh` 352 of 352; `tools/test.sh validation` 30 pass, 1 fail (U1's onset check, now 12.0 kn), 2 pending (U1's targets 3 and 4). The reach check (means over t ≥ 25 s; fin columns slip °, lift N, roll N·m, up N, stall %, heel °):
 
