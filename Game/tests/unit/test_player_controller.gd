@@ -203,3 +203,31 @@ func test_a_manoeuvre_that_never_completes_is_abandoned() -> void:
 	Input.action_release("tack")
 	_run(controller, _telemetry(60.0), controls, 21.0)
 	assert_eq(controller.manoeuvre, PlayerController.Manoeuvre.NONE)
+
+
+func test_ai_hands_drive_the_beginner_controller_like_the_keys() -> void:
+	# An AI skipper's stick turns the board as the key does, and its tack request is taken once.
+	var controller: PlayerController = PlayerController.new()
+	var hands: AiHands = AiHands.new()
+	controller.hands = hands
+	var controls: SimControls = SimControls.new()
+	Input.action_press("steer_left")  # the keyboard is ignored while the hands are on
+	hands.steer = 1.0
+	_run(controller, _telemetry(90.0), controls, 0.5)
+	assert_true(controller.wanted_rate_dps > 5.0, "the stick asks for a right turn: %.1f deg/s" % controller.wanted_rate_dps)
+	assert_true(controller.helm_right > 0.0, "the helm goes right, not left as the ignored key asks")
+	hands.steer = 0.0
+	_run(controller, _telemetry(90.0), controls, 1.0)
+	assert_true(absf(controller.wanted_rate_dps) < 5.0, "the stick released, the heading is held")
+	hands.tack = true
+	controller.update(_telemetry(60.0), controls, DT)
+	assert_true(controller.manoeuvre != PlayerController.Manoeuvre.NONE, "a tack request starts a manoeuvre")
+	assert_false(hands.tack, "the request is taken once")
+	# Half a stick is a gentle turn: the rate is half the full rate.
+	var gentle: PlayerController = PlayerController.new()
+	var gentle_hands: AiHands = AiHands.new()
+	gentle.hands = gentle_hands
+	gentle_hands.steer = 0.5
+	var gentle_controls: SimControls = SimControls.new()
+	_run(gentle, _telemetry(90.0), gentle_controls, 0.5)
+	assert_almost_eq(gentle.wanted_rate_dps, 0.5 * gentle.turn_rate_dps, 1.0, "half the stick, half the rate")

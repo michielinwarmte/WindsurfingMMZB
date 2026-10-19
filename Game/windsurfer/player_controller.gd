@@ -111,6 +111,9 @@ var _helm_trim_up: float = 0.0
 ## The autopilot that trims the sheet when auto_sheet is on. Give it the simulation's sail
 ## (auto_sheet_pilot.sail) and it sheets for the most drive instead of a fixed angle.
 var auto_sheet_pilot: Autopilot = Autopilot.new()
+## An AI skipper's hands on the controls (RACING_PLAN.md, RD1). While set, the controller
+## reads steer, sheet and tack from here and ignores the keyboard.
+var hands: AiHands = null
 
 var _manual_sheet_timer_s: float = 0.0
 var _scratch: SimControls = SimControls.new()
@@ -443,8 +446,11 @@ func _manoeuvre_turn(telemetry: Telemetry, dt: float) -> float:
 	return 0.0
 
 
-## +1 while the first action is held, -1 for the second, 0 for neither or both.
+## +1 while the first action is held, -1 for the second, 0 for neither or both. An AI
+## skipper's hands give the value instead (a stick from -1 to 1).
 func _axis(positive: String, negative: String) -> float:
+	if hands != null:
+		return hands.axis(positive)
 	var value: float = 0.0
 	if Input.is_action_pressed(positive):
 		value += 1.0
@@ -455,6 +461,8 @@ func _axis(positive: String, negative: String) -> float:
 
 ## True on the update in which the key went down, and not again until it is released.
 func _just_pressed(action: String) -> bool:
+	if hands != null:
+		return hands.take_press(action)
 	var down: bool = Input.is_action_pressed(action)
 	var was_down: bool = _was_down.get(action, false)
 	_was_down[action] = down
