@@ -21,6 +21,17 @@ var heel_deg: PackedFloat64Array = PackedFloat64Array()
 var height_m: PackedFloat64Array = PackedFloat64Array()
 var leeway_deg: PackedFloat64Array = PackedFloat64Array()
 var sail_angle_deg: PackedFloat64Array = PackedFloat64Array()
+# The wet part and the loads behind it (U1, PLAYTEST_UPGRADES.md): positions from the tail.
+var wet_front_m: PackedFloat64Array = PackedFloat64Array()
+var wetted_length_m: PackedFloat64Array = PackedFloat64Array()
+var push_centre_m: PackedFloat64Array = PackedFloat64Array()
+var trim_deg: PackedFloat64Array = PackedFloat64Array()
+var friction_area_m2: PackedFloat64Array = PackedFloat64Array()
+var friction_n: PackedFloat64Array = PackedFloat64Array()
+var drive_n: PackedFloat64Array = PackedFloat64Array()
+var harness_tension_n: PackedFloat64Array = PackedFloat64Array()
+var hand_force_up_n: PackedFloat64Array = PackedFloat64Array()
+var mast_foot_force_up_n: PackedFloat64Array = PackedFloat64Array()
 var fell: bool = false
 var nan: bool = false
 var telemetry: Telemetry = null
@@ -93,6 +104,16 @@ func record_steps(pilot: Autopilot, controls: SimControls, run_seconds: float) -
 		height_m.append(t.position.y)
 		leeway_deg.append(t.leeway_deg)
 		sail_angle_deg.append(t.sail_angle_deg)
+		wet_front_m.append(t.wet_front_m)
+		wetted_length_m.append(t.wetted_length_m)
+		push_centre_m.append(t.push_centre_m)
+		trim_deg.append(t.trim_deg)
+		friction_area_m2.append(t.friction_area_m2)
+		friction_n.append(t.hull_friction_n)
+		drive_n.append(t.drive_n)
+		harness_tension_n.append(t.harness_tension_n)
+		hand_force_up_n.append(t.hand_force_up_n)
+		mast_foot_force_up_n.append(t.mast_foot_force_up_n)
 		if sim.sailor_state == WindsurferSim.SailorState.FALLEN:
 			fell = true
 		if is_nan(t.speed_ms) or is_nan(t.position.y):
