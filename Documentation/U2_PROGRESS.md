@@ -16,7 +16,7 @@ The live state of U2, "the fin bends, and its size". The plan and its execution 
 
 | Stop | State |
 |---|---|
-| Stop 1, the lead: agents 1 and 2 in, the stiffness sourced | **passed** on 19 October 2026: the flex test is measured (IST Lisbon), the baseline is pinned, nothing regressed (the lead's verification of the merge runs alongside agent 3) |
+| Stop 1, the lead: agents 1 and 2 in, the stiffness sourced | **passed** on 19 October 2026: the flex test is measured (IST Lisbon), the baseline is pinned, nothing regressed (verified by the lead: see Numbers) |
 | Stop 2, the lead reviews agent 3's diff, then Michiel | not reached |
 | Stop 3, Max's play-test | not reached |
 
@@ -25,6 +25,8 @@ The live state of U2, "the fin bends, and its size". The plan and its execution 
 Agent 3 (`fin_physics`) is running on `u2/fin_physics`: the bending fin by the brief's design, the bend check made real, the 37 stiff/flex/44 cm comparisons. When it reports: **the lead reads its diff itself** (`git diff feature/u2-fin u2/fin_physics -- Game/sim`), checks it against the design point by point, merges if sound, verifies (`tools/check.sh`, `tools/test.sh`, `tools/test.sh validation`, `tools/reach_check.sh`), writes the numbers, and then stops at **Stop 2 for Michiel** with the diff, the spec sections and the report. Agent 4 (`fin_look`) is launched after Michiel's OK.
 
 ## Numbers
+
+**Verified by the lead on the merged branch after Stop 1 (a514a49):** `tools/check.sh` 193 files, 0 failed; `tools/test.sh` 343 of 343; `tools/test.sh validation` 29 pass, 1 fail (U1's onset check, 11.6 kn, on purpose), 3 pending (U1's targets 3 and 4, the bend). The reach check equals U1's Latest in every old column. Fin columns (slip °, lift N, roll N·m, up N, stall %, heel °): 12 kt 60° 4.9, 464, 98, 37, 51, −4.5; 12 kt 100° 2.9, 498, 105, 39, 30, −4.5; 12 kt 135° 1.1, 74, 16, 1, 11, −0.8; 18 kt 60° 3.9, 487, 103, 38, 41, −4.5; 18 kt 100° 2.0, 527, 111, 41, 20, −4.5; 18 kt 135° 1.2, 323, 68, 6, 13, −1.1; 24 kt 60° 3.8, 505, 107, 40, 39, −4.5; 24 kt 100° 1.6, 546, 115, 42, 17, −4.5; 24 kt 135° 1.2, 520, 110, 37, 13, −4.2. The close reaches load the fin most (up to 51 % of stall at 12 kt); the broad reaches at 18 kt and the 12 kt broad reach barely heel, so the fin lifts nothing there.
 
 **Baseline (the lead, 19 October 2026, the 18 kt beam reach of U1's Latest):** fin lift 527 N at a 2.0 deg slip (stall at 12 deg), drag 35 N, roll moment from the fin 111 N m, heel -4.5 deg, rig lean 25 deg, so the heel's upward part of the fin's force is about 41 N. Agent 2 measures the 9 cases.
 
