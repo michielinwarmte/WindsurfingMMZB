@@ -259,6 +259,15 @@ Michiel accepted agent 4's physics (`u1/physics`, merged). He decided:
 3. **1° of vee** stays for now.
 4. **Riding above Savitsky's flat-bottom limit is accepted, and Michiel wants a plain-language explanation** of why the board is steady there. Agent 4 writes it, at most 200 words, as a section of `physics_onset.md` and in PHYSICS_SPEC.md section 17.2.
 
+#### Decisions after round 3 (Max, 19 October 2026, after a first play-test)
+
+Agent 4's round 3 (U1.2, U1.3) is merged. Its stop rule: targets 3 to 5 conflict with statics as the pilot sails (hooked in, the line carries the whole boom force; the drive's couple holds the push 0.66 m ahead of the weight). Max played it: "a little better", but the push on the fin isn't felt (the sideways load and the fin's bending are U2), and real sailors hold part of the sail through the hands. Decided:
+
+1. **Finish U1 as it stands (option b).** Today's numbers are accepted as the physics of a fully sheeted 6.5 m² sail at 18 kt. Targets 3, 4 and 5 stay `pending` in `test_planing_wet_area.gd`, with the numbers in the report. Round 4: agent 5 does U1.7 and U1.8 (report `finish_u178.md`), then Stop 3.
+2. **The hands' share** of the boom force (Max's feel: about a third, which would put the harness near 450 N) is a follow-up, as Max's labelled estimate, only if Michiel agrees. Not in round 4.
+3. **The planing onset** stays as Michiel decided: the band is not moved, the buoyancy factor stays off (the 24 kt broad reach bounces with it). Agent 5 reports where the onset is (U1.7) and the team decides at the pull request what to do with the red check.
+4. **The fin's sideways push and its bending are U2**, next.
+
 **The agent prompt.** The lead launches every agent with this text, filled in:
 
 > You are agent <n>, `<name>`, of U1 in WindsurfingMMZB (Godot 4.7). Read CLAUDE.md and the U1 execution brief in Documentation/PLAYTEST_UPGRADES.md, then do your package from the brief's agent table and the U1.x boxes it names. Work in your worktree on the branch `u1/<name>`: make it from `feature/u1-planing-wet-area`, or continue on it if it already exists. Commit as you go, and change only the files your row allows. Follow the brief's rules, targets and stop rules, and be careful with tokens. Finish with your report (at most 300 words and one table) committed as Documentation/u1_reports/<name>.md, and return the same text.

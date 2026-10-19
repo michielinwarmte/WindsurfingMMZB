@@ -3,7 +3,7 @@
 The live state of U1, "planing on a smaller wet area". The plan and its execution brief are in [PLAYTEST_UPGRADES.md](PLAYTEST_UPGRADES.md). **The lead updates and commits this file after every launch, report and merge.** A lead who takes over starts here.
 
 - **Branch:** `feature/u1-planing-wet-area` (from `main` at 561849c). Agents work on `u1/<name>` branches, made from it in their own worktrees.
-- **Last update:** 19 October 2026. Agent 4's round 3 (U1.2, U1.3) merged (1cf467a). **Stopped for the team:** a stop rule fired on targets 3 to 5. Round 4 (agent 5: U1.7, U1.8) not launched yet.
+- **Last update:** 19 October 2026. Max played it (a little better) and chose option (b): finish U1 as it stands. Round 4 launched: agent 5 on U1.7 and U1.8.
 
 ## State
 
@@ -13,7 +13,7 @@ The live state of U1, "planing on a smaller wet area". The plan and its executio
 | 2 | `sources` | the four numbers that need a source | merged | `u1/sources` | [sources.md](u1_reports/sources.md) |
 | 3 | `porpoising` | U1.5's diagnosis | merged | `u1/porpoising` | [porpoising.md](u1_reports/porpoising.md) |
 | 4 | `physics` | all merged: U1.5 fix, grid, U1.4 back, onset (off), U1.2, U1.3, rake-first on. **Stop rule on targets 3 to 5** | merged (round 3, 1cf467a) | `u1/physics` | [physics.md](u1_reports/physics.md), [physics_onset.md](u1_reports/physics_onset.md), [physics_harness.md](u1_reports/physics_harness.md) |
-| 5 | `finish` | U1.6: **merged** (3718ef4). U1.7 and U1.8 in a relaunch after U1.2 and U1.3 | merged (U1.6); waits for round 3 | `u1/finish` | [finish_u16.md](u1_reports/finish_u16.md) |
+| 5 | `finish` | U1.6 merged. **Now: U1.7 and U1.8** | running (round 4) | `u1/finish` | [finish_u16.md](u1_reports/finish_u16.md); next `finish_u178.md` |
 
 The possible states are: not started → running → reported → merged.
 
@@ -21,19 +21,13 @@ The possible states are: not started → running → reported → merged.
 |---|---|
 | Stop 1, the lead: agents 1 to 3 in, the go/no-go for agent 4 | **passed** on 19 October 2026 with four team decisions (in the brief, "Decisions at Stop 1") |
 | Stop 2, Michiel reviews agent 4's physics | **passed** on 19 October 2026 with four decisions (in the brief, "Decisions at Stop 2") |
-| Stop 3, Max's play-test | not reached |
+| Stop 3, Max's play-test | a first play-test done on 19 October 2026 ("a little better"; the fin's push isn't felt: U2). The formal Stop 3 follows round 4 |
 
 ## Next action
 
-**Stopped for the team after round 3.** Agent 4's U1.2 and U1.3 are merged. The bounce is gone everywhere, the foot trim is fixed (the feet now pass 32 N·m bow-up instead of 117 N·m bow-down), the sailor stands in agent 2's 45° stance, the rake-first course hold is on by default, and the harness fell from 954 to 683 N with the rig at 63 % on the 18 kt beam reach. **But a stop rule fired: targets 3 to 5 conflict with statics as the pilot sails now.**
-1. Hooked in, the arms only steer, so the harness line carries the whole boom force: 600 to 750 N at 18 kt with the 6.5 m² sail sheeted to the most the pilot can hold. 415 N needs two thirds of that sail force.
-2. The water's push sits ahead of the sailor's weight (0.47 m from the tail) by the drive's couple: 280 N × 1.9 m / 800 N = 0.66 m. So the push centre lands at about 1.1 m, not 0.45 to 0.75 m, and the wet front at 1.65 to 1.71 m, not 0.6 to 1.0 m.
+**Round 4 is running:** agent 5 on `u1/finish` does U1.7 (validation again, the reach check, the three straight runs against the baseline, the polar against POLAR_15KT.md, where the onset is, missing drag with a source if the board is too fast) and U1.8 (the spray from the wet front, side screenshots at 12, 18 and 24 kt before and after in `.screenshots/u1/`). Report `finish_u178.md`. When it reports: merge, run `tools/check.sh`, `tools/test.sh`, `tools/test.sh validation` and `tools/reach_check.sh`, write the numbers under Numbers, tick the U1 boxes in the plan, add the PROGRESS_LOG.md entry, commit.
 
-Still off target on the 18 and 24 kt beam and broad reaches: the wet front by 0.4 to 0.7 m, the push centre by 0.33 to 0.39 m, the harness by 203 N, the rig's share by 13 points. Targets 3 to 5 stay `pending` in `test_planing_wet_area.gd`.
-
-**Michiel decides:** (a) a pilot that sheets to a normal stance instead of the most it can hold (slower; closer to Walls & Gale's sailor, whose sail was sized to the wind); or (b) keep the pilot and set the targets for this one 6.5 m² sail at 18 kt (that is, accept the harness and wet-front numbers as the physics of a fully sheeted 6.5 at 18 kt); or (c) something the lead hasn't thought of (the drive's couple is the real reason the push sits forward: a lower drive, or the weight further aft, moves it). Also still open: the onset (the buoyancy factor 0.5 stays off, the 24 kt broad reach bounces with it at 0.83°; the onset is now 11.6 kn with it off); Max's rail-down angle.
-
-**After the decision:** if (b), launch round 4: relaunch agent 5 on `u1/finish` for U1.7 and U1.8 (with agent 4's three reports), then Stop 3. If (a) or (c), relaunch agent 4 on `u1/physics` first. The stance and the rig-lean default changed, so the full manoeuvre matrix before the pull request matters more now (the team runs it).
+**Then Stop 3:** Max's play-test with U1.8's checklist, and the team's decision on the pull request to `main` (the full manoeuvre matrix first: `tools/matrix.sh` and `tools/lake_matrix.sh`; the stance and the rig-lean default changed, so expect surprises in tacks and gybes). Open at the pull request: the red onset check (11.6 kn against 8 to 10 kn; the band stays, the buoyancy factor stays off), the pending targets 3 to 5, the hands' share (Michiel), Max's rail-down angle, `board.glb` (Blender).
 
 ## Numbers
 
@@ -141,6 +135,8 @@ Still off target on the 18 and 24 kt beam and broad reaches: the wet front by 0.
 ## Notes
 
 Decisions and surprises along the way, newest first.
+
+- 19 October 2026 (Max, after a first play-test): "a little better"; the push on the fin isn't felt (the sideways load and bending are U2; U1.6's fin-loading assist adds nothing on reaches because the board already heels 4.5°); real sailors hold part of the sail through the hands (a follow-up as Max's estimate, if Michiel agrees). Decided: finish U1 as it stands (option b), targets 3 to 5 stay pending, then U2.
 
 - 19 October 2026 (agent 4, round 3): the feet's bow-down came from the trim press itself, which moved only the legs' push point aft of a body that stayed put; now the body moves with the press and the hang-back is measured from the feet. `running_trim_deg` 2 → 1.5 (Gourlay). Full lean is agent 2's 45° stance (`lean_max_m` 0.88, `lean_height_drop_m` 0.28), not a full hike. Rake-first on by default. Buoyancy factor 0.5 still off (24 kt broad reach bounces). **Stop rule:** hooked in, the line carries the whole boom force (600 to 750 N at 18 kt); the push sits 0.66 m ahead of the weight by the drive's couple; targets 3 to 5 are out of reach with this pilot and sail. The lead removed two finished worktrees that held `u1/physics` and pointed the branch at round 3.
 
