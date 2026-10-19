@@ -51,13 +51,19 @@ extends Resource
 ## is what sets a planing board's trim; without this the board ran nose-down at a degree
 ## of trim and, with next to no induced drag, far too fast off the wind.
 @export var trim_press_max_m: float = 0.3
-## The running trim the feet hold while planing, degrees of pitch bow up. A planing
-## bottom porpoises above a critical trim that falls as the load coefficient falls with
-## speed (Savitsky 1964). Gourlay and Martellotta (2011) give 3 degrees at 12 kn, 2 at 14
-## kn and less toward 24 kn; the targets' reaches plane at 23 to 31 kn. Held at 3 the
-## board launched and splashed once a second; at 2, once the weight went aft with the
-## feet (U1.3), the 18 kt broad reach bounced (0.66 degrees of pitch at 1.64 degrees).
-@export var running_trim_deg: float = 1.5
+## The running trim the feet hold while planing, degrees of pitch bow up: the smaller of
+## running_trim_max_deg and the hull's porpoising limit less porpoising_margin_deg (U2).
+## A planing bottom porpoises above a critical trim that falls as the load coefficient
+## falls with speed (Savitsky 1964; HullModel.critical_trim_deg_for). Gourlay and
+## Martellotta (2011) give 3 degrees at 12 kn, 2 at 14 kn and less toward 24 kn. (Held at
+## a fixed 3 the board launched and splashed once a second; a fixed 1.5 was the trim
+## until U2.) The trim a sailor rides at when nothing holds them back: 3.5 degrees, where
+## agent 5 of U2 found the weight-aft technique fastest and steady on the 18 kt beam
+## reach (an estimate: the technique, not a measurement).
+@export var running_trim_max_deg: float = 3.5
+## How far below the porpoising limit the sailor holds the trim: a sailor backs off when
+## the board starts to bounce (an estimate).
+@export var porpoising_margin_deg: float = 0.3
 ## The press is full this many degrees of pitch away from hump_trim_deg, and it moves at
 ## trim_press_rate_ms: slowly, for the running trim, never chasing a bounce (a quick press
 ## lags a 1 Hz bounce by a quarter of a cycle and pumps it; the pitch reflex of the
