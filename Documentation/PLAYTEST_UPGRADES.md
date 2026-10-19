@@ -237,6 +237,19 @@ The report says what was tried, with the numbers and the options. The lead tells
 - **Stop 2: Michiel reviews agent 4's physics** (the diff, the spec, the numbers). Wait for his OK.
 - **Stop 3: Max's play-test** (U1.8). Then the team decides on the pull request.
 
+#### Decisions at Stop 1 (Max and Michiel, 19 October 2026)
+
+Agents 1 to 3 are in (their reports are in `Documentation/u1_reports/`). The team decided:
+
+1. **A slight tail vee, documented.** Agent 4 gives the board a slight vee (deadrise) across the tail, with a source for the angle or a labelled estimate in spec section 14, and models its physical effect in `hull_model.gd` (Savitsky's deadrise correction of the planing lift and so of the critical trim; no stabiliser). Target 4's trim band becomes 1.5° up to the porpoising limit of the chosen vee; the 4° upper end is dropped, and the report says what the limit is.
+2. **The five cases that bounce in the baseline** (the three close reaches, the 12 kt beam reach, the 18 kt broad reach) must not get worse, and are fixed if the fix is cheap. Target 2's "below 0.3°" is required in the other four: 12 kt 135°, 18 kt 100°, 24 kt 100° and 24 kt 135°.
+3. **The grid: try different ones.** Agent 4 runs the reach check with 7, 9, 11 and 13 rows (`length_samples`, by building the simulation with its own `BoardConfig` as in agent 1's grid check) and reports where the wet front and the steadiness stop changing. If the default has to change, it changes in `board_default.tres` with its reason in the tuning log and the cost in run time.
+4. **The flat tail (U1.4) comes back** with the vee: `git revert d55bd6a`, update the two tests in `Game/tests/unit/test_buoyancy.gd`, and explain the 18 kt broad reach going bow-down (agent 1's open point, tied to U1.3).
+
+Agent 4's file list is widened by: `Game/config/board_config.gd`, `Game/config/board_default.tres`, `Game/tests/unit/test_buoyancy.gd`, `Game/tests/validation/test_planing_wet_area.gd` (to turn its targets into checks) and the spec sections for the hull and the board.
+
+Still open for Max: his own estimate of the flat-water rail-down angle (agent 2 found no source; the spec holds a 3 to 6° placeholder). Agent 5 needs it for U1.6.
+
 **The agent prompt.** The lead launches every agent with this text, filled in:
 
 > You are agent <n>, `<name>`, of U1 in WindsurfingMMZB (Godot 4.7). Read CLAUDE.md and the U1 execution brief in Documentation/PLAYTEST_UPGRADES.md, then do your package from the brief's agent table and the U1.x boxes it names. Work in your worktree on the branch `u1/<name>`: make it from `feature/u1-planing-wet-area`, or continue on it if it already exists. Commit as you go, and change only the files your row allows. Follow the brief's rules, targets and stop rules, and be careful with tokens. Finish with your report (at most 300 words and one table) committed as Documentation/u1_reports/<name>.md, and return the same text.
