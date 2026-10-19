@@ -15,6 +15,45 @@ Template for new entries:
 
 ---
 
+## 19 October 2026 - Session 46: play-test feedback, the wet area when planing (U1 planned)
+
+**Phase:** documentation, after the merge of Sessions 38 and 39 to `main`. Max's first play-test of the merged game: "playable and feels quite ok". From now on feedback is researched and planned first, and built later.
+
+**Done:**
+- The repository cloned to a new Windows PC (Max's) and Godot 4.7.2 installed there (`GODOT` set as a user variable). Blender 4.5, the map's Python packages (`tifffile`, `Pillow`, `imagecodecs`) and `.map_data/` are not on this PC yet.
+- W3's "the day" (start front, day types) moved to Later, L1, by Max: the lake sails well in the average day, and gameplay comes first (MAP_SILVAPLANA_PLAN.md).
+- New [PLAYTEST_UPGRADES.md](PLAYTEST_UPGRADES.md), one place for every piece of play-test feedback, linked from the rebuild plan. **U1, planing on a smaller wet area**, researched and planned. Max felt the board is wet much further forward than a real one (from the front foot back). Measured on a steady 18 kt beam reach: the board is wet for 1.87 m from the tail at 0.93° of trim, and the friction is 223 N against a sail drive of 319 N. Real boards are wet for 0.6 to 1.0 m (Sutherland 1993, Gourlay & Martellotta 2011, shapers). The cause is the load path: the harness line carries 945 N (measured on a real sailor with a 6.5 m² sail: 415 N), the rig carries 91 % of the sailor's weight to the mast foot 1.30 m from the tail, and the water must push there. The 1 cm tail kick takes about 1° of trim from a short wet part. The fin alone is not the cause. Max's technique on flat water (almost all the weight on the back strap, the nose lifted by loading the fin and pulling up with the front foot) is the opposite of what the game's sailor does: it hangs in the harness, doesn't lean back (`hang_back_m` 0), presses the bow down with the feet (−120 N·m) and holds the board flat. The plan now gives the sailor that technique (U1.3, U1.6). Six what-if runs with command-line overrides: less mast-foot load gives a shorter wet part and 2 kt more speed, but the board then porpoises at 1.78 Hz, the yaw wag of Session 39. The plan has eight steps (U1.1 to U1.8), targets, risks and sources.
+
+**Verified:** `tools/check.sh` 188 files, 0 failed, and `tools/test.sh` 335 of 335 on the fresh clone. No code changed this session. The what-if CSVs are in `.sim_output/wet/` (not in git). NOT verified: the real-world wet length and trim are theory and statements from shapers and experienced sailors; no measurement was found.
+
+- Later the same day, Max's answers went into the plan:
+  - Porpoising is not the same as riding over waves (U1.5).
+  - "Loading the fin" is both pushing on the rail and tipping the leeward rail down a little (U1.6).
+  - Fins bend, and a 44 cm fin can almost lift the kit out of the water. That became its own upgrade, **U2**, with a first estimate.
+- **U1 is ready to build.** It has an execution brief for a lead engineer with sub-agents:
+  - the go-ahead and the branch;
+  - the project's rules and the Windows PC's pitfalls;
+  - exact definitions of every measurement (the "standard run");
+  - the baseline that must not get worse, and the targets in priority order;
+  - when to stop and report;
+  - the numbers still needing a source;
+  - the scope;
+  - step 0, step 1 (the flat tail), three parallel work packages (measure, sources, porpoising diagnosis), one agent for the coupled physics, then validation and screenshots;
+  - three stops: the lead's check, Michiel's review, Max's play-test.
+
+**Decisions:**
+- Documentation mode (Max): play-test feedback becomes a researched plan in PLAYTEST_UPGRADES.md; building comes later.
+- **Michiel gave the go-ahead to build U1** (19 October 2026, told to Max), on a git branch: `feature/u1-planing-wet-area`, made from `main` at 561849c. The documents of this session are committed there, not on `main`.
+- Not in U1: the fin's bending and size (U2), and a player control for the trim (a team decision, later).
+
+**Next:**
+1. Build U1 on `feature/u1-planing-wet-area`, following its execution brief, starting with step 0.
+2. Michiel, when it suits him: the planing-onset band still open from Session 39. U1 keeps it as it is and reports where the onset moves.
+3. Max: more play-test feedback, each as an upgrade (U3, ...).
+4. The open items of Session 39 stand; its item 2 (the porpoising) is now step U1.5.
+
+---
+
 ## 16 October 2026 - Session 39: waves by group, Phase 7 and 8, sailing on Silvaplana, the board's shape and the map's wind
 
 **Phase:** 7 (environment and effects) and 8 (audio) built; the map's M3 (sailing on the lake) and W5 (the map's wind in the physics); the waves restructured; the board's shape in the physics. Branch `feature/visuals-and-ui` (on top of Session 38, nothing merged to `main` yet). Michiel's jobs after Session 38's play-test: the sail flutters too much (only without load), the figure's core looked wonky, sail Silvaplana instead of only flying over it and test the physics in the map's wind; then separate the chop from the swell, finish Phase 7 together with the map's work, Phase 8, document everything, and improve the physics with the board's shape. Seven sub-agents (Opus) on their own git worktrees and branches, merged here; the seams fixed by hand are listed under "Merged".

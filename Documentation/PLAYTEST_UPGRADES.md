@@ -1,0 +1,478 @@
+# Play-test upgrades
+
+From 19 October 2026 the team play-tests the game and writes down what should improve. Each piece of feedback becomes an upgrade in this file: what was felt, what the game does (measured), what the real world says (with sources), why it happens, and a step-by-step plan. Upgrades that change the physics (`Game/sim/`) need Michiel's go-ahead, like every physics change (team decision 5 in [MAP_SILVAPLANA_PLAN.md](MAP_SILVAPLANA_PLAN.md)).
+
+## Status
+
+| # | What | From | Status |
+|---|---|---|---|
+| U1 | Planing on a smaller wet area | Max, 19 October 2026 | ✅ Go-ahead from Michiel (19 October 2026, given to Max), on the branch `feature/u1-planing-wet-area`. Ready to build, not started |
+| U2 | The fin bends, and its size | Max, 19 October 2026 (from U1) | 📝 Idea with a first estimate. After U1 |
+
+---
+
+## U1. Planing on a smaller wet area
+
+**Building U1?** Read the [execution brief](#execution-brief) first. Everything after it is the background it relies on.
+
+### The feedback
+
+Max, 19 October 2026, after sailing the game: "The game is playable and feels quite ok. What I feel is that while planing the wet area is really big still. In real life it's only wetted from the front leg to the back of the board. This will reduce drag. This may be due to the shape of the board, or the lift the fin creates and that it's not happening."
+
+Max added, on how a sailor trims the board on flat water: "In my feeling I'm pushing almost all my weight on the back footstrap, and controlling the board with the front. If I want, I can lift the board up (front up) by loading the fin and pulling up on my front foot. In real life it is possible by technique to trim the board."
+
+### The short answer
+
+- **Max is right, by about a factor of two.** At 18 kt on a beam reach the game's board is wet for 1.87 m from the tail. Real boards are wet for about 0.6 to 1.0 m, ending at or behind the front footstraps.
+- **The main cause is where the board is pushed down.** The sailor hangs 91 % of their weight in the harness. The rig passes that weight on to the mast foot, 1.30 m from the tail, so the water has to hold the board up far forward. The game's harness line carries 945 N; on a real sailor with the same 6.5 m² sail it was measured at about 415 N.
+- **The board's shape adds to it.** The tail kicks up 1 cm over its last 35 cm (an estimate without a source). At the game's low trim the last 20 to 25 cm of the tail then carry nothing, and the lift has to come from further forward. Real freeride and slalom boards are flat from the tail forward.
+- **The fin alone is not the cause, but it is part of the cure.** Its lift already tilts with the board, so a heeled board gets some upward lift at the fin (about 36 N here). On its own, that push behind the centre of mass lowers the nose. But in the real technique (Max's, above) the weight stands over the back strap, right above the fin, and the fin carries part of it. The game's sailor never does that. The game's fin also doesn't bend, which tilts a real fin's push further upward (U2).
+- **The game's sailor trims the board the wrong way.** Max puts almost all the weight on the back foot and can lift the nose with the front foot. The game's sailor hangs in the harness, doesn't lean back, and presses the bow down with the feet.
+- **The catch:** the heavy mast-foot load is also what keeps the board from porpoising (bouncing up and down on its tail; PHYSICS_SPEC.md 7.5). Take it away and the board porpoises at 1.8 Hz. That is the same 1.7 Hz "yaw wag" Session 39 found. So the upgrade must also fix the porpoising, physically.
+- **The pay-off:** the friction drops from 223 N to roughly 100 N, while the sail drives with 319 N. The board gets faster, and the validation's speed ranges have to be checked again.
+
+### Execution brief
+
+For the lead engineer who builds U1 (an AI lead with sub-agents, or a person). It turns the plan below into exact instructions.
+
+#### Go-ahead and branch
+
+- **Michiel approved starting U1** on 19 October 2026 (he told Max). His condition: all work on a git branch.
+- **The branch is `feature/u1-planing-wet-area`**, made from `main` at commit 561849c. It already holds this plan.
+- **Sub-agents** each work in their own git worktree, on a branch made from it (`u1/<package>`, for example `u1/measure`). The lead merges each one back into `feature/u1-planing-wet-area`.
+- **Nothing goes to `main`.** Merging is a pull request the team decides on after Stop 3.
+- **Still open for Michiel, not a blocker:** the planing-onset band from Session 39 (8 to 10 kn, real boards). Keep it in the tests as it is, and report where the onset moves (U1.7).
+
+#### Rules
+
+From [CLAUDE.md](../CLAUDE.md) and PHYSICS_SPEC.md, the ones that matter here:
+
+**Code**
+- Godot 4.7, GDScript with static types.
+- The physics lives in `Game/sim/`: plain classes, no Nodes.
+- Numbers live in `Game/config/*.tres`.
+- SI units, with the unit in the name.
+
+**Checks**
+- After every change: `tools/test.sh`.
+- After a scene or resource change: `tools/check.sh`.
+- After a physics change: `tools/test.sh validation`, and update PHYSICS_SPEC.md:
+  - the section the change is in;
+  - section 14 for every value and its source;
+  - the tuning log in section 16, with the reason.
+- New behaviour gets a new test. A bug gets a failing test first.
+
+**Numbers**
+- No new stabiliser, damping or fudge constant to reach a target (the spec's "Stabilisers and fudges" rule).
+- Every new number has a source, or is labelled as an estimate in section 14.
+
+**Git**
+- Small commits with clear messages.
+- Commit the `.uid` files. Never commit `Game/.godot/`.
+- Don't touch `Legacy/` or `Game/addons/gut/`.
+- Godot rewrites `Game/default_bus_layout.tres` when the game runs (it adds a `uid` and drops a cutoff that equals the default). Restore it with `git checkout -- Game/default_bus_layout.tres` unless you changed it on purpose.
+
+**Each session**
+- End with an entry at the top of PROGRESS_LOG.md, and tick the boxes in this file.
+
+#### Working on Max's Windows PC
+
+- **Godot:** the `tools/*.sh` scripts run in Git Bash. `GODOT` is set as a user variable; a shell that was open before it was set doesn't have it, so export it there.
+- **Timing:** the first Godot run on a fresh checkout imports every asset (about 40 s). `tools/test.sh` takes about 100 s.
+- **Blender** is not installed on this PC. Only U1.4's model rebuild needs it (Blender 4.5 LTS, the version `tools/common.sh` pins). The physics doesn't.
+- **`--out=` must be an absolute path** for `tools/simulate.sh`. Godot runs from `Game/`, so a relative path fails with "Cannot write".
+- **Overrides:** `tools/simulate.sh` takes `--sailor.<field>=`, `--sail.<field>=`, `--board.<field>=` and `--pilot.<field>=`. `tools/matrix.sh` takes `--sailor.`, `--sail.`, `--pilot.` and `--controller.`.
+- **`--board.length_samples` cannot be overridden.** The buoyancy grid is built when the simulation starts, and changing it afterwards floods the log with out-of-bounds errors. Build the simulation with its own `BoardConfig` in a test instead.
+
+#### Measurements, exactly
+
+**The standard run:**
+
+```
+tools/simulate.sh beam_reach 40 --wind_kt=<W> --twa=100 --steady=1 --gradient=0 --out=<absolute path>.csv
+```
+
+- W is 12, 18 and 24.
+- Flat water.
+- Every number is taken over t ≥ 25 s, the last 15 s.
+
+| Name in this plan | How it is computed |
+|---|---|
+| Front of the wet part, from the tail | mean of `wetted_aft_m + wetted_length_m` |
+| Wet length | mean of `wetted_length_m` |
+| Centre of the water's push, from the tail | `length_m / 2 − mean(planing_cop_z_m)` (1.2 m − z for the default board) |
+| Trim | mean of `trim_deg` |
+| Steadiness | standard deviation of `pitch_deg` (over the whole window) |
+| Harness tension | mean of `harness_tension_n` |
+| Rig's share of the sailor's weight | mean of `hand_force_up_n` / (sailor mass × g) |
+| Mast foot pushing down | − mean of `mast_foot_force_up_n` |
+| Friction, drive, speed | means of `hull_friction_n`, `drive_n`, `speed_ms` |
+
+U1.1's validation check computes the same numbers through `Game/tests/validation/validation_run.gd`. Its settled values are the mean of the last 10 s, which is fine.
+
+#### The baseline that must not get worse
+
+These are the numbers of `main` at 561849c (Session 39). **Step 0 measures them again on this PC**, and those measured numbers become the baseline.
+
+| Check | Session 39 |
+|---|---|
+| `tools/check.sh` | 188 files, 0 failed |
+| `tools/test.sh` | 335 of 335 |
+| `tools/test.sh validation` | 20 of 20 |
+| `tools/matrix.sh` (flat water) | 24 of 24, no fall; straight 8.77, 11.10 and 12.01 m/s at 12, 18 and 24 kt |
+| `tools/matrix.sh --waves=1` (the default sea) | 1 fall (`gybe_broad` 24 kt); 2 not completed (`gybe_beam` 24 kt, the 24 kt run turn) |
+| The medium chop | 0 falls; 1 not completed |
+| `tools/lake_matrix.sh` | 24 of 24, no fall |
+
+The medium chop is the Session 37 command:
+
+```
+tools/matrix.sh --waves=1 --wave2.amplitude_m=0.04 --wave2.steepness=0.036 --wave3.amplitude_m=0.015 --wave3.steepness=0.027 --wave4.amplitude_m=0.006 --wave4.steepness=0.021
+```
+
+Session 39 regrouped the waves. If those overrides no longer apply, use the Medium chop preset from the settings, and write down what was run.
+
+**After every step and every merge:**
+- no new fall;
+- no new case that doesn't complete;
+- validation green.
+
+Two exceptions:
+- A test whose band U1 changes on purpose. Write each such change in the tuning log, with its reason.
+- U1.1's own check, which stays `pending` until wave 2.
+
+#### Targets, in priority order
+
+1. No regression against the baseline.
+2. Steady on flat water: steadiness below 0.3° at 12, 18 and 24 kt.
+3. Front of the wet part 0.6 to 1.0 m from the tail at 18 and 24 kt. At 12 kt the board only has to plane.
+4. At 18 and 24 kt:
+   - the centre of the push 0.45 to 0.75 m from the tail;
+   - the trim 1.5 to 4°.
+5. At 18 kt:
+   - a harness tension of 350 to 480 N;
+   - the rig carrying at most 50 % of the sailor's weight.
+6. Speeds: the validation's polar check stays green, so every angle stays inside its real-world range (POLAR_15KT.md).
+
+A result that reaches 3 to 5 by giving up 1 or 2 is not done.
+
+#### Stop and report, instead of pushing on, when
+
+- U1.5's candidates have all been tested and none explains the bounce with evidence.
+- A target can only be reached with a number that has no source and no physical reason.
+- A regression appears that the step can't explain.
+- The work needs a file outside its work package (below).
+- A source contradicts a target of this plan.
+
+The report says what was tried, with the numbers and the options. It goes to Max and Michiel, in the chat and in PROGRESS_LOG.md.
+
+#### Numbers that still need a source
+
+Work package C looks for these:
+1. **How high the harness hook is above the deck when a sailor hikes out**, and the harness line's length and angle. Winter's body proportions are already in `figure_skeleton.gd`.
+2. **How hard a front foot can pull up in its strap**, so how big a nose-up couple the feet can make. The strap spread is 38 to 44 cm (Jem Hall).
+3. **The flat-water rail-down angle** for the assist's "loading the fin" (U1.6). If nothing is found, Max's own estimate is the source: ask him.
+4. **Harness tensions for other winds and sails** than Walls & Gale's one sailor, if any exist.
+
+**Found:** write the number into PHYSICS_SPEC.md section 14, with its source.
+**Not found:** write an estimate, labelled as one, and list it in the next stop report.
+
+#### Scope
+
+**In U1:**
+- U1.1 to U1.8 below.
+- U1.6 delivers the assist's safe fin loading.
+- The railing-out test, as information only.
+
+**Not in U1:**
+- The fin bending and the fin's size: U2, after U1.
+- The player's own trim and fin-loading control, and a choice of fin: team decisions, for later.
+- A finer buoyancy grid, unless U1.1's grid check shows it moves the wet part by more than 5 cm.
+
+#### The order of work, the work packages and the stops
+
+**Step 0, the lead, on `feature/u1-planing-wet-area`**
+- Measure the baseline (above).
+- Do the standard run at 12, 18 and 24 kt and record it next to the "What the game does now" table.
+
+**Step 1, the lead: U1.4, the flat tail**
+- One value (`tail_rocker_m`), measured with the standard run.
+- Validation and the matrices.
+- Commit.
+- The board model is rebuilt only if Blender is installed (U1.4).
+
+**Wave 1: three sub-agents in parallel, each in its own worktree, from the branch after step 1**
+
+| Package | What | May change | Output |
+|---|---|---|---|
+| A. Measure | U1.1: the validation check (`pending` until wave 2), the telemetry fields, the HUD line, the grid check | `Game/tests/validation/test_planing_wet_area.gd` (new); `Game/tests/validation/validation_run.gd` (only to record the new fields); `Game/sim/telemetry.gd`; `Game/sim/hull_model.gd` (only to expose the area the friction uses); the telemetry block at the end of `Game/sim/windsurfer_sim.gd`; `Game/ui/hud.gd` | branch `u1/measure`, merged by the lead |
+| C. Sources | the four numbers above | nothing in the game; research only | a note to the lead with numbers, sources and reliability |
+| D. Porpoising diagnosis | U1.5's first box: experiments only | nothing committed (temporary local edits are allowed and thrown away) | a report naming the cause with evidence, or "not found" (a stop) |
+
+**How D works:**
+- Reproduce the bounce with the standard run plus `--sailor.lean_height_drop_m=0.15`. On the old tail it bounces at 1.78 Hz; check that it still does on the flat tail.
+- Switch the candidates one at a time:
+  - `--sailor.leg_natural_frequency_hz=` and `--sailor.leg_damping_ratio=`;
+  - `--sailor.trim_press_max_m=0`;
+  - `--sailor.pitch_reflex_m_per_rad_s=0`;
+  - `--freeze=<s>` (the sailor stops moving fore and aft from then on);
+  - `--board.planing_lift_lag_s=`.
+- Compute where the board sits against Savitsky's porpoising limit for a flat bottom.
+
+**Stop 1: report the results of step 0, step 1 and wave 1.** Carry on when all three hold:
+- A's check reproduces the standard run's numbers;
+- D names a cause;
+- no regression.
+
+Otherwise stop for the team.
+
+**Wave 2: one sub-agent, in this order.** It alone edits `Game/sim/windsurfer_sim.gd`, `Game/sim/mass_model.gd`, `Game/sim/hull_model.gd`, `Game/sim/config/sailor_config.gd` and `Game/config/sailor_default.tres`.
+1. U1.5: the fix of the cause D found.
+2. U1.2: the harness load.
+3. U1.3: the sailor's trim technique.
+
+After each piece:
+- its tests and a commit;
+- the standard run at 18 kt;
+- the flat-water matrix.
+
+At the end:
+- all three matrices and validation;
+- U1.1's check turns from `pending` into a real check.
+
+**Stop 2: Michiel reviews the physics** (the diff, the spec sections, the numbers). Wait for his OK.
+
+**Wave 3: the lead, or one sub-agent at a time**
+- U1.6: the rig's lean; the assist's fin loading; the railing-out test, as information.
+- U1.7: validate again.
+- U1.8: screenshots.
+
+**Stop 3: Max's play-test** (the questions in U1.8). Then the team decides on a pull request to `main`.
+
+### How the wet length is decided
+
+The code does not choose a wet length. The board sinks until the water's push carries the weight, and tilts until that push sits right under the loads. Planing theory (Savitsky 1964) says the push of a planing bottom is centred about three quarters of the wet length forward of the tail. So:
+
+**wet length ≈ 1.3 × (distance from the tail to the centre of the push)**
+
+Push down on the board 1.2 m from the tail and it is wet for about 1.6 m; push down at 0.6 m and it is wet for about 0.8 m. Gourlay and Martellotta (2011) found the same factor of 1.3 for an RS:X board, nearly constant from 8 to 24 kt. The trim (the angle between the bottom and the water) follows from it: a short wet part has to meet the water at a steeper angle to carry the same weight.
+
+In the code: `HullModel._wetted_span()` reads the wet part from the buoyancy grid (where the still-water surface cuts the hull), and `_apply_planing_lift()` computes the push strip by strip, scaled to Savitsky's measured lift.
+
+### What the game does now (measured, 19 October 2026)
+
+Method: the standard run at 18 kt (execution brief), on `main` at 561849c. Positions are measured forward from the tail.
+
+| | Game | Real world |
+|---|---|---|
+| Boat speed | 12.30 m/s (23.9 kt) | |
+| Wet length | **1.87 m** | 0.6 to 1.0 m |
+| Centre of the water's push | **1.58 m** from the tail | 0.45 to 0.75 m |
+| Trim | **0.93°** | about 1.5 to 4° at these speeds |
+| Area the friction acts on | about 1.07 m² | about 0.3 to 0.4 m² |
+| Skin friction | **223 N**, against a sail drive of 319 N | |
+| Harness line tension | **945 N** | 415 ± 67 N (6.5 m² sail, measured) |
+| Sailor's weight carried by the rig | **673 of 736 N (91 %)** | about half or less |
+| Mast foot pushing the board down | **678 N**, 1.30 m from the tail | |
+| Sailor's feet | 0.38 m from the tail: the "trim press" (`trim_press_max_m`) is at its limit | back straps about 0.4 to 0.6 m |
+| Moment of the feet on the board | **−120 N·m, bow down**, at its limit (`feet_moment_max_nm`) | |
+| Rig leaned to windward | 9° | 10 to 25° |
+
+With the default gusts and the wind's height profile (`tools/simulate.sh beam_reach 60 --wind_kt=18 --twa=100`, the last 10 s) the board is already porpoising: the wet length swings between 0.75 and 1.99 m (1.37 m on average) and the trim between 0.35° and 1.73°. Friction is 153 N against a drive of 240 N, and the harness line tension is 778 N.
+
+**The HUD hides part of it.** Its "wetted" number (`Telemetry.wetted_area_m2`) is the buoyancy grid's area, 0.63 m² here. The friction uses the larger planing area (wet length × mean width, `HullModel`, step 1), about 1.07 m² here.
+
+### What-if runs (settings changed from the command line, no code changed)
+
+The standard run at 18 kt. Each run changes one setting with `--sailor.<field>=<value>`.
+
+| Run | Change | Wet length, mean (range) | Trim | Mast foot down | Harness | Friction | Speed | Steady? |
+|---|---|---|---|---|---|---|---|---|
+| now | none | 1.87 m | 0.93° | 678 N | 945 N | 223 N | 23.9 kt | yes |
+| aim for 4° trim | `running_trim_deg=4` | 1.87 m | 0.93° | 681 N | 951 N | 224 N | 23.9 kt | yes: no change, the press is already at its limit |
+| no trim press | `trim_press_max_m=0` | 1.34 m (0.66 to 1.88) | 0.95° | 499 N | 767 N | 177 N | 25.0 kt | porpoises |
+| feet further back | `stance_planing_z_m=0.8` | 1.38 m (0.67 to 1.90) | 0.93° | 502 N | 771 N | 181 N | 24.9 kt | porpoises |
+| hips higher | `lean_height_drop_m=0.3` | 1.31 m (0.63 to 1.80) | 1.00° | 411 N | 706 N | 174 N | 25.1 kt | porpoises |
+| hips higher still | `lean_height_drop_m=0.15` | 1.08 m (0.64 to 1.64) | 0.89° | 317 N | 645 N | 152 N | 25.9 kt | porpoises at 1.78 Hz |
+
+What they show:
+- **Moving the feet doesn't fix it.** The weight that matters goes through the rig, not the feet.
+- **Less weight on the mast foot shortens the wet part straight away.** With higher hips the harness line is flatter and lifts less of the sailor, and the board gets 2 kt faster.
+- **The trim stays near 0.9° in every run**, even when the wet part gets shorter. The tail kick (below) is the likely reason.
+- **Every run with less mast-foot load porpoises.** The low points of the swing (0.63 to 0.67 m) are in the real range, but the board doesn't stay there.
+
+### What the real world says
+
+Reliability: **measured**, **theory** (a model), **shaper** (a designer's or maker's statement), **expert** (an experienced sailor's statement).
+
+| What | Number | Source | Reliability |
+|---|---|---|---|
+| Wet length of a planing slalom board | "observed values of mean wetted length are approximately 1.0 m"; wetted area 0.40 m², mean wet width 0.40 m | Sutherland 1993 | theory, with an observed value whose method isn't given; 1993 boards were narrower |
+| Wet length and the push's centre | push 0.6 m from the tail, wet length 0.8 m (1.3 × the push's distance), nearly constant from 8 to 24 kt | Gourlay & Martellotta 2011 (RS:X) | theory |
+| The flat part a modern board rides on | "the flat section is only about 80 cm"; "you are really standing right at the back, just riding on the gliding surface" | Gnigler (JP-Australia shaper), surf-magazin 2025 | shaper |
+| Where the wet part ends | "If the area under the front foot is spending most of the time in the water, the board isn't flying"; a flat rocker "from the front foot back to the tail" | O'Shea & Crossley, Windsurf Magazine 2022 | expert |
+| The rocker line | flat "from the tail to beyond your front foot" (Starboard Carve); "planing straight", zero rocker from the tail forward (Carbon Art) | Starboard 2025, Carbon Art | shaper |
+| Trim | 3° at 12 kn and 2° at 14 kn, lower toward 24 kn (Gourlay); about 3° "on very flat water" (Sutherland); Savitsky gives 1.6 to 3.4° at 25 kn for a push 0.45 to 0.75 m from the tail | Gourlay 2011, Sutherland 1993, Savitsky 1964 | theory. **No measured trim was found** |
+| Harness line force | 381.6 ± 43.2 N with a 5.0 m² sail, 415.0 ± 66.7 N with 6.5 m² (about 50 % of body weight), 12 to 30 kn | Walls & Gale 2001 | **measured** (one expert sailor) |
+| The sail carrying weight | 9 to 24 % of the weight, rig 10° to windward (Sutherland); 7 % at 15° (Drake, Formula board) | Sutherland 1993, Drake 2005 | theory |
+| Fin lift upward | the fin tip bends to windward, so its force "acts also upwards"; no number | surf-magazin, fin basics | shaper |
+| Fittings | mast foot about 1.30 m from the tail; front straps 0.80 to 0.90 m (Starboard iSonic 121) | Jem Hall, Windsurf Magazine; owner's measurement on seabreeze.com.au | expert |
+
+**Not found:** a measured wet length or trim of a modern board (tank test, photos from below, motion sensor), a measured mast-foot force, or a number for the fin's upward lift.
+
+### Why it happens
+
+1. **Too much of the sailor hangs on the rig.** In the harness balance (PHYSICS_SPEC.md 7.5) the line runs from the hips to the boom and takes as much of the pull as its direction allows. Fully hiked, the hips drop to 0.5 m above the deck (`lean_height_drop_m` 0.5 below `com_height_m` 1.0), so the line is steep and lifts most of the body. 945 N against the measured 415 N. Everything the line lifts comes back into the board at the mast foot, ahead of where a real board is wet.
+2. **The feet are at their limits.** The trim press has moved them as far back as it may (0.38 m from the tail), and still can't reach `running_trim_deg`. The feet also press the bow down with their maximum moment, −120 N·m. A planing sailor presses the tail with the back foot, not the bow, so this needs looking into. It might be the hands' twist couple, which the body passes through the feet (spec 7.5).
+3. **The tail kick eats the trim.** `tail_rocker_m` 0.01 over `tail_rocker_length_m` 0.35 is a curve whose slope at the very tail is 3.3°. At about 1° of pitch the last 20 to 25 cm of the bottom face slightly downward and carry nothing (a strip may not pull). Over a short wet part, the chord (the straight line from the tail to the front of the wet part) is tilted down by about 1°. The board can only carry its weight on a longer wet part. The value came in Session 30 ("the rocker line of a freeride board", spec section 16) without a source; the legacy game had 0.02.
+4. **The mast-foot load is the porpoising guard.** Spec 7.5: the mast-foot pressure "holds the nose down at speed and took the porpoising out of the flat-water runs". Every what-if run that lowered it porpoised. So the long wet length is partly what keeps the board steady today.
+5. **The rig stands up straight.** It leans 9° to windward, where real sailors lean it 10 to 25°. A rig leaned to windward carries 7 to 24 % of the weight with its lift. This is a smaller effect.
+6. **The sailor has no trim technique.** Max's technique, against what the game's sailor does in the steady 18 kt run:
+
+| Max on flat water | The game's sailor |
+|---|---|
+| Almost all the weight on the back footstrap | The feet stand at the back strap (0.38 m from the tail), but the harness carries 91 % of the weight |
+| Leans back against the boom's pull | Doesn't lean back at all (`hang_back_m` 0): the steep harness line lifts the body from in front of the feet, so the hang-back balance in `windsurfer_sim.gd` has nothing to answer |
+| Back foot down, front foot pulling up: the nose lifts | The feet press the bow down with 120 N·m. That moment isn't a choice: it is whatever is left over from the body's balance (`_apply_leg_forces`) |
+| Loads the fin | The feet hold the board flat (the bank reflex, `feet_roll_stiffness_nm_per_rad`), so the fin only lifts by accident |
+
+**How the technique works.** Take the sailor, rig and board as one system. The sail drives with 319 N about 2 m above the water (the centre of effort is 0.4 × 4.6 m up the mast), and the water holds back at the bottom. That makes a bow-down couple of roughly 600 N·m. The water's push has to sit where it balances this couple and the weight, so the couple pushes it forward. Three things move it back, and together they are the technique:
+- **The weight aft:** the body over and behind the back strap, leaning back against the boom.
+- **The fin carrying weight:** with the leeward rail a little down, the fin's sideways lift tilts upward and carries part of the weight right under the back foot. The hull then needs less wet area.
+- **The rig raked back and to windward:** the sail lifts part of the weight.
+
+Pushing with the back foot and pulling with the front acts between the sailor and the board. It tilts the board nose-up against the body, so the bottom meets the water at a steeper angle and the board rises. The body then has to hold that couple with its weight and the boom. In the game it must come with the body's balance, not as a free torque on the board.
+
+**The fin on its own:** `FinModel` builds its force in the board's frame, so it tilts with the heel and already lifts upward on a heeled board (36 N at 3.6° of heel here). On its own, that push behind the centre of mass lowers the nose. It helps only as part of the technique above, under a sailor standing over it. The fin bending to windward is not modelled, and it is not small (U2).
+
+**Unknown:** whether the coarse buoyancy grid (7 rows, 0.40 m apart) shifts the wet part. The front end of a 0.8 m wet part falls between two rows and is interpolated in a straight line.
+
+### The plan
+
+The order, the work packages and the stops are in the execution brief. Each step's boxes:
+
+**U1.1. Measure it first, and keep measuring it** (work package A)
+- [ ] Step 0: the baseline and the standard runs at 12, 18 and 24 kt, recorded here (the lead).
+- [ ] A validation check, `Game/tests/validation/test_planing_wet_area.gd`, on the standard run's conditions through `validation_run.gd`, at 12, 18 and 24 kt.
+  - It checks targets 2 to 4 of the execution brief.
+  - Until wave 2 meets them it calls `pending()` with the measured numbers, so the suite stays green and the numbers stay visible.
+  - Wave 2 turns it into a real check.
+- [ ] Telemetry: the area the friction uses (for example `friction_area_m2`), the front of the wet part from the tail, and the centre of the push from the tail. The mast-foot load and the harness tension are already in the telemetry.
+- [ ] HUD: "wetted" shows the friction's area instead of the buoyancy grid's, plus the front of the wet part, the harness tension and the mast-foot load (in `hud.gd`'s detail panel).
+- [ ] The grid check: build the simulation with a `BoardConfig` whose `length_samples` is 13, and compare it with 7 at 18 kt. If the front of the wet part moves by more than 5 cm, report it (a finer grid is not in U1's scope without the team).
+
+**U1.2. The harness load** (wave 2; spec 7.5)
+- [ ] Target: at 18 kt with the 6.5 m² sail, a harness line tension of 350 to 480 N (Walls & Gale 2001), and the rig carrying at most 50 % of the sailor's weight.
+- [ ] Check the body's geometry when fully hiked against the figure's skeleton (`figure_skeleton.gd`) and package C's hook height. The what-if runs show the hip height alone moves the tension from 945 to 645 N.
+- [ ] Check the line's share in the least-squares fit (spec 7.5): does it take more of the pull than a real line's direction allows?
+- [ ] Only together with U1.5's fix (wave 2 does U1.5 first).
+
+**U1.3. The sailor trims the board: Max's technique** (wave 2; spec 7.5)
+- [ ] Find out why the feet press the bow down at their limit (−120 N·m) in a steady beam reach. Trace `pitch_from_feet_moment_nm` back to its parts: the hands' pull, the twist couple, the posture.
+- [ ] The sailor leans back against the boom's pull and puts the weight on the back foot. `hang_back_m` is 0 today; find why the hang-back balance sees no pull to answer (perhaps the harness lifting from in front of the feet).
+- [ ] The feet as a trim control: back foot down, front foot pulling up in the strap, balanced by the body (its weight and the boom), within what the legs can hold (package C's number). The autopilot uses it to hold its running trim.
+- [ ] At Stop 3 Max checks it on the water's terms: is the weight on the back foot, and does the nose lift when the sailor asks for it?
+
+**U1.4. A flat tail** (step 1, the lead; spec 5, 6 and 14)
+- [ ] `tail_rocker_m` from 0.01 to 0 in `Game/config/board_default.tres`, flat from the tail forward as the sources say for freeride and slalom boards. Keep a few millimetres only if package C or a later source finds them for freeride boards.
+- [ ] The standard runs at 12, 18 and 24 kt, validation and the matrices. Expected: a higher trim and a shorter wet part. Record the numbers.
+- [ ] The board model: `tools/blender.sh tools/blender/build_rig_models.py` reads `board_default.tres` and rebuilds `Game/assets/models/board.glb`. Blender is not on Max's PC. If it isn't installed, leave a box for the rebuild in the progress log; the physics doesn't need the model.
+
+**U1.5. The porpoising, solved physically** (diagnosis: package D; fix: wave 2; the open item 2 of Session 39)
+
+Two kinds of bouncing must not be confused (Max asked, 19 October 2026):
+- **Riding over waves:** the water surface moves, and the board pitches and slams with it. Waves force this motion; it is real and stays (the sea and chop settings).
+- **Porpoising:** on flat water, in steady wind, the board starts bouncing by itself and keeps going. A small bounce makes the lift move forward and back along the bottom, which feeds the next bounce. Real boards can do this too, usually as a setup problem: a mast foot too far back, a fin that is too big, too little mast-foot pressure. Sailors cure it with the mast foot or the stance. The game's 1.8 Hz bounce is this kind: it happens in steady wind with no waves at all.
+
+- [ ] Diagnosis (package D): find what makes the board bounce at 1.8 Hz once the mast foot is lighter. The candidates, each switched on its own with the overrides in the execution brief:
+  - the sailor's legs: a spring at 1.2 Hz (`leg_natural_frequency_hz`), close to the bounce;
+  - the sailor's reflexes chasing the bounce (`trim_press_*`, `pitch_reflex_m_per_rad_s`, the hang-back);
+  - the planing strips' own damping in pitch and heave, the transom relief (`TRANSOM_RELIEF_BEAMS`), the lift lag;
+  - Savitsky's porpoising limit for a flat bottom (Day & Haag 1952; Savitsky 1964): where do the trim and load sit against it?
+- [ ] The fix (wave 2), of the cause found. Real boards do porpoise sometimes (a mast foot too far back, a fin too big, top speed on flat water), so a short, occasional bounce at top speed is realistic. A board that bounces all the time at 18 kt is not. Target 2 of the brief: steadiness below 0.3° on flat water at 12, 18 and 24 kt.
+- [ ] No new damping constant to hide it.
+
+**U1.6. The rig leaned to windward, and the fin loaded** (wave 3)
+- [ ] Check how the autopilot and the player's assists lean the rig (`max_rig_lean_deg`, `rig_tilt`), and that the sail's upward lift reaches the sailor and the board. Real: 10 to 25°, and the sail carries 7 to 24 % of the weight.
+- [ ] "Loading the fin", the assist's safe amount. When planing and powered up on flat water, the sailor's wanted bank (`_wanted_bank_rad`, flat today) becomes a few degrees of leeward rail down. The angle comes from package C, or else from Max's estimate. It is a small part of U1 (50 to 100 N of about 900 N), so U1 does not depend on it.
+  - What it is on the water. Max, 19 October 2026: "I'm pushing on the rail of the board, and with that I'm also railing the board away from me a little, to tilt the board a bit and load the fin. Now the board wants to fly. If I do it too much, my board comes out of the water and I lose control. It's a fine technique and maybe too hard to replicate." So it is both: the feet push sideways on the rail, and that tips the board away from the sailor (leeward rail down). The fin then pushes harder and partly upward, and the board lifts.
+  - What the model already has right. Max: "the force of the sail is also what I push against the fin." The sail's sideways pull goes through the boom and the harness into the sailor, the feet push the board sideways, and the fin holds against it. In the steady 18 kt run: sail side force 508 N to leeward, fin lift 573 N to windward. In yaw, the fin's moment (+546 N·m) and the feet's (−543 N·m) cancel.
+  - The board already sails with the leeward rail 3.6° down, so the fin lifts 36 N. At 5 to 10° with the same push, that would be 50 to 100 N, and more when the sail pulls harder: a powered-up sailor can load the fin more.
+- [ ] The railing-out test, as information for the team's later decision on a player control. In a test, raise the wanted bank step by step. Does the board lift and then rail out above some angle, because the fin's rolling moment beats what the feet can hold (`feet_moment_max_nm`)? Report the angle. Build nothing on it in U1.
+
+**U1.7. Validate again: the board gets faster** (wave 3)
+- [ ] Friction drops by about half, so the speeds rise. Run the validation suite, the three matrices and the medium chop against the baseline, and the polar against the real ranges in [POLAR_15KT.md](POLAR_15KT.md).
+- [ ] The planing onset band (8 to 10 kn, Michiel's open decision from Session 39) may move. Report where the onset is now.
+- [ ] If the board becomes faster than real boards, look for a drag that is missing, with a source: spray drag (up to 15 % of a planing hull's drag; Savitsky, DeLorme & Datla 2007), the fin, the sailor's windage. Never make the wet part longer again to slow it down.
+
+**U1.8. The look, and Max's play-test** (wave 3, then Stop 3)
+- [ ] The spray comes from the front of the wet part (`effects.gd`, `spray_root_local`), so it moves back under the front foot by itself.
+- [ ] Screenshots from the side at 12, 18 and 24 kt, before (`main`) and after, in `.screenshots/u1/`.
+- [ ] Max play-tests:
+  - Is the board wet only from the front foot back?
+  - Does it feel freer and faster?
+  - Does it bounce, on flat water or in chop?
+  - Does it still behave in gusts on the lake?
+
+### Done when
+
+| What (the standard run, the execution brief's definitions) | Target |
+|---|---|
+| The baseline | no regression; validation green, U1.1's check included and no longer `pending` |
+| Steadiness at 12, 18 and 24 kt | below 0.3° |
+| Front of the wet part at 18 and 24 kt | 0.6 to 1.0 m from the tail |
+| Centre of the water's push at 18 and 24 kt | 0.45 to 0.75 m from the tail |
+| Trim at 18 and 24 kt | 1.5 to 4° |
+| Harness line tension at 18 kt | 350 to 480 N, the rig carrying at most 50 % of the sailor's weight |
+| Speeds | every polar angle inside its real-world range (the validation's polar check) |
+| PHYSICS_SPEC.md | sections 5 and 7.5, section 14 (every new value with its source or labelled an estimate), the tuning log |
+| Max's play-test | the wet area looks and feels right |
+
+### Risks and open questions
+
+- The mast-foot load has been the porpoising guard. U1.2 without U1.5 makes the board bounce, which is why wave 2 does U1.5 first.
+- The speeds will rise, and the polar and the planing onset may move with them.
+- The real-world band (0.6 to 1.0 m) is the agreement of two theory papers, two shapers and two experienced sailors, not a measurement. If a measured wet length or trim turns up (a tank test, photos from below), it replaces this band.
+- Moving load off the mast foot changes the feel in chop: the mast-foot pressure is also what holds the nose down there. The medium chop and the default sea are in the baseline for that reason.
+- For the team, later: should the player get Max's foot trim as a control of their own (lift or drop the nose, load the fin), or should the assist do it? Real sailors use it as a skill, so it could reward good technique: fast with the nose up, and porpoising or a spin-out when overdone. The fin's size could be a setup choice with it (U2).
+
+### Sources
+
+1. Sutherland, L.S. (1993). *Windsurfer Fin Hydrodynamics*. MSc thesis, University of Southampton. https://leighsutherland.com/wp-content/uploads/2022/10/Full-MSc-Thesis.pdf
+2. Gourlay, T. & Martellotta, J. (2011). *Aero-Hydrodynamics of an RS:X Olympic Racing Sailboard*. CMST Report 2011-02, Curtin University. https://www.perthhydro.com/pdf/Gourlay2011Aero-hydroRsx.pdf
+3. Savitsky, D. (1964). "Hydrodynamic Design of Planing Hulls". *Marine Technology* 1(1), 71–95. The equations as coded in OpenPlaning: https://github.com/elcf/python-openplaning
+4. Walls, J. & Gale, T. (2001). "A technique for the assessment of sailboard harness line force". *Journal of Science and Medicine in Sport* 4(3), 348–356. https://figshare.utas.edu.au/articles/journal_contribution/A_Technique_for_the_Assessment_of_Sailboard_Harness_Line_Force/22841867
+5. Gnigler, W. (2025). Interview, surf-magazin, 3 September 2025. https://www.surf-magazin.de/en/windsurfing/windsurf-boards/freeride/30-years-of-board-design-from-long-and-narrow-to-short-and-wide-an-interview-with-werner-gnigler/
+6. O'Shea & Crossley (2022). "Speed sailing: faster faster faster". *Windsurf Magazine*, 23 May 2022. https://www.windsurf.co.uk/speed-sailing-faster-faster-faster/
+7. Drake, J. (2005). *An Introduction to the Physics of Windsurfing* (repost). https://joewindsurfer.wordpress.com/2008/04/27/jim-drakes-windsurf-physics/
+8. surf-magazin, "Fin basics". https://www.surf-magazin.de/en/windsurfing/windsurfing-accessories/finns/fin-basics-how-to-find-the-right-fin-for-freeride-and-freerace/
+9. Starboard, 2025 Carve. https://star-board.com/products/2025-carve-windsurf-board ; Carbon Art, Boardology. https://www.carbonartwindsurf.com/design/boardology/
+10. Hall, J. "Tune-up time". *Windsurf Magazine*. https://www.windsurf.co.uk/jem-hall-tune-up-time/ ; iSonic 121 fittings measured by an owner: https://www.seabreeze.com.au/forums/Windsurfing/Foiling/Foil-Board-Dimensions-Mast-track-to-tail--?page=1
+11. Savitsky, D., DeLorme, M.F. & Datla, R. (2007). "Inclusion of whisker spray drag in performance prediction method for high-speed planing hulls". *Marine Technology* 44(1), 35–56.
+12. Day, J.P. & Haag, R.J. (1952). *Planing boat porpoising*. Thesis, Webb Institute (the porpoising limits that Savitsky 1964 reproduces).
+
+---
+
+## U2. The fin bends, and its size
+
+**Status:** an idea with a first estimate, from U1's research. Plan it in detail after U1, with a source for the fin's stiffness.
+
+### The feedback
+
+Max, 19 October 2026: "A fin of 37 cm can create a lot of lift in real life. The fins can bend and therefore create more lift. A 44 cm fin can almost totally lift the kit out of the water."
+
+### What we know so far
+
+- **The game's fin** (`fin_default.tres`: 38 cm, 0.0365 m², its force at 40 % of the span) is a stiff plate, almost exactly Max's 37 cm fin.
+- **Size isn't the limit; the push is.** The fin's sideways lift is set by how hard the sailor pushes against it, which is the sail's pull: 573 N at 18 kt. At that speed the same fin could give about 3000 N before it stalls (spin-out), so it works at a fifth of what it can do.
+- **What lifts the kit is how much of that push points up:** sideways push × the tilt of the fin's force. Two things tilt it: the board's tilt (the leeward rail down, U1.6) and the fin's bend. Under load the fin bends to windward, most at the tip, and the lift on the bent part tilts upward with it.
+- **A rough estimate, without a source.** Assume a 40 cm fin bends about 3 cm under 10 kg hung at its tip, the kind of flex number fin makers quote; the real figure is still to be found. The sailing load would then tilt the tip about 20° and the fin's force about 10° on average. That is 100 to 200 N upward from the bend, on top of the board's tilt.
+- **Why a 44 cm fin lifts more:** it bends more, its force acts deeper (a longer lever to tip the board, which tilts it more and loads the fin more, a loop that ends in flying out), and it lets the sailor push harder before it spins out.
+- **"Almost totally" adds up.** At 800 N of push with the force tilted 30°: about 460 N upward. The sail raked to windward adds 150 to 200 N. The hull is left with a small part of the 900 N, at the tail.
+
+### First idea for the plan
+
+- Find a source for fin stiffness: fin makers' published flex or deflection numbers, or Max's own fins (brand and model).
+- Let the fin's force tilt with its bend, the bend following the load through that stiffness. The fin's depth and roll lever come with it.
+- Compare a 37 and a 44 cm fin in the what-if runs.
+- Then the team decides whether the fin's size becomes a setup choice for the player.
