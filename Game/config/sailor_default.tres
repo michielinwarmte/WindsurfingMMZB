@@ -57,6 +57,7 @@ windage_area_cd_m2 = 0.5
 carve_rate_dps = 57.0
 bank_max_deg = 30.0
 bank_rate_dps = 12.0
+fin_load_bank_deg = 3.0
 balance_moment_gain = 1.0
 pitch_reflex_m_per_rad_s = 0.5
 balance_feel_time_s = 0.3

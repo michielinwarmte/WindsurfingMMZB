@@ -24,6 +24,21 @@ static func steer(controls: SimControls, turn_right: float, tack_sign: float, le
 	controls.lean = move_toward(controls.lean, helm * lean_share, rate_per_s * dt)
 
 
+## The course hold of a sailor hooked in (Autopilot.trim_with_rake_first). head_up is the
+## whole helm toward the wind (positive heads up, on either tack), from -2 to 2; correction
+## is its quick part (the error and the yaw rate). The rake carries the helm up to its stop
+## and the rig's sideways tilt only the rest, plus the correction: the rig's windward lean
+## stays the body's (the hike), as when a sailor hangs in the harness and steers with the
+## rake. Steer() moves the rake and the tilt together instead, so a steady heading-up helm
+## also stands the rig up toward leeward.
+static func hold_rake_first(controls: SimControls, head_up: float, correction: float, tack_sign: float, lean_share: float, dt: float, rate_per_s: float) -> void:
+	var rake: float = clampf(head_up, -1.0, 1.0)
+	var tilt: float = clampf(head_up - rake + correction, -1.0, 1.0)
+	controls.rake = move_toward(controls.rake, rake, rate_per_s * dt)
+	controls.rig_tilt = move_toward(controls.rig_tilt, -tilt * tack_sign, rate_per_s * dt)
+	controls.lean = move_toward(controls.lean, clampf(head_up, -1.0, 1.0) * tack_sign * lean_share, rate_per_s * dt)
+
+
 ## True while the board is being pivoted through the wind rather than sailed: the sail
 ## backed, or the bow within pivot_deg of the wind.
 static func pivoting(telemetry: Telemetry, controls: SimControls, pivot_deg: float) -> bool:

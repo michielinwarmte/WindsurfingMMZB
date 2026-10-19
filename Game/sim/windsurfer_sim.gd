@@ -490,6 +490,17 @@ func _bank_for_turn(lean_asked: float, forward_speed: float) -> float:
 	return clampf(bank, -limit, limit)
 
 
+## Loading the fin (SailorConfig.fin_load_bank_deg): a sailor in the back straps (the
+## stance, which goes there with the planing speed) who hangs out to one side tips the board
+## the other way, the leeward rail down, as far as they hike, and not while the controls ask
+## for a turn (that bank is the turn's). The lean is positive with the weight out to
+## starboard, so the bank is to port: negative.
+func _fin_load_bank_rad(asked: float) -> float:
+	var in_the_straps: float = clampf(stance, 0.0, 1.0)
+	var not_turning: float = 1.0 - clampf(absf(asked), 0.0, 1.0)
+	return -clampf(lean, -1.0, 1.0) * deg_to_rad(sailor_config.fin_load_bank_deg) * in_the_straps * not_turning
+
+
 ## The heel the sailor feels: the board's heel less the bank that the turn asks for. In a
 ## turn the water pushes the board sideways (v times the yaw rate) and gravity plus that
 ## push, the apparent gravity, is what a standing person balances against, as a cyclist
@@ -662,7 +673,7 @@ func _update_sailor(dt: float, controls: SimControls) -> void:
 	rail_press = move_toward(rail_press, asked, sailor_config.rail_press_rate_per_s * dt)
 	var lean_target: float = asked
 	if controls.balance_reflex:
-		var bank_target: float = _bank_for_turn(asked, forward_speed)
+		var bank_target: float = _bank_for_turn(asked, forward_speed) + _fin_load_bank_rad(asked)
 		_wanted_bank_rad = move_toward(_wanted_bank_rad, bank_target, deg_to_rad(sailor_config.bank_rate_dps) * dt)
 		# The sailor leans against the pull in the hands: the hands' moment about the feet
 		# (positive = the body is being pulled over to port) is answered by moving the
