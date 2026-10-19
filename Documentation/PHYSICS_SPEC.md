@@ -36,7 +36,7 @@ Chosen in section 14 as a real, common freeride setup (section 15, Q3). Every te
 
 | Item | Value |
 |---|---|
-| Board | 120 L, 2.40 m × 0.72 m × 0.12 m, nose rocker 0.08 m, flat tail (U1.4), 9 kg |
+| Board | 120 L, 2.40 m × 0.72 m × 0.12 m, nose rocker 0.08 m, tail rocker 0.02 m, 9 kg |
 | Sail | 6.5 m², luff 4.60 m, boom 1.95 m, mast 4.60 m, camber 0.10, boom 1.40 m above the mast foot |
 | Mast foot | (0, +0.06, −0.05) m in the body frame: on the deck, 0.05 m forward of the board centre |
 | Fin | 38 cm, 0.0365 m², mean chord 0.096 m, aspect ratio 3.96, root at (0, −0.06, +0.90) m |
@@ -2362,14 +2362,6 @@ Strip theory again: each metre of hull side under water to a draft `d` carries `
 
 The strips' lift is scaled to Savitsky's by the ratio of Savitsky's lift (mean wet beam `b`, `λ`, trim) to the slender-body total of the plate, `ρ π b_ref² / 8 · u² · sin τ` (17.2). Until Session 39 `b_ref` was the full width at the root, the forward end of the wet bottom. But the strips' own total is the momentum flux of the water set moving under the widest wet section: the root's push plus the push where the hull widens going aft (a nose taper, `−u V dm'/dx`), with nothing taken back where it narrows (the water lets go). With the wet span behind the widest point (planing) the root is the widest section and nothing changes. With the whole hull wet (slow, in the hump, a nose dive, the start from rest) the root is in the narrow nose, and the lift came out `(b_widest / b_root)²` too large: up to 2 times for the legacy taper, 6 times for the real 0.285 m nose tip, 1.5 kN of "planing lift" on a board 30 cm under water. `b_ref` is now the full width of the widest wet strip. The consequence is less dynamic lift through the hump than before; see 17.14 for what that does to the planing onset.
 
-#### F20. A flat tail (U1.4)
-
-The strips read the bottom's rocker line (section 6, `BoardConfig.bottom_rise_m` and `bottom_slope`): the trim they meet is the pitch, plus the angle of the chord from the tail to the front of the wet part, plus that part's camber (`HullModel._apply_planing_lift`). Session 30's 1 cm tail kick over the last 0.35 m faced the bottom down by up to 3.3° at the transom. At the game's 1° of pitch, the last 20 to 25 cm then carried nothing (a strip may not pull), and the chord of a short wet part tilted down by about 1°. Since U1.4 the tail is flat (`tail_rocker_m` 0, section 14). Measured with `tools/reach_check.sh` on 19 October 2026:
-- the trim rises by about 0.3° on the beam and broad reaches at 18 and 24 kt;
-- the close reaches and the 12 kt beam reach bounce less (pitch SD 0.30 to 0.40° instead of 0.70 to 1.21°);
-- the front of the wet part does not move on the beam reaches (1.88 m at 18 kt): the push stays where the loads put it (the mast foot, section 7.5; U1.2);
-- on the 18 kt broad reach the board settles bow-down (pitch −1.05° instead of +0.91°, the feet's moment −167 instead of −127 N·m), wet to 2.12 m and 0.9 m/s slower.
-
 ### Values
 
 Board and mass values (`HullConfiguration`, `SailingState.cs:203-242`; set by `WindsurferSetup.cs:764-770`; saved in `MainScene.unity:272-279`):
@@ -2666,13 +2658,12 @@ The grid has `n_len` = 7 rows along the length and `n_wid` = 3 points across eac
    z_i   = +L/2 − L · t_i                        # body z: tail = +1.25 m, bow = −1.25 m   [flip: Unity uses z = −L/2 + L·t, bow at +Z]
    d_i   = |t_i − 0.5| · 2                       # 0 in the middle, 1 at either end
    ```
-2. Rocker: the freeride rocker line of `BoardConfig.bottom_rise_m` (Session 30; the tail flat since U1.4). With `x_i = L · t_i` the distance forward of the transom:
+2. Rocker (the bottom curves up quadratically toward each end). The bow half uses the nose rocker, the tail half the tail rocker; the middle row (t = 0.5) has d = 0 so the choice does not matter there:
    ```
-   rocker_i = tail_rocker_m · ((tail_rocker_length_m − x_i) / tail_rocker_length_m)²            if x_i < tail_rocker_length_m       (the tail kick: 0 since U1.4)
-            = nose_rocker_m · ((x_i − (L − nose_rocker_length_m)) / nose_rocker_length_m)²     if x_i > L − nose_rocker_length_m   (8 cm over the front 0.9 m)
-            = 0                                                                                 otherwise                           (the flat planing section)
+   rocker_i = nose_rocker_m · d_i²    if t_i > 0.5   (bow half, z_i < 0)
+            = tail_rocker_m · d_i²    otherwise      (tail half, z_i ≥ 0)
    ```
-   The planing strips (section 5, F20) read the same line and its slope (`bottom_slope`). The legacy line was quadratic over each half of the board (`rocker_i = nose_rocker_m · d_i²` toward the bow, `tail_rocker_m · d_i²` toward the tail; AdvancedBuoyancy.cs:159-170); Session 30 replaced it because it trimmed the board bow-down at speed. U1.4 took out the 1 cm tail kick of Session 30 (it had no source): freeride and slalom boards are flat from the tail forward (section 14, `tail_rocker_m`).
+   Source: AdvancedBuoyancy.cs:159-170.
 3. Width taper: the half-width of the row shrinks quadratically toward the ends, to 70 % at the tips:
    ```
    width_factor_i   = 1 − 0.3 · d_i²
@@ -5785,7 +5776,7 @@ Three candidate sets exist for the default equipment. The table shows them side 
 | Width | 0.6 m (`PhysicsConstants.cs:31`; wizard :711,765,784; scene :248,274,471) | 0.80 m (plan Phase 6 notes) | Futura 120: 76 cm; Super Ride 124: 76 cm; task brief: 0.70 to 0.75 m | **0.72 m** |
 | Thickness | 0.12 m (`PhysicsConstants.cs:32`; wizard :712,766,785; scene :249,275,472) | not measured | Futura 105: 11.5 cm | **0.12 m** |
 | Nose rocker | 0.08 m (`AdvancedBuoyancy.cs:45`; wizard :713; scene :250) | - | - | **0.08 m** |
-| Tail rocker | 0.02 m (`AdvancedBuoyancy.cs:48`; wizard :714; scene :251) | - | flat "from the tail to beyond your front foot" (Starboard Carve 2025); "planing straight", no rocker from the tail forward (Carbon Art); a flat section of about 80 cm that the sailor rides on (Gnigler, JP-Australia, surf-magazin 2025) | **0, a flat tail** (U1.4; Session 30 had a 1 cm kick over 0.35 m, without a source) |
+| Tail rocker | 0.02 m (`AdvancedBuoyancy.cs:48`; wizard :714; scene :251) | - | - | **0.02 m** |
 | Board mass | 8 kg (`PhysicsConstants.cs:34`; `HullConfiguration` `SailingState.cs:220`; `BoardMassConfiguration.cs:27`; wizard :768,780; scene :277,465); 15 kg in `PHYSICS_DESIGN.md:555` | - | Super Ride 124: 8.8 kg; task brief: 8 to 10 kg | **9 kg** |
 
 Reasons: 120 L is the classic volume for a 75 kg sailor (the "add about 50 L to your weight" rule quoted in the Mistral Quikslide search result) and matches all legacy sources. The legacy 0.6 m width is too narrow for a modern 120 L freeride board; 0.72 m is in the real range and gives the buoyancy and planing models a realistic beam. 2.40 m is a compromise between the legacy 2.5 m and modern 2.28 to 2.44 m boards; it also removes the legacy 2.4/2.5 disagreement by choosing one number everywhere. The old `board.fbx` (2.28 x 0.80 m) is closer to a 135 L board (Futura 135: 229 x 83 cm); Phase 6 should scale the model to the config (about +5 % in length and -10 % in width, which is visually harmless) or replace it. The physics never reads the model.
@@ -5866,8 +5857,7 @@ The spec removes this by having **one** `total_mass_kg` computed from the three 
 | `board_width_m` | 0.72 | m | real 120 L boards are 0.70 to 0.76 m (Starboard Futura 120, JP Super Ride 124); legacy 0.6 m too narrow |
 | `board_thickness_m` | 0.12 | m | legacy (`PhysicsConstants.cs:32`) |
 | `nose_rocker_m` | 0.08 | m | legacy (`AdvancedBuoyancy.cs:45`) |
-| `tail_rocker_m` | 0.0 | m | flat from the tail forward, as freeride and slalom boards are (Starboard 2025 Carve; Carbon Art, Boardology; Gnigler, surf-magazin 2025). U1.4; it was 0.01 over 0.35 m from Session 30 (no source), 0.02 in the legacy (`AdvancedBuoyancy.cs:48`) |
-| `tail_rocker_length_m` | 0.35 | m | how far forward a tail kick would reach; no effect while `tail_rocker_m` is 0. Estimate (Session 30), no source |
+| `tail_rocker_m` | 0.02 | m | legacy (`AdvancedBuoyancy.cs:48`) |
 | `board_mass_kg` | 9.0 | kg | JP Super Ride 124: 8.8 kg; legacy 8 kg |
 | `sail_area_m2` | 6.5 | m2 | legacy code and scene (`SailingState.cs:130`, scene :334) |
 | `luff_m` | 4.60 | m | real 6.5 m2 sails: 4.43 to 4.68 m; legacy 4.7 |
@@ -6137,7 +6127,6 @@ How to add a row: date, session, the config file and field (or the section and f
 
 | Date | Session | Where | Old | New | Motivated by | Why this value | Fudge ID |
 |---|---|---|---|---|---|---|---|
-| 19 Oct 2026 | U1 (agent 1) | sections 5 F20, 6 and 14, `board_default.tres`: `tail_rocker_m` | 0.01 m over the last 0.35 m (3.3° at the transom) | 0, a flat tail | Max's play-test (PLAYTEST_UPGRADES.md, U1): the board planes on a far too long wet part; the kick faced the last 20 to 25 cm of the bottom down at 1° of pitch, so they carried nothing | Freeride and slalom boards are flat from the tail forward (Starboard 2025 Carve; Carbon Art; Gnigler, surf-magazin 2025); Session 30's 1 cm had no source | |
 | 16 Oct 2026 | 39 | section 8.10, `autopilot.gd` (the tack's phases), `telemetry.gd` (`twa_at_sail_deg`, new) | The rig flipped once the bow was `flip_twa_deg` (25) through the true wind of the telemetry, on a map the lake's mean | The same 25 degrees through the true wind at the sail (the local wind; on open water the same number) | Three lake tacks stalled after the physics merge (14:30 `tack_stb`, `tack_held`; 17:00 `tack_port`): the backed sail stops pushing 35 degrees past the local wind, and the mean wind is 14 to 16 degrees off it near the shore (17.14) | A sailor flips the rig on the wind they feel; no number changed. Lake matrix 24 of 24 (21 before), open-water matrices identical | |
 | 16 Oct 2026 | 39 | section 8.10, `map_wind_field.gd`, `environment_silvaplana.tres`: the wind on Lake Silvaplana | One `WindConfig` for the whole lake (16 kt at 10 m, gusts of 25 %, shifts of 10 degrees, from 222) | The map's own wind (`MapWind`, W5) from 14:30, real time; the height profile from the pattern's 5 m | PHYSICS_REQUESTS_FROM_MAP.md R5 (W5): the sailing should feel the wind analyser's wind | The map's model, not tuned here. Lake matrix (`tools/lake_matrix.sh`, 12:00, 14:30, 17:00): 24 cases, no fall, no NaN, none aground, 23 of 24 manoeuvres complete (a run turned 58 of 60 degrees) | |
 | 16 Oct 2026 | 39 | `water_silvaplana.tres` (R3): density and viscosity on the lake | 1025 kg/m3, 1.19e-6 m2/s (sea water at 15 degrees) | 1000 kg/m3, 1.14e-6 m2/s | PHYSICS_REQUESTS_FROM_MAP.md R3: Silvaplana is a fresh-water lake | Fresh water; the viscosity of fresh water at 15 degrees (ITTC fresh-water table, 2011), the lake's surface in summer is about 14 to 15 degrees (spot guides, e.g. windsurf.co.uk, "Lake Silvaplana"). The open water keeps 1025. Effect on a beam reach in the same wind and thin air: 0 to +3 % speed (10 to 18.2 kt; the water's forces scale with its density, so a little less drag) | |
