@@ -122,7 +122,9 @@ func update_from(t: Telemetry, controller: PlayerController, camera_name: String
 		+ "sheet %3.0f %%  boom %4.0f deg%s   rake %5.2f   rig tilt %5.2f (%4.0f deg)   alpha %5.1f deg%s   helm %5.2f\n" % [t.sheet * 100.0, t.sail_angle_deg, "  across %3.0f %%" % (t.boom_across * 100.0) if t.boom_across > 0.005 else "", t.rake, t.rig_tilt, t.rig_lean_deg, t.alpha_deg, "  BACKWINDED" if t.is_backwinded else "", controller.helm_right]
 		+ "lean %5.2f   stance %4.2f   hang-back %4.2f m   knees %5.2f m   sway %4.2f m   hands %4.0f N   feet %4.0f N   feet moment %5.0f Nm\n" % [t.lean, t.stance, t.hang_back_m, t.knee_bend_m, t.leg_sway_m, t.hand_force_n, t.foot_force_n, t.feet_moment_roll_nm]
 		+ "sail  lift %5.0f N  drag %4.0f N  drive %5.0f N  side %5.0f N\n" % [t.sail_lift_n, t.sail_drag_n, t.drive_n, t.side_force_n]
-		+ "fin   lift %5.0f N  drag %4.0f N  slip %5.1f deg%s\n" % [t.fin_lift_n, t.fin_drag_n, t.fin_slip_deg, "  STALLED" if t.fin_stalled else ""]
+		# "of stall" is the fin's lift coefficient as a share of its peak; "up" is the upward
+		# part of its force, what it lifts the kit by.
+		+ "fin   lift %5.0f N  drag %4.0f N  slip %5.1f deg  load %3.0f %% of stall  up %4.0f N%s\n" % [t.fin_lift_n, t.fin_drag_n, t.fin_slip_deg, t.fin_load_share * 100.0, t.fin_up_n, "  STALLED" if t.fin_stalled else ""]
 		# "wetted" is the area the friction acts on (the planing wet span times its width),
 		# not the buoyancy grid's smaller area: it is the one that costs speed. "front" is how
 		# far forward of the tail the wet part reaches.
