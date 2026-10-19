@@ -60,7 +60,23 @@ After Michiel's OK: merge `u1/physics` into `feature/u1-planing-wet-area`, apply
 
 **The merged branch** (lead, 19 October 2026, e2f1563): `tools/check.sh` 190 files, 0 failed; `tools/test.sh` all passed; `tools/test.sh validation` no failures, 3 pending (the new check's targets). Green.
 
-**Latest: U1.4, the flat tail** (agent 1; `tail_rocker_m` 0, commit 54282ee, **reverted** in d55bd6a until the lead decides; see `u1_reports/measure.md`):
+**Latest: agent 4's branch `u1/physics` at 18e2a82** (verified by the lead, 19 October 2026, not merged): `tools/check.sh` 190 files, 0 failed; `tools/test.sh` 337 of 337; `tools/test.sh validation` 21 pass, **1 fail** (`test_planing_onset_and_fully_planing`: onset 6.85 m/s = 13.3 kn, band 8 to 10 kn), 2 pending (targets 3 and 4). The reach check (means over t ≥ 25 s, positions from the tail):
+
+| Case | Speed m/s | Front m | Push m | Trim ° | Pitch SD ° | Harness N | Rig % | Mast foot N | Friction N | Area m² |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 12 kt 60° | 7.80 | 1.45 | 1.09 | 3.14 | 0.01 | 753 | 70 | 486 | 77 | 0.82 |
+| 12 kt 100° | 10.28 | 1.91 | 1.47 | 1.82 | 0.01 | 917 | 87 | 645 | 160 | 1.07 |
+| 12 kt 135° | 5.73 | 1.39 | 0.94 | 4.95 | 0.02 | 166 | 15 | 183 | 42 | 0.78 |
+| 18 kt 60° | 9.00 | 1.26 | 0.98 | 3.06 | 0.00 | 702 | 62 | 426 | 86 | 0.69 |
+| 18 kt 100° | 12.28 | 2.00 | 1.69 | 1.34 | 0.02 | 957 | 91 | 685 | 225 | 1.10 |
+| 18 kt 135° | 11.23 | 2.24 | 1.08 | 0.39 | 0.01 | 537 | 52 | 441 | 211 | 1.24 |
+| 24 kt 60° | 9.37 | 1.22 | 0.95 | 3.06 | 0.06 | 693 | 60 | 402 | 88 | 0.66 |
+| 24 kt 100° | 13.79 | 1.93 | 1.60 | 1.25 | 0.00 | 926 | 85 | 633 | 272 | 1.07 |
+| 24 kt 135° | 15.58 | 1.93 | 1.63 | 0.86 | 0.29 | 933 | 89 | 680 | 337 | 1.06 |
+
+  Steady: 9 of 9 (target 2 met). Not met: the wet front (target 0.6 to 1.0 m), the trim (1.5° up) and the harness (350 to 480 N); the 18 kt broad reach is 1.1 m/s slower than the baseline with a longer wet part (2.24 m), which agent 1 tied to the flat tail and the feet (U1.3).
+
+**Earlier: U1.4, the flat tail, first attempt** (agent 1; `tail_rocker_m` 0, commit 54282ee, **reverted** in d55bd6a until the lead decides; see `u1_reports/measure.md`):
 - `tools/test.sh validation` 20 of 20, plus the new check (1 pass, 3 pending). `tools/test.sh` 333 of 335: two tests in `test_buoyancy.gd` (outside agent 1's files) fail, which is why it is reverted.
 - Straight runs, no fall, no NaN: flat 8.87, 11.07 and 11.99 m/s; the sea 8.65, 10.76 and 11.84 m/s (calmer: 4 and 11 sheet reversals instead of 9 and 17); the lake 22.0, 19.0 and 23.1 kt.
 - The reach check:
