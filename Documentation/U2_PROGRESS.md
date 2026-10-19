@@ -3,7 +3,7 @@
 The live state of U2, "the fin bends, and its size". The plan and its execution brief are in [PLAYTEST_UPGRADES.md](PLAYTEST_UPGRADES.md). **The lead updates and commits this file after every launch, report and merge.** A lead who takes over starts here; U1's take-over prompt in [U1_PROGRESS.md](U1_PROGRESS.md) applies with U2 in place of U1.
 
 - **Branch:** `feature/u2-fin` (from `feature/u1-planing-wet-area` at c1eee63). Agents work on `u2/<name>` branches, made from it in their own worktrees.
-- **Last update:** 19 October 2026. Agent 3 merged after the lead's review. **Stop 2: waiting for Michiel.** Agent 4 (the look) not launched yet.
+- **Last update:** 19 October 2026. Stop 2 waits for Michiel. Meanwhile agent 5 (`fin_ride`) runs Max's experiments: can the sailor ride the fin's lift? (brief: "Riding the fin").
 
 ## State
 
@@ -13,6 +13,7 @@ The live state of U2, "the fin bends, and its size". The plan and its execution 
 | 2 | `fin_measure` | the fin's baseline, the overrides, the telemetry, the what-ifs, the pending check | merged | `u2/fin_measure` | [fin_measure.md](u2_reports/fin_measure.md) |
 | 3 | `fin_physics` | the bending fin, by the lead's design | merged, reviewed by the lead | `u2/fin_physics` | [fin_physics.md](u2_reports/fin_physics.md) |
 | 4 | `fin_look` | the bending mesh, the HUD, the screenshots, the checklist | waits for Stop 2 | `u2/fin_look` | |
+| 5 | `fin_ride` | experiments: the sailor riding the fin (weight aft, rail down, fin size), no game file changed | running | `u2/fin_ride` | |
 
 | Stop | State |
 |---|---|
@@ -29,6 +30,8 @@ The live state of U2, "the fin bends, and its size". The plan and its execution 
 4. **The 35° cap** is an estimate (the linear beam's limit); a 44 cm fin at 800 N reaches 32°.
 
 After Michiel's OK: launch agent 4 (`fin_look`) with agent 3's report, then Stop 3.
+
+**In parallel, agent 5 (`fin_ride`)** runs the experiments of the brief's "Riding the fin" (overrides only). When it reports: merge its report, write the findings here, and tell Max and Michiel what the sailor could do with the fin's lift and what it would take (a technique in the pilot and the assists, or a sourced number). The team decides whether that becomes U2's last step or a follow-up.
 
 ## Numbers
 

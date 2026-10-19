@@ -551,6 +551,20 @@ Not in U2: the player's own railing control (a team decision), the fin's twist, 
 - **Stop 2: the lead reviews agent 3's diff itself, then Michiel reviews the physics.** Wait for his OK.
 - **Stop 3: Max's play-test.** Then the team decides on the pull requests (U1, then U2).
 
+#### Riding the fin: the experiments (Max, 19 October 2026, after Stop 2 was reached)
+
+Max: "In real life, the more lift the fin generates, the looser the board feels. I think the player uses the fin's lift wrong and the physics may be correct. Try to lift the board with the character." The fin's lift is in the model now, but the sailor does nothing with it, so at the tail it only pushes the bow down (the wet front moved 0 to 9 cm forward). A real sailor rides the fin: weight on the back foot against the tail's lift, the leeward rail down, the sail sheeted in, so the tail rides on the fin and the hull's wet part shrinks.
+
+**Agent 5, `fin_ride`: experiments only, with the overrides that exist, no game file changed.** On `u2/fin_ride`; report `Documentation/u2_reports/fin_ride.md`. The cases: the 18 kt beam reach first, then the 24 kt beam and broad reach and the 12 kt beam reach as spot checks, each 40 s with `tools/simulate.sh beam_reach 40 --wind_kt=W --twa=A --steady=1 --gradient=0 --out=<absolute>.csv` (or `tools/reach_check.sh` with the same overrides for all 9). The knobs (all in `sailor_default.tres` or `fin_default.tres`):
+1. The weight aft: `--sailor.running_trim_deg=` 1.5 (today), 2, 2.5, 3, 3.5 (the vee raised the porpoising limit; find where it bounces again), with `--sailor.trim_press_max_m=` 0.3 (today) and 0.45, and `--sailor.hang_back_max_m=` 0.8 and 1.0.
+2. The rail down: `--sailor.fin_load_bank_deg=` 4.5 (today), 8, 12, 16 (with the bending fin now; agent 2 did the stiff fin).
+3. The fin: the 38 cm (today) and `--fin.span_m=0.44 --fin.area_m2=0.0411`; and the stiff fin `--fin.bends=0` as the control.
+4. Combinations of the best of 1 and 2 with both fins.
+
+**What to measure per run** (means over t ≥ 25 s): the wet front and the wet length, the push centre, the trim, the pitch standard deviation, the speed, the fin's lift, its upward part (`fin_up_n`), its roll moment against what the feet can hold (`feet_moment_max_nm` 120 N·m: how close to railing out), the heel, the harness, the mast-foot load, and the hull's grip: `hull_resistance_n`, `rail_grip_n`, `yaw_water_nm`, `roll_water_nm` (the board feels "loose" when the hull's sideways grip and its yaw damping fall and the fin carries the side force alone: report those as the looseness).
+
+**What to report:** the combination that gives the shortest wet part while steady (pitch SD below 0.3°), not slower than today, and inside what the feet can hold; how far the fin's lift then carries the kit (its upward part as a share of the 900 N); whether the board gets "looser" by the measures above; where it bounces, rails out or spins out (the fin's share of stall). Then say which of the knobs is a sailor's choice (a technique the pilot and the assists could use when planing and powered up: a higher trim target, a bigger bank, within the feet's limit) and which would need a new behaviour or a sourced number, so the team can decide. Stop rules as in U1's brief; this is information for a decision, not a change.
+
 **The agent prompt** is U1's, with U2 in place of U1: *You are agent <n>, `<name>`, of U2 in WindsurfingMMZB (Godot 4.7). Read CLAUDE.md and the U2 execution brief in Documentation/PLAYTEST_UPGRADES.md (and U1's brief above it for the rules), then do your package from the brief's agent table. Work in your worktree on the branch `u2/<name>`: make it from `feature/u2-fin`, or continue on it if it already exists. Commit as you go, and change only the files your row allows. Follow the rules, targets and stop rules, and be careful with tokens. Finish with your report (at most 300 words and one table) committed as Documentation/u2_reports/<name>.md, and return the same text.*
 
 ### Sources
