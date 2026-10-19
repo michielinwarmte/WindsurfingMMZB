@@ -82,11 +82,17 @@ var meta: Dictionary = {}
 ## drawn from a bell curve of width 1 / sqrt(inputs of its layer), so that a sum of many inputs
 ## still lands mostly between -1 and 1, where tanh is not yet flat (a network whose neurons are all
 ## pinned at -1 or 1 cannot tell one situation from another). The biases start at 0.
-static func make(sizes: Array[int], rng: RandomNumberGenerator) -> NeuralNet:
+## output_scale shrinks the last layer's weights: with 0.1 a new network's answers start close to 0
+## (for a skipper: steer little, leave the sheet to the auto-sheet, do not tack), so it sails
+## straight and fast enough to learn from, instead of throwing the helm about from the first second.
+## (The same idea as the small last layer that PPO implementations start their policies with.)
+static func make(sizes: Array[int], rng: RandomNumberGenerator, output_scale: float = 1.0) -> NeuralNet:
 	var net: NeuralNet = NeuralNet.new()
 	for n: int in sizes.size() - 1:
 		var layer: Layer = Layer.new(sizes[n], sizes[n + 1], "tanh")
 		var spread: float = 1.0 / sqrt(float(maxi(sizes[n], 1)))
+		if n == sizes.size() - 2:
+			spread *= output_scale
 		for k: int in layer.weights.size():
 			layer.weights[k] = rng.randfn(0.0, spread)
 		net.layers.append(layer)
