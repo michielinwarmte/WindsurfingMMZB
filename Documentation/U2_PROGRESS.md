@@ -3,7 +3,7 @@
 The live state of U2, "the fin bends, and its size". The plan and its execution brief are in [PLAYTEST_UPGRADES.md](PLAYTEST_UPGRADES.md). **The lead updates and commits this file after every launch, report and merge.** A lead who takes over starts here; U1's take-over prompt in [U1_PROGRESS.md](U1_PROGRESS.md) applies with U2 in place of U1.
 
 - **Branch:** `feature/u2-fin` (from `feature/u1-planing-wet-area` at c1eee63). Agents work on `u2/<name>` branches, made from it in their own worktrees.
-- **Last update:** 19 October 2026. The technique round merged (reviewed by the lead). **Stop 2: the whole U2 physics package waits for Michiel.** The lead's verification of the merge: see Numbers when it lands.
+- **Last update:** 19 October 2026. The technique round merged (reviewed by the lead). **Stop 2: the whole U2 physics package waits for Michiel.** Verified by the lead: see Numbers.
 
 ## State
 
@@ -36,6 +36,22 @@ After Michiel's OK: agent 4 (`fin_look`: the bending fin mesh, the HUD, the scre
 **Where the targets stand:** the wet front on the four planing reaches 1.37, 1.32, 1.32, 1.58 m (U1's end: 1.76, 1.42, 1.71, 1.71; the target 0.6 to 1.0), the push 1.02 to 1.08 m (0.45 to 0.75), the trim 0.82 to 1.35 deg (1.5 up): U1's targets 3 and 4 stay pending. The map says the 18 kt beam reach can reach 1.0 m flat at a 2.5 deg trim, steady; the 24 kt broad reach cannot go below about 1.5 m without bouncing. Getting further needs either a bank that depends on speed (flat when the hull allows, railed at 32 kn: the opposite of the instruction), or more steadiness in the hull at 32 kn (the vee, the damping), both for the team.
 
 ## Numbers
+
+**Latest, verified by the lead on the merged branch with the technique (b84060c):** `tools/check.sh` 195 files, 0 failed; `tools/test.sh` 356 of 356; `tools/test.sh validation` 30 pass, 1 fail (U1's onset check, 13.4 kn), 2 pending (U1's targets 3 and 4). The hips-dropped case: no fall in 9 of 9 (agent 3: 8 of 9 steady, the 24 kt broad reach 0.36 deg as before). The reach check (fin columns slip, lift N, roll N m, up N, stall %, heel):
+
+| Case | Speed m/s | Front m | Push m | Trim | Pitch SD | Harness N | Rig % | Fin slip | Fin N | Roll | Up N | Stall % | Heel |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 12 kt 60 | 7.62 | 2.24 | 0.98 | 0.67 | 0.00 | 662 | 72 | 4.5 | 430 | 91 | 62 | 46 | -2.0 |
+| 12 kt 100 | 10.34 | 1.75 | 1.25 | 1.31 | 0.01 | 670 | 72 | 2.7 | 465 | 98 | 71 | 27 | -2.0 |
+| 12 kt 135 | 6.34 | 1.87 | 0.87 | 2.77 | 0.05 | 184 | 15 | 1.0 | 69 | 15 | 1 | 11 | -0.3 |
+| 18 kt 60 | 8.90 | 1.49 | 1.22 | 1.96 | 0.01 | 645 | 68 | 3.6 | 465 | 97 | 71 | 37 | -2.0 |
+| 18 kt 100 | 13.16 | 1.37 | 1.06 | 1.33 | 0.03 | 641 | 58 | 1.7 | 484 | 101 | 76 | 18 | -2.0 |
+| 18 kt 135 | 13.19 | 1.32 | 1.06 | 1.35 | 0.11 | 531 | 56 | 1.3 | 364 | 76 | 39 | 13 | -0.9 |
+| 24 kt 60 | 9.26 | 1.39 | 1.14 | 2.01 | 0.00 | 628 | 62 | 3.5 | 484 | 101 | 76 | 36 | -2.0 |
+| 24 kt 100 | 14.86 | 1.32 | 1.02 | 1.22 | 0.00 | 662 | 53 | 1.4 | 510 | 106 | 83 | 15 | -2.0 |
+| 24 kt 135 | 16.43 | 1.58 | 1.08 | 0.82 | 0.24 | 702 | 56 | 1.2 | 508 | 106 | 84 | 12 | -2.1 |
+
+  Against U1's end (1.76, 1.42, 1.71, 1.71 m on the planing reaches at 12.74, 12.55, 14.31, 16.04 m/s): the wet front 1.37, 1.32, 1.32, 1.58 m at 13.16, 13.19, 14.86, 16.43 m/s; the harness on the 18 kt beam reach 683 to 641 N, the rig's share 63 to 58 %, the mast foot 352 to 325 N, the friction 216 to 182 N. All 9 steady.
 
 **Latest, verified by the lead on the merged branch with the heel fix (394fb4d):** `tools/check.sh` 195 files, 0 failed; `tools/test.sh` 354 of 354; `tools/test.sh validation` 30 pass, 1 fail (U1's onset check, 12.7 kn), 2 pending (U1's targets 3 and 4). The reach check (fin columns slip, lift N, roll N m, up N, stall %, heel):
 
