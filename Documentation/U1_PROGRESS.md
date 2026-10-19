@@ -34,9 +34,48 @@ Meanwhile: when agent 1 reports, merge `u1/measure`, check that its reach check 
 
 ## Numbers
 
-**Baseline:** to be measured by agent 1 before any change (the reach check's 9 cases, the straight runs, the test counts). Until then, the 18 kt beam reach of 19 October: front of the wet part 1.87 m, trim 0.93°, steadiness 0.00°, harness 945 N, rig's share 91 %, friction 223 N, 23.9 kt.
+**Baseline** (agent 1, 19 October 2026, `feature/u1-planing-wet-area` at 090593e, no physics changed):
+- `tools/check.sh` 188 files, 0 failed; `tools/test.sh` 335 of 335; `tools/test.sh validation` 20 of 20.
+- `tools/matrix.sh --only=straight` (flat): no fall; 8.77, 11.10 and 12.01 m/s at 12, 18 and 24 kt.
+- `tools/matrix.sh --only=straight --waves=1` (the default sea): no fall; 8.72, 10.90 and 12.07 m/s.
+- `tools/lake_matrix.sh --only=straight`: no fall, no NaN; mean 22.1, 19.2 and 23.3 kt at 12:00, 14:30 and 17:00 (top 23.5, 20.5, 25.3 kt).
+- The reach check, `tools/reach_check.sh` (means over t ≥ 25 s; positions from the tail):
 
-**Latest:** none yet.
+| Case | Speed m/s | Front m | Wet m | Push m | Trim ° | Pitch SD ° | Harness N | Rig % | Mast foot N | Friction N | Drive N | Area m² |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 12 kt 60° | 7.66 | 1.50 | 1.50 | 1.12 | 2.63 | **0.81** | 770 | 74 | 513 | 77 | 142 | 0.86 |
+| 12 kt 100° | 10.25 | 1.57 | 1.57 | 1.25 | 1.44 | **1.21** | 820 | 79 | 578 | 135 | 211 | 0.89 |
+| 12 kt 135° | 5.70 | 1.46 | 1.46 | 1.02 | 4.66 | 0.04 | 171 | 16 | 192 | 45 | 100 | 0.84 |
+| 18 kt 60° | 8.81 | 1.37 | 1.37 | 1.02 | 2.37 | **0.79** | 731 | 67 | 464 | 92 | 189 | 0.77 |
+| 18 kt 100° | 12.30 | 1.87 | 1.87 | 1.58 | 0.93 | 0.00 | 947 | 91 | 679 | 224 | 318 | 1.07 |
+| 18 kt 135° | 12.34 | 1.66 | 1.64 | 1.27 | 0.76 | **0.82** | 630 | 64 | 514 | 202 | 249 | 0.95 |
+| 24 kt 60° | 9.26 | 1.33 | 1.33 | 0.97 | 2.34 | **0.70** | 722 | 64 | 438 | 97 | 220 | 0.75 |
+| 24 kt 100° | 13.83 | 1.82 | 1.82 | 1.56 | 0.70 | 0.00 | 943 | 88 | 660 | 272 | 387 | 1.05 |
+| 24 kt 135° | 15.70 | 1.81 | 1.81 | 1.62 | 0.37 | 0.06 | 973 | 95 | 726 | 342 | 433 | 1.04 |
+
+  Five cases already miss target 2 (bold): the close reaches bounce at 1.1 to 1.2 Hz (pitch 2 to 4.4°, the wet front 1.0 to 1.8 m), the 12 kt beam reach at 1.55 Hz (pitch 0 to 3.4°), the 18 kt broad reach swings without a clear period. The 12 kt broad reach is barely planing (harness 171 N).
+- The validation check (`test_planing_wet_area.gd`, last 10 s): the same numbers within 0.03 m/s and 0.03 m (the 18 kt beam reach identical); targets 2, 3 and 4 `pending`.
+- The grid check (13 rows instead of 7): the front moves −1, **−34** and +3 cm at 18 kt (60°, 100°, 135°), and 0, **+7** and +4 cm at 24 kt. On 13 rows the 18 kt beam reach bounces (pitch SD 0.72°, front 1.53 m on average), so its steady 1.87 m on 7 rows is partly the grid. Over 5 cm: for the team (a finer grid is out of U1's scope).
+
+**Latest: U1.4, the flat tail** (agent 1; `tail_rocker_m` 0, commit 54282ee, **reverted** in d55bd6a until the lead decides; see `u1_reports/measure.md`):
+- `tools/test.sh validation` 20 of 20, plus the new check (1 pass, 3 pending). `tools/test.sh` 333 of 335: two tests in `test_buoyancy.gd` (outside agent 1's files) fail, which is why it is reverted.
+- Straight runs, no fall, no NaN: flat 8.87, 11.07 and 11.99 m/s; the sea 8.65, 10.76 and 11.84 m/s (calmer: 4 and 11 sheet reversals instead of 9 and 17); the lake 22.0, 19.0 and 23.1 kt.
+- The reach check:
+
+| Case | Speed m/s | Front m | Wet m | Push m | Trim ° | Pitch SD ° | Harness N | Rig % | Mast foot N | Friction N |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 12 kt 60° | 7.72 | 1.40 | 1.40 | 1.05 | 3.25 | **0.40** | 744 | 69 | 480 | 74 |
+| 12 kt 100° | 10.27 | 1.76 | 1.76 | 1.35 | 1.78 | 0.00 | 869 | 83 | 614 | 154 |
+| 12 kt 135° | 5.85 | 1.49 | 1.49 | 0.97 | 4.45 | 0.04 | 173 | 16 | 191 | 48 |
+| 18 kt 60° | 8.89 | 1.32 | 1.32 | 1.00 | 2.87 | **0.30** | 715 | 64 | 442 | 90 |
+| 18 kt 100° | 12.30 | 1.88 | 1.88 | 1.59 | 1.21 | 0.01 | 949 | 91 | 681 | 224 |
+| 18 kt 135° | **11.41** | **2.12** | 2.12 | 1.15 | **−0.06** | 0.01 | 557 | 56 | 466 | 210 |
+| 24 kt 60° | 9.28 | 1.33 | 1.33 | 0.98 | 2.74 | **0.36** | 717 | 63 | 427 | 99 |
+| 24 kt 100° | 13.83 | 1.83 | 1.83 | 1.57 | 0.99 | 0.00 | 942 | 88 | 659 | 272 |
+| 24 kt 135° | 15.71 | 1.81 | 1.81 | 1.63 | 0.64 | 0.12 | 974 | 95 | 726 | 343 |
+
+  The trim rises by about 0.3°, the bounce gets smaller, the wet front stays where it was on the beam reaches, and the 18 kt broad reach settles bow-down (pitch −1.05°).
+- `simulate.sh --board.tail_rocker_m=0` (agent 3's way) leaves the buoyancy grid's tail row 1 cm up, but gives nearly the same: within 4 cm and 0.2° on the 18 kt broad reach, and identical within 0.02 on the 18 kt beam reach with `lean_height_drop_m=0.15` (front 1.12 m, trim 1.36°, still bouncing at 1.78 Hz).
 
 ## Open items
 

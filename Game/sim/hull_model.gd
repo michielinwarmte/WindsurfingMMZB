@@ -55,6 +55,9 @@ var trim_deg: float = 0.0  # angle of the planing surface to the flow, degrees
 var wetted_length_m: float = 0.0  # of the planing surface (the wet part of the centreline)
 var wetted_aft_m: float = 0.0  # where the wet part starts, forward of the transom (0 = wet transom)
 var planing_beam_m: float = 0.0  # mean width of the wet part of the bottom
+## The area the skin friction acts on: the larger of the buoyancy grid's wetted area and the
+## planing wet span times its mean width (step 1 of compute()).
+var friction_area_m2: float = 0.0
 ## Water that moves with the hull: the heave added mass of the wet bottom (a flat plate on
 ## the surface carries rho pi b^2 / 8 per metre of length) and its inertia about the centre
 ## of mass in pitch. Strip theory (Wagner, Zarnick), the same physics as the slamming term.
@@ -126,6 +129,7 @@ func compute(body: SimRigidBody, buoyancy: BuoyancyModel, surface: WaterSurface,
 		# half a metre of length per centimetre of depth). Whichever is larger.
 		var dynamic_area_m2: float = wetted_length_m * planing_beam_m
 		var wetted_area_m2: float = maxf(buoyancy.wetted_area_m2, dynamic_area_m2)
+		friction_area_m2 = wetted_area_m2
 		var reference_length: float = maxf(maxf(buoyancy.wetted_length_m, wetted_length_m), 0.3)
 
 		# 1. Skin friction on the wetted bottom (ITTC 1957 line).
@@ -636,6 +640,7 @@ func _clear() -> void:
 	wetted_length_m = 0.0
 	wetted_aft_m = 0.0
 	planing_beam_m = 0.0
+	friction_area_m2 = 0.0
 	heave_added_mass_kg = 0.0
 	pitch_added_inertia_kgm2 = 0.0
 	roll_added_inertia_kgm2 = 0.0
