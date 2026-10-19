@@ -40,17 +40,17 @@ var _rake_trim: float = 0.0
 ## default: holding a course is done with the rig and a flat board; a planing board carves
 ## hard on a few degrees of bank, so a rail used for every small correction rocks it.
 var lean_share: float = 0.0
-## How the steady part of the course hold is carried (U1.6). Off (the default): the helm moves
-## the rake and the rig's sideways tilt together (Helm.steer), so the heading-up helm a
-## planing reach needs also tilts the rig to leeward: on the 18 kt beam reach it leans 8
-## degrees to windward where the hike asks 25. On: the rake carries the helm up to its stop
-## and the tilt only the rest and the quick corrections (Helm.hold_rake_first); the rig then
-## leans 23 to 25 degrees on the close and beam reaches, as hooked-in sailors lean it (10 to
-## 25), with the rake at its 25 degree stop on the beam reaches. Off for now: raked back
-## that far, the arms' forward pull makes the feet press the bow down harder (U1.3), the
-## trim drops (1.8 to 0.7 degrees on the 12 kt beam reach) and the 18 kt broad reach rocks
+## How the steady part of the course hold is carried (U1.6). Off: the helm moves the rake
+## and the rig's sideways tilt together (Helm.steer), so the heading-up helm a planing reach
+## needs also tilts the rig to leeward: on the 18 kt beam reach it leans 10 degrees to
+## windward where the hike asks 25. On (the default since U1.3): the rake carries the helm
+## up to its stop and the tilt only the rest and the quick corrections
+## (Helm.hold_rake_first); the rig then leans 25 degrees on the close and beam reaches, as
+## hooked-in sailors lean it (10 to 25), with the rake at its 25 degree stop on the beam
+## reaches. It was off until U1.3 because raked back that far the feet pressed the bow down
+## harder; with the weight now going with the feet the sailor hangs back instead
 ## (PHYSICS_SPEC.md section 10, "U1.6").
-var trim_with_rake_first: bool = false
+var trim_with_rake_first: bool = true
 ## How fast the sailor moves the rig and the sheet (units per second).
 var rake_rate_per_s: float = 3.0
 var sheet_rate_per_s: float = 1.5
