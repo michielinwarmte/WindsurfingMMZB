@@ -32,6 +32,14 @@ var drive_n: PackedFloat64Array = PackedFloat64Array()
 var harness_tension_n: PackedFloat64Array = PackedFloat64Array()
 var hand_force_up_n: PackedFloat64Array = PackedFloat64Array()
 var mast_foot_force_up_n: PackedFloat64Array = PackedFloat64Array()
+# The fin's load and how much of its force points up (U2, PLAYTEST_UPGRADES.md).
+var fin_slip_deg: PackedFloat64Array = PackedFloat64Array()
+var fin_lift_n: PackedFloat64Array = PackedFloat64Array()
+var fin_roll_nm: PackedFloat64Array = PackedFloat64Array()
+var fin_up_n: PackedFloat64Array = PackedFloat64Array()
+var fin_load_share: PackedFloat64Array = PackedFloat64Array()
+var fin_tilt_deg: PackedFloat64Array = PackedFloat64Array()
+var fin_bend_tip_deg: PackedFloat64Array = PackedFloat64Array()
 var fell: bool = false
 var nan: bool = false
 var telemetry: Telemetry = null
@@ -114,6 +122,13 @@ func record_steps(pilot: Autopilot, controls: SimControls, run_seconds: float) -
 		harness_tension_n.append(t.harness_tension_n)
 		hand_force_up_n.append(t.hand_force_up_n)
 		mast_foot_force_up_n.append(t.mast_foot_force_up_n)
+		fin_slip_deg.append(t.fin_slip_deg)
+		fin_lift_n.append(t.fin_lift_n)
+		fin_roll_nm.append(t.roll_fin_nm)
+		fin_up_n.append(t.fin_up_n)
+		fin_load_share.append(t.fin_load_share)
+		fin_tilt_deg.append(t.fin_tilt_deg)
+		fin_bend_tip_deg.append(t.fin_bend_tip_deg)
 		if sim.sailor_state == WindsurferSim.SailorState.FALLEN:
 			fell = true
 		if is_nan(t.speed_ms) or is_nan(t.position.y):
