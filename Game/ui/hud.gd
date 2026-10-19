@@ -3,7 +3,8 @@ extends CanvasLayer
 ## The telemetry on the screen: a one-line strip that is always there (speed, wind, mode),
 ## a detail panel with the forces and the controls (F1), a wind rose and the key help.
 ## On a map (sail_silvaplana.tscn) also a small map of the lake, and a message line for the
-## shore ("Aground ...").
+## shore ("Aground ..."). With a race course (show_course()) a line with the course's name, and
+## the course on the small map (on the open water a small map of the course's water).
 ## Everything is read from the simulation's Telemetry; nothing is computed here. The pause
 ## menu (pause_menu.gd) is separate; the sailing scene (main.gd) hides this whole layer
 ## behind the start menu.
@@ -14,9 +15,11 @@ var _panel: PanelContainer
 var _detail: Label
 var _help: Label
 var _rose: WindRose
-## Only in a map scene (show_mini_map).
+## Only in a map scene (show_mini_map), or with a race course (show_course).
 var _mini_map: MiniMap = null
 var _message: Label
+## The race course's name, above the small map (show_course).
+var _course_line: Label = null
 ## On a map with its own day of wind: the time of day, at the start of the strip ("" = none).
 var clock_text: String = ""
 
@@ -64,10 +67,42 @@ func _ready() -> void:
 
 
 ## A small map of the lake in the bottom right corner, above the key help (map scenes only).
+## Before show_course(), which then puts the course on it.
 func show_mini_map(area: LakeArea, start: Vector3) -> void:
 	_mini_map = MiniMap.new()
 	add_child(_mini_map)
 	_mini_map.setup(area, start)
+	_place_mini_map()
+
+
+## A race course (RACING_PLAN.md, 9A): its name in a line above the small map, and its marks,
+## lines and legs on it. Without a lake's map (the open water) the small map shows the course's
+## water instead.
+func show_course(course: Course) -> void:
+	if _mini_map == null:
+		_mini_map = MiniMap.new()
+		add_child(_mini_map)
+		_mini_map.setup_for_course(course)
+		_place_mini_map()
+	else:
+		_mini_map.show_course(course)
+	if _course_line == null:
+		_course_line = _label(_strip.get_theme_font("font"), 15, Vector2.ZERO)
+		_course_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		add_child(_course_line)
+		_course_line.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+		_course_line.offset_left = -420.0
+		_course_line.offset_right = -20.0
+		_course_line.offset_top = -_mini_map.size.y - 66.0
+		_course_line.offset_bottom = -_mini_map.size.y - 44.0
+	_course_line.text = "Course: " + course.name
+
+
+func course_text() -> String:
+	return _course_line.text if _course_line != null else ""
+
+
+func _place_mini_map() -> void:
 	_mini_map.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	_mini_map.offset_left = -_mini_map.size.x - 20.0
 	_mini_map.offset_right = -20.0

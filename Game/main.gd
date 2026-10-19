@@ -14,6 +14,11 @@ extends Node3D
 ## --fall=<seconds> (the sailor is catapulted at that time), --pause=<seconds> (the pause
 ## menu opens at that time), --page=settings/<tab>|controls|howto (and that page of it).
 ## --settings=<file.cfg> or --settings=defaults: see ui/game_settings.gd.
+## A race course on the water (RACING_PLAN.md, 9A): --course=<name> shows it (t1_loop on the open
+## water, placed for the settings' wind; a map scene has its own, see _course_named()), starts the
+## board 150 m behind its start line and puts it on the HUD and the mini-map; --lines=1 draws its
+## start and finish lines on the water; --course_view=all puts a fixed camera above the whole
+## course, --course_view=<mark> (1, 4S, start_boat, ...) one beside that mark (for screenshots).
 ##
 ## A map scene sails with this script too (maps/silvaplana/sail_silvaplana.gd extends it): the
 ## map brings its own sun and sky (so Sun is optional), its own wind and start (it overrides
@@ -53,6 +58,9 @@ var _applied_mode: PlayerController.Mode = PlayerController.Mode.BEGINNER
 var _applied_auto_sheet: bool = true
 ## The board ran into the shallows (or off the map) and waits for R (_check_shore()).
 var _aground: bool = false
+## The race course (--course=<name>), or null; and what shows it on the water.
+var _course: Course = null
+var _course_on_water: CourseOnWater = null
 
 
 func _enter_tree() -> void:
@@ -62,6 +70,12 @@ func _enter_tree() -> void:
 	var settings: SettingsValues = GameSettings.values
 	windsurfer.wind_config = _build_wind_config()
 	windsurfer.wave_set_config = settings.build_wave_set_config()
+	# With a course the board starts behind its start line (RaceCourses.pre_start_spot()), placed
+	# from the scene's usual start spot (a map scene sets it before this runs).
+	_course = _course_from_options(Vector2(windsurfer.start_position.x, windsurfer.start_position.z))
+	if _course != null:
+		var spot: Vector2 = RaceCourses.pre_start_spot(_course)
+		windsurfer.start_position = Vector3(spot.x, 0.0, spot.y)
 	windsurfer.start_heading_deg = _start_heading_deg()
 	_sea_signature = settings.sea_signature()
 
@@ -77,6 +91,7 @@ func _ready() -> void:
 	if _sun != null:
 		_sun.rotation_degrees = Vector3(-59.0, -45.0, 0.0)
 	_ocean.setup(_windsurfer.sim, _camera_rig.camera)
+	_show_course()
 	_apply_start_settings()
 	_pause_menu.resume_requested.connect(_set_paused.bind(false))
 	_pause_menu.restart_requested.connect(_on_restart_requested)
@@ -194,6 +209,7 @@ func _rebuild_sea() -> void:
 	for child: Node in _ocean.get_children():
 		child.free()
 	_ocean.setup(_windsurfer.sim, _camera_rig.camera)
+	_put_course_lines_on_the_waves()
 
 
 ## The settings that set up a run: the controls, the camera, the HUD panel, the shadows.
@@ -211,8 +227,11 @@ func _build_wind_config() -> WindConfig:
 	return GameSettings.values.build_wind_config()
 
 
-## The start heading: the settings' one. A map scene has its own (sail_silvaplana.gd).
+## The start heading: the settings' one, or with a course a beam reach behind its start line
+## (RaceCourses.pre_start_heading_deg()). A map scene has its own (sail_silvaplana.gd).
 func _start_heading_deg() -> float:
+	if _course != null:
+		return RaceCourses.pre_start_heading_deg(_course)
 	return GameSettings.values.start_heading_deg
 
 
@@ -308,3 +327,121 @@ func _apply_command_line_options() -> void:
 	if options.has("pause"):
 		_pause_at_s = options["pause"].to_float()
 		_pause_page = options.get("page", "")
+	if _course_on_water != null:
+		_course_on_water.set_lines_visible(options.get("lines", "0") == "1")
+		if options.has("course_view"):
+			_look_at_the_course(options["course_view"])
+
+
+# ---------------------------------------------------------------- the race course (RACING_PLAN.md, 9A)
+
+## The course asked for with --course=<name>, placed for this scene; null without the option, or
+## when there is no such course (it says so).
+func _course_from_options(usual_start: Vector2) -> Course:
+	var course_name: String = _user_option("course")
+	if course_name.is_empty():
+		return null
+	var found: Course = _course_named(course_name, usual_start)
+	if found == null:
+		push_warning("No course called \"%s\" in this scene. The open water has %s; Lake Silvaplana has %s and the courses saved in %s." % [
+			course_name, RaceCourses.T1_NAME, RaceCourses.T2_NAME, RaceCourses.SAVED_FOLDER])
+	return found
+
+
+## A course by name for this scene. The open water knows T1, placed for the settings' wind with the
+## middle of its start line 150 m upwind of the usual start, so the board starts that far behind it;
+## and courses saved in game metres. A map scene knows its own (sail_silvaplana.gd).
+func _course_named(course_name: String, usual_start: Vector2) -> Course:
+	if course_name == RaceCourses.T1_NAME:
+		var wind_from_deg: float = GameSettings.values.wind_from_deg
+		var start_middle: Vector2 = usual_start + Course.direction_of(wind_from_deg) * RaceCourses.PRE_START_BEHIND_M
+		return RaceCourses.t1_loop(wind_from_deg, start_middle)
+	return RaceCourses.load_named(course_name, null)
+
+
+## The course on the water, and its name and marks on the HUD.
+func _show_course() -> void:
+	if _course == null:
+		return
+	_course_on_water = CourseOnWater.new()
+	_course_on_water.name = "CourseOnWater"
+	add_child(_course_on_water)
+	_course_on_water.build(_course, _water_height_at, _water_clock, _true_wind_at)
+	_put_course_lines_on_the_waves()
+	_hud.show_course(_course)
+
+
+## The lines on the water ride the same waves as the water (again after new water is built).
+func _put_course_lines_on_the_waves() -> void:
+	if _course_on_water == null:
+		return
+	var parameters: Dictionary[String, Variant] = {}
+	var field: WaveField = _windsurfer.sim.water as WaveField
+	if field != null:
+		parameters = field.shader_parameters()
+	_course_on_water.set_wave_parameters(parameters, _windsurfer.sim.water_config.base_height_m)
+
+
+## The height of the water you see, for the course's buoys: the simulation's water, asked each
+## time because new waves bring new water (_rebuild_sea()).
+func _water_height_at(x: float, z: float, time_s: float) -> float:
+	return _windsurfer.sim.water.height_at(x, z, time_s)
+
+
+func _water_clock() -> float:
+	return _windsurfer.sim.time_s
+
+
+## The true wind for the boats' flags: the wind over the whole water at a height, as the flag at
+## the start shows it (windsurfer/effects.gd). Not WindField.velocity_at(): on a map that asks the
+## map's wind, which remembers the last spot it was asked for the simulation, and asking it here
+## would change what the simulation gets (rule 2).
+func _true_wind_at(at: Vector3) -> Vector3:
+	var wind: WindField = _windsurfer.sim.wind
+	return -wind.from_direction() * wind.speed_at_height(at.y)
+
+
+## --course_view: a fixed camera for screenshots. "all": straight above the whole course, north up,
+## high enough to see all of it. "start": up high behind the start line, on the side where the
+## board waits, looking across the line at the course. A mark's name (start_boat for "start
+## boat"): beside that mark, across the wind, so its flag is seen side on (a boat a little from
+## behind, to see its deck).
+func _look_at_the_course(view: String) -> void:
+	var camera: Camera3D = _camera_rig.camera
+	var across: Vector2 = Course.direction_of(_course.axis_deg + 90.0)
+	var downwind: Vector2 = -Course.direction_of(_course.axis_deg)
+	if view == "all":
+		var box: Rect2 = _course.bounds().grow(80.0)
+		var window: Vector2 = get_viewport().get_visible_rect().size
+		# The camera's fov is from the top of the picture to the bottom; across it sees more.
+		var half_view: float = tan(deg_to_rad(camera.fov * 0.5))
+		var height_m: float = maxf(box.size.y, box.size.x * window.y / window.x) * 0.5 / half_view
+		var centre: Vector2 = box.get_center()
+		camera.global_transform = Transform3D(Basis.looking_at(Vector3.DOWN, Vector3.FORWARD), Vector3(centre.x, height_m, centre.y))
+	elif view == "start":
+		var middle: Vector2 = _course.start_middle()
+		var behind: Vector2 = (RaceCourses.pre_start_spot(_course) - middle).normalized()
+		var eye: Vector2 = middle + behind * 50.0
+		camera.global_position = Vector3(eye.x, 18.0, eye.y)
+		camera.look_at(Vector3(middle.x, 0.0, middle.y) - Vector3(behind.x, 0.0, behind.y) * 40.0, Vector3.UP)
+	else:
+		var mark: CourseMark = _course.mark(view.replace("_", " "))
+		if mark == null:
+			push_warning("--course_view: the course has no mark called \"%s\"." % view)
+			return
+		var eye: Vector2 = mark.position + across * 9.0
+		var eye_height_m: float = 2.5
+		if mark.is_boat():
+			eye = mark.position + across * 14.0 + downwind * 9.0
+			eye_height_m = 5.0
+		camera.global_position = Vector3(eye.x, eye_height_m, eye.y)
+		camera.look_at(Vector3(mark.position.x, 1.0, mark.position.y), Vector3.UP)
+	_camera_rig.set_process(false)
+
+
+## The value of a command line option --name=value after "--" ("" when it is not given).
+static func _user_option(option: String) -> String:
+	for arg: String in OS.get_cmdline_user_args():
+		if arg.begins_with("--%s=" % option):
+			return arg.get_slice("=", 1)
+	return ""
