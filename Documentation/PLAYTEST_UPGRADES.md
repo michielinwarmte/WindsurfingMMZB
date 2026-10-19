@@ -388,19 +388,19 @@ Who does what, in which order, and the stops: the execution brief's agent table.
 
 **U1.2. The harness load** (agent 4; spec 7.5)
 - [ ] Target: at 18 kt with the 6.5 m² sail, a harness line tension of 350 to 480 N (Walls & Gale 2001), and the rig carrying at most 50 % of the sailor's weight.
-- [ ] Check the body's geometry when fully hiked against the figure's skeleton (`figure_skeleton.gd`) and agent 2's hook height. The what-if runs show the hip height alone moves the tension from 945 to 645 N.
-- [ ] Check the line's share in the least-squares fit (spec 7.5): does it take more of the pull than a real line's direction allows?
-- [ ] Only together with U1.5's fix (agent 4 does U1.5 first).
+- [x] Check the body's geometry when fully hiked against the figure's skeleton (`figure_skeleton.gd`) and agent 2's hook height. The what-if runs show the hip height alone moves the tension from 945 to 645 N.
+- [x] Check the line's share in the least-squares fit (spec 7.5): does it take more of the pull than a real line's direction allows?
+- [x] Only together with U1.5's fix (agent 4 does U1.5 first).
 
 **U1.3. The sailor trims the board: Max's technique** (agent 4; spec 7.5)
-- [ ] Find out why the feet press the bow down at their limit (−120 N·m) in a steady beam reach. Trace `pitch_from_feet_moment_nm` back to its parts: the hands' pull, the twist couple, the posture.
-- [ ] The sailor leans back against the boom's pull and puts the weight on the back foot. `hang_back_m` is 0 today; find why the hang-back balance sees no pull to answer (perhaps the harness lifting from in front of the feet).
-- [ ] The feet as a trim control: back foot down, front foot pulling up in the strap, balanced by the body (its weight and the boom), within what the legs can hold (agent 2's number). The autopilot uses it to hold its running trim.
+- [x] Find out why the feet press the bow down at their limit (−120 N·m) in a steady beam reach. Trace `pitch_from_feet_moment_nm` back to its parts: the hands' pull, the twist couple, the posture.
+- [x] The sailor leans back against the boom's pull and puts the weight on the back foot. `hang_back_m` is 0 today; find why the hang-back balance sees no pull to answer (perhaps the harness lifting from in front of the feet).
+- [x] The feet as a trim control: back foot down, front foot pulling up in the strap, balanced by the body (its weight and the boom), within what the legs can hold (agent 2's number). The autopilot uses it to hold its running trim.
 - [ ] At Stop 3 Max checks it on the water's terms: is the weight on the back foot, and does the nose lift when the sailor asks for it?
 
 **U1.4. A flat tail** (agent 1, after U1.1; spec 5, 6 and 14)
-- [ ] `tail_rocker_m` from 0.01 to 0 in `Game/config/board_default.tres`, flat from the tail forward as the sources say for freeride and slalom boards. Keep a few millimetres only if agent 2 or a later source finds them for freeride boards.
-- [ ] The reach check, validation and the straight runs. Expected: a higher trim and a shorter wet part. Record the numbers in U1_PROGRESS.md.
+- [x] `tail_rocker_m` from 0.01 to 0 in `Game/config/board_default.tres`, flat from the tail forward as the sources say for freeride and slalom boards. Keep a few millimetres only if agent 2 or a later source finds them for freeride boards.
+- [x] The reach check, validation and the straight runs. Expected: a higher trim and a shorter wet part. Record the numbers in U1_PROGRESS.md.
 - [ ] The board model: `tools/blender.sh tools/blender/build_rig_models.py` reads `board_default.tres` and rebuilds `Game/assets/models/board.glb`. Blender is not on Max's PC, so leave the rebuild as an open item in U1_PROGRESS.md; the physics doesn't need the model.
 
 **U1.5. The porpoising, solved physically** (diagnosis: agent 3; fix: agent 4; the open item 2 of Session 39)
@@ -414,16 +414,16 @@ Two kinds of bouncing must not be confused (Max asked, 19 October 2026):
   - the sailor's reflexes chasing the bounce (`trim_press_*`, `pitch_reflex_m_per_rad_s`, the hang-back);
   - the planing strips' own damping in pitch and heave, the transom relief (`TRANSOM_RELIEF_BEAMS`), the lift lag;
   - Savitsky's porpoising limit for a flat bottom (Day & Haag 1952; Savitsky 1964): where do the trim and load sit against it?
-- [ ] The fix (agent 4), of the cause found. Real boards do porpoise sometimes (a mast foot too far back, a fin too big, top speed on flat water), so a short, occasional bounce at top speed is realistic. A board that bounces all the time at 18 kt is not. Target 2 of the brief: steadiness below 0.3° in all 9 reach cases.
-- [ ] No new damping constant to hide it.
+- [x] The fix (agent 4), of the cause found. Real boards do porpoise sometimes (a mast foot too far back, a fin too big, top speed on flat water), so a short, occasional bounce at top speed is realistic. A board that bounces all the time at 18 kt is not. Target 2 of the brief: steadiness below 0.3° in all 9 reach cases.
+- [x] No new damping constant to hide it.
 
 **U1.6. The rig leaned to windward, and the fin loaded** (agent 5)
-- [ ] Check how the autopilot and the player's assists lean the rig (`max_rig_lean_deg`, `rig_tilt`), and that the sail's upward lift reaches the sailor and the board. Real: 10 to 25°, and the sail carries 7 to 24 % of the weight.
-- [ ] "Loading the fin", the assist's safe amount. When planing and powered up on flat water, the sailor's wanted bank (`_wanted_bank_rad`, flat today) becomes a few degrees of leeward rail down. The angle comes from agent 2, or else from Max's estimate. It is a small part of U1 (50 to 100 N of about 900 N), so U1 does not depend on it.
+- [x] Check how the autopilot and the player's assists lean the rig (`max_rig_lean_deg`, `rig_tilt`), and that the sail's upward lift reaches the sailor and the board. Real: 10 to 25°, and the sail carries 7 to 24 % of the weight.
+- [x] "Loading the fin", the assist's safe amount. When planing and powered up on flat water, the sailor's wanted bank (`_wanted_bank_rad`, flat today) becomes a few degrees of leeward rail down. The angle comes from agent 2, or else from Max's estimate. It is a small part of U1 (50 to 100 N of about 900 N), so U1 does not depend on it.
   - What it is on the water. Max, 19 October 2026: "I'm pushing on the rail of the board, and with that I'm also railing the board away from me a little, to tilt the board a bit and load the fin. Now the board wants to fly. If I do it too much, my board comes out of the water and I lose control. It's a fine technique and maybe too hard to replicate." So it is both: the feet push sideways on the rail, and that tips the board away from the sailor (leeward rail down). The fin then pushes harder and partly upward, and the board lifts.
   - What the model already has right. Max: "the force of the sail is also what I push against the fin." The sail's sideways pull goes through the boom and the harness into the sailor, the feet push the board sideways, and the fin holds against it. In the steady 18 kt run: sail side force 508 N to leeward, fin lift 573 N to windward. In yaw, the fin's moment (+546 N·m) and the feet's (−543 N·m) cancel.
   - The board already sails with the leeward rail 3.6° down, so the fin lifts 36 N. At 5 to 10° with the same push, that would be 50 to 100 N, and more when the sail pulls harder: a powered-up sailor can load the fin more.
-- [ ] The railing-out test, as information for the team's later decision on a player control. In a test, raise the wanted bank step by step. Does the board lift and then rail out above some angle, because the fin's rolling moment beats what the feet can hold (`feet_moment_max_nm`)? Report the angle. Build nothing on it in U1.
+- [x] The railing-out test, as information for the team's later decision on a player control. In a test, raise the wanted bank step by step. Does the board lift and then rail out above some angle, because the fin's rolling moment beats what the feet can hold (`feet_moment_max_nm`)? Report the angle. Build nothing on it in U1.
 
 **U1.7. Validate again: the board gets faster** (agent 5)
 - [ ] Friction drops by about half, so the speeds rise. Run the validation suite, the reach check and the three straight runs against the baseline, and the polar against the real ranges in [POLAR_15KT.md](POLAR_15KT.md). No manoeuvres.
