@@ -3,14 +3,15 @@ extends PanelContainer
 ## The course maker's panel (MAP_SILVAPLANA_PLAN.md, W4a): choose a template, set the course's axis,
 ## size and number of boards, add marks, type the order the marks are sailed in, change the
 ## selected mark (name, rounding side, delete), undo, clear, save and load the team's courses; it
-## lists the legs and the warnings. It only shows and asks: CourseEditor does the work, through the
-## signals.
+## lists the legs and the warnings. Fit to water makes the course fit the lake (CourseFitter). It
+## only shows and asks: CourseEditor does the work, through the signals.
 
 signal template_chosen(id: String)
 signal boards_changed(boards: int)
 signal size_changed(percent: float)
 signal axis_changed(degrees: float)
 signal square_to_wind_pressed
+signal fit_to_water_pressed
 signal undo_pressed
 signal clear_pressed
 signal add_mark_pressed
@@ -32,6 +33,7 @@ var _boards: SpinBox
 var _size: SpinBox
 var _axis: SpinBox
 var _square: Button
+var _fit: Button
 var _undo: Button
 var _clear: Button
 var _add: Button
@@ -89,6 +91,8 @@ func _ready() -> void:
 	_size.value_changed.connect(func(value: float) -> void: size_changed.emit(value))
 	_boards = _spin_box(sizes, "Boards", 2.0, 200.0, 1.0, "Sets the start line's length")
 	_boards.value_changed.connect(func(value: float) -> void: boards_changed.emit(int(value)))
+	_fit = _button(sizes, "Fit to water", "Make the course fit the lake: every mark 200 m and every leg 50 m from the shore, set to the wind now, as big as it fits (Undo goes back)")
+	_fit.pressed.connect(func() -> void: fit_to_water_pressed.emit())
 	_clear = _button(sizes, "Clear", "Remove the course from the lake (Undo brings it back)")
 	_clear.pressed.connect(func() -> void: clear_pressed.emit())
 
@@ -175,7 +179,7 @@ static func background() -> StyleBoxFlat:
 ## warnings. A field being typed in keeps what is typed.
 func show_course(course: Course, summary: String, legs_header: PackedStringArray, legs: Array[PackedStringArray],
 		warnings: PackedStringArray) -> void:
-	for control: Control in [_axis, _size, _boards, _square, _clear, _add, _save, _name, _order]:
+	for control: Control in [_axis, _size, _boards, _square, _fit, _clear, _add, _save, _name, _order]:
 		if control is BaseButton:
 			(control as BaseButton).disabled = course == null
 		elif control is SpinBox:
