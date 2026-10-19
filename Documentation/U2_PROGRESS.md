@@ -3,26 +3,26 @@
 The live state of U2, "the fin bends, and its size". The plan and its execution brief are in [PLAYTEST_UPGRADES.md](PLAYTEST_UPGRADES.md). **The lead updates and commits this file after every launch, report and merge.** A lead who takes over starts here; U1's take-over prompt in [U1_PROGRESS.md](U1_PROGRESS.md) applies with U2 in place of U1.
 
 - **Branch:** `feature/u2-fin` (from `feature/u1-planing-wet-area` at c1eee63). Agents work on `u2/<name>` branches, made from it in their own worktrees.
-- **Last update:** 19 October 2026. Agent 1 merged; the brief's chord law and flex-test default corrected. Agent 2 still running.
+- **Last update:** 19 October 2026. Agents 1 and 2 merged; Stop 1 passed; agent 3 (fin_physics) launched with the lead's design.
 
 ## State
 
 | # | Agent | Package | State | Branch | Report |
 |---|---|---|---|---|---|
 | 1 | `fin_sources` | the stiffness, the catalogue fins, the literature | merged | `u2/fin_sources` | [fin_sources.md](u2_reports/fin_sources.md) |
-| 2 | `fin_measure` | the fin's baseline, the overrides, the telemetry, the what-ifs, the pending check | running | `u2/fin_measure` | |
-| 3 | `fin_physics` | the bending fin, by the lead's design | waits for Stop 1 | `u2/fin_physics` | |
+| 2 | `fin_measure` | the fin's baseline, the overrides, the telemetry, the what-ifs, the pending check | merged | `u2/fin_measure` | [fin_measure.md](u2_reports/fin_measure.md) |
+| 3 | `fin_physics` | the bending fin, by the lead's design | running | `u2/fin_physics` | |
 | 4 | `fin_look` | the bending mesh, the HUD, the screenshots, the checklist | waits for Stop 2 | `u2/fin_look` | |
 
 | Stop | State |
 |---|---|
-| Stop 1, the lead: agents 1 and 2 in, the stiffness sourced | not reached |
+| Stop 1, the lead: agents 1 and 2 in, the stiffness sourced | **passed** on 19 October 2026: the flex test is measured (IST Lisbon), the baseline is pinned, nothing regressed (the lead's verification of the merge runs alongside agent 3) |
 | Stop 2, the lead reviews agent 3's diff, then Michiel | not reached |
 | Stop 3, Max's play-test | not reached |
 
 ## Next action
 
-Agents 1 and 2 are running. For each that reports: read `Documentation/u2_reports/<name>.md` on `u2/<name>`, merge into `feature/u2-fin`, verify, set its state here, commit. When both are in: Stop 1 (the stiffness sourced, nothing regressed); the lead fills the flex-test numbers into the design and launches agent 3 with the two reports. An agent that was running but has no committed report is relaunched with the brief's prompt.
+Agent 3 (`fin_physics`) is running on `u2/fin_physics`: the bending fin by the brief's design, the bend check made real, the 37 stiff/flex/44 cm comparisons. When it reports: **the lead reads its diff itself** (`git diff feature/u2-fin u2/fin_physics -- Game/sim`), checks it against the design point by point, merges if sound, verifies (`tools/check.sh`, `tools/test.sh`, `tools/test.sh validation`, `tools/reach_check.sh`), writes the numbers, and then stops at **Stop 2 for Michiel** with the diff, the spec sections and the report. Agent 4 (`fin_look`) is launched after Michiel's OK.
 
 ## Numbers
 
@@ -52,6 +52,8 @@ Up = the world-upward part of the fin's force (today only from the heel); Stall 
 ## Notes
 
 Decisions and surprises along the way, newest first.
+
+- 19 October 2026 (agent 2): `--fin.<field>=` overrides, fin columns in the reach check, `fin_up_n`, `fin_load_share`, `fin_tilt_deg` (from the force itself, so agent 3's tilt shows up by itself) and `fin_bend_tip_deg` in the telemetry and the HUD; `test_fin_bend.gd` pins the stiff fin (slip 1.98°, lift 526 N, up 41 N) with the bend pending. The fin works at 13 to 20 % of its stall on the planing reaches. A 44 cm stiff fin drops the slip by a quarter and raises the roll moment 13 %, but lifts no more: a stiff fin only lifts more by heeling more (bank 0 to 24°: 20 to 243 N up at 18 kt; steady to 20°, wobbling at 24°; at 24 kt 135° it wobbles from 8° on).
 
 - 19 October 2026 (agent 1): the stiffness has a measured source: a 37 cm F-Hot carbon slalom fin, 100 N at 80 % of the span moves the load point 20 mm (Nascimento 2017, IST Lisbon); its FEA bends the tip 0.106 mm per newton of sailing lift, the brief's beam 0.112 mm, within 6 %. No G10 test found (G10 probably 2 to 4 times stiffer, estimate). Unifiber G10 freeride: 38 cm 365 cm², 44 cm 411 cm². Makers say a soft tip lifts the board and shrinks the wet area; no number anywhere for the upward force. Spin-out at 8 to 16° in three measurements. Twist findings contradict each other: left out, as planned. Preview with the beam: 70 N up from the bend at 527 N on the 38 cm fin, 161 N at 800 N; the 44 cm fin 105 and 238 N (tip angle 32° at 800 N, near the 35° cap). **The lead corrected the chord law:** `c_root = area / (0.686 × span)` keeps the area right for every span.
 
