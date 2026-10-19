@@ -10,18 +10,18 @@ The live state of Phase 9, racing. The plan and its execution brief are in [RACI
 
 | # | Agent | Package | State | Branch | Report |
 |---|---|---|---|---|---|
-| 1 | `race_core` | RaceSim (the countdown, the steps, OCS, the clock and splits), RoundingCheck (the geometry), RaceResult, their tests, `tools/race.sh` with `Game/dev/run_race.gd` | launched | `p9/race_core` | |
+| 1 | `race_core` | RaceSim (the countdown, the steps, OCS, the clock and splits), RoundingCheck (the geometry), RaceResult, their tests, `tools/race.sh` with `Game/dev/run_race.gd` | merged (37d880c) | `p9/race_core` | [race_core.md](racing_reports/race_core.md) |
 | 2 | `course_on_water` | buoys, the boats and the lines on the water in both scenes (`--course=<name>`), T1 placed by code (`RaceCourses`), the course file's game-metres frame, the mini-map with the marks | merged (ee79036) | `p9/course_on_water` | [course_on_water.md](racing_reports/course_on_water.md) |
 | 3 | `fit_to_water` | `CourseFitter`: the shore clearance field, the fit (shrink, turn, move; marks 200 m off the shore, legs 50 m), the course maker's "Fit to water" button, `tools/fit_courses.sh` writing `t2_slalom.json` | merged (560574d) | `p9/fit_to_water` | [fit_to_water.md](racing_reports/fit_to_water.md) |
 
 | Stop | State |
 |---|---|
-| Stop A1, the lead: the three agents merged, tests and check green, the courses seen in screenshots | open |
+| Stop A1, the lead: the three agents merged, tests and check green, the courses seen in screenshots | **passed** late on 19 October 2026: 416 tests, 211 files, `tools/race.sh --course=t1_loop` and `--course=t2_slalom` run; the buoy and the start line checked in screenshots |
 | Stop A2, Max: sails among the buoys of T1 and T2; the course maker's Fit to water | open |
 
 ## Next action
 
-The three agents run. When each reports: the lead reads the diff (the rounding geometry and the fitter's search most carefully), merges in the order `race_core`, `fit_to_water`, `course_on_water`, wires `run_race.gd` to `RaceCourses` (one line), runs `tools/test.sh` and `tools/check.sh`, takes the screenshots, and updates this file. Then Stop A2 for Max.
+Max went to bed on 19 October 2026 with "experiment with the AI if you like, use the laptop's CPU, be careful with my tokens, surprise me tomorrow". The lead launches two agents: `skipper` (9B, the scripted skipper and its four characters, headless on T1 and T2) and `learn` (9C-lite: RaceEnv, the observation and the reward, NeuralNet and the brain file, LearnedSkipper, and an in-Godot evolution trainer on all cores, PPO over Python postponed because nothing may be installed at night). When both are merged the lead runs the trainer overnight on T1 and writes the morning report here and in the progress log. Stop A2 (Max sails among the buoys) is open.
 
 ## Numbers
 

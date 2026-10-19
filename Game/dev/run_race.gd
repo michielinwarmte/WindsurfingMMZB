@@ -8,6 +8,8 @@ extends SceneTree
 ##   --course=test         a small loop made by code (the default): a start line 60 m long, mark 1
 ##                         300 m upwind (port), the gate 4S/4P 100 m above the line, and the finish
 ##                         line 150 m to the left of the gate
+##   --course=t1_loop      the T1 training loop on open water (RaceCourses), the start line at the origin
+##   --course=<name>       a course saved by the course maker, by name (t2_slalom, ...)
 ##   --course=<file.json>  a course saved by the course maker (a res:// path, a full path, or a path
 ##                         from the repository's folder), placed with the Silvaplana map's frame
 ##   [--boards=1] [--laps=1] [--wind_kt=15] [--seconds=300: race time after the gun]
@@ -111,8 +113,12 @@ func _initialize() -> void:
 func _course(name: String) -> Course:
 	if name == "test":
 		return _test_course(EnvironmentConfig.new().wind_or_default().from_bearing_deg)
-	# TODO (lead): --course=t1_loop and --course=t2_slalom by name, from the RaceCourses class that
-	# the course_on_water agent builds (RACING_PLAN.md, Part 9A, "Built-in courses").
+	# The built-in courses and the team's saved ones, by name (RaceCourses); anything else is a path.
+	if name == "t1_loop":
+		return RaceCourses.t1_loop(EnvironmentConfig.new().wind_or_default().from_bearing_deg, Vector2.ZERO)
+	var named: Course = RaceCourses.load_named(name, load(MAP_CONFIG_PATH))
+	if named != null:
+		return named
 	var path: String = name
 	if not (path.begins_with("res://") or path.begins_with("user://") or path.is_absolute_path()):
 		path = _repository_path(path)
