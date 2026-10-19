@@ -3,7 +3,7 @@
 The live state of U2, "the fin bends, and its size". The plan and its execution brief are in [PLAYTEST_UPGRADES.md](PLAYTEST_UPGRADES.md). **The lead updates and commits this file after every launch, report and merge.** A lead who takes over starts here; U1's take-over prompt in [U1_PROGRESS.md](U1_PROGRESS.md) applies with U2 in place of U1.
 
 - **Branch:** `feature/u2-fin` (from `feature/u1-planing-wet-area` at c1eee63). Agents work on `u2/<name>` branches, made from it in their own worktrees.
-- **Last update:** 19 October 2026. Max decided on the sailor's technique (the brief: "The sailor rides the fin"); agent 3 relaunched on it. Michiel reviews the bending fin and the technique together at Stop 2.
+- **Last update:** 19 October 2026. The riding round stopped (the porpoising fit is wrong for this hull). The lead found the hull makes about half of Savitsky's lift per wet length, likely the heeled strips' added mass; agent 6 (`hull_lift`) diagnoses it. Michiel's review still pending.
 
 ## State
 
@@ -11,9 +11,10 @@ The live state of U2, "the fin bends, and its size". The plan and its execution 
 |---|---|---|---|---|---|
 | 1 | `fin_sources` | the stiffness, the catalogue fins, the literature | merged | `u2/fin_sources` | [fin_sources.md](u2_reports/fin_sources.md) |
 | 2 | `fin_measure` | the fin's baseline, the overrides, the telemetry, the what-ifs, the pending check | merged | `u2/fin_measure` | [fin_measure.md](u2_reports/fin_measure.md) |
-| 3 | `fin_physics` | the bending fin: merged, reviewed by the lead. **Now: the sailor rides the fin** (the brief's design: the press, the trim target, the straps, the nose air) | running (riding) | `u2/fin_physics` | [fin_physics.md](u2_reports/fin_physics.md); next `fin_ride_physics.md` |
+| 3 | `fin_physics` | the bending fin: merged. The riding round: merged, **stop rule** (Savitsky's porpoising fit doesn't describe this hull), nothing changed in the sailing | merged (riding round, reported only) | `u2/fin_physics` | [fin_physics.md](u2_reports/fin_physics.md), [fin_ride_physics.md](u2_reports/fin_ride_physics.md) |
 | 4 | `fin_look` | the bending mesh, the HUD, the screenshots, the checklist | waits for Stop 2 | `u2/fin_look` | |
 | 5 | `fin_ride` | experiments: the sailor riding the fin (weight aft, rail down, fin size), no game file changed | merged | `u2/fin_ride` | [fin_ride.md](u2_reports/fin_ride.md) |
+| 6 | `hull_lift` | diagnosis: the hull's planing lift against Savitsky, level and heeled; the literature on heeled planing | running | `u2/hull_lift` | |
 
 | Stop | State |
 |---|---|
@@ -23,7 +24,9 @@ The live state of U2, "the fin bends, and its size". The plan and its execution 
 
 ## Next action
 
-**Agent 3 is running** (relaunched on `u2/fin_physics`): the brief's "The sailor rides the fin" design, a to d. When it reports: the lead reads the diff (`windsurfer_sim.gd`, `hull_model.gd`, the configs), merges if sound, verifies (`tools/check.sh`, `tools/test.sh`, `tools/test.sh validation`, `tools/reach_check.sh`), writes the numbers, and then **Stop 2 for Michiel covers both the bending fin and the technique** (the four questions already in the Notes and this diff). After his OK: agent 4 (`fin_look`), then Stop 3, Max's play-test.
+**Agent 6 (`hull_lift`) is running:** the diagnosis of the brief's "The hull's lift under heel" (a probe of the hull model in prescribed states against Savitsky, level and heeled; the literature on heeled planing). When it reports: merge, write the cause here, and **the lead designs the fix** (a new subsection in the brief) and relaunches agent 3 on it. The design must keep the U1 stability (the vee, the spray root), be sourced, and be measured with the reach check. Then the lead's review, Stop 2 for Michiel (the bending fin, the hull's lift fix, the critical trim reported), agent 4 (the look), Stop 3.
+
+**Why:** the sailor's technique can't shorten the wet part while the hull needs 1.7 m to carry 670 N at 1.5° where Savitsky's formula needs about 1.0 m. Max's "the player uses the fin's lift wrong" led here: the fin's lift was fine, the sailor's press is not the limit at 1.5°, and the hull's lift per metre of wet length is the suspect.
 
 ## Numbers
 
@@ -71,6 +74,9 @@ Up = the world-upward part of the fin's force (today only from the heel); Stall 
 ## Notes
 
 Decisions and surprises along the way, newest first.
+
+- 19 October 2026 (agent 3, the riding round): stop rule. Savitsky's porpoising fit (OpenPlaning) gives 0.51 to 0.72° on the fast reaches, extrapolated below its chart (x = 0.09 to 0.13 against 0.13 to 0.3), where the hull rides steadily at 1.2 to 1.5° and bounces at 2.6 times the "limit"; a target built on it made every reach longer and slower. The press scaling (a) made no difference at 1.5° and cost steadiness at 24 kt 130° (not kept). The straps need no change (the press already reaches the back strap, 0.37 to 0.45 m from the tail; Jem Hall's layout). The air under the nose is 3 to 13 N, 0.4 to 1.7 % of the weight (flat plate, Helmbold): left out. The critical trim is now reported by `hull_model.gd` (`critical_trim_deg`, spec 5 F22) and steers nothing.
+- 19 October 2026 (the lead): the hull makes about half of Savitsky's lift per wet length (533 N on 1.76 m at 1.5° and 12.7 m/s; Savitsky with the 0.6 m mean wet beam needs about 1.0 m). Heel alone (bank 0, 4.5, 8 → heel 3.3, 4.5, 8.0°) moves the wet front 1.72, 1.76, 1.87 m and trades planing lift (491, 452, 367 N) for buoyancy (128, 145, 191 N). Suspect: the strips' added mass uses the geometrically wet width, and a heeled board's high rail is dry over the whole wet part. Agent 6 checks it directly.
 
 - 19 October 2026 (Max): on the lead's recommendation: (1) the press not cut by the fin's lift, if it gets better; (2) the trim target falling with speed, OK; (3) while planing and not turning, the feet always press at the footstraps. Sidenote: the air under the raised nose lifts it at speed; the lead has it estimated first (tens of newtons at 30 kt apparent, by a first guess) and added only if it matters.
 
