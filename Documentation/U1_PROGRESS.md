@@ -62,9 +62,25 @@ Still off target on the 18 and 24 kt beam and broad reaches: the wet front by 0.
 
 **The merged branch** (lead, 19 October 2026, e2f1563): `tools/check.sh` 190 files, 0 failed; `tools/test.sh` all passed; `tools/test.sh validation` no failures, 3 pending (the new check's targets). Green.
 
-**Round 3, U1.2 and U1.3 (agent 4, merged 1cf467a), agent 4's own numbers:** unit 343 of 343; check 0 failed; validation fails only the onset (11.6 kn). 18 kt beam reach: harness 683 N, rig 63 %, line 0.77 m, wet front 1.71 m, push 1.13 m, trim 1.64°. All 9 steady (worst 0.26° at 24 kt 135°). Speeds: the beam and broad reaches 4 to 11 % faster than Latest, the close reaches 3 % slower (the 45° stance). Full table in `u1_reports/physics_harness.md`. The lead's verification of the merge: see below when it lands.
+**Round 3, U1.2 and U1.3 (agent 4, merged 1cf467a), agent 4's own numbers:** unit 343 of 343; check 0 failed; validation fails only the onset (11.6 kn). 18 kt beam reach: harness 683 N, rig 63 %, line 0.77 m, wet front 1.71 m, push 1.13 m, trim 1.64°. All 9 steady (worst 0.26° at 24 kt 135°). Speeds: the beam and broad reaches 4 to 11 % faster than Latest, the close reaches 3 % slower (the 45° stance). Full table in `u1_reports/physics_harness.md`.
 
-**U1.6 (agent 5, merged 3718ef4), agent 5's own numbers:** unit 341 of 341; validation fails only on the onset (now 12.7 kn); the reach check stays steady in 9 of 9 (pitch SD at most 0.07°); speeds within 3 % of Latest except the 18 kt broad reach, which is faster (11.23 → 11.88 m/s); the close reaches 2 to 3 % slower (the board now heels 4.5° there). 18 kt beam reach: harness 954 N, rig 91 %, line 1.44 m; with rake-first on: 854 N, 93 %, 1.05 m, rig lean 23°. The board rails out at 24° of heel (holds 21°). **Verified by the lead on the merged branch (3718ef4):** `tools/check.sh` 192 files, 0 failed; `tools/test.sh` 342 of 342; `tools/test.sh validation` 26 pass, 1 fail (the onset, 12.7 kn), 2 pending (targets 3 and 4). The reach check (means over t ≥ 25 s, positions from the tail):
+**Latest, verified by the lead on the merged branch (1cf467a):** `tools/check.sh` 192 files, 0 failed; `tools/test.sh` 343 of 343; `tools/test.sh validation` 26 pass, 1 fail (the onset, 11.6 kn), 2 pending (targets 3 and 4). The reach check (means over t ≥ 25 s, positions from the tail):
+
+| Case | Speed m/s | Front m | Push m | Trim ° | Pitch SD ° | Harness N | Rig % | Mast foot N | Friction N | Area m² |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 12 kt 60° | 7.58 | 1.87 | 1.43 | 2.11 | 0.00 | 708 | 81 | 482 | 90 | 1.05 |
+| 12 kt 100° | 10.30 | 1.82 | 1.32 | 1.77 | 0.00 | 705 | 79 | 462 | 154 | 1.02 |
+| 12 kt 135° | 6.41 | 1.95 | 0.86 | 2.54 | 0.05 | 185 | 16 | 193 | 68 | 1.09 |
+| 18 kt 60° | 8.70 | 1.76 | 1.25 | 2.10 | 0.01 | 666 | 71 | 414 | 111 | 1.00 |
+| 18 kt 100° | 12.74 | 1.71 | 1.13 | 1.64 | 0.00 | 683 | 63 | 352 | 216 | 0.96 |
+| 18 kt 135° | 12.55 | 1.39 | 1.10 | 1.53 | 0.09 | 500 | 55 | 401 | 171 | 0.76 |
+| 24 kt 60° | 9.06 | 1.71 | 1.19 | 2.17 | 0.00 | 647 | 66 | 383 | 117 | 0.97 |
+| 24 kt 100° | 14.31 | 1.65 | 1.08 | 1.67 | 0.01 | 695 | 57 | 320 | 258 | 0.93 |
+| 24 kt 135° | 16.04 | 1.66 | 1.14 | 1.45 | 0.26 | 706 | 60 | 386 | 318 | 0.92 |
+
+  Against the baseline: steady 9 of 9 (was 4 of 9); the 18 kt beam reach's harness 947 → 683 N, rig 91 → 63 %, mast foot 679 → 352 N, friction 224 → 216 N, speed 12.30 → 12.74 m/s; the wet front 1.87 → 1.71 m. The close reaches are slower (8.81 → 8.70 and 9.26 → 9.06 m/s at 18 and 24 kt) with a longer wet part.
+
+**Earlier, U1.6 (agent 5, merged 3718ef4), agent 5's own numbers:** unit 341 of 341; validation fails only on the onset (now 12.7 kn); the reach check stays steady in 9 of 9 (pitch SD at most 0.07°); speeds within 3 % of Latest except the 18 kt broad reach, which is faster (11.23 → 11.88 m/s); the close reaches 2 to 3 % slower (the board now heels 4.5° there). 18 kt beam reach: harness 954 N, rig 91 %, line 1.44 m; with rake-first on: 854 N, 93 %, 1.05 m, rig lean 23°. The board rails out at 24° of heel (holds 21°). **Verified by the lead on the merged branch (3718ef4):** `tools/check.sh` 192 files, 0 failed; `tools/test.sh` 342 of 342; `tools/test.sh validation` 26 pass, 1 fail (the onset, 12.7 kn), 2 pending (targets 3 and 4). The reach check (means over t ≥ 25 s, positions from the tail):
 
 | Case | Speed m/s | Front m | Push m | Trim ° | Pitch SD ° | Harness N | Rig % | Mast foot N | Friction N | Area m² |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -80,7 +96,7 @@ Still off target on the 18 and 24 kt beam and broad reaches: the wet front by 0.
 
 **Onset work (agent 4, merged, off by default):** the reach check and all checks are unchanged from the table below (`check.sh` 0 failed, `test.sh` all passed with one new test, validation 21 pass, onset fails, 2 pending). The onset without the correction is 16.0, 13.3, 11.0, 11.0 kn at 12, 15, 18, 24 kt (it jumps with the wind because the planing share hovers near 0.5); with factor 0.5 it is 8.8, 9.9, 9.4, 9.5 kn, and the 12 kt broad reach drops to 3.75 m/s at 9.3° trim, the 24 kt broad reach bounces at 0.64°. Full table in `u1_reports/physics_onset.md`.
 
-**Latest: `feature/u1-planing-wet-area` after agent 4's first merge** (verified by the lead on `u1/physics` at 18e2a82) (verified by the lead, 19 October 2026, not merged): `tools/check.sh` 190 files, 0 failed; `tools/test.sh` 337 of 337; `tools/test.sh validation` 21 pass, **1 fail** (`test_planing_onset_and_fully_planing`: onset 6.85 m/s = 13.3 kn, band 8 to 10 kn), 2 pending (targets 3 and 4). The reach check (means over t ≥ 25 s, positions from the tail):
+**Earlier: `feature/u1-planing-wet-area` after agent 4's first merge** (verified by the lead on `u1/physics` at 18e2a82) (verified by the lead, 19 October 2026, not merged): `tools/check.sh` 190 files, 0 failed; `tools/test.sh` 337 of 337; `tools/test.sh validation` 21 pass, **1 fail** (`test_planing_onset_and_fully_planing`: onset 6.85 m/s = 13.3 kn, band 8 to 10 kn), 2 pending (targets 3 and 4). The reach check (means over t ≥ 25 s, positions from the tail):
 
 | Case | Speed m/s | Front m | Push m | Trim ° | Pitch SD ° | Harness N | Rig % | Mast foot N | Friction N | Area m² |
 |---|---|---|---|---|---|---|---|---|---|---|
