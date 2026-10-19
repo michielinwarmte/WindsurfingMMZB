@@ -3,7 +3,7 @@
 The live state of U1, "planing on a smaller wet area". The plan and its execution brief are in [PLAYTEST_UPGRADES.md](PLAYTEST_UPGRADES.md). **The lead updates and commits this file after every launch, report and merge.** A lead who takes over starts here.
 
 - **Branch:** `feature/u1-planing-wet-area` (from `main` at 561849c). Agents work on `u1/<name>` branches, made from it in their own worktrees.
-- **Last update:** 19 October 2026. Stop 1 passed with the team's decisions; agent 4 (physics) launched. Agents 1 to 3 merged.
+- **Last update:** 19 October 2026. Agent 4 reported on `u1/physics` (18e2a82), held unmerged; **Stop 2: waiting for Michiel.**
 
 ## State
 
@@ -12,7 +12,7 @@ The live state of U1, "planing on a smaller wet area". The plan and its executio
 | 1 | `measure` | baseline, the reach check, U1.1, then U1.4 (flat tail) | merged (U1.4 reverted) | `u1/measure` | [measure.md](u1_reports/measure.md) |
 | 2 | `sources` | the four numbers that need a source | merged | `u1/sources` | [sources.md](u1_reports/sources.md) |
 | 3 | `porpoising` | U1.5's diagnosis | merged | `u1/porpoising` | [porpoising.md](u1_reports/porpoising.md) |
-| 4 | `physics` | U1.5's fix with a slight tail vee, the grid trial, U1.4 back, U1.2, U1.3 | running | `u1/physics` | |
+| 4 | `physics` | U1.5's fix with a slight tail vee, the grid trial, U1.4 back, U1.2, U1.3 | reported, **not merged** (one validation check fails: the planing onset) | `u1/physics` | `git show u1/physics:Documentation/u1_reports/physics.md` |
 | 5 | `finish` | U1.6, U1.7, U1.8's screenshots | waits for Stop 2 | `u1/finish` | |
 
 The possible states are: not started → running → reported → merged.
@@ -20,12 +20,18 @@ The possible states are: not started → running → reported → merged.
 | Stop | State |
 |---|---|
 | Stop 1, the lead: agents 1 to 3 in, the go/no-go for agent 4 | **passed** on 19 October 2026 with four team decisions (in the brief, "Decisions at Stop 1") |
-| Stop 2, Michiel reviews agent 4's physics | not reached |
+| Stop 2, Michiel reviews agent 4's physics | **reached** on 19 October 2026; waits for Michiel (the questions are in Next action) |
 | Stop 3, Max's play-test | not reached |
 
 ## Next action
 
-Agent 4 (`physics`) is running on `u1/physics`. When it reports: read `Documentation/u1_reports/physics.md`, merge `u1/physics`, run `tools/check.sh`, `tools/test.sh`, `tools/test.sh validation` and `tools/reach_check.sh` on the merged branch, write the numbers under Numbers, and stop at **Stop 2: Michiel reviews agent 4's physics** (the diff, the spec, the numbers). Agent 5 is launched only after his OK, with agent 4's report. If agent 4 was running but has no committed report, relaunch it with the brief's prompt; it continues on `u1/physics`.
+**Stop 2: Michiel reviews agent 4's physics on `u1/physics`** (18e2a82, four commits on top of e51a4b5). The branch is held unmerged because its validation is not green: the planing-onset check fails (onset 13.3 kn against the 8 to 10 kn band), and a stop rule fired on U1.2. To review: `git diff e51a4b5 u1/physics` (hull_model.gd, board_config.gd, board_default.tres, the tests), PHYSICS_SPEC.md sections 5, 7.5, 14, 16 and 17.2, and the report. Michiel decides:
+1. **The planing onset.** It moved from 9.8 kn (which rode a 5.9° bouncing bow-up overshoot) to 13.3 kn. Move the band in the validation check (and write it in the tuning log), or look for missing hump lift first?
+2. **U1.2's route.** The harness stays at 956 N because the line runs 1.45 m from the hiked body to the grip (real: 0.30 to 0.40 m): the pilot's weather helm tilts the rig back to 8°. Options: fix the rig's lean and the helm first (that is U1.6, agent 5's package) and then U1.2; or give the arms a share of the boom force (no source). 415 N needs the arms to take a third.
+3. **The vee: 1° (sourced, median of ten 2024 freeride boards) or 2°.** 2° also steadies the 24 kt broad reach (0.46 to 0.50° now, just above target 2's 0.3°) but slows the 12 kt broad reach by 10 %.
+4. **OK with the board riding above Savitsky's flat-bottom limit?** The vee raised the limit, which is the physical reason it is steady now.
+
+After Michiel's OK: merge `u1/physics` into `feature/u1-planing-wet-area`, apply his decision on the onset check so validation is green, run `tools/check.sh`, `tools/test.sh`, `tools/test.sh validation` and `tools/reach_check.sh`, update Numbers, then launch agent 5 (`finish`: U1.6, U1.7, U1.8) with agent 4's report and Michiel's decisions. U1.2 and U1.3 are still open: agent 5 or a relaunch of agent 4 after U1.6, as the team decides. Note that the wet front is still long (1.9 to 2.2 m against the 0.6 to 1.0 m target): U1's main goal is not reached yet; the bounce is fixed.
 
 ## Numbers
 
@@ -83,6 +89,8 @@ Agent 4 (`physics`) is running on `u1/physics`. When it reports: read `Documenta
 ## Notes
 
 Decisions and surprises along the way, newest first.
+
+- 19 October 2026 (agent 4): the bounce is fixed with no new constant. A strip of bottom that is sinking meets more water across its oblique spray root than a rising one (Zarnick 1978); with a 1° tail vee (median of ten measured 2024 freeride boards) that gives the steadying the flat strips lacked. Also fixed: the gain behind the spray root was counted 1.5 times. 9 of 9 reach cases steady, also with the hips dropped 0.15 m. The grid (7 to 13 rows) moves the wet front at most 4 cm now that the bounce is gone; default kept at 7. The flat tail is back. **But:** the wet front got longer (2.0 to 2.2 m), the trim stays under 1.5°, the harness stays at 956 N, and the planing onset moved to 13.3 kn, failing the validation's 8 to 10 kn band. U1.2 stopped (stop rule: no source for an arms' share), U1.3 diagnosed only (the bow-down 116 N·m is the arms' forward pull; the legs carry 4 N).
 
 - 19 October 2026 (Max, Michiel agrees): Stop 1 decisions. (1) A slight tail vee, documented, modelled physically. (2) The five baseline-bouncing cases must not get worse; fix if cheap. (3) Try grids of 7, 9, 11 and 13 rows. (4) The flat tail comes back with the vee. The lead read "the slight vee right?" as "bring the flat tail back too"; Max can correct that.
 
