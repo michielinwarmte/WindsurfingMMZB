@@ -561,3 +561,48 @@ func test_a_planing_bottom_keeps_only_its_share_of_the_buoyancy() -> void:
 	var middle: Array = _plate_with_buoyancy_factor(middle_ms, 0.5)
 	var middle_grid_n: float = (middle[1] as BuoyancyModel).buoyancy_force_n
 	assert_almost_eq((middle[0] as HullModel).buoyancy_correction_n, 0.25 * middle_grid_n, 1e-3 * middle_grid_n, "half of the loss at Froude 0.7")
+
+
+## U2: the hull's own planing share is its planing lift over what it carries (the lift plus
+## the buoyancy it keeps), whoever carries the rest of the weight; the planing ratio is the
+## same lift over the whole weight, so it falls when the fin and the rig carry part of it.
+func test_the_planing_share_counts_only_what_the_hull_carries() -> void:
+	var plate: Array = _plate_with_buoyancy_factor(7.0, 1.0)
+	var hull: HullModel = plate[0] as HullModel
+	var buoyancy: BuoyancyModel = plate[1] as BuoyancyModel
+	assert_gt(hull.planing_lift_n, 0.0, "the plate planes")
+	assert_almost_eq(hull.hull_load_n, hull.planing_lift_n + buoyancy.buoyancy_force_n, 1e-6, "the hull carries its lift and its buoyancy")
+	assert_almost_eq(hull.planing_share, hull.planing_lift_n / hull.hull_load_n, 1e-9, "the share of it that is dynamic")
+	# The same hull in a kit three times as heavy (the rest carried by the fin and the rig):
+	# the ratio to the whole weight drops to a third, the hull's own share does not move.
+	var share: float = hull.planing_share
+	var ratio: float = hull.planing_ratio
+	var body: SimRigidBody = _trimmed_body(7.0, 4.0)
+	var transom_local: Vector3 = Vector3(0.0, -0.5 * _flat_board().thickness_m, 0.5 * _flat_board().length_m)
+	body.position.y -= body.point_world(transom_local).y + 0.075
+	body.clear_forces()
+	buoyancy.apply(body, FlatWater.new(), 0.0, G)
+	hull.compute(body, buoyancy, FlatWater.new(), 0.0, G, 3.0 * body.mass_kg, 1.0)
+	assert_almost_eq(hull.planing_share, share, 1e-9, "the hull's own share does not see the rest of the weight")
+	assert_almost_eq(hull.planing_ratio, ratio / 3.0, 1e-6, "the ratio to the whole weight does")
+
+
+## U2: Savitsky's porpoising limit as OpenPlaning fits his chart: at x = sqrt(C_L / 2) =
+## 0.2 the three cubics give 3.823, 4.970 and 5.782 degrees for 0, 10 and 20 degrees of
+## deadrise (worked by hand from the coefficients), and the quadratic through them 3.953 at
+## the board's 1 degree. The limit falls as the speed rises at the same load.
+func test_the_critical_trim_follows_savitskys_chart_as_openplaning_fits_it() -> void:
+	# C_L = 0.08 at 10 m/s on a 0.5 m beam: 0.08 * 0.5 * 1025 * 100 * 0.25 = 1025 N.
+	assert_almost_eq(HullModel.critical_trim_deg_for(1025.0, 10.0, 0.5, 0.0, 1025.0), 3.823, 0.001, "flat bottom")
+	assert_almost_eq(HullModel.critical_trim_deg_for(1025.0, 10.0, 0.5, 10.0, 1025.0), 4.970, 0.001, "10 degrees of deadrise")
+	assert_almost_eq(HullModel.critical_trim_deg_for(1025.0, 10.0, 0.5, 20.0, 1025.0), 5.782, 0.001, "20 degrees of deadrise")
+	assert_almost_eq(HullModel.critical_trim_deg_for(1025.0, 10.0, 0.5, 1.0, 1025.0), 3.953, 0.001, "the tail's 1 degree vee")
+	var previous: float = 90.0
+	for speed_ms: float in [8.0, 10.0, 12.0, 14.0, 16.0]:
+		var limit: float = HullModel.critical_trim_deg_for(700.0, speed_ms, 0.57, 1.0, 1025.0)
+		assert_lt(limit, previous, "the limit falls with speed (%.0f m/s)" % speed_ms)
+		previous = limit
+	# Beyond the fit's ends it is held, never turned round.
+	var light: float = HullModel.critical_trim_deg_for(50.0, 20.0, 0.57, 1.0, 1025.0)
+	var lighter: float = HullModel.critical_trim_deg_for(10.0, 20.0, 0.57, 1.0, 1025.0)
+	assert_almost_eq(light, lighter, 1e-9, "held at x = 0.07 below it")

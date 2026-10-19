@@ -57,7 +57,21 @@ var lateral_n: float = 0.0
 var resistance_n: float = 0.0  # friction + residuary + pressure drag, along the flow
 var planing_lift_n: float = 0.0  # vertical component of the planing force
 var planing_normal_force_n: float = 0.0
+## The planing lift as a share of the whole weight of board, rig and sailor: what the trim
+## press, the onset check and the HUD read. The fin and the rig carry part of the weight
+## too, so a planing hull can show well under 1 here.
 var planing_ratio: float = 0.0
+## What the hull itself carries, upward: its planing lift plus the buoyancy it keeps.
+var hull_load_n: float = 0.0
+## How much of what the hull carries is dynamic: planing_lift_n / hull_load_n. It says
+## whether the hull planes, whoever carries the rest of the weight (U2): a hull riding on
+## its planing lift alone is at 1, whether the fin and the rig carry nothing or a third.
+## Reported only: tried as the trim press's scale and not kept (PHYSICS_SPEC.md section 16).
+var planing_share: float = 0.0
+## Savitsky's porpoising limit for the hull's load at its speed (critical_trim_deg_for),
+## degrees; 90 when the hull is out of the water or still. Reported only: it does not say
+## where this hull porpoises, which is well above it (PHYSICS_SPEC.md section 5 F22).
+var critical_trim_deg: float = 90.0
 var trim_deg: float = 0.0  # angle of the planing surface to the flow, degrees
 var wetted_length_m: float = 0.0  # of the planing surface (the wet part of the centreline)
 var wetted_aft_m: float = 0.0  # where the wet part starts, forward of the transom (0 = wet transom)
@@ -183,6 +197,14 @@ func compute(body: SimRigidBody, buoyancy: BuoyancyModel, surface: WaterSurface,
 
 	# 4b. The buoyancy a planing bottom does not get (off at the default factor of 1).
 	_apply_planing_buoyancy(body, buoyancy, surface, time_s, gravity_ms2)
+
+	# 4c. What the hull carries, and how much of it is dynamic.
+	hull_load_n = planing_lift_n + maxf(buoyancy.buoyancy_force_n - buoyancy_correction_n, 0.0)
+	planing_share = clampf(planing_lift_n / hull_load_n, 0.0, 1.0) if hull_load_n > 0.0 else 0.0
+	# Savitsky's porpoising limit for that load at this speed, on the wet bottom's width as
+	# the planing lift sees it (narrower as the board heels) and the tail's vee.
+	var lift_beam_m: float = planing_beam_m * maxf(cos(SimMath.heel_rad(body.basis)), 0.3)
+	critical_trim_deg = critical_trim_deg_for(hull_load_n, forward_speed_ms, lift_beam_m, board.deadrise_deg, rho)
 
 	# 5. A nose under water meets the water face-on.
 	_apply_bow_drag(body, buoyancy, surface, time_s, rho)
@@ -741,6 +763,30 @@ func _camber_sag(aft: float, forward: float) -> float:
 	return sag
 
 
+## Savitsky's porpoising limit: the trim (degrees) above which a planing hull starts to
+## porpoise, for its load coefficient C_L = load / (0.5 rho V^2 b^2) and its deadrise.
+## A planing hull porpoises above a critical trim that falls as the load coefficient falls,
+## so as the speed rises (Day and Haag 1952, Savitsky 1964 figure 21). The chart as fitted
+## in OpenPlaning (Castro-Feliciano, python-openplaning, `check_porpoising`): one cubic in
+## x = sqrt(C_L / 2) for each of 0, 10 and 20 degrees of deadrise, and a quadratic through
+## the three for the deadrise in between. The chart covers x = 0.13 to 0.3. A planing
+## board is lighter for its width than any boat on the chart (x = 0.09 to 0.13 on the
+## reaches), so there the fit is extrapolated as OpenPlaning does it, down to x = 0.07,
+## where the cubic for a flat bottom has its lowest point and would turn up again (which
+## the chart does not show). Above x = 0.3 (a slow, heavy hull) it is held at x = 0.3.
+static func critical_trim_deg_for(load_n: float, speed_ms: float, beam_m: float, deadrise_deg: float, rho: float) -> float:
+	if speed_ms <= 0.0 or beam_m <= 0.0:
+		return 90.0
+	var c_l: float = load_n / (0.5 * rho * speed_ms * speed_ms * beam_m * beam_m)
+	var x: float = clampf(sqrt(maxf(c_l, 0.0) / 2.0), 0.07, 0.3)
+	var tau_0: float = ((-376.37 * x + 329.74) * x - 38.485) * x + 1.3415
+	var tau_10: float = ((-356.05 * x + 314.36) * x - 41.674) * x + 3.5786
+	var tau_20: float = ((-254.51 * x + 239.65) * x - 23.936) * x + 3.0195
+	# The quadratic through the three deadrises (0, 10 and 20 degrees), at this one.
+	var b: float = deadrise_deg
+	return tau_0 * (b - 10.0) * (b - 20.0) / 200.0 - tau_10 * b * (b - 20.0) / 100.0 + tau_20 * b * (b - 10.0) / 200.0
+
+
 func _clear() -> void:
 	friction_n = 0.0
 	residuary_n = 0.0
@@ -753,6 +799,9 @@ func _clear() -> void:
 	rail_grip_n = 0.0
 	rail_yaw_nm = 0.0
 	planing_ratio = 0.0
+	hull_load_n = 0.0
+	planing_share = 0.0
+	critical_trim_deg = 90.0
 	trim_deg = 0.0
 	wetted_length_m = 0.0
 	wetted_aft_m = 0.0
