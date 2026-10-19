@@ -15,6 +15,12 @@ Template for new entries:
 
 ---
 
+## 19 October 2026 - Session 47: U1 led by Fable, agents 1 to 3 in, stopped at Stop 1
+**Phase:** Play-test upgrades, U1 (branch `feature/u1-planing-wet-area`)
+**Done:** The lead launched agents 1 (`measure`), 2 (`sources`) and 3 (`porpoising`), Opus 5.5 at extra-high effort in their own worktrees, and merged all three. New: `tools/reach_check.sh` (9 reach cases, one line each), the pending validation check `test_planing_wet_area.gd`, the friction area, wet front and push centre in telemetry and the HUD, the baseline in U1_PROGRESS.md, the four sourced numbers in PHYSICS_SPEC.md section 14, and agent 3's diagnosis: the 1.8 Hz bounce is plain porpoising past Savitsky's critical trim. U1.4, the flat tail, was built and reverted (two buoyancy unit tests outside agent 1's files, and the 18 kt broad reach went bow-down).
+**Verified:** On the merged branch: `tools/check.sh` 190 files, 0 failed; `tools/test.sh` all passed; `tools/test.sh validation` no failures, 3 pending (the new check's targets, by design). Not verified: how anything feels to sail; nothing in the game's behaviour changed except the HUD and telemetry.
+**Decisions:** Stopped at Stop 1 for the team, because stop rules fired: targets 2 and 4 conflict for a flat bottom (Savitsky), the baseline already misses target 2 in 5 of 9 cases, the grid check moves the wet front by 34 cm, and the flat tail needs files outside agent 1's list. The four decisions are in U1_PROGRESS.md's Next action. Agent 4 is not launched. Also open: Max's own estimate of the flat-water rail-down angle (agent 2 found no source).
+
 ## 19 October 2026 - Session 46: play-test feedback, the wet area when planing (U1 planned)
 
 **Phase:** documentation, after the merge of Sessions 38 and 39 to `main`. Max's first play-test of the merged game: "playable and feels quite ok". From now on feedback is researched and planned first, and built later.
