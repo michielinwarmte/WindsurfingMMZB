@@ -11,8 +11,9 @@ extends RefCounted
 ##
 ## (run_episode() does exactly that.) Every board is the open water's simulation, driven through
 ## the player's beginner controller with the auto-sheet on (RD1); the network's three numbers go
-## onto the controller's hands as LearnedSkipper.apply_action() puts them, so a brain sails here as
-## it will in the game. Nothing here is random except through the seed, so the same seed and the
+## onto the controller's hands through a LearnedSkipper.Driver, as in the game, so a brain sails here
+## as it will there (in the wind-angle mode by default: the first number is the wind angle to hold;
+## see LearnedSkipper). Nothing here is random except through the seed, so the same seed and the
 ## same actions give the same race, tick for tick.
 ##
 ## The reward (the plan's table, "What it is rewarded for"), per board:
@@ -42,6 +43,8 @@ class Options:
 	var laps: int = 1
 	## The network decides every this many ticks (6 ticks of 1/60 s: ten times a second).
 	var decision_ticks: int = LearnedSkipper.DECISION_TICKS
+	## How the network's numbers are read: the wind angle to hold, or the stick (LearnedSkipper).
+	var actions: LearnedSkipper.ActionMode = LearnedSkipper.ActionMode.TWA
 	var waves: bool = false
 	var gusts: bool = false
 	## A board further than this from the course's marks is out of the race.
@@ -73,6 +76,8 @@ class Board:
 	var sim: WindsurferSim
 	var controller: PlayerController
 	var hands: AiHands
+	## Turns the network's numbers into the hands (LearnedSkipper.Driver).
+	var driver: LearnedSkipper.Driver
 	var controls: SimControls
 	## The reward earned since the last reward() call.
 	var pending: float = 0.0
@@ -88,7 +93,6 @@ class Board:
 	var last_distance_m: float = 0.0
 	var last_steps: int = 0
 	var was_fallen: bool = false
-	var tack_was_high: bool = false
 	var since_manoeuvre_s: float = RaceObservation.SINCE_MANOEUVRE_SCALE_S
 	var done: bool = false
 
@@ -174,8 +178,9 @@ func observe(index: int) -> PackedFloat32Array:
 			_in_manoeuvre(b), b.since_manoeuvre_s)
 
 
-## A decision for board `index`: the network's three numbers (steer, sheet, tack, each -1 to 1) onto
-## its hands, held until the next decision. Each decision costs decision_cost.
+## A decision for board `index`: the network's three numbers (each -1 to 1) for its hands, held until
+## the next decision: the wind angle to hold or the steer, the sheet, and (stick mode) the tack.
+## Each decision costs decision_cost.
 func act(index: int, action: PackedFloat32Array) -> void:
 	var b: Board = _boards[index]
 	if b.done:
@@ -184,7 +189,7 @@ func act(index: int, action: PackedFloat32Array) -> void:
 	_add_reward(b, -options.decision_cost)
 	if b.sim.sailor_state != WindsurferSim.SailorState.SAILING:
 		return  # in the water: the hands have nothing to hold
-	b.tack_was_high = LearnedSkipper.apply_action(b.hands, action, b.tack_was_high, _in_manoeuvre(b))
+	b.driver.decide(action, _in_manoeuvre(b))
 
 
 ## One tick of 1/60 s for every board still racing: the sailor's controller (while on the board),
@@ -196,6 +201,8 @@ func tick() -> void:
 			continue  # parked: it no longer moves, and earns nothing
 		b.since_manoeuvre_s = RaceObservation.advance_since_manoeuvre(b.since_manoeuvre_s, _in_manoeuvre(b), DT)
 		if b.sim.sailor_state == WindsurferSim.SailorState.SAILING:
+			# The hands first (steering for the wind angle wanted), then the controller reads them.
+			b.driver.steer(b.sim.telemetry, _in_manoeuvre(b), DT)
 			b.controller.update(b.sim.telemetry, b.controls, DT)
 		b.sim.step(DT, b.controls)
 		var fallen: bool = b.sim.sailor_state == WindsurferSim.SailorState.FALLEN
@@ -285,6 +292,7 @@ func _make_board(at: Vector2, heading_deg: float) -> Board:
 	b.controller.set_sail(b.sim.sail, b.sim.sailor_config, b.sim.air_density_kg_m3)
 	b.hands = AiHands.new()
 	b.controller.hands = b.hands
+	b.driver = LearnedSkipper.Driver.new(b.hands, options.actions)
 	b.controls = SimControls.new()
 	b.controller.reset_controls(b.controls)
 	return b
