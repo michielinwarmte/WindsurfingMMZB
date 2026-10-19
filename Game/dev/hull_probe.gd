@@ -16,7 +16,7 @@ extends SceneTree
 ## the clipping. The column `chk` is the recomputed normal force over the model's own: 1.000
 ## says the recomputation is the model.
 ##
-## Two what-ifs, computed here only (the model is not changed):
+## Three what-ifs, computed here only (the model is not changed):
 ##   wag  the water climbs the heeled bottom pi/2 times as far from the low rail as the
 ##        still surface cuts it (Wagner 1932), as HullModel already does for the vee;
 ##   wet  the 3D factor anchored on the widest *wet* strip instead of the widest full width,
@@ -30,9 +30,10 @@ extends SceneTree
 ##   tools/godot.sh --path Game --headless -s res://dev/hull_probe.gd
 ##   tools/godot.sh --path Game --headless -s res://dev/hull_probe.gd -- --speed=12.7 --trims=1.3,1.5,2 --heels=0,2,4.5,8 --lengths=1,1.4,1.76
 ## --slip_deg=<deg> moves the hull sideways toward its low rail at that angle (the leeway; 0
-## by default, about 2 on the 18 kt beam reach), and with --load=<N> (for instance 597, the hull's load on the 18 kt beam reach) it also
-## prints, per trim and heel, the wet length that carries that load (planing lift plus
-## buoyancy) with today's model and with each what-if.
+## by default, about 2 on the 18 kt beam reach). With --load=<N> (597 is the hull's load on
+## the 18 kt beam reach) it also prints, per trim and heel, the wet length that carries that
+## load (planing lift plus buoyancy) with today's model and with each what-if. The 18 kt
+## beam reach itself: --trims=1.43 --heels=4.5 --lengths=1.76 --slip_deg=2 --load=597.
 
 const STRIPS: int = HullModel.STRIPS
 const WAGNER: float = 2.0 / PI  # the still-surface cut over the wetted reach
