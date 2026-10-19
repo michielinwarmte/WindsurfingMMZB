@@ -3,7 +3,7 @@
 The live state of U1, "planing on a smaller wet area". The plan and its execution brief are in [PLAYTEST_UPGRADES.md](PLAYTEST_UPGRADES.md). **The lead updates and commits this file after every launch, report and merge.** A lead who takes over starts here.
 
 - **Branch:** `feature/u1-planing-wet-area` (from `main` at 561849c). Agents work on `u1/<name>` branches, made from it in their own worktrees.
-- **Last update:** 19 October 2026. Agent 4's onset work merged (off by default; a stop rule fired, options for Michiel in Next action). Agent 5 (U1.6) still running.
+- **Last update:** 19 October 2026. Agent 5's U1.6 merged (3718ef4; spec conflict in sections 14 and 16 resolved by keeping both). Round 3 launched: agent 4 on U1.2 and U1.3. The lead's verification of the merge was still running.
 
 ## State
 
@@ -12,8 +12,8 @@ The live state of U1, "planing on a smaller wet area". The plan and its executio
 | 1 | `measure` | baseline, the reach check, U1.1, then U1.4 (flat tail) | merged (U1.4 reverted) | `u1/measure` | [measure.md](u1_reports/measure.md) |
 | 2 | `sources` | the four numbers that need a source | merged | `u1/sources` | [sources.md](u1_reports/sources.md) |
 | 3 | `porpoising` | U1.5's diagnosis | merged | `u1/porpoising` | [porpoising.md](u1_reports/porpoising.md) |
-| 4 | `physics` | U1.5 fix, grid, U1.4 back: merged. Onset: merged, built but **off by default** (stop rule; Michiel decides). Next relaunch: U1.2, U1.3 after U1.6 | merged (onset); waits for U1.6 | `u1/physics` | [physics.md](u1_reports/physics.md), [physics_onset.md](u1_reports/physics_onset.md) |
-| 5 | `finish` | U1.6 now; U1.7 and U1.8 in a relaunch after U1.2 and U1.3 | running (U1.6) | `u1/finish` | next `finish_u16.md` |
+| 4 | `physics` | U1.5 fix, grid, U1.4 back: merged. Onset: merged, off by default. **Now: U1.2, U1.3, then the onset retest** | running (U1.2, U1.3) | `u1/physics` | [physics.md](u1_reports/physics.md), [physics_onset.md](u1_reports/physics_onset.md); next `physics_harness.md` |
+| 5 | `finish` | U1.6: **merged** (3718ef4). U1.7 and U1.8 in a relaunch after U1.2 and U1.3 | merged (U1.6); waits for round 3 | `u1/finish` | [finish_u16.md](u1_reports/finish_u16.md) |
 
 The possible states are: not started → running → reported → merged.
 
@@ -25,14 +25,11 @@ The possible states are: not started → running → reported → merged.
 
 ## Next action
 
-**Agent 5 is running** on `u1/finish` (U1.6; report `finish_u16.md`). When it reports: merge (expect small conflicts in PHYSICS_SPEC.md sections 14 and 16; keep both), run `tools/check.sh`, `tools/test.sh`, `tools/test.sh validation` and `tools/reach_check.sh`, write the numbers under Numbers, commit.
+**Round 3 is running:** agent 4 on `u1/physics` does U1.2 (the harness load) and U1.3 (Max's foot trim), then the two retests: `trim_with_rake_first` on (agent 5 built it, off by default, because the rake hits its 25° stop and the grip aft worsens U1.3's bow-down) and `planing_buoyancy_factor` 0.5 (agent 4 built it, off, because the broad reaches plough; Michiel's option 1). Report: `physics_harness.md`. When it reports: merge, run `tools/check.sh`, `tools/test.sh`, `tools/test.sh validation` and `tools/reach_check.sh`, write the numbers under Numbers, commit.
 
-**A stop rule fired on the onset (agent 4), for Michiel.** The missing physics is found and built with sources: a planing bottom gets only about half of Archimedes' buoyancy, because the water leaves the transom and the rails (Zarnick 1978, Shuford 1958, Savitsky 1964). It is `BoardConfig.planing_buoyancy_factor`, phased in over Froude 0.4 to 1.0 (Faltinsen 2005; the shape of the phase-in is an estimate). **Default 1.0 = today's behaviour.** With 0.5 the onset is 9.9 kn and the onset check is green, but the broad reaches plough or bounce and four other checks fail (24 kt 135° falls, the 150° polar is too slow, a recovery run falls); that looks like the sailor and the rig keeping the weight aft (U1.2, U1.3), not the hull. Options:
-1. (Recommended, and the lead's default path unless Michiel objects) keep it off, do U1.6, U1.2 and U1.3, then test again with `tools/reach_check.sh --board.planing_buoyancy_factor=0.5` and turn it on if the four checks hold.
-2. Turn it on now: validation goes from one red check to four.
-3. Savitsky's own value (depends on the wet length): onset 11.8 kn, still red.
+**Round 4:** relaunch agent 5 on `u1/finish` for U1.7 and U1.8 (with agent 4's reports). Then **Stop 3: Max's play-test**, and the team's decision on the pull request. Validation stays red on `test_planing_onset_and_fully_planing` until the buoyancy factor is turned on; any other failure is a stop.
 
-**Round 3, after U1.6 is merged:** relaunch agent 4 on `u1/physics` for U1.2 and U1.3 (with agent 5's U1.6 report), ending with the factor-0.5 retest above. **Round 4:** relaunch agent 5 on `u1/finish` for U1.7 and U1.8. Then **Stop 3: Max's play-test.** Validation stays red on `test_planing_onset_and_fully_planing` until the factor is turned on; any other failure is a stop.
+**Still open for the team:** Michiel's choice on the onset (option 1 is the lead's default path, see the Notes); Max's own flat-water rail-down angle (`fin_load_bank_deg` is 4.5°, an estimate); agent 5 changed `test_windsurfer_sim.gd::test_beam_reach_sets_off_and_planes` (the fin's upward force now counts with `planing_ratio`), a test outside its row, with a reason: Michiel may want to look at it.
 
 ## Numbers
 
@@ -60,6 +57,8 @@ The possible states are: not started → running → reported → merged.
 - The grid check (13 rows instead of 7): the front moves −1, **−34** and +3 cm at 18 kt (60°, 100°, 135°), and 0, **+7** and +4 cm at 24 kt. On 13 rows the 18 kt beam reach bounces (pitch SD 0.72°, front 1.53 m on average), so its steady 1.87 m on 7 rows is partly the grid. Over 5 cm: for the team (a finer grid is out of U1's scope).
 
 **The merged branch** (lead, 19 October 2026, e2f1563): `tools/check.sh` 190 files, 0 failed; `tools/test.sh` all passed; `tools/test.sh validation` no failures, 3 pending (the new check's targets). Green.
+
+**U1.6 (agent 5, merged 3718ef4), agent 5's own numbers:** unit 341 of 341; validation fails only on the onset (now 12.7 kn); the reach check stays steady in 9 of 9 (pitch SD at most 0.07°); speeds within 3 % of Latest except the 18 kt broad reach, which is faster (11.23 → 11.88 m/s); the close reaches 2 to 3 % slower (the board now heels 4.5° there). 18 kt beam reach: harness 954 N, rig 91 %, line 1.44 m; with rake-first on: 854 N, 93 %, 1.05 m, rig lean 23°. The board rails out at 24° of heel (holds 21°). The lead's verification of the merged branch: see the next entry when it lands.
 
 **Onset work (agent 4, merged, off by default):** the reach check and all checks are unchanged from the table below (`check.sh` 0 failed, `test.sh` all passed with one new test, validation 21 pass, onset fails, 2 pending). The onset without the correction is 16.0, 13.3, 11.0, 11.0 kn at 12, 15, 18, 24 kt (it jumps with the wind because the planing share hovers near 0.5); with factor 0.5 it is 8.8, 9.9, 9.4, 9.5 kn, and the 12 kt broad reach drops to 3.75 m/s at 9.3° trim, the 24 kt broad reach bounces at 0.64°. Full table in `u1_reports/physics_onset.md`.
 
@@ -108,6 +107,8 @@ The possible states are: not started → running → reported → merged.
 ## Notes
 
 Decisions and surprises along the way, newest first.
+
+- 19 October 2026 (agent 5, U1.6): the rig stood up only 8° because the pilot's heading hold steers through `Helm.steer`, which tilts the rig to leeward as far as it rakes back; a beam reach needs a steady heading-up helm since the sail's centre of effort sits 0.37 m ahead of the fin. A rake-first hold (`Autopilot.trim_with_rake_first`) leans the rig 23° and shortens the harness line from 1.44 to 1.05 m, but is **off**: the rake hits its 25° stop and the grip aft worsens the bow-down of U1.3. Fin loading: `fin_load_bank_deg` 4.5°, an estimate. Agent 4's earlier "rig at 25°" run was in fact sailing at 130°.
 
 - 19 October 2026 (agent 4, onset): the grid gives full Archimedes buoyancy to a planing bottom; the sources give about half (the water leaves the transom and rails). Built as `planing_buoyancy_factor`, default 1.0 (no change), phased in over Froude 0.4 to 1.0. At 0.5 the onset is right (9.9 kn) but the broad reaches plough and four checks fail, likely the sailor keeping the weight aft. Michiel's explanation of the steadiness above Savitsky's limit is in the report and in spec 17.2. Agent 4 moved `u1/physics` out of its old worktree; that old worktree (`.claude/worktrees/agent-a654…`) looks dirty and can be removed.
 
