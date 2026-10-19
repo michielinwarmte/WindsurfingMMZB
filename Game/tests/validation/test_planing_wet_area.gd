@@ -4,22 +4,33 @@ extends GutTest
 ## of 60, 100 and 135 degrees; flat water, a steady wind), run through ValidationRun and
 ## judged on the settled last 10 s.
 ##
-## Target 2: steady, a pitch standard deviation below 0.3 degrees in every case.
+## Target 2 (as the team decided at Stop 1): steady, a pitch standard deviation below 0.3
+##           degrees at 12 kt 135, 18 kt 100, 24 kt 100 and 24 kt 135 degrees; the five
+##           cases that bounced in the baseline no worse than they were.
 ## Target 3: at 18 and 24 kt on the beam and broad reach, the front of the wet part 0.6 to
 ##           1.0 m from the tail (real boards are wet from the front footstraps back).
 ## Target 4: in the same four cases, the centre of the water's push 0.45 to 0.75 m from the
 ##           tail (Savitsky 1964; Gourlay & Martellotta 2011) and the trim 1.5 to 4 degrees.
 ##
-## Until U1's physics meets them (agent 4), an unmet target calls pending() with the measured
-## numbers: the suite stays green and the numbers stay in the output. Agent 4 sets
-## TARGETS_ARE_CHECKS to true, and an unmet target then fails.
-const TARGETS_ARE_CHECKS: bool = false
+## A target that is not yet a check calls pending() with the measured numbers when it is
+## unmet: the suite stays green and the numbers stay in the output. Target 2 is met since
+## U1.5's fix (agent 4) and is a check. Targets 3 and 4 wait for U1.2 (the harness load),
+## which stopped at Stop 2 for the team (Documentation/u1_reports/physics.md).
+const TARGET_2_IS_A_CHECK: bool = true
+const TARGETS_3_AND_4_ARE_CHECKS: bool = false
 
 const RUN_S: float = 40.0
 const WINDS_KT: Array[float] = [12.0, 18.0, 24.0]
 const TWAS_DEG: Array[float] = [60.0, 100.0, 135.0]
 
 const MAX_PITCH_SD_DEG: float = 0.3
+## The cases that must be steady (Stop 1, decision 2).
+const STEADY_CASES: Array[String] = ["12 kt 135 deg", "18 kt 100 deg", "24 kt 100 deg", "24 kt 135 deg"]
+## The baseline's pitch standard deviation in the five cases that bounced (the reach check
+## of 19 October 2026, U1_PROGRESS.md): they may not get worse.
+const BASELINE_PITCH_SD_DEG: Dictionary[String, float] = {
+	"12 kt 60 deg": 0.81, "12 kt 100 deg": 1.21, "18 kt 60 deg": 0.79, "18 kt 135 deg": 0.82, "24 kt 60 deg": 0.70,
+}
 const WET_FRONT_MIN_M: float = 0.6
 const WET_FRONT_MAX_M: float = 1.0
 const PUSH_CENTRE_MIN_M: float = 0.45
@@ -46,13 +57,14 @@ func test_no_case_fell_or_blew_up() -> void:
 		assert_false(_runs[key].fell, "no fall at %s" % key)
 
 
-func test_target_2_steady_in_every_case() -> void:
+func test_target_2_steady() -> void:
 	var misses: PackedStringArray = PackedStringArray()
 	for key: String in _runs:
 		var sd: float = _settled_sd(_runs[key].pitch_deg)
-		if sd >= MAX_PITCH_SD_DEG:
-			misses.append("%s: pitch SD %.2f deg" % [key, sd])
-	_judge("target 2, pitch SD below %.1f deg" % MAX_PITCH_SD_DEG, misses)
+		var limit: float = MAX_PITCH_SD_DEG if key in STEADY_CASES else BASELINE_PITCH_SD_DEG[key]
+		if sd >= limit:
+			misses.append("%s: pitch SD %.2f deg (limit %.2f)" % [key, sd, limit])
+	_judge("target 2, pitch SD below %.1f deg (the four steady cases) or no worse than the baseline" % MAX_PITCH_SD_DEG, misses, TARGET_2_IS_A_CHECK)
 
 
 func test_target_3_wet_front_on_the_planing_reaches() -> void:
@@ -61,7 +73,7 @@ func test_target_3_wet_front_on_the_planing_reaches() -> void:
 		var front: float = _runs[key].settled(_runs[key].wet_front_m)
 		if front < WET_FRONT_MIN_M or front > WET_FRONT_MAX_M:
 			misses.append("%s: front %.2f m" % [key, front])
-	_judge("target 3, front of the wet part %.1f to %.1f m from the tail" % [WET_FRONT_MIN_M, WET_FRONT_MAX_M], misses)
+	_judge("target 3, front of the wet part %.1f to %.1f m from the tail" % [WET_FRONT_MIN_M, WET_FRONT_MAX_M], misses, TARGETS_3_AND_4_ARE_CHECKS)
 
 
 func test_target_4_push_centre_and_trim_on_the_planing_reaches() -> void:
@@ -73,15 +85,15 @@ func test_target_4_push_centre_and_trim_on_the_planing_reaches() -> void:
 			misses.append("%s: push %.2f m" % [key, push])
 		if trim < TRIM_MIN_DEG or trim > TRIM_MAX_DEG:
 			misses.append("%s: trim %.2f deg" % [key, trim])
-	_judge("target 4, push %.2f to %.2f m from the tail and trim %.1f to %.1f deg" % [PUSH_CENTRE_MIN_M, PUSH_CENTRE_MAX_M, TRIM_MIN_DEG, TRIM_MAX_DEG], misses)
+	_judge("target 4, push %.2f to %.2f m from the tail and trim %.1f to %.1f deg" % [PUSH_CENTRE_MIN_M, PUSH_CENTRE_MAX_M, TRIM_MIN_DEG, TRIM_MAX_DEG], misses, TARGETS_3_AND_4_ARE_CHECKS)
 
 
-## A met target passes. An unmet one fails once TARGETS_ARE_CHECKS is on; before that it is
-## pending, with the numbers that miss.
-func _judge(target: String, misses: PackedStringArray) -> void:
+## A met target passes. An unmet one fails when it is a check; before that it is pending,
+## with the numbers that miss.
+func _judge(target: String, misses: PackedStringArray, is_a_check: bool) -> void:
 	if misses.is_empty():
 		pass_test("%s: met" % target)
-	elif TARGETS_ARE_CHECKS:
+	elif is_a_check:
 		fail_test("%s not met: %s" % [target, "; ".join(misses)])
 	else:
 		pending("%s not met yet: %s" % [target, "; ".join(misses)])
