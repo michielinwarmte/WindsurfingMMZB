@@ -265,6 +265,72 @@ func _set_alpha(sail: SailModel, alpha_deg: float) -> void:
 	sail.cd = sail.drag_coefficient(sail.cl, sail.alpha_rad)
 
 
+
+# --- The bending fin (U2) ----------------------------------------------------------------
+
+func test_fin_bend_shape_is_the_simulations_beam() -> void:
+	var shape: Array[PackedFloat32Array] = RigVisuals.fin_bend_shape(fin_config)
+	var edges: int = FinModel.BEND_STRIPS + 1
+	assert_eq(shape[0].size(), edges, "One value per strip edge")
+	assert_eq(shape[1].size(), edges)
+	assert_almost_eq(shape[0][0], 0.0, 1e-6, "The root is clamped: it does not move")
+	assert_almost_eq(shape[1][0], 0.0, 1e-6, "Nor turn")
+	assert_almost_eq(shape[0][edges - 1], 1.0, 1e-6, "The tip moves by the tip's deflection")
+	for j: int in edges - 1:
+		assert_gt(shape[0][j + 1], shape[0][j], "Further out, further over (edge %d)" % (j + 1))
+	# The simulation's own beam, with its calibrated stiffness, has the same shape: the shape
+	# does not depend on the stiffness scale.
+	var fin: FinModel = FinModel.new(fin_config)
+	var span: float = fin_config.span_m
+	var step: float = span / FinModel.BEND_STRIPS
+	var stiffness: PackedFloat64Array = fin.edge_stiffness(span, fin_config.root_chord_m(), fin.stiffness_scale)
+	var deflections: PackedFloat64Array = FinModel.beam_deflections(FinModel.beam_slopes(FinModel.elliptic_moments_per_n(span), stiffness, step), step)
+	for j: int in edges:
+		assert_almost_eq(shape[0][j] * fin.tip_deflection_per_n, deflections[j], 1e-9, "Edge %d" % j)
+	# The slope is the shape's own derivative (the trapezoid rule between the edges).
+	for j: int in edges - 1:
+		var mean_slope: float = 0.5 * (shape[1][j] + shape[1][j + 1])
+		assert_almost_eq(mean_slope / FinModel.BEND_STRIPS, shape[0][j + 1] - shape[0][j], 1e-5, "Slope, strip %d" % j)
+
+
+func test_fin_bends_toward_its_lift() -> void:
+	var rig: RigVisuals = _rig()
+	assert_true(rig.fin_mesh().material_override is ShaderMaterial, "The fin has the bending shader")
+	var fin: FinModel = FinModel.new(fin_config)
+	fin.bend_tip_m = 0.059
+	# The board heading East (its bow, -z, along world +x): its starboard (+x) is world +z.
+	var board_basis: Basis = Basis(Vector3.UP, deg_to_rad(-90.0))
+	for side: float in [-1.0, 1.0]:
+		var lift_in_board: Vector3 = Vector3(side * 480.0, 40.0, 25.0)  # lift, a bit up, drag aft
+		fin.force_world = board_basis * lift_in_board
+		rig.bend_fin(fin, board_basis)
+		assert_almost_eq(rig.fin_tip_deflection_m(), side * 0.059, 1e-9, "The tip toward the lift (side %+.0f)" % side)
+		var material: ShaderMaterial = rig.fin_mesh().material_override as ShaderMaterial
+		assert_almost_eq(float(material.get_shader_parameter("tip_deflection_m")), side * 0.059, 1e-6, "Given to the shader")
+	# No lift, no bend.
+	fin.bend_tip_m = 0.0
+	fin.force_world = Vector3.ZERO
+	rig.bend_fin(fin, board_basis)
+	assert_eq(rig.fin_tip_deflection_m(), 0.0)
+
+
+func test_fin_keeps_its_look_and_takes_the_configured_span() -> void:
+	var rig: RigVisuals = _rig()
+	var material: ShaderMaterial = rig.fin_mesh().material_override as ShaderMaterial
+	var imported: BaseMaterial3D = rig.fin_mesh().mesh.surface_get_material(0) as BaseMaterial3D
+	assert_eq(material.get_shader_parameter("albedo"), imported.albedo_color, "The model's colour")
+	assert_almost_eq(float(material.get_shader_parameter("roughness_value")), imported.roughness, 1e-6, "Its shine")
+	assert_almost_eq((rig.get_node("Fin") as Node3D).scale.y, 1.0, 0.03, "The default fin is the model's size")
+	# A 44 cm fin from the command line: the 38 cm model is drawn down to 44 cm.
+	var long_fin: FinConfig = fin_config.duplicate() as FinConfig
+	long_fin.span_m = 0.44
+	long_fin.area_m2 = 0.0411
+	var long_rig: RigVisuals = RigVisuals.new()
+	add_child_autofree(long_rig)
+	long_rig.build(board_config, sail_config, long_fin)
+	var tip_y: float = (long_rig.get_node("Fin") as Node3D).scale.y * long_rig.fin_mesh().get_aabb().position.y
+	assert_almost_eq(tip_y, -0.44, 0.002, "The tip 44 cm below the root")
+
 # --- Helpers -----------------------------------------------------------------------------
 
 func _rig() -> RigVisuals:
