@@ -3,7 +3,7 @@
 The live state of U1, "planing on a smaller wet area". The plan and its execution brief are in [PLAYTEST_UPGRADES.md](PLAYTEST_UPGRADES.md). **The lead updates and commits this file after every launch, report and merge.** A lead who takes over starts here.
 
 - **Branch:** `feature/u1-planing-wet-area` (from `main` at 561849c). Agents work on `u1/<name>` branches, made from it in their own worktrees.
-- **Last update:** 19 October 2026. Max played it (a little better) and chose option (b): finish U1 as it stands. Round 4 launched: agent 5 on U1.7 and U1.8.
+- **Last update:** 19 October 2026. All five agents are merged. **Stop 3: Max's play-test**, then the team's decision on the pull request.
 
 ## State
 
@@ -13,7 +13,7 @@ The live state of U1, "planing on a smaller wet area". The plan and its executio
 | 2 | `sources` | the four numbers that need a source | merged | `u1/sources` | [sources.md](u1_reports/sources.md) |
 | 3 | `porpoising` | U1.5's diagnosis | merged | `u1/porpoising` | [porpoising.md](u1_reports/porpoising.md) |
 | 4 | `physics` | all merged: U1.5 fix, grid, U1.4 back, onset (off), U1.2, U1.3, rake-first on. **Stop rule on targets 3 to 5** | merged (round 3, 1cf467a) | `u1/physics` | [physics.md](u1_reports/physics.md), [physics_onset.md](u1_reports/physics_onset.md), [physics_harness.md](u1_reports/physics_harness.md) |
-| 5 | `finish` | U1.6 merged. **Now: U1.7 and U1.8** | running (round 4) | `u1/finish` | [finish_u16.md](u1_reports/finish_u16.md); next `finish_u178.md` |
+| 5 | `finish` | U1.6, U1.7, U1.8: all merged | merged (a649a4a) | `u1/finish` | [finish_u16.md](u1_reports/finish_u16.md), [finish_u178.md](u1_reports/finish_u178.md) |
 
 The possible states are: not started → running → reported → merged.
 
@@ -21,13 +21,26 @@ The possible states are: not started → running → reported → merged.
 |---|---|
 | Stop 1, the lead: agents 1 to 3 in, the go/no-go for agent 4 | **passed** on 19 October 2026 with four team decisions (in the brief, "Decisions at Stop 1") |
 | Stop 2, Michiel reviews agent 4's physics | **passed** on 19 October 2026 with four decisions (in the brief, "Decisions at Stop 2") |
-| Stop 3, Max's play-test | a first play-test done on 19 October 2026 ("a little better"; the fin's push isn't felt: U2). The formal Stop 3 follows round 4 |
+| Stop 3, Max's play-test | **reached** on 19 October 2026 (a first play-test was done after round 3: "a little better"). The checklist is in Next action |
 
 ## Next action
 
-**Round 4 is running:** agent 5 on `u1/finish` does U1.7 (validation again, the reach check, the three straight runs against the baseline, the polar against POLAR_15KT.md, where the onset is, missing drag with a source if the board is too fast) and U1.8 (the spray from the wet front, side screenshots at 12, 18 and 24 kt before and after in `.screenshots/u1/`). Report `finish_u178.md`. When it reports: merge, run `tools/check.sh`, `tools/test.sh`, `tools/test.sh validation` and `tools/reach_check.sh`, write the numbers under Numbers, tick the U1 boxes in the plan, add the PROGRESS_LOG.md entry, commit.
+**Stop 3: Max's play-test**, with agent 5's checklist (`tools/play.sh res://main.tscn`, then `tools/play.sh lake`):
+1. Is the board wet only from the front foot back? (Expected: not yet; the wet front is 1.65 to 1.75 m from the tail.)
+2. Does it feel freer and faster?
+3. Does it bounce, on flat water or in chop?
+4. Does it behave in gusts on the lake?
+5. Is the weight on the back foot? Does the nose lift when asked?
 
-**Then Stop 3:** Max's play-test with U1.8's checklist, and the team's decision on the pull request to `main` (the full manoeuvre matrix first: `tools/matrix.sh` and `tools/lake_matrix.sh`; the stance and the rig-lean default changed, so expect surprises in tacks and gybes). Open at the pull request: the red onset check (11.6 kn against 8 to 10 kn; the band stays, the buoyancy factor stays off), the pending targets 3 to 5, the hands' share (Michiel), Max's rail-down angle, `board.glb` (Blender).
+Screenshots (not in git): `.screenshots/u1/before_beam_{12,18,24}kt.png` (`main`) and `after_beam_…` (this branch), four views each.
+
+**Then the team decides on the pull request to `main`.** Before it: the full manoeuvre matrix (`tools/matrix.sh`, `tools/lake_matrix.sh`), since no manoeuvre was run in U1 and the stance and the rig-lean default changed. Open at the pull request:
+- the red validation check `test_planing_onset_and_fully_planing` (onset 11.6 kn, `main` 9.8 kn, band 8 to 10 kn; Michiel: don't move the band; the buoyancy factor `planing_buoyancy_factor` 0.5 is built but off because the 24 kt broad reach bounces with it);
+- targets 3 to 5 pending in `test_planing_wet_area.gd` (the wet front 1.65 to 1.75 m against 0.6 to 1.0; the push 1.08 to 1.14 m against 0.45 to 0.75; the harness 683 N against 350 to 480);
+- the straight runs are 2 to 6 % slower than the baseline (the 45° stance rights less, so the auto-sheet carries less sail; the old stance brings them back within 3 %); the polar at 15 kt is inside every real range;
+- the hands' share of the boom force (Max's estimate, if Michiel agrees); Max's rail-down angle; `board.glb` (Blender); spray drag (missing, the first candidate if the board is ever too fast).
+
+**After U1:** U2, the fin bends and its size (the push on the fin that Max misses).
 
 ## Numbers
 
@@ -57,6 +70,8 @@ The possible states are: not started → running → reported → merged.
 **The merged branch** (lead, 19 October 2026, e2f1563): `tools/check.sh` 190 files, 0 failed; `tools/test.sh` all passed; `tools/test.sh validation` no failures, 3 pending (the new check's targets). Green.
 
 **Round 3, U1.2 and U1.3 (agent 4, merged 1cf467a), agent 4's own numbers:** unit 343 of 343; check 0 failed; validation fails only the onset (11.6 kn). 18 kt beam reach: harness 683 N, rig 63 %, line 0.77 m, wet front 1.71 m, push 1.13 m, trim 1.64°. All 9 steady (worst 0.26° at 24 kt 135°). Speeds: the beam and broad reaches 4 to 11 % faster than Latest, the close reaches 3 % slower (the 45° stance). Full table in `u1_reports/physics_harness.md`.
+
+**U1.7 (agent 5, merged a649a4a, no game file changed):** validation 26 pass, 1 fail (onset 11.6 kn), 2 pending; the reach check equals Latest; no fall, no NaN. Straight runs flat 8.60, 10.49, 11.53 m/s (baseline 8.77, 11.10, 12.01); the sea 8.47, 10.42, 11.44 (8.72, 10.90, 12.07); the lake 20.8, 18.4, 21.9 kt (22.1, 19.2, 23.3). Polar at 15 kt inside every range: 12.7, 16.2, 19.1, 21.5, 23.2, 24.1, 19.1, 12.2, 9.3 kt at 45° to 165°. Friction on the 18 kt beam reach 224 → 216 N: it did not halve, because the wet front barely moved.
 
 **Latest, verified by the lead on the merged branch (1cf467a):** `tools/check.sh` 192 files, 0 failed; `tools/test.sh` 343 of 343; `tools/test.sh validation` 26 pass, 1 fail (the onset, 11.6 kn), 2 pending (targets 3 and 4). The reach check (means over t ≥ 25 s, positions from the tail):
 
@@ -135,6 +150,8 @@ The possible states are: not started → running → reported → merged.
 ## Notes
 
 Decisions and surprises along the way, newest first.
+
+- 19 October 2026 (agent 5, U1.7 and U1.8): the polar is inside every real range, the straight runs are 2 to 6 % slower (the stance), the onset is 11.6 kn. The spray root already uses the wet front's sum, so nothing changed there. Screenshots: before, the sailor upright under a near-vertical rig; after, sitting back and low with the rig leaned to windward (the lead looked at the 18 kt pair). The lead removed the old worktrees that held `u1/finish` and `u1/physics` and pointed both branches at the last merged work.
 
 - 19 October 2026 (Max, after a first play-test): "a little better"; the push on the fin isn't felt (the sideways load and bending are U2; U1.6's fin-loading assist adds nothing on reaches because the board already heels 4.5°); real sailors hold part of the sail through the hands (a follow-up as Max's estimate, if Michiel agrees). Decided: finish U1 as it stands (option b), targets 3 to 5 stay pending, then U2.
 

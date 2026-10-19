@@ -426,13 +426,13 @@ Two kinds of bouncing must not be confused (Max asked, 19 October 2026):
 - [x] The railing-out test, as information for the team's later decision on a player control. In a test, raise the wanted bank step by step. Does the board lift and then rail out above some angle, because the fin's rolling moment beats what the feet can hold (`feet_moment_max_nm`)? Report the angle. Build nothing on it in U1.
 
 **U1.7. Validate again: the board gets faster** (agent 5)
-- [ ] Friction drops by about half, so the speeds rise. Run the validation suite, the reach check and the three straight runs against the baseline, and the polar against the real ranges in [POLAR_15KT.md](POLAR_15KT.md). No manoeuvres.
-- [ ] The planing onset band (8 to 10 kn, Michiel's open decision from Session 39) may move. Report where the onset is now.
-- [ ] If the board becomes faster than real boards, look for a drag that is missing, with a source: spray drag (up to 15 % of a planing hull's drag; Savitsky, DeLorme & Datla 2007), the fin, the sailor's windage. Never make the wet part longer again to slow it down.
+- [x] Friction drops by about half, so the speeds rise. Run the validation suite, the reach check and the three straight runs against the baseline, and the polar against the real ranges in [POLAR_15KT.md](POLAR_15KT.md). No manoeuvres.
+- [x] The planing onset band (8 to 10 kn, Michiel's open decision from Session 39) may move. Report where the onset is now.
+- [x] If the board becomes faster than real boards, look for a drag that is missing, with a source: spray drag (up to 15 % of a planing hull's drag; Savitsky, DeLorme & Datla 2007), the fin, the sailor's windage. Never make the wet part longer again to slow it down.
 
 **U1.8. The look, and Max's play-test** (agent 5, then Stop 3)
-- [ ] The spray comes from the front of the wet part (`effects.gd`, `spray_root_local`), so it moves back under the front foot by itself.
-- [ ] Screenshots from the side on the beam reach at 12, 18 and 24 kt, before (`main`) and after, in `.screenshots/u1/`.
+- [x] The spray comes from the front of the wet part (`effects.gd`, `spray_root_local`), so it moves back under the front foot by itself.
+- [x] Screenshots from the side on the beam reach at 12, 18 and 24 kt, before (`main`) and after, in `.screenshots/u1/`.
 - [ ] Max play-tests:
   - Is the board wet only from the front foot back?
   - Does it feel freer and faster?
