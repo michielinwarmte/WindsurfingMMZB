@@ -18,6 +18,8 @@ extends Node
 ##   mouse. Before the click the legs it will go into are lit in yellow. Far from every leg it is a
 ##   lone mark, which can be typed into the order. It is left on the side the course bends round it.
 ## - The order can also be typed, as in the Notice of Race ("Start-1-5-4S/4P-1-5-4S-Finish").
+## - Fit to water makes the course smaller, turns it to the wind now and moves it, until every mark
+##   is 200 m and every leg 50 m from the shore (CourseFitter, RACING_PLAN.md T2).
 ## - Every change can be undone (Ctrl+Z), also Clear. M shows and hides the course.
 ## - Courses are saved as JSON in the map's courses folder, in the project, so the team shares
 ##   them through git (WD6).
@@ -68,6 +70,9 @@ var _preview_at: Vector2 = Vector2.INF
 var _refresh_left_s: float = 0.0
 ## The saved courses by name, with their files.
 var _saved: Dictionary[String, String] = {}
+## The lake's shore clearance for Fit to water: made the first time it is needed (about a fifth of
+## a second on Silvaplana), then kept.
+var _fitter: CourseFitter
 
 
 ## Connects the course maker to the viewer: its screen layer (the course is drawn in it, under
@@ -100,6 +105,7 @@ func setup(layer: CanvasLayer, panels: Control, config: MapConfig, height_at: Ca
 	_panel.size_changed.connect(_on_size_changed)
 	_panel.axis_changed.connect(_on_axis_changed)
 	_panel.square_to_wind_pressed.connect(_on_square_to_wind)
+	_panel.fit_to_water_pressed.connect(func() -> void: fit_to_water())
 	_panel.undo_pressed.connect(_on_undo)
 	_panel.clear_pressed.connect(_on_clear)
 	_panel.add_mark_pressed.connect(func() -> void:
@@ -411,6 +417,53 @@ func _on_square_to_wind() -> void:
 	var wind: Vector2 = _wind_now.call()
 	course.set_axis(roundf(wind.x))
 	_changed()
+
+
+## Fit to water: the course made smaller, turned and moved until every mark is 200 m and every leg
+## 50 m from the shore, as big as it fits, set to the lake's wind now (as Square to wind) and as near
+## to where it is as it fits (CourseFitter.fit_course). One step for Undo. False, with the reason in
+## the panel, when nothing fits; the course then stays as it was.
+func fit_to_water() -> bool:
+	if course == null:
+		return false
+	var fitter: CourseFitter = _fitter_for_the_course()
+	if fitter == null:
+		_panel.show_message("Fit to water looks for the lake under the course: move the course, or the view, over the water first.")
+		return false
+	var wind: Vector2 = _wind_now.call()
+	var fitted: Course = fitter.fit_course(course, roundf(wind.x))
+	if fitted == null:
+		_panel.show_message(fitter.last_reason)
+		return false
+	_remember()
+	_stop_adding()
+	course = fitted
+	var off_deg: float = Course.turn_deg(roundf(wind.x), course.axis_deg)
+	_panel.show_message("Fitted to the water: %.0f %% of the class's size, %s, every mark at least %.0f m and every leg %.0f m from the shore." % [
+		course.size_percent, "square to the wind" if absf(off_deg) < 0.5 else "%.0f° %s of the wind" % [absf(off_deg), "right" if off_deg > 0.0 else "left"],
+		fitter.mark_margin_m, fitter.leg_margin_m])
+	_changed()
+	return true
+
+
+## The fitter for the lake the course is on: the one already made if the course's middle, one of its
+## marks or the middle of the view is on its lake, otherwise a new one for the lake under the first of
+## them that is on the water. Null when none of them is.
+func _fitter_for_the_course() -> CourseFitter:
+	var spots: Array[Vector2] = [course.bounds().get_center()]
+	for mark: CourseMark in course.marks:
+		spots.append(mark.position)
+	spots.append(_view_centre.call())
+	if _fitter != null:
+		for spot: Vector2 in spots:
+			if _fitter.is_lake_at(spot):
+				return _fitter
+	for spot: Vector2 in spots:
+		if _height_at.call(spot.x, spot.y) < 0.0:
+			_fitter = CourseFitter.from_heights(_height_at, spot)
+			if _fitter.has_water():
+				return _fitter
+	return null
 
 
 func _on_undo() -> void:
