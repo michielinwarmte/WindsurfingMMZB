@@ -7,17 +7,16 @@ extends GutTest
 ## moves the fin's load shows up here: the slip angle, the lift, and the upward part of the
 ## fin's force. A stiff fin's force lies in the board's plane, so it points up only as far
 ## as the board heels (the leeward rail down). Measured on feature/u2-fin on 19 October 2026
-## (agent 2, fin_measure). Once the fin bends (agent 3, fin_physics), the stiff run sails the
-## stiff limit of the bending fin (_stiff_fin), which must give these numbers again: the
-## brief's "the stiff limit gives the old force exactly".
+## (agent 2, fin_measure). Now that the fin bends (agent 3, fin_physics), the stiff run sails
+## the stiff limit of the bending fin (_stiff_fin, the bend switched off), which gives these
+## numbers again: the brief's "the stiff limit gives the old force exactly".
 ##
-## The bend (pending until agent 3). The default fin bends under its load: its tip turns
-## (fin_bend_tip_deg), its force tilts toward the deck (fin_tilt_deg), and the bend adds an
-## upward force: the default fin's fin_up_n less the stiff fin's. No size is a target (the
-## plan's 100 to 200 N was a guess); the check asks that the bend is there, toward the deck
-## on this tack, and inside the linear beam's 35 degrees. A target that is not yet a check
-## calls pending() with the measured numbers, as in test_planing_wet_area.gd.
-const BEND_IS_A_CHECK: bool = false
+## The bend (a check since agent 3). The default fin bends under its load (section 4, "The
+## fin bends"): its tip turns (fin_bend_tip_deg), its force tilts toward the deck
+## (fin_tilt_deg), and the bend adds an upward force: the default fin's fin_up_n less the
+## stiff fin's. No size is a target (the plan's 100 to 200 N was a guess); the check asks
+## that the bend is there, toward the deck on this tack, and inside the linear beam's 35
+## degrees.
 
 const RUN_S: float = 40.0
 const WIND_KT: float = 18.0
@@ -89,10 +88,8 @@ func test_the_bend_tilts_the_force_toward_the_deck() -> void:
 	var target: String = "the fin bends: its tip turns, its force tilts toward the deck and lifts"
 	if misses.is_empty():
 		pass_test("%s: tip %.1f deg, tilt %.1f deg, %.0f N from the bend" % [target, tip, tilt, up_from_bend])
-	elif BEND_IS_A_CHECK:
-		fail_test("%s, not met: %s" % [target, "; ".join(misses)])
 	else:
-		pending("%s, not met yet (U2 agent 3): %s" % [target, "; ".join(misses)])
+		fail_test("%s, not met: %s" % [target, "; ".join(misses)])
 
 
 ## The fin of the game.
@@ -100,11 +97,12 @@ func _default_fin() -> FinConfig:
 	return load("res://config/fin_default.tres") as FinConfig
 
 
-## The stiff fin. Today that is the game's fin itself. Once the fin bends (agent 3), a copy
-## of the game's fin in the stiff limit (the bending stiffness very large), so that this
-## run keeps pinning the old force.
+## The stiff fin: a copy of the game's fin with the bend switched off (its stiff limit), so
+## that this run keeps pinning the old force.
 func _stiff_fin() -> FinConfig:
-	return _default_fin()
+	var stiff: FinConfig = _default_fin().duplicate() as FinConfig
+	stiff.bends = false
+	return stiff
 
 
 ## ValidationRun.sail(TWA_DEG, RUN_S, WIND_KT) with a fin of our choice: the same steady

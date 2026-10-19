@@ -1082,8 +1082,8 @@ func _fill_telemetry(controls: SimControls) -> void:
 	var fin_in_plane_sq: float = fin_force_body.x * fin_force_body.x + fin_force_body.z * fin_force_body.z
 	var fin_side_n: float = sqrt(maxf(fin_in_plane_sq - fin.drag_n * fin.drag_n, 0.0))
 	t.fin_tilt_deg = rad_to_deg(atan2(fin_force_body.y, fin_side_n)) if fin.lift_n > 0.0 else 0.0
-	# The bent tip's angle: zero until the fin bends (U2, agent 3 fills it from the fin model).
-	t.fin_bend_tip_deg = 0.0
+	# The bent tip's angle (U2, section 4 "The fin bends"): zero for a stiff fin.
+	t.fin_bend_tip_deg = rad_to_deg(fin.bend_tip_rad)
 
 	t.buoyancy_n = buoyancy.buoyancy_force_n
 	t.submersion_ratio = buoyancy.submersion_ratio
