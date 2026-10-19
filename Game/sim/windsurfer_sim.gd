@@ -680,9 +680,13 @@ func _update_sailor(dt: float, controls: SimControls) -> void:
 	# stance does the work; nothing while stepping round the mast in a tack).
 	var press_target: float = 0.0
 	if forward_speed > hump_speed and not stepping and controls.balance_reflex:
-		# Only as far as the board is planing: standing on the tail of a board that has
-		# dropped off the plane sinks the stern and rears the nose.
-		press_target = clampf((sailor_config.running_trim_deg - rad_to_deg(SimMath.pitch_rad(body.basis))) / sailor_config.trim_press_band_deg, -1.0, 1.0) * sailor_config.trim_press_max_m * clampf(hull.planing_ratio, 0.0, 1.0)
+		# Only as far as the hull is planing: standing on the tail of a board that has
+		# dropped off the plane sinks the stern and rears the nose. What counts is the
+		# hull's own planing share (how much of what it carries is dynamic lift), not its
+		# share of the whole weight: the fin's and the rig's lift take weight off the hull,
+		# not the plane away from it (U2; with the whole-weight share every newton the fin
+		# lifted made the sailor step forward).
+		press_target = clampf((sailor_config.running_trim_deg - rad_to_deg(SimMath.pitch_rad(body.basis))) / sailor_config.trim_press_band_deg, -1.0, 1.0) * sailor_config.trim_press_max_m * hull.planing_share
 	if not controls.freeze_fore_aft:
 		trim_press_m = move_toward(trim_press_m, press_target, sailor_config.trim_press_rate_ms * dt)
 
