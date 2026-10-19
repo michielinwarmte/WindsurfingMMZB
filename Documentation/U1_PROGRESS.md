@@ -3,15 +3,15 @@
 The live state of U1, "planing on a smaller wet area". The plan and its execution brief are in [PLAYTEST_UPGRADES.md](PLAYTEST_UPGRADES.md). **The lead updates and commits this file after every launch, report and merge.** A lead who takes over starts here.
 
 - **Branch:** `feature/u1-planing-wet-area` (from `main` at 561849c). Agents work on `u1/<name>` branches, made from it in their own worktrees.
-- **Last update:** 19 October 2026, Session 46. The plan is ready; nothing is built yet.
+- **Last update:** 19 October 2026, the lead launched agents 1, 2 and 3 (Opus 5.5, xhigh, own worktrees). Nothing merged yet.
 
 ## State
 
 | # | Agent | Package | State | Branch | Report |
 |---|---|---|---|---|---|
-| 1 | `measure` | baseline, the reach check, U1.1, then U1.4 (flat tail) | not started | `u1/measure` | |
-| 2 | `sources` | the four numbers that need a source | not started | `u1/sources` | |
-| 3 | `porpoising` | U1.5's diagnosis | not started | `u1/porpoising` | |
+| 1 | `measure` | baseline, the reach check, U1.1, then U1.4 (flat tail) | running | `u1/measure` | |
+| 2 | `sources` | the four numbers that need a source | running | `u1/sources` | |
+| 3 | `porpoising` | U1.5's diagnosis | running | `u1/porpoising` | |
 | 4 | `physics` | U1.5's fix, U1.2, U1.3 | waits for Stop 1 | `u1/physics` | |
 | 5 | `finish` | U1.6, U1.7, U1.8's screenshots | waits for Stop 2 | `u1/finish` | |
 
@@ -25,7 +25,7 @@ The possible states are: not started → running → reported → merged.
 
 ## Next action
 
-Launch agents 1, 2 and 3 in parallel, with the agent prompt from the execution brief.
+Agents 1, 2 and 3 are running. For each one that reports: read `Documentation/u1_reports/<name>.md` on `u1/<name>`, merge `u1/<name>` into `feature/u1-planing-wet-area`, set its state to merged here, commit. When all three are in, handle Stop 1 (the brief's three conditions), then launch agent 4 with the reports of agents 2 and 3. An agent that was running but has no committed report is relaunched with the brief's prompt and continues on its branch.
 
 ## Numbers
 
