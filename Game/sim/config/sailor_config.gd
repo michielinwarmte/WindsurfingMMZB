@@ -46,15 +46,18 @@ extends Resource
 ## Trimming with the feet once over the hump: the sailor presses the back foot to free the
 ## nose when the bow is below running_trim_deg and the front foot when it rises above it,
 ## moving the feet's pressure this far aft or forward of the stance (the two feet are
-## half a metre apart) without moving the body. The weight that goes into the board at
-## the feet is what sets a planing board's trim; without this the board ran nose-down
-## at a degree of trim and, with next to no induced drag, far too fast off the wind.
+## half a metre apart), and the body's weight with it (U1.3: pressing the back foot is
+## the weight going over the back foot). The weight that goes into the board at the feet
+## is what sets a planing board's trim; without this the board ran nose-down at a degree
+## of trim and, with next to no induced drag, far too fast off the wind.
 @export var trim_press_max_m: float = 0.3
 ## The running trim the feet hold while planing, degrees of pitch bow up. A planing
 ## bottom porpoises above a critical trim that falls as the load coefficient falls with
-## speed (Savitsky 1964): about 2 degrees for this board at 10 m/s. Held at 3 the board
-## launched and splashed once a second.
-@export var running_trim_deg: float = 2.0
+## speed (Savitsky 1964). Gourlay and Martellotta (2011) give 3 degrees at 12 kn, 2 at 14
+## kn and less toward 24 kn; the targets' reaches plane at 23 to 31 kn. Held at 3 the
+## board launched and splashed once a second; at 2, once the weight went aft with the
+## feet (U1.3), the 18 kt broad reach bounced (0.66 degrees of pitch at 1.64 degrees).
+@export var running_trim_deg: float = 1.5
 ## The press is full this many degrees of pitch away from hump_trim_deg, and it moves at
 ## trim_press_rate_ms: slowly, for the running trim, never chasing a bounce (a quick press
 ## lags a 1 Hz bounce by a quarter of a cycle and pumps it; the pitch reflex of the
@@ -178,11 +181,15 @@ extends Resource
 
 @export_group("Lean (sideways)")
 ## Sideways distance of the sailor's centre of mass from the centreline at full lean:
-## hooked in with the feet on the windward rail and the body stretched out, the body's
-## centre is about a metre outboard.
-@export var lean_max_m: float = 1.0
-## The centre of mass drops by this much at full lean (the body goes nearly horizontal).
-@export var lean_height_drop_m: float = 0.5
+## hooked in with the feet on the windward rail (feet_rail_m) and the body in a planing
+## stance, a straight line from the feet to the hips about 45 degrees above the water
+## (PHYSICS_SPEC.md section 14, "U1: the harness"): 0.66 m outboard of the feet. (Until
+## U1.2 it was a full hike, 1.0 m, the body at 25 degrees: with the hook within 0.4 m of
+## the boom no harness line allows that under a boom 1.4 m up the mast.)
+@export var lean_max_m: float = 0.88
+## The centre of mass drops by this much at full lean: the same 45 degree stance puts it
+## 0.66 m above the deck (the hook 0.65 to 0.70 m up, section 14), 0.28 m below standing.
+@export var lean_height_drop_m: float = 0.28
 ## How fast the sailor means to change the lean (fraction of full lean per second): the
 ## hips move about a metre a second. The body follows as the legs, the ankles and the
 ## pull in the hands let it (it is an inverted pendulum on the feet).

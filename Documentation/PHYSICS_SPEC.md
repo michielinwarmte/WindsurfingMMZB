@@ -3471,6 +3471,26 @@ nothing to answer: about the feet the hands' total force has almost no forward p
 its lift acts straight above them (the grip 0.80 m aft, the feet 0.79 m), so the felt
 moment is 7 N·m. A sailor whose weight hangs in the line has none on the back foot.
 
+**U1.2 and U1.3, round 3 (agent 4, 19 October 2026).** In steady sailing the board feels
+the sailor's weight at the centre of mass, however that weight is shared between the feet
+and the harness: what the line lifts into the rig and down at the mast foot, the feet give
+back as a moment. So the trim is set by where the centre of mass is, and the front-foot
+moment was the trim press itself: it moved only the point where the legs push, 0.19 m aft
+of a body that stayed at its stance, and the feet held the body from tipping forward.
+Now the body goes with the press (pressing the back foot is the weight going over it) and
+the hang-back is measured from the feet's pressure point. On the 18 kt beam reach the
+sailor hangs back 0.36 m against the boom's 136 N forward pull, the centre of mass is 0.34
+m from the tail (was 0.60 m), and the feet pass 24 N·m bow-up, inside the 60 to 100 N·m the
+legs can hold (section 14). Full lean is a planing stance at 45° (`lean_max_m` 0.88,
+`lean_height_drop_m` 0.28, section 14) instead of a full hike at 25°: the line from the
+centre of mass to the grip shortens from 1.44 to 1.10 m, the harness from 954 to 707 N, the
+rig's share from 91 to 57 %. Two limits remain, both statics. The line carries the boom's
+force across the grip line, 600 to 750 N here (hooked in, the arms only steer), so 415 N
+asks for about two thirds of the sail force the pilot holds at full lean. And the board's
+push sits ahead of the weight by the drive's couple over the load: about `D h_CE / N` =
+280 N × 1.9 m / 800 N = 0.66 m here, so with the weight 0.47 m from the tail (sailor, board
+and rig together) the push is at 1.1 m, not 0.45 to 0.75 m.
+
 **The legs, up and down.** The posture (7.2: lean, stance, hang-back) says where the body's
 centre should be above the feet. The legs are a spring and damper in the vertical between
 that height and the body (`leg_natural_frequency_hz` 1.2, `leg_damping_ratio` 0.9, soft
@@ -3509,9 +3529,10 @@ pitch reflex of 7.3 on top. The feet stand on the centreline up to a lean of
 lean the controls ask for is weight on a rail: `rail_press` moves the feet's pressure to the
 pressed rail (`rail_step_m` 0.3) at `rail_press_rate_per_s` 3, which banks the board. Over
 the hump the feet trim the board (`trim_press_m`): the pressure moves aft when the bow is
-below `running_trim_deg` 2 and forward when above, within `trim_press_max_m` 0.3 at
-`trim_press_rate_ms` 0.1, scaled by the planing ratio; the stance keeps the hump's 3
-degrees (`hump_trim_deg`) until the board planes.
+below `running_trim_deg` 1.5 and forward when above, within `trim_press_max_m` 0.3 at
+`trim_press_rate_ms` 0.1, scaled by the planing ratio, and the body's weight moves with it
+(U1.3: the posture hangs from the feet's pressure point, and the hang-back is measured from
+there); the stance keeps the hump's 3 degrees (`hump_trim_deg`) until the board planes.
 
 **What the feet pass to the deck.** A point mass carries no moment, so the loads on the
 body (the legs' hold and the knees, the hands' force at the grip, the body's inertia at its
@@ -6177,6 +6198,19 @@ Sources for this table (read on 19 October 2026):
 | Steering at speed | "with the slightest leg, toe and heel pressure" when in the harness and the straps | expert | surfertoday.com, "Steering: learn how to change the trajectory of your windsurf board": https://www.surfertoday.com/windsurfing/how-to-steer-a-windsurf-board |
 | The railing-out angle on the 18 kt beam reach | in control up to 21° of heel, lost at 24° | model result, information only | section 10, "U1.6" |
 
+### U1.2 and U1.3: the stance, the harness and the trim (agent 4, 19 October 2026)
+
+| What | Number | Reliability | Source, or how it was worked out |
+|---|---|---|---|
+| `lean_max_m` (the centre of mass outboard of the centreline at full lean) | **0.88 m** (was 1.0) | estimate | a planing stance: a straight line from the feet on the windward rail (`feet_rail_m` 0.22) to the hips at about 45° ("U1: the harness" above, [S1], [S2]); the feet-to-centre-of-mass distance of a standing 1.75 m sailor, 0.94 m, times cos 45° is 0.66 m outboard of the feet |
+| `lean_height_drop_m` (how far the centre of mass drops at full lean) | **0.28 m** (was 0.5) | estimate | the same stance: 0.94 m × sin 45° puts the centre of mass 0.66 m above the deck, inside the hook's 0.65 to 0.70 m for a normal stance ("U1: the harness"). The old full hike (25°, 0.37 m up) cannot be hooked in under a boom 1.4 m up the mast with the hook within 0.40 m of it: the line ran 1.44 m |
+| `running_trim_deg` (the trim the feet's press aims for while planing) | **1.5°** (was 2.0) | theory, and the game's own limit | Gourlay & Martellotta [S2]: 3° at 12 kn, 2° at 14 kn, lower toward 24 kn; the four target reaches plane at 23 to 31 kn. Target 4's lower end. At 2°, once the weight went aft with the feet, the 18 kt broad reach bounced (pitch SD 0.66° at 1.64°) |
+| `trim_press_max_m` 0.3 (kept) | the press now moves the body's weight with the feet's pressure | - | U1.3: pressing the back foot is the weight going over the back foot (section 7.5) |
+| The feet's steady pitch moment, 18 kt beam reach | **+24 N·m, the back foot** (was −117 N·m, the front foot) | model result | inside the 60 to 100 N·m the legs can hold ("U1: the harness", the feet's couple); the sailor hangs back 0.36 m against the boom's 136 N forward pull |
+| The harness tension the game's sail asks for | at least the boom's force across the grip line: 600 to 750 N on the 18 kt beam reach | theory (statics) | hooked in, "your arms are only used to steer and make adjustments to the rig" [H5], so the line carries the boom force. The sail's 480 to 500 N at the centre of effort, 1.84 m up the mast, against the grip 1.52 m from the mast foot. Walls & Gale's 415 N [W1] is a boom force of about 415 N: a sail force near 340 N, about two thirds of what the pilot holds at full lean |
+
+Source for this table: [H5] surfertoday.com, "How to hook into the harness lines in windsurfing" (read 19 October 2026): https://www.surfertoday.com/windsurfing/how-to-hook-into-the-harness-lines-in-windsurfing
+
 ### Sources
 
 Legacy code (all under `Legacy/WindsurfingGame/Assets/`):
@@ -6280,6 +6314,9 @@ How to add a row: date, session, the config file and field (or the section and f
 
 | Date | Session | Where | Old | New | Motivated by | Why this value | Fudge ID |
 |---|---|---|---|---|---|---|---|
+| 19 Oct 2026 | U1 (agent 4) | section 7.5 ("U1.2 and U1.3, round 3"), `windsurfer_sim.gd`: `_set_posture` | The trim press moved only the point where the legs push; the body stayed at its stance | The body's centre of mass goes with the press, and the hang-back is measured from the feet's pressure point | U1.3: the feet pressed the bow down with 117 N·m on the 18 kt beam reach (the front foot), the press moving the feet aft of a body that stayed put | In steady sailing the board feels the sailor's weight at the centre of mass, however it is shared between the feet and the harness; pressing the back foot is the weight going over it. The sailor now hangs back 0.36 m against the boom and the feet pass 24 N·m bow-up, within what the legs can hold. No new number | |
+| 19 Oct 2026 | U1 (agent 4) | section 14 ("U1.2 and U1.3"), `sailor_config.gd`, `sailor_default.tres`: `lean_max_m`, `lean_height_drop_m` | 1.0 m and 0.5 m: a full hike, the body at 25° | **0.88 m and 0.28 m**: a planing stance at 45°, the centre of mass 0.66 m outboard of the feet and above the deck | U1.2: the harness line ran 1.44 m from the hips to the grip and lifted 91 % of the weight | Agent 2's normal stance (the hook 0.65 to 0.70 m up); a full hike cannot be hooked in under a 1.4 m boom with the hook within 0.4 m of it. 18 kt beam reach: harness 954 → 707 N, rig's share 91 → 57 %, line 1.44 → 1.10 m. The close reaches 6 to 10 % slower (12 % less righting moment); the polar check stays green | |
+| 19 Oct 2026 | U1 (agent 4) | section 7.5, `sailor_config.gd`, `sailor_default.tres`: `running_trim_deg` | 2.0° | **1.5°** | U1.3: with the weight going aft with the feet, the 18 kt broad reach bounced at 1.64° (pitch SD 0.66°) | Gourlay & Martellotta's trim falls with speed (2° at 14 kn, lower toward 24 kn); target 4's lower end. Steady in all 9 reach cases | |
 | 19 Oct 2026 | U1 (agent 5) | section 10 ("U1.6"), `sailor_config.gd`, `sailor_default.tres`, `windsurfer_sim.gd`: `fin_load_bank_deg`, `_fin_load_bank_rad` | The feet aimed for a flat board | 4.5° of leeward heel at full hike in the back straps, banked only by what the heel does not give already | U1.6, Max's fin loading ("railing the board away from me a little, to tilt the board a bit and load the fin"). A bank added on top of the soft feet's few degrees took the 15 kt beam reach to 7.8° of heel and its settled submersion to 0.26 (the polar check allows 0.25) | The middle of the 3 to 6° estimate (section 14, "U1: the harness"); no source, Max to give his own. The railing-out test loses control at 24° | |
 | 19 Oct 2026 | U1 (agent 5) | section 10 ("U1.6"), `autopilot.gd`, `helm.gd`: `trim_with_rake_first`, `Helm.hold_rake_first` | (new) | An option, **off**: the course hold's steady helm into the rake up to its stop, the rest and the corrections into the tilt | Stop 2: the pilot's heading-up helm stands the hiked rig up to 8° (real 10 to 25°), so the harness line runs 1.44 m | Off because the rake is then at its stop on every beam reach and the aft grip deepens the feet's bow-down moment (U1.3): lower trims, the 18 kt broad reach rocking. To be switched on with U1.3 | |
 | 19 Oct 2026 | U1 (agent 4) | section 5 F21, `board_config.gd`: `planing_buoyancy_factor`; `hull_model.gd`: `_apply_planing_buoyancy`, `FROUDE_DISPLACEMENT` 0.4, `FROUDE_PLANING` 1.0 | Archimedes at every speed | A planing bottom keeps `planing_buoyancy_factor` of its buoyancy, phased in over Faltinsen's semi-displacement range. Default **1.0** (no change); 0.5 is the sourced value | Michiel, Stop 2: the onset at 13.3 kn, a real board planes at about 10 | 0.5 is Shuford's steady-planing factor as Zarnick (1978) uses it; Savitsky's buoyant term gives 0.43 to 0.61. With 0.5 the onset is 9.9 kn and steady across winds, but the 12 kt broad reach ploughs (3.75 m/s at 9.3°) and the 24 kt broad reach bounces (0.64°); four other validation checks fail (section 5 F21): left at 1.0 until U1.6, U1.2 and U1.3 | |

@@ -619,14 +619,20 @@ func _frame_with_up(up: Vector3) -> Basis:
 ## further than the lean the sailor means to have; the rail press shifts them without
 ## moving the body: the legs angle instead.
 func _set_posture() -> void:
-	mass_model.update(body_stance, lean, hang_back_m, 0.0, _rig_lean_now_rad)
+	# The weight goes with the trim press (U1.3): pressing the back foot is the body's
+	# weight moving over the back foot, so the centre of mass shifts with the feet's
+	# pressure, and the hang-back is measured from there. (Until U1.3 the press moved only
+	# the point where the legs push: the body stayed ahead of it, the feet had to hold it
+	# from tipping forward, and that came out as a bow-down moment at the feet, -117 N·m on
+	# the 18 kt beam reach: the front foot pressing, the very opposite of the technique.)
+	mass_model.update(body_stance, lean, hang_back_m + trim_press_m, 0.0, _rig_lean_now_rad)
 	var body_lean: float = SimMath.to_body(body.basis, sailor.position - body.origin_world()).x / sailor_config.lean_max_m
 	var feet_lean: float = body_lean
 	if absf(lean) < absf(body_lean) or signf(lean) != signf(body_lean):
 		feet_lean = lean if signf(lean) == signf(body_lean) else 0.0
 	feet_body = mass_model.feet_position_body(stance, feet_lean, rail_press, trim_press_m)
-	# The body stands at its own stance (the feet may have stepped ahead of it); the trim
-	# press moves only the feet's pressure.
+	# The body stands at its own stance (the feet may have stepped ahead of it), plus the
+	# trim press: the posture hangs from the feet's pressure point.
 	posture_centre_body = Vector3(0.0, feet_body.y, mass_model.sailor_position_body.z - hang_back_m)
 	var from_centre: Vector3 = mass_model.sailor_position_body - posture_centre_body
 	var target_world: Vector3 = body.point_world(posture_centre_body) + _posture_frame() * from_centre
