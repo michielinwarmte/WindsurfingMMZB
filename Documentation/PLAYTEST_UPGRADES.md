@@ -481,7 +481,7 @@ Two kinds of bouncing must not be confused (Max asked, 19 October 2026):
 
 ## U2. The fin bends, and its size
 
-**Status:** an idea with a first estimate, from U1's research. Plan it in detail after U1, with a source for the fin's stiffness.
+**Status:** being built on `feature/u2-fin` (from 19 October 2026); the execution brief below, the live state in [U2_PROGRESS.md](U2_PROGRESS.md).
 
 ### The feedback
 
@@ -496,9 +496,65 @@ Max, 19 October 2026: "A fin of 37 cm can create a lot of lift in real life. The
 - **Why a 44 cm fin lifts more:** it bends more, its force acts deeper (a longer lever to tip the board, which tilts it more and loads the fin more, a loop that ends in flying out), and it lets the sailor push harder before it spins out.
 - **"Almost totally" adds up.** At 800 N of push with the force tilted 30°: about 460 N upward. The sail raked to windward adds 150 to 200 N. The hull is left with a small part of the 900 N, at the tail.
 
-### First idea for the plan
+### Execution brief
 
-- Find a source for fin stiffness: fin makers' published flex or deflection numbers, or Max's own fins (brand and model).
-- Let the fin's force tilt with its bend, the bend following the load through that stiffness. The fin's depth and roll lever come with it.
-- Compare a 37 and a 44 cm fin in the what-if runs.
-- Then the team decides whether the fin's size becomes a setup choice for the player.
+For the lead who builds U2. The live state is in [U2_PROGRESS.md](U2_PROGRESS.md). Everything from U1's brief holds unless this one says otherwise: the rules, the tokens, the Windows notes, the reach check, the stop rules, the agent prompt.
+
+#### Go-ahead, branch and team
+
+- **Go-ahead:** Max, 19 October 2026, after U1's play-test ("we cannot say anything before U2"). Michiel reviews the physics at Stop 2, as in U1.
+- **The branch** is `feature/u2-fin`, made from `feature/u1-planing-wet-area` (U1 is not on `main` yet; U2 builds on U1's steadiness, stance and rig lean). The pull requests go in that order.
+- **The lead is Claude Fable 5.1.** In U2 it does the thinking itself: this design, the review of agent 3's physics before Michiel sees it, and the stops. The agents measure, research, build and draw.
+- **The sub-agents are Opus 5.5 at extra-high effort** (`model: "opus"`, `effort: "xhigh"`, `isolation: "worktree"`), at most 4 in all and 3 at a time, on branches `u2/<name>` made from `feature/u2-fin`.
+- **Testing:** reaches only, with `tools/reach_check.sh`, as in U1. The team runs the manoeuvre matrix before the pull requests.
+
+#### The physics, designed by the lead
+
+**What the model has.** The fin (`fin_model.gd`, spec section 4) is a stiff plate. Its lift lies flat in the board's plane, square to the flow and against the slip, at 40 % of the span below the root. The only upward part of that force comes from the board's heel: at -4.5 deg of heel and 527 N of fin lift (the 18 kt beam reach, measured 19 October 2026) that is 41 N. The fin works at a 2 deg slip against a 12 deg stall, so at a fifth of what it can carry. Its roll moment, 111 N m, is what heels the board, and `feet_moment_max_nm` is what the sailor can hold against it (U1.6: in control to 21 deg of heel, railed out at 24 deg).
+
+**What it misses: the fin bends.** Under its side force the fin bends toward the side the force points, most at the tip. The lift on a bent piece of fin is normal to that piece. A piece whose tip is displaced toward +x has its normal tilted from +x toward +y: a fin bent toward the force gives an **upward** part of its force, on every tack, of `F * sin(tilt)`. That is the lift Max feels on a big fin, on top of the heel's part.
+
+**The model to build (agent 3), the fin as a cantilever beam:**
+1. **Planform.** The chord along the span follows the Blender script's law (`tools/blender/build_rig_models.py`, `fin_chord`): `c(s) = c_root + (c_tip - c_root) * s^1.1`, rounded beyond `s = 0.82`, with `c_root = 0.14 m * sqrt(area_m2 / 0.0365)` and `c_tip = 0.37 * c_root`. Put the law in `FinConfig` (`root_chord_m`, `tip_chord_ratio`, `thickness_ratio` for the NACA 00xx section) so the physics and the model agree. `span_m` and `area_m2` stay the size.
+2. **Stiffness along the span.** For a section of chord `c` and thickness `t = tau * c`, the bending stiffness is `EI(y) = S * c(y)^4` with one scale `S` (the second moment of a thin foil section is proportional to `c * t^3`; the constant and the material join in `S`). The tip, at 37 % of the root chord, is fifty times softer than the root: that is why fins bend at the tip.
+3. **One sourced number sets `S`: a flex test.** `flex_test_load_n` hung at `flex_test_position` (a span fraction, 1.0 = the tip) deflects the tip by `flex_test_deflection_m`. At start, integrate the beam for that point load with `S = 1` and scale `S` so the computed deflection equals the test. Agent 1 finds the test numbers, or Max measures his own fin (clamp the base, hang a known weight at the tip, measure the tip's displacement). Default: the best sourced fin of the right size; labelled as an estimate if nothing is found.
+4. **Loading.** The lift is spread along the span elliptically from the root (the hull is the end plate, so the root is the mid-span of the mirrored wing): `l(y) = F * (4 / (pi * L)) * sqrt(1 - (y/L)^2)`, which integrates to `F`. Twenty stations.
+5. **Beam.** At each station `M(y) = integral from y to L of l(s) (s - y) ds`, the slope `theta(y) = integral from 0 to y of M / EI`, the deflection `w(y) = integral from 0 to y of theta`. Everything is linear in `F`, so precompute `theta1(y_i) = theta(y_i) / F` and `w1(L)` once per fin (at `_init`) and at run time take `theta_i = F * theta1(y_i)`, capped at 35 deg (beyond that the linear beam is wrong and a real fin has long spun out).
+6. **The tilted force.** With the station weights `e_i` (the elliptic shares, `sum e_i = 1`): `up = F * sum e_i sin(theta_i)` along the board's +y, `side = F * sum e_i cos(theta_i)` in the old lift direction, applied at the same centre of pressure, drag unchanged. Report `fin_tilt_deg = atan2(up, side)`, `fin_bend_tip_deg = F * theta1(L)`, `fin_bend_tip_m = F * w1(L)`, `fin_up_n` (the bend's part plus the heel's part, in world +y).
+7. **Quasi-static.** A fin's first bending mode is at tens of hertz, far above the motions here, so the bend follows the load with no lag. Twist (flex-twist coupling, which changes the angle of attack on some fins) and the small shift of the centre of pressure toward the tip's displacement are left out and written down as such.
+8. **Size.** `--fin.span_m=0.44 --fin.area_m2=<catalogue>` gives a 44 cm fin: the chord law and the stiffness follow (the same `S`, the same material; a longer, deeper fin bends more by geometry). Its force acts deeper (`cop_span_fraction * span_m`), so the roll lever and the heel grow with it.
+
+**Tests to write:** with a constant chord (a rectangle) and a tip load, the computed tip deflection equals `P L^3 / (3 EI)` within 1 %; the flex-test calibration reproduces its own deflection; the elliptic weights sum to 1 and the root moment equals `F * 4L / (3 pi)`; a bent fin's force has a positive +y part on both tacks; `F = 0` gives no bend; the stiff limit (`S` very large) gives the old force exactly (the U1 reach check unchanged).
+
+#### Targets, in priority order
+
+1. No regression against U1's Latest (U1_PROGRESS.md): the reach check steady in 9 of 9, no fall, no NaN, validation as it is (the onset check is red on purpose), the polar inside its ranges.
+2. The fin bends by beam theory with a sourced stiffness, and the tip angle, the tilt and the upward force are in the telemetry and on the HUD.
+3. The 18 kt beam reach reports the fin's upward force for the 37 cm fin, stiff versus sourced flex, and for the 44 cm fin. No number is a target here: the plan's 100 to 200 N was a guess. The report says what the physics gives and why.
+4. The 44 cm fin against the 37: more upward force, a larger roll moment and heel, a smaller slip, a later spin-out, with the numbers.
+5. The look: the fin visibly bends in the game by the computed amount, and the HUD shows the fin's load as a share of its stall.
+6. The feel, at Stop 3: Max feels the push on the fin.
+
+Not in U2: the player's own railing control (a team decision), the fin's twist, ventilation spin-out, the wet-area targets of U1 (though the fin's lift may shorten the wet part: report it).
+
+#### The agents and the stops
+
+| # | Name | Package | When | May change |
+|---|---|---|---|---|
+| 1 | `fin_sources` | Published flex or deflection tests of 36 to 44 cm freeride and slalom fins (G10, carbon), with the load and where it hung; catalogue dimensions of 37 and 44 cm freeride fins (span, area, root and tip chord, thickness ratio); anything written on fin flex and lift (fin makers on flex and twist, the 2024 Ocean Engineering windsurf VPP, theses on windsurf fins); spin-out slip angles; Max's own fins when he names them. Into PHYSICS_SPEC.md section 14 with sources; estimates labelled | first | the spec; its report |
+| 2 | `fin_measure` | The fin's baseline: `--fin.<field>=` overrides in `run_scenario.gd` and `run_reach.gd`; fin columns in the reach check (slip, lift, roll moment, the heel's upward part, the share of stall); `fin_up_n`, `fin_tilt_deg`, `fin_bend_tip_deg` in the telemetry (zero for now) and the HUD; what-ifs with the stiff fin: `--fin.span_m=0.44` with its catalogue area, and `--sailor.fin_load_bank_deg=` 0, 4.5, 8 and 12 (how much the heel alone lifts, and where the sailor loses it); a validation check `test_fin_bend.gd` with the stiff numbers pinned and the bend `pending` | with 1 | `Game/dev/run_scenario.gd`, `Game/dev/run_reach.gd`, `tools/reach_check.sh`, `Game/sim/telemetry.gd`, the telemetry block of `windsurfer_sim.gd`, `Game/ui/hud.gd`, `Game/tests/validation/test_fin_bend.gd` (new), `validation_run.gd` (fields only) |
+| 3 | `fin_physics` | The design above, in `fin_config.gd`, `fin_default.tres`, `fin_model.gd`, their tests, the spec (section 4 "The fin bends", 14, 16); the bend check becomes real; the comparisons of targets 3 and 4 | after Stop 1 | those files; `test_fin_bend.gd` |
+| 4 | `fin_look` | The fin mesh bends: a `ShaderMaterial` on the fin's `MeshInstance3D` in `rig_visuals.gd` displacing vertices sideways by `w1`'s shape and the telemetry's tip deflection, set each frame from the sim (the sim drives the visuals); the HUD line; stern-view screenshots at 12, 18 and 24 kt with the 37 and the 44 cm fin in `.screenshots/u2/`; the play-test checklist | after Stop 2 | `Game/windsurfer/rig_visuals.gd`, a new shader under `Game/windsurfer/` or `Game/assets/`, `Game/ui/hud.gd`, their tests; screenshots |
+
+**The stops:**
+- **Stop 1, the lead:** agents 1 and 2 in; the stiffness has a source or Max's measurement (or a labelled estimate the team accepts); nothing regressed. The lead then fills the numbers into the design and launches agent 3.
+- **Stop 2: the lead reviews agent 3's diff itself, then Michiel reviews the physics.** Wait for his OK.
+- **Stop 3: Max's play-test.** Then the team decides on the pull requests (U1, then U2).
+
+**The agent prompt** is U1's, with U2 in place of U1: *You are agent <n>, `<name>`, of U2 in WindsurfingMMZB (Godot 4.7). Read CLAUDE.md and the U2 execution brief in Documentation/PLAYTEST_UPGRADES.md (and U1's brief above it for the rules), then do your package from the brief's agent table. Work in your worktree on the branch `u2/<name>`: make it from `feature/u2-fin`, or continue on it if it already exists. Commit as you go, and change only the files your row allows. Follow the rules, targets and stop rules, and be careful with tokens. Finish with your report (at most 300 words and one table) committed as Documentation/u2_reports/<name>.md, and return the same text.*
+
+### Sources
+
+- The beam: any strength-of-materials text (Euler-Bernoulli cantilever; `delta = P L^3 / (3 EI)` for a tip load). The elliptic loading: lifting-line theory, with the hull as an end plate (spec section 4).
+- The fin's measured load: this repository, the 18 kt beam reach of 19 October 2026 (U1's Latest).
+- The stiffness and the catalogue numbers: agent 1.
