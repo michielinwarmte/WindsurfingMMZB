@@ -114,11 +114,14 @@ Up = the world-upward part of the fin's force (today only from the heel); Stall 
 ## Open items
 
 - Max's own fins: brand, model, and if possible a flex test (clamp the base, hang a known weight at the tip, measure the tip's displacement).
+- The mast track as a setup choice (aft: faster and looser, livelier in gusts; the lead's test of 19 October): the team decides, with the fin's size.
 - Inherited from U1: the red onset check, the pending wet-area targets, the hands' share, the rail-down angle, `board.glb`.
 
 ## Notes
 
 Decisions and surprises along the way, newest first.
+
+- 19 October 2026 (Max's question, the lead's test): **the mast track 10 cm aft** (`mast_foot_local` z -0.10 to 0.0 m, a temporary edit, not kept). Steady reach check: shorter wet part everywhere (18 kt beam 1.42 to 1.35 m, 24 kt beam 1.35 to 1.31, 24 kt broad 1.59 to 1.50, and the 12 kt cases from 2.24 / 1.75 to 1.85 / 1.46 m), speeds equal or higher (12 kt beam 10.34 to 10.77 m/s, 24 kt broad 16.42 to 16.78), the harness unchanged, the mast foot slightly higher (325 to 349 N), all 9 steady. Gusty wind: livelier: the 24 kt beam reach 0.02 to 0.41 deg of pitch SD, the 18 kt beam 0.33 to 0.42, the 24 kt broad 0.43 to 0.51; no fall. That is the real mast-track trade-off (aft: faster and looser; forward: more control), so the track could become a setup choice for the player, like the fin's size: the team decides.
 
 - 19 October 2026 (Max's first U2 play-test): "feels quite nice now". He asked about the 400 N the HUD shows at the mast foot (the lead: that is mostly the sailor's own weight arriving through the harness and the boom, the rig's 10 kg, less what the sail lifts; the steady reach check has 325 N at 18 kt, gusts 400 to 490 N; U1's baseline had 679 N; no measurement of a real mast-foot force is in the spec yet) and missed an arrow for the fin's upward push: added to the F3 force view ("fin up", the world-up part of the fin force, pale cyan), checked on a screenshot.
 
