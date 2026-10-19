@@ -3,7 +3,7 @@
 The live state of U1, "planing on a smaller wet area". The plan and its execution brief are in [PLAYTEST_UPGRADES.md](PLAYTEST_UPGRADES.md). **The lead updates and commits this file after every launch, report and merge.** A lead who takes over starts here.
 
 - **Branch:** `feature/u1-planing-wet-area` (from `main` at 561849c). Agents work on `u1/<name>` branches, made from it in their own worktrees.
-- **Last update:** 19 October 2026. Agent 5's U1.6 merged (3718ef4; spec conflict in sections 14 and 16 resolved by keeping both). Round 3 launched: agent 4 on U1.2 and U1.3. The lead's verification of the merge was still running.
+- **Last update:** 19 October 2026. Agent 5's U1.6 merged (3718ef4) and verified green except the known onset check. Round 3 running: agent 4 on U1.2 and U1.3.
 
 ## State
 
@@ -58,7 +58,19 @@ The possible states are: not started → running → reported → merged.
 
 **The merged branch** (lead, 19 October 2026, e2f1563): `tools/check.sh` 190 files, 0 failed; `tools/test.sh` all passed; `tools/test.sh validation` no failures, 3 pending (the new check's targets). Green.
 
-**U1.6 (agent 5, merged 3718ef4), agent 5's own numbers:** unit 341 of 341; validation fails only on the onset (now 12.7 kn); the reach check stays steady in 9 of 9 (pitch SD at most 0.07°); speeds within 3 % of Latest except the 18 kt broad reach, which is faster (11.23 → 11.88 m/s); the close reaches 2 to 3 % slower (the board now heels 4.5° there). 18 kt beam reach: harness 954 N, rig 91 %, line 1.44 m; with rake-first on: 854 N, 93 %, 1.05 m, rig lean 23°. The board rails out at 24° of heel (holds 21°). The lead's verification of the merged branch: see the next entry when it lands.
+**U1.6 (agent 5, merged 3718ef4), agent 5's own numbers:** unit 341 of 341; validation fails only on the onset (now 12.7 kn); the reach check stays steady in 9 of 9 (pitch SD at most 0.07°); speeds within 3 % of Latest except the 18 kt broad reach, which is faster (11.23 → 11.88 m/s); the close reaches 2 to 3 % slower (the board now heels 4.5° there). 18 kt beam reach: harness 954 N, rig 91 %, line 1.44 m; with rake-first on: 854 N, 93 %, 1.05 m, rig lean 23°. The board rails out at 24° of heel (holds 21°). **Verified by the lead on the merged branch (3718ef4):** `tools/check.sh` 192 files, 0 failed; `tools/test.sh` 342 of 342; `tools/test.sh validation` 26 pass, 1 fail (the onset, 12.7 kn), 2 pending (targets 3 and 4). The reach check (means over t ≥ 25 s, positions from the tail):
+
+| Case | Speed m/s | Front m | Push m | Trim ° | Pitch SD ° | Harness N | Rig % | Mast foot N | Friction N | Area m² |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 12 kt 60° | 7.73 | 1.58 | 1.11 | 3.05 | 0.00 | 762 | 70 | 493 | 81 | 0.90 |
+| 12 kt 100° | 10.29 | 1.91 | 1.47 | 1.82 | 0.01 | 917 | 87 | 645 | 160 | 1.07 |
+| 12 kt 135° | 5.69 | 1.37 | 0.94 | 5.09 | 0.01 | 165 | 15 | 183 | 41 | 0.77 |
+| 18 kt 60° | 8.76 | 1.49 | 1.02 | 2.95 | 0.00 | 715 | 62 | 434 | 98 | 0.84 |
+| 18 kt 100° | 12.26 | 2.00 | 1.68 | 1.35 | 0.01 | 954 | 91 | 684 | 224 | 1.10 |
+| 18 kt 135° | 11.88 | 1.75 | 1.28 | 1.49 | 0.01 | 597 | 60 | 489 | 193 | 0.98 |
+| 24 kt 60° | 9.16 | 1.43 | 0.98 | 3.01 | 0.01 | 704 | 60 | 410 | 102 | 0.81 |
+| 24 kt 100° | 13.74 | 1.94 | 1.61 | 1.32 | 0.01 | 925 | 84 | 630 | 272 | 1.07 |
+| 24 kt 135° | 15.46 | 1.95 | 1.65 | 1.21 | 0.07 | 921 | 87 | 668 | 335 | 1.07 |
 
 **Onset work (agent 4, merged, off by default):** the reach check and all checks are unchanged from the table below (`check.sh` 0 failed, `test.sh` all passed with one new test, validation 21 pass, onset fails, 2 pending). The onset without the correction is 16.0, 13.3, 11.0, 11.0 kn at 12, 15, 18, 24 kt (it jumps with the wind because the planing share hovers near 0.5); with factor 0.5 it is 8.8, 9.9, 9.4, 9.5 kn, and the 12 kt broad reach drops to 3.75 m/s at 9.3° trim, the 24 kt broad reach bounces at 0.64°. Full table in `u1_reports/physics_onset.md`.
 
