@@ -15,7 +15,7 @@
 
 | Check | Result |
 |---|---|
-| `tools/test.sh` | 375 of 375 pass (360 before). Mine: test_course +2, test_race_courses 7, test_course_on_water 7 |
+| `tools/test.sh` | 376 of 376 pass (360 before). Mine: test_course +2, test_race_courses 7, test_course_on_water 7 |
 | `tools/check.sh` | 200 files, 0 failed |
 | `t1_course_from_above.png` | the whole T1 from 260 m up (marks tiny), mini-map |
 | `t1_start_area.png` | start line with boat, pin, line; gate and finish boat beyond |
