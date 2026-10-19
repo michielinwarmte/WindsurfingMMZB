@@ -202,6 +202,19 @@ func test_the_places_go_by_steps_then_distance() -> void:
 	assert_eq(results[1].gap_s, -1.0, "No gap while racing")
 
 
+func test_board_position_is_where_the_board_was_last_put() -> void:
+	# What a skipper sees of the others: each board where update_board() last put it, before and
+	# after the race steps, and unchanged by another board's move.
+	var race: RaceSim = _race(2)
+	race.update_board(0, Vector2(10.0, 4.0))
+	race.update_board(1, Vector2(-10.0, 2.0))
+	assert_eq(race.board_position(0), Vector2(10.0, 4.0))
+	race.step(DT)
+	race.update_board(1, Vector2(-10.0, 1.0))
+	assert_eq(race.board_position(0), Vector2(10.0, 4.0), "Lena has not moved")
+	assert_eq(race.board_position(1), Vector2(-10.0, 1.0), "Joost's new place")
+
+
 func test_two_boards_in_the_same_tick_the_one_over_first_wins() -> void:
 	var race: RaceSim = _race(2)
 	# Joost sails Lena's path half a metre ahead: in the tick both cross the finish, Joost crosses
