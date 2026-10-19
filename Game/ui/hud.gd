@@ -123,7 +123,11 @@ func update_from(t: Telemetry, controller: PlayerController, camera_name: String
 		+ "lean %5.2f   stance %4.2f   hang-back %4.2f m   knees %5.2f m   sway %4.2f m   hands %4.0f N   feet %4.0f N   feet moment %5.0f Nm\n" % [t.lean, t.stance, t.hang_back_m, t.knee_bend_m, t.leg_sway_m, t.hand_force_n, t.foot_force_n, t.feet_moment_roll_nm]
 		+ "sail  lift %5.0f N  drag %4.0f N  drive %5.0f N  side %5.0f N\n" % [t.sail_lift_n, t.sail_drag_n, t.drive_n, t.side_force_n]
 		+ "fin   lift %5.0f N  drag %4.0f N  slip %5.1f deg%s\n" % [t.fin_lift_n, t.fin_drag_n, t.fin_slip_deg, "  STALLED" if t.fin_stalled else ""]
-		+ "hull  planing %3.0f %% (%4.0f N)  buoyancy %4.0f N  submersion %3.0f %%  wetted %4.2f m2  resistance %4.0f N  trim %4.1f deg\n" % [t.planing_ratio * 100.0, t.planing_lift_n, t.buoyancy_n, t.submersion_ratio * 100.0, t.wetted_area_m2, t.hull_resistance_n, t.trim_deg]
+		# "wetted" is the area the friction acts on (the planing wet span times its width),
+		# not the buoyancy grid's smaller area: it is the one that costs speed. "front" is how
+		# far forward of the tail the wet part reaches.
+		+ "hull  planing %3.0f %% (%4.0f N)  buoyancy %4.0f N  submersion %3.0f %%  wetted %4.2f m2 (front %4.2f m)  resistance %4.0f N  trim %4.1f deg\n" % [t.planing_ratio * 100.0, t.planing_lift_n, t.buoyancy_n, t.submersion_ratio * 100.0, t.friction_area_m2, t.wet_front_m, t.hull_resistance_n, t.trim_deg]
+		+ "rig   harness %4.0f N   mast foot pushing down %4.0f N\n" % [t.harness_tension_n, -t.mast_foot_force_up_n]
 		+ "auto-sheet %s" % ["on" if controller.auto_sheet else "off"])
 
 

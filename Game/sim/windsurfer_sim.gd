@@ -1041,12 +1041,17 @@ func _fill_telemetry(controls: SimControls) -> void:
 	t.planing_ratio = hull.planing_ratio
 	t.wetted_length_m = hull.wetted_length_m
 	t.wetted_aft_m = hull.wetted_aft_m
+	t.friction_area_m2 = hull.friction_area_m2
+	t.wet_front_m = hull.wetted_aft_m + hull.wetted_length_m
 	t.spray_root_factor = hull.spray_root_factor
 	t.heave_added_mass_kg = hull.heave_added_mass_kg
 	# The heeling moment the sailor has to hold: the hands' pull about the feet (what the
 	# autopilot trims the sheet to).
 	t.heeling_torque_nm = hand_moment_body.z
 	t.planing_cop_z_m = hull.cop_local.z
+	# The hull's origin is the middle of the board and body z points aft, so the tail is at
+	# z = +length / 2.
+	t.push_centre_m = 0.5 * board_config.length_m - hull.cop_local.z
 	t.bow_immersion_m = buoyancy.point_depths_m[buoyancy.bow_centre_index]
 	t.is_planing = hull.planing_ratio > 0.5
 	t.trim_deg = hull.trim_deg
