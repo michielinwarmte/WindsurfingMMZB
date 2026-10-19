@@ -3,13 +3,13 @@
 The live state of U1, "planing on a smaller wet area". The plan and its execution brief are in [PLAYTEST_UPGRADES.md](PLAYTEST_UPGRADES.md). **The lead updates and commits this file after every launch, report and merge.** A lead who takes over starts here.
 
 - **Branch:** `feature/u1-planing-wet-area` (from `main` at 561849c). Agents work on `u1/<name>` branches, made from it in their own worktrees.
-- **Last update:** 19 October 2026. Agents 2 and 3 are merged (4010cc2, 5ad0e35). Agent 1 is still running. **A stop rule fired** (agent 3: a source contradicts a target); see Next action.
+- **Last update:** 19 October 2026. Agents 1, 2 and 3 are merged (9cc5f52, 4010cc2, 5ad0e35). **Stopped at Stop 1 for the team:** three stop rules fired; see Next action.
 
 ## State
 
 | # | Agent | Package | State | Branch | Report |
 |---|---|---|---|---|---|
-| 1 | `measure` | baseline, the reach check, U1.1, then U1.4 (flat tail) | running | `u1/measure` | |
+| 1 | `measure` | baseline, the reach check, U1.1, then U1.4 (flat tail) | merged (U1.4 reverted) | `u1/measure` | [measure.md](u1_reports/measure.md) |
 | 2 | `sources` | the four numbers that need a source | merged | `u1/sources` | [sources.md](u1_reports/sources.md) |
 | 3 | `porpoising` | U1.5's diagnosis | merged | `u1/porpoising` | [porpoising.md](u1_reports/porpoising.md) |
 | 4 | `physics` | U1.5's fix, U1.2, U1.3 | waits for Stop 1 | `u1/physics` | |
@@ -19,18 +19,20 @@ The possible states are: not started → running → reported → merged.
 
 | Stop | State |
 |---|---|
-| Stop 1, the lead: agents 1 to 3 in, the go/no-go for agent 4 | **stopped for the team** (stop rule: a source contradicts a target). Waits for agent 1 and the team's decision |
+| Stop 1, the lead: agents 1 to 3 in, the go/no-go for agent 4 | **stopped for the team.** Agents 1 to 3 are in, the reach check is reproduced, nothing regressed on the branch; but stop rules fired (see Next action) |
 | Stop 2, Michiel reviews agent 4's physics | not reached |
 | Stop 3, Max's play-test | not reached |
 
 ## Next action
 
-**Stopped for the team at Stop 1.** Agent 3 named the cause of the bounce but also fired the stop rule "a source contradicts a target": Savitsky's porpoising limit for a flat bottom at the target wet length (0.6 to 1.0 m, 13 to 16 m/s) is a trim of 0.9 to 2.2°, so most of target 4's trim band (1.5 to 4°) cannot be steady (target 2). Agent 4 is **not** launched until the team picks one of agent 3's options:
-1. a sourced tail vee (deadrise), with its steadying effect added to the hull model (the current flat strips ignore it: 10° of deadrise still bounces);
-2. a trim target below Savitsky's limit (about 1 to 2° instead of 1.5 to 4°);
-3. sailor damping as technique (the pitch reflex already halves the bounce).
+**Stopped for the team at Stop 1.** Agents 1 to 3 are merged; the branch is green (see Numbers). Agent 4 is **not** launched until the team decides these four things:
 
-Meanwhile: when agent 1 reports, merge `u1/measure`, check that its reach check reproduces the baseline and nothing regressed, and write the baseline into Numbers. Then wait for the team. When the team has chosen, update the brief's target 4 (and the hull-model scope if option 1), set Stop 1 to passed, and launch agent 4 with the reports of agents 2 and 3 and the team's choice.
+1. **Targets 2 and 4 conflict (agent 3, stop rule "a source contradicts a target").** Savitsky's porpoising limit for a flat bottom at the target wet length (0.6 to 1.0 m at 13 to 16 m/s) is a trim of 0.9 to 2.2°, so most of target 4's trim band (1.5 to 4°) cannot be steady. Options: (a) a sourced tail vee (deadrise) with its steadying effect added to the hull model, which widens agent 4's files (the current flat strips ignore vee: 10° of deadrise still bounces); (b) a trim target below the limit, about 1 to 2°; (c) sailor damping as technique. The lead recommends (a) with a trim target under the raised limit.
+2. **The baseline already misses target 2 in 5 of 9 cases (agent 1):** the three close reaches (1.1 to 1.2 Hz), the 12 kt beam reach (1.55 Hz) and the 18 kt broad reach. Target 2 asks for 9 of 9. The team says whether agent 4 must fix those too (they are the same porpoising) or only must not make them worse.
+3. **The grid check moved the wet front by more than 5 cm (agent 1, the brief's threshold):** 13 rows instead of 7 move the 18 kt beam reach's front by −34 cm and make it bounce. A finer grid is out of U1's scope unless the team puts it in.
+4. **U1.4, the flat tail, is reverted (agent 1, stop rules "a file outside the agent's list" and "an unexplained regression").** Two tests in `Game/tests/unit/test_buoyancy.gd` fail (one pins the 1 cm kick, one's height check misses by phase only), and the 18 kt broad reach settles bow-down (−1.05°, 0.9 m/s slower), only partly explained by the feet. To bring it back: `git revert d55bd6a`, then update both tests. The team says whether agent 4 does that.
+
+When the team has decided: write the decisions in the brief (target 4, the file lists, the scope), set Stop 1 to passed, and launch agent 4 with the reports of agents 2 and 3 and the decisions. Agent 1's `--board.tail_rocker_m=0` is a fair stand-in for the flat tail in experiments.
 
 ## Numbers
 
@@ -79,11 +81,15 @@ Meanwhile: when agent 1 reports, merge `u1/measure`, check that its reach check 
 
 ## Open items
 
+- U1.4, the flat tail, is reverted (d55bd6a). Bringing it back needs `Game/tests/unit/test_buoyancy.gd` updated (two tests) and an explanation for the 18 kt broad reach going bow-down.
+- The buoyancy grid: 13 rows move the 18 kt beam reach's wet front by 34 cm. Out of U1's scope unless the team decides otherwise.
 - `board.glb` is not rebuilt after the flat tail: Blender isn't installed on Max's PC. Rebuild it with `tools/blender.sh tools/blender/build_rig_models.py` on a PC that has Blender 4.5.
 
 ## Notes
 
 Decisions and surprises along the way, newest first.
+
+- 19 October 2026 (agent 1): `tools/reach_check.sh` (runner `Game/dev/run_reach.gd`) prints the 9 cases in 50 s and matches `simulate.sh`. Telemetry and the HUD show the friction area, the wet front and the push centre. `test_planing_wet_area.gd` holds targets 2 to 4 as `pending`; agent 4 sets `TARGETS_ARE_CHECKS = true`. The validation suite takes about 36 s longer now. Three findings for the team: the baseline misses target 2 in 5 of 9 cases; the grid check moves the 18 kt beam reach's wet front by 34 cm; the flat tail (U1.4) is reverted because two buoyancy unit tests fail and the 18 kt broad reach goes bow-down.
 
 - 19 October 2026 (agent 3): the 1.8 Hz bounce is plain porpoising (Day & Haag 1952, Savitsky 1964): the board bounces once its trim rises above Savitsky's critical trim for its load, within about 0.2° of the limit at 12, 18 and 24 kt. The mast-foot load only keeps the trim just under it (0.97° against 1.25° on the 18 kt reach). Not the cause: legs, trim press, steering, grid, substeps, spray-root cap, tail kick. The pitch reflex damps it; freezing the sailor or adding lift lag makes it worse. **Stop rule fired:** targets 2 (steady) and 4 (trim 1.5 to 4°) conflict for a flat bottom.
 
