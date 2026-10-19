@@ -104,9 +104,6 @@ var hang_back_m: float = 0.0
 var rail_press: float = 0.0
 ## Trimming with the feet: how far aft (positive) of the stance the feet's pressure is.
 var trim_press_m: float = 0.0
-## The trim the feet aim for (degrees of pitch bow up): the trim the sailor rides at when
-## free to, or less, below the hull's porpoising limit at this speed (_wanted_trim_deg).
-var wanted_trim_deg: float = 0.0
 ## Where the posture puts the centre of mass, where the feet stand and where the hands hold
 ## the boom, all in body axes (relative to the board origin). The posture is measured from
 ## the deck's centreline at the stance (posture_centre_body), at the feet's deck height.
@@ -651,14 +648,6 @@ func _rig_lean_rad(controls: SimControls) -> float:
 	return clampf(hanging + tilted, -limit, limit)
 
 
-## The trim the feet aim for while planing (U2): as much as the sailor likes to ride at
-## (running_trim_max_deg), but never closer to the hull's porpoising limit than the
-## sailor's margin. The limit falls as the speed rises and the load coefficient falls
-## (Savitsky 1964), so the faster the board goes, the flatter the sailor rides it.
-func _wanted_trim_deg() -> float:
-	return minf(sailor_config.running_trim_max_deg, hull.critical_trim_deg - sailor_config.porpoising_margin_deg)
-
-
 ## The sailor's own movements: stepping back as the board accelerates, and leaning to
 ## balance. Both are rate-limited to what a person can do. They set the posture: where
 ## the feet stand and where the body's centre is held over them.
@@ -690,7 +679,6 @@ func _update_sailor(dt: float, controls: SimControls) -> void:
 	# hump_trim_deg, the front foot when it is above (nothing below hump speed, where the
 	# stance does the work; nothing while stepping round the mast in a tack).
 	var press_target: float = 0.0
-	wanted_trim_deg = _wanted_trim_deg()
 	if forward_speed > hump_speed and not stepping and controls.balance_reflex:
 		# Only as far as the hull is planing: standing on the tail of a board that has
 		# dropped off the plane sinks the stern and rears the nose. What counts is the
@@ -698,7 +686,7 @@ func _update_sailor(dt: float, controls: SimControls) -> void:
 		# share of the whole weight: the fin's and the rig's lift take weight off the hull,
 		# not the plane away from it (U2; with the whole-weight share every newton the fin
 		# lifted made the sailor step forward).
-		press_target = clampf((wanted_trim_deg - rad_to_deg(SimMath.pitch_rad(body.basis))) / sailor_config.trim_press_band_deg, -1.0, 1.0) * sailor_config.trim_press_max_m * hull.planing_share
+		press_target = clampf((sailor_config.running_trim_deg - rad_to_deg(SimMath.pitch_rad(body.basis))) / sailor_config.trim_press_band_deg, -1.0, 1.0) * sailor_config.trim_press_max_m * hull.planing_share
 	if not controls.freeze_fore_aft:
 		trim_press_m = move_toward(trim_press_m, press_target, sailor_config.trim_press_rate_ms * dt)
 
