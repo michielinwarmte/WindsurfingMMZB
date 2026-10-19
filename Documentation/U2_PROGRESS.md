@@ -3,7 +3,7 @@
 The live state of U2, "the fin bends, and its size". The plan and its execution brief are in [PLAYTEST_UPGRADES.md](PLAYTEST_UPGRADES.md). **The lead updates and commits this file after every launch, report and merge.** A lead who takes over starts here; U1's take-over prompt in [U1_PROGRESS.md](U1_PROGRESS.md) applies with U2 in place of U1.
 
 - **Branch:** `feature/u2-fin` (from `feature/u1-planing-wet-area` at c1eee63). Agents work on `u2/<name>` branches, made from it in their own worktrees.
-- **Last update:** 19 October 2026. **Cause found** (agent 6): the heeled hull loses 80 % of its lift at 4.5 deg where a real rolled plate loses a third (NACA TN 4187), because Wagner's climb isn't applied across the heeled strips. Agent 3 relaunched on the fix.
+- **Last update:** 19 October 2026. The heeled hull's lift fix is merged (reviewed by the lead). Agent 3 relaunched on the sailor's technique (the brief's subsection). Michiel's review still pending.
 
 ## State
 
@@ -11,7 +11,7 @@ The live state of U2, "the fin bends, and its size". The plan and its execution 
 |---|---|---|---|---|---|
 | 1 | `fin_sources` | the stiffness, the catalogue fins, the literature | merged | `u2/fin_sources` | [fin_sources.md](u2_reports/fin_sources.md) |
 | 2 | `fin_measure` | the fin's baseline, the overrides, the telemetry, the what-ifs, the pending check | merged | `u2/fin_measure` | [fin_measure.md](u2_reports/fin_measure.md) |
-| 3 | `fin_physics` | the bending fin: merged. The riding round: stop rule, reported only. **Now: the heeled hull's lift** (the brief's fix: Wagner's climb across the heeled strips, the camber sign, the heel hold, the trim) | running (heeled hull) | `u2/fin_physics` | [fin_physics.md](u2_reports/fin_physics.md), [fin_ride_physics.md](u2_reports/fin_ride_physics.md) |
+| 3 | `fin_physics` | the bending fin: merged. The heeled hull's lift: **merged** (Wagner's climb across the heeled strips, the camber sign, the heel hold). **Now: the sailor's technique** (the bank by point of sail, the trim by speed) | running (technique) | `u2/fin_physics` | [fin_physics.md](u2_reports/fin_physics.md), [fin_ride_physics.md](u2_reports/fin_ride_physics.md) |
 | 4 | `fin_look` | the bending mesh, the HUD, the screenshots, the checklist | waits for Stop 2 | `u2/fin_look` | |
 | 5 | `fin_ride` | experiments: the sailor riding the fin (weight aft, rail down, fin size), no game file changed | merged | `u2/fin_ride` | [fin_ride.md](u2_reports/fin_ride.md) |
 | 6 | `hull_lift` | diagnosis: the hull's planing lift against Savitsky, level and heeled; the literature on heeled planing | merged | `u2/hull_lift` | [hull_lift.md](u2_reports/hull_lift.md) |
@@ -24,7 +24,9 @@ The live state of U2, "the fin bends, and its size". The plan and its execution 
 
 ## Next action
 
-**Agent 3 is running** (relaunched on `u2/fin_physics`): the brief's "The heeled hull's lift: the fix", points 1 to 4. When it reports: the lead reads the diff (`hull_model.gd`, the sailor's heel hold), merges if sound, verifies (`tools/check.sh`, `tools/test.sh`, `tools/test.sh validation`, `tools/reach_check.sh`, plus the hips-dropped steadiness case), writes the numbers, then **Stop 2 for Michiel** (the bending fin, the heeled hull's lift, the critical trim reported, the probe). After his OK: agent 4 (`fin_look`), then Stop 3.
+**Agent 3 is running** (relaunched on `u2/fin_physics`): the brief's "The sailor's technique", points 1 to 4 (the map of bank x trim against steadiness, then the bank by point of sail and the trim by speed). When it reports: the lead reads the diff, merges if sound, verifies, writes the numbers, then **Stop 2 for Michiel** (the bending fin, the heeled hull's lift, the technique, the critical trim reported, the probe). After his OK: agent 4 (`fin_look`), then Stop 3.
+
+**The lead's verification of the heel fix** (bc24451 + the merge): see Numbers when it lands.
 
 ## Numbers
 
@@ -72,6 +74,8 @@ Up = the world-upward part of the fin's force (today only from the heel); Stall 
 ## Notes
 
 Decisions and surprises along the way, newest first.
+
+- 19 October 2026 (agent 3, the heel fix, reviewed by the lead): Wagner's climb across the heeled strips (`_wet_width`: each section's depth flattened by 2/pi about its deepest point; the level vee exactly as before; TN 4187 eq. 2); the camber sign flipped (rocker lifts less: Anderson; Savitsky 1964); the sailor's feet now aim past level against the fin's roll within the moments they already have (no new number). The 18 kt beam reach: bank 0 / 2 / 4.5 deg gives heel 0 / 2 / 4.5 deg and a wet front of **1.20** / 1.46 / 1.70 m. The 24 kt broad reach bounces flat (0.72 deg) and at a 2.0 deg trim (0.39 deg), so the defaults stayed (4.5 deg, 1.5 deg): the wet part is now the sailor's technique. The onset moved 12.0 to 12.7 kn (in the hump the wet part reaches the nose rocker and lifts less). The railing-out sweep now holds every aim up to 24 deg and catapults at 30 deg. All 9 steady; the hips-dropped case 0.002 deg.
 
 - 19 October 2026 (agent 6, hull_lift): **the cause of the long wet part.** Level, the hull model equals Savitsky (0.91 to 1.06). Heeled, each strip's added mass uses its geometrically wet width and the high rail is dry over most of the wet part, so the lift falls 24 % at 2 deg of heel, 80 % at 4.5 deg, 96 % at 8 deg (at 1.4 m, 1.5 deg). NACA TN 4187's rolled flat plate loses about a third at 4.5 deg and 1.5 deg: the water climbs the rolled plate by Wagner's factor (eq. 2), which the model applies to the vee at the root but not across the heeled strips. The probe (`Game/dev/hull_probe.gd`) reproduces the model (chk 1.000). Side finding: the camber term's sign may be wrong (the level hull with its root in the nose rocker makes 1.47 x Savitsky). Fix designed by the lead: Wagner's climb across the heeled strips, the camber sign checked, the sailor holding the wanted bank against the fin's roll, then the trim if steady.
 
