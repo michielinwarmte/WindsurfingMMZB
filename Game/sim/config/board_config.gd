@@ -74,8 +74,13 @@ const ONE_FOOT_M: float = 0.3048
 @export var residuary_peak_froude: float = 0.55
 ## Width of the hump in Froude number.
 @export var residuary_froude_width: float = 0.25
-## Deadrise angle of the bottom near the tail. Freeride boards are nearly flat.
-@export var deadrise_deg: float = 2.0
+## Deadrise of the bottom: the vee across it, the angle each half rises from the keel
+## toward its rail. Freeride boards carry a slight vee in the tail: surf-magazin's 2024
+## freeride test measured 4 to 16.5 mm (median 8 mm) under a ruler laid on one half, 33 cm
+## from the tail, which is 0.5 to 2 degrees (median 1) on a 0.47 m wide tail
+## (PHYSICS_SPEC.md section 14). The hull model wets the vee (HullModel._wet_width) and
+## takes it in Savitsky's lift; the buoyancy grid keeps a flat bottom.
+@export var deadrise_deg: float = 1.0
 ## The unsteady lift factor of the spray root running forward along a sinking hull (the
 ## slamming part of planing, section 5) is held at most at this: a flat bottom meeting
 ## rising water at a small angle would otherwise see an unbounded root speed.

@@ -91,6 +91,16 @@ var planing_drag_n: float = 0.0  # the part of the planing force that points aga
 var bow_drag_n: float = 0.0  # form drag of a nose pushed under the water
 var rail_grip_n: float = 0.0  # sideways force of the rails' edges in a skid, summed over the strips
 var rail_yaw_nm: float = 0.0  # its moment about the centre of mass, yaw (body y)
+## How much further forward the keel is wet than the chines (Savitsky's L_k - L_c): the
+## front part of the wet length, where a vee bottom is wet only near the keel.
+var chine_dry_length_m: float = 0.0
+## The vee across the bottom (BoardConfig.deadrise_deg): how far the bottom rises per metre
+## out from the keel toward a rail. Set at the start of compute().
+var _vee_rise_per_m: float = 0.0
+## How far the water reaches across that vee: a section entering the water piles the water
+## up its sides and is wet pi/2 times as far out as the still surface would cut it (Wagner
+## 1932). That is the same as a vee 2/pi as steep, wet where the still surface cuts it.
+var _vee_wetting_per_m: float = 0.0
 
 
 func _init(board_config: BoardConfig, water_config: WaterConfig) -> void:
@@ -106,10 +116,13 @@ func compute(body: SimRigidBody, buoyancy: BuoyancyModel, surface: WaterSurface,
 	# The wet part of the bottom along the centreline. Usually it runs from the transom
 	# forward; when the tail has lifted clear and the nose is down, it is the middle of the
 	# hull and the nose rocker that are wet. Everything below works on this span.
+	_vee_rise_per_m = tan(deg_to_rad(board.deadrise_deg))
+	_vee_wetting_per_m = 2.0 / PI * _vee_rise_per_m
 	var span: PackedFloat64Array = _wetted_span(buoyancy)
 	wetted_aft_m = span[0]
 	wetted_length_m = span[1] - span[0]
 	planing_beam_m = _mean_width(span[0], span[1])
+	chine_dry_length_m = _chine_dry_length(body, span[0], span[1])
 	_compute_added_mass(span[0], span[1], body, buoyancy)
 
 	# The flow relative to the wet part of the hull.
@@ -126,8 +139,11 @@ func compute(body: SimRigidBody, buoyancy: BuoyancyModel, surface: WaterSurface,
 		# The wetted bottom of a planing hull runs from the spray root to the transom: the
 		# wet span of the strip theory times the mean width there, which at a low trim is
 		# far more than the still-water grid wets (a flat bottom at 1 degree of trim wets
-		# half a metre of length per centimetre of depth). Whichever is larger.
-		var dynamic_area_m2: float = wetted_length_m * planing_beam_m
+		# half a metre of length per centimetre of depth). Whichever is larger. On a vee
+		# bottom the chines are wet over a shorter length than the keel, so the planing
+		# area is the mean wetted length (the keel's, less half the chine-dry part) times
+		# the width (Savitsky 1964).
+		var dynamic_area_m2: float = (wetted_length_m - 0.5 * chine_dry_length_m) * planing_beam_m
 		var wetted_area_m2: float = maxf(buoyancy.wetted_area_m2, dynamic_area_m2)
 		friction_area_m2 = wetted_area_m2
 		var reference_length: float = maxf(maxf(buoyancy.wetted_length_m, wetted_length_m), 0.3)
@@ -218,7 +234,9 @@ func _apply_planing_lift(body: SimRigidBody, buoyancy: BuoyancyModel, aft: float
 	if cos(heel) <= 0.3:
 		return
 	var beam: float = planing_beam_m * maxf(cos(heel), 0.3)
-	lambda_ratio = clampf(length / beam, 0.2, board.length_m / beam)
+	# Savitsky's lift and centre of pressure take the mean wetted length: on a vee bottom,
+	# the keel's less half the chine-dry part.
+	lambda_ratio = clampf((length - 0.5 * chine_dry_length_m) / beam, 0.2, board.length_m / beam)
 
 	# The wet bottom seen as one cambered plate, for the reference trim: its chord is
 	# inclined to the board by the rocker and the bottom bulges below the chord, which acts
@@ -234,6 +252,9 @@ func _apply_planing_lift(body: SimRigidBody, buoyancy: BuoyancyModel, aft: float
 	var normals_world: PackedVector3Array = PackedVector3Array()
 	var v_into: PackedFloat64Array = PackedFloat64Array()
 	var m_per_m: PackedFloat64Array = PackedFloat64Array()
+	var full_widths: PackedFloat64Array = PackedFloat64Array()
+	var wet_fractions: PackedFloat64Array = PackedFloat64Array()
+	var sink_ms: PackedFloat64Array = PackedFloat64Array()  # down through the surface
 	var v_mean: float = 0.0
 	for k: int in STRIPS:
 		var x: float = aft + (float(k) + 0.5) * strip_length
@@ -246,12 +267,16 @@ func _apply_planing_lift(body: SimRigidBody, buoyancy: BuoyancyModel, aft: float
 		var point_world: Vector3 = body.point_world(Vector3(wet.y, _bottom_y(x), 0.5 * board.length_m - x))
 		var normal_world: Vector3 = SimMath.to_world(body.basis, normal_local)
 		var v_rel: Vector3 = body.point_velocity(point_world) - surface.velocity_at(point_world.x, point_world.z, time_s)
-		var width: float = _width_at(x) * wet.x
+		var full_width: float = _width_at(x)
+		var width: float = full_width * wet.x
 		x_k.append(x)
 		points_world.append(point_world)
 		normals_world.append(normal_world)
 		v_into.append(-v_rel.dot(normal_world))
 		m_per_m.append(rho * PI * width * width / 8.0)
+		full_widths.append(full_width)
+		wet_fractions.append(wet.x)
+		sink_ms.append(-v_rel.dot(surface.normal_at(point_world.x, point_world.z, time_s)))
 		v_mean += v_into[k] / float(STRIPS)
 	trim_deg = rad_to_deg(atan2(v_mean, u))
 
@@ -260,16 +285,32 @@ func _apply_planing_lift(body: SimRigidBody, buoyancy: BuoyancyModel, aft: float
 	#    going aft (the nose) the water column gains added mass, more push; where it narrows
 	#    the water lets go instead of pulling. Over the last half beam before the aft end
 	#    the pressure falls away to the air behind it (the transom relief).
+	#    The added mass also grows aft where the water reaches further across the bottom:
+	#    behind the spray root of a vee, or of a heeled bottom, where only part of the width
+	#    is wet. That part of the root runs across a sinking strip faster and across a
+	#    rising one slower, by the same factor as the root at the front (step 3; Zarnick
+	#    1978: the force is the rate of change of the added mass's momentum, and a section's
+	#    added mass grows with its immersion).
+	#    The added mass the water gains between two neighbouring strips is shared by the two
+	#    (the front strip's gain from nothing is the spray root's, step 3), so the gains add
+	#    up to the added mass under the widest wet section, as the theory has it.
 	var strip_forces: PackedFloat64Array = PackedFloat64Array()
 	for k: int in STRIPS:
 		var k0: int = maxi(k - 1, 0)
 		var k1: int = mini(k + 1, STRIPS - 1)
 		var dx: float = float(k1 - k0) * strip_length
 		var dv_dx: float = (v_into[k1] - v_into[k0]) / dx
-		var dm_dx: float = (m_per_m[k1] - m_per_m[k0]) / dx
 		var force: float = -u * m_per_m[k] * dv_dx * strip_length
-		if dm_dx < 0.0:
-			force -= u * v_into[k] * dm_dx * strip_length
+		var advance: float = _root_advance_factor(sink_ms[k], u, pitch + board.bottom_slope(x_k[k]))
+		for j: int in [k - 1, k]:
+			if j < 0 or j >= STRIPS - 1:
+				continue
+			var gain_kg_m: float = m_per_m[j] - m_per_m[j + 1]
+			# The wetting's share of it: m = rho pi (W f)^2 / 8 at this strip's outline width.
+			var wetting_gain_kg_m: float = rho * PI / 8.0 * full_widths[k] * full_widths[k] * (wet_fractions[j] * wet_fractions[j] - wet_fractions[j + 1] * wet_fractions[j + 1])
+			var gain: float = gain_kg_m + (advance - 1.0) * wetting_gain_kg_m
+			if gain > 0.0:
+				force += 0.5 * u * v_into[k] * gain
 		var relief: float = clampf((x_k[k] - aft) / (TRANSOM_RELIEF_BEAMS * beam), 0.0, 1.0)
 		strip_forces.append(force * relief)
 
@@ -286,9 +327,7 @@ func _apply_planing_lift(body: SimRigidBody, buoyancy: BuoyancyModel, aft: float
 	var root_world: Vector3 = body.point_world(Vector3(root_across, _bottom_y(forward), 0.5 * board.length_m - forward))
 	var root_normal: Vector3 = surface.normal_at(root_world.x, root_world.z, time_s)
 	var root_down_speed: float = -(body.point_velocity(root_world) - surface.velocity_at(root_world.x, root_world.z, time_s)).dot(root_normal)
-	var bottom_angle: float = pitch + board.bottom_slope(forward)
-	var advance_ms: float = root_down_speed / tan(maxf(bottom_angle, MIN_SPRAY_ROOT_ANGLE_RAD))
-	spray_root_factor = clampf(1.0 + advance_ms / u, 0.0, board.spray_root_factor_max)
+	spray_root_factor = _root_advance_factor(root_down_speed, u, pitch + board.bottom_slope(forward))
 	var root_force: float = maxf(u * spray_root_factor * m_per_m[last] * v_root, 0.0)
 
 	# 4. Three-dimensional correction: the strip theory is two-dimensional and gives a flat
@@ -463,7 +502,14 @@ func _rail_depth(buoyancy: BuoyancyModel, from_transom: float, side: float) -> f
 	var position: float = clampf(from_transom / spacing, 0.0, float(rows - 1))
 	var i0: int = mini(int(floor(position)), rows - 2)
 	var column: int = columns - 1 if side > 0.0 else 0
-	return lerpf(buoyancy.point_depths_m[i0 * columns + column], buoyancy.point_depths_m[(i0 + 1) * columns + column], position - float(i0))
+	return lerpf(_point_depth(buoyancy, i0 * columns + column), _point_depth(buoyancy, (i0 + 1) * columns + column), position - float(i0))
+
+
+## Depth below the water of a point of the buoyancy grid on the vee bottom. The grid's
+## points lie on a flat bottom at the keel's height; the vee lifts a rail's point by its
+## distance out from the keel times the deadrise's tangent (a few millimetres).
+func _point_depth(buoyancy: BuoyancyModel, index: int) -> float:
+	return buoyancy.point_depths_m[index] - absf(buoyancy.sample_points[index].x) * _vee_rise_per_m
 
 
 ## The wet part of the bottom as [aft, forward] in metres from the transom, from the
@@ -493,12 +539,13 @@ func _wetted_span(buoyancy: BuoyancyModel) -> PackedFloat64Array:
 	return PackedFloat64Array([aft, forward])
 
 
-## The deepest point of a row of the buoyancy grid (row 0 is the tail row).
+## The deepest point of a row of the buoyancy grid on the vee bottom (row 0 is the tail
+## row): the keel of a level board, the low rail of a heeled one.
 func _row_max_depth(buoyancy: BuoyancyModel, row: int) -> float:
 	var columns: int = maxi(board.width_samples, 1)
 	var deepest: float = -INF
 	for j: int in columns:
-		deepest = maxf(deepest, buoyancy.point_depths_m[row * columns + j])
+		deepest = maxf(deepest, _point_depth(buoyancy, row * columns + j))
 	return deepest
 
 
@@ -506,8 +553,11 @@ func _row_max_depth(buoyancy: BuoyancyModel, row: int) -> float:
 ## x = the wet fraction of the width (0 to 1), y = the depth-weighted centre of the wet
 ## part in body x (metres, positive to starboard). The depth across the width is taken as
 ## linear between the rail points of the two nearest grid rows (a flat bottom heeled is a
-## plane). A level board gives (1, 0); a board heeled to starboard gives a centre on the
-## starboard side and, toward the bow, a strip wet only at that rail.
+## plane), less the vee's rise from the keel toward each rail as the water wets it
+## (_vee_wetting_per_m). A level flat board gives (1, 0); a board heeled to starboard gives
+## a centre on the starboard side and, toward the bow, a strip wet only at that rail; a
+## level vee is wet only near the keel just behind the spray root, and across its whole
+## width further aft, where the keel is deep enough for the water to reach the chines.
 func _wet_width(buoyancy: BuoyancyModel, from_transom: float) -> Vector2:
 	var rows: int = maxi(board.length_samples, 2)
 	var columns: int = maxi(board.width_samples, 1)
@@ -522,11 +572,23 @@ func _wet_width(buoyancy: BuoyancyModel, from_transom: float) -> Vector2:
 	var half_width: float = 0.5 * _width_at(from_transom)
 	if half_width < 1e-6:
 		return Vector2(1.0, 0.0)
-	# depth(y) = middle + slope * y across the width, from the two rail depths.
+	# depth(y) = middle + slope * y across the flat bottom, from the two rail depths, less
+	# the vee's rise toward the rail on each half: two planes that meet at the keel.
 	var middle: float = 0.5 * (port + starboard)
 	var slope: float = (starboard - port) / (2.0 * half_width)
-	var a: float = -half_width
-	var b: float = half_width
+	var port_half: Vector3 = _wet_part(middle, slope + _vee_wetting_per_m, -half_width, 0.0)
+	var starboard_half: Vector3 = _wet_part(middle, slope - _vee_wetting_per_m, 0.0, half_width)
+	var wet_width: float = port_half.x + starboard_half.x
+	var area: float = port_half.y + starboard_half.y
+	if wet_width <= 0.0 or area <= 1e-9:
+		return Vector2(0.0, 0.0)
+	return Vector2(wet_width / (2.0 * half_width), (port_half.z + starboard_half.z) / area)
+
+
+## The wet part of one piece of a section, from a to b across the board (body x), whose
+## depth below the water is middle + slope * y: x = its wet width, y = the integral of the
+## depth over it, z = that integral's moment about the keel.
+func _wet_part(middle: float, slope: float, a: float, b: float) -> Vector3:
 	if absf(slope) > 1e-9:
 		var waterline: float = -middle / slope  # where the depth crosses zero
 		if slope > 0.0:
@@ -534,12 +596,12 @@ func _wet_width(buoyancy: BuoyancyModel, from_transom: float) -> Vector2:
 		else:
 			b = minf(b, waterline)
 	if b <= a:
-		return Vector2(0.0, 0.0)
+		return Vector3.ZERO
 	var area: float = middle * (b - a) + 0.5 * slope * (b * b - a * a)
-	if area <= 1e-9:
-		return Vector2(0.0, 0.0)
+	if area <= 0.0:
+		return Vector3.ZERO
 	var moment: float = 0.5 * middle * (b * b - a * a) + slope * (b * b * b - a * a * a) / 3.0
-	return Vector2((b - a) / (2.0 * half_width), moment / area)
+	return Vector3(b - a, area, moment)
 
 
 ## Width of the bottom at a distance forward of the transom: the board's outline, the same
@@ -611,6 +673,29 @@ func _chord_angle(aft: float, forward: float) -> float:
 	return atan((board.bottom_rise_m(forward) - board.bottom_rise_m(aft)) / maxf(forward - aft, 0.05))
 
 
+## How much faster than in steady planing the spray root runs onto the bottom when that
+## part of the hull also sinks (down_speed_ms > 0, through the surface) or rises: a
+## bottom at an angle to the water wets a further sink / tan(angle) of its length. Held
+## between 0 (rising faster than the water follows) and spray_root_factor_max, and the
+## angle at one degree or more (PHYSICS_SPEC.md section 16).
+func _root_advance_factor(down_speed_ms: float, u: float, bottom_angle: float) -> float:
+	var advance_ms: float = down_speed_ms / tan(maxf(bottom_angle, MIN_SPRAY_ROOT_ANGLE_RAD))
+	return clampf(1.0 + advance_ms / u, 0.0, board.spray_root_factor_max)
+
+
+## How much further forward the keel of a vee bottom is wet than its chines, Savitsky's
+## (1964) L_k - L_c = b tan(beta) / (pi tan(tau)): the water piled up the vee reaches the
+## chines where the keel is b tan(beta) / pi deep. At the trim of the wet span's chord, at
+## least one degree (as the lift's reference trim), and no longer than the wet span.
+func _chine_dry_length(body: SimRigidBody, aft: float, forward: float) -> float:
+	var length: float = forward - aft
+	if length <= 0.0 or _vee_rise_per_m <= 0.0:
+		return 0.0
+	var trim: float = maxf(SimMath.pitch_rad(body.basis) + _chord_angle(aft, forward), MIN_SPRAY_ROOT_ANGLE_RAD)
+	var beam: float = planing_beam_m * maxf(cos(SimMath.heel_rad(body.basis)), 0.3)
+	return minf(beam * _vee_rise_per_m / (PI * tan(trim)), length)
+
+
 ## How far the wet bottom bulges below its chord, at most (zero if it does not).
 func _camber_sag(aft: float, forward: float) -> float:
 	var length: float = maxf(forward - aft, 0.05)
@@ -647,6 +732,7 @@ func _clear() -> void:
 	sway_added_mass_kg = 0.0
 	yaw_added_inertia_kgm2 = 0.0
 	spray_root_factor = 1.0
+	chine_dry_length_m = 0.0
 	lambda_ratio = 0.0
 	froude_number = 0.0
 	reynolds_number = 0.0
