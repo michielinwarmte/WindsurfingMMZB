@@ -115,7 +115,7 @@ func test_a_rig_leaned_to_windward_lifts_and_the_lift_reaches_the_sailor_and_the
 	assert_almost_eq(total.y, leaned.sail.force_world.y + rig_weight.y, 1.0, "and the hands (the sailor) and the mast foot (the board) carry it between them")
 
 
-func test_a_hiked_sailor_in_the_straps_banks_the_board_to_leeward_to_load_the_fin() -> void:
+func test_a_hiked_sailor_in_the_straps_heels_the_board_to_leeward_to_load_the_fin() -> void:
 	var sim: WindsurferSim = _sim(0.0)
 	var bank_rad: float = deg_to_rad(sim.sailor_config.fin_load_bank_deg)
 	assert_gt(bank_rad, 0.0, "the default sailor loads the fin")
@@ -127,6 +127,14 @@ func test_a_hiked_sailor_in_the_straps_banks_the_board_to_leeward_to_load_the_fi
 	assert_almost_eq(sim._fin_load_bank_rad(1.0), 0.0, 1e-6, "not while the controls ask for a turn")
 	sim.stance = 0.0
 	assert_almost_eq(sim._fin_load_bank_rad(0.0), 0.0, 1e-6, "not when standing by the mast, off the plane")
+	# The angle is the board's heel: the sailor banks only by what the heel beyond the
+	# bank (the soft feet giving to the hiked weight) does not give already.
+	sim.stance = 1.0
+	sim.lean = 1.0
+	sim._felt_heel_beyond_rad = 0.4 * bank_rad
+	assert_almost_eq(sim._fin_load_bank_rad(0.0), -0.6 * bank_rad, 1e-6, "the board already heels 40 % of the way: bank the rest")
+	sim._felt_heel_beyond_rad = 2.0 * bank_rad
+	assert_almost_eq(sim._fin_load_bank_rad(0.0), 0.0, 1e-6, "already heeled further than aimed: no bank on top, and none to windward")
 
 
 func test_the_hull_is_kicked_but_the_body_is_not() -> void:

@@ -45,9 +45,11 @@ var lean_share: float = 0.0
 ## planing reach needs also tilts the rig to leeward: on the 18 kt beam reach it leans 8
 ## degrees to windward where the hike asks 25. On: the rake carries the helm up to its stop
 ## and the tilt only the rest and the quick corrections (Helm.hold_rake_first); the rig then
-## leans 23 to 25 degrees, as hooked-in sailors lean it (10 to 25). Off for now: raked back
-## that far, the arms' forward pull makes the feet press the bow down to their limit (U1.3)
-## and the 18 kt broad reach drops bow-down (PHYSICS_SPEC.md section 10, U1.6).
+## leans 23 to 25 degrees on the close and beam reaches, as hooked-in sailors lean it (10 to
+## 25), with the rake at its 25 degree stop on the beam reaches. Off for now: raked back
+## that far, the arms' forward pull makes the feet press the bow down harder (U1.3), the
+## trim drops (1.8 to 0.7 degrees on the 12 kt beam reach) and the 18 kt broad reach rocks
+## (PHYSICS_SPEC.md section 10, "U1.6").
 var trim_with_rake_first: bool = false
 ## How fast the sailor moves the rig and the sheet (units per second).
 var rake_rate_per_s: float = 3.0
