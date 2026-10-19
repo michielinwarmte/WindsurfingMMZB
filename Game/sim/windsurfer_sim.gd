@@ -1069,6 +1069,21 @@ func _fill_telemetry(controls: SimControls) -> void:
 	t.fin_drag_n = fin.drag_n
 	t.fin_stalled = fin.is_stalled
 	t.fin_immersed = fin.immersed_fraction
+	# How much the fin lifts the kit: the world-upward part of its force (U2).
+	t.fin_up_n = fin.force_world.y
+	# Its load: the lift coefficient as a share of the peak, the coefficient at the stall angle.
+	var fin_cl_peak: float = absf(fin.lift_coefficient(deg_to_rad(fin_config.stall_peak_deg)))
+	t.fin_load_share = absf(fin.cl) / fin_cl_peak if fin_cl_peak > 0.0 else 0.0
+	# The tilt of the fin's lift out of the board's plane, toward the deck: atan2 of its part
+	# along the board's up axis over its part in the board's plane. The drag lies in the plane
+	# too, along the flow and square to the lift, so it is taken out of the plane's part. A
+	# stiff fin has no part along the up axis: zero.
+	var fin_force_body: Vector3 = SimMath.to_body(body.basis, fin.force_world)
+	var fin_in_plane_sq: float = fin_force_body.x * fin_force_body.x + fin_force_body.z * fin_force_body.z
+	var fin_side_n: float = sqrt(maxf(fin_in_plane_sq - fin.drag_n * fin.drag_n, 0.0))
+	t.fin_tilt_deg = rad_to_deg(atan2(fin_force_body.y, fin_side_n)) if fin.lift_n > 0.0 else 0.0
+	# The bent tip's angle: zero until the fin bends (U2, agent 3 fills it from the fin model).
+	t.fin_bend_tip_deg = 0.0
 
 	t.buoyancy_n = buoyancy.buoyancy_force_n
 	t.submersion_ratio = buoyancy.submersion_ratio

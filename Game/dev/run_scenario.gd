@@ -6,8 +6,10 @@ extends SceneTree
 ## [--twa=<deg>] [--heading=<deg>] [--every=<steps>] [--freeze=<s>: the sailor stops moving fore and aft from then on]
 ## [--twa2=<deg> --switch=<s>: the pilot steers to a second wind angle from that time on]
 ## [--kick_pitch=<rad/s> --kick_at=<s>: a sudden bow-up pitch rate at that time]
-## [--pilot.<field>=<n> --sailor.<field>=<n> --sail.<field>=<n>: try another value of a
-## tuning field without editing code] [--gradient=0: the same wind at every height, as
+## [--pilot.<field>=<n> --sailor.<field>=<n> --sail.<field>=<n> --board.<field>=<n>
+## --fin.<field>=<n>: try another value of a tuning field without editing code; a fin field
+## is set before the simulation is built, so the fin model sees it from the start]
+## [--gradient=0: the same wind at every height, as
 ## the validation suite uses; --steady=1 also turns the gusts and shifts off] [--waves=1: the default wave set on the water]
 
 const DT: float = 1.0 / 60.0
@@ -38,7 +40,7 @@ func _initialize() -> void:
 	var kick_at_s: float = options.get("kick_at", "-1").to_float()
 	var switch_s: float = options.get("switch", "-1").to_float()
 
-	var sim: WindsurferSim = WindsurferSim.create_default(options.get("waves", "0") == "1")
+	var sim: WindsurferSim = _with_fin_overrides(WindsurferSim.create_default(options.get("waves", "0") == "1"), options)
 	sim.wind_config = sim.wind_config.duplicate()
 	sim.wind_config.speed_kt = scenario.wind_kt
 	sim.wind = WindField.new(sim.wind_config)
@@ -46,7 +48,7 @@ func _initialize() -> void:
 	scenario.pilot.sailor = sim.sailor_config
 	for key: String in options:
 		var parts: PackedStringArray = key.split(".", true, 1)
-		if parts.size() != 2:
+		if parts.size() != 2 or parts[0] == "fin":
 			continue
 		var target: Object = null
 		match parts[0]:
@@ -61,9 +63,7 @@ func _initialize() -> void:
 		if target == null or not (parts[1] in target):
 			push_error("No field '%s' to override." % key)
 			continue
-		var current: Variant = target.get(parts[1])
-		var number: float = options[key].to_float()
-		target.set(parts[1], (number != 0.0) if current is bool else (int(number) if current is int else number))
+		_set_number(target, parts[1], options[key])
 	if options.get("gradient", "1") == "0":
 		sim.wind_config.height_gradient_enabled = false
 	# --steady=1: the validation suite's wind (no gradient, gusts or shifts).
@@ -133,6 +133,38 @@ func _initialize() -> void:
 	if out_path != "":
 		print("  CSV: %s" % out_path)
 	quit(0)
+
+
+## --fin.<field>=<n>: the same simulation, built again on a copy of the default fin with
+## those values. The fin is changed before the simulation is built (not afterwards, as the
+## other groups are), so that anything the fin model works out from its size when it is
+## made (the bending fin of U2) sees the new size too.
+func _with_fin_overrides(sim: WindsurferSim, options: Dictionary[String, String]) -> WindsurferSim:
+	var fin: FinConfig = sim.fin_config.duplicate() as FinConfig
+	var changed: bool = false
+	for key: String in options:
+		if not key.begins_with("fin."):
+			continue
+		var field: String = key.trim_prefix("fin.")
+		if not (field in fin):
+			push_error("No field '%s' to override." % key)
+			continue
+		_set_number(fin, field, options[key])
+		changed = true
+	if not changed:
+		return sim
+	var rebuilt: WindsurferSim = WindsurferSim.new(sim.board_config, sim.sail_config, fin, sim.sailor_config,
+		sim.water_config, sim.wind_config, sim.sim_config, sim.wave_set_config)
+	rebuilt.air_density_kg_m3 = sim.air_density_kg_m3
+	return rebuilt
+
+
+## Sets a tuning field from a command-line number: a bool is true for anything but 0, an
+## int is rounded down, everything else is a float.
+func _set_number(target: Object, field: String, text: String) -> void:
+	var current: Variant = target.get(field)
+	var number: float = text.to_float()
+	target.set(field, (number != 0.0) if current is bool else (int(number) if current is int else number))
 
 
 func _read_user_args() -> Dictionary[String, String]:
