@@ -42,7 +42,7 @@ func test_at_rest_the_legs_carry_the_weight_into_the_hull_and_nothing_else() -> 
 
 
 func test_a_sailor_leaning_to_starboard_at_rest_heels_the_board_to_starboard() -> void:
-	# No reflex: the controls place the body 0.1 m to starboard. (Without a sail to hang
+	# No reflex: the controls place the body a tenth of the full lean (about 0.09 m) to starboard. (Without a sail to hang
 	# on, 0.2 m puts the rail of a 120 L board under with 3 cm of freeboard, and the sailor
 	# swims: the feet can hold the body, the board cannot hold the feet.) The toes press
 	# against the heel, so it stays small.
@@ -54,7 +54,7 @@ func test_a_sailor_leaning_to_starboard_at_rest_heels_the_board_to_starboard() -
 	_run(sim, 4.0, controls)
 	var t: Telemetry = sim.telemetry
 	assert_eq(sim.sailor_state, WindsurferSim.SailorState.SAILING, "still standing")
-	assert_almost_eq(t.sailor_position_body.x, 0.1, 0.04, "the body is 0.1 m to starboard")
+	assert_almost_eq(t.sailor_position_body.x, 0.1 * sim.sailor_config.lean_max_m, 0.04, "the body is a tenth of the full lean to starboard")
 	assert_between(t.heel_deg, 0.5, 15.0, "the starboard rail goes down (heel positive), held by the toes")
 	# The sailor presses the starboard side down: the feet stand under the body, off the
 	# centreline, and the toes press back against the heel. On the board's real outline
@@ -135,6 +135,21 @@ func test_a_hiked_sailor_in_the_straps_heels_the_board_to_leeward_to_load_the_fi
 	assert_almost_eq(sim._fin_load_bank_rad(0.0), -0.6 * bank_rad, 1e-6, "the board already heels 40 % of the way: bank the rest")
 	sim._felt_heel_beyond_rad = 2.0 * bank_rad
 	assert_almost_eq(sim._fin_load_bank_rad(0.0), 0.0, 1e-6, "already heeled further than aimed: no bank on top, and none to windward")
+
+
+func test_pressing_the_back_foot_moves_the_weight_aft_with_it() -> void:
+	# U1.3: the board feels the sailor's weight at the centre of mass, so a press that
+	# moved only the feet would trim nothing; the weight has to go over the back foot.
+	var sim: WindsurferSim = _sim(0.0)
+	sim._set_posture()
+	var com_before_z: float = sim.mass_model.sailor_position_body.z
+	var feet_before_z: float = sim.feet_body.z
+	sim.trim_press_m = 0.2
+	sim.hang_back_m = 0.1
+	sim._set_posture()
+	assert_almost_eq(sim.feet_body.z - feet_before_z, 0.2, 1e-4, "the feet's pressure goes 0.2 m aft")
+	assert_almost_eq(sim.mass_model.sailor_position_body.z - com_before_z, 0.3, 1e-4, "the weight goes with it, and hangs back 0.1 m behind it")
+	assert_almost_eq(sim.posture_centre_body.z, sim.feet_body.z, 1e-4, "the posture hangs from the feet's pressure point")
 
 
 func test_the_hull_is_kicked_but_the_body_is_not() -> void:
