@@ -224,8 +224,9 @@ extends Resource
 ## the board heel a little away from them, the leeward rail down. The fin then meets the
 ## water tilted, so its sideways push also lifts the board. This many degrees of leeward
 ## heel at full hike and in the back straps (the planing stance), less in proportion to
-## either, and none while the controls ask for a turn. The sailor banks only by what the
-## heel does not give already. No source gives the angle: 3 to 6 degrees is an estimate
+## either, and none while the controls ask for a turn. The sailor holds that heel with the
+## feet: where the fin's roll moment heels the board further, the heels press the windward
+## rail down, within feet_moment_max_nm. No source gives the angle: 3 to 6 degrees is an estimate
 ## from "a few degrees of heel" (Sutherland 1993; PHYSICS_SPEC.md section 14, "U1: the
 ## harness, the feet and the rail angle"); 4.5 is its middle, until Max gives his own.
 ## Too much and the board rails out (between 21 and 24 degrees on the 18 kt beam reach).

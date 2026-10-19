@@ -76,8 +76,8 @@ var _felt_acceleration_world: Vector3 = Vector3.ZERO
 var _wanted_bank_rad: float = 0.0
 ## How far the board heels beyond that bank, away from the sailor, felt over
 ## lean_feel_time_s (rad, positive = further down on the side away from the sailor). The
-## feet hold the bank softly, so a hiked sailor's weight heels a powered board a few
-## degrees past it; loading the fin only adds what is missing (_fin_load_bank_rad).
+## feet hold the bank softly, so the fin's roll moment heels a powered board a few degrees
+## past it; the sailor aims the feet that much the other way (_fin_load_bank_rad).
 var _felt_heel_beyond_rad: float = 0.0
 ## Which side the sailor and rig fell to (+1 starboard, -1 port), what kind of fall it
 ## was ("catapult" to leeward, "fell back" to windward), and for how long.
@@ -501,14 +501,24 @@ func _bank_for_turn(lean_asked: float, forward_speed: float) -> float:
 ## stance, which goes there with the planing speed) who hangs out to one side lets the board
 ## heel the other way, the leeward rail down, by up to that angle times the hike, and not
 ## while the controls ask for a turn (that bank is the turn's). The angle is the board's
-## heel, as seen on the water: the sailor banks only by what the heel beyond the bank does
-## not give already (a powered board on a beam reach already heels about 5 degrees). The
+## heel, as seen on the water, and the sailor holds it: the feet's reflex holds the board
+## at the bank it aims for only as stiffly as the ankles are (feet_roll_stiffness_nm_per_rad),
+## so a steady roll moment, the fin's above all, heels the board past it. The sailor feels
+## that (_felt_heel_beyond_rad) and aims the feet that much further the other way, until
+## the heel is the one wanted: the felt heel beyond adds up the heel's error over
+## lean_feel_time_s. Where the fin heels the board more than wanted, that means the heels
+## pressing the windward rail down, as far as the feet's reflex reaches: from its full
+## moment one way to its full moment the other (2 feet_moment_max_nm over the stiffness),
+## a target beyond which only winds up. _apply_leg_forces keeps what the feet pass within
+## feet_moment_max_nm, so a board the feet cannot hold heels further and is not held. The
 ## lean is positive with the weight out to starboard, so the bank is to port: negative.
 func _fin_load_bank_rad(asked: float) -> float:
 	var in_the_straps: float = clampf(stance, 0.0, 1.0)
 	var not_turning: float = 1.0 - clampf(absf(asked), 0.0, 1.0)
-	var aim: float = deg_to_rad(sailor_config.fin_load_bank_deg) * absf(clampf(lean, -1.0, 1.0)) * in_the_straps * not_turning
-	return -signf(lean) * clampf(aim - _felt_heel_beyond_rad, 0.0, aim)
+	var planing_stance: float = absf(clampf(lean, -1.0, 1.0)) * in_the_straps * not_turning
+	var aim: float = deg_to_rad(sailor_config.fin_load_bank_deg) * planing_stance
+	var feet_reach: float = 2.0 * sailor_config.feet_moment_max_nm / sailor_config.feet_roll_stiffness_nm_per_rad * planing_stance
+	return -signf(lean) * clampf(aim - _felt_heel_beyond_rad, aim - feet_reach, aim)
 
 
 ## Feels how far the board heels past the bank the sailor works toward, on the side away
