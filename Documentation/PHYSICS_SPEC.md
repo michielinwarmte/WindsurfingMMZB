@@ -3425,6 +3425,33 @@ when the line would be shorter than 0.3 m or within 13 degrees of r (1 - c^2 < 0
 `harness_line_stiffness_n_m` 0: its jolts went into the hull as slams on chop and broke
 the flat-water tacks when the rig flipped.)
 
+**U1.2 and U1.3: what the harness and the feet do on the 18 kt beam reach (agent 4, 19
+October 2026; measured, nothing changed).** Since then the line carries more: 955 N
+(Walls & Gale 2001: 415 ± 67 N with 6.5 m²), lifting 670 N of the sailor's 736 N; the legs
+carry 4 N. The fit itself is right for the line's direction: only the part of `T d` across
+`r` balances the rig, and the line runs within 49° of `r` (`c` 0.66, so `T` is 1.75 times
+that part). The direction is what no harness allows. The line runs 1.45 m from the
+sailor's centre of mass (fully hiked, 1.04 m to windward and 0.37 m above the deck) up to
+the grip, 1.41 m up over the centreline; a real line holds the hook 0.30 to 0.40 m from the
+boom (section 14, "U1: the harness"). The hike itself matches the skeleton: a straight body
+from the windward rail to the hips at 29°, the hook at 0.44 m, inside the full hike's 0.30
+to 0.50 m. What keeps the boom so far from the body is the rig standing nearly upright:
+7.9° to windward, where full lean asks 25°, because the pilot's steady weather helm also
+tilts the rig back (`Helm.steer`: `rig_tilt = −helm`). Tried (reach check): the hips at a
+normal stance (`lean_height_drop_m` 0.28 and `lean_max_m` 0.88, a body at 45° on the same
+skeleton) 720 N, the rig carrying 62 %; the rig held at its full 25° 684 N and 83 %, with
+the board going bow-down (trim −0.1°); `lean_height_drop_m` 0.15 677 N and 46 %, but its
+hips are further from the feet than the legs are long. Even a line square to the grip arm
+would carry the whole boom force across it, about 550 to 650 N at 18 kt, so a measured 415
+N means the arms take a third or more; there is no source for that share. The feet's bow-
+down 116 N·m (U1.3) is the arms' part: the line runs nearly sideways (the grip only 0.2 m
+aft of the body's centre of mass) and cannot take the drive's forward pull, so the arms
+pull the body forward with 148 N, 0.98 m above its centre of mass, and the feet hold it
+from tipping (the line's own force passes through the centre of mass). The hang-back sees
+nothing to answer: about the feet the hands' total force has almost no forward part, and
+its lift acts straight above them (the grip 0.80 m aft, the feet 0.79 m), so the felt
+moment is 7 N·m. A sailor whose weight hangs in the line has none on the back foot.
+
 **The legs, up and down.** The posture (7.2: lean, stance, hang-back) says where the body's
 centre should be above the feet. The legs are a spring and damper in the vertical between
 that height and the body (`leg_natural_frequency_hz` 1.2, `leg_damping_ratio` 0.9, soft
