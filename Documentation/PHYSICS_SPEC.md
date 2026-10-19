@@ -2398,6 +2398,8 @@ Michiel's Stop 2 decision: the onset at 13.3 kn is too late, a real board of thi
 
 Both look like the sailor and the rig more than the hull (not proven): a sailor who keeps the weight aft once the bow is up (`hump_trim_deg`, section 7) and never steps forward off a ploughing board, and a fast broad reach pressed flat (trim 0.1°) by 540 N on the mast foot (U1.2). So the factor stays at 1.0 until U1.6, U1.2 and U1.3 are in; then it is tested again with `tools/reach_check.sh --board.planing_buoyancy_factor=0.5`. Test: `test_hull.gd::test_a_planing_bottom_keeps_only_its_share_of_the_buoyancy`.
 
+**Retested after U1.2 and U1.3 (agent 4, round 3): still off.** With 0.5 on the new defaults the 24 kt broad reach bounces (pitch SD 0.83°, trim 1.50°; 0.70° with the rake-first hold off), the 18 kt beam reach rocks (0.15°), and the 12 kt broad reach slows to 5.35 m/s at 4.5° of trim (5.73 m/s before U1.2). The mast foot no longer presses the broad reaches flat (about 360 N, trims 1.5 to 1.7°), so the ploughing is gone, but the bounce of the fastest reach blocks it (target 2). The onset without it is now 11.6 kn (was 13.3).
+
 ### Values
 
 Board and mass values (`HullConfiguration`, `SailingState.cs:203-242`; set by `WindsurferSetup.cs:764-770`; saved in `MainScene.unity:272-279`):
