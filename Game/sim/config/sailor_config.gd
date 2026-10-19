@@ -65,14 +65,19 @@ extends Resource
 ## steady and moves the weight forward as the speed rises, because a planing board at
 ## speed tail-walks (bounces) with too much trim. The wanted trim is running_trim_deg up
 ## to running_trim_fast_speed_ms (24 kn) and falls linearly to running_trim_fast_deg at
-## running_trim_fastest_speed_ms (31 kn), held beyond: the speeds of the 18 kt reaches
+## running_trim_fastest_speed_ms (26 kn), held beyond: the speeds of the 18 kt reaches
 ## and of the 24 kt broad reach in the reach check. The fast trim is U1's 1.5 degrees: on
 ## the 24 kt broad reach (31 to 33 kn) the bounce grows steadily with the target (pitch
 ## SD 0.24 degrees at 1.5, 0.28 at 1.75, 0.30 at 2.0), so 2.0 is the limit there and 1.8
 ## would leave next to no margin. Measured on this hull in Session 49 (PHYSICS_SPEC.md
 ## section 14 "U2: the sailor's technique"); Savitsky's chart does not cover this loading.
+## The fastest speed came out of the steady-wind map as 16.0 m/s (31 kn). In the game's own
+## gusty wind the 24 kt beam reach (28 kn) then pitched 0.39 degrees where U1's flat 1.5
+## degrees gave 0.01, because the bending fin's upward push pulses with the gusts at the
+## tail; with the fast trim reached by 13.5 m/s (26 kn) it pitches 0.02 degrees in gusts
+## (the lead, Session 49). The sailor rides in gusts, not in a steady wind.
 @export var running_trim_fast_speed_ms: float = 12.3
-@export var running_trim_fastest_speed_ms: float = 16.0
+@export var running_trim_fastest_speed_ms: float = 13.5
 @export var running_trim_fast_deg: float = 1.5
 ## The press is full this many degrees of pitch away from hump_trim_deg, and it moves at
 ## trim_press_rate_ms: slowly, for the running trim, never chasing a bounce (a quick press
