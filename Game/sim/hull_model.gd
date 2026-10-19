@@ -277,10 +277,14 @@ func _apply_planing_lift(body: SimRigidBody, buoyancy: BuoyancyModel, aft: float
 	lambda_ratio = clampf((length - 0.5 * chine_dry_length_m) / beam, 0.2, board.length_m / beam)
 
 	# The wet bottom seen as one cambered plate, for the reference trim: its chord is
-	# inclined to the board by the rocker and the bottom bulges below the chord, which acts
-	# like camber on a wing (two sag-over-length of extra angle, thin-airfoil theory).
+	# inclined to the board by the rocker and the bottom bulges below the chord, toward the
+	# water, which is the pressure side. That is camber the wrong way up for lift: thin-
+	# airfoil theory moves the zero-lift angle by two sag-over-length, so the plate lifts
+	# as if trimmed that much less (Anderson, Fundamentals of Aerodynamics; a planing
+	# bottom with convex buttocks, rocker, lifts less than a flat one at the same trim, and
+	# a concave one, hook, more: Savitsky 1964, Savitsky and Brown 1976).
 	var chord_angle: float = _chord_angle(aft, forward)
-	var camber_angle: float = 2.0 * _camber_sag(aft, forward) / length
+	var camber_angle: float = -2.0 * _camber_sag(aft, forward) / length
 	var trim_geometric: float = pitch + chord_angle + camber_angle
 
 	# 1. The strips: where each is, which way its bottom faces, how fast it moves into the

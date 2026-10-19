@@ -158,7 +158,7 @@ func _strip_theory(wagner_heel: bool, wet_reference: bool) -> Dictionary[String,
 	var heel: float = SimMath.heel_rad(body.basis)
 	var beam: float = hull.planing_beam_m * maxf(cos(heel), 0.3)
 	out["beam"] = beam
-	var trim_geometric: float = pitch + hull._chord_angle(aft, forward) + 2.0 * hull._camber_sag(aft, forward) / length
+	var trim_geometric: float = pitch + hull._chord_angle(aft, forward) - 2.0 * hull._camber_sag(aft, forward) / length
 
 	# Step 1, the strips.
 	var x_k: PackedFloat64Array = PackedFloat64Array()
