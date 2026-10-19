@@ -6,14 +6,14 @@ From 19 October 2026 the team play-tests the game and writes down what should im
 
 | # | What | From | Status |
 |---|---|---|---|
-| U1 | Planing on a smaller wet area | Max, 19 October 2026 | ✅ Go-ahead from Michiel (19 October 2026, given to Max), on the branch `feature/u1-planing-wet-area`. Ready to build, not started |
+| U1 | Planing on a smaller wet area | Max, 19 October 2026 | ✅ Go-ahead from Michiel (19 October 2026, given to Max), on the branch `feature/u1-planing-wet-area`. Ready to build (Fable 5.1 leading Opus 5.5 agents, reaches only), not started. Live state: [U1_PROGRESS.md](U1_PROGRESS.md) |
 | U2 | The fin bends, and its size | Max, 19 October 2026 (from U1) | 📝 Idea with a first estimate. After U1 |
 
 ---
 
 ## U1. Planing on a smaller wet area
 
-**Building U1?** Read the [execution brief](#execution-brief) first. Everything after it is the background it relies on.
+**Building U1?** Read [U1_PROGRESS.md](U1_PROGRESS.md) (the live state and the prompts), then the [execution brief](#execution-brief). Everything after the brief is the background it relies on.
 
 ### The feedback
 
@@ -33,15 +33,44 @@ Max added, on how a sailor trims the board on flat water: "In my feeling I'm pus
 
 ### Execution brief
 
-For the lead engineer who builds U1 (an AI lead with sub-agents, or a person). It turns the plan below into exact instructions.
+For the lead who builds U1. It turns the plan below into exact instructions; everything after the brief is background. The live state is in [U1_PROGRESS.md](U1_PROGRESS.md).
 
-#### Go-ahead and branch
+#### Go-ahead, branch and team
 
-- **Michiel approved starting U1** on 19 October 2026 (he told Max). His condition: all work on a git branch.
-- **The branch is `feature/u1-planing-wet-area`**, made from `main` at commit 561849c. It already holds this plan.
-- **Sub-agents** each work in their own git worktree, on a branch made from it (`u1/<package>`, for example `u1/measure`). The lead merges each one back into `feature/u1-planing-wet-area`.
-- **Nothing goes to `main`.** Merging is a pull request the team decides on after Stop 3.
-- **Still open for Michiel, not a blocker:** the planing-onset band from Session 39 (8 to 10 kn, real boards). Keep it in the tests as it is, and report where the onset moves (U1.7).
+- **Go-ahead:** Michiel approved building U1 on 19 October 2026 (he told Max). His condition: all work on a git branch.
+- **The branch** is `feature/u1-planing-wet-area`, made from `main` at 561849c. It holds this plan.
+- **Nothing goes to `main`.** That is a pull request after Stop 3, and the team's call.
+- **The lead is Claude Fable 5.1**, the head developer. It:
+  - launches the agents;
+  - reads their reports and merges their branches;
+  - keeps U1_PROGRESS.md up to date;
+  - handles the stops.
+
+  It does little hands-on work, because Max has little Fable usage left.
+- **The sub-agents are Claude Opus 5.5 at extra-high effort** (`model: "opus"`, `effort: "xhigh"`).
+  - At most 5 in all, and at most 3 at a time.
+  - Each works in its own git worktree (`isolation: "worktree"`), on a branch `u1/<name>` made from `feature/u1-planing-wet-area`. The lead merges it back.
+- **Still open for Michiel, not a blocker:** the planing-onset band from Session 39. Keep it as it is, and report where the onset moves (U1.7).
+
+#### Tokens
+
+- **Read narrowly.** Read this brief and the files of your package. PHYSICS_SPEC.md is over 6000 lines: grep it for the sections you need and never read it whole.
+- **Measure with the reach check** (one line per case), not by reading CSV files. Pipe long outputs through `tail`.
+- **Pace the checks.** Run `tools/test.sh` after each change. Run the reach check and `tools/test.sh validation` once per finished piece, not after every edit.
+- **Report briefly.** At most 300 words plus one table, committed as `Documentation/u1_reports/<name>.md`, and returned to the lead as the same text.
+
+#### If the lead stops
+
+Fable can run out at any moment, so everything needed to go on lives in git:
+- **U1_PROGRESS.md** holds the state of each agent, the stops, the latest numbers and the next action. The lead updates and commits it after every launch, report and merge.
+- **Each agent's work** is committed on `u1/<name>` as it goes, with its report at the end.
+- **The agent prompts** are in this brief, so any lead can launch an agent again in the same form.
+
+**To go on,** Max starts a new Claude Code session in the repo with the resume prompt from U1_PROGRESS.md. Opus 5.5 at extra-high effort can be the lead. The new lead:
+1. checks `git worktree list` and the `u1/*` branches;
+2. merges the finished agents (their report is committed);
+3. launches the unfinished ones again, continuing on their existing branch;
+4. carries on from the next action.
 
 #### Rules
 
@@ -49,9 +78,7 @@ From [CLAUDE.md](../CLAUDE.md) and PHYSICS_SPEC.md, the ones that matter here:
 
 **Code**
 - Godot 4.7, GDScript with static types.
-- The physics lives in `Game/sim/`: plain classes, no Nodes.
-- Numbers live in `Game/config/*.tres`.
-- SI units, with the unit in the name.
+- The physics lives in `Game/sim/` (plain classes, no Nodes); numbers in `Game/config/*.tres`; SI units, with the unit in the name.
 
 **Checks**
 - After every change: `tools/test.sh`.
@@ -63,38 +90,36 @@ From [CLAUDE.md](../CLAUDE.md) and PHYSICS_SPEC.md, the ones that matter here:
 - New behaviour gets a new test. A bug gets a failing test first.
 
 **Numbers**
-- No new stabiliser, damping or fudge constant to reach a target (the spec's "Stabilisers and fudges" rule).
+- No new stabiliser, damping or fudge constant to reach a target.
 - Every new number has a source, or is labelled as an estimate in section 14.
 
 **Git**
-- Small commits with clear messages.
-- Commit the `.uid` files. Never commit `Game/.godot/`.
-- Don't touch `Legacy/` or `Game/addons/gut/`.
-- Godot rewrites `Game/default_bus_layout.tres` when the game runs (it adds a `uid` and drops a cutoff that equals the default). Restore it with `git checkout -- Game/default_bus_layout.tres` unless you changed it on purpose.
+- Small commits with clear messages. Commit the `.uid` files; never `Game/.godot/`. Don't touch `Legacy/` or `Game/addons/gut/`.
+- Godot rewrites `Game/default_bus_layout.tres` when the game runs. Restore it with `git checkout -- Game/default_bus_layout.tres` unless you changed it on purpose.
 
 **Each session**
-- End with an entry at the top of PROGRESS_LOG.md, and tick the boxes in this file.
+- The lead adds an entry at the top of PROGRESS_LOG.md and ticks the boxes in this file.
 
 #### Working on Max's Windows PC
 
-- **Godot:** the `tools/*.sh` scripts run in Git Bash. `GODOT` is set as a user variable; a shell that was open before it was set doesn't have it, so export it there.
-- **Timing:** the first Godot run on a fresh checkout imports every asset (about 40 s). `tools/test.sh` takes about 100 s.
-- **Blender** is not installed on this PC. Only U1.4's model rebuild needs it (Blender 4.5 LTS, the version `tools/common.sh` pins). The physics doesn't.
+- **Godot:** the `tools/*.sh` scripts run in Git Bash. `GODOT` is set as a user variable; a shell that was open before it was set needs `export GODOT=/c/Users/maxba/AppData/Local/Programs/Godot/Godot_v4.7.2-stable_win64_console.exe`.
+- **Timing:** the first Godot run in a new checkout or worktree imports every asset (about 40 s). `tools/test.sh` takes about 100 s.
+- **Blender** is not installed, so `board.glb` can't be rebuilt here (U1.4). The physics doesn't need it.
 - **`--out=` must be an absolute path** for `tools/simulate.sh`. Godot runs from `Game/`, so a relative path fails with "Cannot write".
-- **Overrides:** `tools/simulate.sh` takes `--sailor.<field>=`, `--sail.<field>=`, `--board.<field>=` and `--pilot.<field>=`. `tools/matrix.sh` takes `--sailor.`, `--sail.`, `--pilot.` and `--controller.`.
-- **`--board.length_samples` cannot be overridden.** The buoyancy grid is built when the simulation starts, and changing it afterwards floods the log with out-of-bounds errors. Build the simulation with its own `BoardConfig` in a test instead.
+- **Overrides:** `tools/simulate.sh` takes `--sailor.<field>=`, `--sail.<field>=`, `--board.<field>=` and `--pilot.<field>=`. A plain number such as `tail_rocker_m` can be overridden.
+- **`length_samples` cannot be overridden.** The buoyancy grid is built at start. Build the simulation with its own `BoardConfig` in a test instead.
 
-#### Measurements, exactly
+#### Testing: reaches only
 
-**The standard run:**
+Max, 19 October 2026: U1 is tested on reaches at several headings, not in manoeuvres. No tacks, gybes or turns are run in U1, to save tokens. The team runs the full manoeuvre matrix before the pull request to `main`.
+
+**The reach check:** the beam-reach scenario, flat water, steady wind, 40 s per case, numbers over the last 15 s (t ≥ 25 s):
 
 ```
-tools/simulate.sh beam_reach 40 --wind_kt=<W> --twa=100 --steady=1 --gradient=0 --out=<absolute path>.csv
+tools/simulate.sh beam_reach 40 --wind_kt=<W> --twa=<A> --steady=1 --gradient=0 --out=<absolute path>.csv
 ```
 
-- W is 12, 18 and 24.
-- Flat water.
-- Every number is taken over t ≥ 25 s, the last 15 s.
+W is 12, 18 and 24 kt. A is 60° (close reach), 100° (beam reach) and 135° (broad reach). That makes 9 cases. Agent 1 wraps them in one command that prints one line per case: a `tools/reach_check.sh`, or a runner in `Game/dev/` like `run_matrix.gd`.
 
 | Name in this plan | How it is computed |
 |---|---|
@@ -102,80 +127,70 @@ tools/simulate.sh beam_reach 40 --wind_kt=<W> --twa=100 --steady=1 --gradient=0 
 | Wet length | mean of `wetted_length_m` |
 | Centre of the water's push, from the tail | `length_m / 2 − mean(planing_cop_z_m)` (1.2 m − z for the default board) |
 | Trim | mean of `trim_deg` |
-| Steadiness | standard deviation of `pitch_deg` (over the whole window) |
+| Steadiness | standard deviation of `pitch_deg` over the window |
 | Harness tension | mean of `harness_tension_n` |
 | Rig's share of the sailor's weight | mean of `hand_force_up_n` / (sailor mass × g) |
 | Mast foot pushing down | − mean of `mast_foot_force_up_n` |
-| Friction, drive, speed | means of `hull_friction_n`, `drive_n`, `speed_ms` |
+| Friction, drive, speed, planing | means of `hull_friction_n`, `drive_n`, `speed_ms`, `planing_ratio` |
 
-U1.1's validation check computes the same numbers through `Game/tests/validation/validation_run.gd`. Its settled values are the mean of the last 10 s, which is fine.
+U1.1's validation check computes the same numbers through `Game/tests/validation/validation_run.gd`. Its last-10-s window is fine.
 
 #### The baseline that must not get worse
 
-These are the numbers of `main` at 561849c (Session 39). **Step 0 measures them again on this PC**, and those measured numbers become the baseline.
+Agent 1 measures the baseline first, before any change, and writes it into U1_PROGRESS.md:
 
-| Check | Session 39 |
+| Check | Session 39, for comparison |
 |---|---|
 | `tools/check.sh` | 188 files, 0 failed |
 | `tools/test.sh` | 335 of 335 |
 | `tools/test.sh validation` | 20 of 20 |
-| `tools/matrix.sh` (flat water) | 24 of 24, no fall; straight 8.77, 11.10 and 12.01 m/s at 12, 18 and 24 kt |
-| `tools/matrix.sh --waves=1` (the default sea) | 1 fall (`gybe_broad` 24 kt); 2 not completed (`gybe_beam` 24 kt, the 24 kt run turn) |
-| The medium chop | 0 falls; 1 not completed |
-| `tools/lake_matrix.sh` | 24 of 24, no fall |
+| The reach check | 9 cases (the 18 kt beam reach is the "What the game does now" table below) |
+| `tools/matrix.sh --only=straight` (flat water) | no fall; 8.77, 11.10 and 12.01 m/s at 12, 18 and 24 kt |
+| `tools/matrix.sh --only=straight --waves=1` (the default sea) | to be measured |
+| `tools/lake_matrix.sh --only=straight` (the lake at three times of day) | to be measured |
 
-The medium chop is the Session 37 command:
-
-```
-tools/matrix.sh --waves=1 --wave2.amplitude_m=0.04 --wave2.steepness=0.036 --wave3.amplitude_m=0.015 --wave3.steepness=0.027 --wave4.amplitude_m=0.006 --wave4.steepness=0.021
-```
-
-Session 39 regrouped the waves. If those overrides no longer apply, use the Medium chop preset from the settings, and write down what was run.
-
-**After every step and every merge:**
-- no new fall;
-- no new case that doesn't complete;
+After every merge:
+- no fall and no NaN;
 - validation green.
 
 Two exceptions:
-- A test whose band U1 changes on purpose. Write each such change in the tuning log, with its reason.
-- U1.1's own check, which stays `pending` until wave 2.
+- U1.1's check stays `pending` until agent 4.
+- A band that U1 changes on purpose is allowed, if it is written in the tuning log with its reason.
 
 #### Targets, in priority order
 
 1. No regression against the baseline.
-2. Steady on flat water: steadiness below 0.3° at 12, 18 and 24 kt.
-3. Front of the wet part 0.6 to 1.0 m from the tail at 18 and 24 kt. At 12 kt the board only has to plane.
-4. At 18 and 24 kt:
+2. Steady: pitch standard deviation below 0.3° in all 9 cases.
+3. At 18 and 24 kt, on the beam reach and the broad reach (100° and 135°): the front of the wet part 0.6 to 1.0 m from the tail.
+4. In the same four cases:
    - the centre of the push 0.45 to 0.75 m from the tail;
    - the trim 1.5 to 4°.
-5. At 18 kt:
+5. On the 18 kt beam reach:
    - a harness tension of 350 to 480 N;
    - the rig carrying at most 50 % of the sailor's weight.
 6. Speeds: the validation's polar check stays green, so every angle stays inside its real-world range (POLAR_15KT.md).
 
-A result that reaches 3 to 5 by giving up 1 or 2 is not done.
+The close reach (60°) only has to be steady and no worse than the baseline; its wet part is reported. A result that reaches 3 to 5 by giving up 1 or 2 is not done.
 
 #### Stop and report, instead of pushing on, when
 
-- U1.5's candidates have all been tested and none explains the bounce with evidence.
+- Agent 3 has tested every candidate and none explains the bounce with evidence.
 - A target can only be reached with a number that has no source and no physical reason.
 - A regression appears that the step can't explain.
-- The work needs a file outside its work package (below).
+- The work needs a file outside the agent's list (below).
 - A source contradicts a target of this plan.
 
-The report says what was tried, with the numbers and the options. It goes to Max and Michiel, in the chat and in PROGRESS_LOG.md.
+The report says what was tried, with the numbers and the options. The lead tells Max in plain language and writes it in U1_PROGRESS.md.
 
-#### Numbers that still need a source
+#### Numbers that still need a source (agent 2)
 
-Work package C looks for these:
 1. **How high the harness hook is above the deck when a sailor hikes out**, and the harness line's length and angle. Winter's body proportions are already in `figure_skeleton.gd`.
 2. **How hard a front foot can pull up in its strap**, so how big a nose-up couple the feet can make. The strap spread is 38 to 44 cm (Jem Hall).
-3. **The flat-water rail-down angle** for the assist's "loading the fin" (U1.6). If nothing is found, Max's own estimate is the source: ask him.
+3. **The flat-water rail-down angle** for the assist's fin loading (U1.6). If nothing is found, ask Max for his estimate.
 4. **Harness tensions for other winds and sails** than Walls & Gale's one sailor, if any exist.
 
 **Found:** write the number into PHYSICS_SPEC.md section 14, with its source.
-**Not found:** write an estimate, labelled as one, and list it in the next stop report.
+**Not found:** write an estimate, labelled as one, and list it in the report.
 
 #### Scope
 
@@ -185,32 +200,24 @@ Work package C looks for these:
 - The railing-out test, as information only.
 
 **Not in U1:**
-- The fin bending and the fin's size: U2, after U1.
-- The player's own trim and fin-loading control, and a choice of fin: team decisions, for later.
-- A finer buoyancy grid, unless U1.1's grid check shows it moves the wet part by more than 5 cm.
+- Manoeuvre testing.
+- The fin bending and the fin's size: U2.
+- The player's own trim and fin-loading control: a team decision, for later.
+- A finer buoyancy grid, unless agent 1's grid check moves the wet part by more than 5 cm.
 
-#### The order of work, the work packages and the stops
+#### The agents and the stops
 
-**Step 0, the lead, on `feature/u1-planing-wet-area`**
-- Measure the baseline (above).
-- Do the standard run at 12, 18 and 24 kt and record it next to the "What the game does now" table.
+| # | Name | Package | When | May change |
+|---|---|---|---|---|
+| 1 | `measure` | The baseline; the reach check command; U1.1 (the validation check, `pending`; telemetry; HUD; the grid check); then U1.4, the flat tail, with its numbers | first | the reach-check script or runner (`tools/`, `Game/dev/`); `Game/tests/validation/test_planing_wet_area.gd` (new); `validation_run.gd` (only to record the new fields); `Game/sim/telemetry.gd`; `Game/sim/hull_model.gd` (only to expose the friction area); the telemetry block at the end of `Game/sim/windsurfer_sim.gd`; `Game/ui/hud.gd`; `Game/config/board_default.tres`; the spec for the tail |
+| 2 | `sources` | The four numbers above | with 1 | nothing in the game: its report only |
+| 3 | `porpoising` | U1.5's diagnosis | with 1 | nothing in the game: experiments, and its report |
+| 4 | `physics` | U1.5's fix, U1.2, U1.3, in that order; U1.1's check becomes real | after Stop 1 | `Game/sim/windsurfer_sim.gd`, `mass_model.gd`, `hull_model.gd`, `config/sailor_config.gd`, `Game/config/sailor_default.tres`, their tests, the spec |
+| 5 | `finish` | U1.6, U1.7, U1.8's screenshots | after Stop 2 | the sailor and pilot files for the bank and the rig's lean, their tests, the spec; screenshots in `.screenshots/u1/` (not in git) |
 
-**Step 1, the lead: U1.4, the flat tail**
-- One value (`tail_rocker_m`), measured with the standard run.
-- Validation and the matrices.
-- Commit.
-- The board model is rebuilt only if Blender is installed (U1.4).
-
-**Wave 1: three sub-agents in parallel, each in its own worktree, from the branch after step 1**
-
-| Package | What | May change | Output |
-|---|---|---|---|
-| A. Measure | U1.1: the validation check (`pending` until wave 2), the telemetry fields, the HUD line, the grid check | `Game/tests/validation/test_planing_wet_area.gd` (new); `Game/tests/validation/validation_run.gd` (only to record the new fields); `Game/sim/telemetry.gd`; `Game/sim/hull_model.gd` (only to expose the area the friction uses); the telemetry block at the end of `Game/sim/windsurfer_sim.gd`; `Game/ui/hud.gd` | branch `u1/measure`, merged by the lead |
-| C. Sources | the four numbers above | nothing in the game; research only | a note to the lead with numbers, sources and reliability |
-| D. Porpoising diagnosis | U1.5's first box: experiments only | nothing committed (temporary local edits are allowed and thrown away) | a report naming the cause with evidence, or "not found" (a stop) |
-
-**How D works:**
-- Reproduce the bounce with the standard run plus `--sailor.lean_height_drop_m=0.15`. On the old tail it bounces at 1.78 Hz; check that it still does on the flat tail.
+**Agent 3, how:**
+- Reproduce the bounce on the 18 kt beam reach with `--sailor.lean_height_drop_m=0.15`. It bounces at 1.78 Hz on the current tail.
+- Do the same on the flat tail, with `--board.tail_rocker_m=0`.
 - Switch the candidates one at a time:
   - `--sailor.leg_natural_frequency_hz=` and `--sailor.leg_damping_ratio=`;
   - `--sailor.trim_press_max_m=0`;
@@ -218,36 +225,23 @@ Work package C looks for these:
   - `--freeze=<s>` (the sailor stops moving fore and aft from then on);
   - `--board.planing_lift_lag_s=`.
 - Compute where the board sits against Savitsky's porpoising limit for a flat bottom.
+- Name the cause with numbers.
 
-**Stop 1: report the results of step 0, step 1 and wave 1.** Carry on when all three hold:
-- A's check reproduces the standard run's numbers;
-- D names a cause;
-- no regression.
+**The stops:**
+- **Stop 1, the lead:** agents 1 to 3 are in. Go on when all three hold:
+  - agent 1's check reproduces the reach check;
+  - agent 3 names a cause;
+  - nothing regressed.
 
-Otherwise stop for the team.
+  Otherwise stop for the team.
+- **Stop 2: Michiel reviews agent 4's physics** (the diff, the spec, the numbers). Wait for his OK.
+- **Stop 3: Max's play-test** (U1.8). Then the team decides on the pull request.
 
-**Wave 2: one sub-agent, in this order.** It alone edits `Game/sim/windsurfer_sim.gd`, `Game/sim/mass_model.gd`, `Game/sim/hull_model.gd`, `Game/sim/config/sailor_config.gd` and `Game/config/sailor_default.tres`.
-1. U1.5: the fix of the cause D found.
-2. U1.2: the harness load.
-3. U1.3: the sailor's trim technique.
+**The agent prompt.** The lead launches every agent with this text, filled in:
 
-After each piece:
-- its tests and a commit;
-- the standard run at 18 kt;
-- the flat-water matrix.
+> You are agent <n>, `<name>`, of U1 in WindsurfingMMZB (Godot 4.7). Read CLAUDE.md and the U1 execution brief in Documentation/PLAYTEST_UPGRADES.md, then do your package from the brief's agent table and the U1.x boxes it names. Work in your worktree on the branch `u1/<name>`: make it from `feature/u1-planing-wet-area`, or continue on it if it already exists. Commit as you go, and change only the files your row allows. Follow the brief's rules, targets and stop rules, and be careful with tokens. Finish with your report (at most 300 words and one table) committed as Documentation/u1_reports/<name>.md, and return the same text.
 
-At the end:
-- all three matrices and validation;
-- U1.1's check turns from `pending` into a real check.
-
-**Stop 2: Michiel reviews the physics** (the diff, the spec sections, the numbers). Wait for his OK.
-
-**Wave 3: the lead, or one sub-agent at a time**
-- U1.6: the rig's lean; the assist's fin loading; the railing-out test, as information.
-- U1.7: validate again.
-- U1.8: screenshots.
-
-**Stop 3: Max's play-test** (the questions in U1.8). Then the team decides on a pull request to `main`.
+For agent 4, add the reports of agents 2 and 3. For agent 5, add agent 4's report.
 
 ### How the wet length is decided
 
@@ -261,7 +255,7 @@ In the code: `HullModel._wetted_span()` reads the wet part from the buoyancy gri
 
 ### What the game does now (measured, 19 October 2026)
 
-Method: the standard run at 18 kt (execution brief), on `main` at 561849c. Positions are measured forward from the tail.
+Method: the reach check's 18 kt beam reach (100°, execution brief), on `main` at 561849c. Positions are measured forward from the tail.
 
 | | Game | Real world |
 |---|---|---|
@@ -284,7 +278,7 @@ With the default gusts and the wind's height profile (`tools/simulate.sh beam_re
 
 ### What-if runs (settings changed from the command line, no code changed)
 
-The standard run at 18 kt. Each run changes one setting with `--sailor.<field>=<value>`.
+The reach check's 18 kt beam reach. Each run changes one setting with `--sailor.<field>=<value>`.
 
 | Run | Change | Wet length, mean (range) | Trim | Mast foot down | Harness | Friction | Speed | Steady? |
 |---|---|---|---|---|---|---|---|---|
@@ -349,65 +343,65 @@ Pushing with the back foot and pulling with the front acts between the sailor an
 
 ### The plan
 
-The order, the work packages and the stops are in the execution brief. Each step's boxes:
+Who does what, in which order, and the stops: the execution brief's agent table. Each step's boxes:
 
-**U1.1. Measure it first, and keep measuring it** (work package A)
-- [ ] Step 0: the baseline and the standard runs at 12, 18 and 24 kt, recorded here (the lead).
-- [ ] A validation check, `Game/tests/validation/test_planing_wet_area.gd`, on the standard run's conditions through `validation_run.gd`, at 12, 18 and 24 kt.
+**U1.1. Measure it first, and keep measuring it** (agent 1)
+- [ ] The reach check as one command (9 cases, one line each), and the baseline with it, written into U1_PROGRESS.md before any change.
+- [ ] A validation check, `Game/tests/validation/test_planing_wet_area.gd`, on the reach check's conditions through `validation_run.gd`, in the 9 cases.
   - It checks targets 2 to 4 of the execution brief.
-  - Until wave 2 meets them it calls `pending()` with the measured numbers, so the suite stays green and the numbers stay visible.
-  - Wave 2 turns it into a real check.
+  - Until agent 4 meets them it calls `pending()` with the measured numbers, so the suite stays green and the numbers stay visible.
+  - Agent 4 turns it into a real check.
 - [ ] Telemetry: the area the friction uses (for example `friction_area_m2`), the front of the wet part from the tail, and the centre of the push from the tail. The mast-foot load and the harness tension are already in the telemetry.
 - [ ] HUD: "wetted" shows the friction's area instead of the buoyancy grid's, plus the front of the wet part, the harness tension and the mast-foot load (in `hud.gd`'s detail panel).
 - [ ] The grid check: build the simulation with a `BoardConfig` whose `length_samples` is 13, and compare it with 7 at 18 kt. If the front of the wet part moves by more than 5 cm, report it (a finer grid is not in U1's scope without the team).
 
-**U1.2. The harness load** (wave 2; spec 7.5)
+**U1.2. The harness load** (agent 4; spec 7.5)
 - [ ] Target: at 18 kt with the 6.5 m² sail, a harness line tension of 350 to 480 N (Walls & Gale 2001), and the rig carrying at most 50 % of the sailor's weight.
-- [ ] Check the body's geometry when fully hiked against the figure's skeleton (`figure_skeleton.gd`) and package C's hook height. The what-if runs show the hip height alone moves the tension from 945 to 645 N.
+- [ ] Check the body's geometry when fully hiked against the figure's skeleton (`figure_skeleton.gd`) and agent 2's hook height. The what-if runs show the hip height alone moves the tension from 945 to 645 N.
 - [ ] Check the line's share in the least-squares fit (spec 7.5): does it take more of the pull than a real line's direction allows?
-- [ ] Only together with U1.5's fix (wave 2 does U1.5 first).
+- [ ] Only together with U1.5's fix (agent 4 does U1.5 first).
 
-**U1.3. The sailor trims the board: Max's technique** (wave 2; spec 7.5)
+**U1.3. The sailor trims the board: Max's technique** (agent 4; spec 7.5)
 - [ ] Find out why the feet press the bow down at their limit (−120 N·m) in a steady beam reach. Trace `pitch_from_feet_moment_nm` back to its parts: the hands' pull, the twist couple, the posture.
 - [ ] The sailor leans back against the boom's pull and puts the weight on the back foot. `hang_back_m` is 0 today; find why the hang-back balance sees no pull to answer (perhaps the harness lifting from in front of the feet).
-- [ ] The feet as a trim control: back foot down, front foot pulling up in the strap, balanced by the body (its weight and the boom), within what the legs can hold (package C's number). The autopilot uses it to hold its running trim.
+- [ ] The feet as a trim control: back foot down, front foot pulling up in the strap, balanced by the body (its weight and the boom), within what the legs can hold (agent 2's number). The autopilot uses it to hold its running trim.
 - [ ] At Stop 3 Max checks it on the water's terms: is the weight on the back foot, and does the nose lift when the sailor asks for it?
 
-**U1.4. A flat tail** (step 1, the lead; spec 5, 6 and 14)
-- [ ] `tail_rocker_m` from 0.01 to 0 in `Game/config/board_default.tres`, flat from the tail forward as the sources say for freeride and slalom boards. Keep a few millimetres only if package C or a later source finds them for freeride boards.
-- [ ] The standard runs at 12, 18 and 24 kt, validation and the matrices. Expected: a higher trim and a shorter wet part. Record the numbers.
-- [ ] The board model: `tools/blender.sh tools/blender/build_rig_models.py` reads `board_default.tres` and rebuilds `Game/assets/models/board.glb`. Blender is not on Max's PC. If it isn't installed, leave a box for the rebuild in the progress log; the physics doesn't need the model.
+**U1.4. A flat tail** (agent 1, after U1.1; spec 5, 6 and 14)
+- [ ] `tail_rocker_m` from 0.01 to 0 in `Game/config/board_default.tres`, flat from the tail forward as the sources say for freeride and slalom boards. Keep a few millimetres only if agent 2 or a later source finds them for freeride boards.
+- [ ] The reach check, validation and the straight runs. Expected: a higher trim and a shorter wet part. Record the numbers in U1_PROGRESS.md.
+- [ ] The board model: `tools/blender.sh tools/blender/build_rig_models.py` reads `board_default.tres` and rebuilds `Game/assets/models/board.glb`. Blender is not on Max's PC, so leave the rebuild as an open item in U1_PROGRESS.md; the physics doesn't need the model.
 
-**U1.5. The porpoising, solved physically** (diagnosis: package D; fix: wave 2; the open item 2 of Session 39)
+**U1.5. The porpoising, solved physically** (diagnosis: agent 3; fix: agent 4; the open item 2 of Session 39)
 
 Two kinds of bouncing must not be confused (Max asked, 19 October 2026):
 - **Riding over waves:** the water surface moves, and the board pitches and slams with it. Waves force this motion; it is real and stays (the sea and chop settings).
 - **Porpoising:** on flat water, in steady wind, the board starts bouncing by itself and keeps going. A small bounce makes the lift move forward and back along the bottom, which feeds the next bounce. Real boards can do this too, usually as a setup problem: a mast foot too far back, a fin that is too big, too little mast-foot pressure. Sailors cure it with the mast foot or the stance. The game's 1.8 Hz bounce is this kind: it happens in steady wind with no waves at all.
 
-- [ ] Diagnosis (package D): find what makes the board bounce at 1.8 Hz once the mast foot is lighter. The candidates, each switched on its own with the overrides in the execution brief:
+- [ ] Diagnosis (agent 3): find what makes the board bounce at 1.8 Hz once the mast foot is lighter. The candidates, each switched on its own with the overrides in the execution brief:
   - the sailor's legs: a spring at 1.2 Hz (`leg_natural_frequency_hz`), close to the bounce;
   - the sailor's reflexes chasing the bounce (`trim_press_*`, `pitch_reflex_m_per_rad_s`, the hang-back);
   - the planing strips' own damping in pitch and heave, the transom relief (`TRANSOM_RELIEF_BEAMS`), the lift lag;
   - Savitsky's porpoising limit for a flat bottom (Day & Haag 1952; Savitsky 1964): where do the trim and load sit against it?
-- [ ] The fix (wave 2), of the cause found. Real boards do porpoise sometimes (a mast foot too far back, a fin too big, top speed on flat water), so a short, occasional bounce at top speed is realistic. A board that bounces all the time at 18 kt is not. Target 2 of the brief: steadiness below 0.3° on flat water at 12, 18 and 24 kt.
+- [ ] The fix (agent 4), of the cause found. Real boards do porpoise sometimes (a mast foot too far back, a fin too big, top speed on flat water), so a short, occasional bounce at top speed is realistic. A board that bounces all the time at 18 kt is not. Target 2 of the brief: steadiness below 0.3° in all 9 reach cases.
 - [ ] No new damping constant to hide it.
 
-**U1.6. The rig leaned to windward, and the fin loaded** (wave 3)
+**U1.6. The rig leaned to windward, and the fin loaded** (agent 5)
 - [ ] Check how the autopilot and the player's assists lean the rig (`max_rig_lean_deg`, `rig_tilt`), and that the sail's upward lift reaches the sailor and the board. Real: 10 to 25°, and the sail carries 7 to 24 % of the weight.
-- [ ] "Loading the fin", the assist's safe amount. When planing and powered up on flat water, the sailor's wanted bank (`_wanted_bank_rad`, flat today) becomes a few degrees of leeward rail down. The angle comes from package C, or else from Max's estimate. It is a small part of U1 (50 to 100 N of about 900 N), so U1 does not depend on it.
+- [ ] "Loading the fin", the assist's safe amount. When planing and powered up on flat water, the sailor's wanted bank (`_wanted_bank_rad`, flat today) becomes a few degrees of leeward rail down. The angle comes from agent 2, or else from Max's estimate. It is a small part of U1 (50 to 100 N of about 900 N), so U1 does not depend on it.
   - What it is on the water. Max, 19 October 2026: "I'm pushing on the rail of the board, and with that I'm also railing the board away from me a little, to tilt the board a bit and load the fin. Now the board wants to fly. If I do it too much, my board comes out of the water and I lose control. It's a fine technique and maybe too hard to replicate." So it is both: the feet push sideways on the rail, and that tips the board away from the sailor (leeward rail down). The fin then pushes harder and partly upward, and the board lifts.
   - What the model already has right. Max: "the force of the sail is also what I push against the fin." The sail's sideways pull goes through the boom and the harness into the sailor, the feet push the board sideways, and the fin holds against it. In the steady 18 kt run: sail side force 508 N to leeward, fin lift 573 N to windward. In yaw, the fin's moment (+546 N·m) and the feet's (−543 N·m) cancel.
   - The board already sails with the leeward rail 3.6° down, so the fin lifts 36 N. At 5 to 10° with the same push, that would be 50 to 100 N, and more when the sail pulls harder: a powered-up sailor can load the fin more.
 - [ ] The railing-out test, as information for the team's later decision on a player control. In a test, raise the wanted bank step by step. Does the board lift and then rail out above some angle, because the fin's rolling moment beats what the feet can hold (`feet_moment_max_nm`)? Report the angle. Build nothing on it in U1.
 
-**U1.7. Validate again: the board gets faster** (wave 3)
-- [ ] Friction drops by about half, so the speeds rise. Run the validation suite, the three matrices and the medium chop against the baseline, and the polar against the real ranges in [POLAR_15KT.md](POLAR_15KT.md).
+**U1.7. Validate again: the board gets faster** (agent 5)
+- [ ] Friction drops by about half, so the speeds rise. Run the validation suite, the reach check and the three straight runs against the baseline, and the polar against the real ranges in [POLAR_15KT.md](POLAR_15KT.md). No manoeuvres.
 - [ ] The planing onset band (8 to 10 kn, Michiel's open decision from Session 39) may move. Report where the onset is now.
 - [ ] If the board becomes faster than real boards, look for a drag that is missing, with a source: spray drag (up to 15 % of a planing hull's drag; Savitsky, DeLorme & Datla 2007), the fin, the sailor's windage. Never make the wet part longer again to slow it down.
 
-**U1.8. The look, and Max's play-test** (wave 3, then Stop 3)
+**U1.8. The look, and Max's play-test** (agent 5, then Stop 3)
 - [ ] The spray comes from the front of the wet part (`effects.gd`, `spray_root_local`), so it moves back under the front foot by itself.
-- [ ] Screenshots from the side at 12, 18 and 24 kt, before (`main`) and after, in `.screenshots/u1/`.
+- [ ] Screenshots from the side on the beam reach at 12, 18 and 24 kt, before (`main`) and after, in `.screenshots/u1/`.
 - [ ] Max play-tests:
   - Is the board wet only from the front foot back?
   - Does it feel freer and faster?
@@ -416,24 +410,25 @@ Two kinds of bouncing must not be confused (Max asked, 19 October 2026):
 
 ### Done when
 
-| What (the standard run, the execution brief's definitions) | Target |
+| What (the reach check, the execution brief's definitions) | Target |
 |---|---|
 | The baseline | no regression; validation green, U1.1's check included and no longer `pending` |
-| Steadiness at 12, 18 and 24 kt | below 0.3° |
-| Front of the wet part at 18 and 24 kt | 0.6 to 1.0 m from the tail |
-| Centre of the water's push at 18 and 24 kt | 0.45 to 0.75 m from the tail |
-| Trim at 18 and 24 kt | 1.5 to 4° |
-| Harness line tension at 18 kt | 350 to 480 N, the rig carrying at most 50 % of the sailor's weight |
+| Steadiness in all 9 cases | below 0.3° |
+| Front of the wet part at 18 and 24 kt, 100° and 135° | 0.6 to 1.0 m from the tail |
+| Centre of the water's push, the same cases | 0.45 to 0.75 m from the tail |
+| Trim, the same cases | 1.5 to 4° |
+| Harness line tension, 18 kt beam reach | 350 to 480 N, the rig carrying at most 50 % of the sailor's weight |
 | Speeds | every polar angle inside its real-world range (the validation's polar check) |
 | PHYSICS_SPEC.md | sections 5 and 7.5, section 14 (every new value with its source or labelled an estimate), the tuning log |
 | Max's play-test | the wet area looks and feels right |
 
 ### Risks and open questions
 
-- The mast-foot load has been the porpoising guard. U1.2 without U1.5 makes the board bounce, which is why wave 2 does U1.5 first.
+- The mast-foot load has been the porpoising guard. U1.2 without U1.5 makes the board bounce, which is why agent 4 does U1.5 first.
 - The speeds will rise, and the polar and the planing onset may move with them.
 - The real-world band (0.6 to 1.0 m) is the agreement of two theory papers, two shapers and two experienced sailors, not a measurement. If a measured wet length or trim turns up (a tank test, photos from below), it replaces this band.
-- Moving load off the mast foot changes the feel in chop: the mast-foot pressure is also what holds the nose down there. The medium chop and the default sea are in the baseline for that reason.
+- Moving load off the mast foot changes the feel in chop: the mast-foot pressure is also what holds the nose down there. The default sea's straight runs are in the baseline for that reason.
+- Manoeuvres (tacks, gybes, turns) are not tested in U1 (Max's choice, to save tokens), and U1.2 and U1.3 change the sailor, which tacks and gybes rely on. The team runs the full matrix (`tools/matrix.sh`, `--waves=1`, `tools/lake_matrix.sh`) before the pull request to `main`, against Session 39's results.
 - For the team, later: should the player get Max's foot trim as a control of their own (lift or drop the nose, load the fin), or should the assist do it? Real sailors use it as a skill, so it could reward good technique: fast with the nose up, and porpoising or a spin-out when overdone. The fin's size could be a setup choice with it (U2).
 
 ### Sources

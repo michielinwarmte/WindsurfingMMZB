@@ -40,6 +40,11 @@ Template for new entries:
   - the scope;
   - step 0, step 1 (the flat tail), three parallel work packages (measure, sources, porpoising diagnosis), one agent for the coupled physics, then validation and screenshots;
   - three stops: the lead's check, Michiel's review, Max's play-test.
+- Then set up for the build Max wants:
+  - **The team:** Fable 5.1 as the head developer, leading at most 5 Opus 5.5 sub-agents at extra-high effort, 3 at a time, each in its own worktree on a `u1/<name>` branch. Agent 1 measures, 2 finds sources, 3 diagnoses the porpoising, 4 does the coupled physics, 5 finishes.
+  - **Testing on reaches only:** 60°, 100° and 135° at 12, 18 and 24 kt (the "reach check"), plus the straight runs of the matrices. No manoeuvres; the team runs the full matrix before the pull request to `main`.
+  - **Token rules**, and a handoff that survives the lead running out: the new [U1_PROGRESS.md](U1_PROGRESS.md) holds the state, the next action, and the start and take-over prompts. The agents commit their reports on their branches.
+  - `.gitignore` now ignores the agents' worktrees (`/.claude/worktrees/`).
 
 **Decisions:**
 - Documentation mode (Max): play-test feedback becomes a researched plan in PLAYTEST_UPGRADES.md; building comes later.
