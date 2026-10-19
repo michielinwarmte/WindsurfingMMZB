@@ -3,7 +3,7 @@
 The live state of U2, "the fin bends, and its size". The plan and its execution brief are in [PLAYTEST_UPGRADES.md](PLAYTEST_UPGRADES.md). **The lead updates and commits this file after every launch, report and merge.** A lead who takes over starts here; U1's take-over prompt in [U1_PROGRESS.md](U1_PROGRESS.md) applies with U2 in place of U1.
 
 - **Branch:** `feature/u2-fin` (from `feature/u1-planing-wet-area` at c1eee63). Agents work on `u2/<name>` branches, made from it in their own worktrees.
-- **Last update:** 19 October 2026. Agent 5's riding-the-fin experiments are in and merged. Stop 2 still waits for Michiel; the team also decides on the sailor's technique (see Next action).
+- **Last update:** 19 October 2026. Max decided on the sailor's technique (the brief: "The sailor rides the fin"); agent 3 relaunched on it. Michiel reviews the bending fin and the technique together at Stop 2.
 
 ## State
 
@@ -11,7 +11,7 @@ The live state of U2, "the fin bends, and its size". The plan and its execution 
 |---|---|---|---|---|---|
 | 1 | `fin_sources` | the stiffness, the catalogue fins, the literature | merged | `u2/fin_sources` | [fin_sources.md](u2_reports/fin_sources.md) |
 | 2 | `fin_measure` | the fin's baseline, the overrides, the telemetry, the what-ifs, the pending check | merged | `u2/fin_measure` | [fin_measure.md](u2_reports/fin_measure.md) |
-| 3 | `fin_physics` | the bending fin, by the lead's design | merged, reviewed by the lead | `u2/fin_physics` | [fin_physics.md](u2_reports/fin_physics.md) |
+| 3 | `fin_physics` | the bending fin: merged, reviewed by the lead. **Now: the sailor rides the fin** (the brief's design: the press, the trim target, the straps, the nose air) | running (riding) | `u2/fin_physics` | [fin_physics.md](u2_reports/fin_physics.md); next `fin_ride_physics.md` |
 | 4 | `fin_look` | the bending mesh, the HUD, the screenshots, the checklist | waits for Stop 2 | `u2/fin_look` | |
 | 5 | `fin_ride` | experiments: the sailor riding the fin (weight aft, rail down, fin size), no game file changed | merged | `u2/fin_ride` | [fin_ride.md](u2_reports/fin_ride.md) |
 
@@ -23,19 +23,7 @@ The live state of U2, "the fin bends, and its size". The plan and its execution 
 
 ## Next action
 
-**Stop 2: Michiel reviews the bending fin.** The lead read the code against the design (`git diff cc6761c u2/fin_physics -- Game/sim Game/config Game/tests`) and found it right: the planform with an area-true root chord, `EI = S c^4`, `S` from the measured flex test at its load point, the elliptic load with exact strip sums, the slopes capped at 35°, the tilted force (sideways share and upward share along the board's +y) at the old centre of pressure, drag unchanged, the stiff switch (`bends = false`) giving the old force bit for bit, nine unit tests and the real bend check. To review: PHYSICS_SPEC.md section 4 "The fin bends (U2)", section 14 "U2" (two subsections), the section 16 row, and the report. Questions for Michiel:
-1. **Agent 3's one departure:** `S` is calibrated on the test fin's own size (`flex_test_span_m`, `flex_test_area_m2`), so a 44 cm fin keeps the same `S`, the same material. The lead agrees. OK?
-2. **The fin's lift lengthens the wet part** (the push at the tail pitches the bow down: the wet front 1.71 → 1.76 m on the 18 kt beam reach, trims up to 0.28° lower, speeds up to 1.1 % lower). Fin makers say a soft tip shrinks the wet area; that needs the sailor to move the weight aft against the tail's lift, which the pilot's trim hold doesn't do yet. Leave it for now (the lead's suggestion: a note for the U1 follow-ups, with the hands' share) or address it in U2?
-3. **The onset moved from 11.6 to 12.0 kn** (the red check stays red, as decided in U1).
-4. **The 35° cap** is an estimate (the linear beam's limit); a 44 cm fin at 800 N reaches 32°.
-
-After Michiel's OK: launch agent 4 (`fin_look`) with agent 3's report, then Stop 3.
-
-**Agent 5's experiments are in** (78 runs, overrides only; `u2_reports/fin_ride.md`). Findings: (1) the weight aft works: a trim target of 3.5° with the press reaching the back strap (`trim_press_max_m` 0.45, the feet's pressure 0.35 m from the tail) shortens the 18 kt beam reach's wet front from 1.76 to 1.45 m, 2 % faster, steady, and the 24 kt beam reach's from 1.71 to 1.34 m; probes past the back strap (not a real stance) reach 1.25 m steady and 0.69 m bouncing, so the hull can plane on Max's 0.6 to 1.0 m once the weight is far enough aft; (2) **a flaw: the sailor steps forward when the fin lifts**, because the trim press is multiplied by `hull.planing_ratio` (`windsurfer_sim.gd` line 685), which is the hull's planing lift over the whole weight (`hull_model.gd` line 412), so every newton the fin or the rig carries cuts the press; that is why the bend and the 44 cm fin lengthen the wet part; (3) the fin's lift does not carry the kit: 109 N (12 %) at the best setting, 146 N with the 44 cm fin; railing to 16° lifts 247 N but sinks the leeward rail (buoyancy 85 → 235 N) and lengthens the wet part; (4) looseness: the fin already carries all the side force (hull grip ≤ 13 N), the water's yaw damping falls with the weight aft (18 → 15 N·m) and rises with the rail; (5) limits: the 24 kt broad reach sits at the porpoising limit today (1.32° steady, 1.41° bounces), every weight-aft setting bounces there, trim 3° catapults (the fin at 97 % of stall), the 44 cm fin spins out; the board never railed out (fin roll up to 136 N·m against the feet's 120).
-
-**The lead's recommendation for the team (Max's "the player uses the fin's lift wrong" is confirmed):** a last step in U2, "the sailor rides the fin", by agent 3 relaunched after Michiel's OK: (a) the trim press no longer cut by the fin's and the rig's lift (scale it by the hull's planing lift over the hull's own load, or by the speed: a sailor feels whether the board planes, not the hull's share of the total weight); (b) a trim target that falls with speed along Savitsky's porpoising limit minus a margin (sourced: Savitsky 1964, the fit U1's agent 3 used), instead of the constant 1.5°, so the weight aft is safe at 31 kn; (c) the press reaching the back strap (`trim_press_max_m` 0.45, sourced from the strap positions). Not now: the heeled hull (railing sinks the leeward rail in this model: a sourced heeled planing hull is a separate item), the front-foot pull as a pitch couple (U1.3's open box).
-
-**Previously planned in parallel:** agent 5 (`fin_ride`) ran the experiments of the brief's "Riding the fin" (overrides only). When it reports: merge its report, write the findings here, and tell Max and Michiel what the sailor could do with the fin's lift and what it would take (a technique in the pilot and the assists, or a sourced number). The team decides whether that becomes U2's last step or a follow-up.
+**Agent 3 is running** (relaunched on `u2/fin_physics`): the brief's "The sailor rides the fin" design, a to d. When it reports: the lead reads the diff (`windsurfer_sim.gd`, `hull_model.gd`, the configs), merges if sound, verifies (`tools/check.sh`, `tools/test.sh`, `tools/test.sh validation`, `tools/reach_check.sh`), writes the numbers, and then **Stop 2 for Michiel covers both the bending fin and the technique** (the four questions already in the Notes and this diff). After his OK: agent 4 (`fin_look`), then Stop 3, Max's play-test.
 
 ## Numbers
 
@@ -83,6 +71,8 @@ Up = the world-upward part of the fin's force (today only from the heel); Stall 
 ## Notes
 
 Decisions and surprises along the way, newest first.
+
+- 19 October 2026 (Max): on the lead's recommendation: (1) the press not cut by the fin's lift, if it gets better; (2) the trim target falling with speed, OK; (3) while planing and not turning, the feet always press at the footstraps. Sidenote: the air under the raised nose lifts it at speed; the lead has it estimated first (tens of newtons at 30 kt apparent, by a first guess) and added only if it matters.
 
 - 19 October 2026 (agent 5, fin_ride): the weight aft shortens the wet part (1.76 → 1.45 m at 18 kt with the press at the back strap) but the fin's lift itself doesn't carry the kit (12 %), and the sailor model steps forward when the fin lifts because the trim press is scaled by the hull's planing share of the total weight. Railing sinks the leeward rail in this model. The 24 kt broad reach is at the porpoising limit, so a weight-aft technique needs a trim target that falls with speed.
 
