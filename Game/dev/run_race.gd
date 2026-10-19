@@ -1,8 +1,9 @@
 extends SceneTree
-## A headless race (RACING_PLAN.md, Part 9A): boards on a course, the countdown, the gun, the race's
-## own clock and checks (RaceSim), and one line per board at the end. In 9A every board is the plain
-## Autopilot holding one wind angle, so it starts and then sails on at that angle and does not
-## finish: this is the plumbing that the scripted skippers of 9B make meaningful. Use tools/race.sh.
+## A headless race (RACING_PLAN.md, Parts 9A and 9B): boards on a course, the countdown, the gun, the
+## race's own clock and checks (RaceSim), and one line per board at the end. Each board is sailed by
+## a scripted skipper (Skipper, with a character sheet from Game/race/skippers/) on the beginner
+## PlayerController, the player's own controls, or by the plain Autopilot of 9A holding one wind
+## angle (it starts and sails on at that angle, and does not finish). Use tools/race.sh.
 ##
 ## Arguments after "--":
 ##   --course=test         a small loop made by code (the default): a start line 60 m long, mark 1
@@ -12,54 +13,86 @@ extends SceneTree
 ##   --course=<name>       a course saved by the course maker, by name (t2_slalom, ...)
 ##   --course=<file.json>  a course saved by the course maker (a res:// path, a full path, or a path
 ##                         from the repository's folder), placed with the Silvaplana map's frame
-##   [--boards=1] [--laps=1] [--wind_kt=15] [--seconds=300: race time after the gun]
+##   [--skippers=autopilot] who sails the boards, by name, comma-separated: allrounder, cautious,
+##                         gambler, rookie (the .tres files in Game/race/skippers/), or autopilot.
+##                         The names are dealt round the boards in order.
+##   [--boards=<n>]        how many boards (the default: one per name in --skippers)
+##   [--seed=0]            the skippers' random seed (board i gets seed + i): the same seed, the same race
+##   [--laps=1] [--wind_kt=15] [--seconds=300: race time after the gun]
 ##   [--prestart=10: the countdown, seconds] [--twa=50: the wind angle the autopilot holds]
-##   [--out_dir=<folder>: a CSV per board: race time, x, z, heading, speed and its next step]
+##   [--out_dir=<folder>: a CSV per board: race time, x, z, heading, speed, its next step, and what
+##                         its skipper is doing]
 ##
 ## Every board is the open water's default simulation with its waves, stepped at 1/60 s. The wind
-## blows from the course's axis, so the course is square to it. The boards wait behind the line
-## until SET_OFF_S before the gun, spread across it, then set off for it. After every tick the race
-## is told where the boards are.
+## blows from the course's axis, so the course is square to it. After every tick the race is told
+## where the boards are.
+##
+## Where the boards wait: a skipper sails the whole countdown itself, from RACING_PLAN.md's pre-start
+## spot (RaceCourses.pre_start_spot(), 150 m behind the start line, spread across it, on a beam
+## reach at rest), brought nearer the line for a countdown shorter than a minute, so that it can
+## still get there. An autopilot cannot sail a countdown: it is put back along its approach so that
+## it reaches the line at about the gun, and waits until SET_OFF_S before it.
 
 const DT: float = 1.0 / 60.0
 const MAP_CONFIG_PATH: String = "res://maps/silvaplana/map_config.tres"
-## How far back along its approach a board is put for each second of the countdown, metres: about
-## what a board starting from rest sails in that time in 15 kt (it averaged 4.8 m/s over its first
-## 10 s), so that it reaches the line near the gun. More wind gets it there earlier, less later.
+## How far back along its approach an autopilot board is put for each second of the countdown,
+## metres: about what a board starting from rest sails in that time in 15 kt (it averaged 4.8 m/s
+## over its first 10 s), so that it reaches the line near the gun. More wind gets it there earlier,
+## less later.
 const APPROACH_M_PER_S: float = 4.5
-## The boards are put back as if the countdown were this much longer, seconds: a fixed-angle pilot
-## cannot go back behind the line, so a little late is better than over early.
+## The autopilot boards are put back as if the countdown were this much longer, seconds: a
+## fixed-angle pilot cannot go back behind the line, so a little late is better than over early.
 const START_MARGIN_S: float = 3.0
-## The boards set off this long before the gun, seconds; until then they wait where they were put
-## (their simulations are not stepped). A fixed-angle pilot sailing a long countdown would drift far
-## from the spot it was aimed at. The skippers of 9B sail the pre-start themselves.
+## The autopilot boards set off this long before the gun, seconds; until then they wait where they
+## were put (their simulations are not stepped). A fixed-angle pilot sailing a long countdown would
+## drift far from the spot it was aimed at.
 const SET_OFF_S: float = 10.0
+## A skipper waits 150 m behind the line for a countdown of a minute (RaceCourses.PRE_START_BEHIND_M),
+## and this much less per second of countdown short of that, but never nearer than SKIPPER_NEAREST_M.
+## From 150 m behind the line of T1 (a beat) a skipper needs about 45 s to get to the line.
+const SKIPPER_WAIT_M_PER_S: float = 2.5
+const SKIPPER_NEAREST_M: float = 40.0
 ## A CSV row every this many ticks (0.1 s).
 const CSV_EVERY: int = 6
 
 
-## One board in the race: its simulation, its sailor, and what is counted about it.
+## One board in the race: its simulation, who sails it, and what is counted about it.
 class Entry:
 	var name: String = ""
 	var sim: WindsurferSim
-	var pilot: Autopilot
 	var controls: SimControls
+	## The 9A autopilot (--skippers=autopilot), or null.
+	var pilot: Autopilot = null
+	## A skipper on the beginner controller, with its hands on the controls; null for an autopilot.
+	var skipper: Skipper = null
+	var controller: PlayerController = null
+	var hands: AiHands = null
+	## The race time from which the board is sailed (before it, it waits where it was put).
+	var set_off_s: float = -INF
 	var falls: int = 0
 	var was_fallen: bool = false
+	## The tacks and gybes the controller started.
+	var tacks: int = 0
+	var gybes: int = 0
+	var last_manoeuvre: PlayerController.Manoeuvre = PlayerController.Manoeuvre.NONE
 	var file: FileAccess = null
 
 
 func _initialize() -> void:
 	var options: Dictionary[String, String] = _read_user_args()
-	var boards: int = maxi(options.get("boards", "1").to_int(), 1)
+	var names: PackedStringArray = options.get("skippers", "autopilot").split(",", false)
+	if names.is_empty():
+		names = PackedStringArray(["autopilot"])
+	var boards: int = maxi(options.get("boards", str(names.size())).to_int(), 1)
 	var laps: int = maxi(options.get("laps", "1").to_int(), 1)
 	var wind_kt: float = options.get("wind_kt", "15").to_float()
 	var seconds: float = options.get("seconds", "300").to_float()
 	var prestart_s: float = maxf(options.get("prestart", "10").to_float(), 0.0)
 	var twa_deg: float = options.get("twa", "50").to_float()
+	var random_seed: int = options.get("seed", "0").to_int()
 	var out_dir: String = options.get("out_dir", _repository_path(".sim_output/race"))
 
-	var course: Course = _course(options.get("course", "test"))
+	var course: Course = course_named(options.get("course", "test"))
 	if course == null:
 		quit(2)
 		return
@@ -69,25 +102,22 @@ func _initialize() -> void:
 		return
 	DirAccess.make_dir_recursive_absolute(out_dir)
 
-	var entries: Array[Entry] = []
+	var who: PackedStringArray = PackedStringArray()
 	for i: int in boards:
-		var entry: Entry = _make_board("board%d" % (i + 1), race, course.axis_deg, wind_kt, twa_deg, float(i + 1) / (boards + 1))
-		entry.file = FileAccess.open(out_dir.path_join(entry.name + ".csv"), FileAccess.WRITE)
+		who.append(names[i % names.size()])
+	var entries: Array[Entry] = make_entries(race, course, who, wind_kt, twa_deg, random_seed)
+	if entries.is_empty():
+		quit(2)
+		return
+	for entry: Entry in entries:
+		entry.file = FileAccess.open(out_dir.path_join(_file_name(entry.name) + ".csv"), FileAccess.WRITE)
 		if entry.file != null:
-			entry.file.store_line("race_time_s,x_m,z_m,heading_deg,speed_ms,next_step")
-		race.add_board(entry.name)
-		race.update_board(i, _where(entry))
-		entries.append(entry)
+			entry.file.store_line("race_time_s,x_m,z_m,heading_deg,speed_ms,next_step,doing")
 	race.start()
 
 	var ticks: int = roundi((prestart_s + seconds) / DT)
 	for tick: int in ticks:
-		var set_off: bool = race.clock_s() >= -SET_OFF_S
-		for i: int in entries.size():
-			if set_off:
-				_sail(entries[i])
-			race.update_board(i, _where(entries[i]))
-		race.step(DT)
+		step_race(race, entries)
 		if tick % CSV_EVERY == 0:
 			for i: int in entries.size():
 				_write_row(entries[i], race, i)
@@ -97,20 +127,63 @@ func _initialize() -> void:
 		if entry.file != null:
 			entry.file.close()
 
-	print("Race on %s (%s, %d lap%s, %d steps): wind %.0f kt from %.0f deg, %d board%s at TWA %.0f, pre-start %.0f s" % [
+	print("Race on %s (%s, %d lap%s, %d steps): wind %.0f kt from %.0f deg, %s, seed %d, pre-start %.0f s" % [
 		course.name, course.sequence, laps, "" if laps == 1 else "s", race.steps().size(), wind_kt, course.axis_deg,
-		boards, "" if boards == 1 else "s", twa_deg, prestart_s])
+		", ".join(who) + (" at TWA %.0f" % twa_deg if who.has("autopilot") else ""), random_seed, prestart_s])
 	for result: RaceResult in race.results():
-		print("%s  falls %d" % [result.to_line(), entries[result.index].falls])
+		var entry: Entry = entries[result.index]
+		print("%s  falls %d  tacks %d  gybes %d" % [result.to_line(), entry.falls, entry.tacks, entry.gybes])
 	print("%s at race time %s; CSV files in %s" % [
 		"Finished" if race.phase() == RaceSim.Phase.FINISHED else "Stopped", RaceResult.format_time(race.race_time_s()), out_dir])
 	quit(0)
 
 
-# ---------------------------------------------------------------- the course
+# ---------------------------------------------------------------- the race, for this tool and the tests
 
-## The course to race: the test loop, or a course file.
-func _course(name: String) -> Course:
+## The boards of a race, one per name (a character, or "autopilot"), added to the race in order and
+## placed for its countdown; board i's skipper gets the seed random_seed + i. Empty if a name is
+## not a skipper.
+static func make_entries(race: RaceSim, course: Course, who: PackedStringArray, wind_kt: float, twa_deg: float = 50.0, random_seed: int = 0) -> Array[Entry]:
+	var entries: Array[Entry] = []
+	var used: Dictionary[String, int] = {}
+	for i: int in who.size():
+		var share: float = float(i + 1) / (who.size() + 1)
+		var entry: Entry
+		if who[i] == "autopilot":
+			entry = _make_autopilot_board(race, course.axis_deg, wind_kt, twa_deg, share)
+			entry.name = "board%d" % (i + 1)
+		else:
+			entry = _make_skipper_board(who[i], race, course, wind_kt, share)
+			if entry == null:
+				var none: Array[Entry] = []
+				return none
+			entry.skipper.random_seed = random_seed + i
+			# Two of the same character are told apart by their number.
+			used[entry.name] = used.get(entry.name, 0) + 1
+			if who.count(who[i]) > 1:
+				entry.name = "%s %d" % [entry.name, used[entry.name]]
+		race.add_board(entry.name)
+		race.update_board(i, _where(entry))
+		entries.append(entry)
+	# The skippers look at the whole fleet, so they are set up once every board is in the race.
+	for i: int in entries.size():
+		if entries[i].skipper != null:
+			entries[i].skipper.setup(entries[i].sim, entries[i].controller, entries[i].hands, race, i)
+	return entries
+
+
+## One tick of the race: every board (its sailor, the physics, the falls and the manoeuvres
+## counted), the race told where each one is, and the race clock moved on.
+static func step_race(race: RaceSim, entries: Array[Entry]) -> void:
+	for i: int in entries.size():
+		if race.clock_s() >= entries[i].set_off_s:
+			_sail(entries[i])
+		race.update_board(i, _where(entries[i]))
+	race.step(DT)
+
+
+## The course to race: the test loop, T1, or a course file.
+static func course_named(name: String) -> Course:
 	if name == "test":
 		return _test_course(EnvironmentConfig.new().wind_or_default().from_bearing_deg)
 	# The built-in courses and the team's saved ones, by name (RaceCourses); anything else is a path.
@@ -128,10 +201,12 @@ func _course(name: String) -> Course:
 	return course
 
 
+# ---------------------------------------------------------------- the course
+
 ## The small loop of --course=test, set for a wind direction (where it comes from), with the middle of
 ## its start line at the origin. Drawn in the frame of the course diagrams, as CourseTemplates does:
 ## up toward the wind, right to the right looking upwind.
-func _test_course(axis_deg: float) -> Course:
+static func _test_course(axis_deg: float) -> Course:
 	var course: Course = Course.new()
 	course.name = "the test loop"
 	course.axis_deg = axis_deg
@@ -156,23 +231,55 @@ func _test_course(axis_deg: float) -> Course:
 
 # ---------------------------------------------------------------- the boards
 
-## A board behind the start line at `share` of the way along it (from the pin to the boat), on the
-## tack that points nearer the first leg, far enough back to reach the line at about the gun.
-func _make_board(board_name: String, race: RaceSim, wind_from_deg: float, wind_kt: float, twa_deg: float, share: float) -> Entry:
+## The open water's default simulation with its waves, in a wind of some knots from a direction.
+static func _make_sim(wind_from_deg: float, wind_kt: float) -> WindsurferSim:
+	var sim: WindsurferSim = WindsurferSim.create_default(true)
+	sim.wind_config = sim.wind_config.duplicate()
+	sim.wind_config.speed_kt = wind_kt
+	sim.wind_config.from_bearing_deg = wind_from_deg
+	sim.wind = WindField.new(sim.wind_config)
+	sim.set_waves(true)  # again, so the waves run with the new wind
+	return sim
+
+
+## A skipper's board: at the pre-start spot (brought nearer the line for a short countdown), at
+## `share` of the way across the line's width, on the pre-start's beam reach, at rest. Its skipper
+## drives the beginner controller (auto-sheet on), as the player's board is set up in the game.
+static func _make_skipper_board(skipper_name: String, race: RaceSim, course: Course, wind_kt: float, share: float) -> Entry:
+	var skipper: Skipper = Skippers.make(skipper_name)
+	if skipper == null:
+		return null
 	var entry: Entry = Entry.new()
-	entry.name = board_name
-	entry.sim = WindsurferSim.create_default(true)
-	entry.sim.wind_config = entry.sim.wind_config.duplicate()
-	entry.sim.wind_config.speed_kt = wind_kt
-	entry.sim.wind_config.from_bearing_deg = wind_from_deg
-	entry.sim.wind = WindField.new(entry.sim.wind_config)
-	entry.sim.set_waves(true)  # again, so the waves run with the new wind
+	entry.name = skipper.config.name
+	entry.skipper = skipper
+	entry.sim = _make_sim(course.axis_deg, wind_kt)
+	entry.controller = PlayerController.new()
+	entry.controller.set_sail(entry.sim.sail, entry.sim.sailor_config, entry.sim.air_density_kg_m3)
+	entry.hands = AiHands.new()
+	entry.controller.hands = entry.hands
+	entry.controls = _fresh_controls()
+	var start: RaceStep = race.steps()[0]
+	var behind_m: float = clampf(race.prestart_s * SKIPPER_WAIT_M_PER_S, SKIPPER_NEAREST_M, RaceCourses.PRE_START_BEHIND_M)
+	var along: Vector2 = start.points[0] - start.points[1]
+	var at: Vector2 = RaceCourses.pre_start_spot(course) + start.in_dir * (RaceCourses.PRE_START_BEHIND_M - behind_m) + along * (share - 0.5)
+	entry.sim.reset(Vector3(at.x, 0.0, at.y), deg_to_rad(RaceCourses.pre_start_heading_deg(course)))
+	entry.controller.reset_controls(entry.controls)
+	return entry
+
+
+## A 9A autopilot board behind the start line at `share` of the way along it (from the pin to the
+## boat), on the tack that points nearer the first leg, far enough back to reach the line at about
+## the gun.
+static func _make_autopilot_board(race: RaceSim, wind_from_deg: float, wind_kt: float, twa_deg: float, share: float) -> Entry:
+	var entry: Entry = Entry.new()
+	entry.sim = _make_sim(wind_from_deg, wind_kt)
 	entry.pilot = Autopilot.new()
 	entry.pilot.target_twa_deg = twa_deg
 	entry.pilot.sail = entry.sim.sail
 	entry.pilot.sailor = entry.sim.sailor_config
 	entry.pilot.air_density_kg_m3 = entry.sim.air_density_kg_m3
 	entry.controls = _fresh_controls()
+	entry.set_off_s = -SET_OFF_S
 	# From standstill the pilot sails no closer than bear_away_twa_deg until it has speed, so the
 	# board comes up to the line along that angle: put it back along that line from its spot.
 	var start: RaceStep = race.steps()[0]
@@ -185,9 +292,17 @@ func _make_board(board_name: String, race: RaceSim, wind_from_deg: float, wind_k
 	return entry
 
 
-## One tick of a board: the sailor (while on the board), the physics, and the falls counted.
-func _sail(entry: Entry) -> void:
-	if entry.sim.sailor_state == WindsurferSim.SailorState.SAILING:
+## One tick of a board: the sailor (while on the board), the physics, the falls and the manoeuvres
+## counted.
+static func _sail(entry: Entry) -> void:
+	var sailing: bool = entry.sim.sailor_state == WindsurferSim.SailorState.SAILING
+	if entry.skipper != null:
+		# The skipper keeps watching from the water too (its clock runs, its hands come off).
+		entry.skipper.update(entry.sim.telemetry, DT)
+		if sailing:
+			entry.controller.update(entry.sim.telemetry, entry.controls, DT)
+		_count_manoeuvres(entry)
+	elif sailing:
 		entry.pilot.update(entry.sim.telemetry, entry.controls, DT)
 	entry.sim.step(DT, entry.controls)
 	var fallen: bool = entry.sim.sailor_state == WindsurferSim.SailorState.FALLEN
@@ -195,9 +310,23 @@ func _sail(entry: Entry) -> void:
 		entry.falls += 1
 	elif entry.was_fallen and not fallen:
 		# Up again after the waterstart (the simulation does it after a while): the sail eased, as at
-		# the start.
-		entry.controls = _fresh_controls()
+		# the start, and the controller starts afresh, as the game's board does (windsurfer.gd).
+		if entry.controller != null:
+			entry.controller.reset_controls(entry.controls)
+		else:
+			entry.controls = _fresh_controls()
 	entry.was_fallen = fallen
+
+
+## Counts a tack or a gybe when the controller starts one.
+static func _count_manoeuvres(entry: Entry) -> void:
+	var now: PlayerController.Manoeuvre = entry.controller.manoeuvre
+	if now != entry.last_manoeuvre and entry.last_manoeuvre == PlayerController.Manoeuvre.NONE:
+		if now == PlayerController.Manoeuvre.TACK_HEADING_UP or now == PlayerController.Manoeuvre.TACK_BEARING_AWAY:
+			entry.tacks += 1
+		else:
+			entry.gybes += 1
+	entry.last_manoeuvre = now
 
 
 ## The compass heading that holds a wind angle on the tack that points nearer a bearing. On
@@ -228,7 +357,13 @@ func _write_row(entry: Entry, race: RaceSim, index: int) -> void:
 	if entry.file == null:
 		return
 	var t: Telemetry = entry.sim.telemetry
-	entry.file.store_line("%.2f,%.2f,%.2f,%.1f,%.2f,%d" % [race.clock_s(), t.position.x, t.position.z, t.heading_deg, t.speed_ms, race.next_step_index(index)])
+	var doing: String = entry.skipper.note if entry.skipper != null else "autopilot"
+	entry.file.store_line("%.2f,%.2f,%.2f,%.1f,%.2f,%d,%s" % [race.clock_s(), t.position.x, t.position.z, t.heading_deg, t.speed_ms, race.next_step_index(index), doing.replace(",", ";")])
+
+
+## A board's name as a file name: "All-rounder 2" is all-rounder_2.
+static func _file_name(board_name: String) -> String:
+	return board_name.to_lower().replace(" ", "_")
 
 
 # ---------------------------------------------------------------- arguments and paths

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="SkipperConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://race/skipper_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+name = "All-rounder"
+sail_colour = Color(0.95, 0.55, 0.1, 1)
+upwind_vmg_twa_deg = 45.0
+downwind_vmg_twa_deg = 135.0
+pointing_offset_deg = 0.0
+layline_margin_m = 10.0
+mark_margin_m = 6.0
+max_tacks_per_beat = 4
+reaction_time_s = 0.25
+steering_noise_deg = 0.5
+start_spot = 0.6
+start_timing_error_s = 1.0
+shift_sensitivity_deg = 8.0
+gust_appetite = 0.3
