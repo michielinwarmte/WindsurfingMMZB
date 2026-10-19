@@ -3,7 +3,7 @@
 The live state of U1, "planing on a smaller wet area". The plan and its execution brief are in [PLAYTEST_UPGRADES.md](PLAYTEST_UPGRADES.md). **The lead updates and commits this file after every launch, report and merge.** A lead who takes over starts here.
 
 - **Branch:** `feature/u1-planing-wet-area` (from `main` at 561849c). Agents work on `u1/<name>` branches, made from it in their own worktrees.
-- **Last update:** 19 October 2026. Agent 2 (sources) reported and is merged (4010cc2). Agents 1 and 3 are still running.
+- **Last update:** 19 October 2026. Agents 2 and 3 are merged (4010cc2, 5ad0e35). Agent 1 is still running. **A stop rule fired** (agent 3: a source contradicts a target); see Next action.
 
 ## State
 
@@ -11,7 +11,7 @@ The live state of U1, "planing on a smaller wet area". The plan and its executio
 |---|---|---|---|---|---|
 | 1 | `measure` | baseline, the reach check, U1.1, then U1.4 (flat tail) | running | `u1/measure` | |
 | 2 | `sources` | the four numbers that need a source | merged | `u1/sources` | [sources.md](u1_reports/sources.md) |
-| 3 | `porpoising` | U1.5's diagnosis | running | `u1/porpoising` | |
+| 3 | `porpoising` | U1.5's diagnosis | merged | `u1/porpoising` | [porpoising.md](u1_reports/porpoising.md) |
 | 4 | `physics` | U1.5's fix, U1.2, U1.3 | waits for Stop 1 | `u1/physics` | |
 | 5 | `finish` | U1.6, U1.7, U1.8's screenshots | waits for Stop 2 | `u1/finish` | |
 
@@ -19,13 +19,18 @@ The possible states are: not started → running → reported → merged.
 
 | Stop | State |
 |---|---|
-| Stop 1, the lead: agents 1 to 3 in, the go/no-go for agent 4 | not reached |
+| Stop 1, the lead: agents 1 to 3 in, the go/no-go for agent 4 | **stopped for the team** (stop rule: a source contradicts a target). Waits for agent 1 and the team's decision |
 | Stop 2, Michiel reviews agent 4's physics | not reached |
 | Stop 3, Max's play-test | not reached |
 
 ## Next action
 
-Agents 1, 2 and 3 are running. For each one that reports: read `Documentation/u1_reports/<name>.md` on `u1/<name>`, merge `u1/<name>` into `feature/u1-planing-wet-area`, set its state to merged here, commit. When all three are in, handle Stop 1 (the brief's three conditions), then launch agent 4 with the reports of agents 2 and 3. An agent that was running but has no committed report is relaunched with the brief's prompt and continues on its branch.
+**Stopped for the team at Stop 1.** Agent 3 named the cause of the bounce but also fired the stop rule "a source contradicts a target": Savitsky's porpoising limit for a flat bottom at the target wet length (0.6 to 1.0 m, 13 to 16 m/s) is a trim of 0.9 to 2.2°, so most of target 4's trim band (1.5 to 4°) cannot be steady (target 2). Agent 4 is **not** launched until the team picks one of agent 3's options:
+1. a sourced tail vee (deadrise), with its steadying effect added to the hull model (the current flat strips ignore it: 10° of deadrise still bounces);
+2. a trim target below Savitsky's limit (about 1 to 2° instead of 1.5 to 4°);
+3. sailor damping as technique (the pitch reflex already halves the bounce).
+
+Meanwhile: when agent 1 reports, merge `u1/measure`, check that its reach check reproduces the baseline and nothing regressed, and write the baseline into Numbers. Then wait for the team. When the team has chosen, update the brief's target 4 (and the hull-model scope if option 1), set Stop 1 to passed, and launch agent 4 with the reports of agents 2 and 3 and the team's choice.
 
 ## Numbers
 
@@ -40,6 +45,8 @@ Agents 1, 2 and 3 are running. For each one that reports: read `Documentation/u1
 ## Notes
 
 Decisions and surprises along the way, newest first.
+
+- 19 October 2026 (agent 3): the 1.8 Hz bounce is plain porpoising (Day & Haag 1952, Savitsky 1964): the board bounces once its trim rises above Savitsky's critical trim for its load, within about 0.2° of the limit at 12, 18 and 24 kt. The mast-foot load only keeps the trim just under it (0.97° against 1.25° on the 18 kt reach). Not the cause: legs, trim press, steering, grid, substeps, spray-root cap, tail kick. The pitch reflex damps it; freezing the sailor or adding lift lag makes it worse. **Stop rule fired:** targets 2 (steady) and 4 (trim 1.5 to 4°) conflict for a flat bottom.
 
 - 19 October 2026 (agent 2): all four numbers are in PHYSICS_SPEC.md section 14 ("U1: the harness, the feet and the rail angle"). Only the harness tension is measured (Walls & Gale: 4.9 N/kg, so 368 N for the 75 kg sailor, inside the 350 to 480 N target). The rest are labelled estimates. **Item 3, the flat-water rail-down angle, was not found anywhere: the 3 to 6° in the spec is a placeholder, and Max should give his own estimate.** Hint for agent 4: a real harness line hangs the hips only 0.30 to 0.40 m from the boom; a much longer centre-of-mass-to-grip line may be part of the 945 N.
 - 19 October 2026 (lead): an agent's worktree starts at `main` (561849c), not at the U1 branch head. Agents must make `u1/<name>` from `feature/u1-planing-wet-area` explicitly; agent 2 did.
