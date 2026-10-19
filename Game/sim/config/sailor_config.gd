@@ -213,6 +213,16 @@ extends Resource
 @export var carve_rate_dps: float = 57.0
 @export var bank_max_deg: float = 30.0
 @export var bank_rate_dps: float = 12.0
+## Loading the fin (U1.6): planing and hooked in, the sailor pushes on the rail and lets
+## the board heel a little away from them, the leeward rail down. The fin then meets the
+## water tilted, so its sideways push also lifts the board. This many degrees of leeward
+## heel at full hike and in the back straps (the planing stance), less in proportion to
+## either, and none while the controls ask for a turn. The sailor banks only by what the
+## heel does not give already. No source gives the angle: 3 to 6 degrees is an estimate
+## from "a few degrees of heel" (Sutherland 1993; PHYSICS_SPEC.md section 14, "U1: the
+## harness, the feet and the rail angle"); 4.5 is its middle, until Max gives his own.
+## Too much and the board rails out (between 21 and 24 degrees on the 18 kt beam reach).
+@export var fin_load_bank_deg: float = 4.5
 ## The sailor leans against the pull in the hands: this many times the lean that balances
 ## the hands' moment about the feet with the body's weight (1 = exactly in balance). The
 ## posture is held in the apparent gravity (gravity less the body's own felt acceleration,

@@ -40,6 +40,17 @@ var _rake_trim: float = 0.0
 ## default: holding a course is done with the rig and a flat board; a planing board carves
 ## hard on a few degrees of bank, so a rail used for every small correction rocks it.
 var lean_share: float = 0.0
+## How the steady part of the course hold is carried (U1.6). Off (the default): the helm moves
+## the rake and the rig's sideways tilt together (Helm.steer), so the heading-up helm a
+## planing reach needs also tilts the rig to leeward: on the 18 kt beam reach it leans 8
+## degrees to windward where the hike asks 25. On: the rake carries the helm up to its stop
+## and the tilt only the rest and the quick corrections (Helm.hold_rake_first); the rig then
+## leans 23 to 25 degrees on the close and beam reaches, as hooked-in sailors lean it (10 to
+## 25), with the rake at its 25 degree stop on the beam reaches. Off for now: raked back
+## that far, the arms' forward pull makes the feet press the bow down harder (U1.3), the
+## trim drops (1.8 to 0.7 degrees on the 12 kt beam reach) and the 18 kt broad reach rocks
+## (PHYSICS_SPEC.md section 10, "U1.6").
+var trim_with_rake_first: bool = false
 ## How fast the sailor moves the rig and the sheet (units per second).
 var rake_rate_per_s: float = 3.0
 var sheet_rate_per_s: float = 1.5
@@ -167,13 +178,19 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		# bearing away, on port tack it is heading up: turn it into "rate of heading up".
 		var heading_up_rate: float = -telemetry.yaw_rate_dps * signf(telemetry.twa_deg) if telemetry.twa_deg != 0.0 else 0.0
 		# The trim only accumulates while the helm is not already at its stop (no wind-up).
-		if absf(_rake_trim + rake_gain_per_deg * error_deg) < 1.0:
-			_rake_trim = clampf(_rake_trim + rake_trim_per_deg_s * error_deg * dt, -0.8, 0.8)
-		var head_up: float = clampf(_rake_trim + rake_gain_per_deg * error_deg - rake_yaw_damping * heading_up_rate, -1.0, 1.0)
+		# Rake first, the helm runs to 2: the rake's full range, then the tilt's.
+		var helm_span: float = 2.0 if trim_with_rake_first else 1.0
+		if absf(_rake_trim + rake_gain_per_deg * error_deg) < helm_span:
+			_rake_trim = clampf(_rake_trim + rake_trim_per_deg_s * error_deg * dt, -0.8 * helm_span, 0.8 * helm_span)
+		var correction: float = rake_gain_per_deg * error_deg - rake_yaw_damping * heading_up_rate
+		var head_up: float = clampf(_rake_trim + correction, -helm_span, helm_span)
 		_hold_turn_right = signf(head_up) * tack if absf(head_up) > 0.1 else 0.0
 		# Heading up is a right turn on starboard tack and a left turn on port tack.
 		var pivot: bool = Helm.pivoting(telemetry, controls, 30.0)
-		Helm.steer(controls, head_up * tack, tack, 0.0 if pivot else lean_share, dt, rake_rate_per_s, 0.0 if pivot else 1.0)
+		if trim_with_rake_first and not pivot:
+			Helm.hold_rake_first(controls, head_up, correction, tack, lean_share, dt, rake_rate_per_s)
+		else:
+			Helm.steer(controls, clampf(head_up, -1.0, 1.0) * tack, tack, 0.0 if pivot else lean_share, dt, rake_rate_per_s, 0.0 if pivot else 1.0)
 	if trim_sheet:
 		_feel_the_pull(telemetry, dt)
 		var alpha_deg: float = minf(best_alpha_deg(deg_to_rad(telemetry.awa_deg)), max_alpha_deg)

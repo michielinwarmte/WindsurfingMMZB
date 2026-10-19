@@ -74,6 +74,11 @@ var _fall_lift_ms2: float = 0.0
 var _felt_acceleration_world: Vector3 = Vector3.ZERO
 ## The bank the sailor is working toward (rad, positive = starboard rail down).
 var _wanted_bank_rad: float = 0.0
+## How far the board heels beyond that bank, away from the sailor, felt over
+## lean_feel_time_s (rad, positive = further down on the side away from the sailor). The
+## feet hold the bank softly, so a hiked sailor's weight heels a powered board a few
+## degrees past it; loading the fin only adds what is missing (_fin_load_bank_rad).
+var _felt_heel_beyond_rad: float = 0.0
 ## Which side the sailor and rig fell to (+1 starboard, -1 port), what kind of fall it
 ## was ("catapult" to leeward, "fell back" to windward), and for how long.
 var fall_side: int = 0
@@ -237,6 +242,7 @@ func reset(origin_xz: Vector3, heading_rad: float) -> void:
 	_fall_lift_ms2 = 0.0
 	_felt_acceleration_world = Vector3.ZERO
 	_wanted_bank_rad = 0.0
+	_felt_heel_beyond_rad = 0.0
 	_rig_lean_now_rad = 0.0
 	stance = 0.0
 	body_stance = 0.0
@@ -411,6 +417,7 @@ func waterstart() -> void:
 	_fall_lift_ms2 = 0.0
 	_felt_acceleration_world = Vector3.ZERO
 	_wanted_bank_rad = 0.0
+	_felt_heel_beyond_rad = 0.0
 	_rig_lean_now_rad = 0.0
 	var origin: Vector3 = body.origin_world()
 	var heading_rad: float = wind.current_from_bearing_rad - _tack_before_fall * PI / 2.0
@@ -488,6 +495,28 @@ func _bank_for_turn(lean_asked: float, forward_speed: float) -> float:
 	var bank: float = atan2(maxf(forward_speed, 0.0) * turn_rate, sim_config.gravity_ms2)
 	var limit: float = deg_to_rad(sailor_config.bank_max_deg)
 	return clampf(bank, -limit, limit)
+
+
+## Loading the fin (SailorConfig.fin_load_bank_deg): a sailor in the back straps (the
+## stance, which goes there with the planing speed) who hangs out to one side lets the board
+## heel the other way, the leeward rail down, by up to that angle times the hike, and not
+## while the controls ask for a turn (that bank is the turn's). The angle is the board's
+## heel, as seen on the water: the sailor banks only by what the heel beyond the bank does
+## not give already (a powered board on a beam reach already heels about 5 degrees). The
+## lean is positive with the weight out to starboard, so the bank is to port: negative.
+func _fin_load_bank_rad(asked: float) -> float:
+	var in_the_straps: float = clampf(stance, 0.0, 1.0)
+	var not_turning: float = 1.0 - clampf(absf(asked), 0.0, 1.0)
+	var aim: float = deg_to_rad(sailor_config.fin_load_bank_deg) * absf(clampf(lean, -1.0, 1.0)) * in_the_straps * not_turning
+	return -signf(lean) * clampf(aim - _felt_heel_beyond_rad, 0.0, aim)
+
+
+## Feels how far the board heels past the bank the sailor works toward, on the side away
+## from the sailor (_felt_heel_beyond_rad).
+func _feel_the_rail(dt: float) -> void:
+	var away: float = -signf(lean)
+	var beyond: float = (SimMath.heel_rad(body.basis) - _wanted_bank_rad) * away
+	_felt_heel_beyond_rad = lerpf(_felt_heel_beyond_rad, beyond, clampf(dt / sailor_config.lean_feel_time_s, 0.0, 1.0))
 
 
 ## The heel the sailor feels: the board's heel less the bank that the turn asks for. In a
@@ -662,7 +691,8 @@ func _update_sailor(dt: float, controls: SimControls) -> void:
 	rail_press = move_toward(rail_press, asked, sailor_config.rail_press_rate_per_s * dt)
 	var lean_target: float = asked
 	if controls.balance_reflex:
-		var bank_target: float = _bank_for_turn(asked, forward_speed)
+		_feel_the_rail(dt)
+		var bank_target: float = _bank_for_turn(asked, forward_speed) + _fin_load_bank_rad(asked)
 		_wanted_bank_rad = move_toward(_wanted_bank_rad, bank_target, deg_to_rad(sailor_config.bank_rate_dps) * dt)
 		# The sailor leans against the pull in the hands: the hands' moment about the feet
 		# (positive = the body is being pulled over to port) is answered by moving the
