@@ -6024,6 +6024,38 @@ Validation tests (Phase 4, slow, `tests/validation/`):
 - `test_rest_submersion.gd` (may live in unit tests): the Archimedes check above, plus righting from 20 deg of heel.
 - `test_acceleration.gd` and `test_head_to_wind.gd`: the time limits in the table.
 
+### U1: the harness, the feet and the rail angle (sources found 19 October 2026)
+
+The numbers U1 still needed a source for (PLAYTEST_UPGRADES.md, "Numbers that still need a source"). Reliability as in U1's table: **measured**, **theory**, **expert**, and **estimate** (worked out here from the sources named). None of them is in a config file yet: agent 4 (U1.2, U1.3) and agent 5 (U1.6) decide what to use.
+
+| What | Number | Reliability | Source, or how it was worked out |
+|---|---|---|---|
+| Where the hook sits on the body | waist harness: just below the navel (men); seat harness: about 7.5 cm (3 in) lower, by the hip joints. As a share of the height about 0.53 to 0.58 H: 0.93 to 1.0 m from the soles of a 1.75 m sailor | expert; the share is an estimate | [H1], [H2]; the hip joints at 0.530 H (Winter 2009, as in `figure_skeleton.gd`) |
+| The hook and the centre of mass | within a few centimetres of each other along the body: the centre of mass is at 0.55 to 0.57 H | theory | Winter 2009; [S2] (0.57 H, after Luciani 1913). Hanging the line from the centre of mass (7.5) is a fair model |
+| The body's angle when hiked (a straight line from the feet to the hips) | full hike: at least 20 to 30° above the horizontal; a "normal" stance: about 45° | theory, from photographs | [S2] §6.1; [S1] §4.1.2 |
+| The hook's height above the deck | full hike: 0.30 to 0.50 m; normal stance: 0.65 to 0.70 m | estimate | the two rows above: 0.93 to 1.0 m × sin 20 to 30°, and × sin 45°. Sutherland's own stance (centre of mass 1.1 m from the feet) gives 0.78 m. The simulation's centre of mass is 0.5 m above the deck at full lean (`com_height_m` 1.0 − `lean_height_drop_m` 0.5): the high end of a full hike |
+| The harness line's length (the loop) | 22 to 32 in (0.56 to 0.81 m), longer for taller sailors and bigger sails: 28 to 29 in for a 1.78 m sailor, up to 32 in above 1.83 m (Guy Cribb's rule, as quoted) | expert | [H2], [H3]; the fitting rule: from the elbow to the palm, the line tensioned [H1] |
+| The hook's distance from the boom, line tight | 0.30 to 0.40 m | estimate | half the loop (its two ends at most a hand's width apart on the boom [H1]); the elbow-to-palm rule gives 0.32 to 0.35 m for 1.75 m (forearm 0.146 H plus about half a hand). `figure_skeleton.gd` uses 0.4 m. So the hips hang within about 0.4 m of the boom: a line from the centre of mass to the grip much longer than that puts the hips further from the boom than a real harness allows (U1.2 checks this) |
+| The line's angle | not found | - | it follows from where the hook and the boom are (the two rows above), so no number of its own is needed |
+| How hard the front foot can pull up in its strap | 150 to 250 N held, up to about 400 N briefly | estimate from measured strength | the hip flexors: 417 to 464 N measured just above the knee in adult male footballers [F1] (38.5 % of the body weight in young women [F2]), about half of that at the foot, which is twice as far from the hip. Dinghy hiking straps (the insteps pulling up on a strap, both legs): 430 N falling to 285 N over 10 min [F3], peaks of 843 N [F4], so 140 to 420 N per leg. No measured windsurf footstrap force was found |
+| The nose-up couple the feet can make | 60 to 100 N·m held, up to about 170 N·m briefly | estimate | the pull above times the strap spread, 0.38 to 0.44 m (Jem Hall, U1's source 10), with the back foot pressing down by as much more |
+| The flat-water rail-down angle (loading the fin) | not found. Estimate: 3 to 6° of leeward rail down | estimate; Max to give his own | the board is "generally 'railed' slightly (ie. sailed with a few degrees of heel)" ([S1] p. 64, there for the board's own share of the side force); the windward rail "level or fractionally higher than the leeward rail" ([H4], 2014). The game's board already sails 3.6° leeward rail down (U1.6) |
+| Harness tension in other winds and sails | one study only: 4.9 N/kg (half the body weight) on average over 12 to 30 kn, with 6.5 m² in the lighter and 5.0 m² in the stronger winds (381.6 ± 43.2 N and 415.0 ± 66.7 N); "downsizing sail area ... maintains harness force within a manageable range". For a 75 kg sailor, 4.9 N/kg is 368 N | measured (one expert sailor) | [W1] |
+| The same with the game's one 6.5 m² sail | 12 kt, planing and hooked in: 250 to 400 N; 24 kt: 400 to 500 N | estimate | the tension stays near half the weight while the sail suits the wind [W1]; overpowered, the hiked sailor's righting moment is the limit when planing ([S2] §6.5), so the sailor eases the sheet rather than hanging harder |
+
+Sources for this table (read on 19 October 2026):
+- [S1] Sutherland, L.S. (1993), *Windsurfer Fin Hydrodynamics*, MSc thesis, Southampton (U1's source 1): pp. 11 to 12 (§4.1.2, the stance), p. 64 (§8.3.3, railing).
+- [S2] Gourlay, T. & Martellotta, J. (2011), *Aero-Hydrodynamics of an RS:X Olympic Racing Sailboard*, CMST 2011-02 (U1's source 2): §6.1 (the sailor), §6.5 (the heeling moments).
+- [W1] Walls, J.T. & Gale, T.J. (2001), "A technique for the assessment of sailboard harness line force", *J Sci Med Sport* 4(3), 348–356, doi:10.1016/s1440-2440(01)80043-8 (the abstract, PubMed 11702921; the full text is restricted).
+- [H1] boards.co.uk, "Getting going in the harness": https://boards.co.uk/technique/getting-going-in-the-harness.html
+- [H2] seabreeze.com.au forum, "Harness lines length quandary" (2016): https://www.seabreeze.com.au/forums/Windsurfing/General/Harness-lines-length-quandary
+- [H3] howtowindsurf101, "How to set up the harness lines": https://howtowindsurf101.com/how-to-set-up-the-harness-lines/
+- [H4] seabreeze.com.au forum, "Starboard 107 advice" (2014): https://www.seabreeze.com.au/forums/Windsurfing/General/Starboard-107-advice
+- [F1] Hanna, C.M., Fulcher, M.L., Elley, C.R. & Moyes, S.A. (2010), "Normative values of hip strength in adult male association football players assessed by handheld dynamometry", *J Sci Med Sport* 13(3), 299–303 (PubMed 19574097).
+- [F2] Alvarenga, G. et al. (2017), "Normative values for isometric hip muscle force assessed by hand-held dynamometry", WCPT Congress 2017: https://world.physio/congress-proceeding/normative-values-isometric-hip-muscle-force-assessed-hand-held-dynamometry
+- [F3] Buchardt, R., Bay, J., Bojsen-Møller, J. & Nordsborg, N.B. (2017), "Hiking strap force decreases during sustained upwind sailing", *Eur J Sport Sci* 17(4), 393–399 (PubMed 28038503).
+- [F4] Mackie, H.W. & Legg, S.J. (1999), "Preliminary assessment of force demands in Laser racing", *J Sci Med Sport* 2(1), 78–85: https://sponet.de/sponet/Record/4004778
+
 ### Sources
 
 Legacy code (all under `Legacy/WindsurfingGame/Assets/`):
