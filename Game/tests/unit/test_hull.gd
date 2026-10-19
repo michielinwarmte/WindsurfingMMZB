@@ -529,3 +529,35 @@ func test_a_wider_tail_needs_less_thrust_over_the_hump() -> void:
 	var wide_hump: float = _hump_resistance_n(wide)
 	gut.p("hump resistance 3 to 5 m/s: tail 0.40 m %.0f N, tail 0.50 m %.0f N" % [narrow_hump, wide_hump])
 	assert_lt(wide_hump, 0.9 * narrow_hump, "the wide tail needs at least 10 %% less thrust (%.0f against %.0f N)" % [wide_hump, narrow_hump])
+
+
+## The flat plate of the Savitsky test at a forward speed, its transom 7.5 cm deep, with a
+## given planing_buoyancy_factor.
+func _plate_with_buoyancy_factor(speed_ms: float, factor: float) -> Array:
+	var board: BoardConfig = _flat_board()
+	board.planing_buoyancy_factor = factor
+	var buoyancy: BuoyancyModel = BuoyancyModel.new(board, _water())
+	var hull: HullModel = HullModel.new(board, _water())
+	var body: SimRigidBody = _trimmed_body(speed_ms, 4.0)
+	var transom_local: Vector3 = Vector3(0.0, -0.5 * board.thickness_m, 0.5 * board.length_m)
+	body.position.y -= body.point_world(transom_local).y + 0.075
+	_evaluate(hull, buoyancy, body)
+	return [hull, buoyancy]
+
+
+func test_a_planing_bottom_keeps_only_its_share_of_the_buoyancy() -> void:
+	# Default (factor 1): Archimedes at every speed, nothing taken away.
+	var archimedes: Array = _plate_with_buoyancy_factor(7.0, 1.0)
+	assert_eq((archimedes[0] as HullModel).buoyancy_correction_n, 0.0, "the default keeps Archimedes")
+	# Shuford's half (Zarnick 1978): none of it below the semi-displacement range (Froude
+	# 0.4 on the 2.4 m hull is 1.94 m/s), all of it once planing (Froude 1.0, 4.85 m/s),
+	# half of it half-way.
+	var slow: Array = _plate_with_buoyancy_factor(1.5, 0.5)
+	assert_eq((slow[0] as HullModel).buoyancy_correction_n, 0.0, "a displacement hull floats on Archimedes")
+	var planing: Array = _plate_with_buoyancy_factor(7.0, 0.5)
+	var grid_n: float = (planing[1] as BuoyancyModel).buoyancy_force_n
+	assert_almost_eq((planing[0] as HullModel).buoyancy_correction_n, 0.5 * grid_n, 1e-6 * grid_n, "a planing bottom keeps half")
+	var middle_ms: float = 0.7 * sqrt(G * 2.4) / cos(deg_to_rad(4.0))  # along the keel
+	var middle: Array = _plate_with_buoyancy_factor(middle_ms, 0.5)
+	var middle_grid_n: float = (middle[1] as BuoyancyModel).buoyancy_force_n
+	assert_almost_eq((middle[0] as HullModel).buoyancy_correction_n, 0.25 * middle_grid_n, 1e-3 * middle_grid_n, "half of the loss at Froude 0.7")

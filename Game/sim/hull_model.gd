@@ -39,6 +39,13 @@ const RAIL_ENGAGE_DEG: float = 3.0
 ## ...where it is 1.0 to 1.3 times the dynamic pressure of the flow on the edge's wetted
 ## area, for every trim and yaw tested (figure 27; "Ce' lies between 1.0 and 1.3").
 const RAIL_FORCE_COEFFICIENT: float = 1.15
+## The semi-displacement range on the hull's length (Faltinsen 2005, chapter 1): below a
+## Froude number of about 0.4 the buoyancy carries the weight, above 1.0 to 1.2 the
+## water's dynamic pressure does. A planing bottom's smaller buoyancy
+## (BoardConfig.planing_buoyancy_factor) is phased in between the two; the shape of the
+## phase-in is an estimate.
+const FROUDE_DISPLACEMENT: float = 0.4
+const FROUDE_PLANING: float = 1.0
 
 var board: BoardConfig
 var water: WaterConfig
@@ -81,6 +88,9 @@ var sway_added_mass_kg: float = 0.0
 ## The same water about the yaw axis through the centre of mass (each strip's sway added
 ## mass times its lever squared): about 3 kg m2 at rest, next to nothing when planing.
 var yaw_added_inertia_kgm2: float = 0.0
+## The buoyancy a planing bottom does not get (BoardConfig.planing_buoyancy_factor), pushed
+## down at the centre of buoyancy; zero at the default factor of 1.
+var buoyancy_correction_n: float = 0.0
 var spray_root_factor: float = 1.0  # unsteady lift factor from the spray root running along the hull
 var lambda_ratio: float = 0.0
 var froude_number: float = 0.0
@@ -170,6 +180,9 @@ func compute(body: SimRigidBody, buoyancy: BuoyancyModel, surface: WaterSurface,
 
 	# 4. Dynamic lift of the planing surface.
 	_apply_planing_lift(body, buoyancy, span[0], span[1], surface, time_s, gravity_ms2, total_mass_kg, rho, dt)
+
+	# 4b. The buoyancy a planing bottom does not get (off at the default factor of 1).
+	_apply_planing_buoyancy(body, buoyancy, surface, time_s, gravity_ms2)
 
 	# 5. A nose under water meets the water face-on.
 	_apply_bow_drag(body, buoyancy, surface, time_s, rho)
@@ -397,6 +410,25 @@ func _apply_planing_lift(body: SimRigidBody, buoyancy: BuoyancyModel, aft: float
 	if planing_normal_force_n > 0.0:
 		cop_local = SimMath.to_body(body.basis, weighted_position / planing_normal_force_n - body.origin_world())
 	planing_ratio = clampf(planing_lift_n / (total_mass_kg * gravity_ms2), 0.0, 1.0)
+
+
+## At planing speed the water leaves the transom and the rails clear of the bottom, so the
+## pressure there is the air's instead of the weight of the water above it: the bottom gets
+## only part of the buoyancy the still-water grid gives it (Shuford 1958, Zarnick 1978;
+## BoardConfig.planing_buoyancy_factor). What it keeps acts where the grid's buoyancy acts:
+## the dynamic term at 0.75 of the wet length and the buoyant term at one third (the
+## centroid of the wet wedge) reproduce Savitsky's (1964) centre of pressure exactly. The
+## loss is phased in across the semi-displacement range, where the dynamic lift takes the
+## weight over from the buoyancy (Faltinsen 2005).
+func _apply_planing_buoyancy(body: SimRigidBody, buoyancy: BuoyancyModel, surface: WaterSurface, time_s: float, gravity_ms2: float) -> void:
+	var lost_share: float = 1.0 - board.planing_buoyancy_factor
+	if lost_share <= 0.0 or forward_speed_ms <= 0.0 or buoyancy.buoyancy_force_n <= 0.0:
+		return
+	var froude_on_length: float = forward_speed_ms / sqrt(gravity_ms2 * board.length_m)
+	var planing: float = smoothstep(FROUDE_DISPLACEMENT, FROUDE_PLANING, froude_on_length)
+	buoyancy_correction_n = lost_share * planing * buoyancy.buoyancy_force_n
+	var centre: Vector3 = buoyancy.centre_of_buoyancy_world
+	body.add_force_at(centre, -surface.normal_at(centre.x, centre.z, time_s) * buoyancy_correction_n)
 
 
 ## When the deck at the bow goes under (a nose dive, a wave over the nose), the water
@@ -732,6 +764,7 @@ func _clear() -> void:
 	sway_added_mass_kg = 0.0
 	yaw_added_inertia_kgm2 = 0.0
 	spray_root_factor = 1.0
+	buoyancy_correction_n = 0.0
 	chine_dry_length_m = 0.0
 	lambda_ratio = 0.0
 	froude_number = 0.0
