@@ -15,7 +15,7 @@ Max asked for three things on 19 October 2026: races with AI opponents; opponent
 
 | Part | What | Status |
 |---|---|---|
-| 9A | A race you can sail alone: the course on the water, the start, the rounding, the clock, the results | ⬜ |
+| 9A | A race you can sail alone: the course on the water, the start, the rounding, the clock, the results | 🔶 Started (Session 50): agents `race_core`, `course_on_water`, `fit_to_water` launched, up to the two training courses (Max's instruction); state in [P9_PROGRESS.md](P9_PROGRESS.md) |
 | 9B | Scripted skippers: three opponents with their own characters, built on the Phase 4 autopilot | ⬜ |
 | 9C | The learning harness: the race as a training environment, the bridge to Python, the first learned skipper on course T1 | ⬜ |
 | 9D | Learned skippers in the game: the curriculum T1 to T2, personalities, evaluation | ⬜ |
@@ -59,7 +59,7 @@ Version one has no right-of-way rules and no protests. A board over the line ear
 A weaker skipper has worse numbers in its character sheet (a longer reaction time, a noisier helm, a bigger margin), or is an earlier checkpoint of a learned one. Nobody gets a lighter board or more wind.
 
 ### RD8. Branches and the physics track
-9A and 9B are built on `feature/p9-racing` from `main` now: they do not depend on the U1/U2 physics. Training (9C, 9D) waits until U1 and U2 are merged, because a brain is trained against one physics and must be retrained when it changes. The few additions to `Game/sim/` that racing needs are small and go past Michiel: a way to step one shared wind field once per tick instead of once per board, and a contact force for collisions (section "What racing asks of the physics").
+9A and 9B are built on `feature/p9-racing` from `feature/u2-fin` (Max's decision on 19 October 2026 to build now: that branch carries U1 and U2, which Max plays on, and this plan; the pull requests go in the order U1, U2, P9). They do not depend on the U1/U2 physics. Training (9C, 9D) waits until U1 and U2 are merged, because a brain is trained against one physics and must be retrained when it changes. The few additions to `Game/sim/` that racing needs are small and go past Michiel: a way to step one shared wind field once per tick instead of once per board, and a contact force for collisions (section "What racing asks of the physics").
 
 ## The two courses
 
@@ -74,6 +74,7 @@ A weaker skipper has worse numbers in its character sheet (a longer reaction tim
 
 - The sprint slalom (template PD3, also the iQFOiL medal race MR2): a reaching start to mark 1 600 m from the pin, a 830 m run to mark 2, two 400 m slalom legs with 25° between them, the finish. Placed by Max in the course maker in the main basin, square to the lake's 14:30 wind, and saved as the team's course `t2_slalom`; the plan's code loads it by name. If it does not fit, Max scales it (80 % is fine).
 - The map's wind of the day with its moving gusts and the lee of the shore, thin air, fresh water (the lake scene as it is).
+- **Placed to fit the water.** Max, 19 October 2026: a template placed by code would land on the shore. So a course placed by code, and the course maker on request, fits itself to the lake: every mark at least 200 m from the shore, every leg over water with 50 m of clearance, found by trying the class's size first and then smaller (down to 40 %), the wind's axis first and then up to 15° off it, over every spot on the lake; the largest course that fits, closest to the wind, nearest the preferred spot, wins (`CourseFitter`). The fitted T2 is saved as `t2_slalom.json`, so the game loads it instead of fitting at startup.
 - Why: gybes at speed round marks, gusts worth hunting, a shore to stay off. It is the iQFOiL race the game was always meant to have ("slalom racing against AI opponents", the rebuild plan's "What we are building").
 
 ### Any saved course
@@ -207,6 +208,7 @@ Small, and none of it changes how a board sails:
 - [ ] `Game/race/`: `RaceSim` (the race state machine: pre-start, countdown, racing, finished; the boards' progress through the course's steps; the clock and the splits; OCS), `RoundingCheck` (the geometry above), `RaceResult`. Plain classes, no nodes, so a race can run headless. Tests: every rounding case (port and starboard, 180° and 25° turns, the wrong side, a gate from either end, a line crossed backwards, the start before and after the gun, OCS and clearing it), the clock and the splits, the finish order, two boards finishing in the same tick.
 - [ ] The course on the water (`CourseOnWater`, a node): buoys (an orange inflatable shape, floating on the wave height, with a small flag), the committee and finish boats (simple hulls with the Phase 7 flag), optionally a faint line on the water between a line's ends (a setting, off by default; the mini-map always shows the lines). Built from a `Course` in both the open-water and the lake scene.
 - [ ] Built-in courses: `t1_loop` placed by code from the LG2 template at 30 % and set to the scene's wind; `t2_slalom` loaded from the course maker's save (Max places it; until then the code places a PD3 at the lake's start as a stand-in). Any saved course by name. The course file gets its optional "game metres" frame for the open water (RD5).
+- [ ] `CourseFitter` (`Game/maps/course/course_fitter.gd`): a shore-clearance field from the lake's 2 m grid, the fit search (size, axis, position) with marks 200 m and legs 50 m off the shore, a "Fit to water" button in the course maker, and `tools/fit_courses.sh`, which writes `t2_slalom.json`. Tests: every fitted mark is 200 m from land when checked independently on a ring of samples; an impossible fit says why.
 - [ ] The race in the scene: `main.gd` and `sail_silvaplana.gd` get a race mode (`--race=<course> --laps=2 --prestart=60`): the board is placed behind the line, the autopilot sails the pre-start until a key is touched, the countdown runs, the HUD shows the race, the results page opens at the end.
 - [ ] The start menu gets **Race**: course (the built-in two and the saved ones), wind (the open water's settings, or the lake's time of day), laps, pre-start time, opponents (none yet: the list is there, empty, for 9B). The pause menu gets "Restart race" and "Leave race". The settings are saved like the others.
 - [ ] The HUD as described above; the mini-map's course-centred mode for the open water; the countdown sounds and the gun in `Game/audio/`.
@@ -299,6 +301,7 @@ For the lead who builds Phase 9. The live state goes in [P9_PROGRESS.md](P9_PROG
 |---|---|---|---|
 | 9A | `race_core` | RaceSim, RoundingCheck, RaceResult, the tests, tools/race.sh | `Game/race/` (new), `Game/dev/run_race.gd`, `tools/race.sh`, its tests |
 | 9A | `course_on_water` | buoys, boats, lines, the course in both scenes, t1 by code, the course file's game frame, the mini-map's course mode | `Game/race/course_on_water.gd`, `Game/maps/course/course.gd` (the frame only), `Game/ui/mini_map.gd`, the scenes' race hook |
+| 9A | `fit_to_water` | CourseFitter, the clearance field, the Fit to water button, tools/fit_courses.sh, t2_slalom.json | `Game/maps/course/course_fitter.gd`, the editor and panel (the button), `Game/dev/fit_courses.gd`, `tools/fit_courses.sh`, `Game/maps/silvaplana/courses/`, its tests |
 | 9A | `race_ui` | the Race menu page, the HUD's race items, the results page, the countdown sounds, the pause menu's items | `Game/ui/`, `Game/audio/`, `Game/main.gd` and `sail_silvaplana.gd` (race mode) |
 | 9B | `skipper` | Skipper, SkipperConfig, the polar resource, the four characters, the tests at 12/18/24 kt | `Game/race/skipper*.gd`, `Game/race/skippers/`, its tests |
 | 9B | `fleet` | opponents in the scene, colours and labels, collisions (with Michiel's contact force), the performance measurement and the threads if needed, race_matrix.sh | `Game/race/`, `Game/windsurfer/` (colour and label only), `tools/race_matrix.sh` |
