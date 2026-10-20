@@ -16,6 +16,12 @@ var sheet: float = 0.0
 ## A tack or gybe asked for (the player's Space). The controller takes it on its next update
 ## and clears it, so one request is one manoeuvre.
 var tack: bool = false
+## The hold-back skill before a start (AI_FLEET_PLAN.md, D1 and D4): a wanted speed, m/s. Above
+## 0 the controller eases the sheet until the board sails no faster than this, and sheets in
+## again below it, so the board slows without stopping and keeps steerage (the skipper luffs up
+## at the same time: it owns the heading). 0 lets the auto-sheet trim for the most drive again,
+## which is how the board accelerates for the gun.
+var hold_speed_ms: float = 0.0
 
 
 ## What the controller reads for a key pair: the stick value for the pairs a skipper has, 0

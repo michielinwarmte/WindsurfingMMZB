@@ -24,8 +24,17 @@ extends SceneTree
 ##   [--seconds: the longest race time after the gun: 1200 with skippers, 300 with only autopilots]
 ##   [--prestart: the countdown, seconds: 60 (the game's) with skippers, 10 with only autopilots]
 ##   [--twa=50: the wind angle the autopilot holds]
+##   [--spawn=line]        where the skippers' boards appear: line (behind the start line, below) or
+##                         random (at random spots in the sailing area round the start line, as the
+##                         game puts them: SailingArea; on the lake kept off the shore)
+##   [--spawn_seed=0]      the seed of the random spots: the same seed, the same spots
+##   [--free_sail=0]       seconds of free sailing before the countdown starts
+##   [--stop_after_gun=<s>] stop the race this long after the gun (to look at the start only)
 ##   [--out_dir=<folder>: a CSV per board: race time, x, z, heading, speed, its next step, and what
 ##                         its skipper is doing]
+## After the results it prints each skipper's start: how long after the gun it crossed the start
+## line, whether it was over the line at the gun (OCS), and the boards outside the sailing area at the
+## gun.
 ##
 ## Every board is the open water's default simulation with its waves, stepped at 1/60 s. The wind
 ## blows from the course's axis, so the course is square to it. After every tick the race is told
@@ -56,6 +65,8 @@ const SET_OFF_S: float = 10.0
 ## From 150 m behind the line of T1 (a beat) a skipper needs about 45 s to get to the line.
 const SKIPPER_WAIT_M_PER_S: float = 2.5
 const SKIPPER_NEAREST_M: float = 40.0
+## The lake's shore grid, for the sailing area of a course on the lake (kept off the shore).
+const SHORE_GRID_PATH: String = "res://maps/silvaplana/terrain/shore_heights.json"
 ## A CSV row every this many ticks (0.1 s).
 const CSV_EVERY: int = 6
 
@@ -100,8 +111,13 @@ func _initialize() -> void:
 	var random_seed: int = options.get("seed", "0").to_int()
 	var finish_window_s: float = options.get("finish_window", "60").to_float()
 	var out_dir: String = options.get("out_dir", _repository_path(".sim_output/race"))
+	var spawn: String = options.get("spawn", "line")
+	var spawn_seed: int = options.get("spawn_seed", "0").to_int()
+	var free_sail_s: float = maxf(options.get("free_sail", "0").to_float(), 0.0)
+	var stop_after_gun_s: float = options["stop_after_gun"].to_float() if options.has("stop_after_gun") else INF
 
-	var course: Course = course_named(options.get("course", "test"))
+	var course_name: String = options.get("course", "test")
+	var course: Course = course_named(course_name)
 	if course == null:
 		quit(2)
 		return
@@ -111,11 +127,12 @@ func _initialize() -> void:
 		quit(2)
 		return
 	DirAccess.make_dir_recursive_absolute(out_dir)
+	var area: SailingArea = sailing_area_for(course_name, course)
 
 	var who: PackedStringArray = PackedStringArray()
 	for i: int in boards:
 		who.append(names[i % names.size()])
-	var entries: Array[Entry] = make_entries(race, course, who, wind_kt, twa_deg, random_seed)
+	var entries: Array[Entry] = make_entries(race, course, who, wind_kt, twa_deg, random_seed, spawn, area, spawn_seed)
 	if entries.is_empty():
 		quit(2)
 		return
@@ -123,39 +140,98 @@ func _initialize() -> void:
 		entry.file = FileAccess.open(out_dir.path_join(_file_name(entry.name) + ".csv"), FileAccess.WRITE)
 		if entry.file != null:
 			entry.file.store_line("race_time_s,x_m,z_m,heading_deg,speed_ms,next_step,doing")
-	race.start()
+	race.start_in(free_sail_s)
 
-	var ticks: int = roundi((prestart_s + seconds) / DT)
+	var outside_at_gun: PackedStringArray = PackedStringArray()
+	var gun_seen: bool = false
+	var ticks: int = roundi((free_sail_s + prestart_s + seconds) / DT)
 	for tick: int in ticks:
 		step_race(race, entries)
 		if tick % CSV_EVERY == 0:
 			for i: int in entries.size():
 				_write_row(entries[i], race, i)
-		if race.phase() == RaceSim.Phase.FINISHED:
+		if not gun_seen and race.is_started() and race.clock_s() >= 0.0:
+			gun_seen = true
+			outside_at_gun = boards_outside(race, area)
+		if race.phase() == RaceSim.Phase.FINISHED or race.clock_s() >= stop_after_gun_s:
 			break
 	for entry: Entry in entries:
 		if entry.file != null:
 			entry.file.close()
 
-	print("Race on %s (%s, %d lap%s, %d steps): wind %.0f kt from %.0f deg, %s, seed %d, pre-start %.0f s" % [
+	print("Race on %s (%s, %d lap%s, %d steps): wind %.0f kt from %.0f deg, %s, seed %d, pre-start %.0f s, spawn %s (seed %d)" % [
 		course.name, course.sequence, laps, "" if laps == 1 else "s", race.steps().size(), wind_kt, course.axis_deg,
-		", ".join(who) + (" at TWA %.0f" % twa_deg if who.has("autopilot") else ""), random_seed, prestart_s])
+		", ".join(who) + (" at TWA %.0f" % twa_deg if who.has("autopilot") else ""), random_seed, prestart_s, spawn, spawn_seed])
 	for result: RaceResult in race.results():
 		var entry: Entry = entries[result.index]
 		print("%s  falls %d  tacks %d  gybes %d" % [result.to_line(), entry.falls, entry.tacks, entry.gybes])
 	print("%s at race time %s; CSV files in %s" % [
 		"Finished" if race.phase() == RaceSim.Phase.FINISHED else "Stopped", RaceResult.format_time(race.race_time_s()), out_dir])
+	print(start_report(race, entries, outside_at_gun))
 	quit(0)
+
+
+## The start of every skipper's board, one line each: how long after the gun it crossed the start
+## line (its start delay; "-" if it has not started), whether it was over the line at the gun (OCS),
+## and a summary: the longest delay, the OCS count, and the boards outside the area at the gun.
+static func start_report(race: RaceSim, entries: Array[Entry], outside_at_gun: PackedStringArray) -> String:
+	var lines: PackedStringArray = PackedStringArray(["Starts:"])
+	var longest_s: float = 0.0
+	var not_started: int = 0
+	var ocs: int = 0
+	for i: int in entries.size():
+		var skipper: Skipper = entries[i].skipper as Skipper
+		if skipper == null:
+			continue
+		var started: bool = race.next_step_index(i) > 0
+		var delay_s: float = race.splits_s(i)[0] if started else NAN
+		if started:
+			longest_s = maxf(longest_s, delay_s)
+		else:
+			not_started += 1
+		if skipper.was_ocs:
+			ocs += 1
+		lines.append("  %-16s start %s%s" % [entries[i].name, "%+6.1f s" % delay_s if started else "   -   ", "  OCS" if skipper.was_ocs else ""])
+	lines.append("  longest start delay %.1f s, %d not started, %d OCS, %d outside the sailing area at the gun%s" % [
+		longest_s, not_started, ocs, outside_at_gun.size(), (": " + ", ".join(outside_at_gun)) if not outside_at_gun.is_empty() else ""])
+	return "\n".join(lines)
+
+
+## The boards outside the sailing area now (by name).
+static func boards_outside(race: RaceSim, area: SailingArea) -> PackedStringArray:
+	var outside: PackedStringArray = PackedStringArray()
+	if area == null:
+		return outside
+	for i: int in race.board_count():
+		if not area.contains(race.board_position(i)):
+			outside.append(race.board_name(i))
+	return outside
+
+
+## The sailing area of a course: round its start line, kept off the lake's shore for a course on the
+## lake (any course but the test loop and T1).
+static func sailing_area_for(course_name: String, course: Course) -> SailingArea:
+	if course_name == "test" or course_name == "t1_loop":
+		return SailingArea.for_course(course)
+	return SailingArea.for_course(course, TerrainGrid.load_from(SHORE_GRID_PATH))
 
 
 # ---------------------------------------------------------------- the race, for this tool and the tests
 
 ## The boards of a race, one per name (a character, or "autopilot"), added to the race in order and
-## placed for its countdown; board i's skipper gets the seed random_seed + i. Empty if a name is
-## not a skipper.
-static func make_entries(race: RaceSim, course: Course, who: PackedStringArray, wind_kt: float, twa_deg: float = 50.0, random_seed: int = 0) -> Array[Entry]:
+## placed for its countdown; board i's skipper gets the seed random_seed + i. With spawn "random"
+## the skippers' boards appear at random spots of the sailing area (SailingArea.spawn_places(), as
+## in the game), seeded by spawn_seed; with "line" behind the start line. Every skipper sails free in
+## the area (one round the start line when none is given). Empty if a name is not a skipper.
+static func make_entries(race: RaceSim, course: Course, who: PackedStringArray, wind_kt: float, twa_deg: float = 50.0, random_seed: int = 0,
+		spawn: String = "line", area: SailingArea = null, spawn_seed: int = 0) -> Array[Entry]:
 	var entries: Array[Entry] = []
 	var used: Dictionary[String, int] = {}
+	if area == null:
+		area = SailingArea.for_course(course)
+	var places: Array[Vector3] = []
+	if spawn == "random":
+		places = area.spawn_places(who.size(), spawn_seed)
 	for i: int in who.size():
 		var share: float = float(i + 1) / (who.size() + 1)
 		var entry: Entry
@@ -167,6 +243,10 @@ static func make_entries(race: RaceSim, course: Course, who: PackedStringArray, 
 			if entry == null:
 				var none: Array[Entry] = []
 				return none
+			if not places.is_empty():
+				entry.sim.reset(Vector3(places[i].x, 0.0, places[i].y), deg_to_rad(places[i].z))
+				entry.controller.reset_controls(entry.controls)
+			entry.skipper.sailing_area = area
 			entry.skipper.random_seed = random_seed + i
 			# Two of the same character are told apart by their number.
 			used[entry.name] = used.get(entry.name, 0) + 1

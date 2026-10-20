@@ -32,6 +32,24 @@ static func make(skipper_name: String) -> RaceSkipper:
 	return skipper
 
 
+## A fleet: one skipper per name, in order (a name may come more than once: a fleet of 16 repeats
+## the four characters). A character that sails more than once gets a numbered label on each of its
+## boards ("Rookie 1", "Rookie 2"); each skipper has its own copy of its sheet. A name that is no
+## skipper is left out (with an error).
+static func make_fleet(skipper_names: PackedStringArray) -> Array[RaceSkipper]:
+	var fleet: Array[RaceSkipper] = []
+	var seen: Dictionary[String, int] = {}
+	for skipper_name: String in skipper_names:
+		var skipper: RaceSkipper = make(skipper_name)
+		if skipper == null:
+			continue
+		seen[skipper_name] = seen.get(skipper_name, 0) + 1
+		if skipper_names.count(skipper_name) > 1:
+			skipper.label = "%s %d" % [skipper.skipper_name(), seen[skipper_name]]
+		fleet.append(skipper)
+	return fleet
+
+
 ## The character sheet of a name; null if there is none.
 static func load_config(skipper_name: String) -> SkipperConfig:
 	var path: String = FOLDER.path_join(skipper_name + ".tres")
