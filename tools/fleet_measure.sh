@@ -66,7 +66,7 @@ row_from_log() {
 		}
 		match($0, /all boards. physics ([0-9.]+) ms/, m) { together = m[1] }
 		# The summary line of the AI boards (since F1 fleet_frame).
-		match($0, /the AI boards .*physics median ([0-9.]+), worst ([0-9.]+)/, m) { median = m[1]; worst_board = m[2] }
+		match($0, /the AI boards.*physics median ([0-9.]+), worst ([0-9.]+)/, m) { median = m[1]; worst_board = m[2] }
 		# One line per opponent (before fleet_frame): the median and the worst are worked out here.
 		match($0, /^  Opponent[0-9]+: .*physics ([0-9.]+),/, m) { steps[++n] = m[1] + 0 }
 		END {
