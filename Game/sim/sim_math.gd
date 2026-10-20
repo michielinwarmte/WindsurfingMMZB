@@ -43,7 +43,14 @@ static func heading_rad(basis: Basis) -> float:
 ## true wind angle, the apparent wind angle and the fin's slip angle alike. Never use
 ## signed_angle_to for this: in Godot it is positive toward port (see test_engine_conventions).
 static func wind_angle_rad(basis: Basis, from_world: Vector3) -> float:
-	var fwd_h: Vector3 = horizontal(forward(basis))
+	return wind_angle_rad_of_bow(forward(basis), from_world)
+
+
+## wind_angle_rad() for the bow's direction (forward(basis)) instead of the whole basis: what the
+## body and the rig ask in the substeps (SimRigidBody.wind_angle_rad()), where handing a Basis to a
+## function takes the engine's lock (F1 no_wait, SimRigidBody).
+static func wind_angle_rad_of_bow(bow: Vector3, from_world: Vector3) -> float:
+	var fwd_h: Vector3 = horizontal(bow)
 	var from_h: Vector3 = horizontal(from_world)
 	if fwd_h.length_squared() < 1e-12 or from_h.length_squared() < 1e-12:
 		return 0.0
@@ -54,12 +61,22 @@ static func wind_angle_rad(basis: Basis, from_world: Vector3) -> float:
 
 ## Pitch of the board, positive = bow up.
 static func pitch_rad(basis: Basis) -> float:
-	return asin(clampf(forward(basis).y, -1.0, 1.0))
+	return pitch_rad_of_bow(forward(basis))
+
+
+## pitch_rad() for the bow's direction (forward(basis)); see wind_angle_rad_of_bow().
+static func pitch_rad_of_bow(bow: Vector3) -> float:
+	return asin(clampf(bow.y, -1.0, 1.0))
 
 
 ## Heel of the board, positive = heeled to starboard (starboard rail down).
 static func heel_rad(basis: Basis) -> float:
-	return atan2(-basis.x.y, basis.y.y)
+	return heel_rad_of_axes(basis.x, basis.y)
+
+
+## heel_rad() for the starboard and up axes (basis.x and basis.y); see wind_angle_rad_of_bow().
+static func heel_rad_of_axes(starboard: Vector3, up: Vector3) -> float:
+	return atan2(-starboard.y, up.y)
 
 
 ## Expresses a world vector in the body frame. The basis is orthonormal, so its transpose

@@ -19,6 +19,18 @@ extends RefCounted
 ## the centripetal force, applied forward of the centre of mass it turns the bow into the
 ## bank, and applied off-centre it rights the board (Savitsky 1964 on heeled planing
 ## surfaces; Brown and Klosinski 1994 on the side force and yaw of heeled planing hulls).
+##
+## Boards on threads (F1 no_wait): reading or writing a field of another object (body.basis,
+## board.length_m, buoyancy.point_depths_m), or handing an object to a function's typed
+## parameter, takes a global engine lock, and boards stepped side by side on worker threads
+## wait for each other there; calling a method of another object (body.point_world(),
+## body.add_force_at(), board.width_at()) does not. So the model keeps copies of the configs'
+## numbers in its own fields, taken by copy_config(): when it is made and at the start of every
+## tick (WindsurferSim.step); the configs are never changed inside a tick. And compute() reads
+## what it needs from the body and the buoyancy grid once at its top, into the fields below,
+## which the helpers use instead of taking the objects as parameters. Nothing of that changes
+## while compute() runs (it only adds forces to the body), and the arithmetic is the same, in
+## the same order: the answers are the same to the last bit.
 
 const MIN_SPRAY_ROOT_ANGLE_RAD: float = 0.01745  # one degree
 const STRIPS: int = 12  # strips along the wet bottom
@@ -52,6 +64,37 @@ const FROUDE_PLANING: float = 1.0
 
 var board: BoardConfig
 var water: WaterConfig
+
+## The configs' numbers (copy_config()).
+var _length_m: float = 0.0
+var _thickness_m: float = 0.0
+var _length_samples: int = 0
+var _width_samples: int = 0
+var _deadrise_deg: float = 0.0
+var _rail_edge_height_m: float = 0.0
+var _lateral_drag_cd: float = 0.0
+var _residuary_peak_fraction: float = 0.0
+var _residuary_peak_froude: float = 0.0
+var _residuary_froude_width: float = 0.0
+var _spray_root_factor_max: float = 0.0
+var _planing_lift_lag_s: float = 0.0
+var _planing_buoyancy_factor: float = 1.0
+var _bow_drag_cd: float = 0.0
+var _density_kg_m3: float = 0.0
+var _kinematic_viscosity_m2_s: float = 0.0
+
+## What compute() reads from the other objects, once at its top: the body (its methods are
+## called through this, the axis questions too: _body.to_body(), _body.heel_rad(),
+## _body.starboard_axis(), which hand no Basis over), the water surface, and the buoyancy grid's
+## points and their depths below the water (the grid's own arrays, not copies: a packed array
+## kept in two places is the same array, and the grid writes it before compute() reads it).
+var _body: SimRigidBody = null
+var _surface: WaterSurface = null
+var _points: PackedVector3Array = PackedVector3Array()
+var _depths: PackedFloat64Array = PackedFloat64Array()
+## The wet span of the bottom found by _wetted_span(), metres forward of the transom.
+var _span_aft_m: float = 0.0
+var _span_forward_m: float = 0.0
 
 # Results of the last compute().
 var friction_n: float = 0.0
@@ -149,6 +192,27 @@ var _sea_spare: PackedFloat64Array = WaterSurface.new_samples(1)
 func _init(board_config: BoardConfig, water_config: WaterConfig) -> void:
 	board = board_config
 	water = water_config
+	copy_config()
+
+
+## Copies the configs' numbers into this model's own (see the note at the top).
+func copy_config() -> void:
+	_length_m = board.length_m
+	_thickness_m = board.thickness_m
+	_length_samples = board.length_samples
+	_width_samples = board.width_samples
+	_deadrise_deg = board.deadrise_deg
+	_rail_edge_height_m = board.rail_edge_height_m
+	_lateral_drag_cd = board.lateral_drag_cd
+	_residuary_peak_fraction = board.residuary_peak_fraction
+	_residuary_peak_froude = board.residuary_peak_froude
+	_residuary_froude_width = board.residuary_froude_width
+	_spray_root_factor_max = board.spray_root_factor_max
+	_planing_lift_lag_s = board.planing_lift_lag_s
+	_planing_buoyancy_factor = board.planing_buoyancy_factor
+	_bow_drag_cd = board.bow_drag_cd
+	_density_kg_m3 = water.density_kg_m3
+	_kinematic_viscosity_m2_s = water.kinematic_viscosity_m2_s
 
 
 ## Forgets the water's last answers at the hull's own points, so that the next compute()
@@ -161,31 +225,43 @@ func forget_the_sea() -> void:
 
 func compute(body: SimRigidBody, buoyancy: BuoyancyModel, surface: WaterSurface, time_s: float, gravity_ms2: float, total_mass_kg: float, dt: float = 1.0 / 240.0) -> void:
 	_clear()
-	if not buoyancy.is_floating or buoyancy.wetted_area_m2 <= 0.0:
+	# What the buoyancy grid found this substep, read once (see the note at the top).
+	var grid_wetted_area_m2: float = buoyancy.wetted_area_m2
+	if not buoyancy.is_floating or grid_wetted_area_m2 <= 0.0:
 		return
+	var grid_wetted_length_m: float = buoyancy.wetted_length_m
+	var buoyancy_force_n: float = buoyancy.buoyancy_force_n
+	var centre_of_buoyancy: Vector3 = buoyancy.centre_of_buoyancy_world
+	_points = buoyancy.sample_points
+	_depths = buoyancy.point_depths_m
 	_grid_sea = buoyancy.sea_samples_of(surface)
+	# The body and the water, for the helpers below.
+	_body = body
+	_surface = surface
 
 	# The wet part of the bottom along the centreline. Usually it runs from the transom
 	# forward; when the tail has lifted clear and the nose is down, it is the middle of the
 	# hull and the nose rocker that are wet. Everything below works on this span.
-	_vee_rise_per_m = tan(deg_to_rad(board.deadrise_deg))
+	_vee_rise_per_m = tan(deg_to_rad(_deadrise_deg))
 	_vee_wetting_per_m = WAGNER_CUT * _vee_rise_per_m
-	var span: PackedFloat64Array = _wetted_span(buoyancy)
-	wetted_aft_m = span[0]
-	wetted_length_m = span[1] - span[0]
-	planing_beam_m = _mean_width(span[0], span[1])
-	chine_dry_length_m = _chine_dry_length(body, span[0], span[1])
-	_compute_added_mass(span[0], span[1], body, buoyancy)
+	_wetted_span()
+	var aft: float = _span_aft_m
+	var forward: float = _span_forward_m
+	wetted_aft_m = aft
+	wetted_length_m = forward - aft
+	planing_beam_m = _mean_width(aft, forward)
+	chine_dry_length_m = _chine_dry_length(aft, forward)
+	_compute_added_mass(aft, forward, body.com_offset_body.z)
 
 	# The flow relative to the wet part of the hull.
 	var wet_point: Vector3 = buoyancy.wet_centroid_world
 	surface.sample_at(wet_point.x, wet_point.z, time_s, _sea_at_wet_centroid, 0)
 	var v_rel: Vector3 = body.point_velocity(wet_point) - WaterSurface.sample_velocity(_sea_at_wet_centroid, 0)
-	var v_body: Vector3 = SimMath.to_body(body.basis, v_rel)
+	var v_body: Vector3 = body.to_body(v_rel)
 	forward_speed_ms = -v_body.z
 	var v_h: Vector3 = SimMath.horizontal(v_rel)
 	var speed_h: float = v_h.length()
-	var rho: float = water.density_kg_m3
+	var rho: float = _density_kg_m3
 
 	if speed_h > 0.01:
 		var flow_dir: Vector3 = v_h / speed_h
@@ -197,12 +273,12 @@ func compute(body: SimRigidBody, buoyancy: BuoyancyModel, surface: WaterSurface,
 		# area is the mean wetted length (the keel's, less half the chine-dry part) times
 		# the width (Savitsky 1964).
 		var dynamic_area_m2: float = (wetted_length_m - 0.5 * chine_dry_length_m) * planing_beam_m
-		var wetted_area_m2: float = maxf(buoyancy.wetted_area_m2, dynamic_area_m2)
+		var wetted_area_m2: float = maxf(grid_wetted_area_m2, dynamic_area_m2)
 		friction_area_m2 = wetted_area_m2
-		var reference_length: float = maxf(maxf(buoyancy.wetted_length_m, wetted_length_m), 0.3)
+		var reference_length: float = maxf(maxf(grid_wetted_length_m, wetted_length_m), 0.3)
 
 		# 1. Skin friction on the wetted bottom (ITTC 1957 line).
-		reynolds_number = maxf(speed_h * reference_length / water.kinematic_viscosity_m2_s, 1e5)
+		reynolds_number = maxf(speed_h * reference_length / _kinematic_viscosity_m2_s, 1e5)
 		var cf: float = 0.075 / pow(log(reynolds_number) / log(10.0) - 2.0, 2.0)
 		var q_h: float = 0.5 * rho * speed_h * speed_h
 		friction_n = cf * q_h * wetted_area_m2
@@ -212,61 +288,62 @@ func compute(body: SimRigidBody, buoyancy: BuoyancyModel, surface: WaterSurface,
 		# number of about 0.55, scaled by the weight that buoyancy still carries. As the
 		# planing lift takes the weight over, this term fades out by itself.
 		froude_number = speed_h / sqrt(gravity_ms2 * reference_length)
-		var hump: float = (froude_number - board.residuary_peak_froude) / board.residuary_froude_width
-		var residuary_coefficient: float = board.residuary_peak_fraction * exp(-hump * hump)
-		residuary_n = residuary_coefficient * buoyancy.buoyancy_force_n
-		body.add_force_at(buoyancy.centre_of_buoyancy_world, -flow_dir * residuary_n)
+		var hump: float = (froude_number - _residuary_peak_froude) / _residuary_froude_width
+		var residuary_coefficient: float = _residuary_peak_fraction * exp(-hump * hump)
+		residuary_n = residuary_coefficient * buoyancy_force_n
+		body.add_force_at(centre_of_buoyancy, -flow_dir * residuary_n)
 
 	# 3. Sideways drag of the immersed hull, row by row along the length, so that a turning
 	# board is also damped in yaw by the water (section 5 F10).
-	_apply_lateral_drag(body, buoyancy, surface, time_s, rho)
+	_apply_lateral_drag(time_s, rho)
 
 	# 4. Dynamic lift of the planing surface.
-	_apply_planing_lift(body, buoyancy, span[0], span[1], surface, time_s, gravity_ms2, total_mass_kg, rho, dt)
+	_apply_planing_lift(aft, forward, time_s, gravity_ms2, total_mass_kg, rho, dt)
 
 	# 4b. The buoyancy a planing bottom does not get (off at the default factor of 1).
-	_apply_planing_buoyancy(body, buoyancy, surface, time_s, gravity_ms2)
+	_apply_planing_buoyancy(time_s, gravity_ms2, buoyancy_force_n, centre_of_buoyancy)
 
 	# 4c. What the hull carries, and how much of it is dynamic.
-	hull_load_n = planing_lift_n + maxf(buoyancy.buoyancy_force_n - buoyancy_correction_n, 0.0)
+	hull_load_n = planing_lift_n + maxf(buoyancy_force_n - buoyancy_correction_n, 0.0)
 	planing_share = clampf(planing_lift_n / hull_load_n, 0.0, 1.0) if hull_load_n > 0.0 else 0.0
 	# Savitsky's porpoising limit for that load at this speed, on the wet bottom's width as
 	# the planing lift sees it (narrower as the board heels) and the tail's vee.
-	var lift_beam_m: float = planing_beam_m * maxf(cos(SimMath.heel_rad(body.basis)), 0.3)
-	critical_trim_deg = critical_trim_deg_for(hull_load_n, forward_speed_ms, lift_beam_m, board.deadrise_deg, rho)
+	var lift_beam_m: float = planing_beam_m * maxf(cos(body.heel_rad()), 0.3)
+	critical_trim_deg = critical_trim_deg_for(hull_load_n, forward_speed_ms, lift_beam_m, _deadrise_deg, rho)
 
 	# 5. A nose under water meets the water face-on.
-	_apply_bow_drag(body, buoyancy, surface, time_s, rho)
+	_apply_bow_drag(time_s, rho, buoyancy.bow_immersion_m, buoyancy.bow_centre_index)
 
 	# 6. A rail skidding sideways meets the water with its edge.
-	_apply_rail_grip(body, buoyancy, span[0], span[1], surface, time_s, rho, dt)
+	_apply_rail_grip(aft, forward, time_s, rho, dt)
 
 	resistance_n = friction_n + residuary_n + planing_drag_n + bow_drag_n
 
 
-func _apply_lateral_drag(body: SimRigidBody, buoyancy: BuoyancyModel, surface: WaterSurface, time_s: float, rho: float) -> void:
-	var rows: int = maxi(board.length_samples, 1)
-	var row_length: float = board.length_m / rows
-	var centre_column: int = maxi(board.width_samples, 1) / 2
-	var columns: int = maxi(board.width_samples, 1)
+func _apply_lateral_drag(time_s: float, rho: float) -> void:
+	var rows: int = maxi(_length_samples, 1)
+	var row_length: float = _length_m / rows
+	var centre_column: int = maxi(_width_samples, 1) / 2
+	var columns: int = maxi(_width_samples, 1)
+	var starboard: Vector3 = _body.starboard_axis()
 	lateral_n = 0.0
-	for k: int in buoyancy.sample_points.size():
+	for k: int in _points.size():
 		if k % columns != centre_column:
 			continue
 		# The immersed side of a heeled board is its low rail: deeper than the centreline.
-		var depth: float = _row_max_depth(buoyancy, k / columns)
+		var depth: float = _row_max_depth(k / columns)
 		if depth <= 0.0:
 			continue
-		var point_world: Vector3 = body.point_world(buoyancy.sample_points[k])
-		var v_rel: Vector3 = body.point_velocity(point_world) - _water_velocity_at_grid_point(k, surface, point_world, time_s)
-		var v_lat: float = v_rel.dot(body.basis.x)
+		var point_world: Vector3 = _body.point_world(_points[k])
+		var v_rel: Vector3 = _body.point_velocity(point_world) - _water_velocity_at_grid_point(k, point_world, time_s)
+		var v_lat: float = v_rel.dot(starboard)
 		# The hard rail's edge face is in the rail model (_apply_rail_grip); the cross-flow
 		# drag takes the rest of the immersed side.
-		var from_transom: float = 0.5 * board.length_m - buoyancy.sample_points[k].z
-		var edge: float = board.rail_hardness(from_transom) * minf(depth, board.rail_edge_height_m)
-		var side_area: float = row_length * maxf(minf(depth, board.thickness_m) - edge, 0.0)
-		var force: float = -0.5 * rho * board.lateral_drag_cd * side_area * v_lat * absf(v_lat)
-		body.add_force_at(point_world, body.basis.x * force)
+		var from_transom: float = 0.5 * _length_m - _points[k].z
+		var edge: float = board.rail_hardness(from_transom) * minf(depth, _rail_edge_height_m)
+		var side_area: float = row_length * maxf(minf(depth, _thickness_m) - edge, 0.0)
+		var force: float = -0.5 * rho * _lateral_drag_cd * side_area * v_lat * absf(v_lat)
+		_body.add_force_at(point_world, starboard * force)
 		lateral_n += absf(force)
 
 
@@ -285,14 +362,14 @@ func _apply_lateral_drag(body: SimRigidBody, buoyancy: BuoyancyModel, surface: W
 ## where Savitsky measured it. The water leaves the bottom at the aft end of the wet part as
 ## it would at a transom, so the same applies when the tail has lifted clear and the middle
 ## of the hull and the nose rocker are what planes.
-func _apply_planing_lift(body: SimRigidBody, buoyancy: BuoyancyModel, aft: float, forward: float, surface: WaterSurface, time_s: float, gravity_ms2: float, total_mass_kg: float, rho: float, _dt: float) -> void:
+func _apply_planing_lift(aft: float, forward: float, time_s: float, gravity_ms2: float, total_mass_kg: float, rho: float, _dt: float) -> void:
 	var u: float = forward_speed_ms
 	var length: float = wetted_length_m
 	if u < 0.5 or length < 0.1:
 		return
 	var strip_length: float = length / float(STRIPS)
-	var pitch: float = SimMath.pitch_rad(body.basis)
-	var heel: float = SimMath.heel_rad(body.basis)
+	var pitch: float = _body.pitch_rad()
+	var heel: float = _body.heel_rad()
 	# A board on its rail or upside down (after a fall) has no planing bottom facing the
 	# water; the strip theory below would push it the wrong way.
 	if cos(heel) <= 0.3:
@@ -300,7 +377,7 @@ func _apply_planing_lift(body: SimRigidBody, buoyancy: BuoyancyModel, aft: float
 	var beam: float = planing_beam_m * maxf(cos(heel), 0.3)
 	# Savitsky's lift and centre of pressure take the mean wetted length: on a vee bottom,
 	# the keel's less half the chine-dry part.
-	lambda_ratio = clampf((length - 0.5 * chine_dry_length_m) / beam, 0.2, board.length_m / beam)
+	lambda_ratio = clampf((length - 0.5 * chine_dry_length_m) / beam, 0.2, _length_m / beam)
 
 	# The wet bottom seen as one cambered plate, for the reference trim: its chord is
 	# inclined to the board by the rocker and the bottom bulges below the chord, toward the
@@ -331,11 +408,11 @@ func _apply_planing_lift(body: SimRigidBody, buoyancy: BuoyancyModel, aft: float
 		# Across the board: how much of this strip's width is wet and where its centre is
 		# (on the low rail of a heeled board). The strip carries the added mass of its wet
 		# width and its force acts at that centre.
-		var wet: Vector2 = _wet_width(buoyancy, x)
-		var point_world: Vector3 = body.point_world(Vector3(wet.y, _bottom_y(x), 0.5 * board.length_m - x))
-		var normal_world: Vector3 = SimMath.to_world(body.basis, normal_local)
-		surface.sample_at(point_world.x, point_world.z, time_s, _sea_at_strips, k)
-		var v_rel: Vector3 = body.point_velocity(point_world) - WaterSurface.sample_velocity(_sea_at_strips, k)
+		var wet: Vector2 = _wet_width(x)
+		var point_world: Vector3 = _body.point_world(Vector3(wet.y, _bottom_y(x), 0.5 * _length_m - x))
+		var normal_world: Vector3 = _body.to_world(normal_local)
+		_surface.sample_at(point_world.x, point_world.z, time_s, _sea_at_strips, k)
+		var v_rel: Vector3 = _body.point_velocity(point_world) - WaterSurface.sample_velocity(_sea_at_strips, k)
 		var full_width: float = _width_at(x)
 		var width: float = full_width * wet.x
 		x_k.append(x)
@@ -371,7 +448,7 @@ func _apply_planing_lift(body: SimRigidBody, buoyancy: BuoyancyModel, aft: float
 		var dv_dx: float = (v_into[k1] - v_into[k0]) / dx
 		var force: float = -u * m_per_m[k] * dv_dx * strip_length
 		var advance: float = _root_advance_factor(sink_ms[k], u, pitch + board.bottom_slope(x_k[k]))
-		for j: int in [k - 1, k]:
+		for j: int in range(k - 1, k + 1):  # k - 1 and k (a range: an array literal takes the lock)
 			if j < 0 or j >= STRIPS - 1:
 				continue
 			var gain_kg_m: float = m_per_m[j] - m_per_m[j + 1]
@@ -392,11 +469,11 @@ func _apply_planing_lift(body: SimRigidBody, buoyancy: BuoyancyModel, aft: float
 	#    at twice the steady value (PHYSICS_SPEC.md section 16).
 	var last: int = STRIPS - 1
 	var v_root: float = v_into[last] + 0.5 * (v_into[last] - v_into[last - 1])
-	var root_across: float = _wet_width(buoyancy, forward).y
-	var root_world: Vector3 = body.point_world(Vector3(root_across, _bottom_y(forward), 0.5 * board.length_m - forward))
-	surface.sample_at(root_world.x, root_world.z, time_s, _sea_at_spray_root, 0)
+	var root_across: float = _wet_width(forward).y
+	var root_world: Vector3 = _body.point_world(Vector3(root_across, _bottom_y(forward), 0.5 * _length_m - forward))
+	_surface.sample_at(root_world.x, root_world.z, time_s, _sea_at_spray_root, 0)
 	var root_normal: Vector3 = WaterSurface.sample_normal(_sea_at_spray_root, 0)
-	var root_down_speed: float = -(body.point_velocity(root_world) - WaterSurface.sample_velocity(_sea_at_spray_root, 0)).dot(root_normal)
+	var root_down_speed: float = -(_body.point_velocity(root_world) - WaterSurface.sample_velocity(_sea_at_spray_root, 0)).dot(root_normal)
 	spray_root_factor = _root_advance_factor(root_down_speed, u, pitch + board.bottom_slope(forward))
 	var root_force: float = maxf(u * spray_root_factor * m_per_m[last] * v_root, 0.0)
 
@@ -406,7 +483,7 @@ func _apply_planing_lift(body: SimRigidBody, buoyancy: BuoyancyModel, aft: float
 	#    that) scales everything. This is how slender-body planing models are anchored.
 	var tau_ref_deg: float = maxf(rad_to_deg(trim_geometric), 1.0)
 	var cl_flat: float = 0.012 * pow(minf(tau_ref_deg, 15.0), 1.1) * sqrt(lambda_ratio)
-	var cl_dynamic: float = maxf(cl_flat - 0.0065 * board.deadrise_deg * pow(cl_flat, 0.6), 0.0)
+	var cl_dynamic: float = maxf(cl_flat - 0.0065 * _deadrise_deg * pow(cl_flat, 0.6), 0.0)
 	var savitsky_lift: float = cl_dynamic * 0.5 * rho * u * u * beam * beam
 	# The slender-body total for the plate is the momentum flux of the water set moving
 	# under its widest wet section: the root's push, plus the push where the hull widens
@@ -437,7 +514,7 @@ func _apply_planing_lift(body: SimRigidBody, buoyancy: BuoyancyModel, aft: float
 
 	# 6. Apply. No strip may pull: where the theory would have the water sucking on a
 	#    bottom that lifts away, the water has let go instead.
-	var flow_dir: Vector3 = SimMath.horizontal(body.velocity)
+	var flow_dir: Vector3 = SimMath.horizontal(_body.velocity)
 	flow_dir = flow_dir.normalized() if flow_dir.length() > 0.01 else Vector3.ZERO
 	var weighted_position: Vector3 = Vector3.ZERO
 	# The unsteady lag (BoardConfig.planing_lift_lag_s): the quasi-steady total is followed
@@ -447,8 +524,8 @@ func _apply_planing_lift(body: SimRigidBody, buoyancy: BuoyancyModel, aft: float
 		var share_k: float = root_force * weights[k] / weight_sum if weight_sum > 0.0 else 0.0
 		quasi_steady_n += maxf(three_d_factor * (strip_forces[k] + share_k), 0.0)
 	var lag_factor: float = 1.0
-	if board.planing_lift_lag_s > 0.0 and quasi_steady_n > 0.0:
-		var blend: float = clampf(_dt / board.planing_lift_lag_s, 0.0, 1.0)
+	if _planing_lift_lag_s > 0.0 and quasi_steady_n > 0.0:
+		var blend: float = clampf(_dt / _planing_lift_lag_s, 0.0, 1.0)
 		_lagged_normal_n = lerpf(_lagged_normal_n, quasi_steady_n, blend)
 		lag_factor = _lagged_normal_n / quasi_steady_n
 	else:
@@ -459,13 +536,13 @@ func _apply_planing_lift(body: SimRigidBody, buoyancy: BuoyancyModel, aft: float
 		if magnitude <= 0.0:
 			continue
 		var force: Vector3 = normals_world[k] * magnitude
-		body.add_force_at(points_world[k], force)
+		_body.add_force_at(points_world[k], force)
 		planing_lift_n += force.y
 		planing_normal_force_n += magnitude
 		planing_drag_n -= force.dot(flow_dir)
 		weighted_position += points_world[k] * magnitude
 	if planing_normal_force_n > 0.0:
-		cop_local = SimMath.to_body(body.basis, weighted_position / planing_normal_force_n - body.origin_world())
+		cop_local = _body.to_body(weighted_position / planing_normal_force_n - _body.origin_world())
 	planing_ratio = clampf(planing_lift_n / (total_mass_kg * gravity_ms2), 0.0, 1.0)
 
 
@@ -477,16 +554,15 @@ func _apply_planing_lift(body: SimRigidBody, buoyancy: BuoyancyModel, aft: float
 ## centroid of the wet wedge) reproduce Savitsky's (1964) centre of pressure exactly. The
 ## loss is phased in across the semi-displacement range, where the dynamic lift takes the
 ## weight over from the buoyancy (Faltinsen 2005).
-func _apply_planing_buoyancy(body: SimRigidBody, buoyancy: BuoyancyModel, surface: WaterSurface, time_s: float, gravity_ms2: float) -> void:
-	var lost_share: float = 1.0 - board.planing_buoyancy_factor
-	if lost_share <= 0.0 or forward_speed_ms <= 0.0 or buoyancy.buoyancy_force_n <= 0.0:
+func _apply_planing_buoyancy(time_s: float, gravity_ms2: float, buoyancy_force_n: float, centre: Vector3) -> void:
+	var lost_share: float = 1.0 - _planing_buoyancy_factor
+	if lost_share <= 0.0 or forward_speed_ms <= 0.0 or buoyancy_force_n <= 0.0:
 		return
-	var froude_on_length: float = forward_speed_ms / sqrt(gravity_ms2 * board.length_m)
+	var froude_on_length: float = forward_speed_ms / sqrt(gravity_ms2 * _length_m)
 	var planing: float = smoothstep(FROUDE_DISPLACEMENT, FROUDE_PLANING, froude_on_length)
-	buoyancy_correction_n = lost_share * planing * buoyancy.buoyancy_force_n
-	var centre: Vector3 = buoyancy.centre_of_buoyancy_world
-	surface.sample_at(centre.x, centre.z, time_s, _sea_at_centre_of_buoyancy, 0)
-	body.add_force_at(centre, -WaterSurface.sample_normal(_sea_at_centre_of_buoyancy, 0) * buoyancy_correction_n)
+	buoyancy_correction_n = lost_share * planing * buoyancy_force_n
+	_surface.sample_at(centre.x, centre.z, time_s, _sea_at_centre_of_buoyancy, 0)
+	_body.add_force_at(centre, -WaterSurface.sample_normal(_sea_at_centre_of_buoyancy, 0) * buoyancy_correction_n)
 
 
 ## When the deck at the bow goes under (a nose dive, a wave over the nose), the water
@@ -496,20 +572,21 @@ func _apply_planing_buoyancy(body: SimRigidBody, buoyancy: BuoyancyModel, surfac
 ## it slows the board hard and pitches it over the nose, as a pearling board does. A bow
 ## whose bottom is wet but whose deck is dry (the hump, a chop) is a knife, not a face,
 ## and its wave-making is in the residuary drag already; it feels nothing here.
-func _apply_bow_drag(body: SimRigidBody, buoyancy: BuoyancyModel, surface: WaterSurface, time_s: float, rho: float) -> void:
+func _apply_bow_drag(time_s: float, rho: float, bow_immersion_m: float, bow_index: int) -> void:
 	bow_drag_n = 0.0
-	var deck_immersion: float = buoyancy.bow_immersion_m - board.thickness_m
-	var immersed_height: float = clampf(deck_immersion, 0.0, board.thickness_m)
+	var deck_immersion: float = bow_immersion_m - _thickness_m
+	var immersed_height: float = clampf(deck_immersion, 0.0, _thickness_m)
 	if immersed_height <= 0.0:
 		return
-	var nose_world: Vector3 = body.point_world(buoyancy.sample_points[buoyancy.bow_centre_index])
-	var v_rel: Vector3 = body.point_velocity(nose_world) - _water_velocity_at_grid_point(buoyancy.bow_centre_index, surface, nose_world, time_s)
-	var along: float = v_rel.dot(-body.basis.z)  # forward speed through the water at the nose
+	var nose_world: Vector3 = _body.point_world(_points[bow_index])
+	var v_rel: Vector3 = _body.point_velocity(nose_world) - _water_velocity_at_grid_point(bow_index, nose_world, time_s)
+	var aft: Vector3 = _body.aft_axis()
+	var along: float = v_rel.dot(-aft)  # forward speed through the water at the nose
 	if along <= 0.05:
 		return
-	var area: float = _width_at(board.length_m) * immersed_height
-	bow_drag_n = 0.5 * rho * board.bow_drag_cd * area * along * along
-	body.add_force_at(nose_world, body.basis.z * bow_drag_n)
+	var area: float = _width_at(_length_m) * immersed_height
+	bow_drag_n = 0.5 * rho * _bow_drag_cd * area * along * along
+	_body.add_force_at(nose_world, aft * bow_drag_n)
 
 
 ## The rails in a skid. A flat planing bottom moving at a yaw angle to the flow carries no
@@ -532,14 +609,15 @@ func _apply_bow_drag(body: SimRigidBody, buoyancy: BuoyancyModel, surface: Water
 ## The force acts on the edge, normal to it, against the slip; no more than what stops
 ## the strip's sideways motion within the step (the exact result for a damper integrated
 ## implicitly), shared among the gripping strips.
-func _apply_rail_grip(body: SimRigidBody, buoyancy: BuoyancyModel, aft: float, forward: float, surface: WaterSurface, time_s: float, rho: float, dt: float) -> void:
+func _apply_rail_grip(aft: float, forward: float, time_s: float, rho: float, dt: float) -> void:
 	rail_grip_n = 0.0
 	rail_yaw_nm = 0.0
 	var length: float = forward - aft
-	var heel: float = SimMath.heel_rad(body.basis)
+	var heel: float = _body.heel_rad()
 	if length < 0.05 or cos(heel) <= 0.3:
 		return
 	var strip_length: float = length / float(STRIPS)
+	var starboard: Vector3 = _body.starboard_axis()
 	var magnitudes: PackedFloat64Array = PackedFloat64Array()
 	var points: PackedVector3Array = PackedVector3Array()
 	var directions: PackedVector3Array = PackedVector3Array()
@@ -547,15 +625,15 @@ func _apply_rail_grip(body: SimRigidBody, buoyancy: BuoyancyModel, aft: float, f
 	var gripping: int = 0
 	for k: int in STRIPS:
 		var x: float = aft + (float(k) + 0.5) * strip_length
-		var z: float = 0.5 * board.length_m - x
+		var z: float = 0.5 * _length_m - x
 		var hardness: float = board.rail_hardness(x)
-		var centre_world: Vector3 = body.point_world(Vector3(0.0, _bottom_y(x), z))
-		surface.sample_at(centre_world.x, centre_world.z, time_s, _sea_at_rail_strips, k)
-		var v_rel: Vector3 = body.point_velocity(centre_world) - WaterSurface.sample_velocity(_sea_at_rail_strips, k)
-		var v_body: Vector3 = SimMath.to_body(body.basis, v_rel)
+		var centre_world: Vector3 = _body.point_world(Vector3(0.0, _bottom_y(x), z))
+		_surface.sample_at(centre_world.x, centre_world.z, time_s, _sea_at_rail_strips, k)
+		var v_rel: Vector3 = _body.point_velocity(centre_world) - WaterSurface.sample_velocity(_sea_at_rail_strips, k)
+		var v_body: Vector3 = _body.to_body(v_rel)
 		var slip_ms: float = v_body.x  # sideways through the water, positive to starboard
 		var side: float = 1.0 if slip_ms >= 0.0 else -1.0  # the leading rail
-		var edge_wet_m: float = clampf(_rail_depth(buoyancy, x, side), 0.0, board.rail_edge_height_m)
+		var edge_wet_m: float = clampf(_rail_depth(x, side), 0.0, _rail_edge_height_m)
 		var magnitude: float = 0.0
 		if hardness > 0.0 and edge_wet_m > 0.0:
 			var slip_deg: float = rad_to_deg(atan2(absf(slip_ms), absf(v_body.z)))
@@ -567,66 +645,67 @@ func _apply_rail_grip(body: SimRigidBody, buoyancy: BuoyancyModel, aft: float, f
 		if magnitude > 0.0:
 			gripping += 1
 		magnitudes.append(magnitude)
-		points.append(body.point_world(Vector3(side * 0.5 * _width_at(x), _bottom_y(x) + 0.5 * edge_wet_m, z)))
-		directions.append(-side * body.basis.x)
+		points.append(_body.point_world(Vector3(side * 0.5 * _width_at(x), _bottom_y(x) + 0.5 * edge_wet_m, z)))
+		directions.append(-side * starboard)
 		slips_ms.append(absf(slip_ms))
 	if gripping == 0:
 		return
 	var torque: Vector3 = Vector3.ZERO
+	var centre_of_mass: Vector3 = _body.position
 	for k: int in STRIPS:
 		if magnitudes[k] <= 0.0:
 			continue
-		var stopping: float = body.effective_mass_at(points[k], directions[k]) * slips_ms[k] / maxf(dt, 1e-4) / float(gripping)
+		var stopping: float = _body.effective_mass_at(points[k], directions[k]) * slips_ms[k] / maxf(dt, 1e-4) / float(gripping)
 		var force: Vector3 = directions[k] * minf(magnitudes[k], stopping)
-		body.add_force_at(points[k], force)
+		_body.add_force_at(points[k], force)
 		rail_grip_n += force.length()
-		torque += (points[k] - body.position).cross(force)
-	rail_yaw_nm = torque.dot(body.basis.y)
+		torque += (points[k] - centre_of_mass).cross(force)
+	rail_yaw_nm = torque.dot(_body.up_axis())
 
 
 ## The water's velocity at point k of the buoyancy grid: from the grid's own record when it
 ## answers the same question (the simulation calls buoyancy.apply() just before compute(), so
 ## the point and the time are the same), otherwise from a solve from scratch.
-func _water_velocity_at_grid_point(k: int, surface: WaterSurface, point_world: Vector3, time_s: float) -> Vector3:
+func _water_velocity_at_grid_point(k: int, point_world: Vector3, time_s: float) -> Vector3:
 	if not _grid_sea.is_empty() and WaterSurface.sample_answers(_grid_sea, k, point_world.x, point_world.z, time_s):
 		return WaterSurface.sample_velocity(_grid_sea, k)
 	WaterSurface.forget_samples(_sea_spare)
-	surface.sample_at(point_world.x, point_world.z, time_s, _sea_spare, 0)
+	_surface.sample_at(point_world.x, point_world.z, time_s, _sea_spare, 0)
 	return WaterSurface.sample_velocity(_sea_spare, 0)
 
 
 ## Depth below the water of one rail (side +1 starboard, -1 port) at a distance forward of
 ## the transom, between the rail points of the two nearest grid rows.
-func _rail_depth(buoyancy: BuoyancyModel, from_transom: float, side: float) -> float:
-	var rows: int = maxi(board.length_samples, 2)
-	var columns: int = maxi(board.width_samples, 1)
-	var spacing: float = board.length_m / float(rows - 1)
+func _rail_depth(from_transom: float, side: float) -> float:
+	var rows: int = maxi(_length_samples, 2)
+	var columns: int = maxi(_width_samples, 1)
+	var spacing: float = _length_m / float(rows - 1)
 	var position: float = clampf(from_transom / spacing, 0.0, float(rows - 1))
 	var i0: int = mini(int(floor(position)), rows - 2)
 	var column: int = columns - 1 if side > 0.0 else 0
-	return lerpf(_point_depth(buoyancy, i0 * columns + column), _point_depth(buoyancy, (i0 + 1) * columns + column), position - float(i0))
+	return lerpf(_point_depth(i0 * columns + column), _point_depth((i0 + 1) * columns + column), position - float(i0))
 
 
 ## Depth below the water of a point of the buoyancy grid on the vee bottom. The grid's
 ## points lie on a flat bottom at the keel's height; the vee lifts a rail's point by its
 ## distance out from the keel times the deadrise's tangent (a few millimetres).
-func _point_depth(buoyancy: BuoyancyModel, index: int) -> float:
-	return buoyancy.point_depths_m[index] - absf(buoyancy.sample_points[index].x) * _vee_rise_per_m
+func _point_depth(index: int) -> float:
+	return _depths[index] - absf(_points[index].x) * _vee_rise_per_m
 
 
 ## The wet part of the bottom as [aft, forward] in metres from the transom, from the
 ## deepest point of each row (the centre of a level board, the low rail of a heeled one),
 ## with both ends interpolated between the last wet row and the first dry one. [0, 0] when
-## the bottom is dry.
-func _wetted_span(buoyancy: BuoyancyModel) -> PackedFloat64Array:
-	var rows: int = maxi(board.length_samples, 2)
-	var columns: int = maxi(board.width_samples, 1)
-	var spacing: float = board.length_m / float(rows - 1)
+## the bottom is dry. Into _span_aft_m and _span_forward_m (two numbers, not a new array: making
+## an array from a list takes the engine's lock).
+func _wetted_span() -> void:
+	var rows: int = maxi(_length_samples, 2)
+	var spacing: float = _length_m / float(rows - 1)
 	var aft: float = -1.0
 	var forward: float = 0.0
 	var previous_depth: float = -1.0
 	for i: int in rows:
-		var depth: float = _row_max_depth(buoyancy, i)
+		var depth: float = _row_max_depth(i)
 		var x: float = spacing * float(i)
 		if depth > 0.0:
 			if aft < 0.0:
@@ -637,17 +716,20 @@ func _wetted_span(buoyancy: BuoyancyModel) -> PackedFloat64Array:
 			break
 		previous_depth = depth
 	if aft < 0.0:
-		return PackedFloat64Array([0.0, 0.0])
-	return PackedFloat64Array([aft, forward])
+		_span_aft_m = 0.0
+		_span_forward_m = 0.0
+		return
+	_span_aft_m = aft
+	_span_forward_m = forward
 
 
 ## The deepest point of a row of the buoyancy grid on the vee bottom (row 0 is the tail
 ## row): the keel of a level board, the low rail of a heeled one.
-func _row_max_depth(buoyancy: BuoyancyModel, row: int) -> float:
-	var columns: int = maxi(board.width_samples, 1)
+func _row_max_depth(row: int) -> float:
+	var columns: int = maxi(_width_samples, 1)
 	var deepest: float = -INF
 	for j: int in columns:
-		deepest = maxf(deepest, _point_depth(buoyancy, row * columns + j))
+		deepest = maxf(deepest, _point_depth(row * columns + j))
 	return deepest
 
 
@@ -667,17 +749,17 @@ func _row_max_depth(buoyancy: BuoyancyModel, row: int) -> float:
 ## bow, a strip wet only near that rail; a level vee is wet only near the keel just behind
 ## the spray root, and across its whole width further aft, where the keel is deep enough
 ## for the water to reach the chines.
-func _wet_width(buoyancy: BuoyancyModel, from_transom: float) -> Vector2:
-	var rows: int = maxi(board.length_samples, 2)
-	var columns: int = maxi(board.width_samples, 1)
+func _wet_width(from_transom: float) -> Vector2:
+	var rows: int = maxi(_length_samples, 2)
+	var columns: int = maxi(_width_samples, 1)
 	if columns < 3:
 		return Vector2(1.0, 0.0)
-	var spacing: float = board.length_m / float(rows - 1)
+	var spacing: float = _length_m / float(rows - 1)
 	var position: float = clampf(from_transom / spacing, 0.0, float(rows - 1))
 	var i0: int = mini(int(floor(position)), rows - 2)
 	var t: float = position - float(i0)
-	var port: float = lerpf(buoyancy.point_depths_m[i0 * columns], buoyancy.point_depths_m[(i0 + 1) * columns], t)
-	var starboard: float = lerpf(buoyancy.point_depths_m[i0 * columns + columns - 1], buoyancy.point_depths_m[(i0 + 1) * columns + columns - 1], t)
+	var port: float = lerpf(_depths[i0 * columns], _depths[(i0 + 1) * columns], t)
+	var starboard: float = lerpf(_depths[i0 * columns + columns - 1], _depths[(i0 + 1) * columns + columns - 1], t)
 	var half_width: float = 0.5 * _width_at(from_transom)
 	if half_width < 1e-6:
 		return Vector2(1.0, 0.0)
@@ -743,7 +825,7 @@ func _mean_width(aft: float, forward: float) -> float:
 ## centre of mass for pitch. Sideways, the hull's immersed side to its draft d drags
 ## rho pi d^2 / 2 per metre (sway_added_mass_kg), and about the yaw axis that water times
 ## the lever squared.
-func _compute_added_mass(aft: float, forward: float, body: SimRigidBody, buoyancy: BuoyancyModel) -> void:
+func _compute_added_mass(aft: float, forward: float, com_offset_z_m: float) -> void:
 	heave_added_mass_kg = 0.0
 	pitch_added_inertia_kgm2 = 0.0
 	roll_added_inertia_kgm2 = 0.0
@@ -752,19 +834,19 @@ func _compute_added_mass(aft: float, forward: float, body: SimRigidBody, buoyanc
 	var length: float = forward - aft
 	if length <= 0.0:
 		return
-	var com_from_transom: float = 0.5 * board.length_m - body.com_offset_body.z
+	var com_from_transom: float = 0.5 * _length_m - com_offset_z_m
 	var strips: int = 8
 	var strip_length: float = length / float(strips)
 	for k: int in strips:
 		var x: float = aft + (float(k) + 0.5) * strip_length
 		var width: float = _width_at(x)
 		var lever: float = x - com_from_transom
-		var strip_mass: float = water.density_kg_m3 * PI * width * width / 8.0 * strip_length
+		var strip_mass: float = _density_kg_m3 * PI * width * width / 8.0 * strip_length
 		heave_added_mass_kg += strip_mass
 		pitch_added_inertia_kgm2 += strip_mass * lever * lever
-		roll_added_inertia_kgm2 += water.density_kg_m3 * PI * pow(width, 4.0) / 256.0 * strip_length
-		var draft: float = clampf(_draft_at(buoyancy, x), 0.0, board.thickness_m)
-		var side_mass: float = water.density_kg_m3 * PI * draft * draft / 2.0 * strip_length
+		roll_added_inertia_kgm2 += _density_kg_m3 * PI * pow(width, 4.0) / 256.0 * strip_length
+		var draft: float = clampf(_draft_at(x), 0.0, _thickness_m)
+		var side_mass: float = _density_kg_m3 * PI * draft * draft / 2.0 * strip_length
 		sway_added_mass_kg += side_mass
 		yaw_added_inertia_kgm2 += side_mass * lever * lever
 
@@ -772,18 +854,18 @@ func _compute_added_mass(aft: float, forward: float, body: SimRigidBody, buoyanc
 ## How deep the hull is at a distance forward of the transom: the deepest point of the
 ## buoyancy grid's rows there (the low rail of a heeled board), between the two nearest
 ## rows.
-func _draft_at(buoyancy: BuoyancyModel, from_transom: float) -> float:
-	var rows: int = maxi(board.length_samples, 2)
-	var spacing: float = board.length_m / float(rows - 1)
+func _draft_at(from_transom: float) -> float:
+	var rows: int = maxi(_length_samples, 2)
+	var spacing: float = _length_m / float(rows - 1)
 	var position: float = clampf(from_transom / spacing, 0.0, float(rows - 1))
 	var i0: int = mini(int(floor(position)), rows - 2)
-	return lerpf(_row_max_depth(buoyancy, i0), _row_max_depth(buoyancy, i0 + 1), position - float(i0))
+	return lerpf(_row_max_depth(i0), _row_max_depth(i0 + 1), position - float(i0))
 
 
 ## Height of the bottom in body axes at a distance forward of the transom (the same rocker
 ## line the buoyancy grid uses).
 func _bottom_y(from_transom: float) -> float:
-	return -0.5 * board.thickness_m + board.bottom_rise_m(from_transom)
+	return -0.5 * _thickness_m + board.bottom_rise_m(from_transom)
 
 
 ## Angle of the chord of the wet bottom to the board's reference plane, positive when the
@@ -799,19 +881,19 @@ func _chord_angle(aft: float, forward: float) -> float:
 ## angle at one degree or more (PHYSICS_SPEC.md section 16).
 func _root_advance_factor(down_speed_ms: float, u: float, bottom_angle: float) -> float:
 	var advance_ms: float = down_speed_ms / tan(maxf(bottom_angle, MIN_SPRAY_ROOT_ANGLE_RAD))
-	return clampf(1.0 + advance_ms / u, 0.0, board.spray_root_factor_max)
+	return clampf(1.0 + advance_ms / u, 0.0, _spray_root_factor_max)
 
 
 ## How much further forward the keel of a vee bottom is wet than its chines, Savitsky's
 ## (1964) L_k - L_c = b tan(beta) / (pi tan(tau)): the water piled up the vee reaches the
 ## chines where the keel is b tan(beta) / pi deep. At the trim of the wet span's chord, at
 ## least one degree (as the lift's reference trim), and no longer than the wet span.
-func _chine_dry_length(body: SimRigidBody, aft: float, forward: float) -> float:
+func _chine_dry_length(aft: float, forward: float) -> float:
 	var length: float = forward - aft
 	if length <= 0.0 or _vee_rise_per_m <= 0.0:
 		return 0.0
-	var trim: float = maxf(SimMath.pitch_rad(body.basis) + _chord_angle(aft, forward), MIN_SPRAY_ROOT_ANGLE_RAD)
-	var beam: float = planing_beam_m * maxf(cos(SimMath.heel_rad(body.basis)), 0.3)
+	var trim: float = maxf(_body.pitch_rad() + _chord_angle(aft, forward), MIN_SPRAY_ROOT_ANGLE_RAD)
+	var beam: float = planing_beam_m * maxf(cos(_body.heel_rad()), 0.3)
 	return minf(beam * _vee_rise_per_m / (PI * tan(trim)), length)
 
 

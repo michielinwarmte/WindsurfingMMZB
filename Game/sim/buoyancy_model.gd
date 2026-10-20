@@ -13,9 +13,27 @@ extends RefCounted
 ## Besides the forces, the model reports what the hull model needs: how much of the hull
 ## is under water, the wetted bottom area, the wetted length and the immersion at the
 ## transom (section 15 decisions for Phase 2).
+##
+## Boards on threads (F1 no_wait): reading a field of another object, as board.thickness_m,
+## takes a global engine lock, and boards stepped side by side on worker threads wait for each
+## other there; calling a method of it (body.point_world(), body.add_force_at()) does not. So
+## apply() uses copies of the configs' numbers kept in this model's own fields, taken by
+## copy_config(): when the model is made and at the start of every tick (WindsurferSim.step).
+## The configs are never changed inside a tick, so the copies are their numbers.
 
 var board: BoardConfig
 var water: WaterConfig
+
+## The configs' numbers that apply() uses (copy_config()).
+var _thickness_m: float = 0.0
+var _volume_m3: float = 0.0
+var _length_m: float = 0.0
+var _length_samples: int = 0
+var _density_kg_m3: float = 0.0
+var _damping_linear_ns_m: float = 0.0
+var _damping_quadratic_ns2_m2: float = 0.0
+## Which rows of the grid have a point in the water, during apply() (1 = wet), to count them.
+var _row_is_wet: PackedByteArray = PackedByteArray()
 
 ## Sample points in body axes relative to the board origin (x starboard, y up, z aft).
 var sample_points: PackedVector3Array = PackedVector3Array()
@@ -61,7 +79,20 @@ const WET_RAMP_M: float = 0.02
 func _init(board_config: BoardConfig, water_config: WaterConfig) -> void:
 	board = board_config
 	water = water_config
+	copy_config()
 	_build_grid()
+
+
+## Copies the configs' numbers that apply() uses into this model's own (see the note at the
+## top).
+func copy_config() -> void:
+	_thickness_m = board.thickness_m
+	_volume_m3 = board.volume_m3
+	_length_m = board.length_m
+	_length_samples = board.length_samples
+	_density_kg_m3 = water.density_kg_m3
+	_damping_linear_ns_m = water.damping_linear_ns_m
+	_damping_quadratic_ns2_m2 = water.damping_quadratic_ns2_m2
 
 
 ## Builds the grid: rows from the tail (z = +L/2) to the bow (z = -L/2), with the bottom
@@ -113,6 +144,7 @@ func _build_grid() -> void:
 		sample_volumes_m3[k] = board.volume_m3 * weights[k] / total_weight
 		sample_areas_m2[k] = planform_area_m2 * area_weights[k] / total_area_weight
 	sea_samples = WaterSurface.new_samples(sample_points.size())
+	_row_is_wet.resize(n_len)
 
 
 ## Forgets the water's last answers, so that the next apply() solves every point from
@@ -138,7 +170,10 @@ func apply(body: SimRigidBody, surface: WaterSurface, time_s: float, gravity_ms2
 	wetted_area_m2 = 0.0
 	var wet_count: int = 0
 	var depth_sum: float = 0.0
-	var wet_rows: Dictionary[int, bool] = {}
+	# The rows with a point in the water, counted once each (a list of flags, not a new
+	# Dictionary: making one takes the engine's lock too).
+	var wet_rows: int = 0
+	_row_is_wet.fill(0)
 	sea_surface = surface
 
 	for k: int in sample_points.size():
@@ -152,12 +187,14 @@ func apply(body: SimRigidBody, surface: WaterSurface, time_s: float, gravity_ms2
 			continue
 		wet_count += 1
 		depth_sum += depth
-		wet_rows[sample_rows[k]] = true
+		if _row_is_wet[sample_rows[k]] == 0:
+			_row_is_wet[sample_rows[k]] = 1
+			wet_rows += 1
 
 		# Archimedes for this column: the column fills over one hull thickness.
-		var fraction: float = clampf(depth / board.thickness_m, 0.0, 1.0)
+		var fraction: float = clampf(depth / _thickness_m, 0.0, 1.0)
 		var volume: float = sample_volumes_m3[k] * fraction
-		var magnitude: float = water.density_kg_m3 * gravity_ms2 * volume
+		var magnitude: float = _density_kg_m3 * gravity_ms2 * volume
 		var force: Vector3 = normal * magnitude
 		body.add_force_at(point_world, force)
 		submerged_volume_m3 += volume
@@ -172,8 +209,8 @@ func apply(body: SimRigidBody, surface: WaterSurface, time_s: float, gravity_ms2
 		var wet_share: float = sample_areas_m2[k] * clampf(depth / WET_RAMP_M, 0.0, 1.0) / planform_area_m2
 		var relative_velocity: Vector3 = body.point_velocity(point_world) - WaterSurface.sample_velocity(sea_samples, k)
 		var normal_speed: float = relative_velocity.dot(normal)
-		var damping: float = -(water.damping_linear_ns_m * normal_speed
-			+ water.damping_quadratic_ns2_m2 * normal_speed * absf(normal_speed)) * wet_share
+		var damping: float = -(_damping_linear_ns_m * normal_speed
+			+ _damping_quadratic_ns2_m2 * normal_speed * absf(normal_speed)) * wet_share
 		# A damper can only take away the momentum there is: in one step this point's share
 		# of the force may not exceed what stops its motion (the exact answer for a damper
 		# integrated implicitly). Without this a light hull slamming down at a few metres per
@@ -193,7 +230,7 @@ func apply(body: SimRigidBody, surface: WaterSurface, time_s: float, gravity_ms2
 	buoyancy_force_n = force_sum.length()
 	damping_force_n = damping_sum.length()
 	is_floating = wet_count > 0
-	submersion_ratio = submerged_volume_m3 / board.volume_m3
+	submersion_ratio = submerged_volume_m3 / _volume_m3
 	if buoyancy_force_n > 1e-6:
 		centre_of_buoyancy_world = weighted_position / buoyancy_force_n
 	else:
@@ -203,6 +240,6 @@ func apply(body: SimRigidBody, surface: WaterSurface, time_s: float, gravity_ms2
 	else:
 		wet_centroid_world = body.origin_world()
 	mean_immersion_m = depth_sum / wet_count if wet_count > 0 else 0.0
-	wetted_length_m = board.length_m * float(wet_rows.size()) / float(maxi(board.length_samples, 1))
+	wetted_length_m = _length_m * float(wet_rows) / float(maxi(_length_samples, 1))
 	transom_immersion_m = maxf(point_depths_m[tail_centre_index], 0.0)
 	bow_immersion_m = maxf(point_depths_m[bow_centre_index], 0.0)

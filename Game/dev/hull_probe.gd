@@ -145,7 +145,6 @@ func _evaluate(trim_deg: float, heel_deg: float, height_m: float) -> Dictionary[
 func _strip_theory(wagner_heel: bool, wet_reference: bool) -> Dictionary[String, float]:
 	var hull: HullModel = _sim.hull
 	var body: SimRigidBody = _sim.body
-	var buoyancy: BuoyancyModel = _sim.buoyancy
 	var board: BoardConfig = _sim.board_config
 	var water: WaterSurface = _sim.water
 	var rho: float = _sim.water_config.density_kg_m3
@@ -173,7 +172,7 @@ func _strip_theory(wagner_heel: bool, wet_reference: bool) -> Dictionary[String,
 	for k: int in STRIPS:
 		var x: float = aft + (float(k) + 0.5) * strip_length
 		var normal_world: Vector3 = SimMath.to_world(body.basis, Vector3(0.0, 1.0, board.bottom_slope(x)).normalized())
-		var wet: Vector2 = hull._wet_width(buoyancy, x)
+		var wet: Vector2 = hull._wet_width(x)
 		if wagner_heel:
 			wet.x = _wagner_wet_fraction(x)
 		var point_world: Vector3 = body.point_world(Vector3(wet.y, hull._bottom_y(x), 0.5 * board.length_m - x))
@@ -218,7 +217,7 @@ func _strip_theory(wagner_heel: bool, wet_reference: bool) -> Dictionary[String,
 	# Step 3, the spray root.
 	var last: int = STRIPS - 1
 	var v_root: float = v_into[last] + 0.5 * (v_into[last] - v_into[last - 1])
-	var root_world: Vector3 = body.point_world(Vector3(hull._wet_width(buoyancy, forward).y, hull._bottom_y(forward), 0.5 * board.length_m - forward))
+	var root_world: Vector3 = body.point_world(Vector3(hull._wet_width(forward).y, hull._bottom_y(forward), 0.5 * board.length_m - forward))
 	var root_down: float = -(body.point_velocity(root_world) - water.velocity_at(root_world.x, root_world.z, 0.0)).dot(water.normal_at(root_world.x, root_world.z, 0.0))
 	var root_factor: float = hull._root_advance_factor(root_down, u, pitch + board.bottom_slope(forward))
 	var root_force: float = maxf(u * root_factor * m_per_m[last] * v_root, 0.0)
@@ -332,7 +331,7 @@ func _high_rail_dry_length() -> float:
 	var high_side: float = 1.0 if SimMath.heel_rad(_sim.body.basis) < 0.0 else -1.0
 	var forward: float = hull.wetted_aft_m + hull.wetted_length_m
 	var x: float = forward
-	while x > hull.wetted_aft_m and hull._rail_depth(_sim.buoyancy, x, high_side) <= 0.0:
+	while x > hull.wetted_aft_m and hull._rail_depth(x, high_side) <= 0.0:
 		x -= 0.005
 	return forward - maxf(x, hull.wetted_aft_m)
 

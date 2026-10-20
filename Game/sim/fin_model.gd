@@ -10,11 +10,29 @@ extends RefCounted
 ## and each bent piece of fin pushes square to itself: partly sideways, partly up toward the
 ## deck. The beam is worked out once, when the fin is made (_prepare_bend); each step only
 ## scales it by the lift (_bend), because a beam's bend is proportional to its load.
+##
+## Boards on threads (F1 no_wait): reading a field of another object, as config.area_m2 or
+## body.basis, takes a global engine lock, and boards stepped side by side on worker threads
+## wait for each other there; calling a method of it does not. So compute() asks the body for
+## its axes through its methods (body.to_body(), which hands no Basis over: see SimRigidBody)
+## and uses copies of the config's numbers kept in this model's own fields, taken by copy_config(): when the model is made and at the start of every tick
+## (WindsurferSim.step). The config is never changed inside a tick, so the copies are the
+## config's numbers. The coefficient curves (lift_coefficient(), drag_coefficient()) still
+## read the config itself: the telemetry and the tests ask them too.
 
 ## The fin is cut into this many strips along the span for the beam.
 const BEND_STRIPS: int = 20
 
 var config: FinConfig
+
+## The config's numbers that compute() and _bend() use (copy_config()).
+var _area_m2: float = 0.0
+var _span_m: float = 0.0
+var _root_local: Vector3 = Vector3.ZERO
+var _min_speed_ms: float = 0.0
+var _stall_peak_deg: float = 0.0
+var _bends: bool = false
+var _max_bend_deg: float = 0.0
 
 # The beam, worked out once in _prepare_bend().
 ## S in EI(y) = S * c(y)^4: the fin's bending stiffness is this scale times the chord to the
@@ -50,7 +68,20 @@ var up_share: float = 0.0
 
 func _init(fin_config: FinConfig) -> void:
 	config = fin_config
+	copy_config()
 	_prepare_bend()
+
+
+## Copies the config's numbers that compute() and _bend() use into this model's own (see the
+## note at the top).
+func copy_config() -> void:
+	_area_m2 = config.area_m2
+	_span_m = config.span_m
+	_root_local = config.root_local
+	_min_speed_ms = config.min_speed_ms
+	_stall_peak_deg = config.stall_peak_deg
+	_bends = config.bends
+	_max_bend_deg = config.max_bend_deg
 
 
 func compute(body: SimRigidBody, surface: WaterSurface, time_s: float, rho_water: float) -> void:
@@ -58,9 +89,9 @@ func compute(body: SimRigidBody, surface: WaterSurface, time_s: float, rho_water
 	# The part of the span that is in the water: all of it with the root under the surface,
 	# less when the tail has lifted and the root is in the air (a tack with the sailor's
 	# weight forward, a bounce). The force scales with the immersed area.
-	var root_world: Vector3 = body.point_world(config.root_local)
+	var root_world: Vector3 = body.point_world(_root_local)
 	var root_depth: float = surface.depth_at(root_world, time_s)
-	immersed_fraction = clampf((root_depth + config.span_m) / config.span_m, 0.0, 1.0)
+	immersed_fraction = clampf((root_depth + _span_m) / _span_m, 0.0, 1.0)
 	in_water = immersed_fraction > 0.0
 	if not in_water:
 		_clear()
@@ -68,21 +99,21 @@ func compute(body: SimRigidBody, surface: WaterSurface, time_s: float, rho_water
 
 	# The flow the fin sees: its own motion (including the board's rotation) minus the water's.
 	var v_rel: Vector3 = body.point_velocity(cop_world) - surface.velocity_at(cop_world.x, cop_world.z, time_s)
-	var v_body: Vector3 = SimMath.to_body(body.basis, v_rel)
+	var v_body: Vector3 = body.to_body(v_rel)
 	var v_plane: Vector3 = Vector3(v_body.x, 0.0, v_body.z)  # flow in the fin's plane
 	var speed: float = v_plane.length()
-	if speed < config.min_speed_ms:
+	if speed < _min_speed_ms:
 		_clear()
 		return
 
 	slip_rad = SimMath.slip_angle_rad(v_plane)
 	cl = lift_coefficient(slip_rad)
 	cd = drag_coefficient(cl, slip_rad)
-	is_stalled = rad_to_deg(absf(slip_rad)) > config.stall_peak_deg
+	is_stalled = rad_to_deg(absf(slip_rad)) > _stall_peak_deg
 
 	var q: float = 0.5 * rho_water * speed * speed
-	lift_n = q * config.area_m2 * immersed_fraction * absf(cl)
-	drag_n = q * config.area_m2 * immersed_fraction * cd
+	lift_n = q * _area_m2 * immersed_fraction * absf(cl)
+	drag_n = q * _area_m2 * immersed_fraction * cd
 
 	# Drag along the flow; lift perpendicular to it, against the slip. A stiff fin's lift lies
 	# in the board's plane; the bent fin turns a part of it up toward the deck (_bend).
@@ -90,7 +121,7 @@ func compute(body: SimRigidBody, surface: WaterSurface, time_s: float, rho_water
 	var lift_dir: Vector3 = signf(slip_rad) * Vector3(flow_dir.z, 0.0, -flow_dir.x)
 	_bend(lift_n)
 	var force_body: Vector3 = lift_dir * (lift_n * side_share) + Vector3.UP * (lift_n * up_share) - flow_dir * drag_n
-	force_world = SimMath.to_world(body.basis, force_body)
+	force_world = body.to_world(force_body)
 	body.add_force_at(cop_world, force_world)
 
 
@@ -160,9 +191,9 @@ func _bend(lift: float) -> void:
 	up_share = 0.0
 	bend_tip_rad = 0.0
 	bend_tip_m = 0.0
-	if not config.bends or lift <= 0.0:
+	if not _bends or lift <= 0.0:
 		return
-	var cap: float = deg_to_rad(config.max_bend_deg)
+	var cap: float = deg_to_rad(_max_bend_deg)
 	var side: float = 0.0
 	for i: int in BEND_STRIPS:
 		var theta: float = minf(lift * strip_slope_per_n[i], cap)
