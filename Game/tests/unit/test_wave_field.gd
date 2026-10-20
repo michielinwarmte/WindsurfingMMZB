@@ -309,3 +309,125 @@ func _swell_and_chop() -> WaveSetConfig:
 	var set_config: WaveSetConfig = WaveSetConfig.new()
 	set_config.waves = [swell, chop]
 	return set_config
+
+
+# F1, the sea query (AI_FLEET_PLAN.md, D2): the hull asks for the height, the normal and the
+# velocity at once (WaterSurface.sample_at), from one solve started where the last substep's
+# ended. The answers must be the three queries' answers: to the last bit when the solve
+# starts cold, within the solver's own millimetre when it starts warm.
+
+
+## The solve of 9.5 as the spec writes it and as rest_point_at did it until F1: each pass
+## takes the whole displacement_at and keeps its sideways part.
+func _rest_point_as_the_spec_solves_it(field: WaveField, x: float, z: float, t: float) -> Vector2:
+	var rest: Vector2 = Vector2(x, z)
+	for i: int in WaveField.SOLVE_MAX_ITERATIONS:
+		var displacement: Vector3 = field.displacement_at(rest.x, rest.y, t)
+		var next: Vector2 = Vector2(x - displacement.x, z - displacement.z)
+		var moved: float = next.distance_to(rest)
+		rest = next
+		if moved < WaveField.SOLVE_TOLERANCE_M:
+			break
+	return rest
+
+
+func test_the_solve_finds_the_same_rest_point_as_the_spec_s_solve() -> void:
+	var field: WaveField = _default_set()
+	seed(21)
+	var differ: int = 0
+	for i: int in 200:
+		var x: float = randf_range(-100.0, 100.0)
+		var z: float = randf_range(-100.0, 100.0)
+		var t: float = randf_range(0.0, 60.0)
+		if field.rest_point_at(x, z, t) != _rest_point_as_the_spec_solves_it(field, x, z, t):
+			differ += 1
+	assert_eq(differ, 0, "the sideways-only passes find the same rest point to the last bit")
+
+
+func test_a_cold_sample_gives_the_three_queries_answers() -> void:
+	var field: WaveField = _default_set()
+	var sample: WaterSurface.Sample = WaterSurface.Sample.new()
+	seed(17)
+	var worst_height_m: float = 0.0
+	var worst_normal: float = 0.0
+	var worst_velocity_ms: float = 0.0
+	for i: int in 200:
+		var x: float = randf_range(-100.0, 100.0)
+		var z: float = randf_range(-100.0, 100.0)
+		var t: float = randf_range(0.0, 60.0)
+		sample.forget()  # cold: the solve starts at (x, z), as the three queries' solves do
+		field.sample_at(x, z, t, sample)
+		worst_height_m = maxf(worst_height_m, absf(sample.height_m - field.height_at(x, z, t)))
+		worst_normal = maxf(worst_normal, sample.normal.distance_to(field.normal_at(x, z, t)))
+		worst_velocity_ms = maxf(worst_velocity_ms, sample.velocity_ms.distance_to(field.velocity_at(x, z, t)))
+		assert_true(sample.answers(x, z, t), "the sample says which question it answers")
+	assert_lt(worst_height_m, 1e-9, "the height of height_at (worst %s m)" % String.num_scientific(worst_height_m))
+	assert_lt(worst_normal, 1e-9, "the normal of normal_at (worst %s)" % String.num_scientific(worst_normal))
+	assert_lt(worst_velocity_ms, 1e-9, "the velocity of velocity_at (worst %s m/s)" % String.num_scientific(worst_velocity_ms))
+
+
+func test_a_warm_sample_agrees_within_the_solver_s_millimetre() -> void:
+	var field: WaveField = _default_set()
+	var sample: WaterSurface.Sample = WaterSurface.Sample.new()
+	seed(19)
+	var worst_height_m: float = 0.0
+	var worst_normal: float = 0.0
+	var worst_velocity_ms: float = 0.0
+	var worst_residual_m: float = 0.0
+	for i: int in 200:
+		var x: float = randf_range(-100.0, 100.0)
+		var z: float = randf_range(-100.0, 100.0)
+		var t: float = randf_range(0.0, 60.0)
+		# The sample holds an answer whose rest point is 4 cm from this point's: the solve
+		# starts there.
+		var rest: Vector2 = field.rest_point_at(x, z, t)
+		var angle: float = randf_range(0.0, TAU)
+		sample.x = x
+		sample.z = z
+		sample.rest_x = rest.x + 0.04 * cos(angle)
+		sample.rest_z = rest.y + 0.04 * sin(angle)
+		sample.is_set = true
+		field.sample_at(x, z, t, sample)
+		worst_height_m = maxf(worst_height_m, absf(sample.height_m - field.height_at(x, z, t)))
+		worst_normal = maxf(worst_normal, sample.normal.distance_to(field.normal_at(x, z, t)))
+		worst_velocity_ms = maxf(worst_velocity_ms, sample.velocity_ms.distance_to(field.velocity_at(x, z, t)))
+		var displacement: Vector3 = field.displacement_at(sample.rest_x, sample.rest_z, t)
+		worst_residual_m = maxf(worst_residual_m, Vector2(sample.rest_x + displacement.x - x, sample.rest_z + displacement.z - z).length())
+	assert_lt(worst_height_m, WaveField.SOLVE_TOLERANCE_M, "the height within the solver's millimetre (worst %.6f mm)" % (worst_height_m * 1000.0))
+	assert_lt(worst_normal, 1e-4, "the normal within 1e-4 (worst %s)" % String.num_scientific(worst_normal))
+	assert_lt(worst_velocity_ms, 1e-3, "the velocity within a millimetre per second (worst %s m/s)" % String.num_scientific(worst_velocity_ms))
+	assert_lt(worst_residual_m, 0.0015, "rest + displacement lands on the world point within about a millimetre")
+
+
+func test_a_sample_carried_along_with_a_moving_point_keeps_agreeing() -> void:
+	# A point of a board at 10 m/s, asked every substep of 1/180 s for 3 s, each solve
+	# started from the substep before's answer.
+	var field: WaveField = _default_set()
+	var sample: WaterSurface.Sample = WaterSurface.Sample.new()
+	var worst_height_m: float = 0.0
+	var worst_normal: float = 0.0
+	var dt: float = 1.0 / 180.0
+	for i: int in 540:
+		var t: float = 5.0 + i * dt
+		var x: float = 3.0 + 10.0 * cos(0.3) * i * dt
+		var z: float = -7.0 + 10.0 * sin(0.3) * i * dt
+		field.sample_at(x, z, t, sample)
+		worst_height_m = maxf(worst_height_m, absf(sample.height_m - field.height_at(x, z, t)))
+		worst_normal = maxf(worst_normal, sample.normal.distance_to(field.normal_at(x, z, t)))
+	assert_lt(worst_height_m, WaveField.SOLVE_TOLERANCE_M, "worst %.6f mm" % (worst_height_m * 1000.0))
+	assert_lt(worst_normal, 1e-4, "worst %s" % String.num_scientific(worst_normal))
+
+
+func test_flat_water_samples_are_still_and_level() -> void:
+	var level: WaterConfig = WaterConfig.new()
+	level.base_height_m = 1.5
+	var disabled: WaveSetConfig = _one_wave()
+	disabled.enable_waves = false
+	for surface: WaterSurface in [FlatWater.new(level), WaveField.new(disabled, level)]:
+		var sample: WaterSurface.Sample = WaterSurface.Sample.new()
+		surface.sample_at(3.0, -7.0, 2.0, sample)
+		assert_eq(sample.height_m, surface.height_at(3.0, -7.0, 2.0))
+		assert_eq(sample.height_m, 1.5)
+		assert_eq(sample.normal, Vector3.UP)
+		assert_eq(sample.velocity_ms, Vector3.ZERO)
+		assert_eq(Vector2(sample.rest_x, sample.rest_z), Vector2(3.0, -7.0), "nothing is displaced")

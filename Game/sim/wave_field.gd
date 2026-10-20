@@ -99,17 +99,41 @@ func displacement_at(rest_x: float, rest_z: float, t: float) -> Vector3:
 ## 9.5. With a total steepness below 1 each pass shrinks the error by at least that
 ## factor; the default set needs about six passes for a millimetre.
 func rest_point_at(x: float, z: float, t: float) -> Vector2:
-	var rest: Vector2 = Vector2(x, z)
+	return rest_point_from(x, z, t, Vector2(x, z))
+
+
+## The solve of rest_point_at started from a guess instead of from (x, z) itself: the same
+## passes, the same tolerance and the same cap. A guess near the answer needs fewer passes,
+## and where the solve stops the answer is as close to the exact rest point as
+## rest_point_at's: the last pass moved it less than the solver's millimetre.
+func rest_point_from(x: float, z: float, t: float, start: Vector2) -> Vector2:
 	if count == 0:
-		return rest
+		return Vector2(x, z)
+	var rest: Vector2 = start
 	for i: int in SOLVE_MAX_ITERATIONS:
-		var displacement: Vector3 = displacement_at(rest.x, rest.y, t)
-		var next: Vector2 = Vector2(x - displacement.x, z - displacement.z)
+		var sideways: Vector2 = _sideways_displacement_at(rest.x, rest.y, t)
+		var next: Vector2 = Vector2(x - sideways.x, z - sideways.y)
 		var moved: float = next.distance_to(rest)
 		rest = next
 		if moved < SOLVE_TOLERANCE_M:
 			break
 	return rest
+
+
+## The sideways part (x, z) of displacement_at, all a pass of the solve needs: the same
+## sums in the same order without the height's sine. Vector2 holds 32-bit floats as Vector3
+## does, so the sums are rounded the same way and the rest point is the same to the last bit.
+func _sideways_displacement_at(rest_x: float, rest_z: float, t: float) -> Vector2:
+	var sideways: Vector2 = Vector2.ZERO
+	for i: int in count:
+		var wave_k: float = k[i]
+		var wave_x: float = dir_x[i]
+		var wave_z: float = dir_z[i]
+		var phase: float = wave_k * (wave_x * rest_x + wave_z * rest_z) - omega[i] * t
+		var horizontal: float = steepness[i] / wave_k * cos(phase)
+		sideways.x += wave_x * horizontal
+		sideways.y += wave_z * horizontal
+	return sideways
 
 
 func height_at(x: float, z: float, t: float) -> float:
@@ -164,6 +188,79 @@ func velocity_at_rest(rest_x: float, rest_z: float, t: float) -> Vector3:
 		velocity.z += dir_z[i] * forward
 		velocity.y -= amplitude[i] * omega[i] * cos(phase)
 	return velocity
+
+
+## The height, the normal and the velocity at a world (x, z) at once (WaterSurface.Sample):
+## one solve for the rest point and one pass over the waves, where height_at, normal_at and
+## velocity_at take a solve and a pass each. Started cold (a new or forgotten sample) the
+## solve starts at (x, z), as theirs does, and the answers are theirs to the last bit.
+##
+## Started warm (the sample holds the answer at the same point of the hull a substep ago):
+## the surface point now at (x, z) has been carried sideways by nearly the same amount as
+## the one found then, a few centimetres away and a fraction of a second earlier. So the
+## search starts at (x, z) less that displacement, within a few millimetres of the answer,
+## and one or two passes reach the solver's millimetre instead of three. The answer is the
+## same within the solver's millimetre (9.5): it can differ from the cold one by a small
+## part of a millimetre in the rest point, a few micrometres in the height.
+func sample_at(x: float, z: float, time_s: float, sample: WaterSurface.Sample) -> void:
+	var start: Vector2 = Vector2(x, z)
+	if sample.is_set:
+		start = Vector2(x - (sample.x - sample.rest_x), z - (sample.z - sample.rest_z))
+	var rest: Vector2 = rest_point_from(x, z, time_s, start)
+	sample.x = x
+	sample.z = z
+	sample.time_s = time_s
+	sample.rest_x = rest.x
+	sample.rest_z = rest.y
+	sample.is_set = true
+	if count == 0:
+		sample.height_m = base_height_m
+		sample.normal = Vector3.UP
+		sample.velocity_ms = Vector3.ZERO
+		return
+	_answers_at_rest(rest.x, rest.y, time_s, sample)
+
+
+## The height (9.4), the normal (9.6a) and the velocity (9.7) at a rest point in one pass
+## over the waves: the formulas of displacement_at, normal_at_rest and velocity_at_rest,
+## with each wave's sine and cosine computed once for all three, and its numbers read from
+## the arrays once (reading an array costs GDScript more than the arithmetic). The products
+## are the same in the same order, and the sums are kept in Vector3s as those functions keep
+## them, so they are rounded the same way and the answers are the same to the last bit.
+func _answers_at_rest(rest_x: float, rest_z: float, t: float, sample: WaterSurface.Sample) -> void:
+	var displacement: Vector3 = Vector3.ZERO  # only its vertical part, the height, is needed
+	var tangent_x: Vector3 = Vector3(1.0, 0.0, 0.0)
+	var tangent_z: Vector3 = Vector3(0.0, 0.0, 1.0)
+	var velocity: Vector3 = Vector3.ZERO
+	for i: int in count:
+		var wave_k: float = k[i]
+		var wave_x: float = dir_x[i]
+		var wave_z: float = dir_z[i]
+		var wave_a: float = amplitude[i]
+		var wave_s: float = steepness[i]
+		var wave_omega: float = omega[i]
+		var phase: float = wave_k * (wave_x * rest_x + wave_z * rest_z) - wave_omega * t
+		var sin_phase: float = sin(phase)
+		var cos_phase: float = cos(phase)
+		# The height of the surface point (displacement_at).
+		displacement.y += wave_a * sin_phase
+		# The two tangents of the displaced surface (normal_at_rest); the cross term is the
+		# same in both.
+		var cross_term: float = wave_x * wave_z * wave_s * sin_phase
+		tangent_x.x -= wave_x * wave_x * wave_s * sin_phase
+		tangent_x.y += wave_a * wave_k * wave_x * cos_phase
+		tangent_x.z -= cross_term
+		tangent_z.x -= cross_term
+		tangent_z.y += wave_a * wave_k * wave_z * cos_phase
+		tangent_z.z -= wave_z * wave_z * wave_s * sin_phase
+		# The velocity of the surface point (velocity_at_rest).
+		var forward: float = wave_s * c[i] * sin_phase
+		velocity.x += wave_x * forward
+		velocity.z += wave_z * forward
+		velocity.y -= wave_a * wave_omega * cos_phase
+	sample.height_m = base_height_m + displacement.y
+	sample.normal = tangent_z.cross(tangent_x).normalized()
+	sample.velocity_ms = velocity
 
 
 ## The largest height above the still level the set can reach.

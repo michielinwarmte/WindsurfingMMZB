@@ -88,6 +88,49 @@ func _time_the_queries(n: int) -> void:
 
 	print("sea queries, microseconds each (%d waves, %d points): height_at %.2f; height+normal+velocity as the hull asked them %.2f; one solve then the three _rest answers %.2f; one displacement_at (one wave sum) %.2f; worst height difference between the two ways %.3f mm (sink %.1f)" % [
 		field.count, n, height_us, three_us, once_us, displacement_us, worst_mm, sink])
+	_time_the_sample(field, points, t)
+
+
+## The one-pass sample (WaveField.sample_at, F1): cold, as the first question at a point,
+## and warm, as the hull asks it: the same point of the hull a substep (1/180 s) ago was
+## 4 cm away (a board at 7 m/s). Then how far the warm answers are from the three queries'.
+func _time_the_sample(field: WaveField, points: PackedVector2Array, t: float) -> void:
+	var n: int = points.size()
+	var sink: float = 0.0
+	var sample: WaterSurface.Sample = WaterSurface.Sample.new()
+	var t0: int = Time.get_ticks_usec()
+	for p: Vector2 in points:
+		sample.forget()
+		field.sample_at(p.x, p.y, t, sample)
+		sink += sample.height_m + sample.normal.y + sample.velocity_ms.x
+	var cold_us: float = float(Time.get_ticks_usec() - t0) / n
+
+	var substep_s: float = 1.0 / 180.0
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 2
+	var samples: Array[WaterSurface.Sample] = []
+	for p: Vector2 in points:
+		var before: WaterSurface.Sample = WaterSurface.Sample.new()
+		var angle: float = rng.randf_range(0.0, TAU)
+		field.sample_at(p.x - 0.04 * cos(angle), p.y - 0.04 * sin(angle), t - substep_s, before)
+		samples.append(before)
+	t0 = Time.get_ticks_usec()
+	for i: int in n:
+		var warm: WaterSurface.Sample = samples[i]
+		field.sample_at(points[i].x, points[i].y, t, warm)
+		sink += warm.height_m + warm.normal.y + warm.velocity_ms.x
+	var warm_us: float = float(Time.get_ticks_usec() - t0) / n
+
+	var worst_height_mm: float = 0.0
+	var worst_normal: float = 0.0
+	var worst_velocity_ms: float = 0.0
+	for i: int in mini(2000, n):
+		var p: Vector2 = points[i]
+		worst_height_mm = maxf(worst_height_mm, absf(samples[i].height_m - field.height_at(p.x, p.y, t)) * 1000.0)
+		worst_normal = maxf(worst_normal, samples[i].normal.distance_to(field.normal_at(p.x, p.y, t)))
+		worst_velocity_ms = maxf(worst_velocity_ms, samples[i].velocity_ms.distance_to(field.velocity_at(p.x, p.y, t)))
+	print("the one-pass sample, microseconds each: cold %.2f, warm (the point 4 cm away a substep ago) %.2f; warm against the three queries, at worst: height %.5f mm, normal %.7f, velocity %.7f m/s (sink %.1f)" % [
+		cold_us, warm_us, worst_height_mm, worst_normal, worst_velocity_ms, sink])
 
 
 ## Milliseconds of physics per tick of one board, the way tools/simulate.sh beam_reach sails.
