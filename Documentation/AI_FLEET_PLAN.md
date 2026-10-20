@@ -29,11 +29,21 @@ So: the editor build we always played in is what made the race stutter at four b
 
 Every board, the player's and every AI's, runs `WindsurferSim` with the same controller, the same autopilot and the same substeps: it falls, it catches gusts, it slams on waves, it obeys the same rules. (Michiel, 20 October 2026: "the same AI controller and steps for everyone, every AI the same." The earlier idea of a coarser integration for far boards is dropped.)
 
-- **The substeps are decided once, for all boards:** 2 if the validation suite and the race matrix give the same answers at 2 as at 4 within a few per cent (the polar, the onset of planing, the stability, the manoeuvres, the fall rates in a fleet race at 12, 18 and 24 kt), else 4. Michiel decides what "the same" is. The one measured case (a 120 s beam reach: the same speed to two decimals, half the cost) is a hint, not the verdict.
+- **The substeps are decided once, for all boards,** by the measurements below: 4 unless Michiel accepts 3; 2 is out (the 24 kt broad reach falls).
+
+**The substeps, measured (20 October 2026, for Michiel's verdict).** The physics tick is 1/60 s cut into substeps; every force is computed at every substep, so the cost is per substep and nothing in the model changes with their number, only how finely it is integrated. The reach check (nine steady cases, flat water, 40 s each) and the validation suite (the polar, the onset, the stability, the recovery, the waves, the fin, and the skipper's races on T1 and T2 at 12, 18 and 24 kt) at each setting:
+
+| Substeps | Step | Cost per board and tick (waves) | The reach check against 4 | The validation suite against 4 |
+|---|---|---|---|---|
+| 4 (today) | 1/240 s | 3.3 ms | | 40 pass, 1 fail (the onset, red on purpose), 2 pending (U1's targets) |
+| 3 | 1/180 s | about 2.5 ms | all nine cases the same within 0.1 % (the 24 kt broad reach: 16.45 against 16.42 m/s, pitch steadiness 0.23 against 0.25 deg) | the same, plus two differences in the skipper's races: the all-rounder falls once alone on T1 at 24 kt (none at 4), and rounds T2's mark 2 at 20.2 m instead of under 20 |
+| 2 | 1/120 s | 1.7 ms | eight cases the same within 1 %; **the 24 kt broad reach at 32 knots falls** (a catapult: pitch steadiness 5.4 deg where 4 gives 0.25) | not run: the reach check already fails |
+
+What it means: the steady sailing is the same at 3 and 4; the fast events at 24 kt (a catapult on a broad reach, a fall in a long race) are where a coarser step shows, because the board, the sailor on the harness and the rig move fastest there. At 2 the integration itself gives way in the fastest case. So 4 stays unless Michiel accepts 3 with its 24 kt difference (a quarter of the cost saved; the fleet from 16 to about 21 boards at 60 fps). The sea query is the bigger and the safer lever: half of a board's cost without touching the integration.
 - **The sea query** is the other lever, Michiel's: the sea is more than half of a board's cost (3.3 ms per tick with waves, 1.5 flat), and a cheaper way to sample it for the buoyancy grid would help every board alike.
 - **The release engine** (`tools/release.sh`): the game and the training runs use the exported build, where threads scale. The editor build stays for development and the tests.
 - **Eight threads, boards batched:** the race runner's group task gets at most eight tasks, each stepping a batch of boards one after the other, so 32 boards cost about four boards' time per thread. The frame's other work with many boards (the HUD's fleet order is quadratic today, the labels, the figures) gets the same treatment: levels of visual detail beyond 300 m, the fleet order computed once per tick. Only visuals are leveled; the physics never is.
-- **The budget, from the measurements:** at 2 substeps, 32 boards cost about 32 x 1.7 / 8 x 1.3 = 8.8 ms of physics per tick, a frame under 16 ms: 60 fps on the laptop. At 4 substeps the same fleet costs about 17 ms, so 16 boards fit and 32 need Michiel's cheaper sea. Max's sizes: 20 to start with, 32 nice, 40 very nice; measured at 8, 16, 24, 32 and 40 in F1.
+- **The budget, from the measurements:** at 4 substeps, 16 boards cost about 16 x 3.3 / 8 x 1.3 = 8.6 ms of physics per tick: 60 fps on the laptop with room; 32 boards about 17 ms, too much. At 3 substeps about 21 boards fit. With Michiel's cheaper sea (the sea is half the cost) 32 boards fit at 4 substeps. Max's sizes: 20 to start with, 32 nice, 40 very nice; measured at 8, 16, 24, 32 and 40 in F1.
 
 ### D3. One strong brain, many personas
 
@@ -111,7 +121,7 @@ This is a long process, and Max's tokens are the scarce thing; the laptop's nigh
 | 5 | T2's size | Max: 200 m from the shore is the minimum: T2 stays at 60 %. |
 | 6 | The countdown | Max: 60 s for now; longer later. |
 | 7 | The characters' names | Max: leave them; the next development may rename them, the lead's choice. |
-| 8 | The substeps | Michiel: the same controller and the same steps for everyone, every AI the same; the simulation decides which (D2). |
+| 8 | The substeps | Michiel: the same controller and the same steps for everyone, every AI the same; the simulation decides which. Measured (D2): 2 is out, 3 is the same steady physics with a 24 kt fall difference, 4 stays unless Michiel takes 3. |
 | 9 | The sea query | Michiel's lever, open. |
 | 10 | The tack that stops the board | Michiel asked whether the tack is the autopilot's: half of it. The turn through the wind (its rate, heading up, when to stop) is `PlayerController._steer_tack` and `_start_manoeuvre`; the sail's part (backing it, flipping the rig to the new side) is the `Autopilot`'s tack phases (`update_tack`, `carry_boom_across_the_flip`). Both are the hands, the same for the player and the AI, so the 6.5 s cost everyone. |
 
