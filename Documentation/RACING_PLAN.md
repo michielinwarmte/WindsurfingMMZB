@@ -20,6 +20,7 @@ Max asked for three things on 19 October 2026: races with AI opponents; opponent
 | 9C | The learning harness: the race as a training environment, the bridge to Python, the first learned skipper on course T1 | 🔶 The harness built with an in-Godot evolution trainer first (Session 51, the night run): a brain learnt to start and beat to mark 1 on T1, not yet to round it; the Python bridge and PPO are still to build |
 | 9D | Learned skippers in the game: the curriculum T1 to T2, personalities, evaluation | ⬜ |
 | 9E | Later: racing rules and penalties, replays, a leaderboard | ⬜ |
+| 9F | The AI fleet: a head and hands, polar boards for the far ones, personas as skill sheets, a living fleet that free-sails and gathers for the start, wind shadows and rules, a trained head, 20 to 40 boards | 📝 Planned (Session 51): [AI_FLEET_PLAN.md](AI_FLEET_PLAN.md), parts F1 to F6, five decisions for Max and Michiel first |
 
 **Phase 9 is done** (the rebuild plan's "done when") at the end of 9B: a full race against three AI opponents. 9C and 9D are Max's neural-network track on top of it.
 
