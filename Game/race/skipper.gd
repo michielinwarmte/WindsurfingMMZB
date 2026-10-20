@@ -53,9 +53,9 @@ const APPROACH_ROOM_S: float = 6.0
 ## Rule 6: another board this close, metres, and getting closer, makes it bear away this much.
 const KEEP_CLEAR_M: float = 15.0
 const KEEP_CLEAR_BEAR_AWAY_DEG: float = 15.0
-## Keeping clear never takes it deeper than this wind angle: past 150 degrees the board stops
-## planing (POLAR_15KT.md).
-const KEEP_CLEAR_DEEPEST_TWA_DEG: float = 145.0
+## The best downwind angle of POLAR_15KT.md, which the character sheets' downwind angles are
+## measured from (see _downwind_twa_deg()).
+const POLAR_15KT_DOWNWIND_TWA_DEG: float = 135.0
 ## Steering: inside the dead band the stick is let go and the controller holds the heading; beyond
 ## it the stick moves in proportion to the error, fully at FULL_STICK_ERROR_DEG (30 degrees of
 ## error asks for the controller's full turn rate, 30 degrees per second).
@@ -81,7 +81,7 @@ const MEASURE_LEEWAY_FROM_MS: float = 2.5
 ## ON_PLANE_MS. Upwind, a board slower than FOOT_BELOW_MS is sailed FOOT_DEG_PER_MS lower for each
 ## m/s it lacks, at most FOOT_MAX_DEG lower.
 const OFF_PLANE_MS: float = 6.0
-const ON_PLANE_MS: float = 8.0
+const ON_PLANE_MS: float = 7.0
 const RUN_HEAD_UP_DEG: float = 10.0
 const FOOT_BELOW_MS: float = 5.5
 const FOOT_DEG_PER_MS: float = 4.0
@@ -299,7 +299,7 @@ func _decide(telemetry: Telemetry) -> float:
 		var leg_twa: float = absf(wrapf(wind_deg - Course.bearing_deg(Vector2.ZERO, step.in_dir), -180.0, 180.0))
 		var up_deg: float = _pointing_twa_deg()
 		if leg_twa < up_deg + _leeway_deg or leg_twa > config.downwind_vmg_twa_deg + _leeway_deg:
-			arrive_tack = _approach_tack(step, wind_deg, up_deg if leg_twa < 90.0 else config.downwind_vmg_twa_deg)
+			arrive_tack = _approach_tack(step, wind_deg, up_deg if leg_twa < 90.0 else _downwind_twa_deg())
 	return _course_to(telemetry, target, arrive_tack)
 
 
@@ -507,16 +507,36 @@ func _pointing_twa_deg() -> float:
 	return config.upwind_vmg_twa_deg + config.pointing_offset_deg + foot_deg
 
 
-## The wind angle it sails downwind: the polar's, or RUN_HEAD_UP_DEG higher while the board is off
-## the plane (_off_plane), which is how a sailor gets it planing again; deeper than the polar's
-## angle a board that has stopped planing does not plane again (at 12 kt on the open water's sea it
-## does 6.6 m/s at 125 degrees and 2.4 m/s at 130).
+## The wind angle it sails downwind (rule 4: its gybe angle read from the polar, not a constant):
+## the angle with the most speed downwind in the board's polar at the wind of the moment (125
+## degrees at 12 kt, 130 at 18, 140 at 24), moved by the character's own difference from
+## POLAR_15KT.md's 135; and RUN_HEAD_UP_DEG higher while the board is off the plane (_off_plane),
+## which is how a sailor gets it planing again. Deeper than that a board that has stopped planing
+## does not plane again (at 12 kt on the open water's sea it does 6.6 m/s at 125 degrees and 2.4 m/s
+## at 130).
 func _downwind_twa_deg() -> float:
-	return config.downwind_vmg_twa_deg - (RUN_HEAD_UP_DEG if _off_plane else 0.0)
+	var own_deg: float = config.downwind_vmg_twa_deg - POLAR_15KT_DOWNWIND_TWA_DEG
+	return _best_downwind_twa_deg() + own_deg - (RUN_HEAD_UP_DEG if _off_plane else 0.0)
+
+
+## The wind angle between 110 and 150 degrees with the most speed downwind (the speed times the
+## cosine of the angle off dead downwind) in the polar at the wind of the moment, in 5 degree steps.
+func _best_downwind_twa_deg() -> float:
+	var best_twa: float = POLAR_15KT_DOWNWIND_TWA_DEG
+	var best_vmg: float = -1.0
+	var twa: float = 110.0
+	while twa <= 150.0:
+		var vmg: float = _polar_speed_ms(twa) * cos(deg_to_rad(180.0 - twa))
+		if vmg > best_vmg:
+			best_vmg = vmg
+			best_twa = twa
+		twa += 5.0
+	return best_twa
 
 
 ## Rule 6: another board close and getting closer makes it bear away a little (to pass to leeward
-## of it), never deeper than KEEP_CLEAR_DEEPEST_TWA_DEG. The change of heading, degrees.
+## of it), never deeper than the angle it runs at (deeper the board stops planing). The change of
+## heading, degrees.
 func _keep_clear_deg(telemetry: Telemetry, tack: float) -> float:
 	var position: Vector2 = _position(telemetry)
 	for j: int in _race.board_count():
@@ -529,7 +549,7 @@ func _keep_clear_deg(telemetry: Telemetry, tack: float) -> float:
 		var other_velocity: Vector2 = (other - _others_last[j]) / maxf(_tick_s, 1e-6)
 		if apart.dot(other_velocity - _velocity) < 0.0:
 			_keeping_clear = true
-			var room_deg: float = clampf(KEEP_CLEAR_DEEPEST_TWA_DEG - absf(telemetry.twa_deg), 0.0, KEEP_CLEAR_BEAR_AWAY_DEG)
+			var room_deg: float = clampf(_downwind_twa_deg() - absf(telemetry.twa_deg), 0.0, KEEP_CLEAR_BEAR_AWAY_DEG)
 			# Bearing away on starboard tack turns the bow to the left (the heading decreases).
 			return -tack * room_deg
 	return 0.0
