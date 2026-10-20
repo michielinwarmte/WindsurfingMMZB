@@ -90,6 +90,17 @@ Baseline on `feature/u2-fin` (f598a00): `tools/check.sh` 196 files, 0 failed; `t
 
 **The sea query (agent sea_query, F1, merged):** the bench (`tools/sea_bench.sh`): a warm sample 3.5 to 4.3 microseconds against 12.5 to 12.8 for the three answers as the hull asked them before; a board's tick on waves 2.42 to 2.59 ms before, 1.60 to 1.76 after (the sea in it 1.36 to 1.48, then 0.47 to 0.62); `simulate.sh beam_reach 120 --waves=1` 22.1 to 22.5 s before, 17.5 after; the editor game with four boards 3.6 to 3.0 ms per board, one board alone 2.5 to 1.85; the release race, all boards' physics per tick, four boards 2.8 to 2.2 ms, eight boards 4.1 to 4.3 before and 3.9 to 4.1 after. Unit tests 446 to 453 (7 new, in `test_wave_field.gd`); the validation suite 40 pass, 1 fail (the onset), 2 pending, as before.
 
+**The fleet on the release build after the sea query (lead, 20 October 2026, late evening; `tools/release.sh --race=t1_loop --skippers=<n names> --measure=12`, T1 at 3 substeps, the player's board and n AI boards on 8 worker threads, vsync off):**
+
+| AI boards (+ the player) | fps | A frame, average / worst (ms) | All AI boards' physics per tick, side by side (ms) | The player's own board's physics per tick (ms) |
+|---|---|---|---|---|
+| 8 (9) | 255 | 3.9 / 12.6 | 5.6 | 4.7 |
+| 10 (11) | 134 | 7.4 / 15.8 | 9.3 | 8.3 |
+| 12 (13) | 33 | 30.5 / 84.6 | 12.7 | 11.3 |
+| 16 (17) | 5 | 197.6 / 205.4 | 19.4 | 16.4 |
+
+So **10 AI boards and the player hold 60 fps today; 12 do not.** The signature is contention, not work: a board's own step takes 1.7 ms alone (the bench), 4.7 ms beside 8 others and 16.4 ms beside 16, for the same physics. The sea query's saving shows alone and at four boards and is eaten here. Where the waiting is (the agent's guess: a global engine lock on reads of another object's fields) is the other chat's first F1 question.
+
 ## Token ledger (D7 of AI_FLEET_PLAN.md)
 
 | Package | Agent | Tokens | Tool uses | Wall time | Note |
