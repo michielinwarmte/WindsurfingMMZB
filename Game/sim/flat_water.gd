@@ -16,13 +16,5 @@ func height_at(_x: float, _z: float, _time_s: float) -> float:
 
 ## The three answers at once: the still level, level, not moving (9.9). Nothing is displaced,
 ## so the rest point is the point itself.
-func sample_at(x: float, z: float, time_s: float, sample: WaterSurface.Sample) -> void:
-	sample.x = x
-	sample.z = z
-	sample.time_s = time_s
-	sample.height_m = base_height_m
-	sample.normal = Vector3.UP
-	sample.velocity_ms = Vector3.ZERO
-	sample.rest_x = x
-	sample.rest_z = z
-	sample.is_set = true
+func sample_at(x: float, z: float, time_s: float, samples: PackedFloat64Array, index: int) -> void:
+	write_sample(samples, index, x, z, time_s, Vector2(x, z), base_height_m, Vector3.UP, Vector3.ZERO)

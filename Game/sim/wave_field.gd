@@ -190,35 +190,31 @@ func velocity_at_rest(rest_x: float, rest_z: float, t: float) -> Vector3:
 	return velocity
 
 
-## The height, the normal and the velocity at a world (x, z) at once (WaterSurface.Sample):
-## one solve for the rest point and one pass over the waves, where height_at, normal_at and
-## velocity_at take a solve and a pass each. Started cold (a new or forgotten sample) the
-## solve starts at (x, z), as theirs does, and the answers are theirs to the last bit.
+## The height, the normal and the velocity at a world (x, z) at once, into record `index` of
+## `samples` (WaterSurface.SAMPLE_*): one solve for the rest point and one pass over the
+## waves, where height_at, normal_at and velocity_at take a solve and a pass each. Started
+## cold (a new or forgotten record) the solve starts at (x, z), as theirs does, and the
+## answers are theirs to the last bit.
 ##
-## Started warm (the sample holds the answer at the same point of the hull a substep ago):
+## Started warm (the record holds the answer at the same point of the hull a substep ago):
 ## the surface point now at (x, z) has been carried sideways by nearly the same amount as
 ## the one found then, a few centimetres away and a fraction of a second earlier. So the
 ## search starts at (x, z) less that displacement, within a few millimetres of the answer,
 ## and one or two passes reach the solver's millimetre instead of three. The answer is the
 ## same within the solver's millimetre (9.5): it can differ from the cold one by a small
 ## part of a millimetre in the rest point, a few micrometres in the height.
-func sample_at(x: float, z: float, time_s: float, sample: WaterSurface.Sample) -> void:
+func sample_at(x: float, z: float, time_s: float, samples: PackedFloat64Array, index: int) -> void:
+	var at: int = index * SAMPLE_SIZE
 	var start: Vector2 = Vector2(x, z)
-	if sample.is_set:
-		start = Vector2(x - (sample.x - sample.rest_x), z - (sample.z - sample.rest_z))
+	if samples[at + SAMPLE_IS_SET] > 0.5:
+		var sideways_x: float = samples[at + SAMPLE_X] - samples[at + SAMPLE_REST_X]
+		var sideways_z: float = samples[at + SAMPLE_Z] - samples[at + SAMPLE_REST_Z]
+		start = Vector2(x - sideways_x, z - sideways_z)
 	var rest: Vector2 = rest_point_from(x, z, time_s, start)
-	sample.x = x
-	sample.z = z
-	sample.time_s = time_s
-	sample.rest_x = rest.x
-	sample.rest_z = rest.y
-	sample.is_set = true
 	if count == 0:
-		sample.height_m = base_height_m
-		sample.normal = Vector3.UP
-		sample.velocity_ms = Vector3.ZERO
+		write_sample(samples, index, x, z, time_s, rest, base_height_m, Vector3.UP, Vector3.ZERO)
 		return
-	_answers_at_rest(rest.x, rest.y, time_s, sample)
+	_answers_at_rest(x, z, time_s, rest, samples, index)
 
 
 ## The height (9.4), the normal (9.6a) and the velocity (9.7) at a rest point in one pass
@@ -227,7 +223,10 @@ func sample_at(x: float, z: float, time_s: float, sample: WaterSurface.Sample) -
 ## the arrays once (reading an array costs GDScript more than the arithmetic). The products
 ## are the same in the same order, and the sums are kept in Vector3s as those functions keep
 ## them, so they are rounded the same way and the answers are the same to the last bit.
-func _answers_at_rest(rest_x: float, rest_z: float, t: float, sample: WaterSurface.Sample) -> void:
+## Written with the question (x, z, t) into record `index` of `samples`.
+func _answers_at_rest(x: float, z: float, t: float, rest: Vector2, samples: PackedFloat64Array, index: int) -> void:
+	var rest_x: float = rest.x
+	var rest_z: float = rest.y
 	var displacement: Vector3 = Vector3.ZERO  # only its vertical part, the height, is needed
 	var tangent_x: Vector3 = Vector3(1.0, 0.0, 0.0)
 	var tangent_z: Vector3 = Vector3(0.0, 0.0, 1.0)
@@ -258,9 +257,8 @@ func _answers_at_rest(rest_x: float, rest_z: float, t: float, sample: WaterSurfa
 		velocity.x += wave_x * forward
 		velocity.z += wave_z * forward
 		velocity.y -= wave_a * wave_omega * cos_phase
-	sample.height_m = base_height_m + displacement.y
-	sample.normal = tangent_z.cross(tangent_x).normalized()
-	sample.velocity_ms = velocity
+	var normal: Vector3 = tangent_z.cross(tangent_x).normalized()
+	write_sample(samples, index, x, z, t, rest, base_height_m + displacement.y, normal, velocity)
 
 
 ## The largest height above the still level the set can reach.

@@ -128,46 +128,42 @@ var _vee_rise_per_m: float = 0.0
 ## up its sides and is wet pi/2 times as far out as the still surface would cut it (Wagner
 ## 1932). That is the same as a vee 2/pi as steep, wet where the still surface cuts it.
 var _vee_wetting_per_m: float = 0.0
-## The water at the hull's own points (WaterSurface.Sample: the height, the normal and the
-## water's velocity from one solve), one per point and kept from substep to substep, so that
-## each answer is where that point's next solve starts: the wet part's centroid, the planing
-## strips, the spray root, the centre of buoyancy and the rail strips. The buoyancy grid's
-## points (the centre column: the lateral drag and the nose) reuse the buoyancy model's
-## samples of the same substep instead.
-var _sea_at_wet_centroid: WaterSurface.Sample = WaterSurface.Sample.new()
-var _sea_at_strips: Array[WaterSurface.Sample] = []
-var _sea_at_spray_root: WaterSurface.Sample = WaterSurface.Sample.new()
-var _sea_at_centre_of_buoyancy: WaterSurface.Sample = WaterSurface.Sample.new()
-var _sea_at_rail_strips: Array[WaterSurface.Sample] = []
-## For a grid point whose sample the buoyancy model does not have (it was applied on another
-## surface or at another time, as some tests do): solved from scratch.
-var _sea_spare: WaterSurface.Sample = WaterSurface.Sample.new()
+## The water at the hull's own points (WaterSurface.sample_at: the height, the normal and the
+## water's velocity from one solve), one record per point, kept from substep to substep so
+## that each answer is where that point's next solve starts: the wet part's centroid, the
+## planing strips, the spray root, the centre of buoyancy and the rail strips. The buoyancy
+## grid's points (the centre column: the lateral drag and the nose) reuse the buoyancy
+## model's records of the same substep instead (_grid_sea).
+var _sea_at_wet_centroid: PackedFloat64Array = WaterSurface.new_samples(1)
+var _sea_at_strips: PackedFloat64Array = WaterSurface.new_samples(STRIPS)
+var _sea_at_spray_root: PackedFloat64Array = WaterSurface.new_samples(1)
+var _sea_at_centre_of_buoyancy: PackedFloat64Array = WaterSurface.new_samples(1)
+var _sea_at_rail_strips: PackedFloat64Array = WaterSurface.new_samples(STRIPS)
+## The buoyancy grid's records of this substep, set at the start of compute() (empty when the
+## grid was sampled on another surface, as some tests do).
+var _grid_sea: PackedFloat64Array = PackedFloat64Array()
+## For a grid point the grid's records do not answer: solved from scratch.
+var _sea_spare: PackedFloat64Array = WaterSurface.new_samples(1)
 
 
 func _init(board_config: BoardConfig, water_config: WaterConfig) -> void:
 	board = board_config
 	water = water_config
-	for k: int in STRIPS:
-		_sea_at_strips.append(WaterSurface.Sample.new())
-		_sea_at_rail_strips.append(WaterSurface.Sample.new())
 
 
 ## Forgets the water's last answers at the hull's own points, so that the next compute()
 ## solves them from scratch: for a board put somewhere new (WindsurferSim.reset), whose
 ## answers are then a new board's to the last bit.
 func forget_the_sea() -> void:
-	_sea_at_wet_centroid.forget()
-	_sea_at_spray_root.forget()
-	_sea_at_centre_of_buoyancy.forget()
-	for k: int in STRIPS:
-		_sea_at_strips[k].forget()
-		_sea_at_rail_strips[k].forget()
+	for samples: PackedFloat64Array in [_sea_at_wet_centroid, _sea_at_strips, _sea_at_spray_root, _sea_at_centre_of_buoyancy, _sea_at_rail_strips]:
+		WaterSurface.forget_samples(samples)
 
 
 func compute(body: SimRigidBody, buoyancy: BuoyancyModel, surface: WaterSurface, time_s: float, gravity_ms2: float, total_mass_kg: float, dt: float = 1.0 / 240.0) -> void:
 	_clear()
 	if not buoyancy.is_floating or buoyancy.wetted_area_m2 <= 0.0:
 		return
+	_grid_sea = buoyancy.sea_samples_of(surface)
 
 	# The wet part of the bottom along the centreline. Usually it runs from the transom
 	# forward; when the tail has lifted clear and the nose is down, it is the middle of the
@@ -183,8 +179,8 @@ func compute(body: SimRigidBody, buoyancy: BuoyancyModel, surface: WaterSurface,
 
 	# The flow relative to the wet part of the hull.
 	var wet_point: Vector3 = buoyancy.wet_centroid_world
-	surface.sample_at(wet_point.x, wet_point.z, time_s, _sea_at_wet_centroid)
-	var v_rel: Vector3 = body.point_velocity(wet_point) - _sea_at_wet_centroid.velocity_ms
+	surface.sample_at(wet_point.x, wet_point.z, time_s, _sea_at_wet_centroid, 0)
+	var v_rel: Vector3 = body.point_velocity(wet_point) - WaterSurface.sample_velocity(_sea_at_wet_centroid, 0)
 	var v_body: Vector3 = SimMath.to_body(body.basis, v_rel)
 	forward_speed_ms = -v_body.z
 	var v_h: Vector3 = SimMath.horizontal(v_rel)
@@ -262,8 +258,7 @@ func _apply_lateral_drag(body: SimRigidBody, buoyancy: BuoyancyModel, surface: W
 		if depth <= 0.0:
 			continue
 		var point_world: Vector3 = body.point_world(buoyancy.sample_points[k])
-		var sea: WaterSurface.Sample = _sea_at_grid_point(buoyancy, k, surface, point_world, time_s)
-		var v_rel: Vector3 = body.point_velocity(point_world) - sea.velocity_ms
+		var v_rel: Vector3 = body.point_velocity(point_world) - _water_velocity_at_grid_point(k, surface, point_world, time_s)
 		var v_lat: float = v_rel.dot(body.basis.x)
 		# The hard rail's edge face is in the rail model (_apply_rail_grip); the cross-flow
 		# drag takes the rest of the immersed side.
@@ -339,9 +334,8 @@ func _apply_planing_lift(body: SimRigidBody, buoyancy: BuoyancyModel, aft: float
 		var wet: Vector2 = _wet_width(buoyancy, x)
 		var point_world: Vector3 = body.point_world(Vector3(wet.y, _bottom_y(x), 0.5 * board.length_m - x))
 		var normal_world: Vector3 = SimMath.to_world(body.basis, normal_local)
-		var sea: WaterSurface.Sample = _sea_at_strips[k]
-		surface.sample_at(point_world.x, point_world.z, time_s, sea)
-		var v_rel: Vector3 = body.point_velocity(point_world) - sea.velocity_ms
+		surface.sample_at(point_world.x, point_world.z, time_s, _sea_at_strips, k)
+		var v_rel: Vector3 = body.point_velocity(point_world) - WaterSurface.sample_velocity(_sea_at_strips, k)
 		var full_width: float = _width_at(x)
 		var width: float = full_width * wet.x
 		x_k.append(x)
@@ -351,7 +345,7 @@ func _apply_planing_lift(body: SimRigidBody, buoyancy: BuoyancyModel, aft: float
 		m_per_m.append(rho * PI * width * width / 8.0)
 		full_widths.append(full_width)
 		wet_fractions.append(wet.x)
-		sink_ms.append(-v_rel.dot(sea.normal))
+		sink_ms.append(-v_rel.dot(WaterSurface.sample_normal(_sea_at_strips, k)))
 		v_mean += v_into[k] / float(STRIPS)
 	trim_deg = rad_to_deg(atan2(v_mean, u))
 
@@ -400,9 +394,9 @@ func _apply_planing_lift(body: SimRigidBody, buoyancy: BuoyancyModel, aft: float
 	var v_root: float = v_into[last] + 0.5 * (v_into[last] - v_into[last - 1])
 	var root_across: float = _wet_width(buoyancy, forward).y
 	var root_world: Vector3 = body.point_world(Vector3(root_across, _bottom_y(forward), 0.5 * board.length_m - forward))
-	surface.sample_at(root_world.x, root_world.z, time_s, _sea_at_spray_root)
-	var root_normal: Vector3 = _sea_at_spray_root.normal
-	var root_down_speed: float = -(body.point_velocity(root_world) - _sea_at_spray_root.velocity_ms).dot(root_normal)
+	surface.sample_at(root_world.x, root_world.z, time_s, _sea_at_spray_root, 0)
+	var root_normal: Vector3 = WaterSurface.sample_normal(_sea_at_spray_root, 0)
+	var root_down_speed: float = -(body.point_velocity(root_world) - WaterSurface.sample_velocity(_sea_at_spray_root, 0)).dot(root_normal)
 	spray_root_factor = _root_advance_factor(root_down_speed, u, pitch + board.bottom_slope(forward))
 	var root_force: float = maxf(u * spray_root_factor * m_per_m[last] * v_root, 0.0)
 
@@ -491,8 +485,8 @@ func _apply_planing_buoyancy(body: SimRigidBody, buoyancy: BuoyancyModel, surfac
 	var planing: float = smoothstep(FROUDE_DISPLACEMENT, FROUDE_PLANING, froude_on_length)
 	buoyancy_correction_n = lost_share * planing * buoyancy.buoyancy_force_n
 	var centre: Vector3 = buoyancy.centre_of_buoyancy_world
-	surface.sample_at(centre.x, centre.z, time_s, _sea_at_centre_of_buoyancy)
-	body.add_force_at(centre, -_sea_at_centre_of_buoyancy.normal * buoyancy_correction_n)
+	surface.sample_at(centre.x, centre.z, time_s, _sea_at_centre_of_buoyancy, 0)
+	body.add_force_at(centre, -WaterSurface.sample_normal(_sea_at_centre_of_buoyancy, 0) * buoyancy_correction_n)
 
 
 ## When the deck at the bow goes under (a nose dive, a wave over the nose), the water
@@ -509,8 +503,7 @@ func _apply_bow_drag(body: SimRigidBody, buoyancy: BuoyancyModel, surface: Water
 	if immersed_height <= 0.0:
 		return
 	var nose_world: Vector3 = body.point_world(buoyancy.sample_points[buoyancy.bow_centre_index])
-	var sea: WaterSurface.Sample = _sea_at_grid_point(buoyancy, buoyancy.bow_centre_index, surface, nose_world, time_s)
-	var v_rel: Vector3 = body.point_velocity(nose_world) - sea.velocity_ms
+	var v_rel: Vector3 = body.point_velocity(nose_world) - _water_velocity_at_grid_point(buoyancy.bow_centre_index, surface, nose_world, time_s)
 	var along: float = v_rel.dot(-body.basis.z)  # forward speed through the water at the nose
 	if along <= 0.05:
 		return
@@ -557,9 +550,8 @@ func _apply_rail_grip(body: SimRigidBody, buoyancy: BuoyancyModel, aft: float, f
 		var z: float = 0.5 * board.length_m - x
 		var hardness: float = board.rail_hardness(x)
 		var centre_world: Vector3 = body.point_world(Vector3(0.0, _bottom_y(x), z))
-		var sea: WaterSurface.Sample = _sea_at_rail_strips[k]
-		surface.sample_at(centre_world.x, centre_world.z, time_s, sea)
-		var v_rel: Vector3 = body.point_velocity(centre_world) - sea.velocity_ms
+		surface.sample_at(centre_world.x, centre_world.z, time_s, _sea_at_rail_strips, k)
+		var v_rel: Vector3 = body.point_velocity(centre_world) - WaterSurface.sample_velocity(_sea_at_rail_strips, k)
 		var v_body: Vector3 = SimMath.to_body(body.basis, v_rel)
 		var slip_ms: float = v_body.x  # sideways through the water, positive to starboard
 		var side: float = 1.0 if slip_ms >= 0.0 else -1.0  # the leading rail
@@ -592,16 +584,15 @@ func _apply_rail_grip(body: SimRigidBody, buoyancy: BuoyancyModel, aft: float, f
 	rail_yaw_nm = torque.dot(body.basis.y)
 
 
-## The water at point k of the buoyancy grid: the grid's own sample when it answers the same
-## question (the simulation calls buoyancy.apply() just before compute(), so the points and
-## the time are the same), otherwise a solve from scratch.
-func _sea_at_grid_point(buoyancy: BuoyancyModel, k: int, surface: WaterSurface, point_world: Vector3, time_s: float) -> WaterSurface.Sample:
-	var sea: WaterSurface.Sample = buoyancy.sea_sample_for(k, surface, point_world, time_s)
-	if sea != null:
-		return sea
-	_sea_spare.forget()
-	surface.sample_at(point_world.x, point_world.z, time_s, _sea_spare)
-	return _sea_spare
+## The water's velocity at point k of the buoyancy grid: from the grid's own record when it
+## answers the same question (the simulation calls buoyancy.apply() just before compute(), so
+## the point and the time are the same), otherwise from a solve from scratch.
+func _water_velocity_at_grid_point(k: int, surface: WaterSurface, point_world: Vector3, time_s: float) -> Vector3:
+	if not _grid_sea.is_empty() and WaterSurface.sample_answers(_grid_sea, k, point_world.x, point_world.z, time_s):
+		return WaterSurface.sample_velocity(_grid_sea, k)
+	WaterSurface.forget_samples(_sea_spare)
+	surface.sample_at(point_world.x, point_world.z, time_s, _sea_spare, 0)
+	return WaterSurface.sample_velocity(_sea_spare, 0)
 
 
 ## Depth below the water of one rail (side +1 starboard, -1 port) at a distance forward of

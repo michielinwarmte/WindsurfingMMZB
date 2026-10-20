@@ -311,6 +311,7 @@ func _swell_and_chop() -> WaveSetConfig:
 	return set_config
 
 
+
 # F1, the sea query (AI_FLEET_PLAN.md, D2): the hull asks for the height, the normal and the
 # velocity at once (WaterSurface.sample_at), from one solve started where the last substep's
 # ended. The answers must be the three queries' answers: to the last bit when the solve
@@ -346,29 +347,32 @@ func test_the_solve_finds_the_same_rest_point_as_the_spec_s_solve() -> void:
 
 func test_a_cold_sample_gives_the_three_queries_answers() -> void:
 	var field: WaveField = _default_set()
-	var sample: WaterSurface.Sample = WaterSurface.Sample.new()
+	var samples: PackedFloat64Array = WaterSurface.new_samples(1)
 	seed(17)
 	var worst_height_m: float = 0.0
 	var worst_normal: float = 0.0
 	var worst_velocity_ms: float = 0.0
+	var differ: int = 0
 	for i: int in 200:
 		var x: float = randf_range(-100.0, 100.0)
 		var z: float = randf_range(-100.0, 100.0)
 		var t: float = randf_range(0.0, 60.0)
-		sample.forget()  # cold: the solve starts at (x, z), as the three queries' solves do
-		field.sample_at(x, z, t, sample)
-		worst_height_m = maxf(worst_height_m, absf(sample.height_m - field.height_at(x, z, t)))
-		worst_normal = maxf(worst_normal, sample.normal.distance_to(field.normal_at(x, z, t)))
-		worst_velocity_ms = maxf(worst_velocity_ms, sample.velocity_ms.distance_to(field.velocity_at(x, z, t)))
-		assert_true(sample.answers(x, z, t), "the sample says which question it answers")
+		WaterSurface.forget_samples(samples)  # cold: the solve starts at (x, z), as the three queries' solves do
+		field.sample_at(x, z, t, samples, 0)
+		worst_height_m = maxf(worst_height_m, absf(WaterSurface.sample_height(samples, 0) - field.height_at(x, z, t)))
+		worst_normal = maxf(worst_normal, WaterSurface.sample_normal(samples, 0).distance_to(field.normal_at(x, z, t)))
+		worst_velocity_ms = maxf(worst_velocity_ms, WaterSurface.sample_velocity(samples, 0).distance_to(field.velocity_at(x, z, t)))
+		if WaterSurface.sample_rest_point(samples, 0) != field.rest_point_at(x, z, t) or not WaterSurface.sample_answers(samples, 0, x, z, t):
+			differ += 1
 	assert_lt(worst_height_m, 1e-9, "the height of height_at (worst %s m)" % String.num_scientific(worst_height_m))
 	assert_lt(worst_normal, 1e-9, "the normal of normal_at (worst %s)" % String.num_scientific(worst_normal))
 	assert_lt(worst_velocity_ms, 1e-9, "the velocity of velocity_at (worst %s m/s)" % String.num_scientific(worst_velocity_ms))
+	assert_eq(differ, 0, "the record keeps the question and the rest point")
 
 
 func test_a_warm_sample_agrees_within_the_solver_s_millimetre() -> void:
 	var field: WaveField = _default_set()
-	var sample: WaterSurface.Sample = WaterSurface.Sample.new()
+	var samples: PackedFloat64Array = WaterSurface.new_samples(1)
 	seed(19)
 	var worst_height_m: float = 0.0
 	var worst_normal: float = 0.0
@@ -378,21 +382,19 @@ func test_a_warm_sample_agrees_within_the_solver_s_millimetre() -> void:
 		var x: float = randf_range(-100.0, 100.0)
 		var z: float = randf_range(-100.0, 100.0)
 		var t: float = randf_range(0.0, 60.0)
-		# The sample holds an answer whose rest point is 4 cm from this point's: the solve
+		# The record holds an answer whose rest point is 4 cm from this point's: the solve
 		# starts there.
 		var rest: Vector2 = field.rest_point_at(x, z, t)
 		var angle: float = randf_range(0.0, TAU)
-		sample.x = x
-		sample.z = z
-		sample.rest_x = rest.x + 0.04 * cos(angle)
-		sample.rest_z = rest.y + 0.04 * sin(angle)
-		sample.is_set = true
-		field.sample_at(x, z, t, sample)
-		worst_height_m = maxf(worst_height_m, absf(sample.height_m - field.height_at(x, z, t)))
-		worst_normal = maxf(worst_normal, sample.normal.distance_to(field.normal_at(x, z, t)))
-		worst_velocity_ms = maxf(worst_velocity_ms, sample.velocity_ms.distance_to(field.velocity_at(x, z, t)))
-		var displacement: Vector3 = field.displacement_at(sample.rest_x, sample.rest_z, t)
-		worst_residual_m = maxf(worst_residual_m, Vector2(sample.rest_x + displacement.x - x, sample.rest_z + displacement.z - z).length())
+		var start: Vector2 = rest + 0.04 * Vector2(cos(angle), sin(angle))
+		WaterSurface.write_sample(samples, 0, x, z, t - 1.0 / 180.0, start, 0.0, Vector3.UP, Vector3.ZERO)
+		field.sample_at(x, z, t, samples, 0)
+		worst_height_m = maxf(worst_height_m, absf(WaterSurface.sample_height(samples, 0) - field.height_at(x, z, t)))
+		worst_normal = maxf(worst_normal, WaterSurface.sample_normal(samples, 0).distance_to(field.normal_at(x, z, t)))
+		worst_velocity_ms = maxf(worst_velocity_ms, WaterSurface.sample_velocity(samples, 0).distance_to(field.velocity_at(x, z, t)))
+		var found: Vector2 = WaterSurface.sample_rest_point(samples, 0)
+		var displacement: Vector3 = field.displacement_at(found.x, found.y, t)
+		worst_residual_m = maxf(worst_residual_m, Vector2(found.x + displacement.x - x, found.y + displacement.z - z).length())
 	assert_lt(worst_height_m, WaveField.SOLVE_TOLERANCE_M, "the height within the solver's millimetre (worst %.6f mm)" % (worst_height_m * 1000.0))
 	assert_lt(worst_normal, 1e-4, "the normal within 1e-4 (worst %s)" % String.num_scientific(worst_normal))
 	assert_lt(worst_velocity_ms, 1e-3, "the velocity within a millimetre per second (worst %s m/s)" % String.num_scientific(worst_velocity_ms))
@@ -403,7 +405,7 @@ func test_a_sample_carried_along_with_a_moving_point_keeps_agreeing() -> void:
 	# A point of a board at 10 m/s, asked every substep of 1/180 s for 3 s, each solve
 	# started from the substep before's answer.
 	var field: WaveField = _default_set()
-	var sample: WaterSurface.Sample = WaterSurface.Sample.new()
+	var samples: PackedFloat64Array = WaterSurface.new_samples(1)
 	var worst_height_m: float = 0.0
 	var worst_normal: float = 0.0
 	var dt: float = 1.0 / 180.0
@@ -411,9 +413,9 @@ func test_a_sample_carried_along_with_a_moving_point_keeps_agreeing() -> void:
 		var t: float = 5.0 + i * dt
 		var x: float = 3.0 + 10.0 * cos(0.3) * i * dt
 		var z: float = -7.0 + 10.0 * sin(0.3) * i * dt
-		field.sample_at(x, z, t, sample)
-		worst_height_m = maxf(worst_height_m, absf(sample.height_m - field.height_at(x, z, t)))
-		worst_normal = maxf(worst_normal, sample.normal.distance_to(field.normal_at(x, z, t)))
+		field.sample_at(x, z, t, samples, 0)
+		worst_height_m = maxf(worst_height_m, absf(WaterSurface.sample_height(samples, 0) - field.height_at(x, z, t)))
+		worst_normal = maxf(worst_normal, WaterSurface.sample_normal(samples, 0).distance_to(field.normal_at(x, z, t)))
 	assert_lt(worst_height_m, WaveField.SOLVE_TOLERANCE_M, "worst %.6f mm" % (worst_height_m * 1000.0))
 	assert_lt(worst_normal, 1e-4, "worst %s" % String.num_scientific(worst_normal))
 
@@ -424,13 +426,15 @@ func test_flat_water_samples_are_still_and_level() -> void:
 	var disabled: WaveSetConfig = _one_wave()
 	disabled.enable_waves = false
 	for surface: WaterSurface in [FlatWater.new(level), WaveField.new(disabled, level)]:
-		var sample: WaterSurface.Sample = WaterSurface.Sample.new()
-		surface.sample_at(3.0, -7.0, 2.0, sample)
-		assert_eq(sample.height_m, surface.height_at(3.0, -7.0, 2.0))
-		assert_eq(sample.height_m, 1.5)
-		assert_eq(sample.normal, Vector3.UP)
-		assert_eq(sample.velocity_ms, Vector3.ZERO)
-		assert_eq(Vector2(sample.rest_x, sample.rest_z), Vector2(3.0, -7.0), "nothing is displaced")
+		var samples: PackedFloat64Array = WaterSurface.new_samples(2)
+		surface.sample_at(3.0, -7.0, 2.0, samples, 1)
+		assert_false(WaterSurface.sample_is_set(samples, 0), "only the record asked for is written")
+		assert_true(WaterSurface.sample_is_set(samples, 1))
+		assert_eq(WaterSurface.sample_height(samples, 1), surface.height_at(3.0, -7.0, 2.0))
+		assert_eq(WaterSurface.sample_height(samples, 1), 1.5)
+		assert_eq(WaterSurface.sample_normal(samples, 1), Vector3.UP)
+		assert_eq(WaterSurface.sample_velocity(samples, 1), Vector3.ZERO)
+		assert_eq(WaterSurface.sample_rest_point(samples, 1), Vector2(3.0, -7.0), "nothing is displaced")
 
 
 func test_the_board_s_samples_on_the_waves_are_the_three_queries_answers() -> void:
@@ -449,32 +453,40 @@ func test_the_board_s_samples_on_the_waves_are_the_three_queries_answers() -> vo
 	var worst_height_m: float = 0.0
 	var worst_normal: float = 0.0
 	var worst_velocity_ms: float = 0.0
+	var points: int = sim.buoyancy.sample_points.size()
 	for tick: int in 480:
 		pilot.update(sim.telemetry, controls, 1.0 / 60.0)
 		sim.step(1.0 / 60.0, controls)
-		for sea: WaterSurface.Sample in sim.buoyancy.sea_samples:
-			worst_height_m = maxf(worst_height_m, absf(sea.height_m - field.height_at(sea.x, sea.z, sea.time_s)))
-			worst_normal = maxf(worst_normal, sea.normal.distance_to(field.normal_at(sea.x, sea.z, sea.time_s)))
-			worst_velocity_ms = maxf(worst_velocity_ms, sea.velocity_ms.distance_to(field.velocity_at(sea.x, sea.z, sea.time_s)))
+		var samples: PackedFloat64Array = sim.buoyancy.sea_samples
+		for k: int in points:
+			var at: int = k * WaterSurface.SAMPLE_SIZE
+			var x: float = samples[at + WaterSurface.SAMPLE_X]
+			var z: float = samples[at + WaterSurface.SAMPLE_Z]
+			var t: float = samples[at + WaterSurface.SAMPLE_TIME_S]
+			worst_height_m = maxf(worst_height_m, absf(WaterSurface.sample_height(samples, k) - field.height_at(x, z, t)))
+			worst_normal = maxf(worst_normal, WaterSurface.sample_normal(samples, k).distance_to(field.normal_at(x, z, t)))
+			worst_velocity_ms = maxf(worst_velocity_ms, WaterSurface.sample_velocity(samples, k).distance_to(field.velocity_at(x, z, t)))
 	assert_gt(sim.telemetry.speed_ms, 7.0, "the board is sailing")
 	assert_lt(worst_height_m, WaveField.SOLVE_TOLERANCE_M, "worst %.6f mm" % (worst_height_m * 1000.0))
 	assert_lt(worst_normal, 1e-4, "worst %s" % String.num_scientific(worst_normal))
 	assert_lt(worst_velocity_ms, 1e-3, "worst %s m/s" % String.num_scientific(worst_velocity_ms))
-	# The hull asks the grid's centre column in the same substep: the same points, the same
-	# time, so it is handed the grid's samples.
+	# The hull asks the grid's centre column in the same substep: the same points at the same
+	# time, so the grid's records answer its questions.
 	sim.buoyancy.apply(sim.body, sim.water, sim.time_s, 9.81)
-	var reused: int = 0
-	for k: int in sim.buoyancy.sample_points.size():
+	var grid: PackedFloat64Array = sim.buoyancy.sea_samples_of(sim.water)
+	var answered: int = 0
+	for k: int in points:
 		var point: Vector3 = sim.body.point_world(sim.buoyancy.sample_points[k])
-		if sim.buoyancy.sea_sample_for(k, sim.water, point, sim.time_s) == sim.buoyancy.sea_samples[k]:
-			reused += 1
-	assert_eq(reused, sim.buoyancy.sample_points.size())
-	assert_null(sim.buoyancy.sea_sample_for(0, FlatWater.new(), sim.body.point_world(sim.buoyancy.sample_points[0]), sim.time_s), "not on another surface")
-	assert_null(sim.buoyancy.sea_sample_for(0, sim.water, sim.body.point_world(sim.buoyancy.sample_points[0]), sim.time_s + 0.001), "not at another time")
+		if WaterSurface.sample_answers(grid, k, point.x, point.z, sim.time_s):
+			answered += 1
+	assert_eq(answered, points)
+	assert_true(sim.buoyancy.sea_samples_of(FlatWater.new()).is_empty(), "not on another surface")
+	var first: Vector3 = sim.body.point_world(sim.buoyancy.sample_points[0])
+	assert_false(WaterSurface.sample_answers(grid, 0, first.x, first.z, sim.time_s + 0.001), "not at another time")
 
 
 func test_reset_forgets_the_water_s_answers() -> void:
-	# The samples remember the last answers, where the next solves start. reset() forgets
+	# The records remember the last answers, where the next solves start. reset() forgets
 	# them, so a board put somewhere new solves from scratch, as a new board does: its first
 	# answers are the cold ones, bit for bit.
 	var sim: WindsurferSim = WindsurferSim.create_default(true)
@@ -482,31 +494,26 @@ func test_reset_forgets_the_water_s_answers() -> void:
 	sim.reset(Vector3(20.0, 0.0, -30.0), deg_to_rad(90.0))
 	for tick: int in 30:
 		sim.step(1.0 / 60.0, controls)
-	var remembered: int = 0
-	for sea: WaterSurface.Sample in sim.buoyancy.sea_samples:
-		remembered += 1 if sea.is_set else 0
-	assert_eq(remembered, sim.buoyancy.sea_samples.size(), "after a run every grid point remembers")
-	assert_true(sim.hull._sea_at_wet_centroid.is_set, "and so does the hull's wet centroid")
+	var points: int = sim.buoyancy.sample_points.size()
+	assert_eq(_answered(sim.buoyancy.sea_samples), points, "after a run every grid point remembers")
+	assert_eq(_answered(sim.hull._sea_at_wet_centroid), 1, "and so does the hull's wet centroid")
 	sim.reset(Vector3.ZERO, deg_to_rad(180.0))
-	remembered = 0
-	for sea: WaterSurface.Sample in sim.buoyancy.sea_samples:
-		remembered += 1 if sea.is_set else 0
-	# The hull's own points are private to it; the test looks at them all the same.
-	var hull_samples: Array[WaterSurface.Sample] = [sim.hull._sea_at_wet_centroid, sim.hull._sea_at_spray_root, sim.hull._sea_at_centre_of_buoyancy]
-	hull_samples.append_array(sim.hull._sea_at_strips)
-	hull_samples.append_array(sim.hull._sea_at_rail_strips)
-	for sea: WaterSurface.Sample in hull_samples:
-		remembered += 1 if sea.is_set else 0
+	# The hull's own records are private to it; the test looks at them all the same.
+	var remembered: int = _answered(sim.buoyancy.sea_samples)
+	for samples: PackedFloat64Array in [sim.hull._sea_at_wet_centroid, sim.hull._sea_at_spray_root, sim.hull._sea_at_centre_of_buoyancy, sim.hull._sea_at_strips, sim.hull._sea_at_rail_strips]:
+		remembered += _answered(samples)
 	assert_eq(remembered, 0, "after reset() nothing is remembered")
 	# The first answers after the reset are the cold ones.
 	sim.buoyancy.apply(sim.body, sim.water, 0.0, 9.81)
 	var fresh: WindsurferSim = WindsurferSim.create_default(true)
 	fresh.reset(Vector3.ZERO, deg_to_rad(180.0))
 	fresh.buoyancy.apply(fresh.body, fresh.water, 0.0, 9.81)
-	var differ: int = 0
-	for k: int in sim.buoyancy.sea_samples.size():
-		var a: WaterSurface.Sample = sim.buoyancy.sea_samples[k]
-		var b: WaterSurface.Sample = fresh.buoyancy.sea_samples[k]
-		if a.height_m != b.height_m or a.normal != b.normal or a.velocity_ms != b.velocity_ms:
-			differ += 1
-	assert_eq(differ, 0, "the same answers as a new board's")
+	assert_eq(sim.buoyancy.sea_samples, fresh.buoyancy.sea_samples, "the same records as a new board's")
+
+
+## How many records of `samples` hold an answer.
+func _answered(samples: PackedFloat64Array) -> int:
+	var answered: int = 0
+	for index: int in samples.size() / WaterSurface.SAMPLE_SIZE:
+		answered += 1 if WaterSurface.sample_is_set(samples, index) else 0
+	return answered

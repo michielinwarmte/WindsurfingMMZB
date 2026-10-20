@@ -13,10 +13,18 @@ extends SceneTree
 ## 2. A board's physics per tick: WindsurferSim with the default waves on a beam reach with
 ##    the autopilot (as tools/simulate.sh beam_reach sets it up), 600 ticks of 1/60 s after
 ##    600 ticks to get it sailing; the same on flat water, so the sea's share shows.
+## 3. The same with eight boards stepped side by side on threads, as a race steps them: the
+##    time of a tick for all of them. GDScript on threads waits wherever the engine takes a
+##    lock (an object looked up in its global table), so a change that is cheaper on one
+##    board can still be dearer on eight. This is the editor engine; the game's release
+##    engine scales better, but the same way.
 ##
-## Arguments after "--": [--points=20000] [--ticks=600]
+## Arguments after "--": [--points=20000] [--ticks=600] [--boards=8]
 
 const DT: float = 1.0 / 60.0
+
+var _sims: Array[WindsurferSim] = []
+var _scenarios: Array[SimScenario] = []
 
 
 func _initialize() -> void:
@@ -28,6 +36,8 @@ func _initialize() -> void:
 	var flat_ms: float = _time_a_board(false, ticks)
 	print("a board's physics per tick (%d ticks of 1/60 s on a beam reach, after %d to get going): %.3f ms with the waves, %.3f ms on flat water, the sea %.3f ms" % [
 		ticks, ticks, waves_ms, flat_ms, waves_ms - flat_ms])
+	var boards: int = options.get("boards", "8").to_int()
+	print("%d boards with the waves side by side on threads: %.3f ms per tick for all of them" % [boards, _time_boards_side_by_side(boards, ticks)])
 	quit(0)
 
 
@@ -97,28 +107,25 @@ func _time_the_queries(n: int) -> void:
 func _time_the_sample(field: WaveField, points: PackedVector2Array, t: float) -> void:
 	var n: int = points.size()
 	var sink: float = 0.0
-	var sample: WaterSurface.Sample = WaterSurface.Sample.new()
+	var one: PackedFloat64Array = WaterSurface.new_samples(1)
 	var t0: int = Time.get_ticks_usec()
 	for p: Vector2 in points:
-		sample.forget()
-		field.sample_at(p.x, p.y, t, sample)
-		sink += sample.height_m + sample.normal.y + sample.velocity_ms.x
+		WaterSurface.forget_samples(one)
+		field.sample_at(p.x, p.y, t, one, 0)
+		sink += WaterSurface.sample_height(one, 0) + WaterSurface.sample_normal(one, 0).y + WaterSurface.sample_velocity(one, 0).x
 	var cold_us: float = float(Time.get_ticks_usec() - t0) / n
 
 	var substep_s: float = 1.0 / 180.0
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = 2
-	var samples: Array[WaterSurface.Sample] = []
-	for p: Vector2 in points:
-		var before: WaterSurface.Sample = WaterSurface.Sample.new()
+	var samples: PackedFloat64Array = WaterSurface.new_samples(n)
+	for i: int in n:
 		var angle: float = rng.randf_range(0.0, TAU)
-		field.sample_at(p.x - 0.04 * cos(angle), p.y - 0.04 * sin(angle), t - substep_s, before)
-		samples.append(before)
+		field.sample_at(points[i].x - 0.04 * cos(angle), points[i].y - 0.04 * sin(angle), t - substep_s, samples, i)
 	t0 = Time.get_ticks_usec()
 	for i: int in n:
-		var warm: WaterSurface.Sample = samples[i]
-		field.sample_at(points[i].x, points[i].y, t, warm)
-		sink += warm.height_m + warm.normal.y + warm.velocity_ms.x
+		field.sample_at(points[i].x, points[i].y, t, samples, i)
+		sink += WaterSurface.sample_height(samples, i) + WaterSurface.sample_normal(samples, i).y + WaterSurface.sample_velocity(samples, i).x
 	var warm_us: float = float(Time.get_ticks_usec() - t0) / n
 
 	var worst_height_mm: float = 0.0
@@ -126,28 +133,20 @@ func _time_the_sample(field: WaveField, points: PackedVector2Array, t: float) ->
 	var worst_velocity_ms: float = 0.0
 	for i: int in mini(2000, n):
 		var p: Vector2 = points[i]
-		worst_height_mm = maxf(worst_height_mm, absf(samples[i].height_m - field.height_at(p.x, p.y, t)) * 1000.0)
-		worst_normal = maxf(worst_normal, samples[i].normal.distance_to(field.normal_at(p.x, p.y, t)))
-		worst_velocity_ms = maxf(worst_velocity_ms, samples[i].velocity_ms.distance_to(field.velocity_at(p.x, p.y, t)))
+		worst_height_mm = maxf(worst_height_mm, absf(WaterSurface.sample_height(samples, i) - field.height_at(p.x, p.y, t)) * 1000.0)
+		worst_normal = maxf(worst_normal, WaterSurface.sample_normal(samples, i).distance_to(field.normal_at(p.x, p.y, t)))
+		worst_velocity_ms = maxf(worst_velocity_ms, WaterSurface.sample_velocity(samples, i).distance_to(field.velocity_at(p.x, p.y, t)))
 	print("the one-pass sample, microseconds each: cold %.2f, warm (the point 4 cm away a substep ago) %.2f; warm against the three queries, at worst: height %.5f mm, normal %.7f, velocity %.7f m/s (sink %.1f)" % [
 		cold_us, warm_us, worst_height_mm, worst_normal, worst_velocity_ms, sink])
 
 
 ## Milliseconds of physics per tick of one board, the way tools/simulate.sh beam_reach sails.
 func _time_a_board(with_waves: bool, ticks: int) -> float:
-	var scenario: SimScenario = load("res://dev/scenarios/beam_reach.gd").new()
-	var sim: WindsurferSim = WindsurferSim.create_default(with_waves)
-	sim.wind_config = sim.wind_config.duplicate()
-	sim.wind_config.speed_kt = scenario.wind_kt
-	sim.wind = WindField.new(sim.wind_config)
-	scenario.pilot.sail = sim.sail
-	scenario.pilot.sailor = sim.sailor_config
-	sim.set_waves(with_waves)
-	sim.reset(Vector3.ZERO, deg_to_rad(scenario.start_heading_deg))
-	scenario.setup(sim)
+	_add_board(with_waves)
+	var sim: WindsurferSim = _sims[0]
+	var scenario: SimScenario = _scenarios[0]
 	for i: int in ticks:
-		scenario.update(sim, DT)
-		sim.step(DT, scenario.controls)
+		_step_board(0)
 	var physics_us: int = 0
 	for i: int in ticks:
 		scenario.update(sim, DT)
@@ -156,7 +155,46 @@ func _time_a_board(with_waves: bool, ticks: int) -> float:
 		physics_us += Time.get_ticks_usec() - t0
 	print("  %s: %.2f m/s, planing ratio %.2f after %.0f s" % [
 		"waves" if with_waves else "flat", sim.telemetry.speed_ms, sim.telemetry.planing_ratio, sim.time_s])
+	_sims.clear()
+	_scenarios.clear()
 	return float(physics_us) / 1000.0 / float(ticks)
+
+
+## Milliseconds per tick for that many boards on the waves, each tick stepped side by side on
+## the engine's worker threads (one task per board), after as many ticks to get them going.
+func _time_boards_side_by_side(boards: int, ticks: int) -> float:
+	for i: int in boards:
+		_add_board(true)
+	for i: int in ticks:
+		WorkerThreadPool.wait_for_group_task_completion(WorkerThreadPool.add_group_task(_step_board, boards))
+	var t0: int = Time.get_ticks_usec()
+	for i: int in ticks:
+		WorkerThreadPool.wait_for_group_task_completion(WorkerThreadPool.add_group_task(_step_board, boards))
+	var us: int = Time.get_ticks_usec() - t0
+	_sims.clear()
+	_scenarios.clear()
+	return float(us) / 1000.0 / float(ticks)
+
+
+## A board on a beam reach as tools/simulate.sh beam_reach sets it up, with its own copies of
+## the config files (boards stepped side by side must not share objects).
+func _add_board(with_waves: bool) -> void:
+	var scenario: SimScenario = load("res://dev/scenarios/beam_reach.gd").new()
+	var sim: WindsurferSim = WindsurferSim.create_for(EnvironmentConfig.new(), with_waves, true)
+	sim.wind_config.speed_kt = scenario.wind_kt
+	sim.wind = WindField.new(sim.wind_config)
+	scenario.pilot.sail = sim.sail
+	scenario.pilot.sailor = sim.sailor_config
+	sim.set_waves(with_waves)
+	sim.reset(Vector3.ZERO, deg_to_rad(scenario.start_heading_deg))
+	scenario.setup(sim)
+	_sims.append(sim)
+	_scenarios.append(scenario)
+
+
+func _step_board(index: int) -> void:
+	_scenarios[index].update(_sims[index], DT)
+	_sims[index].step(DT, _scenarios[index].controls)
 
 
 func _read_user_args() -> Dictionary[String, String]:
