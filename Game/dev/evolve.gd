@@ -36,7 +36,9 @@ extends SceneTree
 ##   --prestart_s=10       [10] the countdown, seconds
 ##   --start_behind_m=150  [150] how far behind the start line the board waits at the start: the
 ##                         plan's pre-start spot is 150 m back, too far to reach T1's 60 m line on
-##                         one tack; 25 m lets a beginner reach it on either tack
+##                         one tack; from 25 m it can be reached without a tack, on one tack or the other
+##   --spot_jitter_m=20    [20] how far the seed moves the start along the line (and back, up to a
+##                         quarter of start_behind_m); with 5 every start can be made on starboard
 ##   --population=64       [64] networks per generation
 ##   --actions=twa         [twa] how the networks' numbers are read: twa, the wind angle to hold (the
 ##                         hands steer for it and tack or gybe when it is on the other tack), or
@@ -161,6 +163,7 @@ func _initialize() -> void:
 	_env_options.stall_s = _number("stall_s", 0.0)
 	_env_options.prestart_s = _number("prestart_s", _env_options.prestart_s)
 	_env_options.start_behind_m = _number("start_behind_m", _env_options.start_behind_m)
+	_env_options.spot_jitter_m = _number("spot_jitter_m", _env_options.spot_jitter_m)
 	_env_options.laps = maxi(_integer("laps", 1), 1)
 	_episodes = maxi(_integer("episodes", 1), 1)
 	_env_options.actions = LearnedSkipper.mode_named(_text("actions", "twa"))
@@ -348,7 +351,7 @@ func _sail_in_processes(population: Array[NeuralNet], race_seed: int, workers: i
 		"--wind_kt=%s" % _wind_kt, "--episode_s=%s" % _env_options.episode_s, "--stall_s=%s" % _env_options.stall_s,
 		"--laps=%d" % _env_options.laps, "--episodes=%d" % _episodes, "--prestart_s=%s" % _env_options.prestart_s,
 		"--actions=%s" % LearnedSkipper.mode_name(_env_options.actions),
-		"--start_behind_m=%s" % _env_options.start_behind_m])
+		"--start_behind_m=%s" % _env_options.start_behind_m, "--spot_jitter_m=%s" % _env_options.spot_jitter_m])
 	var pids: Array[int] = []
 	for k: int in mini(workers, population.size()):
 		var pid: int = OS.create_process(OS.get_executable_path(), arguments)
@@ -527,6 +530,7 @@ func _note(brain: NeuralNet, run_name: String, generation: int, result: Result, 
 		"actions": LearnedSkipper.mode_name(_env_options.actions),
 		"prestart_s": _env_options.prestart_s,
 		"start_behind_m": _env_options.start_behind_m,
+		"spot_jitter_m": _env_options.spot_jitter_m,
 		"seed": _integer("seed", 1),
 		"sigma": snappedf(sigma, 0.0001),
 		"sheet_dead_zone": LearnedSkipper.SHEET_DEAD_ZONE,
