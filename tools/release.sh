@@ -9,6 +9,8 @@
 #   tools/release.sh [--options...]           build if there is no pack yet, then run it; the
 #                                             options go to the game: --race=t1_loop
 #                                             [--skippers=a,b,c] [--prestart=20] [--measure=12]
+#   tools/release.sh --mute [--options...]    the same without sound (a measurement or a bench
+#                                             run is always silent: Max sleeps next to the laptop)
 #
 # Rebuild after a change to the game (the pack is a copy). Needs the Windows export templates of
 # this Godot version installed once: in the editor, Editor > Manage Export Templates > Download,
@@ -46,4 +48,14 @@ fi
 if [[ ! -f "$out/wsim.pck" ]]; then
 	build
 fi
-exec "$out/wsim_console.exe" -- "$@"
+# Silent when asked, and for every measurement or bench run (they run at night, unattended).
+engine_args=()
+game_args=()
+for arg in "$@"; do
+	case "$arg" in
+		--mute) engine_args+=(--audio-driver Dummy) ;;
+		--measure=*|--bench=*) engine_args+=(--audio-driver Dummy); game_args+=("$arg") ;;
+		*) game_args+=("$arg") ;;
+	esac
+done
+exec "$out/wsim_console.exe" "${engine_args[@]}" -- "${game_args[@]}"
