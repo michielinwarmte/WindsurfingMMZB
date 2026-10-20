@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="SkipperConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://race/skipper_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+name = "Rookie"
+sail_colour = Color(0.3, 0.75, 0.25, 1)
+upwind_vmg_twa_deg = 45.0
+downwind_vmg_twa_deg = 135.0
+pointing_offset_deg = 3.0
+layline_margin_m = 25.0
+mark_margin_m = 12.0
+max_tacks_per_beat = 6
+reaction_time_s = 0.9
+steering_noise_deg = 5.0
+start_spot = 0.5
+start_timing_error_s = 3.0
+shift_sensitivity_deg = 20.0
+gust_appetite = 0.0

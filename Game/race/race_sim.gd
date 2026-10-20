@@ -162,6 +162,12 @@ func board_name(index: int) -> String:
 	return _boards[index].name
 
 
+## Where a board is (game X, Z, metres), as update_board() last said: what a skipper sees of the
+## other boards on the water.
+func board_position(index: int) -> Vector2:
+	return _boards[index].position
+
+
 # ---------------------------------------------------------------- one board
 
 ## The step a board is sailing to (an index into steps()); steps().size() once it has finished.
