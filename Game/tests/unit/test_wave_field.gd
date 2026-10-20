@@ -431,3 +431,82 @@ func test_flat_water_samples_are_still_and_level() -> void:
 		assert_eq(sample.normal, Vector3.UP)
 		assert_eq(sample.velocity_ms, Vector3.ZERO)
 		assert_eq(Vector2(sample.rest_x, sample.rest_z), Vector2(3.0, -7.0), "nothing is displaced")
+
+
+func test_the_board_s_samples_on_the_waves_are_the_three_queries_answers() -> void:
+	# A board sailing a beam reach on the default sea: every sample of the buoyancy grid,
+	# every substep, against the three queries at the same point and time.
+	var sim: WindsurferSim = WindsurferSim.create_default(true)
+	sim.reset(Vector3.ZERO, deg_to_rad(180.0))
+	var pilot: Autopilot = Autopilot.new()
+	pilot.target_twa_deg = 90.0
+	pilot.sail = sim.sail
+	pilot.sailor = sim.sailor_config
+	var controls: SimControls = SimControls.new()
+	controls.sheet = 0.0
+	var field: WaveField = sim.water as WaveField
+	assert_not_null(field, "the default sea is on")
+	var worst_height_m: float = 0.0
+	var worst_normal: float = 0.0
+	var worst_velocity_ms: float = 0.0
+	for tick: int in 480:
+		pilot.update(sim.telemetry, controls, 1.0 / 60.0)
+		sim.step(1.0 / 60.0, controls)
+		for sea: WaterSurface.Sample in sim.buoyancy.sea_samples:
+			worst_height_m = maxf(worst_height_m, absf(sea.height_m - field.height_at(sea.x, sea.z, sea.time_s)))
+			worst_normal = maxf(worst_normal, sea.normal.distance_to(field.normal_at(sea.x, sea.z, sea.time_s)))
+			worst_velocity_ms = maxf(worst_velocity_ms, sea.velocity_ms.distance_to(field.velocity_at(sea.x, sea.z, sea.time_s)))
+	assert_gt(sim.telemetry.speed_ms, 7.0, "the board is sailing")
+	assert_lt(worst_height_m, WaveField.SOLVE_TOLERANCE_M, "worst %.6f mm" % (worst_height_m * 1000.0))
+	assert_lt(worst_normal, 1e-4, "worst %s" % String.num_scientific(worst_normal))
+	assert_lt(worst_velocity_ms, 1e-3, "worst %s m/s" % String.num_scientific(worst_velocity_ms))
+	# The hull asks the grid's centre column in the same substep: the same points, the same
+	# time, so it is handed the grid's samples.
+	sim.buoyancy.apply(sim.body, sim.water, sim.time_s, 9.81)
+	var reused: int = 0
+	for k: int in sim.buoyancy.sample_points.size():
+		var point: Vector3 = sim.body.point_world(sim.buoyancy.sample_points[k])
+		if sim.buoyancy.sea_sample_for(k, sim.water, point, sim.time_s) == sim.buoyancy.sea_samples[k]:
+			reused += 1
+	assert_eq(reused, sim.buoyancy.sample_points.size())
+	assert_null(sim.buoyancy.sea_sample_for(0, FlatWater.new(), sim.body.point_world(sim.buoyancy.sample_points[0]), sim.time_s), "not on another surface")
+	assert_null(sim.buoyancy.sea_sample_for(0, sim.water, sim.body.point_world(sim.buoyancy.sample_points[0]), sim.time_s + 0.001), "not at another time")
+
+
+func test_reset_forgets_the_water_s_answers() -> void:
+	# The samples remember the last answers, where the next solves start. reset() forgets
+	# them, so a board put somewhere new solves from scratch, as a new board does: its first
+	# answers are the cold ones, bit for bit.
+	var sim: WindsurferSim = WindsurferSim.create_default(true)
+	var controls: SimControls = SimControls.new()
+	sim.reset(Vector3(20.0, 0.0, -30.0), deg_to_rad(90.0))
+	for tick: int in 30:
+		sim.step(1.0 / 60.0, controls)
+	var remembered: int = 0
+	for sea: WaterSurface.Sample in sim.buoyancy.sea_samples:
+		remembered += 1 if sea.is_set else 0
+	assert_eq(remembered, sim.buoyancy.sea_samples.size(), "after a run every grid point remembers")
+	assert_true(sim.hull._sea_at_wet_centroid.is_set, "and so does the hull's wet centroid")
+	sim.reset(Vector3.ZERO, deg_to_rad(180.0))
+	remembered = 0
+	for sea: WaterSurface.Sample in sim.buoyancy.sea_samples:
+		remembered += 1 if sea.is_set else 0
+	# The hull's own points are private to it; the test looks at them all the same.
+	var hull_samples: Array[WaterSurface.Sample] = [sim.hull._sea_at_wet_centroid, sim.hull._sea_at_spray_root, sim.hull._sea_at_centre_of_buoyancy]
+	hull_samples.append_array(sim.hull._sea_at_strips)
+	hull_samples.append_array(sim.hull._sea_at_rail_strips)
+	for sea: WaterSurface.Sample in hull_samples:
+		remembered += 1 if sea.is_set else 0
+	assert_eq(remembered, 0, "after reset() nothing is remembered")
+	# The first answers after the reset are the cold ones.
+	sim.buoyancy.apply(sim.body, sim.water, 0.0, 9.81)
+	var fresh: WindsurferSim = WindsurferSim.create_default(true)
+	fresh.reset(Vector3.ZERO, deg_to_rad(180.0))
+	fresh.buoyancy.apply(fresh.body, fresh.water, 0.0, 9.81)
+	var differ: int = 0
+	for k: int in sim.buoyancy.sea_samples.size():
+		var a: WaterSurface.Sample = sim.buoyancy.sea_samples[k]
+		var b: WaterSurface.Sample = fresh.buoyancy.sea_samples[k]
+		if a.height_m != b.height_m or a.normal != b.normal or a.velocity_ms != b.velocity_ms:
+			differ += 1
+	assert_eq(differ, 0, "the same answers as a new board's")
