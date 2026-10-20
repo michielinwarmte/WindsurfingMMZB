@@ -18,6 +18,8 @@ extends SceneTree
 ##                         The names are dealt round the boards in order.
 ##   [--boards=<n>]        how many boards (the default: one per name in --skippers)
 ##   [--seed=0]            the skippers' random seed (board i gets seed + i): the same seed, the same race
+##   [--finish_window=60]  the race ends this long after the first board finishes, seconds (the game's
+##                         rule; tools/race_matrix.sh waits longer, so every board gets a time)
 ##   [--laps=1] [--wind_kt=15] [--seconds=300: race time after the gun]
 ##   [--prestart=10: the countdown, seconds] [--twa=50: the wind angle the autopilot holds]
 ##   [--out_dir=<folder>: a CSV per board: race time, x, z, heading, speed, its next step, and what
@@ -90,6 +92,7 @@ func _initialize() -> void:
 	var prestart_s: float = maxf(options.get("prestart", "10").to_float(), 0.0)
 	var twa_deg: float = options.get("twa", "50").to_float()
 	var random_seed: int = options.get("seed", "0").to_int()
+	var finish_window_s: float = options.get("finish_window", "60").to_float()
 	var out_dir: String = options.get("out_dir", _repository_path(".sim_output/race"))
 
 	var course: Course = course_named(options.get("course", "test"))
@@ -97,6 +100,7 @@ func _initialize() -> void:
 		quit(2)
 		return
 	var race: RaceSim = RaceSim.new(course, laps, prestart_s)
+	race.finish_window_s = finish_window_s
 	if race.steps().is_empty():
 		quit(2)
 		return
@@ -231,14 +235,27 @@ static func _test_course(axis_deg: float) -> Course:
 
 # ---------------------------------------------------------------- the boards
 
-## The open water's default simulation with its waves, in a wind of some knots from a direction.
+## The open water's default simulation with its waves (as WindsurferSim.create_default(true)
+## builds it), in a wind of some knots from a direction. Every board gets copies of the
+## configuration files of its own: boards stepped side by side on threads (tests/unit/
+## test_skipper.gd) would otherwise all read the same objects, and that slowed each of them down
+## several times over. The numbers are the same.
 static func _make_sim(wind_from_deg: float, wind_kt: float) -> WindsurferSim:
-	var sim: WindsurferSim = WindsurferSim.create_default(true)
-	sim.wind_config = sim.wind_config.duplicate()
-	sim.wind_config.speed_kt = wind_kt
-	sim.wind_config.from_bearing_deg = wind_from_deg
-	sim.wind = WindField.new(sim.wind_config)
-	sim.set_waves(true)  # again, so the waves run with the new wind
+	var environment: EnvironmentConfig = EnvironmentConfig.new()
+	var wind_config: WindConfig = environment.wind_or_default().duplicate(true)
+	wind_config.speed_kt = wind_kt
+	wind_config.from_bearing_deg = wind_from_deg
+	var sim: WindsurferSim = WindsurferSim.new(
+		load("res://config/board_default.tres").duplicate(true),
+		load("res://config/sail_default.tres").duplicate(true),
+		load("res://config/fin_default.tres").duplicate(true),
+		load("res://config/sailor_default.tres").duplicate(true),
+		environment.water_or_default().duplicate(true),
+		wind_config,
+		load("res://config/sim_default.tres").duplicate(true),
+		environment.waves_or_default().duplicate(true))
+	sim.air_density_kg_m3 = environment.air_density_kg_m3
+	sim.set_waves(true)
 	return sim
 
 
