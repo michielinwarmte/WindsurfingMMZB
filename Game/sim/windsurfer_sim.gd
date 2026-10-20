@@ -255,6 +255,10 @@ func reset(origin_xz: Vector3, heading_rad: float) -> void:
 	trim_press_m = 0.0
 	body = SimRigidBody.new()
 	_set_hull_mass_properties()
+	# The water's last answers are where the next solves start (WaveField.sample_at); a board
+	# put somewhere new starts them from scratch, as a new board does.
+	buoyancy.forget_the_sea()
+	hull.forget_the_sea()
 	# A positive rotation about +Y turns the bow to port, so a compass heading is a negative angle.
 	body.basis = Basis(Vector3.UP, -heading_rad)
 	body.set_origin_world(Vector3(origin_xz.x, water_config.base_height_m + 0.5 * board_config.thickness_m - _rest_depth_m(), origin_xz.z))

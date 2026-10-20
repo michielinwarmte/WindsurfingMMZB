@@ -45,6 +45,15 @@ var bow_immersion_m: float = 0.0
 var centre_of_buoyancy_world: Vector3 = Vector3.ZERO
 var wet_centroid_world: Vector3 = Vector3.ZERO
 
+## The water at each sample point as the last apply() found it, one record per point
+## (WaterSurface.sample_at: the height, the normal and the water's velocity, from one solve
+## per point). The hull model reuses the centre column's records: the same points in the
+## same substep. And each record is where its point's solve starts the next substep, since
+## the board moves only a few centimetres per substep (WaveField.sample_at).
+var sea_samples: PackedFloat64Array = PackedFloat64Array()
+## The water surface those samples are of.
+var sea_surface: WaterSurface = null
+
 ## A point counts as fully wetted (for the wetted area) once it is this deep.
 const WET_RAMP_M: float = 0.02
 
@@ -103,6 +112,20 @@ func _build_grid() -> void:
 	for k: int in sample_points.size():
 		sample_volumes_m3[k] = board.volume_m3 * weights[k] / total_weight
 		sample_areas_m2[k] = planform_area_m2 * area_weights[k] / total_area_weight
+	sea_samples = WaterSurface.new_samples(sample_points.size())
+
+
+## Forgets the water's last answers, so that the next apply() solves every point from
+## scratch: for a board put somewhere new (WindsurferSim.reset), whose answers are then a new
+## board's to the last bit.
+func forget_the_sea() -> void:
+	WaterSurface.forget_samples(sea_samples)
+
+
+## The records of the last apply() if they are of this surface, for the hull model, which asks
+## the same points in the same substep (it checks each record's question); empty if not.
+func sea_samples_of(surface: WaterSurface) -> PackedFloat64Array:
+	return sea_samples if surface == sea_surface else PackedFloat64Array()
 
 
 ## Computes the buoyancy and damping forces for the body's current state and applies them.
@@ -116,11 +139,14 @@ func apply(body: SimRigidBody, surface: WaterSurface, time_s: float, gravity_ms2
 	var wet_count: int = 0
 	var depth_sum: float = 0.0
 	var wet_rows: Dictionary[int, bool] = {}
+	sea_surface = surface
 
 	for k: int in sample_points.size():
 		var point_world: Vector3 = body.point_world(sample_points[k])
-		var normal: Vector3 = surface.normal_at(point_world.x, point_world.z, time_s)
-		var depth: float = surface.height_at(point_world.x, point_world.z, time_s) - point_world.y
+		# The height, the normal and the water's velocity here, from one solve.
+		surface.sample_at(point_world.x, point_world.z, time_s, sea_samples, k)
+		var normal: Vector3 = WaterSurface.sample_normal(sea_samples, k)
+		var depth: float = WaterSurface.sample_height(sea_samples, k) - point_world.y
 		point_depths_m[k] = depth
 		if depth <= 0.0:
 			continue
@@ -144,7 +170,7 @@ func apply(body: SimRigidBody, surface: WaterSurface, time_s: float, gravity_ms2
 		# surface it works against, not on how deep it sits; a light hull floating high is
 		# damped like a loaded one as long as its bottom is wet.
 		var wet_share: float = sample_areas_m2[k] * clampf(depth / WET_RAMP_M, 0.0, 1.0) / planform_area_m2
-		var relative_velocity: Vector3 = body.point_velocity(point_world) - surface.velocity_at(point_world.x, point_world.z, time_s)
+		var relative_velocity: Vector3 = body.point_velocity(point_world) - WaterSurface.sample_velocity(sea_samples, k)
 		var normal_speed: float = relative_velocity.dot(normal)
 		var damping: float = -(water.damping_linear_ns_m * normal_speed
 			+ water.damping_quadratic_ns2_m2 * normal_speed * absf(normal_speed)) * wet_share
