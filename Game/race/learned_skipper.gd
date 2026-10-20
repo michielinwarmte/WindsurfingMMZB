@@ -1,5 +1,5 @@
 class_name LearnedSkipper
-extends RefCounted
+extends RaceSkipper
 ## A skipper whose decisions come from a trained neural network (RACING_PLAN.md, "The learned
 ## skipper"). Ten times a second it builds what it sees (RaceObservation), asks the brain "what
 ## now?", and turns the answer into a player's controls. It drives the board through the same
@@ -119,6 +119,8 @@ class Driver:
 
 
 var brain: NeuralNet = null
+## The brain file's name (night_best, ...), shown on the results and the labels.
+var brain_name: String = "brain"
 var decision_ticks: int = DECISION_TICKS
 
 var _sim: WindsurferSim = null
@@ -151,6 +153,10 @@ func setup(sim: WindsurferSim, controller: PlayerController, hands: AiHands, rac
 	_controller.hands = _hands
 	_ticks_to_decision = 0
 	_since_manoeuvre_s = RaceObservation.SINCE_MANOEUVRE_SCALE_S
+
+
+func skipper_name() -> String:
+	return brain_name
 
 
 ## The wind field to sample the gusts around the board from.

@@ -67,8 +67,9 @@ class Entry:
 	var controls: SimControls
 	## The 9A autopilot (--skippers=autopilot), or null.
 	var pilot: Autopilot = null
-	## A skipper on the beginner controller, with its hands on the controls; null for an autopilot.
-	var skipper: Skipper = null
+	## A skipper on the beginner controller, with its hands on the controls (a scripted Skipper or a
+	## LearnedSkipper); null for an autopilot.
+	var skipper: RaceSkipper = null
 	var controller: PlayerController = null
 	var hands: AiHands = null
 	## The race time from which the board is sailed (before it, it waits where it was put).
@@ -185,6 +186,8 @@ static func make_entries(race: RaceSim, course: Course, who: PackedStringArray, 
 ## counted), the race told where each one is, and the race clock moved on.
 static func step_race(race: RaceSim, entries: Array[Entry]) -> void:
 	for i: int in entries.size():
+		if entries[i].skipper != null and entries.size() > 1:
+			_tell_others(entries, i)
 		if race.clock_s() >= entries[i].set_off_s:
 			_sail(entries[i])
 		race.update_board(i, _where(entries[i]))
@@ -268,11 +271,11 @@ static func _make_sim(wind_from_deg: float, wind_kt: float) -> WindsurferSim:
 ## `share` of the way across the line's width, on the pre-start's beam reach, at rest. Its skipper
 ## drives the beginner controller (auto-sheet on), as the player's board is set up in the game.
 static func _make_skipper_board(skipper_name: String, race: RaceSim, course: Course, wind_kt: float, share: float) -> Entry:
-	var skipper: Skipper = Skippers.make(skipper_name)
+	var skipper: RaceSkipper = Skippers.make(skipper_name)
 	if skipper == null:
 		return null
 	var entry: Entry = Entry.new()
-	entry.name = skipper.config.name
+	entry.name = skipper.skipper_name()
 	entry.skipper = skipper
 	entry.sim = _make_sim(course.axis_deg, wind_kt)
 	entry.controller = PlayerController.new()
@@ -373,6 +376,20 @@ static func _fresh_controls() -> SimControls:
 static func _where(entry: Entry) -> Vector2:
 	var position: Vector3 = entry.sim.telemetry.position
 	return Vector2(position.x, position.z)
+
+
+## Board i's skipper is told where the other boards are and how they move (a learned skipper looks
+## at the nearest two; a scripted one reads the race instead and ignores this).
+static func _tell_others(entries: Array[Entry], i: int) -> void:
+	var positions: PackedVector2Array = PackedVector2Array()
+	var velocities: PackedVector2Array = PackedVector2Array()
+	for j: int in entries.size():
+		if j == i:
+			continue
+		positions.append(_where(entries[j]))
+		var v: Vector3 = entries[j].sim.body.velocity
+		velocities.append(Vector2(v.x, v.z))
+	entries[i].skipper.set_others(positions, velocities)
 
 
 func _write_row(entry: Entry, race: RaceSim, index: int) -> void:

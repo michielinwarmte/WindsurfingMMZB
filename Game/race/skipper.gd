@@ -1,5 +1,5 @@
 class_name Skipper
-extends RefCounted
+extends RaceSkipper
 ## The scripted skipper (RACING_PLAN.md, "The scripted skipper (9B)"): the course layer above the
 ## beginner PlayerController and its auto-sheet Autopilot. It decides where to go next and moves
 ## the same stick the player has (AiHands): steer, sheet, and Space for a tack or gybe. It never
@@ -147,12 +147,9 @@ const POLAR_SPEED_MS: PackedFloat32Array = [
 	1.2, 5.80, 6.51, 7.11, 7.70, 8.32, 9.64, 10.84, 11.86, 12.55, 13.73, 14.16, 14.33, 14.33, 14.19, 13.33, 8.76, 6.0, 6.0,
 ]
 
-## The character sheet.
+## The character sheet. (random_seed seeds its steering noise, and note says what it is doing:
+## "beat", "run", "start: away", ...; both are RaceSkipper's.)
 var config: SkipperConfig = SkipperConfig.new()
-## The seed of its steering noise: the same seed, the same race.
-var random_seed: int = 0
-## What it is doing, a word or two for the tools' CSV ("beat", "run", "start: away", ...).
-var note: String = ""
 ## Before its start: the seconds it has to spare (the time until it wants to cross, less the time
 ## it expects to need to get to its spot), for the tools.
 var start_spare_s: float = 0.0
@@ -220,6 +217,11 @@ var _keeping_clear: bool = false
 var _polar_winds: PackedFloat32Array = POLAR_WINDS_KT.duplicate()
 var _polar_twa: PackedFloat32Array = POLAR_TWA_DEG.duplicate()
 var _polar_speeds: PackedFloat32Array = POLAR_SPEED_MS.duplicate()
+
+
+## The name on its character sheet.
+func skipper_name() -> String:
+	return config.name
 
 
 ## Puts the skipper on a board: its simulation (to see whether the sailor is up), its controller

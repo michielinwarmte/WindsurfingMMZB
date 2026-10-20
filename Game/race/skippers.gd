@@ -5,15 +5,22 @@ extends RefCounted
 ## with that SkipperConfig.
 
 const FOLDER: String = "res://race/skippers"
+## The trained networks (RACING_PLAN.md, RD4): brain:<name> is Game/race/brains/<name>.json.
+const BRAINS_FOLDER: String = "res://race/brains"
 
 
-## A skipper for a name; null (with an error) if there is no such character.
-static func make(skipper_name: String) -> Skipper:
-	# ---- The learned skippers (RACING_PLAN.md, 9C) go here after the merge: "brain:<name>" makes
-	# ---- a learned skipper from Game/race/brains/<name>.json, with the same setup() and update().
+## A skipper for a name: a character sheet's name makes a scripted Skipper, "brain:<name>" a
+## LearnedSkipper with that trained network; null (with an error) if there is neither.
+static func make(skipper_name: String) -> RaceSkipper:
 	if skipper_name.begins_with("brain:"):
-		push_error("Learned skippers (%s) are not in this build yet." % skipper_name)
-		return null
+		var brain_name: String = skipper_name.trim_prefix("brain:")
+		var brain: NeuralNet = NeuralNet.load_file(BRAINS_FOLDER.path_join(brain_name + ".json"))
+		if brain == null:
+			return null
+		var learned: LearnedSkipper = LearnedSkipper.new()
+		learned.brain = brain
+		learned.brain_name = brain_name
+		return learned
 	var config: SkipperConfig = load_config(skipper_name)
 	if config == null:
 		push_error("No skipper called '%s' (the characters are: %s)." % [skipper_name, ", ".join(names())])
