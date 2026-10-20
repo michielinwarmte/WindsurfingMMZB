@@ -3,7 +3,7 @@
 The live state of Phase 9, racing. The plan and its execution brief are in [RACING_PLAN.md](RACING_PLAN.md). **The lead updates and commits this file after every launch, report and merge**, so any session can take over.
 
 - **Branch:** `feature/p9-racing` (from `feature/u2-fin` at f598a00, which carries U1 and U2). Agents work on `p9/<name>` branches, made from it in their own worktrees.
-- **Last update:** 19 October 2026, late evening (Session 50): fit_to_water and course_on_water merged (385 tests, 204 files); race_core still running. The AiHands (the controller fed by values) added by the lead (121f017). T2 fits at 60 % with the 200 m rule (150 m would give 80 %: Max decides).
+- **Last update:** 20 October 2026, 02:45 (Session 50, the night): all of 9A's three agents merged, the learning harness merged (two rounds, c279c67; 442 tests, 219 files). **A training run is in progress**: `tools/race_evolve.sh --run=night --hours=5 --actions=twa --population=32 --episodes=2 --episode_s=300 --start_behind_m=25 --prestart_s=5 --stall_s=30 --sigma=0.03 --sigma_min=0.01 --output_scale=0.5 --threads=16`, started 02:42, log in `.sim_output/evolve/night.log` and `night.csv`, brains in `Game/race/brains/night_*.json`. The `skipper` agent (9B) still runs on `p9/skipper`.
 - **Max's instruction (19 October 2026):** "go till the 2 training courses": build 9A up to and including the two training courses, with the course placement fitting itself to the water (every mark at least 200 m from the shore). Then stop for his look.
 
 ## State
@@ -24,6 +24,8 @@ The live state of Phase 9, racing. The plan and its execution brief are in [RACI
 Max went to bed on 19 October 2026 with "experiment with the AI if you like, use the laptop's CPU, be careful with my tokens, surprise me tomorrow". The lead launches two agents: `skipper` (9B, the scripted skipper and its four characters, headless on T1 and T2) and `learn` (9C-lite: RaceEnv, the observation and the reward, NeuralNet and the brain file, LearnedSkipper, and an in-Godot evolution trainer on all cores, PPO over Python postponed because nothing may be installed at night). When both are merged the lead runs the trainer overnight on T1 and writes the morning report here and in the progress log. Stop A2 (Max sails among the buoys) is open.
 
 ## Numbers
+
+**The learning harness (agent `learn`, [learn.md](racing_reports/learn.md)):** GDScript threads slow each other down in Godot 4.7.2 (14 threads run 3 times slower than 1), so the trainer runs one Godot process per core: 521 ticks/s with 1 process, 3928 with 14, 4388 with 20. The hand-written wind-angle policy (the ceiling) starts at 28 s and rounds mark 1 at 204 s of race time from 25 m behind the line. Fitness to read the log by: nothing about -30, starts in one of two races about -5, in both +20 or more, rounds mark 1 in both about +75.
 
 Baseline on `feature/u2-fin` (f598a00): `tools/check.sh` 196 files, 0 failed; `tools/test.sh` 360 of 360.
 
