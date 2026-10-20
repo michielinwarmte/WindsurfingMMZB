@@ -385,8 +385,8 @@ func test_a_vee_bottom_is_wet_near_its_keel_behind_the_spray_root() -> void:
 	var transom_local: Vector3 = Vector3(0.0, -0.5 * vee.board.thickness_m, 0.5 * vee.board.length_m)
 	body.position.y -= body.point_world(transom_local).y + 0.075
 	_evaluate(vee, buoyancy, body)
-	var near_root: Vector2 = vee._wet_width(buoyancy, front - 0.25 * expected)
-	var behind: Vector2 = vee._wet_width(buoyancy, front - 1.5 * expected)
+	var near_root: Vector2 = vee._wet_width(front - 0.25 * expected)
+	var behind: Vector2 = vee._wet_width(front - 1.5 * expected)
 	assert_almost_eq(near_root.x, 0.25, 0.05, "a quarter of the chine-dry part behind the root: a quarter of the width wet")
 	assert_almost_eq(near_root.y, 0.0, 1e-6, "around the keel")
 	assert_almost_eq(behind.x, 1.0, 1e-6, "further aft: the whole width")

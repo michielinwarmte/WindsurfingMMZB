@@ -39,6 +39,17 @@ func place(new_position: Vector3, new_velocity: Vector3) -> void:
 	_force_sum = Vector3.ZERO
 
 
+## Moves the body across the deck with the hull: its horizontal position and speed are set,
+## the vertical ones kept (WindsurferSim._ride_the_hull). A method rather than writing the
+## fields from outside: writing another object's field takes a global engine lock on worker
+## threads, a method call does not (F1 no_wait, WindsurferSim).
+func ride(position_x: float, position_z: float, velocity_x: float, velocity_z: float) -> void:
+	position.x = position_x
+	position.z = position_z
+	velocity.x = velocity_x
+	velocity.z = velocity_z
+
+
 ## Advances by dt seconds and clears the forces: the velocity first, then the position
 ## with the new velocity, which keeps the leg spring from gaining energy.
 func integrate(dt: float) -> void:

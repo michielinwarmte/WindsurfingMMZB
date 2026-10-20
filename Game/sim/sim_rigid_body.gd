@@ -95,6 +95,19 @@ func take_water_along_sideways(new_added_mass_sway_kg: float) -> void:
 	velocity += across * (v_across * (before / after - 1.0))
 
 
+## Sets the water that moves with the hull along its up axis (added_mass_up_kg) and sideways
+## (added_mass_sway_kg): the simulation does, every substep, after take_water_along() and
+## take_water_along_sideways(). Methods rather than writing the fields from outside: writing
+## another object's field takes a global engine lock on worker threads, a method call does
+## not (F1 no_wait, WindsurferSim).
+func set_added_mass_up(kg: float) -> void:
+	added_mass_up_kg = kg
+
+
+func set_added_mass_sway(kg: float) -> void:
+	added_mass_sway_kg = kg
+
+
 ## World position of the board origin.
 func origin_world() -> Vector3:
 	return position - basis * com_offset_body
