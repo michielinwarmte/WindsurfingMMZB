@@ -104,6 +104,17 @@ const CASES: PackedStringArray = [
 	"array_literal_for", # a loop over a two-element array literal (for j in [a, b])
 	"vector_method_own", # a method of another object taking and giving a Vector3
 	"packed_argument",   # handing a PackedFloat64Array to a method of another object
+	"basis_local",       # a Basis kept in a local and multiplied with vectors (no new Basis)
+	"basis_argument",    # a Basis handed to a static function (the argument is a copy)
+	"basis_transposed",  # basis.transposed() * v: a new Basis made for the product
+	"vector_times_basis",# v * basis: the same product without the new Basis
+	"effective_mass",    # SimRigidBody.effective_mass_at() of a body of this thread's own
+	"to_body",           # SimMath.to_body(basis, v)
+	"pitch_rad",         # SimMath.pitch_rad(basis)
+	"point_world",       # SimRigidBody.point_world(p)
+	"add_force_at",      # SimRigidBody.add_force_at(p, f)
+	"mobility",          # SimRigidBody.mobility(of, at, u, v)
+	"angular_acceleration", # SimRigidBody.angular_acceleration()
 	"board_step",        # a whole board's physics tick, n boards side by side (see the top)
 ]
 
@@ -304,6 +315,54 @@ func _run_case(index: int, case_name: String) -> void:
 			var p: Vector3 = Vector3(0.5, 0.5, 0.5)
 			for i: int in k:
 				sink += own.xform(p).y
+		"basis_local":
+			var b: Basis = Basis(Vector3.UP, 0.3)
+			var v: Vector3 = Vector3(1.0, 2.0, 3.0)
+			for i: int in k:
+				sink += (b * v).x
+		"basis_argument":
+			var b: Basis = Basis(Vector3.UP, 0.3)
+			for i: int in k:
+				sink += _first_of_basis(b)
+		"basis_transposed":
+			var b: Basis = Basis(Vector3.UP, 0.3)
+			var v: Vector3 = Vector3(1.0, 2.0, 3.0)
+			for i: int in k:
+				sink += (b.transposed() * v).x
+		"vector_times_basis":
+			var b: Basis = Basis(Vector3.UP, 0.3)
+			var v: Vector3 = Vector3(1.0, 2.0, 3.0)
+			for i: int in k:
+				sink += (v * b).x
+		"effective_mass":
+			var body: SimRigidBody = SimRigidBody.new()
+			body.basis = Basis(Vector3.UP, 0.3)
+			var p: Vector3 = Vector3(0.3, -0.1, 0.9)
+			for i: int in k:
+				sink += body.effective_mass_at(p, Vector3.UP)
+		"to_body":
+			var b: Basis = Basis(Vector3.UP, 0.3)
+			var v: Vector3 = Vector3(1.0, 2.0, 3.0)
+			for i: int in k:
+				sink += SimMath.to_body(b, v).x
+		"pitch_rad":
+			var b: Basis = Basis(Vector3.UP, 0.3)
+			for i: int in k:
+				sink += SimMath.pitch_rad(b)
+		"point_world", "add_force_at", "mobility", "angular_acceleration":
+			var body: SimRigidBody = SimRigidBody.new()
+			body.basis = Basis(Vector3.UP, 0.3)
+			var p: Vector3 = Vector3(0.3, -0.1, 0.9)
+			var q: Vector3 = Vector3(-0.2, 0.4, 0.1)
+			for i: int in k:
+				if case_name == "point_world":
+					sink += body.point_world(p).x
+				elif case_name == "add_force_at":
+					body.add_force_at(p, q)
+				elif case_name == "mobility":
+					sink += body.mobility(p, q, Vector3.RIGHT, Vector3.BACK)
+				else:
+					sink += body.angular_acceleration().x
 		"packed_argument":
 			var samples: PackedFloat64Array = own.samples
 			for i: int in k:
@@ -344,6 +403,10 @@ func _time_boards(n: int) -> float:
 
 func _step_board(index: int) -> void:
 	_boards[index].step(DT, _sailors[index].controls)
+
+
+static func _first_of_basis(b: Basis) -> float:
+	return b.x.x
 
 
 static func _twice(x: float) -> float:

@@ -52,3 +52,27 @@ func point_world(local: Vector3) -> Vector3:
 ## The velocity of a world point that moves with the rig.
 func point_velocity(point: Vector3) -> Vector3:
 	return foot_velocity + angular_velocity.cross(point - foot_world)
+
+
+## The sail's axis questions, without handing the Basis over: every Basis a GDScript function
+## takes as a parameter or keeps in a local variable comes from one engine-wide pool under a
+## lock, and boards on threads wait for each other there (F1 no_wait, SimRigidBody). The same
+## arithmetic as SimMath's functions of the basis.
+## A vector in the rig's axes, in the world: basis * v (SimMath.to_world(basis, v)).
+func to_world(v_rig: Vector3) -> Vector3:
+	return basis * v_rig
+
+
+## A world vector in the rig's axes: SimMath.to_body(basis, v_world).
+func to_body(v_world: Vector3) -> Vector3:
+	return v_world * basis
+
+
+## The direction the rig's bow points (the board's heading), world: SimMath.forward(basis).
+func forward() -> Vector3:
+	return -basis.z
+
+
+## SimMath.wind_angle_rad(basis, from_world).
+func wind_angle_rad(from_world: Vector3) -> float:
+	return SimMath.wind_angle_rad_of_bow(-basis.z, from_world)

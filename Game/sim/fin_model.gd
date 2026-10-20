@@ -13,9 +13,9 @@ extends RefCounted
 ##
 ## Boards on threads (F1 no_wait): reading a field of another object, as config.area_m2 or
 ## body.basis, takes a global engine lock, and boards stepped side by side on worker threads
-## wait for each other there; calling a method of it does not. So compute() reads the body's
-## axes once at its top and uses copies of the config's numbers kept in this model's own
-## fields, taken by copy_config(): when the model is made and at the start of every tick
+## wait for each other there; calling a method of it does not. So compute() asks the body for
+## its axes through its methods (body.to_body(), which hands no Basis over: see SimRigidBody)
+## and uses copies of the config's numbers kept in this model's own fields, taken by copy_config(): when the model is made and at the start of every tick
 ## (WindsurferSim.step). The config is never changed inside a tick, so the copies are the
 ## config's numbers. The coefficient curves (lift_coefficient(), drag_coefficient()) still
 ## read the config itself: the telemetry and the tests ask them too.
@@ -85,8 +85,6 @@ func copy_config() -> void:
 
 
 func compute(body: SimRigidBody, surface: WaterSurface, time_s: float, rho_water: float) -> void:
-	# The body's axes, read once (see the note at the top).
-	var basis: Basis = body.basis
 	cop_world = body.point_world(config.cop_local())
 	# The part of the span that is in the water: all of it with the root under the surface,
 	# less when the tail has lifted and the root is in the air (a tack with the sailor's
@@ -101,7 +99,7 @@ func compute(body: SimRigidBody, surface: WaterSurface, time_s: float, rho_water
 
 	# The flow the fin sees: its own motion (including the board's rotation) minus the water's.
 	var v_rel: Vector3 = body.point_velocity(cop_world) - surface.velocity_at(cop_world.x, cop_world.z, time_s)
-	var v_body: Vector3 = SimMath.to_body(basis, v_rel)
+	var v_body: Vector3 = body.to_body(v_rel)
 	var v_plane: Vector3 = Vector3(v_body.x, 0.0, v_body.z)  # flow in the fin's plane
 	var speed: float = v_plane.length()
 	if speed < _min_speed_ms:
@@ -123,7 +121,7 @@ func compute(body: SimRigidBody, surface: WaterSurface, time_s: float, rho_water
 	var lift_dir: Vector3 = signf(slip_rad) * Vector3(flow_dir.z, 0.0, -flow_dir.x)
 	_bend(lift_n)
 	var force_body: Vector3 = lift_dir * (lift_n * side_share) + Vector3.UP * (lift_n * up_share) - flow_dir * drag_n
-	force_world = SimMath.to_world(basis, force_body)
+	force_world = body.to_world(force_body)
 	body.add_force_at(cop_world, force_world)
 
 

@@ -110,8 +110,8 @@ func set_side_for_wind(apparent_wind_angle_rad: float) -> void:
 ## held_side: 0 lets the wind decide which side the sail is on; +1 or -1 is the sailor
 ## holding the rig on that side (through a tack, until they flip it).
 func compute(rig: RigFrame, wind: WindField, sheet: float, rake: float, rho_air: float, rig_lean: float = 0.0, boom_across: float = 0.0, held_side: int = 0) -> void:
-	# The rig's axes and the hull's centre of mass, read once (see the note at the top).
-	var rig_basis: Basis = rig.basis
+	# The hull's centre of mass, read once (see the note at the top); the rig's axes are asked
+	# through its methods (rig.to_body() and so on), which hand no Basis over.
 	var rig_position: Vector3 = rig.position
 	rake_rad = clampf(rake, -1.0, 1.0) * config.max_rake_rad()
 	rig_lean_rad = rig_lean
@@ -130,7 +130,7 @@ func compute(rig: RigFrame, wind: WindField, sheet: float, rake: float, rho_air:
 	if held_side != 0:
 		sail_side = held_side
 	elif apparent_h.length() >= _min_apparent_wind_ms:
-		update_side(SimMath.wind_angle_rad(rig_basis, -apparent_h))
+		update_side(rig.wind_angle_rad(-apparent_h))
 
 	# Boom direction and the centre of effort (section 2.2 and 2.13), in body axes.
 	var chord_local: Vector3 = Vector3(sail_side * sin(sheet_angle_rad), 0.0, cos(sheet_angle_rad))
@@ -144,11 +144,11 @@ func compute(rig: RigFrame, wind: WindField, sheet: float, rake: float, rho_air:
 	if aws_ms < _min_apparent_wind_ms:
 		_clear_forces()
 		return
-	awa_rad = SimMath.wind_angle_rad(rig_basis, -w)
+	awa_rad = rig.wind_angle_rad(-w)
 
 	# Everything else happens in the horizontal "heading frame": f = bow, r = starboard.
 	# A board standing on its nose or tail has no heading frame; then there is no sail force.
-	var f: Vector3 = SimMath.horizontal(SimMath.forward(rig_basis))
+	var f: Vector3 = SimMath.horizontal(rig.forward())
 	if f.length() < 0.1:
 		_clear_forces()
 		return
@@ -190,7 +190,7 @@ func compute(rig: RigFrame, wind: WindField, sheet: float, rake: float, rho_air:
 	drive_n = force_world.dot(f)
 	side_force_n = force_world.dot(r)
 
-	torque_body = SimMath.to_body(rig_basis, (ce_world - rig_position).cross(force_world))
+	torque_body = rig.to_body((ce_world - rig_position).cross(force_world))
 
 
 ## Forgets the last forces (the rig is in the water).

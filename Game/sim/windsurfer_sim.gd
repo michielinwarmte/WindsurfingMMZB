@@ -33,7 +33,10 @@ extends RefCounted
 ## - the controls are copied the same way at the start of every tick (_read_controls());
 ## - each function reads the body's, the sailor's and the models' fields it needs once, at its
 ##   top, into local variables (nothing changes them inside the function: the forces are only
-##   collected), and hands its forces over with method calls (add_force_at(), ride()).
+##   collected), and hands its forces over with method calls (add_force_at(), ride());
+## - every Basis a function takes as a parameter or keeps in a local variable comes from one
+##   engine-wide pool under a lock too, so the hull's and the rig's axes are asked through their
+##   methods (body.to_body(), body.heel_rad(), rig.to_world()), which hand no Basis over.
 ## The arithmetic is the same, in the same order: the answers are the same to the last bit.
 
 var board_config: BoardConfig
@@ -361,7 +364,7 @@ func reset(origin_xz: Vector3, heading_rad: float) -> void:
 	body.set_origin_world(Vector3(origin_xz.x, water_config.base_height_m + 0.5 * board_config.thickness_m - _rest_depth_m(), origin_xz.z))
 	body.velocity = Vector3.ZERO
 	body.angular_velocity = Vector3.ZERO
-	var twa: float = SimMath.wind_angle_rad(body.basis, wind.from_direction())
+	var twa: float = body.wind_angle_rad(wind.from_direction())
 	sail.set_side_for_wind(twa)
 	_place_sailor()
 	_fill_telemetry(SimControls.new())
@@ -533,7 +536,7 @@ func _set_hull_mass_properties() -> void:
 ## over the sail to leeward when overpowered (a catapult), backwards into the water to
 ## windward when the pull vanished while hiked out.
 func _check_balance() -> void:
-	var twa: float = SimMath.wind_angle_rad(body.basis, wind.from_direction())
+	var twa: float = body.wind_angle_rad(wind.from_direction())
 	var tack: float = 1.0 if twa >= 0.0 else -1.0
 	# Heel is positive with the starboard rail down; on starboard tack leeward is port.
 	var leeward_heel: float = -_fall_heel_rad() * tack
@@ -578,7 +581,7 @@ func _check_balance() -> void:
 func force_fall(kind: String) -> void:
 	if sailor_state != SailorState.SAILING:
 		return
-	var twa: float = SimMath.wind_angle_rad(body.basis, wind.from_direction())
+	var twa: float = body.wind_angle_rad(wind.from_direction())
 	var tack: float = 1.0 if twa >= 0.0 else -1.0
 	_fall(int(-tack) if kind == "catapult" else int(tack), kind, tack)
 
@@ -629,7 +632,7 @@ func waterstart() -> void:
 	body.set_origin_world(Vector3(origin.x, water_config.base_height_m + 0.5 * board_config.thickness_m - _rest_depth_m(), origin.z))
 	body.velocity = Vector3.ZERO
 	body.angular_velocity = Vector3.ZERO
-	sail.set_side_for_wind(SimMath.wind_angle_rad(body.basis, wind.from_direction()))
+	sail.set_side_for_wind(body.wind_angle_rad(wind.from_direction()))
 	_place_sailor()
 
 
@@ -735,7 +738,7 @@ func _fin_load_bank_rad(asked: float) -> float:
 ## the wind. The wind angle is the true wind the sail met a moment ago (what the sailor
 ## feels and sees on the water, not the pilot's target), the same on either tack.
 func _rail_share_by_point_of_sail() -> float:
-	var twa_deg: float = absf(rad_to_deg(SimMath.wind_angle_rad(body.basis, _felt_true_wind_from())))
+	var twa_deg: float = absf(rad_to_deg(body.wind_angle_rad(_felt_true_wind_from())))
 	var flat_from: float = _fin_load_twa_max_deg
 	var fade: float = _fin_load_twa_fade_deg
 	if fade <= 0.0:
@@ -767,7 +770,7 @@ func _running_trim_target_deg(forward_speed: float) -> float:
 ## from the sailor (_felt_heel_beyond_rad).
 func _feel_the_rail(dt: float) -> void:
 	var away: float = -signf(lean)
-	var beyond: float = (SimMath.heel_rad(body.basis) - _wanted_bank_rad) * away
+	var beyond: float = (body.heel_rad() - _wanted_bank_rad) * away
 	_felt_heel_beyond_rad = lerpf(_felt_heel_beyond_rad, beyond, clampf(dt / _lean_feel_time_s, 0.0, 1.0))
 
 
@@ -788,7 +791,7 @@ func _fall_heel_rad() -> float:
 ## The apparent gravity is gravity less the body's own acceleration (a plumb line held
 ## by the sailor hangs along it); the felt heel is its angle from the deck's normal.
 func _apparent_heel_rad(push_ms2: float, lift_ms2: float) -> float:
-	var gravity_body: Vector3 = SimMath.to_body(body.basis, Vector3(0.0, -_gravity_ms2, 0.0))
+	var gravity_body: Vector3 = body.to_body(Vector3(0.0, -_gravity_ms2, 0.0))
 	var apparent_x: float = gravity_body.x - push_ms2
 	var apparent_down: float = -(gravity_body.y - lift_ms2)
 	return atan2(apparent_x, maxf(apparent_down, 0.1))
@@ -807,16 +810,15 @@ func _feel_the_turn(dt: float) -> void:
 	# the feet a few millimetres, which the ankles take, and throws nobody). Up and down
 	# the body is accelerated by its own forces on its legs.
 	# The hull's state, read once (see the note at the top).
-	var basis: Basis = body.basis
 	var angular_velocity: Vector3 = body.angular_velocity
 	var feet_world: Vector3 = body.point_world(feet_body)
 	var r: Vector3 = feet_world - body.position
-	var up: Vector3 = basis.y
+	var up: Vector3 = body.up_axis()
 	var alpha_yaw: Vector3 = up * body.angular_acceleration().dot(up)
 	_hull_acceleration_at_feet = body.linear_acceleration() + alpha_yaw.cross(r) + angular_velocity.cross(angular_velocity.cross(r))
 	var acceleration_world: Vector3 = SimMath.horizontal(_hull_acceleration_at_feet)
 	acceleration_world.y = sailor.acceleration_now().y
-	var acceleration_body: Vector3 = SimMath.to_body(basis, acceleration_world)
+	var acceleration_body: Vector3 = body.to_body(acceleration_world)
 	var blend: float = clampf(dt / maxf(_balance_feel_time_s, dt), 0.0, 1.0)
 	_felt_push_ms2 = lerpf(_felt_push_ms2, acceleration_body.x, blend)
 	_felt_lift_ms2 = lerpf(_felt_lift_ms2, acceleration_body.y, blend)
@@ -846,14 +848,13 @@ func _posture_frame() -> Basis:
 ## the board wobbled in yaw at about 1 Hz on flat water.)
 func _hold_the_rig() -> void:
 	# The hull's state, read once (see the note at the top).
-	var basis: Basis = body.basis
 	var angular_velocity: Vector3 = body.angular_velocity
-	var forward: Vector3 = SimMath.forward(basis)
+	var forward: Vector3 = body.forward()
 	var z: Vector3 = -forward
 	var x: Vector3 = Vector3.UP.cross(z)
 	if x.length() < 0.2:
 		# Standing on its nose or tail: no heading to speak of; keep the deck's across.
-		x = basis.x
+		x = body.starboard_axis()
 	x = x.normalized()
 	var rig_basis: Basis = Basis(x, z.cross(x), z)
 	var spin: Vector3 = angular_velocity - forward * angular_velocity.dot(forward)
@@ -863,10 +864,10 @@ func _hold_the_rig() -> void:
 ## A frame with the given up and the hull's heading: x across the board squared to up,
 ## z aft.
 func _frame_with_up(up: Vector3) -> Basis:
-	var basis: Basis = body.basis
-	var x: Vector3 = basis.x - up * basis.x.dot(up)
+	var across: Vector3 = body.starboard_axis()
+	var x: Vector3 = across - up * across.dot(up)
 	if x.length() < 0.2:
-		x = basis.z.cross(up)
+		x = body.aft_axis().cross(up)
 	x = x.normalized()
 	return Basis(x, up, x.cross(up))
 
@@ -885,10 +886,9 @@ func _set_posture() -> void:
 	# from tipping forward, and that came out as a bow-down moment at the feet, -117 N·m on
 	# the 18 kt beam reach: the front foot pressing, the very opposite of the technique.)
 	mass_model.update(body_stance, lean, hang_back_m + trim_press_m, 0.0, _rig_lean_now_rad)
-	# The hull's axes and the mass model's answer, read once (see the note at the top).
-	var basis: Basis = body.basis
+	# The mass model's answer, read once (see the note at the top).
 	var sailor_position_body: Vector3 = mass_model.sailor_position_body
-	var body_lean: float = SimMath.to_body(basis, sailor.position - body.origin_world()).x / _lean_max_m
+	var body_lean: float = body.to_body(sailor.position - body.origin_world()).x / _lean_max_m
 	var feet_lean: float = body_lean
 	if absf(lean) < absf(body_lean) or signf(lean) != signf(body_lean):
 		feet_lean = lean if signf(lean) == signf(body_lean) else 0.0
@@ -898,7 +898,7 @@ func _set_posture() -> void:
 	posture_centre_body = Vector3(0.0, feet_body.y, sailor_position_body.z - hang_back_m)
 	var from_centre: Vector3 = sailor_position_body - posture_centre_body
 	var target_world: Vector3 = body.point_world(posture_centre_body) + _posture_frame() * from_centre
-	posture_target_body = SimMath.to_body(basis, target_world - body.origin_world())
+	posture_target_body = body.to_body(target_world - body.origin_world())
 
 
 ## Where the rig leans sideways: it hangs toward the sailor with the lean (the sailor pulls
@@ -915,9 +915,8 @@ func _rig_lean_rad() -> float:
 ## balance. Both are rate-limited to what a person can do. They set the posture: where
 ## the feet stand and where the body's centre is held over them.
 func _update_sailor(dt: float) -> void:
-	# The hull's axes, read once (see the note at the top). The controls are this tick's copies.
-	var basis: Basis = body.basis
-	var forward_speed: float = -SimMath.to_body(basis, body.velocity).z
+	# The controls are this tick's copies (see the note at the top).
+	var forward_speed: float = -body.to_body(body.velocity).z
 	var stance_target: float = smoothstep(_stance_speed_start_ms, _stance_speed_full_ms, forward_speed)
 	# Through the hump the weight goes aft as long as the bow is below the hump attitude
 	# (SailorConfig.hump_trim_deg), and stays there once the bow is up: a sailor steps back
@@ -926,7 +925,7 @@ func _update_sailor(dt: float) -> void:
 	# walked forward as soon as the bow began to rise and pressed it down again mid-hump.)
 	var hump_speed: float = _board_residuary_peak_froude * sqrt(_gravity_ms2 * _board_length_m)
 	if forward_speed > hump_speed:
-		var bow_low: bool = rad_to_deg(SimMath.pitch_rad(basis)) < _hump_trim_deg
+		var bow_low: bool = rad_to_deg(body.pitch_rad()) < _hump_trim_deg
 		stance_target = maxf(stance_target, 1.0 if bow_low else stance)
 	# In a tack the sailor steps round the front of the mast instead, and quickly, but only
 	# as far as the nose allows: a board still carrying speed buries its nose under a sailor
@@ -949,7 +948,7 @@ func _update_sailor(dt: float) -> void:
 		# dropped off the plane sinks the stern and rears the nose.
 		# The trim aimed for falls with the speed (_running_trim_target_deg).
 		var trim_target_deg: float = _running_trim_target_deg(forward_speed)
-		press_target = clampf((trim_target_deg - rad_to_deg(SimMath.pitch_rad(basis))) / _trim_press_band_deg, -1.0, 1.0) * _trim_press_max_m * clampf(hull.planing_ratio, 0.0, 1.0)
+		press_target = clampf((trim_target_deg - rad_to_deg(body.pitch_rad())) / _trim_press_band_deg, -1.0, 1.0) * _trim_press_max_m * clampf(hull.planing_ratio, 0.0, 1.0)
 	if not _controls_freeze_fore_aft:
 		trim_press_m = move_toward(trim_press_m, press_target, _trim_press_rate_ms * dt)
 
@@ -1050,15 +1049,14 @@ func _inertia_with_added_water(base: Basis) -> Basis:
 func _apply_rig_forces() -> void:
 	# The rig's and the sail's state, read once (see the note at the top).
 	var foot_world: Vector3 = rig.foot_world
-	var rig_basis: Basis = rig.basis
 	var sail_force: Vector3 = sail.force_world
 	var mast_dir: Vector3 = sail.mast_direction()
 	# From the mast foot to the grip, along the rig's own axes (the sailor's frame).
-	var grip: Vector3 = rig_basis * (mast_dir * _boom_height_m + sail.boom_direction_local * _hand_grip_m)
+	var grip: Vector3 = rig.to_world(mast_dir * _boom_height_m + sail.boom_direction_local * _hand_grip_m)
 	_hands_world = foot_world + grip
-	hand_grip_body = SimMath.to_body(body.basis, _hands_world - body.origin_world())
+	hand_grip_body = body.to_body(_hands_world - body.origin_world())
 	var rig_weight: Vector3 = Vector3(0.0, -_gravity_ms2 * _rig_mass_kg, 0.0)
-	var rig_com: Vector3 = rig_basis * (mast_dir * _rig_com_height_m)
+	var rig_com: Vector3 = rig.to_world(mast_dir * _rig_com_height_m)
 	var moment: Vector3 = (sail.ce_world - foot_world).cross(sail_force) + rig_com.cross(rig_weight)
 	var grip_length_squared: float = maxf(grip.length_squared(), 0.01)
 	var hand_perp: Vector3 = moment.cross(grip) / grip_length_squared
@@ -1117,7 +1115,6 @@ func _apply_leg_forces(dt: float) -> void:
 	var m: float = sailor.mass_kg
 	var sailor_position: Vector3 = sailor.position
 	var sailor_velocity: Vector3 = sailor.velocity
-	var basis: Basis = body.basis
 	var g: float = _gravity_ms2
 	var weight: Vector3 = Vector3(0.0, -g * m, 0.0)
 	var feet_world: Vector3 = body.point_world(feet_body)
@@ -1161,8 +1158,8 @@ func _apply_leg_forces(dt: float) -> void:
 	var legs_force: Vector3 = hold + knees
 	var height_lever: Vector3 = Vector3(0.0, -com_from_feet.y, 0.0).cross(_attachment_force_world)
 	var moment_to_deck: Vector3 = (-com_from_feet).cross(legs_force) + height_lever + (hands_world - sailor_position).cross(hand_force_world) + _hand_twist_world
-	var roll_axis: Vector3 = basis.z
-	var heel_error: float = SimMath.heel_rad(basis) - _wanted_bank_rad
+	var roll_axis: Vector3 = body.aft_axis()
+	var heel_error: float = body.heel_rad() - _wanted_bank_rad
 	var heel_rate: float = -body.angular_velocity_body().z
 	# A positive torque about the aft axis lifts the starboard rail (less heel).
 	var reflex: float = _feet_roll_stiffness_nm_per_rad * heel_error + _feet_roll_damping_nms_per_rad * heel_rate
@@ -1190,7 +1187,7 @@ func _apply_leg_forces(dt: float) -> void:
 	sailor.add_force(leg_force_world)
 	body.add_force_at(feet_world, -leg_force_world)
 	body.add_torque(feet_moment_world)
-	hand_moment_body = SimMath.to_body(basis, (hands_world - feet_world).cross(hand_force_world))
+	hand_moment_body = body.to_body((hands_world - feet_world).cross(hand_force_world))
 	_pull_the_harness_line(hands_world, target_world, dt)
 
 	knee_bend_m = along
@@ -1301,20 +1298,20 @@ func _fill_telemetry(controls: SimControls) -> void:
 	t.speed_kmh = t.speed_ms * 3.6
 	t.speed_kt = t.speed_ms / SimMath.KNOT_MS
 	t.heading_deg = rad_to_deg(SimMath.heading_rad(body.basis))
-	t.pitch_deg = rad_to_deg(SimMath.pitch_rad(body.basis))
-	t.heel_deg = rad_to_deg(SimMath.heel_rad(body.basis))
+	t.pitch_deg = rad_to_deg(body.pitch_rad())
+	t.heel_deg = rad_to_deg(body.heel_rad())
 	t.yaw_rate_dps = rad_to_deg(body.angular_velocity_body().y)
-	t.leeway_deg = rad_to_deg(SimMath.slip_angle_rad(SimMath.to_body(body.basis, v_h)))
+	t.leeway_deg = rad_to_deg(SimMath.slip_angle_rad(body.to_body(v_h)))
 
 	var from_true: Vector3 = wind.from_direction()
 	t.wind_from_bearing_deg = rad_to_deg(wind.current_from_bearing_rad)
 	t.tws_10m_kt = wind.speed_at_height(wind.config.reference_height_m) / SimMath.KNOT_MS
 	t.tws_at_sail_kt = sail.true_wind_at_ce_world.length() / SimMath.KNOT_MS
-	t.twa_deg = rad_to_deg(SimMath.wind_angle_rad(body.basis, from_true))
+	t.twa_deg = rad_to_deg(body.wind_angle_rad(from_true))
 	# The wind the sail meets comes from where the air at the sail comes from (a map's local
 	# wind); before the sail has been computed, the mean wind.
 	var at_sail: Vector3 = sail.true_wind_at_ce_world
-	t.twa_at_sail_deg = rad_to_deg(SimMath.wind_angle_rad(body.basis, -at_sail)) if at_sail.length_squared() > 1e-6 else t.twa_deg
+	t.twa_at_sail_deg = rad_to_deg(body.wind_angle_rad(-at_sail)) if at_sail.length_squared() > 1e-6 else t.twa_deg
 	t.vmg_ms = v_h.dot(from_true)
 	t.aws_kt = sail.aws_ms / SimMath.KNOT_MS
 	t.awa_deg = rad_to_deg(sail.awa_rad)
@@ -1349,7 +1346,7 @@ func _fill_telemetry(controls: SimControls) -> void:
 	# along the board's up axis over its part in the board's plane. The drag lies in the plane
 	# too, along the flow and square to the lift, so it is taken out of the plane's part. A
 	# stiff fin has no part along the up axis: zero.
-	var fin_force_body: Vector3 = SimMath.to_body(body.basis, fin.force_world)
+	var fin_force_body: Vector3 = body.to_body(fin.force_world)
 	var fin_in_plane_sq: float = fin_force_body.x * fin_force_body.x + fin_force_body.z * fin_force_body.z
 	var fin_side_n: float = sqrt(maxf(fin_in_plane_sq - fin.drag_n * fin.drag_n, 0.0))
 	t.fin_tilt_deg = rad_to_deg(atan2(fin_force_body.y, fin_side_n)) if fin.lift_n > 0.0 else 0.0
@@ -1399,28 +1396,28 @@ func _fill_telemetry(controls: SimControls) -> void:
 	t.hang_back_m = hang_back_m
 	t.knee_bend_m = knee_bend_m
 	t.leg_sway_m = leg_sway_m
-	t.sailor_position_body = SimMath.to_body(body.basis, sailor.position - origin)
+	t.sailor_position_body = body.to_body(sailor.position - origin)
 	t.posture_target_body = posture_target_body
 	t.feet_body = feet_body
 	t.hand_grip_body = hand_grip_body
 	t.com_offset_body = mass_model.com_offset_body
 	t.total_mass_kg = mass_model.total_mass_kg
 	t.hand_force_n = hand_force_world.length()
-	t.hand_force_body = SimMath.to_body(body.basis, hand_force_world)
+	t.hand_force_body = body.to_body(hand_force_world)
 	t.hand_force_up_n = hand_force_world.y
 	t.mast_foot_force_up_n = mast_foot_force_world.y
 	var foot_arm: Vector3 = body.point_world(sail_config.mast_foot_local) - body.position
 	var feet_arm: Vector3 = body.point_world(feet_body) - body.position
-	t.pitch_from_mast_foot_nm = SimMath.to_body(body.basis, foot_arm.cross(mast_foot_force_world)).x
+	t.pitch_from_mast_foot_nm = body.to_body(foot_arm.cross(mast_foot_force_world)).x
 	var under_arm: Vector3 = feet_arm + SimMath.horizontal(sailor.position - body.point_world(feet_body))
-	t.pitch_from_feet_force_nm = SimMath.to_body(body.basis, feet_arm.cross(-leg_force_world) + under_arm.cross(-_attachment_force_world)).x
-	t.pitch_from_feet_moment_nm = SimMath.to_body(body.basis, feet_moment_world).x
+	t.pitch_from_feet_force_nm = body.to_body(feet_arm.cross(-leg_force_world) + under_arm.cross(-_attachment_force_world)).x
+	t.pitch_from_feet_moment_nm = body.to_body(feet_moment_world).x
 	t.attachment_x_n = _attachment_force_world.x
 	t.attachment_z_n = _attachment_force_world.z
 	t.harness_tension_n = harness_tension_n
 	t.foot_force_n = leg_force_world.length()
 	t.mast_foot_force_n = mast_foot_force_world.length()
-	t.feet_moment_roll_nm = SimMath.to_body(body.basis, feet_moment_world).z
+	t.feet_moment_roll_nm = body.to_body(feet_moment_world).z
 	t.hand_moment_roll_nm = hand_moment_body.z
 	t.feet_moment_excess_nm = feet_moment_excess_nm
 	# What turns (yaw) and heels (roll) the hull, by source: the fin, the rig at the mast
@@ -1432,11 +1429,11 @@ func _fill_telemetry(controls: SimControls) -> void:
 	var under_body: Vector3 = feet_world + SimMath.horizontal(sailor.position - feet_world)
 	var sailor_torque: Vector3 = (feet_world - centre).cross(-leg_force_world) + (under_body - centre).cross(-_attachment_force_world) + feet_moment_world
 	var water_torque: Vector3 = _net_torque_world - fin_torque - rig_torque - sailor_torque
-	var fin_body: Vector3 = SimMath.to_body(body.basis, fin_torque)
-	var rig_body: Vector3 = SimMath.to_body(body.basis, rig_torque)
-	var sailor_body_t: Vector3 = SimMath.to_body(body.basis, sailor_torque)
-	var water_body: Vector3 = SimMath.to_body(body.basis, water_torque)
-	var net_body: Vector3 = SimMath.to_body(body.basis, _net_torque_world)
+	var fin_body: Vector3 = body.to_body(fin_torque)
+	var rig_body: Vector3 = body.to_body(rig_torque)
+	var sailor_body_t: Vector3 = body.to_body(sailor_torque)
+	var water_body: Vector3 = body.to_body(water_torque)
+	var net_body: Vector3 = body.to_body(_net_torque_world)
 	t.yaw_fin_nm = fin_body.y
 	t.yaw_rig_nm = rig_body.y
 	t.yaw_sailor_nm = sailor_body_t.y

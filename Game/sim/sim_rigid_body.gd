@@ -13,16 +13,39 @@ extends RefCounted
 ## The "board origin" (the geometric centre of the hull, where the models measure their
 ## points) sits at com_offset_body from the centre of mass, in body axes. The sailor moves,
 ## so the offset changes; set_mass_properties() keeps the board origin still when it does.
+##
+## Boards on threads (F1 no_wait): in this engine every Basis that a GDScript function takes as a
+## parameter, keeps in a local variable or makes on the way (basis.transposed(), a product of two
+## bases) comes from one engine-wide pool under a lock, so boards stepped side by side on worker
+## threads wait for each other there (Game/dev/thread_bench.gd: SimMath.to_body() 39 times
+## slower on 8 threads than on 1). Products with a vector make no Basis. So:
+## - the inertia in world axes (basis * inertia * basis^T, and its inverses) is worked out once
+##   when it is needed after the axes or the inertia have changed (the setters below mark it
+##   stale), not again in every effective_mass_at() and mobility();
+## - basis.transposed() * v is written v * basis: the same products, summed in the same order
+##   (Basis.xform_inv), without making the transposed Basis;
+## - the models ask the body for their axis questions (to_body(), pitch_rad(), heel_rad(),
+##   wind_angle_rad(), ...) instead of handing body.basis to SimMath.
+## The answers are the same to the last bit.
 
 var mass_kg: float = 1.0
 ## Inertia tensor about the centre of mass, in body axes.
-var inertia_body: Basis = Basis.IDENTITY
-var inertia_body_inv: Basis = Basis.IDENTITY
+var inertia_body: Basis = Basis.IDENTITY:
+	set(value):
+		inertia_body = value
+		_world_inertia_stale = true
+var inertia_body_inv: Basis = Basis.IDENTITY:
+	set(value):
+		inertia_body_inv = value
+		_world_inertia_stale = true
 ## Centre of mass in the world frame.
 var position: Vector3 = Vector3.ZERO
 var velocity: Vector3 = Vector3.ZERO
 ## Body axes in the world frame: basis.x = starboard, basis.y = up, -basis.z = bow.
-var basis: Basis = Basis.IDENTITY
+var basis: Basis = Basis.IDENTITY:
+	set(value):
+		basis = value
+		_world_inertia_stale = true
 ## Angular velocity in the world frame.
 var angular_velocity: Vector3 = Vector3.ZERO
 ## Centre of mass relative to the board origin, in body axes.
@@ -44,6 +67,24 @@ var added_mass_sway_kg: float = 0.0
 
 var _force_sum: Vector3 = Vector3.ZERO
 var _torque_sum: Vector3 = Vector3.ZERO
+
+## The inertia in world axes, B I B^T, its inverse taken in body axes, B I^-1 B^T, and the inverse
+## of the first; worked out by _update_world_inertia() when stale (see the note at the top).
+var _inertia_world: Basis = Basis.IDENTITY
+var _inertia_world_inv: Basis = Basis.IDENTITY
+var _inertia_world_inverse: Basis = Basis.IDENTITY
+var _world_inertia_stale: bool = true
+
+
+## Works out the inertia in world axes again if the axes or the inertia have changed since: the
+## same products as before, in the same order.
+func _update_world_inertia() -> void:
+	if not _world_inertia_stale:
+		return
+	_inertia_world = basis * inertia_body * basis.transposed()
+	_inertia_world_inv = basis * inertia_body_inv * basis.transposed()
+	_inertia_world_inverse = _inertia_world.inverse()
+	_world_inertia_stale = false
 
 
 ## keep_centre_of_mass = false: the board stays where it is and the centre of mass moves
@@ -128,6 +169,48 @@ func point_velocity(point: Vector3) -> Vector3:
 	return velocity + internal_velocity + angular_velocity.cross(point - position)
 
 
+## A world vector in body axes: SimMath.to_body(basis, v_world), without handing the Basis over
+## (see the note at the top).
+func to_body(v_world: Vector3) -> Vector3:
+	return v_world * basis
+
+
+## A body vector in world axes: SimMath.to_world(basis, v_body).
+func to_world(v_body: Vector3) -> Vector3:
+	return basis * v_body
+
+
+## The direction the bow points, in the world frame: SimMath.forward(basis).
+func forward() -> Vector3:
+	return -basis.z
+
+
+## The body's axes in the world frame: basis.x (starboard), basis.y (up), basis.z (aft).
+func starboard_axis() -> Vector3:
+	return basis.x
+
+
+func up_axis() -> Vector3:
+	return basis.y
+
+
+func aft_axis() -> Vector3:
+	return basis.z
+
+
+## SimMath.pitch_rad(basis), SimMath.heel_rad(basis) and SimMath.wind_angle_rad(basis, from).
+func pitch_rad() -> float:
+	return SimMath.pitch_rad_of_bow(-basis.z)
+
+
+func heel_rad() -> float:
+	return SimMath.heel_rad_of_axes(basis.x, basis.y)
+
+
+func wind_angle_rad(from_world: Vector3) -> float:
+	return SimMath.wind_angle_rad_of_bow(-basis.z, from_world)
+
+
 ## Acceleration a point of the body is about to get from the forces collected so far,
 ## as if the body were rigid: linear, angular and centripetal parts.
 func acceleration_at(point: Vector3) -> Vector3:
@@ -137,16 +220,16 @@ func acceleration_at(point: Vector3) -> Vector3:
 
 ## Angular acceleration (world frame) from the torques collected so far.
 func angular_acceleration() -> Vector3:
-	var inertia_world: Basis = basis * inertia_body * basis.transposed()
-	var gyroscopic: Vector3 = angular_velocity.cross(inertia_world * angular_velocity)
-	return inertia_world.inverse() * (_torque_sum - gyroscopic)
+	_update_world_inertia()
+	var gyroscopic: Vector3 = angular_velocity.cross(_inertia_world * angular_velocity)
+	return _inertia_world_inverse * (_torque_sum - gyroscopic)
 
 
 ## Acceleration of the centre of mass from the forces collected so far. Along the body's up
 ## axis the water's added mass is accelerated too, and across the deck the sailor's, so
 ## those directions respond more slowly: in body axes a_i = F_i / (m + added_i).
 func linear_acceleration() -> Vector3:
-	var force_body: Vector3 = basis.transposed() * _force_sum
+	var force_body: Vector3 = _force_sum * basis
 	return basis * (force_body * _inverse_mass_body())
 
 
@@ -157,7 +240,7 @@ func _inverse_mass_body() -> Vector3:
 
 ## Angular velocity expressed in body axes (x = pitch, y = yaw, z = roll).
 func angular_velocity_body() -> Vector3:
-	return basis.transposed() * angular_velocity
+	return angular_velocity * basis
 
 
 ## The mass a force at a world point along a unit direction has to accelerate: the whole
@@ -166,12 +249,12 @@ func angular_velocity_body() -> Vector3:
 ## push), the centre of a heavy one is not. Dampers use it to know how much momentum a
 ## point really has (see BuoyancyModel and the rig-in-water drag).
 func effective_mass_at(point: Vector3, direction: Vector3) -> float:
-	var n_body: Vector3 = basis.transposed() * direction
+	_update_world_inertia()
+	var n_body: Vector3 = direction * basis
 	var inverse: Vector3 = _inverse_mass_body()
 	var translational: float = n_body.x * n_body.x * inverse.x + n_body.y * n_body.y * inverse.y + n_body.z * n_body.z * inverse.z
 	var r_cross_n: Vector3 = (point - position).cross(direction)
-	var inertia_world_inv: Basis = basis * inertia_body_inv * basis.transposed()
-	var rotational: float = r_cross_n.dot(inertia_world_inv * r_cross_n)
+	var rotational: float = r_cross_n.dot(_inertia_world_inv * r_cross_n)
 	return 1.0 / maxf(translational + rotational, 1e-9)
 
 
@@ -180,12 +263,12 @@ func effective_mass_at(point: Vector3, direction: Vector3) -> float:
 ## (r_of x u) . I^-1 (r_at x v). The mobility between two points; mobility(p, p, n, n)
 ## is 1 / effective_mass_at(p, n).
 func mobility(of: Vector3, at: Vector3, u: Vector3, v: Vector3) -> float:
-	var u_body: Vector3 = basis.transposed() * u
-	var v_body: Vector3 = basis.transposed() * v
+	_update_world_inertia()
+	var u_body: Vector3 = u * basis
+	var v_body: Vector3 = v * basis
 	var inverse: Vector3 = _inverse_mass_body()
 	var translational: float = u_body.x * v_body.x * inverse.x + u_body.y * v_body.y * inverse.y + u_body.z * v_body.z * inverse.z
-	var inertia_world_inv: Basis = basis * inertia_body_inv * basis.transposed()
-	return translational + (of - position).cross(u).dot(inertia_world_inv * ((at - position).cross(v)))
+	return translational + (of - position).cross(u).dot(_inertia_world_inv * ((at - position).cross(v)))
 
 
 ## A force (world frame) acting at a world point. The torque about the centre of mass
@@ -224,10 +307,9 @@ func integrate(dt: float) -> void:
 
 	# Rotation: I_world = B * I_body * B^T. The gyroscopic term omega x (I omega) is what
 	# makes a tumbling body wobble; it is tiny for a windsurfer but costs nothing.
-	var inertia_world: Basis = basis * inertia_body * basis.transposed()
-	var inertia_world_inv: Basis = basis * inertia_body_inv * basis.transposed()
-	var gyroscopic: Vector3 = angular_velocity.cross(inertia_world * angular_velocity)
-	var angular_acceleration: Vector3 = inertia_world_inv * (_torque_sum - gyroscopic)
+	_update_world_inertia()
+	var gyroscopic: Vector3 = angular_velocity.cross(_inertia_world * angular_velocity)
+	var angular_acceleration: Vector3 = _inertia_world_inv * (_torque_sum - gyroscopic)
 	angular_velocity += angular_acceleration * dt
 
 	var angle: float = angular_velocity.length() * dt
