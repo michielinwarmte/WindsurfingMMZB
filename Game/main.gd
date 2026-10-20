@@ -360,7 +360,7 @@ func _course_from_options(usual_start: Vector2) -> Course:
 		_race_setup = RaceSetup.race(course_name, _user_option("skippers").split(","), maxi(_user_option("laps").to_int(), 1),
 			prestart.to_float() if not prestart.is_empty() else RaceSetup.DEFAULT_PRESTART_S)
 		_race_setup.opponent_effects = _user_option("opponent_effects") == "1"
-		_race_setup.threads = _user_option("threads") != "0"
+		_race_setup.threads = RaceSetup.threads_from_option(_user_option("threads"))
 		_race_setup.read_spawn_options()
 	var found: Course = _course_named(course_name, usual_start)
 	if found == null:
@@ -513,8 +513,8 @@ func _measure_frame_rate(seconds: float) -> void:
 	var process_ms: float = 0.0
 	_windsurfer.cost_text()  # the warm-up's numbers are dropped
 	if _race_runner != null:
-		for node: WindsurferNode in _race_runner.opponents:
-			node.cost_text()
+		_race_runner.cost_text()
+		_race_runner.opponents_cost_text()
 	var start_us: int = Time.get_ticks_usec()
 	var last_us: int = start_us
 	while (Time.get_ticks_usec() - start_us) / 1e6 < seconds:
@@ -530,9 +530,9 @@ func _measure_frame_rate(seconds: float) -> void:
 	print("Measured %.0f s with %d boards: %.0f fps; a frame %.1f ms on average, %.1f ms at worst; physics %.1f ms and the rest %.1f ms of a frame" % [
 		total_s, boards, frames / total_s, 1000.0 * total_s / frames, worst_ms, physics_ms / frames, process_ms / frames])
 	print("  the player's board: %s" % _windsurfer.cost_text())
+	if _race_runner != null and not _race_runner.opponents.is_empty():
+		# One line for the whole fleet, not one per board.
+		print("  the AI boards: %s" % _race_runner.opponents_cost_text())
 	if _race_runner != null:
 		print("  the race runner: %s" % _race_runner.cost_text())
-	if _race_runner != null:
-		for node: WindsurferNode in _race_runner.opponents:
-			print("  %s: %s" % [node.name, node.cost_text()])
 	get_tree().quit()

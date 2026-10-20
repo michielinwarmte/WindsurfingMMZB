@@ -64,6 +64,12 @@ var _clock_s: float = 0.0
 var _first_finish_s: float = -1.0
 ## Seconds until the countdown starts by itself (start_in()); -1 when it is not waiting.
 var _start_in_s: float = -1.0
+## The race order, worked out once after the boards moved (see _order()): the boards' numbers
+## first to last, and each board's place. A big fleet's HUD asks for the places every frame; a
+## sort per question made 33 boards' fleet lines cost 0.3 s (F1 fleet_frame).
+var _order_cache: Array[int] = []
+var _places: PackedInt32Array = PackedInt32Array()
+var _order_stale: bool = true
 
 
 func _init(race_course: Course, lap_count: int = 1, prestart: float = 60.0, limit_s: float = 1200.0) -> void:
@@ -80,6 +86,7 @@ func add_board(board_name: String) -> int:
 	var board: Board = Board.new()
 	board.name = board_name
 	_boards.append(board)
+	_order_stale = true
 	return _boards.size() - 1
 
 
@@ -119,6 +126,7 @@ func update_board(index: int, position: Vector2) -> void:
 		board.last_position = position
 		board.has_position = true
 	board.position = position
+	_order_stale = true
 
 
 ## Moves the race clock on by dt seconds and checks every board's move since the last step().
@@ -233,7 +241,13 @@ func distance_to_next_m(index: int) -> float:
 ## others by the steps they have completed and then by their distance to the next step. A tie
 ## goes to the board added first.
 func place(index: int) -> int:
-	return _order().find(index) + 1
+	_order()
+	return _places[index]
+
+
+## The boards' numbers in race order, the first first (a copy: the caller may change it).
+func race_order() -> Array[int]:
+	return _order().duplicate()
 
 
 ## True while a board is over the start line early: before the gun while it is on the course side,
@@ -331,6 +345,7 @@ func _over_start_line(step: RaceStep, position: Vector2) -> bool:
 func _complete_step(board: Board, at_s: float) -> void:
 	board.splits.append(at_s)
 	board.next_step += 1
+	_order_stale = true
 	if board.next_step == _steps.size():
 		board.finish_time_s = at_s
 		if _first_finish_s < 0.0 or at_s < _first_finish_s:
@@ -352,17 +367,29 @@ func _is_over() -> bool:
 	return true
 
 
-## The boards' numbers in race order (see place()).
+## The boards' numbers in race order (see place()), worked out again only when a board has moved or
+## completed a step since the last time: at most once per tick however often the HUD asks. Each
+## board's distance to its next step is measured once, before the sort, not at every comparison.
 func _order() -> Array[int]:
+	if not _order_stale:
+		return _order_cache
+	var distances: PackedFloat64Array = PackedFloat64Array()
 	var order: Array[int] = []
 	for i: int in _boards.size():
 		order.append(i)
-	order.sort_custom(_is_ahead)
-	return order
+		distances.append(distance_to_next_m(i))
+	order.sort_custom(func(a: int, b: int) -> bool: return _is_ahead(a, b, distances))
+	_places.resize(order.size())
+	for rank: int in order.size():
+		_places[order[rank]] = rank + 1
+	_order_cache = order
+	_order_stale = false
+	return _order_cache
 
 
-## True when board a is ahead of board b in the race.
-func _is_ahead(a: int, b: int) -> bool:
+## True when board a is ahead of board b in the race; `distances` holds every board's distance
+## to its next step.
+func _is_ahead(a: int, b: int, distances: PackedFloat64Array) -> bool:
 	var board_a: Board = _boards[a]
 	var board_b: Board = _boards[b]
 	var finished_a: bool = board_a.finish_time_s >= 0.0
@@ -375,8 +402,8 @@ func _is_ahead(a: int, b: int) -> bool:
 		return a < b
 	if board_a.next_step != board_b.next_step:
 		return board_a.next_step > board_b.next_step
-	var distance_a: float = distance_to_next_m(a)
-	var distance_b: float = distance_to_next_m(b)
+	var distance_a: float = distances[a]
+	var distance_b: float = distances[b]
 	if distance_a != distance_b:
 		return distance_a < distance_b
 	return a < b
