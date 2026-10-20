@@ -33,6 +33,8 @@ var _splash_trigger: SplashTrigger = SplashTrigger.new()
 var _wake: WakeTrail
 var _telltale: Telltale
 var _flag: WindFlag
+## Whether the flag buoy is made at all (the opponents of a race have none, WindsurferNode).
+var wind_flag_wanted: bool = true
 var _forces: ForceArrows
 var _flag_placed: bool = false
 var _fall_splashed: bool = false
@@ -92,8 +94,9 @@ func setup(sim: WindsurferSim) -> void:
 	_wake.setup(sim)
 	_telltale = Telltale.new()
 	add_child(_telltale)
-	_flag = WindFlag.new()
-	world.add_child(_flag)
+	if wind_flag_wanted:
+		_flag = WindFlag.new()
+		world.add_child(_flag)
 	_forces = ForceArrows.new()
 	world.add_child(_forces)
 	_forces.visible = "--forces=1" in OS.get_cmdline_user_args()
@@ -245,6 +248,8 @@ func _update_telltale(t: Telemetry, sailing: bool) -> void:
 ## The flag stands near the start (placed at the first tick, which is the start) and shows
 ## the true wind there.
 func _update_flag(t: Telemetry) -> void:
+	if _flag == null:
+		return
 	if not _flag_placed:
 		var heading: float = deg_to_rad(t.heading_deg)
 		var forward: Vector3 = Vector3(sin(heading), 0.0, -cos(heading))

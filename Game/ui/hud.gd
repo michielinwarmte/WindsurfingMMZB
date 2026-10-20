@@ -204,3 +204,9 @@ class WindRose:
 		var dir: Vector2 = (head - tail).normalized()
 		var wing: Vector2 = Vector2(-dir.y, dir.x) * 6.0
 		draw_colored_polygon(PackedVector2Array([head, head - dir * 10.0 + wing, head - dir * 10.0 - wing]), Color(0.5, 0.85, 1.0))
+
+
+## The other boards of a race on the small map (RaceRunner).
+func set_other_boards(positions: PackedVector3Array) -> void:
+	if _mini_map != null:
+		_mini_map.other_boards = positions

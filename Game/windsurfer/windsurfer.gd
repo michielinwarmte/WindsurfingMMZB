@@ -29,6 +29,14 @@ var sim: WindsurferSim
 var controls: SimControls = SimControls.new()
 var controller: PlayerController = PlayerController.new()
 var autopilot: Autopilot = Autopilot.new()
+## An AI skipper on this board (RACING_PLAN.md, 9B): every tick it sets `hands`, which the
+## controller then reads in place of the keyboard. Null on the player's board.
+var skipper: RaceSkipper = null
+var hands: AiHands = null
+## Whether this board's effects put the wind-flag buoy near its start (the player's does; the
+## opponents of a race would each add one, so theirs do not). Set before the node is added.
+var wind_flag_wanted: bool = true
+var _name_label: Label3D = null
 
 ## The fall takes this long on screen (the physics has already let go).
 const FALL_DURATION_S: float = 0.9
@@ -91,6 +99,9 @@ func is_fallen() -> bool:
 
 
 func _physics_process(delta: float) -> void:
+	# A skipper keeps watching from the water too (its clock runs, its hands come off).
+	if skipper != null:
+		skipper.update(sim.telemetry, delta)
 	if sim.sailor_state == WindsurferSim.SailorState.SAILING:
 		if use_autopilot:
 			autopilot.update(sim.telemetry, controls, delta)
@@ -156,4 +167,26 @@ func _build_visuals() -> void:
 	# Spray, wake, splashes, the streamer, the wind flag and the force view (F3).
 	_effects = WindsurferEffects.new()
 	add_child(_effects)
+	_effects.wind_flag_wanted = wind_flag_wanted
 	_effects.setup(sim)
+
+
+## The sail's colour, so the boards of a race tell apart (RaceRunner).
+func set_sail_colour(colour: Color) -> void:
+	_rig.tint_sail(colour)
+
+
+## A name above the mast head, seen from up to 300 m (an opponent in a race).
+func set_name_label(text: String) -> void:
+	if _name_label == null:
+		_name_label = Label3D.new()
+		_name_label.name = "NameLabel"
+		_name_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		_name_label.no_depth_test = true
+		_name_label.font_size = 64
+		_name_label.pixel_size = 0.008
+		_name_label.outline_size = 12
+		_name_label.position = Vector3(0.0, 5.8, 0.0)
+		_name_label.visibility_range_end = 300.0
+		add_child(_name_label)
+	_name_label.text = text

@@ -19,13 +19,15 @@ const WIND_VIEWER_SCENE: String = "res://maps/silvaplana/wind_viewer.tscn"
 
 ## The play options, as last_play_option in the settings saves them (new ones go at the end, so
 ## a saved choice keeps its meaning; the menu shows them in its own order).
-enum PlayOption { OPEN_WATER, FLY_OVER, WIND_VIEWER, SAIL_SILVAPLANA }
+enum PlayOption { OPEN_WATER, FLY_OVER, WIND_VIEWER, SAIL_SILVAPLANA, RACE_OPEN_WATER, RACE_LAKE }
 
 @onready var _sailing: SailingScene = $Sailing
 @onready var _menu: CanvasLayer = $Menu
 @onready var _main_page: Control = %MainPage
 @onready var _open_water_button: Button = %OpenWaterButton
 @onready var _sail_silvaplana_button: Button = %SailSilvaplanaButton
+@onready var _race_open_water_button: Button = %RaceOpenWaterButton
+@onready var _race_lake_button: Button = %RaceLakeButton
 @onready var _silvaplana_button: Button = %SilvaplanaButton
 @onready var _wind_button: Button = %WindButton
 @onready var _settings_button: Button = %SettingsButton
@@ -44,6 +46,8 @@ enum PlayOption { OPEN_WATER, FLY_OVER, WIND_VIEWER, SAIL_SILVAPLANA }
 func _ready() -> void:
 	_open_water_button.pressed.connect(_on_open_water_pressed)
 	_sail_silvaplana_button.pressed.connect(_open_map_scene.bind(PlayOption.SAIL_SILVAPLANA, SAIL_SILVAPLANA_SCENE, "Lake Silvaplana"))
+	_race_open_water_button.pressed.connect(_on_race_open_water_pressed)
+	_race_lake_button.pressed.connect(_on_race_lake_pressed)
 	_silvaplana_button.pressed.connect(_open_map_scene.bind(PlayOption.FLY_OVER, FLY_OVER_SCENE, "the map of Lake Silvaplana"))
 	_wind_button.pressed.connect(_open_map_scene.bind(PlayOption.WIND_VIEWER, WIND_VIEWER_SCENE, "the wind viewer"))
 	_settings_button.pressed.connect(_open_page.bind(_settings))
@@ -53,7 +57,7 @@ func _ready() -> void:
 	_quit_confirm.confirmed.connect(_on_quit_confirmed)
 	for page: MenuPage in [_settings, _controls, _howto, _quit_confirm]:
 		page.closed.connect(_on_page_closed.bind(page))
-	MenuFocus.setup_buttons([_open_water_button, _sail_silvaplana_button, _wind_button, _silvaplana_button,
+	MenuFocus.setup_buttons([_open_water_button, _sail_silvaplana_button, _race_open_water_button, _race_lake_button, _wind_button, _silvaplana_button,
 		_settings_button, _controls_button, _howto_button, _quit_button])
 	_version.text = _version_text()
 	_show_main_page(_play_buttons()[GameSettings.values.last_play_option])
@@ -69,7 +73,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 ## The play buttons in the order of PlayOption.
 func _play_buttons() -> Array[Button]:
-	return [_open_water_button, _silvaplana_button, _wind_button, _sail_silvaplana_button]
+	return [_open_water_button, _silvaplana_button, _wind_button, _sail_silvaplana_button, _race_open_water_button, _race_lake_button]
 
 
 ## Sail on open water: the menu goes away and the backdrop becomes the game.
@@ -78,6 +82,22 @@ func _on_open_water_pressed() -> void:
 	set_process_unhandled_input(false)
 	_menu.queue_free()
 	_sailing.start_playing()
+
+
+## Race on open water: the backdrop becomes a race on the T1 training loop against three AI
+## skippers (RACING_PLAN.md, 9A and 9B).
+func _on_race_open_water_pressed() -> void:
+	_remember_choice(PlayOption.RACE_OPEN_WATER)
+	set_process_unhandled_input(false)
+	_menu.queue_free()
+	_sailing.start_race(RaceSetup.race(RaceCourses.T1_NAME))
+
+
+## Race on Lake Silvaplana: the sprint slalom T2 against three AI skippers; the lake scene takes
+## the race from RaceSetup.pending when it starts.
+func _on_race_lake_pressed() -> void:
+	RaceSetup.pending = RaceSetup.race(RaceCourses.T2_NAME)
+	_open_map_scene(PlayOption.RACE_LAKE, SAIL_SILVAPLANA_SCENE, "Lake Silvaplana")
 
 
 ## One of the map track's scenes. Loading the terrain takes a moment, so a line says so

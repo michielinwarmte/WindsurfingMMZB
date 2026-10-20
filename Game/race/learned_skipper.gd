@@ -159,6 +159,11 @@ func skipper_name() -> String:
 	return brain_name
 
 
+## A learned skipper sails under a purple sail.
+func sail_colour() -> Color:
+	return Color(0.6, 0.35, 0.9)
+
+
 ## The wind field to sample the gusts around the board from.
 func set_wind_field(wind: WindField) -> void:
 	_wind = wind

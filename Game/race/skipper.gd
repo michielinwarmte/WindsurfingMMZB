@@ -224,6 +224,10 @@ func skipper_name() -> String:
 	return config.name
 
 
+func sail_colour() -> Color:
+	return config.sail_colour
+
+
 ## Puts the skipper on a board: its simulation (to see whether the sailor is up), its controller
 ## and the hands on it, and the race with the board's number in it.
 func setup(sim: WindsurferSim, controller: PlayerController, hands: AiHands, race: RaceSim, index: int) -> void:

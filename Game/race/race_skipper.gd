@@ -18,6 +18,11 @@ func skipper_name() -> String:
 	return "skipper"
 
 
+## The sail's colour in the game, so the boards tell apart.
+func sail_colour() -> Color:
+	return Color(0.75, 0.75, 0.8)
+
+
 ## Puts the skipper on a board: its simulation, its controller (which gets these hands), the race
 ## and the board's number in it.
 func setup(_sim: WindsurferSim, _controller: PlayerController, _hands: AiHands, _race: RaceSim, _index: int) -> void:

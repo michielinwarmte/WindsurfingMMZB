@@ -20,6 +20,7 @@ const COURSE_BORDER_M: float = 200.0
 const WATER_COLOR: Color = Color(0.2, 0.42, 0.55, 0.85)
 const LAND_COLOR: Color = Color(0.16, 0.2, 0.14, 0.6)
 const BOARD_COLOR: Color = Color(1.0, 0.6, 0.1)
+const OTHER_BOARD_COLOR: Color = Color(0.9, 0.9, 0.95)
 const START_COLOR: Color = Color(1.0, 1.0, 1.0, 0.85)
 const WIND_COLOR: Color = Color(0.5, 0.85, 1.0)
 ## The course, in the colours of the marks on the water (course_on_water.gd).
@@ -34,6 +35,8 @@ const LEG_OFFSET_PX: float = 2.0
 var board_position: Vector3 = Vector3.ZERO
 var heading_deg: float = 0.0
 var wind_from_deg: float = 0.0
+## The other boards of a race, as smaller dots (Hud.set_other_boards).
+var other_boards: PackedVector3Array = PackedVector3Array()
 ## The race course drawn on the map (null: none).
 var course: Course = null
 
@@ -158,6 +161,8 @@ func _label(at: Vector2, text: String) -> void:
 ## screen's y points down, so bearing b points along (sin b, -cos b). On the open water the board
 ## can sail off the course's map: it then stays at the map's edge, so you see which way it is.
 func _draw_board() -> void:
+	for other: Vector3 in other_boards:
+		draw_circle(map_point(other).clamp(Vector2.ZERO, size), 3.0, OTHER_BOARD_COLOR)
 	var at: Vector2 = map_point(board_position).clamp(Vector2.ZERO, size)
 	var heading: Vector2 = Vector2(sin(deg_to_rad(heading_deg)), -cos(deg_to_rad(heading_deg)))
 	draw_line(at, at + heading * 12.0, BOARD_COLOR, 2.0)

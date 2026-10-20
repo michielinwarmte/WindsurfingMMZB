@@ -3,7 +3,7 @@
 The live state of Phase 9, racing. The plan and its execution brief are in [RACING_PLAN.md](RACING_PLAN.md). **The lead updates and commits this file after every launch, report and merge**, so any session can take over.
 
 - **Branch:** `feature/p9-racing` (from `feature/u2-fin` at f598a00, which carries U1 and U2). Agents work on `p9/<name>` branches, made from it in their own worktrees. Not pushed yet.
-- **Last update:** 20 October 2026, 08:30 (Session 51, the morning after the night run). Everything below is merged on the branch; the tests and the check are green (443 unit tests, 228 files; the skipper's own races are in the validation suite, `tools/test.sh validation -gselect=skipper`, about 12 minutes).
+- **Last update:** 20 October 2026, late morning (Session 51): the race is playable in the game against the AI skippers (below, "Playing a race"); 445 unit tests, 232 files. Everything below is merged on the branch; the tests and the check are green (443 unit tests, 228 files; the skipper's own races are in the validation suite, `tools/test.sh validation -gselect=skipper`, about 12 minutes).
 - **Max's instruction (19 October 2026):** "go till the 2 training courses", then "experiment with the AI, use the laptop's CPU, be careful with my tokens, surprise me tomorrow". Both done; the state is below. **Stop A2 (Max's look) is open.**
 
 ## State
@@ -21,6 +21,14 @@ The live state of Phase 9, racing. The plan and its execution brief are in [RACI
 |---|---|
 | Stop A1, the lead: 9A's agents merged, green, the courses seen in screenshots | **passed** 19 October 2026 |
 | Stop A2, Max: sails among the buoys of T1 and T2; the course maker's Fit to water; the race matrix; the night's brain | **open** |
+
+## Playing a race (built by the lead, 20 October 2026, after Max's "make it so I can race against the AIs in game")
+
+- **Start menu:** *Race on open water* (the T1 training loop, three AI skippers: the all-rounder, the gambler and the rookie, a 60 s countdown) and *Race on Lake Silvaplana* (the T2 sprint slalom, the same three). Or from the command line: `tools/play.sh res://main.tscn --course=t1_loop --skippers=allrounder,gambler,rookie --prestart=30` (also `--laps=`, `brain:night_best` as a skipper, and `lake` with `--course=t2_slalom`).
+- **On the screen:** the countdown large; at the bottom the race clock, the next mark and its distance, your place; a split at every rounding; warnings for over the line early and the wrong side of a mark; the results table when you finish or the race is over. R starts the race again; Esc is the pause menu.
+- **The opponents** are full windsurfer boards (the same physics, the same beginner controller, with their AiHands), each with its character's sail colour and a name above the mast head within 300 m, and as small white dots on the mini-map. They have no wind-flag buoy of their own.
+- **What it is made of:** `RaceRunner` (the boards on the line, the race told where they are each tick, R), `RaceHud`, `RaceSetup` (the menu's hand-over to a scene), `WindsurferNode.skipper` and `hands`, `RigVisuals.tint_sail` with a `sail_tint` in the sail's shader. Screenshots: `.screenshots/p9/menu_race.png`, `race_t1_countdown.png`, `race_t1_after_gun.png`, `race_t2_lake.png`.
+- **Not yet:** collisions (boards pass through each other and the marks), the Race page with choices (who, laps, the countdown), the countdown sounds, the lake's shore for the opponents (they may run aground on the lake; the player stops, they do not), the frame time with four boards measured on the desktop. Not verified by a human: how it feels; the screenshots were taken with nobody steering the player's board.
 
 ## What there is now
 

@@ -76,6 +76,8 @@ var _cloth: MeshInstance3D
 var _mast_tube: MeshInstance3D
 var _fin_mesh: MeshInstance3D
 var _fin_material: ShaderMaterial
+## The cloth's material, for a race's sail colours (tint_sail).
+var _sail_cloth_material: ShaderMaterial
 # The tip's sideways movement last given to the fin's shader, m (+ toward starboard).
 var _fin_tip_deflection_m: float = 0.0
 
@@ -283,6 +285,7 @@ func _add_model(model: PackedScene, node_name: String, parent: Node3D) -> Node3D
 func _set_up_cloth(sail_config: SailConfig) -> void:
 	var cloth_material: ShaderMaterial = _cloth_material(SAIL_CLOTH_SHADER, sail_config)
 	cloth_material.set_shader_parameter("panel_texture", SAIL_PANELS)
+	_sail_cloth_material = cloth_material
 	var sleeve_material: ShaderMaterial = _cloth_material(SAIL_CLOTH_SHADER, sail_config)
 	sleeve_material.set_shader_parameter("is_sleeve", true)
 	var window_material: ShaderMaterial = _cloth_material(SAIL_WINDOW_SHADER, sail_config)
@@ -374,3 +377,9 @@ func _cloth_time_step(time_s: float) -> float:
 	var dt: float = SNAP_STEP_S if snap else minf(time_s - _last_cloth_time_s, 0.1)
 	_last_cloth_time_s = time_s
 	return dt
+
+
+## Tints the sail's panels, so the boards of a race tell apart (white keeps the panel picture).
+func tint_sail(colour: Color) -> void:
+	if _sail_cloth_material != null:
+		_sail_cloth_material.set_shader_parameter("sail_tint", colour)

@@ -61,6 +61,10 @@ var _aground: bool = false
 ## The race course (--course=<name>), or null; and what shows it on the water.
 var _course: Course = null
 var _course_on_water: CourseOnWater = null
+## The race asked for (the start menu's RaceSetup, or --skippers= on the command line), or null;
+## and the node that runs it (RaceRunner).
+var _race_setup: RaceSetup = null
+var _race_runner: RaceRunner = null
 
 
 func _enter_tree() -> void:
@@ -92,6 +96,7 @@ func _ready() -> void:
 		_sun.rotation_degrees = Vector3(-59.0, -45.0, 0.0)
 	_ocean.setup(_windsurfer.sim, _camera_rig.camera)
 	_show_course()
+	_start_race_runner()
 	_apply_start_settings()
 	_pause_menu.resume_requested.connect(_set_paused.bind(false))
 	_pause_menu.restart_requested.connect(_on_restart_requested)
@@ -144,6 +149,8 @@ func _process(delta: float) -> void:
 		if _pause_page != "":
 			_pause_menu.open_page(_pause_page)
 	_hud.update_from(_windsurfer.telemetry(), _windsurfer.controller, _camera_rig.mode_name(), _windsurfer.use_autopilot)
+	if _race_runner != null:
+		_hud.set_other_boards(_race_runner.other_positions())
 
 
 ## The start menu's "Sail on open water": the board goes back to the start and the player
@@ -195,6 +202,8 @@ func _restart_run() -> void:
 	if settings.sea_signature() != _sea_signature:
 		_rebuild_sea()
 	_windsurfer.reset()
+	if _race_runner != null:
+		_race_runner.restart()
 	_set_aground(false)
 	_pause_menu.set_note("")
 
@@ -338,9 +347,15 @@ func _apply_command_line_options() -> void:
 ## The course asked for with --course=<name>, placed for this scene; null without the option, or
 ## when there is no such course (it says so).
 func _course_from_options(usual_start: Vector2) -> Course:
-	var course_name: String = _user_option("course")
+	# The start menu's race first; else the command line's course, raced when it names skippers.
+	_race_setup = RaceSetup.take()
+	var course_name: String = _race_setup.course_name if _race_setup != null else _user_option("course")
 	if course_name.is_empty():
 		return null
+	if _race_setup == null and not _user_option("skippers").is_empty():
+		var prestart: String = _user_option("prestart")
+		_race_setup = RaceSetup.race(course_name, _user_option("skippers").split(","), maxi(_user_option("laps").to_int(), 1),
+			prestart.to_float() if not prestart.is_empty() else RaceSetup.DEFAULT_PRESTART_S)
 	var found: Course = _course_named(course_name, usual_start)
 	if found == null:
 		push_warning("No course called \"%s\" in this scene. The open water has %s; Lake Silvaplana has %s and the courses saved in %s." % [
@@ -445,3 +460,33 @@ static func _user_option(option: String) -> String:
 		if arg.begins_with("--%s=" % option):
 			return arg.get_slice("=", 1)
 	return ""
+
+
+# ---------------------------------------------------------------- the race (RACING_PLAN.md, 9A and 9B)
+
+## The start menu's race on open water: the course goes on the water, the board behind its start
+## line, the opponents beside it, and the player gets the keys (start_playing()).
+func start_race(setup: RaceSetup) -> void:
+	_race_setup = setup
+	var usual: Vector2 = Vector2(_windsurfer.start_position.x, _windsurfer.start_position.z)
+	_course = _course_named(setup.course_name, usual)
+	if _course == null:
+		push_warning("No course called \"%s\": sailing without a race." % setup.course_name)
+		_race_setup = null
+		start_playing()
+		return
+	var spot: Vector2 = RaceCourses.pre_start_spot(_course)
+	_windsurfer.start_position = Vector3(spot.x, 0.0, spot.y)
+	_show_course()
+	start_playing()
+	_start_race_runner()
+
+
+## The race (RaceRunner), when one is asked for and its course is on the water.
+func _start_race_runner() -> void:
+	if _race_setup == null or _course == null or _race_runner != null:
+		return
+	_race_runner = RaceRunner.new()
+	_race_runner.name = "RaceRunner"
+	add_child(_race_runner)
+	_race_runner.setup_race(_course, _windsurfer, _race_setup, _hud)
