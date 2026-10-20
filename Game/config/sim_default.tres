@@ -4,5 +4,5 @@
 
 [resource]
 script = ExtResource("1")
-substeps = 4
+substeps = 3
 gravity_ms2 = 9.81

@@ -29,7 +29,7 @@ So: the editor build we always played in is what made the race stutter at four b
 
 Every board, the player's and every AI's, runs `WindsurferSim` with the same controller, the same autopilot and the same substeps: it falls, it catches gusts, it slams on waves, it obeys the same rules. (Michiel, 20 October 2026: "the same AI controller and steps for everyone, every AI the same." The earlier idea of a coarser integration for far boards is dropped.)
 
-- **The substeps are decided once, for all boards,** by the measurements below: 4 unless Michiel accepts 3; 2 is out (the 24 kt broad reach falls).
+- **The substeps are 3 for every board** (Michiel, 20 October 2026, from the measurements below; 2 is out: the 24 kt broad reach falls).
 
 **The substeps, measured (20 October 2026, for Michiel's verdict).** The physics tick is 1/60 s cut into substeps; every force is computed at every substep, so the cost is per substep and nothing in the model changes with their number, only how finely it is integrated. The reach check (nine steady cases, flat water, 40 s each) and the validation suite (the polar, the onset, the stability, the recovery, the waves, the fin, and the skipper's races on T1 and T2 at 12, 18 and 24 kt) at each setting:
 
@@ -122,15 +122,15 @@ This is a long process, and Max's tokens are the scarce thing; the laptop's nigh
 | 5 | T2's size | Max: 200 m from the shore is the minimum: T2 stays at 60 %. |
 | 6 | The countdown | Max: 60 s for now; longer later. |
 | 7 | The characters' names | Max: leave them; the next development may rename them, the lead's choice. |
-| 8 | The substeps | Michiel: the same controller and the same steps for everyone, every AI the same; the simulation decides which. Measured (D2): 2 is out, 3 is the same steady physics with a 24 kt fall difference, 4 stays unless Michiel takes 3. |
-| 9 | The sea query | Measured (D2): one solve per point instead of three, warm-started, one pass for the three answers: a board from 3.3 to about 2.0 ms with identical answers. The lead's suggestion: do this first, with Michiel's go-ahead; it is a refactor in his folder, no formula changes. |
+| 8 | The substeps | Michiel: the same controller and the same steps for everyone, every AI the same, no shortcuts. Measured (D2): 2 is out, 3 is the same steady physics with a 24 kt fall difference. **Michiel took 3** (20 October 2026, evening); the game runs at 3 since then. |
+| 9 | The sea query | Measured (D2): one solve per point instead of three, warm-started, one pass for the three answers: a board from 3.3 to about 2.0 ms with identical answers. **Michiel: "yes, big go"** (20 October 2026); the agent `sea_query` builds it as F1's first package (P9_PROGRESS.md). |
 | 10 | The tack that stops the board | Michiel asked whether the tack is the autopilot's: half of it. The turn through the wind (its rate, heading up, when to stop) is `PlayerController._steer_tack` and `_start_manoeuvre`; the sail's part (backing it, flipping the rig to the new side) is the `Autopilot`'s tack phases (`update_tack`, `carry_boom_across_the_flip`). Both are the hands, the same for the player and the AI, so the 6.5 s cost everyone. |
 
 Not answered yet: pushing `feature/p9-racing` to GitHub.
 
 ## To start in another chat
 
-Paste: "Read Documentation/AI_FLEET_PLAN.md (the decisions are answered in it) and Documentation/P9_PROGRESS.md. Lead Part F1 as RACING_PLAN.md's execution brief describes, with the plan's section D7 on tokens: one agent per package, Opus 5.5 in a worktree on a branch `f1/<name>` from `feature/p9-racing`, extra-high effort only where the brief says so, and a stop for Max at the part's Stop. The substeps are the same for every board (D2): give Michiel the validation numbers at 2 against 4 and wait for his verdict before anything depends on it. Keep P9_PROGRESS.md current after every launch, report and merge, with the token ledger."
+Paste: "Read Documentation/AI_FLEET_PLAN.md (every decision is answered in it) and Documentation/P9_PROGRESS.md (where F1 stands: the substeps are 3, the sea refactor is merged or in progress). Lead the rest of Part F1 and then F2 as RACING_PLAN.md's execution brief describes, with the plan's section D7 on tokens: one agent per package, Opus 5.5 in a worktree on a branch `f1/<name>` from `feature/p9-racing`, extra-high effort only where the brief says so, and a stop for Max at each part's Stop. Keep P9_PROGRESS.md current after every launch, report and merge, with the token ledger."
 
 ## Sources and prior art
 
