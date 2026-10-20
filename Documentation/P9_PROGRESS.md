@@ -3,7 +3,7 @@
 The live state of Phase 9, racing. The plan and its execution brief are in [RACING_PLAN.md](RACING_PLAN.md). **The lead updates and commits this file after every launch, report and merge**, so any session can take over.
 
 - **Branch:** `feature/p9-racing` (from `feature/u2-fin` at f598a00, which carries U1 and U2). Agents work on `p9/<name>` branches, made from it in their own worktrees. Not pushed yet.
-- **Last update:** 20 October 2026, midday (Session 51): the race is playable in the game against the AI skippers (below, "Playing a race"); after Max's first race the frame drops are fixed with threads, the start is nearer the line and the HUD is made for racing; 446 unit tests, 232 files. Everything below is merged on the branch; the tests and the check are green (443 unit tests, 228 files; the skipper's own races are in the validation suite, `tools/test.sh validation -gselect=skipper`, about 12 minutes).
+- **Last update:** 21 October 2026, 00:10 (Session 52, the AI fleet chat, Max asleep): the waiting of boards on threads is found and measured (below, "The thread bench"); three agents launched at once (F1 `no_wait` and `fleet_frame`, F2 `living_skipper`); the night's training stage `night2a` running on 6 processes. Everything above the launch is merged on the branch; the tests and the check are green (453 unit tests, 234 files; the skipper's own races are in the validation suite, `tools/test.sh validation -gselect=skipper`, about 12 minutes).
 - **Max's instruction (19 October 2026):** "go till the 2 training courses", then "experiment with the AI, use the laptop's CPU, be careful with my tokens, surprise me tomorrow". Both done; the state is below. **Stop A2 (Max's look) is open.**
 
 ## State
@@ -17,6 +17,10 @@ The live state of Phase 9, racing. The plan and its execution brief are in [RACI
 | 5 | `learn` | `RaceObservation`, `NeuralNet`, `RaceEnv`, `LearnedSkipper` (the wind-angle action mode), the evolution trainer `tools/race_evolve.sh` | merged (39191b1, c279c67) | `p9/learn` | [learn.md](racing_reports/learn.md) |
 | lead | | `AiHands` (the controller fed by values), `RaceSkipper` (the base of both skippers), `brain:<name>` in the race tool, the night's training run | 96928d6 | | this file |
 | F1 | `sea_query` | the sea's answers for the hull at half the cost with identical results: one solve per sample point, warm-started, one pass for height, normal and velocity; the hull's rows reuse the grid's samples; `tools/sea_bench.sh` | merged c87617a (20 October 2026, late evening) | `f1/sea_query` | `racing_reports/sea_query.md` |
+| lead | | the thread bench (`tools/thread_bench.sh [--release]`, `Game/dev/thread_bench.gd`, run by the start menu on `--bench=thread`): what GDScript work waits on a global engine lock | 9ea21a3 (21 October 2026, 00:00) | | this file, "The thread bench" |
+| F1 | `no_wait` | the physics step without the lock: each model reads other objects' fields once per step into locals or its own fields, results through its own fields and method calls; no new objects, Arrays or Dictionaries per substep; bit-for-bit identical answers (Michiel's condition); `fin_model.gd`'s old sea path if cheap | **running** (launched 21 October 2026, 00:05; Opus 5.5, extra-high effort, worktree) | `f1/no_wait` | `racing_reports/no_wait.md` (to come) |
+| F1 | `fleet_frame` | the runner's group task batched over at most 8 threads; the HUD's fleet order once per tick; visual levels beyond 300 m; `--measure` summarised; `tools/fleet_measure.sh --sizes=8,16,24,32,40` on the release build | **running** (launched 00:07; Opus 5.5, high effort, worktree) | `f1/fleet_frame` | `racing_reports/fleet_frame.md` (to come) |
+| F2 | `living_skipper` | the skipper's states (free sailing in a sailing area, pre-start with the navigation skill, the line bias, the end choice, the timing loop or the hold with the hands' hold-back skill, over-early boards going back; racing; finished); AI boards spawn anywhere in the area and the countdown gathers them; `--spawn=` in the race tool and the menu's races; the 16-board validation test on T1 and T2 | **running** (launched 00:08; Opus 5.5, extra-high effort, worktree) | `f2/living_skipper` | `racing_reports/living_skipper.md` (to come) |
 
 | Stop | State |
 |---|---|
@@ -65,7 +69,13 @@ The live state of Phase 9, racing. The plan and its execution brief are in [RACI
 - **Speed:** 2,600 to 4,000 ticks per second on 16 processes; 37 s per generation at first, 250 s once every board sails its 300 s.
 - The brains: `Game/race/brains/night_best.json`, `night_gen1.json` (the rookie), `night_gen50.json` are committed; `night_gen10..100.json` are in the folder uncommitted.
 
+## The second night (20 to 21 October 2026): `night2a`
+
+The recommended next stage from the first night, started 21 October 2026 at 00:03, resumed from `night_best.json`: `tools/race_evolve.sh --run=night2a --hours=2.5 --threads=6 --resume=Game/race/brains/night_best.json --actions=twa --population=32 --episodes=2 --episode_s=420 --start_behind_m=150 --prestart_s=30 --spot_jitter_m=20 --stall_s=30 --sigma=0.03 --sigma_min=0.01` (the real 150 m pre-start spot, a 30 s countdown, the start spot moved up to 20 m by the seed, 420 s episodes; 6 processes so the agents' thread measurements stay readable). The log is `.sim_output/evolve/night2a.log`, the curve `night2a.csv`, the brains `Game/race/brains/night2a_best.json` and `night2a_gen<N>.json`. A second stage `night2b` on 16 processes follows once the fleet is measured on a quiet machine.
+
 ## Next action
+
+**The night of 20 to 21 October 2026 (Session 52; Max: "lead the rest of F1 and then F2; train the AIs overnight as well").** The lead found the waiting first ("The thread bench" under Numbers: every read or write of another object's field takes a global engine lock, on the release engine too), then launched the three agents in the State table at once, and the training stage `night2a` (6 processes, 2.5 hours, so the agents' measurements stay readable; `night2b` on 16 processes follows once F1's physics package is merged and the fleet is measured on a quiet machine). The order for the rest of the night: merge `no_wait` (read its diff for Michiel: no formula change, bit-for-bit answers) and `fleet_frame` (fleet_frame first if both are ready), rebuild the release, run `tools/fleet_measure.sh --sizes=8,16,24,32,40` on the quiet laptop for F1's Stop table, start `night2b`, merge `living_skipper`, and write the two Stops for Max (F1: the table and the substeps verdict (3, done); F2: the one command to watch 16 boards gather and start). The morning race against last night's brain (D6) is `tools/race.sh --skippers=brain:night2a_best,allrounder` for now (the Race page lists brains later, in F5).
 
 **Max's next ask (20 October 2026, after his races): smarter AIs with character, a living fleet of 20 to 40 boards, trained on all the iQFOiL courses and random ones, on the full physics (no cheap models), with the tokens spent carefully.** Planned in [AI_FLEET_PLAN.md](AI_FLEET_PLAN.md) (parts F1 to F6), to be run in another chat with its "To start" prompt. **Max and Michiel answered on 20 October 2026** (the table in the plan): wind shadows yes; the rules yes; the training stack yes with a race against last night's brain every morning; 20 boards to start, 32 nice, 40 very nice; T2 stays at 60 % (200 m is the minimum); the countdown 60 s for now; the names stay; Michiel: the same controller and the same substeps for everyone, decided by the simulation. **Measured the same day** (AI_FLEET_PLAN.md, D2): 2 substeps are out (the 24 kt broad reach falls); 3 give the same steady numbers within 0.1 % but one fall at 24 kt and a 20.2 m rounding in the skipper's races where 4 give none; 4 stays unless Michiel accepts 3 (Max: 0.1 % is nothing). The sea query measured the same evening (AI_FLEET_PLAN.md, D2): the hull's three answers per sample point cost 12.1 microseconds with three solves, 6.4 with one solve and identical answers; one solve per point, warm-started, with one pass for the three answers brings a board from 3.3 to about 2.0 ms per tick with no formula changed. The lead's suggestion: the sea refactor first (Michiel's go-ahead), then 3 substeps if Michiel takes them; together about 32 to 40 boards at 60 fps and training 2.2 times faster. **Michiel's answers the same evening: the sea refactor "yes, big go"; 3 substeps OK; every board the same, no shortcuts.** Done at once: the game runs at 3 substeps (`sim_default.tres`, the spec's row, the two skipper assertions that differ at 3 relaxed with a note; the validation suite at 3 confirmed the same evening: 40 pass, 1 fail (the onset, red on purpose), 2 pending); the agent `sea_query` launched on `f1/sea_query` as F1's first package. T2's size and the countdown are also the answers to Stop A2's open points; the push is still unanswered. Measured for it (Session 51): the editor engine collapses at eight boards (4 fps) where the exported release engine runs them at 244 fps (`tools/release.sh`, new; the Windows export templates are installed on Max's laptop); the thread ceiling is about eight; the sea is over half a board's cost (3.3 ms per tick with waves, 1.5 flat); 2 substeps halve the cost with the same speeds on a beam reach (the validation suite decides). The start menu takes `--race=<course> [--skippers=] [--prestart=]` so an exported build can start a race from the command line.
 
@@ -101,12 +111,31 @@ Baseline on `feature/u2-fin` (f598a00): `tools/check.sh` 196 files, 0 failed; `t
 
 So **10 AI boards and the player hold 60 fps today; 12 do not.** The signature is contention, not work: a board's own step takes 1.7 ms alone (the bench), 4.7 ms beside 8 others and 16.4 ms beside 16, for the same physics. The sea query's saving shows alone and at four boards and is eaten here. Where the waiting is (the agent's guess: a global engine lock on reads of another object's fields) is the other chat's first F1 question.
 
+**The thread bench (lead, 21 October 2026, 00:00; `tools/thread_bench.sh --release`; each case run on 1, 8 and 16 worker threads at once, 100,000 iterations per thread, the release engine on the laptop's 14 cores; the slowdown is the wall time with n threads divided by the time with 1, so 1.0 is perfect and 8 means the threads ran one after the other):**
+
+| What a thread does | 1 thread, ms | 8 threads | 16 threads |
+|---|---|---|---|
+| float and Vector3 maths; Basis and Transform3D values; PackedFloat64Array reads and writes; a formatted String | 1 to 37 | 1.0 to 3.9 | 1.1 to 6.1 |
+| calling a method of another object (`own.add(0.5)`, a getter), a static function | 10 to 21 | 1.2 to 1.5 | 1.3 to 2.0 |
+| **reading a float field of another object** (`own.f`, owned by the thread, shared with nobody) | 8 to 12 | **40 to 63** | **116 to 186** |
+| **writing a float field of another object** | 4 | **32** | **84** |
+| reading a Vector3 or Basis field of another object | 10 | 27 to 51 | 68 to 124 |
+| reading a float of a Resource (a config, own copy or shared) | 5 to 9 | 34 to 63 | 97 to 208 |
+| passing an object to a typed parameter | 15 | 12 | 37 |
+| `RefCounted.new()`; a small Array; a small Dictionary | 25 to 42 | 14 to 22 | 54 to 75 |
+
+So the sea query agent's guess was right: in Godot 4.7.2, on the release engine as on the editor engine, **every read or write of another object's field takes a global engine lock**, whether or not the object is shared, and so do new objects, Arrays, Dictionaries and objects passed to typed parameters; method calls, `self.field` inside a method, static functions, packed arrays and value maths take none. (The editor engine also locks on every method call, which is why it collapses at four boards.) The physics reads other objects' fields about 800 places textually (windsurfer_sim.gd 383, hull_model.gd 132, autopilot.gd 74, sail_model.gd 65, fin_model.gd 64, mass_model.gd 49), many in loops over the hull's 21 points, at 3 substeps per tick: hundreds of thousands of locked reads per second per board. That is where the eight-board time goes, and it is the `no_wait` package's job (the pattern: read once into locals, results through own fields and method calls, bit-for-bit identical answers).
+
 ## Token ledger (D7 of AI_FLEET_PLAN.md)
 
 | Package | Agent | Tokens | Tool uses | Wall time | Note |
 |---|---|---|---|---|---|
 | F1 `sea_query` | Opus 5.5, extra-high effort, worktree | 436,000 | 270 | 1 h 48 min | in Michiel's folder with the identical-answers proof; the first version (an object per point) measured and replaced |
-| lead (Fable) | the brief, the diff read, the merge, the tests, these documents | not metered here | | | |
+| lead (Fable), Session 51 | the brief, the diff read, the merge, the tests, these documents | not metered here | | | |
+| lead (Fable), Session 52 | the thread bench written, run twice on both engines and committed; three briefs; the training started; this file | about 150,000 so far | | 1 h | |
+| F1 `no_wait` | Opus 5.5, extra-high effort, worktree | running | | | |
+| F1 `fleet_frame` | Opus 5.5, high effort, worktree | running | | | |
+| F2 `living_skipper` | Opus 5.5, extra-high effort, worktree | running | | | |
 
 ## Open items
 
