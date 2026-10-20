@@ -36,8 +36,13 @@ extends SceneTree
 ##   --prestart_s=10       [10] the countdown, seconds
 ##   --start_behind_m=150  [150] how far behind the start line the board waits at the start: the
 ##                         plan's pre-start spot is 150 m back, too far to reach T1's 60 m line on
-##                         one tack; 25 m lets a beginner reach it on either tack
+##                         one tack; from 25 m it can be reached without a tack, on one tack or the other
+##   --spot_jitter_m=20    [20] how far the seed moves the start along the line (and back, up to a
+##                         quarter of start_behind_m); with 5 every start can be made on starboard
 ##   --population=64       [64] networks per generation
+##   --actions=twa         [twa] how the networks' numbers are read: twa, the wind angle to hold (the
+##                         hands steer for it and tack or gybe when it is on the other tack), or
+##                         stick, the steering stick itself and a tack output (LearnedSkipper)
 ##   --episodes=1          [1] races per network per generation, each from another start; the fitness
 ##                         is their mean (more races: a fairer fitness, at that many times the cost)
 ##   --elite=8             [8] the best ones kept unchanged each generation
@@ -158,8 +163,10 @@ func _initialize() -> void:
 	_env_options.stall_s = _number("stall_s", 0.0)
 	_env_options.prestart_s = _number("prestart_s", _env_options.prestart_s)
 	_env_options.start_behind_m = _number("start_behind_m", _env_options.start_behind_m)
+	_env_options.spot_jitter_m = _number("spot_jitter_m", _env_options.spot_jitter_m)
 	_env_options.laps = maxi(_integer("laps", 1), 1)
 	_episodes = maxi(_integer("episodes", 1), 1)
+	_env_options.actions = LearnedSkipper.mode_named(_text("actions", "twa"))
 	if _options.has("job"):
 		_work(_text("job", ""))
 	elif _options.has("evaluate"):
@@ -200,8 +207,9 @@ func _train() -> void:
 	var csv: FileAccess = FileAccess.open(csv_path, FileAccess.WRITE)
 	if csv != null:
 		csv.store_line("generation,best,mean,median,best_steps,steps_total,best_finish_s,best_falls,best_progress_m,started,seconds,ticks_per_s,sigma,elapsed_s")
-	print("evolve %s: %s, %.0f kt, %d lap%s, %d race%s of %.0f s%s per network, the start %.0f m behind the line; population %d, elite %d, sigma %.3f to %.3f, network %s (%d weights), %d %s" % [
+	print("evolve %s: %s, %.0f kt, %d lap%s, actions %s, %d race%s of %.0f s%s per network, the start %.0f m behind the line; population %d, elite %d, sigma %.3f to %.3f, network %s (%d weights), %d %s" % [
 		run_name, _course.name, _wind_kt, _env_options.laps, "" if _env_options.laps == 1 else "s",
+		LearnedSkipper.mode_name(_env_options.actions),
 		_episodes, "" if _episodes == 1 else "s", _env_options.episode_s,
 		(" (stall %.0f s)" % _env_options.stall_s) if _env_options.stall_s > 0.0 else "", _env_options.start_behind_m,
 		population_size, elite_count, sigma, sigma_min, str(population[0].sizes()), population[0].parameter_count(),
@@ -253,7 +261,9 @@ func _train() -> void:
 		if generation == 1 or generation % save_every == 0:
 			best_brain.save(_brain_path("%s_gen%d" % [run_name, generation]))
 
-		# The next generation: the elite unchanged, and their children.
+		# The next generation: the elite unchanged, and their children. The elite race again next
+		# generation, on its new seed, with everyone else, and are ranked only on that race: a brain
+		# that was lucky once does not stay at the top.
 		var next: Array[NeuralNet] = []
 		for k: int in elite_count:
 			next.append(population[order[k]])
@@ -285,6 +295,8 @@ func _first_population(size: int, sigma: float, rng: RandomNumberGenerator) -> A
 		if brain.input_count() != RaceObservation.size():
 			push_error("evolve: %s takes %d inputs, the observation has %d." % [path, brain.input_count(), RaceObservation.size()])
 			return population
+		# Its children answer the way it learnt to.
+		_env_options.actions = LearnedSkipper.mode_of(brain)
 		population.append(brain)
 		while population.size() < size:
 			population.append(brain.mutated(sigma, rng))
@@ -338,7 +350,8 @@ func _sail_in_processes(population: Array[NeuralNet], race_seed: int, workers: i
 		"--job=%s" % work_dir, "--population=%d" % population.size(), "--race_seed=%d" % race_seed,
 		"--wind_kt=%s" % _wind_kt, "--episode_s=%s" % _env_options.episode_s, "--stall_s=%s" % _env_options.stall_s,
 		"--laps=%d" % _env_options.laps, "--episodes=%d" % _episodes, "--prestart_s=%s" % _env_options.prestart_s,
-		"--start_behind_m=%s" % _env_options.start_behind_m])
+		"--actions=%s" % LearnedSkipper.mode_name(_env_options.actions),
+		"--start_behind_m=%s" % _env_options.start_behind_m, "--spot_jitter_m=%s" % _env_options.spot_jitter_m])
 	var pids: Array[int] = []
 	for k: int in mini(workers, population.size()):
 		var pid: int = OS.create_process(OS.get_executable_path(), arguments)
@@ -425,13 +438,15 @@ func _evaluate(path: String, races: int) -> void:
 	if brain == null:
 		quit(2)
 		return
+	_env_options.actions = LearnedSkipper.mode_of(brain)
 	var csv_path: String = _repository_path(".sim_output/evolve/evaluate.csv")
 	DirAccess.make_dir_recursive_absolute(csv_path.get_base_dir())
 	var track: FileAccess = FileAccess.open(csv_path, FileAccess.WRITE)
 	if track != null:
-		track.store_line("time_s,x_m,z_m,heading_deg,speed_ms,twa_deg,next_step,steer,sheet,tack")
-	print("%s (generation %s of run %s): %d race%s of %.0f s on %s" % [path.get_file(), str(brain.meta.get("generation", "?")),
-		str(brain.meta.get("run", "?")), races, "" if races == 1 else "s", _env_options.episode_s, _course.name])
+		track.store_line("time_s,x_m,z_m,heading_deg,speed_ms,twa_deg,next_step,action_1,action_2,action_3,hands_steer")
+	print("%s (generation %s of run %s, actions %s): %d race%s of %.0f s on %s" % [path.get_file(), str(brain.meta.get("generation", "?")),
+		str(brain.meta.get("run", "?")), LearnedSkipper.mode_name(_env_options.actions), races, "" if races == 1 else "s",
+		_env_options.episode_s, _course.name])
 	for race_number: int in range(1, races + 1):
 		var env: RaceEnv = _new_env(race_number)
 		var total: float = 0.0
@@ -439,8 +454,8 @@ func _evaluate(path: String, races: int) -> void:
 			var action: PackedFloat32Array = brain.forward(env.observe(0))
 			if race_number == 1 and track != null:
 				var t: Telemetry = env.board(0).sim.telemetry
-				track.store_line("%.1f,%.2f,%.2f,%.1f,%.2f,%.1f,%d,%.3f,%.3f,%.3f" % [env.time_s, t.position.x, t.position.z,
-					t.heading_deg, t.speed_ms, t.twa_deg, env.race.next_step_index(0), action[0], action[1], action[2]])
+				track.store_line("%.1f,%.2f,%.2f,%.1f,%.2f,%.1f,%d,%.3f,%.3f,%.3f,%.3f" % [env.time_s, t.position.x, t.position.z,
+					t.heading_deg, t.speed_ms, t.twa_deg, env.race.next_step_index(0), action[0], action[1], action[2], env.board(0).hands.steer])
 			env.act(0, action)
 			for k: int in env.decision_ticks:
 				env.tick()
@@ -494,7 +509,8 @@ static func _summary(generation: int, fitness: Array[float], order: Array[int], 
 ## outputs, before it is saved.
 func _note(brain: NeuralNet, run_name: String, generation: int, result: Result, sigma: float) -> void:
 	brain.obs_names = RaceObservation.names()
-	brain.action_names = LearnedSkipper.ACTION_NAMES
+	var twa_mode: bool = _env_options.actions == LearnedSkipper.ActionMode.TWA
+	brain.action_names = LearnedSkipper.TWA_ACTION_NAMES if twa_mode else LearnedSkipper.ACTION_NAMES
 	brain.meta = {
 		"course": RaceCourses.T1_NAME,
 		"run": run_name,
@@ -511,8 +527,10 @@ func _note(brain: NeuralNet, run_name: String, generation: int, result: Result, 
 		"episode_s": _env_options.episode_s,
 		"stall_s": _env_options.stall_s,
 		"episodes": _episodes,
+		"actions": LearnedSkipper.mode_name(_env_options.actions),
 		"prestart_s": _env_options.prestart_s,
 		"start_behind_m": _env_options.start_behind_m,
+		"spot_jitter_m": _env_options.spot_jitter_m,
 		"seed": _integer("seed", 1),
 		"sigma": snappedf(sigma, 0.0001),
 		"sheet_dead_zone": LearnedSkipper.SHEET_DEAD_ZONE,

@@ -17,12 +17,22 @@ Each `<name>.json` holds:
 - `obs_names`: what each input is, in order (`Game/race/race_observation.gd`).
 - `obs_scale`: a number per input that multiplies it before the first layer (all
   ones for the brains made here; the observation is already scaled).
-- `action_names`: `steer`, `sheet`, `tack`, each -1 to 1. Steer is the stick of the
-  beginner controller; the sheet only takes over from the auto-sheet beyond 0.5 either
-  way; a tack or gybe is asked for when tack rises above 0.5.
+- `action_names`: what the three outputs (each -1 to 1) mean, which depends on the
+  brain's action mode, `meta.actions`:
+  - `twa` (the trainer's default): `twa`, `sheet`, `unused`. The first is the wind
+    angle the board should sail at: 180 degrees times the output, positive with the
+    wind from starboard (0.25 is close-hauled on starboard, -0.83 a broad reach on
+    port). The hands steer for that angle every tick and let the controller's heading
+    hold do the steady part; when the angle wanted is on the other tack they ask for
+    a tack or gybe (the controller chooses which), at most every 3 s.
+  - `stick`: `steer`, `sheet`, `tack`. Steer is the stick of the beginner controller
+    itself; a tack or gybe is asked for when tack rises above 0.5.
+  In both, the sheet only takes over from the auto-sheet beyond 0.5 either way.
+  `LearnedSkipper` reads a brain in the mode it was trained in (no `meta.actions`
+  means `stick`, as the first brains were).
 - `meta`: where the brain came from: the course, the training run, the generation,
   its fitness (the reward it collected in its race), how far it got, the date, the
-  physics commit, and the settings of the training.
+  physics commit, the action mode, and the settings of the training.
 
 `NeuralNet.load_file(path)` reads one; `LearnedSkipper` sails a board with it.
 
@@ -37,6 +47,11 @@ needed; the races run on all the cores.
 The command, from the repository's folder:
 
     tools/race_evolve.sh --run=<name> [--hours=6] [options]
+
+To see how a brain sails, without a window (one line per race, and the first race's
+track in `.sim_output/evolve/evaluate.csv`):
+
+    tools/race_evolve.sh --evaluate=Game/race/brains/<name>.json --races=5 [race options]
 
 It writes:
 

@@ -2,8 +2,10 @@ extends GutTest
 ## RaceEnv, a race as a learning environment (RACING_PLAN.md, Part 9C): what a board sees stays
 ## within -3 and 3; the progress reward is the metres gained toward the next step / 100, and a step
 ## completed is not counted as a loss of the next leg; a fall costs 20 and being over the line at
-## the gun 10; the same seed and the same actions give the same rewards; and an episode ends at the
-## time limit, far from the course, or (if asked) when the board stops gaining.
+## the gun 10; the same seed and the same actions give the same rewards; an episode ends at the
+## time limit, far from the course, or (if asked) when the board stops gaining; and a hand-written
+## wind-angle policy, answering as a network does in the "twa" mode, starts and rounds mark 1 within
+## 240 s (the ceiling a learner chases).
 ##
 ## The course is T1 for a wind from the west (270): the start line runs north and south through
 ## the origin, mark 1 lies 556 m to the west, and the boards wait 150 m east of the line, heading
@@ -20,9 +22,11 @@ static func _course() -> Course:
 	return RaceCourses.t1_loop(270.0, Vector2.ZERO)
 
 
-## Options with only the parts of the reward a test looks at.
+## Options with only the parts of the reward a test looks at, and the stick mode, so that the action
+## [0, 0, 0] lets go of the stick and the controller holds the heading.
 static func _options(progress: bool, decisions: bool) -> RaceEnv.Options:
 	var options: RaceEnv.Options = RaceEnv.Options.new()
+	options.actions = LearnedSkipper.ActionMode.STICK
 	options.progress_per_m = 0.01 if progress else 0.0
 	options.decision_cost = 0.01 if decisions else 0.0
 	return options
@@ -43,12 +47,18 @@ static func _decide(env: RaceEnv, action: PackedFloat32Array) -> float:
 
 
 func test_every_observation_stays_within_minus_3_and_3_over_60_s_with_a_constant_action() -> void:
+	# The stick: a steady turn, the sheet pulled in by hand, and the tack output held high.
+	_check_the_observation_over_60_s(LearnedSkipper.ActionMode.STICK, PackedFloat32Array([0.4, 0.8, 1.0]))
+	# The wind angle: 45 degrees on starboard, the sheet pulled in by hand.
+	_check_the_observation_over_60_s(LearnedSkipper.ActionMode.TWA, PackedFloat32Array([0.25, 0.8, 0.0]))
+
+
+func _check_the_observation_over_60_s(mode: LearnedSkipper.ActionMode, action: PackedFloat32Array) -> void:
 	var options: RaceEnv.Options = RaceEnv.Options.new()
 	options.episode_s = 70.0
+	options.actions = mode
 	var env: RaceEnv = RaceEnv.new(_course(), 1, 15.0, options)
 	env.reset(3)
-	# A steady turn, the sheet pulled in by hand, and the tack output held high.
-	var action: PackedFloat32Array = PackedFloat32Array([0.4, 0.8, 1.0])
 	var names: PackedStringArray = RaceObservation.names()
 	var worst: float = 0.0
 	var worst_name: String = ""
@@ -149,17 +159,21 @@ func test_each_decision_costs_a_hundredth() -> void:
 
 
 func test_the_same_seed_and_the_same_actions_give_the_same_rewards() -> void:
-	var first: PackedFloat32Array = _rewards_of_a_scripted_race(42)
-	var second: PackedFloat32Array = _rewards_of_a_scripted_race(42)
-	assert_eq(first.size(), second.size())
-	assert_eq(first, second, "tick for tick the same race")
-	var other_seed: PackedFloat32Array = _rewards_of_a_scripted_race(43)
-	assert_ne(first, other_seed, "another seed is another start")
+	for mode: LearnedSkipper.ActionMode in [LearnedSkipper.ActionMode.TWA, LearnedSkipper.ActionMode.STICK]:
+		var first: PackedFloat32Array = _rewards_of_a_scripted_race(42, mode)
+		var second: PackedFloat32Array = _rewards_of_a_scripted_race(42, mode)
+		assert_eq(first.size(), second.size())
+		assert_eq(first, second, "tick for tick the same race (%s)" % LearnedSkipper.mode_name(mode))
+	var other_seed: PackedFloat32Array = _rewards_of_a_scripted_race(43, LearnedSkipper.ActionMode.TWA)
+	assert_ne(_rewards_of_a_scripted_race(42, LearnedSkipper.ActionMode.TWA), other_seed, "another seed is another start")
 
 
-## 20 s of a race with a fixed sequence of actions: a slow weave, and a tack asked for twice.
-static func _rewards_of_a_scripted_race(seed: int) -> PackedFloat32Array:
-	var env: RaceEnv = RaceEnv.new(_course(), 1, 15.0)
+## 20 s of a race with a fixed sequence of actions: a slow weave (in the wind-angle mode, a wind
+## angle swinging from one tack to the other), and a tack asked for twice.
+static func _rewards_of_a_scripted_race(seed: int, mode: LearnedSkipper.ActionMode) -> PackedFloat32Array:
+	var options: RaceEnv.Options = RaceEnv.Options.new()
+	options.actions = mode
+	var env: RaceEnv = RaceEnv.new(_course(), 1, 15.0, options)
 	env.reset(seed)
 	var rewards: PackedFloat32Array = PackedFloat32Array()
 	for k: int in 200:
@@ -200,6 +214,7 @@ func test_a_board_far_from_the_course_is_done() -> void:
 
 func test_a_board_that_stops_gaining_is_done_when_asked() -> void:
 	var options: RaceEnv.Options = RaceEnv.Options.new()
+	options.actions = LearnedSkipper.ActionMode.STICK
 	options.stall_s = 3.0
 	var env: RaceEnv = RaceEnv.new(_course(), 1, 15.0, options)
 	env.reset(1)
@@ -208,3 +223,64 @@ func test_a_board_that_stops_gaining_is_done_when_asked() -> void:
 		_decide(env, PackedFloat32Array([0.0, 0.0, 0.0]))
 	assert_true(env.done(0), "done")
 	assert_true(env.time_s < 10.0, "a few seconds after it stopped gaining: %.1f s" % env.time_s)
+
+
+# ---------------------------------------------------------------- the ceiling: a hand-written wind-angle policy
+
+## Close-hauled at this angle, broad reaching at RUN_TWA_DEG, and the other tack once the aim is this far
+## past the wind on the other side (a little past the layline, for the leeway and the tack).
+const BEAT_TWA_DEG: float = 45.0
+const RUN_TWA_DEG: float = 150.0
+const LAYLINE_DEG: float = 48.0
+
+
+func test_a_hand_written_wind_angle_policy_starts_and_rounds_mark_1_within_240_s() -> void:
+	var options: RaceEnv.Options = RaceEnv.Options.new()
+	options.actions = LearnedSkipper.ActionMode.TWA
+	options.start_behind_m = 25.0
+	options.prestart_s = 5.0
+	var env: RaceEnv = RaceEnv.new(_course(), 1, 15.0, options)
+	env.reset(3)
+	var tack: Array[float] = [0.0]  # the policy's own memory: the tack it means to be on
+	while not env.done(0) and env.race.next_step_index(0) < 2:
+		_decide(env, _wind_angle_policy(env, tack))
+	var splits: PackedFloat32Array = env.race.splits_s(0)
+	assert_eq(env.race.next_step_index(0), 2, "started and rounded mark 1")
+	assert_eq(env.board(0).falls, 0, "without a fall")
+	if splits.size() >= 2:
+		gut.p("The wind-angle policy: start at %.1f s, mark 1 at %.1f s of race time (%.1f s after reset)" % [splits[0], splits[1], env.time_s])
+		assert_true(env.time_s < 240.0, "within the 240 s of an episode: %.1f s" % env.time_s)
+
+
+## Through act() as a network in the wind-angle mode answers: the wind angle to hold / 180. Upwind
+## (start line, mark 1): close-hauled on the tack it is on, the other tack once the aim is past the
+## layline, straight at the aim when it can be reached without beating. Downwind: RUN_TWA_DEG.
+static func _wind_angle_policy(env: RaceEnv, tack: Array[float]) -> PackedFloat32Array:
+	var t: Telemetry = env.board(0).sim.telemetry
+	var here: Vector2 = Vector2(t.position.x, t.position.z)
+	var step: RaceStep = env.race.next_step(0)
+	if tack[0] == 0.0:
+		tack[0] = LearnedSkipper.tack_of(t)
+	# A mark is rounded 20 m outside it; a line crossed at least 10 m inside its ends.
+	var aim: Vector2 = step.target()
+	if step.kind == RaceStep.Kind.MARK:
+		aim = step.points[0] + RoundingCheck.rounding_ray(step.in_dir, step.out_dir, step.side) * 20.0
+	else:
+		var inset: Vector2 = (step.points[1] - step.points[0]).normalized() * 10.0
+		aim = Geometry2D.get_closest_point_to_segment(here, step.points[0] + inset, step.points[1] - inset)
+	# Where the aim is from the wind: 0 straight upwind, positive to the right looking upwind.
+	var from_wind_deg: float = Course.turn_deg(t.wind_from_bearing_deg, Course.bearing_deg(here, aim))
+	var wanted_deg: float = RUN_TWA_DEG * tack[0]
+	if absf(from_wind_deg) <= 90.0:
+		# On starboard tack the board heads 45 degrees left of the wind; once the aim lies more than
+		# LAYLINE_DEG to the right, port tack fetches it, and the other way round.
+		if tack[0] > 0.0 and from_wind_deg > LAYLINE_DEG:
+			tack[0] = -1.0
+		elif tack[0] < 0.0 and from_wind_deg < -LAYLINE_DEG:
+			tack[0] = 1.0
+		wanted_deg = BEAT_TWA_DEG * tack[0]
+		if absf(from_wind_deg) > BEAT_TWA_DEG + 10.0:
+			# Reachable without beating: the wind angle that points at it (the wind from starboard is
+			# the wind clockwise of the bow, so that angle is minus the aim's angle from the wind).
+			wanted_deg = -from_wind_deg
+	return PackedFloat32Array([wanted_deg / LearnedSkipper.TWA_FULL_SCALE_DEG, 0.0, 0.0])

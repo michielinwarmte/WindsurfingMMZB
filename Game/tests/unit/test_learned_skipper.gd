@@ -1,9 +1,11 @@
 extends GutTest
 ## LearnedSkipper, a network at the controls (RACING_PLAN.md, "The learned skipper"): a random brain
 ## moves the hands within their range, ten times a second, and holds them between; the network's
-## numbers become the hands through the sheet's dead zone and the tack's rising edge; and a brain
-## sails a board in the game's way (setup() and update() every tick) exactly as it sails in the
-## trainer's RaceEnv.
+## numbers become the hands through the sheet's dead zone and the tack's rising edge (the stick
+## mode), or through a wind angle to hold, steered for on both tacks, with a tack or gybe asked for
+## when the angle wanted is on the other tack (the wind-angle mode); a brain is read in the mode it
+## was trained in; and a brain sails a board in the game's way (setup() and update() every tick)
+## exactly as it sails in the trainer's RaceEnv, in both modes.
 
 const DT: float = 1.0 / 60.0
 
@@ -94,13 +96,21 @@ func test_the_networks_numbers_become_the_hands() -> void:
 
 
 func test_a_brain_sails_through_the_skipper_exactly_as_in_the_trainer() -> void:
+	_sail_both_ways(LearnedSkipper.ActionMode.STICK)
+	_sail_both_ways(LearnedSkipper.ActionMode.TWA)
+
+
+func _sail_both_ways(mode: LearnedSkipper.ActionMode) -> void:
 	var brain: NeuralNet = _random_brain(8)
+	brain.meta["actions"] = LearnedSkipper.mode_name(mode)
 	var course: Course = _course()
+	var options: RaceEnv.Options = RaceEnv.Options.new()
+	options.actions = mode
 	# The trainer's way: observe, act, six ticks.
-	var trained: RaceEnv = RaceEnv.new(course, 1, 15.0)
+	var trained: RaceEnv = RaceEnv.new(course, 1, 15.0, options)
 	trained.reset(5)
 	# The game's way: the same race, with the skipper setting the hands before every tick.
-	var played: RaceEnv = RaceEnv.new(course, 1, 15.0)
+	var played: RaceEnv = RaceEnv.new(course, 1, 15.0, options)
 	played.reset(5)
 	var board: RaceEnv.Board = played.board(0)
 	var skipper: LearnedSkipper = LearnedSkipper.new()
@@ -114,6 +124,99 @@ func test_a_brain_sails_through_the_skipper_exactly_as_in_the_trainer() -> void:
 			played.tick()
 	var a: Telemetry = trained.board(0).sim.telemetry
 	var b: Telemetry = board.sim.telemetry
-	assert_true(a.speed_ms > 0.1 or b.speed_ms > 0.1, "the board moved")
-	assert_eq(b.position, a.position, "the same track, to the last bit")
+	var name: String = LearnedSkipper.mode_name(mode)
+	assert_true(a.speed_ms > 0.1 or b.speed_ms > 0.1, "the board moved (%s)" % name)
+	assert_eq(b.position, a.position, "the same track, to the last bit (%s)" % name)
 	assert_eq(b.heading_deg, a.heading_deg)
+
+
+# ---------------------------------------------------------------- the wind-angle mode
+
+func test_steering_for_a_wind_angle_turns_the_right_way_on_both_tacks() -> void:
+	# Starboard tack (the wind from starboard, +1), 60 degrees off the wind, 45 wanted: head up, which
+	# on starboard tack is a right turn. 15 degrees of error is three quarters of the stick.
+	assert_almost_eq(LearnedSkipper.steer_toward_twa(60.0, 1.0, 45.0), 0.75, 1e-6, "starboard, too far off: right")
+	assert_almost_eq(LearnedSkipper.steer_toward_twa(30.0, 1.0, 45.0), -0.75, 1e-6, "starboard, too high: left")
+	# Port tack: heading up is a left turn.
+	assert_almost_eq(LearnedSkipper.steer_toward_twa(-60.0, -1.0, 45.0), -0.75, 1e-6, "port, too far off: left")
+	assert_almost_eq(LearnedSkipper.steer_toward_twa(-30.0, -1.0, 45.0), 0.75, 1e-6, "port, too high: right")
+	# Within the dead band the stick is let go (the heading hold keeps the course); 20 degrees or
+	# more is a full stick.
+	assert_eq(LearnedSkipper.steer_toward_twa(46.5, 1.0, 45.0), 0.0, "within 2 degrees: let go")
+	assert_eq(LearnedSkipper.steer_toward_twa(100.0, 1.0, 45.0), 1.0, "a full stick at most")
+	# Just past head to wind on starboard tack (the sail still on the port side): bear away, left.
+	assert_true(LearnedSkipper.steer_toward_twa(-10.0, 1.0, 45.0) < -0.9, "past head to wind: bear away")
+	# By the lee on starboard tack (175 degrees from port): head up, right, back to 150.
+	assert_true(LearnedSkipper.steer_toward_twa(-175.0, 1.0, 150.0) > 0.9, "by the lee: head up")
+
+
+func test_the_tack_comes_from_the_wind_angle_or_near_head_to_wind_from_the_sail() -> void:
+	var t: Telemetry = Telemetry.new()
+	t.twa_deg = 60.0
+	t.sail_side = -1
+	assert_eq(LearnedSkipper.tack_of(t), 1.0, "60 degrees from starboard: starboard tack")
+	t.twa_deg = -120.0
+	t.sail_side = 1
+	assert_eq(LearnedSkipper.tack_of(t), -1.0, "120 from port: port tack")
+	# In irons, a few degrees the other side of the wind: still the tack the sail is set for.
+	t.twa_deg = -8.0
+	t.sail_side = -1
+	assert_eq(LearnedSkipper.tack_of(t), 1.0, "in irons: the sail says starboard")
+	t.twa_deg = 178.0
+	t.sail_side = 1
+	assert_eq(LearnedSkipper.tack_of(t), -1.0, "dead downwind: the sail says port")
+
+
+func test_a_wind_angle_on_the_other_tack_asks_for_one_tack_and_not_again_for_3_s() -> void:
+	var hands: AiHands = AiHands.new()
+	var driver: LearnedSkipper.Driver = LearnedSkipper.Driver.new(hands, LearnedSkipper.ActionMode.TWA)
+	var t: Telemetry = Telemetry.new()
+	t.twa_deg = 50.0
+	t.sail_side = -1
+	# 45 degrees on starboard, the tack it is on: no tack, a little right to head up 5 degrees.
+	driver.decide(PackedFloat32Array([0.25, 0.0, 1.0]), false)
+	driver.steer(t, false, DT)
+	assert_false(hands.tack, "the third output is not a tack in this mode")
+	assert_almost_eq(hands.steer, 0.25, 1e-6, "5 degrees off: a quarter of the stick, right")
+	assert_eq(hands.sheet, 0.0, "the sheet left to the auto-sheet")
+	# 45 degrees on port: ask for the tack once.
+	driver.decide(PackedFloat32Array([-0.25, 0.0, 0.0]), false)
+	driver.steer(t, false, DT)
+	assert_true(hands.tack, "the other tack is asked for")
+	hands.tack = false  # the controller took it
+	for k: int in 60:  # a second later, the board still on starboard (the tack did not start)
+		driver.steer(t, false, DT)
+	assert_false(hands.tack, "not asked again within 3 s")
+	for k: int in 150:
+		driver.steer(t, false, DT)
+	assert_true(hands.tack, "asked again after 3 s")
+	hands.tack = false
+	for k: int in 200:
+		driver.steer(t, true, DT)
+	assert_false(hands.tack, "never while a manoeuvre is under way")
+	for k: int in 300:  # 5 s after the manoeuvre ended
+		driver.steer(t, false, DT)
+	assert_false(hands.tack, "nor in the first 6 s after one, while the board gets its speed back")
+	for k: int in 120:
+		driver.steer(t, false, DT)
+	assert_true(hands.tack, "and then it is asked for")
+	hands.tack = false
+	# A wish near head to wind, or dead downwind, on the other side is not clearly the other tack:
+	# it means as high (or as deep) as it goes on this one.
+	var later: LearnedSkipper.Driver = LearnedSkipper.Driver.new(hands, LearnedSkipper.ActionMode.TWA)
+	later.decide(PackedFloat32Array([-10.0 / 180.0, 0.0, 0.0]), false)
+	later.steer(t, false, DT)
+	assert_false(hands.tack, "10 degrees on port, from starboard: no tack")
+	assert_eq(hands.steer, 1.0, "but head up as far as it goes: right, on starboard")
+	later.decide(PackedFloat32Array([-0.95, 0.0, 0.0]), false)
+	later.steer(t, false, DT)
+	assert_false(hands.tack, "171 degrees on port, from starboard: no gybe")
+
+
+func test_a_brain_is_read_in_the_mode_it_was_trained_in() -> void:
+	var brain: NeuralNet = _random_brain(1)
+	assert_eq(LearnedSkipper.mode_of(brain), LearnedSkipper.ActionMode.STICK, "no note: a stick brain")
+	brain.meta["actions"] = "twa"
+	assert_eq(LearnedSkipper.mode_of(brain), LearnedSkipper.ActionMode.TWA)
+	brain.meta["actions"] = "stick"
+	assert_eq(LearnedSkipper.mode_of(brain), LearnedSkipper.ActionMode.STICK)
