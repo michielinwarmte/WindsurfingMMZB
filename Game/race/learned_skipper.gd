@@ -10,8 +10,9 @@ extends RefCounted
 ## - "twa" (the trainer's default): the first number is the wind angle the board should sail at,
 ##   180 degrees times the number, positive with the wind from starboard as Telemetry.twa_deg. The
 ##   hands then steer for that angle every tick, with the controller's heading hold doing the steady
-##   part, and ask for a tack or a gybe when the angle wanted is on the other tack. A sailor thinks
-##   the same way: "close-hauled on starboard", "now the other tack". The third number is not used.
+##   part, and ask for a tack or a gybe when the angle wanted is clearly on the other tack (and the
+##   board has sailed a few seconds since the last one). A sailor thinks the same way:
+##   "close-hauled on starboard", "now the other tack". The third number is not used.
 ## - "stick": the first number is the steering stick itself, held until the next decision, and the
 ##   third asks for a tack or gybe as it rises above 0.5.
 ## In both, the second number is the sheet, through a dead zone that leaves the auto-sheet trimming.
@@ -52,9 +53,13 @@ const TWA_FULL_STICK_DEG: float = 20.0
 ## Within this many degrees of the angle wanted the stick is let go, and the controller's heading
 ## hold keeps the board where it is.
 const TWA_DEAD_BAND_DEG: float = 2.0
-## A tack or gybe is asked for at most this often, so a manoeuvre that did not take (or a network
-## that keeps changing its mind) does not have the sailor tacking non-stop.
+## A tack or gybe is asked for at most this often, so a manoeuvre that did not take does not have
+## the sailor asking non-stop.
 const TACK_REQUEST_EVERY_S: float = 3.0
+## And not until this long after the last manoeuvre ended: the board needs its speed back, and a
+## network whose wish flips as the board turns would otherwise tack it to a standstill (the first
+## wind-angle brains did, every 2.5 s).
+const TACK_HOLD_S: float = 6.0
 ## Between these wind angles (either side) the sign of the wind angle says the tack. Nearer head to
 ## wind (in irons) or dead downwind (by the lee) it flickers, and the side the sail is on says it.
 const CLEAR_TACK_FROM_DEG: float = 25.0
@@ -73,8 +78,9 @@ class Driver:
 	var has_wish: bool = false
 	## Stick mode: whether the tack output was high at the last decision.
 	var tack_was_high: bool = false
-	## Seconds since the last tack or gybe this driver asked for.
+	## Seconds since the last tack or gybe this driver asked for, and since the last manoeuvre ended.
 	var since_tack_request_s: float = 1.0e9
+	var since_manoeuvre_s: float = 1.0e9
 
 	func _init(the_hands: AiHands, action_mode: ActionMode = ActionMode.TWA) -> void:
 		hands = the_hands
@@ -90,21 +96,26 @@ class Driver:
 		has_wish = true
 
 	## Every tick, before the controller's update (wind-angle mode only; the stick mode's hands stay
-	## as the last decision left them). The angle wanted is on the other tack: ask for a tack or
-	## gybe (the controller picks which), unless one is under way or was asked for less than
-	## TACK_REQUEST_EVERY_S ago. Otherwise steer toward the angle wanted on this tack.
+	## as the last decision left them). The angle wanted is clearly on the other tack: ask for a tack
+	## or gybe (the controller picks which), unless one is under way, ended less than TACK_HOLD_S
+	## ago, or was asked for less than TACK_REQUEST_EVERY_S ago. Otherwise steer toward the angle
+	## wanted on this tack. "Clearly" is the rule tack_of() uses for the board: between
+	## CLEAR_TACK_FROM_DEG and CLEAR_TACK_TO_DEG off the wind. A wish nearer head to wind or dead
+	## downwind means "as high (or as deep) as it goes" on the tack the board is on.
 	func steer(telemetry: Telemetry, in_manoeuvre: bool, dt: float) -> void:
 		since_tack_request_s += dt
+		since_manoeuvre_s = 0.0 if in_manoeuvre else since_manoeuvre_s + dt
 		if mode != ActionMode.TWA or not has_wish:
 			return
 		var tack: float = LearnedSkipper.tack_of(telemetry)
-		var wanted_tack: float = signf(wanted_twa_deg)
-		if wanted_tack != 0.0 and wanted_tack != tack and not in_manoeuvre and since_tack_request_s >= TACK_REQUEST_EVERY_S:
+		var off_wind_deg: float = absf(wanted_twa_deg)
+		var clearly_other_tack: bool = signf(wanted_twa_deg) == -tack and off_wind_deg > CLEAR_TACK_FROM_DEG and off_wind_deg < CLEAR_TACK_TO_DEG
+		if clearly_other_tack and not in_manoeuvre and since_manoeuvre_s >= TACK_HOLD_S and since_tack_request_s >= TACK_REQUEST_EVERY_S:
 			hands.tack = true
 			hands.steer = 0.0
 			since_tack_request_s = 0.0
 			return
-		hands.steer = LearnedSkipper.steer_toward_twa(telemetry.twa_deg, tack, absf(wanted_twa_deg))
+		hands.steer = LearnedSkipper.steer_toward_twa(telemetry.twa_deg, tack, off_wind_deg)
 
 
 var brain: NeuralNet = null

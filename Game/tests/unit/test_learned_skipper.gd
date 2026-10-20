@@ -184,7 +184,7 @@ func test_a_wind_angle_on_the_other_tack_asks_for_one_tack_and_not_again_for_3_s
 	driver.steer(t, false, DT)
 	assert_true(hands.tack, "the other tack is asked for")
 	hands.tack = false  # the controller took it
-	for k: int in 60:  # a second later, the board still on starboard (the tack did not take)
+	for k: int in 60:  # a second later, the board still on starboard (the tack did not start)
 		driver.steer(t, false, DT)
 	assert_false(hands.tack, "not asked again within 3 s")
 	for k: int in 150:
@@ -194,6 +194,23 @@ func test_a_wind_angle_on_the_other_tack_asks_for_one_tack_and_not_again_for_3_s
 	for k: int in 200:
 		driver.steer(t, true, DT)
 	assert_false(hands.tack, "never while a manoeuvre is under way")
+	for k: int in 300:  # 5 s after the manoeuvre ended
+		driver.steer(t, false, DT)
+	assert_false(hands.tack, "nor in the first 6 s after one, while the board gets its speed back")
+	for k: int in 120:
+		driver.steer(t, false, DT)
+	assert_true(hands.tack, "and then it is asked for")
+	hands.tack = false
+	# A wish near head to wind, or dead downwind, on the other side is not clearly the other tack:
+	# it means as high (or as deep) as it goes on this one.
+	var later: LearnedSkipper.Driver = LearnedSkipper.Driver.new(hands, LearnedSkipper.ActionMode.TWA)
+	later.decide(PackedFloat32Array([-10.0 / 180.0, 0.0, 0.0]), false)
+	later.steer(t, false, DT)
+	assert_false(hands.tack, "10 degrees on port, from starboard: no tack")
+	assert_eq(hands.steer, 1.0, "but head up as far as it goes: right, on starboard")
+	later.decide(PackedFloat32Array([-0.95, 0.0, 0.0]), false)
+	later.steer(t, false, DT)
+	assert_false(hands.tack, "171 degrees on port, from starboard: no gybe")
 
 
 func test_a_brain_is_read_in_the_mode_it_was_trained_in() -> void:
