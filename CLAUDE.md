@@ -32,6 +32,7 @@ The team are not very experienced programmers and rely on AI for most of the cod
 | Contact sheets of the sailor figure, or the rig from eleven cameras | `tools/godot.sh --path Game --resolution 1280x720 --audio-driver Dummy res://dev/figure_view.tscn -- --wind=18 --times=8` and `tools/screenshot.sh res://dev/rig_view.tscn .screenshots/rig/view.png 600` (the options are in the two scripts' headers) |
 | Rebuild the board, sail, boom, mast and fin models after a size changed in `Game/config/` | `tools/blender.sh tools/blender/build_rig_models.py` (about 2 s; writes `Game/assets/models/*.glb`) |
 | Anything else with Godot | `tools/godot.sh <args>` |
+| The game as a release build (the engine without the editor: the AI boards' physics scales over threads there, the editor build collapses beyond four boards) | `tools/release.sh build`, then `tools/release.sh --race=t1_loop [--skippers=a,b,c] [--measure=12]`; needs the Windows export templates installed once (see the script's header) |
 
 Always go through these scripts instead of calling `godot` directly: the shell Claude Code uses is zsh without `~/.local/bin` on its PATH, and the scripts use the pinned Godot version. They exit non-zero on failure and keep logs in `.logs/`. `tools/screenshot.sh` opens a game window for a few seconds; that is expected.
 

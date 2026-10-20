@@ -485,6 +485,8 @@ func start_race(setup: RaceSetup) -> void:
 	_show_course()
 	start_playing()
 	_start_race_runner()
+	# The command-line options (--measure, --camera, ...) apply to the race, not to the menu's backdrop.
+	_apply_command_line_options()
 
 
 ## The race (RaceRunner), when one is asked for and its course is on the water.

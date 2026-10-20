@@ -62,6 +62,7 @@ func _ready() -> void:
 	_version.text = _version_text()
 	_show_main_page(_play_buttons()[GameSettings.values.last_play_option])
 	_apply_command_line_options()
+	_start_race_from_options()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -186,3 +187,33 @@ func _apply_command_line_options() -> void:
 				_open_page(_howto)
 			"quit":
 				_open_page(_quit_confirm)
+
+
+## --race=t1_loop|t2_slalom [--skippers=a,b,c] [--prestart=<s>]: the menu starts that race at once,
+## for measuring and screenshots, and for exported builds, which take no scene on the command line.
+func _start_race_from_options() -> void:
+	var course: String = _race_option("race")
+	if course.is_empty():
+		return
+	var who: PackedStringArray = RaceSetup.DEFAULT_SKIPPERS
+	if not _race_option("skippers").is_empty():
+		who = _race_option("skippers").split(",")
+	var prestart: float = RaceSetup.DEFAULT_PRESTART_S
+	if not _race_option("prestart").is_empty():
+		prestart = _race_option("prestart").to_float()
+	var setup: RaceSetup = RaceSetup.race(course, who, 1, prestart)
+	setup.threads = _race_option("threads") != "0"
+	if course == RaceCourses.T1_NAME:
+		set_process_unhandled_input(false)
+		_menu.queue_free()
+		_sailing.start_race(setup)
+	else:
+		RaceSetup.pending = setup
+		_open_map_scene(PlayOption.RACE_LAKE, SAIL_SILVAPLANA_SCENE, "Lake Silvaplana")
+
+
+static func _race_option(option: String) -> String:
+	for arg: String in OS.get_cmdline_user_args():
+		if arg.begins_with("--%s=" % option):
+			return arg.get_slice("=", 1)
+	return ""
