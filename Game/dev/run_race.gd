@@ -20,8 +20,10 @@ extends SceneTree
 ##   [--seed=0]            the skippers' random seed (board i gets seed + i): the same seed, the same race
 ##   [--finish_window=60]  the race ends this long after the first board finishes, seconds (the game's
 ##                         rule; tools/race_matrix.sh waits longer, so every board gets a time)
-##   [--laps=1] [--wind_kt=15] [--seconds=300: race time after the gun]
-##   [--prestart=10: the countdown, seconds] [--twa=50: the wind angle the autopilot holds]
+##   [--laps=1] [--wind_kt=15]
+##   [--seconds: the longest race time after the gun: 1200 with skippers, 300 with only autopilots]
+##   [--prestart: the countdown, seconds: 60 (the game's) with skippers, 10 with only autopilots]
+##   [--twa=50: the wind angle the autopilot holds]
 ##   [--out_dir=<folder>: a CSV per board: race time, x, z, heading, speed, its next step, and what
 ##                         its skipper is doing]
 ##
@@ -88,8 +90,11 @@ func _initialize() -> void:
 	var boards: int = maxi(options.get("boards", str(names.size())).to_int(), 1)
 	var laps: int = maxi(options.get("laps", "1").to_int(), 1)
 	var wind_kt: float = options.get("wind_kt", "15").to_float()
-	var seconds: float = options.get("seconds", "300").to_float()
-	var prestart_s: float = maxf(options.get("prestart", "10").to_float(), 0.0)
+	# The skippers sail the game's whole countdown and the whole race (it ends when everyone is in);
+	# the 9A autopilot only the last 10 s of the countdown, and it never finishes.
+	var all_autopilot: bool = Array(names).all(func(skipper_name: String) -> bool: return skipper_name == "autopilot")
+	var seconds: float = options.get("seconds", "300" if all_autopilot else "1200").to_float()
+	var prestart_s: float = maxf(options.get("prestart", "10" if all_autopilot else "60").to_float(), 0.0)
 	var twa_deg: float = options.get("twa", "50").to_float()
 	var random_seed: int = options.get("seed", "0").to_int()
 	var finish_window_s: float = options.get("finish_window", "60").to_float()

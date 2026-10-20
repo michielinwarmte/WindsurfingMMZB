@@ -63,7 +63,7 @@ const STEER_DEAD_BAND_DEG: float = 2.0
 const FULL_STICK_ERROR_DEG: float = 30.0
 ## Faster than this, it heads up with at most this much stick (a fifth of the full turn rate, some
 ## 6 degrees per second): see _steer_toward().
-const GENTLE_HEAD_UP_FROM_MS: float = 10.0
+const GENTLE_HEAD_UP_FROM_MS: float = 12.0
 const GENTLE_HEAD_UP_STICK: float = 0.2
 ## The steering noise wanders on about this time scale, seconds: a slow wobble, not a shake.
 const NOISE_TIME_S: float = 4.0
@@ -91,16 +91,27 @@ const WIND_MEMORY_S: float = 90.0
 ## a board on a close reach sails further along the line than toward it (1.4 m per metre at 50
 ## degrees and its leeway, 2.2 m at 60), and the line is only 60 m long.
 const START_RUN_IN_TWA_DEG: float = 50.0
-## It waits on the run-in line this far behind the start line, metres, before deciding what to do
-## with the time left; close enough to that point is within START_HOLD_REACHED_M. Nearer the line
-## than the two together, it runs in.
+## Its waiting point is on the run-in line this far behind the start line, metres; within
+## START_HOLD_REACHED_M of it, or nearer the line than it, the board runs in.
 const START_HOLD_BEHIND_M: float = 20.0
 const START_HOLD_REACHED_M: float = 15.0
 ## What a tack or gybe costs, seconds: the turn and getting going again (a tack stops the board).
+## The gybe back from the broad reach away from the line, at 10 m/s, costs START_GYBE_EXTRA_S
+## more: the board comes out of it at 1 to 2 m/s (T2 at 18 kt).
 const START_TURN_S: float = 6.5
+const START_GYBE_EXTRA_S: float = 6.0
 ## With more time than this to spare at the line it sails away and comes back (two gybes and the
 ## legs between them); with less it loses the time by crossing further along the line.
 const START_LOOP_SPARE_S: float = 2.0 * START_TURN_S + 6.0
+## With that much time it sails away at once if it is further behind the line than this, metres.
+const START_LOOP_FROM_M: float = 60.0
+## Using up time on the beat up to the line, it sails on past the layline at most until the reach
+## back to the waiting point is this wide, degrees.
+const START_OVERSTAND_TWA_DEG: float = 70.0
+## With more than START_OFF_SPARE_S to spare far from the line, it first bears away to this wind
+## angle (away from the line), and turns back once it has that little left (see _start_heading()).
+const START_OFF_TWA_DEG: float = 110.0
+const START_OFF_SPARE_S: float = 4.0
 ## It is on time when it has less than this to spare, seconds.
 const START_GO_SPARE_S: float = 1.0
 ## Near the line it looks at this many points of the line to choose where to cross.
@@ -164,8 +175,10 @@ var _gate_end: int = -1
 var _start_phase: StartPhase = StartPhase.TO_LINE
 ## The tack it runs in to the start line on, chosen at the first look (_start_run_in_tack()).
 var _run_in_tack: float = 0.0
-## True once it has reached its waiting point behind the start line (it runs in from there).
+## True once it has reached its waiting point behind the start line (it runs in from there), and
+## once it has turned back from sailing off the line.
 var _reached_hold: bool = false
+var _off_done: bool = false
 ## When it decided to turn back toward the line (the start's TURNING phase).
 var _turn_back_from_s: float = 0.0
 
@@ -195,8 +208,10 @@ var _last_position: Vector2 = Vector2.ZERO
 var _velocity: Vector2 = Vector2.ZERO
 ## The length of the last tick, seconds, for the other boards' velocities.
 var _tick_s: float = 1.0 / 60.0
-## The other boards' positions at the last tick, to see whether they are getting closer.
+## The other boards' positions at the last tick, to see whether they are getting closer; and
+## whether it is keeping clear of one this tick (for the note).
 var _others_last: PackedVector2Array = PackedVector2Array()
+var _keeping_clear: bool = false
 
 
 ## Puts the skipper on a board: its simulation (to see whether the sailor is up), its controller
@@ -237,7 +252,10 @@ func update(telemetry: Telemetry, dt: float) -> void:
 		_remember_others()
 		return
 	_new_step_check()
+	_keeping_clear = false
 	var decided_deg: float = _decide(telemetry)
+	if _keeping_clear:
+		note += ", keeping clear"
 	_last_wanted_deg = decided_deg
 	var wanted_deg: float = _after_reaction(decided_deg) + _wander(dt) + _gust_lean_deg()
 	_steer_toward(telemetry, wanted_deg)
@@ -502,7 +520,7 @@ func _keep_clear_deg(telemetry: Telemetry, tack: float) -> float:
 			continue
 		var other_velocity: Vector2 = (other - _others_last[j]) / maxf(_tick_s, 1e-6)
 		if apart.dot(other_velocity - _velocity) < 0.0:
-			note += ", keeping clear"
+			_keeping_clear = true
 			var room_deg: float = clampf(KEEP_CLEAR_DEEPEST_TWA_DEG - absf(telemetry.twa_deg), 0.0, KEEP_CLEAR_BEAR_AWAY_DEG)
 			# Bearing away on starboard tack turns the bow to the left (the heading decreases).
 			return -tack * room_deg
@@ -521,15 +539,22 @@ func _gust_lean_deg() -> float:
 
 ## Rule 5, the timed start. The spot on the line is approached along a run-in line (a close reach
 ## when the first leg is a beat, the first leg's own course on a reaching start), from a waiting
-## point on it just behind the start line. Beating up to that point with time to spare, it sails
-## on past the layline before its last tack, which uses the time at full speed. With plenty of time
-## to spare at the line it sails away on a broad reach and gybes back when the time left equals the
-## way back (the gybe, and the distance over the speed it expects) plus its timing error. Near the
-## line it crosses where it would arrive on time: of the points of the line it can reach on its
-## present tack, the first one it would not reach early; when it would be early everywhere, the
-## one it reaches last (further along the line, which is how a board that cannot stop loses time
-## without losing speed). On the course side before it has started (over early, OCS at the gun,
-## or past an end of the line) it goes back behind the line and starts again.
+## point on it just behind the start line. The time it has to spare (the time until it wants to
+## cross, the gun plus its timing error, less the time it expects to need) is used up away from
+## the line, where being early does no harm:
+##   - with plenty of it (a reaching start) it sails away on a broad reach and gybes back when the
+##     way back (the gybe, and the distance over the speed it expects) takes the time left;
+##   - with some of it far from the line (the beat up to T1's line in a strong wind) it first bears
+##     away off the line and comes back to the beat;
+##   - beating up to the waiting point, it sails on past the layline on its first tack and tacks
+##     when the way from there takes the time left.
+## Near the line it crosses where it would arrive on time: of the points of the line it can reach
+## on its present tack, the first one it would not reach early; when it would be early everywhere,
+## the one it reaches last (further along the line). On the course side before it has started
+## (over early, OCS at the gun, or past an end of the line) it goes back behind the line and starts
+## again. Two ways of waiting near the line were tried and dropped: easing the sheet stops the
+## board, which then rounds up and needs some 10 s to get going; heading back up after bearing
+## away takes 7 s or more at planing speed and loses most of the speed.
 func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 	var position: Vector2 = _position(telemetry)
 	var wind_deg: float = telemetry.wind_from_bearing_deg
@@ -568,12 +593,28 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 				return back_deg
 			_start_phase = StartPhase.RUN_IN
 		StartPhase.TO_LINE:
-			if spare_s > START_GO_SPARE_S and not _reached_hold:
+			# Far behind the line with plenty of time (a reaching start, whose boards wait on the run in
+			# itself), it sails away at once: near the line the gybe away would carry it over.
+			if spare_s > START_LOOP_SPARE_S + START_GO_SPARE_S and behind_m > START_LOOP_FROM_M:
+				_start_phase = StartPhase.AWAY
+			elif spare_s > START_GO_SPARE_S and not _reached_hold:
+				# Some time to spare far from the line (a beat up to it in a strong wind): first off the
+				# line on the same tack, then back up to the beat; the way out and back uses the time
+				# far from the line, where being early does no harm. Once it turns back, it keeps going.
+				var off_deg: float = wind_deg - _tack() * START_OFF_TWA_DEG
+				var leads_away: bool = Course.direction_of(off_deg).dot(forward) < 0.0
+				if spare_s <= START_OFF_SPARE_S or behind_m < START_LOOP_FROM_M or not leads_away:
+					_off_done = true
+				if not _off_done:
+					note = "start: off the line"
+					return off_deg
 				return _to_the_line_deg(telemetry, step, hold, spot, aim_s)
-			_start_phase = StartPhase.AWAY if spare_s > START_LOOP_SPARE_S else StartPhase.RUN_IN
+			else:
+				_start_phase = StartPhase.AWAY if spare_s > START_LOOP_SPARE_S else StartPhase.RUN_IN
 		StartPhase.AWAY:
-			# The time it needs counts the gybe back (the way back is a reach on the other tack).
-			if spare_s <= START_GO_SPARE_S:
+			# The time it needs counts a turn (the way back is a reach on the other tack); a gybe from
+			# the broad reach at speed costs START_GYBE_EXTRA_S more.
+			if spare_s <= START_GO_SPARE_S + START_GYBE_EXTRA_S:
 				_start_phase = StartPhase.TURNING
 				_turn_back_from_s = _time_s
 	if _start_phase == StartPhase.AWAY:
@@ -658,7 +699,10 @@ func _to_the_line_deg(telemetry: Telemetry, step: RaceStep, hold: Vector2, spot:
 		var run_in_deg: float = Course.bearing_deg(Vector2.ZERO, _run_in_direction(step, wind_deg))
 		var run_in_ms: float = maxf(_speed_ratio * _polar_speed_ms(wrapf(wind_deg - run_in_deg, -180.0, 180.0)), 1.0)
 		var after_s: float = START_TURN_S + position.distance_to(hold) / reach_ms + hold.distance_to(spot) / run_in_ms
-		if after_s >= aim_s - START_GO_SPARE_S:
+		# Not further than a reach of START_OVERSTAND_TWA_DEG back to the waiting point, though: from
+		# further down the line the board would come back along it rather than toward it, and could
+		# not turn in to cross before the end of the line.
+		if after_s >= aim_s - START_GO_SPARE_S or absf(needed_twa) >= START_OVERSTAND_TWA_DEG:
 			_ask_for_manoeuvre(true)
 		note = "start: to the line, timing the tack"
 		return wind_deg - tack * _upwind_twa_deg() + _keep_clear_deg(telemetry, tack)
@@ -780,6 +824,8 @@ func _time_to_s(telemetry: Telemetry, target: Vector2) -> float:
 		var turn_s: float = START_TURN_S if legs.x > LAID_WITHIN_M and legs.y > LAID_WITHIN_M else 0.0
 		if legs.x <= LAID_WITHIN_M and legs.y > LAID_WITHIN_M:
 			turn_s = START_TURN_S  # all of it on the other tack: a tack or gybe first
+		else:
+			turn_s += _turn_time_s(telemetry, sail_deg)  # onto the beat (or the run) on this tack first
 		return (legs.x + legs.y) / speed_ms + gaining_s + turn_s
 	var distance_m: float = position.distance_to(target)
 	if signf(needed_twa) != tack:

@@ -101,6 +101,11 @@ func before_all() -> void:
 		tasks.append(WorkerThreadPool.add_task(_runs[key].sail, true, key))
 	for task: int in tasks:
 		WorkerThreadPool.wait_for_task_completion(task)
+	# The results, for the log: what the tests below look at.
+	for key: String in _runs:
+		var run: Run = _runs[key]
+		for result: RaceResult in run.race.results():
+			print("%-18s %s  falls %d" % [key, result.to_line(), run.falls(result.index)])
 
 
 func _add(key: String, course: Course, who: PackedStringArray, wind_kt: float, random_seed: int = 0, stop_after_gun_s: float = INF) -> void:
