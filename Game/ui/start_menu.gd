@@ -62,6 +62,8 @@ func _ready() -> void:
 	_version.text = _version_text()
 	_show_main_page(_play_buttons()[GameSettings.values.last_play_option])
 	_apply_command_line_options()
+	if _run_bench_from_options():
+		return
 	_start_race_from_options()
 
 
@@ -210,6 +212,21 @@ func _start_race_from_options() -> void:
 	else:
 		RaceSetup.pending = setup
 		_open_map_scene(PlayOption.RACE_LAKE, SAIL_SILVAPLANA_SCENE, "Lake Silvaplana")
+
+
+## --bench=thread [--threads=1,4,8,16] [--iterations=<n>] [--only=a,b]: runs the thread bench
+## (Game/dev/thread_bench.gd) and quits; the way to run it on the release engine, which runs no
+## script of its own. Returns true when it ran.
+func _run_bench_from_options() -> bool:
+	if _race_option("bench") != "thread":
+		return false
+	var options: Dictionary[String, String] = {}
+	for name: String in ["threads", "iterations", "only"]:
+		if not _race_option(name).is_empty():
+			options[name] = _race_option(name)
+	ThreadBench.new().run(options)
+	get_tree().quit()
+	return true
 
 
 static func _race_option(option: String) -> String:
