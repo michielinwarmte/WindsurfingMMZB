@@ -8,11 +8,12 @@ extends Node
 ## the player does (RD1); nothing here touches the physics.
 
 const WINDSURFER_SCENE: String = "res://windsurfer/windsurfer.tscn"
-## How far back from the line a board waits per second of countdown (about what a board starting
-## from rest sails in that time), and the nearest it is put: the race tool's numbers
-## (dev/run_race.gd), so the game and the tool start the same way.
-const WAIT_M_PER_S: float = 2.5
+## How far back from the line the boards wait per second of countdown, and the nearest and the
+## farthest: 60 m for the menu's 60 s. (The race tool waits further back, 2.5 m per second, for
+## its fixed-angle pilot; a player wants the line in sight: Max, 20 October 2026.)
+const WAIT_M_PER_S: float = 1.0
 const NEAREST_M: float = 40.0
+const FARTHEST_M: float = 100.0
 const PLAYER_NAME: String = "You"
 
 var race: RaceSim = null
@@ -21,8 +22,16 @@ var setup: RaceSetup = null
 var player: WindsurferNode = null
 var opponents: Array[WindsurferNode] = []
 var hud: RaceHud = null
+var _hud_layer: Hud = null
 var _skippers: Array[RaceSkipper] = []
 var _running: bool = false
+## Every board, the player's first, for the tick.
+var _boards: Array[WindsurferNode] = []
+## What the runner's own tick costs (the physics of all boards, side by side or not, and the
+## race's checks), microseconds since the last cost_text().
+var _us_physics: int = 0
+var _us_race: int = 0
+var _ticks_counted: int = 0
 
 
 func _ready() -> void:
@@ -32,13 +41,18 @@ func _ready() -> void:
 
 ## Builds the race: one board per skipper beside the player's, the race HUD on the scene's HUD
 ## layer, and the first start.
-func setup_race(race_course: Course, player_node: WindsurferNode, race_setup: RaceSetup, hud_layer: Node) -> void:
+func setup_race(race_course: Course, player_node: WindsurferNode, race_setup: RaceSetup, hud_layer: Hud) -> void:
 	course = race_course
 	player = player_node
 	setup = race_setup
+	_hud_layer = hud_layer
 	hud = RaceHud.new()
 	hud.name = "RaceHud"
 	hud_layer.add_child(hud)
+	hud_layer.set_race_mode(true)
+	# The runner steps the player's board with the others (its own _physics_process steps nothing).
+	player.stepped_by_runner = true
+	_boards = [player]
 	var scene: PackedScene = load(WINDSURFER_SCENE)
 	for skipper_name: String in setup.skippers:
 		var skipper: RaceSkipper = Skippers.make(skipper_name)
@@ -54,6 +68,9 @@ func setup_race(race_course: Course, player_node: WindsurferNode, race_setup: Ra
 		node.start_heading_deg = player.start_heading_deg
 		node.process_mode = Node.PROCESS_MODE_PAUSABLE
 		node.wind_flag_wanted = false
+		node.effects_wanted = setup.opponent_effects
+		node.stepped_by_runner = true
+		node.own_config_copies = true
 		player.get_parent().add_child(node)
 		node.hands = AiHands.new()
 		node.controller.hands = node.hands
@@ -61,6 +78,7 @@ func setup_race(race_course: Course, player_node: WindsurferNode, race_setup: Ra
 		node.set_sail_colour(skipper.sail_colour())
 		node.set_name_label(skipper.skipper_name())
 		opponents.append(node)
+		_boards.append(node)
 		_skippers.append(skipper)
 	restart()
 
@@ -71,7 +89,7 @@ func restart() -> void:
 	race.add_board(PLAYER_NAME)
 	for skipper: RaceSkipper in _skippers:
 		race.add_board(skipper.skipper_name())
-	var behind_m: float = clampf(setup.prestart_s * WAIT_M_PER_S, NEAREST_M, RaceCourses.PRE_START_BEHIND_M)
+	var behind_m: float = clampf(setup.prestart_s * WAIT_M_PER_S, NEAREST_M, FARTHEST_M)
 	var spots: PackedVector2Array = pre_start_spots(course, race.steps()[0], opponents.size() + 1, behind_m)
 	var heading_deg: float = RaceCourses.pre_start_heading_deg(course)
 	_place(player, spots[0], heading_deg)
@@ -111,16 +129,58 @@ func _place(node: WindsurferNode, spot: Vector2, heading_deg: float) -> void:
 	node.reset()
 
 
+## One tick of the race: every board's sailor sets its controls (on this thread: the skippers read
+## the race), then every board's physics steps, side by side on worker threads when the setup says
+## so (each simulation touches only its own objects), then the visuals, then the race is told where
+## everyone is. A board that has run aground (the scene stops it) is not stepped.
 func _physics_process(delta: float) -> void:
 	if not _running:
 		return
+	var scene: SailingScene = get_parent() as SailingScene
+	var player_stopped: bool = scene != null and scene.is_aground()
+	for node: WindsurferNode in _boards:
+		if not (player_stopped and node == player):
+			node.sail(delta)
+	var t0: int = Time.get_ticks_usec()
+	if setup.threads:
+		var group: int = WorkerThreadPool.add_group_task(_step_board.bind(delta, player_stopped), _boards.size(), -1, true, "race physics")
+		WorkerThreadPool.wait_for_group_task_completion(group)
+	else:
+		for i: int in _boards.size():
+			_step_board(i, delta, player_stopped)
+	var t1: int = Time.get_ticks_usec()
+	for node: WindsurferNode in _boards:
+		if not (player_stopped and node == player):
+			node.after_step()
 	_tell_the_race()
 	race.step(delta)
+	_us_physics += t1 - t0
+	_us_race += Time.get_ticks_usec() - t1
+	_ticks_counted += 1
+
+
+## Board i's physics (a worker thread's task, or the loop's).
+func _step_board(i: int, delta: float, player_stopped: bool) -> void:
+	if player_stopped and i == 0:
+		return
+	_boards[i].step_physics(delta)
+
+
+## What a tick of the runner costs on average since the last call, milliseconds (--measure).
+func cost_text() -> String:
+	var ticks: float = maxf(float(_ticks_counted), 1.0)
+	var text: String = "all boards' physics %.2f ms (%s), the race's checks %.2f ms per tick" % [
+		_us_physics / ticks / 1000.0, "side by side" if setup.threads else "one after the other", _us_race / ticks / 1000.0]
+	_us_physics = 0
+	_us_race = 0
+	_ticks_counted = 0
+	return text
 
 
 func _process(_delta: float) -> void:
 	if _running:
-		hud.update_from(race, 0)
+		hud.update_from(race, 0, player.telemetry())
+		_hud_layer.set_next_mark_bearing(Course.bearing_deg(_where(player), race.next_target(0)))
 
 
 ## The race is told where every board is (the player first).

@@ -226,7 +226,8 @@ func _apply_start_settings() -> void:
 	var settings: SettingsValues = GameSettings.values
 	_apply_control_settings()
 	_camera_rig.set_mode(settings.start_camera)
-	_hud.set_detail_visible(settings.show_hud_panel)
+	# In a race the racing block takes the panel's place (F1 brings the panel back).
+	_hud.set_detail_visible(settings.show_hud_panel and _race_runner == null)
 	if _sun != null:
 		_sun.shadow_enabled = settings.shadow_quality > 0
 
@@ -340,6 +341,8 @@ func _apply_command_line_options() -> void:
 		_course_on_water.set_lines_visible(options.get("lines", "0") == "1")
 		if options.has("course_view"):
 			_look_at_the_course(options["course_view"])
+	if options.has("measure"):
+		_measure_frame_rate(options["measure"].to_float())
 
 
 # ---------------------------------------------------------------- the race course (RACING_PLAN.md, 9A)
@@ -356,6 +359,8 @@ func _course_from_options(usual_start: Vector2) -> Course:
 		var prestart: String = _user_option("prestart")
 		_race_setup = RaceSetup.race(course_name, _user_option("skippers").split(","), maxi(_user_option("laps").to_int(), 1),
 			prestart.to_float() if not prestart.is_empty() else RaceSetup.DEFAULT_PRESTART_S)
+		_race_setup.opponent_effects = _user_option("opponent_effects") == "1"
+		_race_setup.threads = _user_option("threads") != "0"
 	var found: Course = _course_named(course_name, usual_start)
 	if found == null:
 		push_warning("No course called \"%s\" in this scene. The open water has %s; Lake Silvaplana has %s and the courses saved in %s." % [
@@ -490,3 +495,41 @@ func _start_race_runner() -> void:
 	_race_runner.name = "RaceRunner"
 	add_child(_race_runner)
 	_race_runner.setup_race(_course, _windsurfer, _race_setup, _hud)
+
+
+## --measure=<seconds>: the frame rate without vsync, the frame on average and at worst, and how
+## much of a frame the physics and the rest take, over that many seconds after a warm-up; then
+## quits. For finding frame drops (a race with four boards, Session 51).
+func _measure_frame_rate(seconds: float) -> void:
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+	for i: int in 180:
+		await get_tree().process_frame
+	var frames: int = 0
+	var worst_ms: float = 0.0
+	var physics_ms: float = 0.0
+	var process_ms: float = 0.0
+	_windsurfer.cost_text()  # the warm-up's numbers are dropped
+	if _race_runner != null:
+		for node: WindsurferNode in _race_runner.opponents:
+			node.cost_text()
+	var start_us: int = Time.get_ticks_usec()
+	var last_us: int = start_us
+	while (Time.get_ticks_usec() - start_us) / 1e6 < seconds:
+		await get_tree().process_frame
+		var now_us: int = Time.get_ticks_usec()
+		worst_ms = maxf(worst_ms, (now_us - last_us) / 1000.0)
+		last_us = now_us
+		physics_ms += Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0
+		process_ms += Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0
+		frames += 1
+	var total_s: float = (Time.get_ticks_usec() - start_us) / 1e6
+	var boards: int = 1 + (_race_runner.opponents.size() if _race_runner != null else 0)
+	print("Measured %.0f s with %d boards: %.0f fps; a frame %.1f ms on average, %.1f ms at worst; physics %.1f ms and the rest %.1f ms of a frame" % [
+		total_s, boards, frames / total_s, 1000.0 * total_s / frames, worst_ms, physics_ms / frames, process_ms / frames])
+	print("  the player's board: %s" % _windsurfer.cost_text())
+	if _race_runner != null:
+		print("  the race runner: %s" % _race_runner.cost_text())
+	if _race_runner != null:
+		for node: WindsurferNode in _race_runner.opponents:
+			print("  %s: %s" % [node.name, node.cost_text()])
+	get_tree().quit()

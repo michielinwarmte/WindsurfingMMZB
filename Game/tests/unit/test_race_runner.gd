@@ -30,3 +30,17 @@ func test_a_pending_race_setup_is_taken_once() -> void:
 	assert_eq(taken.skippers.size(), 3, "three opponents by default")
 	assert_eq(taken.prestart_s, 60.0)
 	assert_null(RaceSetup.take(), "taken once")
+
+
+func test_the_race_hud_tells_the_gap_the_turn_and_the_wind() -> void:
+	assert_eq(RaceHud.gap_text(PackedFloat32Array([10.0, 100.0]), PackedFloat32Array([12.0])), "-2.0 s", "they crossed the start 2 s before you")
+	assert_eq(RaceHud.gap_text(PackedFloat32Array([15.0]), PackedFloat32Array([12.0, 90.0])), "+3.0 s", "you crossed 3 s before them")
+	assert_eq(RaceHud.gap_text(PackedFloat32Array(), PackedFloat32Array([12.0])), "", "nothing to compare yet")
+	# Heading north, a mark to the east is 90 degrees to starboard; to the west, 90 to port.
+	assert_almost_eq(RaceHud.relative_bearing_deg(Vector2.ZERO, Vector2(100.0, 0.0), 0.0), 90.0, 0.01)
+	assert_almost_eq(RaceHud.relative_bearing_deg(Vector2.ZERO, Vector2(-100.0, 0.0), 0.0), -90.0, 0.01)
+	assert_eq(RaceHud.turn_text(-12.4), "12 deg to port")
+	assert_eq(RaceHud.turn_text(1.0), "ahead")
+	assert_eq(RaceHud.compass_name(270.0), "W")
+	assert_eq(RaceHud.compass_name(222.0), "SW")
+	assert_eq(RaceHud.clock(65.2), "1:05.2")

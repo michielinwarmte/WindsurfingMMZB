@@ -22,6 +22,8 @@ var _message: Label
 var _course_line: Label = null
 ## On a map with its own day of wind: the time of day, at the start of the strip ("" = none).
 var clock_text: String = ""
+## A race is on: the strip is hidden and the help names the racing keys (set_race_mode).
+var _race_mode: bool = false
 
 
 func _ready() -> void:
@@ -128,7 +130,7 @@ func toggle_detail() -> void:
 func set_detail_visible(shown: bool) -> void:
 	detail_visible = shown
 	_panel.visible = shown
-	_help.visible = shown
+	_help.visible = shown or _race_mode
 
 
 func update_from(t: Telemetry, controller: PlayerController, camera_name: String, use_autopilot: bool) -> void:
@@ -185,6 +187,8 @@ class WindRose:
 	extends Control
 	var heading_deg: float = 0.0
 	var wind_from_deg: float = 270.0
+	## The bearing of a race's next mark; NAN for none.
+	var mark_bearing_deg: float = NAN
 
 	func _draw() -> void:
 		var centre: Vector2 = size * 0.5
@@ -204,9 +208,28 @@ class WindRose:
 		var dir: Vector2 = (head - tail).normalized()
 		var wing: Vector2 = Vector2(-dir.y, dir.x) * 6.0
 		draw_colored_polygon(PackedVector2Array([head, head - dir * 10.0 + wing, head - dir * 10.0 - wing]), Color(0.5, 0.85, 1.0))
+		# The next mark of a race: an orange dot on the rim at its bearing.
+		if not is_nan(mark_bearing_deg):
+			var to_mark: Vector2 = Vector2(sin(deg_to_rad(mark_bearing_deg)), -cos(deg_to_rad(mark_bearing_deg)))
+			draw_circle(centre + to_mark * radius * 0.88, 5.0, Color(1.0, 0.45, 0.1))
 
 
 ## The other boards of a race on the small map (RaceRunner).
 func set_other_boards(positions: PackedVector3Array) -> void:
 	if _mini_map != null:
 		_mini_map.other_boards = positions
+
+
+## A race (RaceRunner): the telemetry strip and the panel make way for the race's own block
+## (RaceHud); F1 still brings the panel back. The key help names the racing keys.
+func set_race_mode(on: bool) -> void:
+	_race_mode = on
+	_strip.visible = not on
+	if on:
+		set_detail_visible(false)
+		_help.text = "A/D turn   W/S sheet   Space tack/gybe   1-4 camera   R race again   Esc menu   F1 telemetry"
+
+
+## The bearing of a race's next mark, as a dot on the compass rose (NAN clears it).
+func set_next_mark_bearing(bearing_deg: float) -> void:
+	_rose.mark_bearing_deg = bearing_deg

@@ -190,18 +190,21 @@ static func create_default(with_waves: bool = false) -> WindsurferSim:
 ## Builds the simulation for a place (PHYSICS_REQUESTS_FROM_MAP.md, R1): its air, its water,
 ## its wind and its waves, and what it leaves empty from the open water's default files. With
 ## the map's wind on, the wind is the map's own (MapWindField, PHYSICS_SPEC.md 8.10). The board,
-## the sail, the fin and the sailor are the default ones everywhere.
-static func create_for(environment: EnvironmentConfig, with_waves: bool = false) -> WindsurferSim:
+## the sail, the fin and the sailor are the default ones everywhere. With own_copies the
+## simulation gets its own copies of every config resource (the same values): simulations
+## stepped side by side on threads must not share objects (a race's boards, RaceRunner).
+static func create_for(environment: EnvironmentConfig, with_waves: bool = false, own_copies: bool = false) -> WindsurferSim:
 	var wind_cfg: WindConfig = environment.wind_or_default()
+	var configs: Array[Resource] = [
+		load("res://config/board_default.tres"), load("res://config/sail_default.tres"),
+		load("res://config/fin_default.tres"), load("res://config/sailor_default.tres"),
+		environment.water_or_default(), wind_cfg, load("res://config/sim_default.tres"), environment.waves_or_default()]
+	if own_copies:
+		for i: int in configs.size():
+			configs[i] = configs[i].duplicate(true)
+		wind_cfg = configs[5]
 	var sim: WindsurferSim = WindsurferSim.new(
-		load("res://config/board_default.tres"),
-		load("res://config/sail_default.tres"),
-		load("res://config/fin_default.tres"),
-		load("res://config/sailor_default.tres"),
-		environment.water_or_default(),
-		wind_cfg,
-		load("res://config/sim_default.tres"),
-		environment.waves_or_default())
+		configs[0], configs[1], configs[2], configs[3], configs[4], configs[5], configs[6], configs[7])
 	sim.air_density_kg_m3 = environment.air_density_kg_m3
 	var map_wind: MapWind = environment.map_wind()
 	if map_wind != null:

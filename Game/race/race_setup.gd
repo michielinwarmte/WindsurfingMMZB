@@ -18,6 +18,10 @@ var course_name: String = ""
 var skippers: PackedStringArray = PackedStringArray()
 var laps: int = 1
 var prestart_s: float = DEFAULT_PRESTART_S
+## Whether the opponents' boards get spray, wake and splashes (off: they cost frame time).
+var opponent_effects: bool = false
+## Whether the boards' physics runs on worker threads, side by side (off: one after the other).
+var threads: bool = true
 
 
 ## A race on a course against these skippers.

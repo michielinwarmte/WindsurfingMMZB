@@ -36,7 +36,22 @@ var hands: AiHands = null
 ## Whether this board's effects put the wind-flag buoy near its start (the player's does; the
 ## opponents of a race would each add one, so theirs do not). Set before the node is added.
 var wind_flag_wanted: bool = true
+## Whether this board gets spray, wake, splashes and the rest of the effects (an opponent in a race
+## may do without them, for the frame time). Set before the node is added.
+var effects_wanted: bool = true
+## In a race the runner steps this board (RaceRunner, on a worker thread with the others): the
+## node's own _physics_process does nothing then. Set before the node is added.
+var stepped_by_runner: bool = false
+## Whether the simulation gets its own copies of the config resources (a board stepped on a
+## thread beside others must share nothing with them). Set before the node is added.
+var own_config_copies: bool = false
 var _name_label: Label3D = null
+## What a tick costs, microseconds summed since the last cost_text(): the skipper and the
+## controller, the physics step, and the visuals (for --measure, main.gd).
+var _us_sailor: int = 0
+var _us_sim: int = 0
+var _us_visuals: int = 0
+var _ticks_counted: int = 0
 
 ## The fall takes this long on screen (the physics has already let go).
 const FALL_DURATION_S: float = 0.9
@@ -49,10 +64,7 @@ var _effects: WindsurferEffects
 
 
 func _ready() -> void:
-	if environment != null:
-		sim = WindsurferSim.create_for(environment, true)
-	else:
-		sim = WindsurferSim.create_default(true)
+	sim = WindsurferSim.create_for(environment if environment != null else EnvironmentConfig.new(), true, own_config_copies)
 	if wind_config != null or wave_set_config != null:
 		set_sea(wind_config, wave_set_config)
 	controller.set_sail(sim.sail, sim.sailor_config, sim.air_density_kg_m3)
@@ -77,6 +89,9 @@ func reset() -> void:
 ## The waves are lined up with the new wind. Call reset() afterwards: the water changes
 ## under the board.
 func set_sea(wind: WindConfig, waves: WaveSetConfig) -> void:
+	if own_config_copies:
+		wind = wind.duplicate(true) if wind != null else null
+		waves = waves.duplicate(true) if waves != null else null
 	if wind != null:
 		wind_config = wind
 		sim.wind_config = wind
@@ -99,7 +114,17 @@ func is_fallen() -> bool:
 
 
 func _physics_process(delta: float) -> void:
-	# A skipper keeps watching from the water too (its clock runs, its hands come off).
+	if stepped_by_runner:
+		return
+	sail(delta)
+	step_physics(delta)
+	after_step()
+
+
+## The sailor's part of a tick: the skipper (who keeps watching from the water too: its clock
+## runs, its hands come off) and the controller or the autopilot set the controls.
+func sail(delta: float) -> void:
+	var t0: int = Time.get_ticks_usec()
 	if skipper != null:
 		skipper.update(sim.telemetry, delta)
 	if sim.sailor_state == WindsurferSim.SailorState.SAILING:
@@ -107,11 +132,26 @@ func _physics_process(delta: float) -> void:
 			autopilot.update(sim.telemetry, controls, delta)
 		else:
 			controller.update(sim.telemetry, controls, delta)
+	_us_sailor += Time.get_ticks_usec() - t0
+
+
+## The physics of a tick. It touches only this board's simulation, so a race may run several
+## boards' steps side by side on worker threads (with own_config_copies).
+func step_physics(delta: float) -> void:
+	var t1: int = Time.get_ticks_usec()
 	sim.step(delta, controls)
+	_us_sim += Time.get_ticks_usec() - t1
+
+
+## After the physics, on the main thread: the water start noticed, the visuals posed.
+func after_step() -> void:
 	if sim.sailor_state == WindsurferSim.SailorState.SAILING and _previous_state == WindsurferSim.SailorState.FALLEN:
 		_after_waterstart()
 	_previous_state = sim.sailor_state
+	var t3: int = Time.get_ticks_usec()
 	_copy_state_to_visuals()
+	_us_visuals += Time.get_ticks_usec() - t3
+	_ticks_counted += 1
 
 
 func _after_waterstart() -> void:
@@ -133,7 +173,8 @@ func interpolated_transform() -> Transform3D:
 func _copy_state_to_visuals() -> void:
 	var body: SimRigidBody = sim.body
 	global_transform = Transform3D(body.basis, body.origin_world())
-	_effects.update(sim)
+	if _effects != null:
+		_effects.update(sim)
 	if sim.sailor_state == WindsurferSim.SailorState.FALLEN:
 		# A fall picks up speed: the progress is squared.
 		var progress: float = clampf(sim.fallen_for_s / FALL_DURATION_S, 0.0, 1.0)
@@ -165,10 +206,11 @@ func _build_visuals() -> void:
 	add_child(_figure)
 	_figure.build(sim.sailor_config)
 	# Spray, wake, splashes, the streamer, the wind flag and the force view (F3).
-	_effects = WindsurferEffects.new()
-	add_child(_effects)
-	_effects.wind_flag_wanted = wind_flag_wanted
-	_effects.setup(sim)
+	if effects_wanted:
+		_effects = WindsurferEffects.new()
+		add_child(_effects)
+		_effects.wind_flag_wanted = wind_flag_wanted
+		_effects.setup(sim)
 
 
 ## The sail's colour, so the boards of a race tell apart (RaceRunner).
@@ -190,3 +232,15 @@ func set_name_label(text: String) -> void:
 		_name_label.visibility_range_end = 300.0
 		add_child(_name_label)
 	_name_label.text = text
+
+
+## What a tick of this board costs on average since the last call, milliseconds: the sailor (the
+## skipper and the controller), the physics and the visuals. For --measure (main.gd).
+func cost_text() -> String:
+	var ticks: float = maxf(float(_ticks_counted), 1.0)
+	var text: String = "sailor %.2f, physics %.2f, visuals %.2f ms per tick" % [_us_sailor / ticks / 1000.0, _us_sim / ticks / 1000.0, _us_visuals / ticks / 1000.0]
+	_us_sailor = 0
+	_us_sim = 0
+	_us_visuals = 0
+	_ticks_counted = 0
+	return text
