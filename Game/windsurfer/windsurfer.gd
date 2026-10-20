@@ -46,6 +46,8 @@ var stepped_by_runner: bool = false
 ## thread beside others must share nothing with them). Set before the node is added.
 var own_config_copies: bool = false
 var _name_label: Label3D = null
+## Far from the camera in a race (set_far_away).
+var _far_away: bool = false
 ## What a tick costs, microseconds summed since the last cost_text(): the skipper and the
 ## controller, the physics step, and the visuals (for --measure, main.gd).
 var _us_sailor: int = 0
@@ -143,15 +145,33 @@ func step_physics(delta: float) -> void:
 	_us_sim += Time.get_ticks_usec() - t1
 
 
-## After the physics, on the main thread: the water start noticed, the visuals posed.
-func after_step() -> void:
+## After the physics, on the main thread: the water start noticed, the visuals posed. With `pose`
+## false only the board's place on the water is set and the sailor, the rig and the sail keep
+## their pose of the last tick (a race's far opponents, posed on alternate ticks: RaceRunner).
+func after_step(pose: bool = true) -> void:
 	if sim.sailor_state == WindsurferSim.SailorState.SAILING and _previous_state == WindsurferSim.SailorState.FALLEN:
 		_after_waterstart()
 	_previous_state = sim.sailor_state
 	var t3: int = Time.get_ticks_usec()
-	_copy_state_to_visuals()
+	if pose:
+		_copy_state_to_visuals()
+	else:
+		_copy_place_to_visuals()
 	_us_visuals += Time.get_ticks_usec() - t3
 	_ticks_counted += 1
+
+
+## A race's opponent far from the camera (RaceRunner.FAR_DETAIL_M): its fin's bend is not
+## updated every frame (the fin is under water, and a few pixels long that far away).
+func set_far_away(far: bool) -> void:
+	if far == _far_away:
+		return
+	_far_away = far
+	_rig.set_process(not far)
+
+
+func is_far_away() -> bool:
+	return _far_away
 
 
 func _after_waterstart() -> void:
@@ -170,11 +190,17 @@ func interpolated_transform() -> Transform3D:
 	return get_global_transform_interpolated()
 
 
-func _copy_state_to_visuals() -> void:
+## The board's place and orientation on the water, and its effects (every tick).
+func _copy_place_to_visuals() -> void:
 	var body: SimRigidBody = sim.body
 	global_transform = Transform3D(body.basis, body.origin_world())
 	if _effects != null:
 		_effects.update(sim)
+
+
+func _copy_state_to_visuals() -> void:
+	_copy_place_to_visuals()
+	var body: SimRigidBody = sim.body
 	if sim.sailor_state == WindsurferSim.SailorState.FALLEN:
 		# A fall picks up speed: the progress is squared.
 		var progress: float = clampf(sim.fallen_for_s / FALL_DURATION_S, 0.0, 1.0)
@@ -237,10 +263,17 @@ func set_name_label(text: String) -> void:
 ## What a tick of this board costs on average since the last call, milliseconds: the sailor (the
 ## skipper and the controller), the physics and the visuals. For --measure (main.gd).
 func cost_text() -> String:
+	var cost: Vector3 = take_cost_ms()
+	return "sailor %.2f, physics %.2f, visuals %.2f ms per tick" % [cost.x, cost.y, cost.z]
+
+
+## The same as numbers, and the counting starts again: x the sailor, y the physics, z the
+## visuals, milliseconds per tick on average.
+func take_cost_ms() -> Vector3:
 	var ticks: float = maxf(float(_ticks_counted), 1.0)
-	var text: String = "sailor %.2f, physics %.2f, visuals %.2f ms per tick" % [_us_sailor / ticks / 1000.0, _us_sim / ticks / 1000.0, _us_visuals / ticks / 1000.0]
+	var cost: Vector3 = Vector3(_us_sailor, _us_sim, _us_visuals) / ticks / 1000.0
 	_us_sailor = 0
 	_us_sim = 0
 	_us_visuals = 0
 	_ticks_counted = 0
-	return text
+	return cost

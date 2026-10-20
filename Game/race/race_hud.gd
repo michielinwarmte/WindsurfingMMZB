@@ -11,7 +11,7 @@ extends Control
 
 const SPLIT_SHOWN_S: float = 4.0
 const GO_SHOWN_S: float = 2.0
-## The fleet's lines are worked out a few times a second, not every frame.
+## The fleet's lines and the results table are worked out a few times a second, not every frame.
 const FLEET_REFRESH_S: float = 0.25
 const COUNTDOWN_COLOR: Color = Color(1.0, 0.9, 0.5)
 const WARNING_COLOR: Color = Color(1.0, 0.35, 0.3)
@@ -30,7 +30,7 @@ var _results_text: Label
 ## How many splits have been shown, so a new one is noticed.
 var _splits_seen: int = 0
 var _split_until_s: float = -1.0
-var _fleet_refresh_at_s: float = -1.0
+var _fleet_refresh_at_s: float = -INF
 
 
 func _ready() -> void:
@@ -104,7 +104,7 @@ func _centre_label(font: Font, size: int, colour: Color, top: float, height: flo
 func reset() -> void:
 	_splits_seen = 0
 	_split_until_s = -1.0
-	_fleet_refresh_at_s = -1.0
+	_fleet_refresh_at_s = -INF  # the race clock reads negative in the countdown: the first frame refreshes
 	_countdown.hide()
 	_split.hide()
 	_warning.hide()
@@ -143,7 +143,8 @@ func update_from(race: RaceSim, index: int, t: Telemetry) -> void:
 			lines.append("next: %s   %d m %s" % [next_name, roundi(distance_m), turn])
 			lines.append("%s of %d   race %s" % [ordinal(race.place(index)), race.board_count(), clock(time_s)])
 	_info.text = "\n".join(lines)
-	if race.clock_s() >= _fleet_refresh_at_s:
+	var refresh: bool = race.clock_s() >= _fleet_refresh_at_s
+	if refresh:
 		_fleet.text = fleet_text(race, index)
 		_fleet_refresh_at_s = race.clock_s() + FLEET_REFRESH_S
 	_show_split(race, index)
@@ -156,7 +157,8 @@ func update_from(race: RaceSim, index: int, t: Telemetry) -> void:
 	else:
 		_warning.hide()
 	if race.phase() == RaceSim.Phase.FINISHED or race.is_finished(index):
-		_results_text.text = results_table(race)
+		if refresh or not _results.visible:
+			_results_text.text = results_table(race)
 		_results.show()
 	else:
 		_results.hide()
@@ -176,14 +178,11 @@ func _show_split(race: RaceSim, index: int) -> void:
 
 
 ## The fleet in race order: place, name, where it is going, and its gap to the player at the last
-## step both have completed (negative: it got there first).
+## step both have completed (negative: it got there first). The race works its order out once per
+## tick (RaceSim.race_order), so this costs a line per board, not a sort per line.
 static func fleet_text(race: RaceSim, player: int) -> String:
-	var order: Array[int] = []
-	for i: int in race.board_count():
-		order.append(i)
-	order.sort_custom(func(a: int, b: int) -> bool: return race.place(a) < race.place(b))
 	var lines: PackedStringArray = PackedStringArray()
-	for i: int in order:
+	for i: int in race.race_order():
 		var going: String = "finished" if race.is_finished(i) else "to " + race.next_step_name(i)
 		var gap: String = "you" if i == player else gap_text(race.splits_s(i), race.splits_s(player))
 		lines.append("%d. %-12s %-16s %s" % [race.place(i), race.board_name(i).left(12), going, gap])

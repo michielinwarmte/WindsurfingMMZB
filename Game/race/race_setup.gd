@@ -20,8 +20,14 @@ var laps: int = 1
 var prestart_s: float = DEFAULT_PRESTART_S
 ## Whether the opponents' boards get spray, wake and splashes (off: they cost frame time).
 var opponent_effects: bool = false
-## Whether the boards' physics runs on worker threads, side by side (off: one after the other).
-var threads: bool = true
+## How many worker-thread tasks step the boards' physics side by side, each a batch of boards
+## (eight by default, RaceRunner.MAX_THREADS); 0: one after the other on the main thread.
+var threads: int = RaceRunner.MAX_THREADS
+
+
+## The thread count from a --threads=<n> option: empty keeps the usual eight, 0 one after the other.
+static func threads_from_option(text: String) -> int:
+	return RaceRunner.MAX_THREADS if text.is_empty() else maxi(text.to_int(), 0)
 
 
 ## A race on a course against these skippers.

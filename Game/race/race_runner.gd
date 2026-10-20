@@ -15,6 +15,17 @@ const WAIT_M_PER_S: float = 1.0
 const NEAREST_M: float = 40.0
 const FARTHEST_M: float = 100.0
 const PLAYER_NAME: String = "You"
+## At most this many worker-thread tasks step the boards' physics side by side, each a batch of
+## boards one after the other (32 AI boards and the player: five or four per task). GDScript
+## threads wait on a global engine lock, so more than about eight threads make a fleet slower,
+## not faster (Session 51: 14 threads ran 3 times slower than 1). --threads=<n> sets another
+## number, --threads=0 steps the boards one after the other on this thread.
+const MAX_THREADS: int = 8
+## An opponent farther than this from the camera is drawn with less care (its name label is
+## hidden at the same distance, WindsurferNode.set_name_label): its sailor, rig and sail are posed
+## every other tick, and its fin's bend is not updated. At 300 m a sailor is a few pixels tall.
+## The physics and the skipper are never leveled: only what is drawn.
+const FAR_DETAIL_M: float = 300.0
 
 var race: RaceSim = null
 var course: Course = null
@@ -32,6 +43,12 @@ var _boards: Array[WindsurferNode] = []
 var _us_physics: int = 0
 var _us_race: int = 0
 var _ticks_counted: int = 0
+## The boards' numbers (into _boards) shared over the worker-thread tasks: one batch per task, the
+## player's board in the first. Worked out again when the fleet's size changes.
+var _batches: Array[PackedInt32Array] = []
+var _batched_boards: int = -1
+## The ticks since the race was built, for posing the far boards on alternate ticks.
+var _tick: int = 0
 
 
 func _ready() -> void:
@@ -131,7 +148,8 @@ func _place(node: WindsurferNode, spot: Vector2, heading_deg: float) -> void:
 
 ## One tick of the race: every board's sailor sets its controls (on this thread: the skippers read
 ## the race), then every board's physics steps, side by side on worker threads when the setup says
-## so (each simulation touches only its own objects), then the visuals, then the race is told where
+## so (each simulation touches only its own objects; at most MAX_THREADS tasks, each a batch of
+## boards), then the visuals (the far opponents' on alternate ticks), then the race is told where
 ## everyone is. A board that has run aground (the scene stops it) is not stepped.
 func _physics_process(delta: float) -> void:
 	if not _running:
@@ -142,39 +160,118 @@ func _physics_process(delta: float) -> void:
 		if not (player_stopped and node == player):
 			node.sail(delta)
 	var t0: int = Time.get_ticks_usec()
-	if setup.threads:
-		var group: int = WorkerThreadPool.add_group_task(_step_board.bind(delta, player_stopped), _boards.size(), -1, true, "race physics")
+	if setup.threads > 0:
+		if _batched_boards != _boards.size():
+			_batches = batches(_boards.size(), setup.threads)
+			_batched_boards = _boards.size()
+		var group: int = WorkerThreadPool.add_group_task(_step_batch.bind(delta, player_stopped), _batches.size(), -1, true, "race physics")
 		WorkerThreadPool.wait_for_group_task_completion(group)
 	else:
 		for i: int in _boards.size():
 			_step_board(i, delta, player_stopped)
 	var t1: int = Time.get_ticks_usec()
-	for node: WindsurferNode in _boards:
-		if not (player_stopped and node == player):
-			node.after_step()
+	_pose_boards(player_stopped)
 	_tell_the_race()
 	race.step(delta)
 	_us_physics += t1 - t0
 	_us_race += Time.get_ticks_usec() - t1
 	_ticks_counted += 1
+	_tick += 1
 
 
-## Board i's physics (a worker thread's task, or the loop's).
+## Task `task`'s batch of boards, one after the other (a worker thread's task).
+func _step_batch(task: int, delta: float, player_stopped: bool) -> void:
+	for i: int in _batches[task]:
+		_step_board(i, delta, player_stopped)
+
+
+## Board i's physics (a batch's, or the loop's).
 func _step_board(i: int, delta: float, player_stopped: bool) -> void:
 	if player_stopped and i == 0:
 		return
 	_boards[i].step_physics(delta)
 
 
+## `count` boards' numbers shared over at most `max_batches` batches as evenly as can be, in order
+## (board 0, the player's, in the first; the first batches take one more when it does not share
+## out evenly): 33 boards over 8 are 5, 4, 4, 4, 4, 4, 4, 4. Fewer boards than batches: one each.
+static func batches(count: int, max_batches: int) -> Array[PackedInt32Array]:
+	var shared: Array[PackedInt32Array] = []
+	var batch_count: int = mini(count, maxi(max_batches, 1))
+	var next: int = 0
+	for b: int in batch_count:
+		var size: int = count / batch_count + (1 if b < count % batch_count else 0)
+		var batch: PackedInt32Array = PackedInt32Array()
+		for k: int in size:
+			batch.append(next)
+			next += 1
+		shared.append(batch)
+	return shared
+
+
+## After the physics, on this thread: every board's visuals. An opponent farther than
+## FAR_DETAIL_M from the camera is posed on alternate ticks (half of them on the even ticks, half
+## on the odd, so the cost is even); its place on the water is set every tick.
+func _pose_boards(player_stopped: bool) -> void:
+	if not player_stopped:
+		player.after_step()
+	var camera: Camera3D = get_viewport().get_camera_3d()
+	var eye: Vector3 = camera.global_position if camera != null else player.global_position
+	for i: int in opponents.size():
+		var node: WindsurferNode = opponents[i]
+		var far: bool = node.global_position.distance_to(eye) > FAR_DETAIL_M
+		node.set_far_away(far)
+		node.after_step(not far or (_tick + i) % 2 == 0)
+
+
 ## What a tick of the runner costs on average since the last call, milliseconds (--measure).
 func cost_text() -> String:
 	var ticks: float = maxf(float(_ticks_counted), 1.0)
-	var text: String = "all boards' physics %.2f ms (%s), the race's checks %.2f ms per tick" % [
-		_us_physics / ticks / 1000.0, "side by side" if setup.threads else "one after the other", _us_race / ticks / 1000.0]
+	var how: String = "side by side, %d tasks" % _batches.size() if setup.threads > 0 else "one after the other"
+	var text: String = "all boards' physics %.2f ms (%s), the race's checks and the visuals %.2f ms per tick" % [
+		_us_physics / ticks / 1000.0, how, _us_race / ticks / 1000.0]
 	_us_physics = 0
 	_us_race = 0
 	_ticks_counted = 0
 	return text
+
+
+## The AI boards' costs since the last call, in one line (--measure): their number, and the median
+## and the worst of their own sailor, physics and visuals per tick (milliseconds; each board's
+## average over the ticks). How many are far from the camera now, too.
+func opponents_cost_text() -> String:
+	var sailor: PackedFloat64Array = PackedFloat64Array()
+	var physics: PackedFloat64Array = PackedFloat64Array()
+	var visuals: PackedFloat64Array = PackedFloat64Array()
+	var far: int = 0
+	for node: WindsurferNode in opponents:
+		var cost: Vector3 = node.take_cost_ms()
+		sailor.append(cost.x)
+		physics.append(cost.y)
+		visuals.append(cost.z)
+		if node.is_far_away():
+			far += 1
+	return "%d, %d of them beyond %d m: physics median %.2f, worst %.2f; sailor median %.2f, worst %.2f; visuals median %.2f, worst %.2f ms per tick" % [
+		opponents.size(), far, roundi(FAR_DETAIL_M), median(physics), worst(physics), median(sailor), worst(sailor), median(visuals), worst(visuals)]
+
+
+## The middle value (the mean of the two middle ones for an even count); 0 for none.
+static func median(values: PackedFloat64Array) -> float:
+	if values.is_empty():
+		return 0.0
+	var sorted: PackedFloat64Array = values.duplicate()
+	sorted.sort()
+	var middle: int = sorted.size() / 2
+	if sorted.size() % 2 == 1:
+		return sorted[middle]
+	return (sorted[middle - 1] + sorted[middle]) * 0.5
+
+
+static func worst(values: PackedFloat64Array) -> float:
+	var largest: float = 0.0
+	for value: float in values:
+		largest = maxf(largest, value)
+	return largest
 
 
 func _process(_delta: float) -> void:
