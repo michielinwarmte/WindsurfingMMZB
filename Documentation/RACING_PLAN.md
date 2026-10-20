@@ -15,9 +15,9 @@ Max asked for three things on 19 October 2026: races with AI opponents; opponent
 
 | Part | What | Status |
 |---|---|---|
-| 9A | A race you can sail alone: the course on the water, the start, the rounding, the clock, the results | 🔶 Started (Session 50): agents `race_core`, `course_on_water`, `fit_to_water` launched, up to the two training courses (Max's instruction); state in [P9_PROGRESS.md](P9_PROGRESS.md) |
-| 9B | Scripted skippers: three opponents with their own characters, built on the Phase 4 autopilot | ⬜ |
-| 9C | The learning harness: the race as a training environment, the bridge to Python, the first learned skipper on course T1 | ⬜ |
+| 9A | A race you can sail alone: the course on the water, the start, the rounding, the clock, the results | 🔶 Built up to the two courses (Sessions 50 and 51): the race core and the rounding geometry, the buoys and boats on the water, T1 and T2 (fitted to the lake), the headless race tool; the race mode in the scenes, the Race page, the HUD's race items and the results page are still to build; state in [P9_PROGRESS.md](P9_PROGRESS.md) |
+| 9B | Scripted skippers: three opponents with their own characters, built on the Phase 4 autopilot | 🔶 The skipper and its four characters built (Session 51): all finish T1 and T2 at 12, 18 and 24 kt headless; the fleet in the scene, collisions and the frame time are still to build |
+| 9C | The learning harness: the race as a training environment, the bridge to Python, the first learned skipper on course T1 | 🔶 The harness built with an in-Godot evolution trainer first (Session 51, the night run): a brain learnt to start and beat to mark 1 on T1, not yet to round it; the Python bridge and PPO are still to build |
 | 9D | Learned skippers in the game: the curriculum T1 to T2, personalities, evaluation | ⬜ |
 | 9E | Later: racing rules and penalties, replays, a leaderboard | ⬜ |
 
@@ -66,7 +66,7 @@ A weaker skipper has worse numbers in its character sheet (a longer reaction tim
 ### T1: the training loop on open water
 
 - The shape of the windward-leeward course with a gate (template LG2), set to the scene's wind, at 30 % of the class's size: the beat about 550 m, the leeward gate 150 m above the start line, the gate 75 m wide, the start line 60 m (the class rule gives less for four boards; the skippers need room).
-- Order: start, mark 1 to port, the gate (either mark), mark 1 again, the gate again, finish. In the game a race is two laps; for training one lap (about three minutes at 15 kt).
+- Order: start, mark 1 to port, the gate (either mark), mark 1 again, the gate again, finish. In the game a race is one lap of this sequence (two beats and two runs); it takes the scripted all-rounder 8 minutes at 15 kt and 7 at 18 kt (Session 51 corrected the plan's 3 minutes, which forgot the second beat and overrated the board's speed to windward: 2.9 to 4.1 m/s). Training episodes are shorter: the start and the first beat to mark 1 take about 200 s.
 - Wind 15 kt with the default gusts and shifts (`wind_default.tres`), the default gentle sea; also run at 12 and 24 kt. Flat water is a training option.
 - Why this course: it has everything a windsurfer race asks for except gybing round slalom marks: the start, a beat with tacks and laylines, a rounding, a run with gybes, a gate choice, a finish. It is short, so a training episode is cheap.
 
@@ -173,6 +173,8 @@ The weights of these are the personality knobs (below). The sum of the progress 
 **Watching it learn** is the fun part, so it is built in: the trainer saves a checkpoint every half-million decisions and a CSV of the reward and the finish rate per round; `tools/race_plot.sh` draws the curve; `tools/play.sh race --brain=<checkpoint>` lets Max watch any checkpoint sail; and a "brains race" mode puts four checkpoints of different ages on one start line.
 
 ### If PPO disappoints
+
+> Session 51: this fallback was built and run first, in the night of 19 to 20 October 2026, because nothing could be installed on Max's PC at night. Two lessons for the PPO track: GDScript threads slow each other down in Godot 4.7.2 (the trainer runs one Godot process per core instead), and the network does better choosing the true wind angle to hold (the controller's heading hold does the rest) than twitching the stick ten times a second. Both carry over to the bridge.
 
 Stop rule 3 (below) fires when stage 1 shows no learning after about two million decisions with two reward settings tried. Then the fallback is neuroevolution inside Godot: 64 copies of the network with random weights sail T1 at once in one headless process (they are independent `RefCounted` objects, so `WorkerThreadPool` can step them in parallel), the best 8 are kept and copied with small random changes, and this repeats for a few hundred generations. It is slower to learn but has no bridge, no Python, and almost no settings, and it gives a population of different skippers for free. The environment, the observation, the reward and the brain file are the same, so nothing from 9C is wasted.
 
