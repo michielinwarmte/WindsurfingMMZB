@@ -60,6 +60,8 @@ const KEEP_CLEAR_DEEPEST_TWA_DEG: float = 145.0
 ## it the stick moves in proportion to the error, fully at FULL_STICK_ERROR_DEG (30 degrees of
 ## error asks for the controller's full turn rate, 30 degrees per second).
 const STEER_DEAD_BAND_DEG: float = 2.0
+## Faster than GENTLE_HEAD_UP_FROM_MS the dead band is this wide.
+const STEER_DEAD_BAND_FAST_DEG: float = 4.0
 const FULL_STICK_ERROR_DEG: float = 30.0
 ## Faster than this, it heads up with at most this much stick (a fifth of the full turn rate, some
 ## 6 degrees per second): see _steer_toward().
@@ -110,7 +112,7 @@ const START_LOOP_FROM_M: float = 60.0
 const START_OVERSTAND_TWA_DEG: float = 70.0
 ## With more than START_OFF_SPARE_S to spare far from the line, it first bears away to this wind
 ## angle (away from the line), and turns back once it has that little left (see _start_heading()).
-const START_OFF_TWA_DEG: float = 110.0
+const START_OFF_TWA_DEG: float = 100.0
 const START_OFF_SPARE_S: float = 4.0
 ## It is on time when it has less than this to spare, seconds.
 const START_GO_SPARE_S: float = 1.0
@@ -179,6 +181,8 @@ var _run_in_tack: float = 0.0
 ## once it has turned back from sailing off the line.
 var _reached_hold: bool = false
 var _off_done: bool = false
+## Whether the point of the line it chose near the line can be reached on its present tack.
+var _crossing_on_this_tack: bool = true
 ## When it decided to turn back toward the line (the start's TURNING phase).
 var _turn_back_from_s: float = 0.0
 
@@ -212,6 +216,10 @@ var _tick_s: float = 1.0 / 60.0
 ## whether it is keeping clear of one this tick (for the note).
 var _others_last: PackedVector2Array = PackedVector2Array()
 var _keeping_clear: bool = false
+## Its own copies of the polar's tables (see _polar_speed_ms()).
+var _polar_winds: PackedFloat32Array = POLAR_WINDS_KT.duplicate()
+var _polar_twa: PackedFloat32Array = POLAR_TWA_DEG.duplicate()
+var _polar_speeds: PackedFloat32Array = POLAR_SPEED_MS.duplicate()
 
 
 ## Puts the skipper on a board: its simulation (to see whether the sailor is up), its controller
@@ -645,19 +653,26 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 		return _away_heading(telemetry, step)
 	var go_deg: float = _course_to(telemetry, _through(position, cross_at))
 	note = "start: run in" if before_gun and spare_s > START_GO_SPARE_S else "start: go"
+	if not _crossing_on_this_tack:
+		# No point of the line can be reached on this tack: near the line, sailing on to the
+		# layline would take it past the end of the line. It tacks (or gybes) now.
+		_ask_for_manoeuvre(true)
+		note += ", the line is on the other tack"
 	return go_deg
 
 
 ## The point of the start line it makes for near the line, aiming to cross at aim_s from now: of
 ## the points it can reach on a reach on its present tack (no tack, no beat), the one it would reach
 ## soonest without being early; when it would be early at every one of them, the one it reaches
-## last; with none on this tack, the nearest point of the line.
+## last; with none on this tack, the nearest point of the line (on the other tack, or a beat).
 func _choose_crossing(telemetry: Telemetry, step: RaceStep, aim_s: float) -> Vector2:
 	var position: Vector2 = _position(telemetry)
 	var wind_deg: float = telemetry.wind_from_bearing_deg
 	var tack: float = _tack()
 	var up_track_deg: float = _pointing_twa_deg() + _leeway_deg
 	var inset: float = _line_inset(step)
+	_crossing_on_this_tack = true
+	var on_other_tack: bool = false
 	var on_time: Vector2 = Vector2.INF
 	var on_time_s: float = INF
 	var latest: Vector2 = Vector2.INF
@@ -665,7 +680,10 @@ func _choose_crossing(telemetry: Telemetry, step: RaceStep, aim_s: float) -> Vec
 	for i: int in START_CROSSING_SAMPLES:
 		var point: Vector2 = step.points[1].lerp(step.points[0], lerpf(inset, 1.0 - inset, float(i) / (START_CROSSING_SAMPLES - 1)))
 		var needed_twa: float = wrapf(wind_deg - Course.bearing_deg(position, point), -180.0, 180.0)
-		if signf(needed_twa) != tack or absf(needed_twa) < up_track_deg:
+		if absf(needed_twa) < up_track_deg:
+			continue  # a beat: neither tack reaches it straight
+		if signf(needed_twa) != tack:
+			on_other_tack = true
 			continue
 		var need_s: float = _time_to_s(telemetry, point)
 		if need_s >= aim_s and need_s < on_time_s:
@@ -678,6 +696,9 @@ func _choose_crossing(telemetry: Telemetry, step: RaceStep, aim_s: float) -> Vec
 		return on_time
 	if latest_s > -INF:
 		return latest
+	# None on this tack. If the other tack reaches the line, the line needs the other tack (said by
+	# _crossing_on_this_tack); if neither does, it is a beat, sailed as any beat is.
+	_crossing_on_this_tack = not on_other_tack
 	return _nearest_on_line(step, position)
 
 
@@ -845,7 +866,11 @@ func _turn_time_s(telemetry: Telemetry, to_twa_deg: float) -> float:
 	var rate_dps: float = _controller.turn_rate_dps
 	if turn_deg < 0.0:
 		rate_dps = clampf(_controller.head_up_rate_budget_dps_ms / maxf(telemetry.speed_ms, 0.1), _controller.head_up_rate_min_dps, _controller.turn_rate_dps)
-	return 0.5 * absf(turn_deg) / rate_dps
+		if telemetry.speed_ms > GENTLE_HEAD_UP_FROM_MS:
+			rate_dps = minf(rate_dps, GENTLE_HEAD_UP_STICK * _controller.turn_rate_dps)
+	# A big turn (coming back from off the line, say) loses most of its time.
+	var lost: float = 0.5 if absf(turn_deg) < 30.0 else 0.8
+	return lost * absf(turn_deg) / rate_dps
 
 
 ## A way split into two legs along two directions (one metre long each): the lengths (along a,
@@ -861,32 +886,29 @@ static func _split_along(way: Vector2, a: Vector2, b: Vector2) -> Vector2:
 
 ## The polar's speed at a wind angle (degrees, either tack) in the wind the board sails in now, m/s:
 ## between the table's angles and between its winds (below 12 kt the 12 kt row, above 24 kt the
-## 24 kt row).
+## 24 kt row). It reads its own copies of the tables (_polar_winds and the others), not the
+## constants every skipper shares: skippers sailed side by side on threads slowed each other down
+## reading shared data.
 func _polar_speed_ms(twa_deg: float) -> float:
-	return polar_speed_ms(twa_deg, _sim.telemetry.tws_10m_kt)
-
-
-## The polar's speed at a wind angle (degrees, either tack) and a wind (kt), m/s.
-static func polar_speed_ms(twa_deg: float, wind_kt: float) -> float:
-	var winds: int = POLAR_WINDS_KT.size()
-	var kt: float = clampf(wind_kt, POLAR_WINDS_KT[0], POLAR_WINDS_KT[winds - 1])
+	var winds: int = _polar_winds.size()
+	var kt: float = clampf(_sim.telemetry.tws_10m_kt, _polar_winds[0], _polar_winds[winds - 1])
 	var row: int = 0
-	while row < winds - 2 and kt > POLAR_WINDS_KT[row + 1]:
+	while row < winds - 2 and kt > _polar_winds[row + 1]:
 		row += 1
-	var share: float = (kt - POLAR_WINDS_KT[row]) / (POLAR_WINDS_KT[row + 1] - POLAR_WINDS_KT[row])
+	var share: float = (kt - _polar_winds[row]) / (_polar_winds[row + 1] - _polar_winds[row])
 	return lerpf(_polar_row_speed_ms(row, twa_deg), _polar_row_speed_ms(row + 1, twa_deg), share)
 
 
 ## The speed at a wind angle in one wind's row of the polar, m/s, between the table's angles.
-static func _polar_row_speed_ms(row: int, twa_deg: float) -> float:
-	var angles: int = POLAR_TWA_DEG.size()
+func _polar_row_speed_ms(row: int, twa_deg: float) -> float:
+	var angles: int = _polar_twa.size()
 	var base: int = row * angles
-	var angle: float = clampf(absf(twa_deg), POLAR_TWA_DEG[0], POLAR_TWA_DEG[angles - 1])
+	var angle: float = clampf(absf(twa_deg), _polar_twa[0], _polar_twa[angles - 1])
 	for i: int in range(1, angles):
-		if angle <= POLAR_TWA_DEG[i]:
-			var share: float = (angle - POLAR_TWA_DEG[i - 1]) / (POLAR_TWA_DEG[i] - POLAR_TWA_DEG[i - 1])
-			return lerpf(POLAR_SPEED_MS[base + i - 1], POLAR_SPEED_MS[base + i], share)
-	return POLAR_SPEED_MS[base + angles - 1]
+		if angle <= _polar_twa[i]:
+			var share: float = (angle - _polar_twa[i - 1]) / (_polar_twa[i] - _polar_twa[i - 1])
+			return lerpf(_polar_speeds[base + i - 1], _polar_speeds[base + i], share)
+	return _polar_speeds[base + angles - 1]
 
 
 # ---------------------------------------------------------------- the hands
@@ -925,7 +947,10 @@ func _steer_toward(telemetry: Telemetry, wanted_deg: float) -> void:
 		_settling = false
 	# Positive turns right (the heading increases).
 	var error_deg: float = wrapf(wanted_deg - telemetry.heading_deg, -180.0, 180.0)
-	if absf(error_deg) < STEER_DEAD_BAND_DEG:
+	# At speed the helm is held still for small errors and the controller's own heading hold does
+	# the steadying (busy corrections at 14 m/s in 24 kt went with catapults on broad reaches).
+	var dead_band_deg: float = STEER_DEAD_BAND_FAST_DEG if telemetry.speed_ms > GENTLE_HEAD_UP_FROM_MS else STEER_DEAD_BAND_DEG
+	if absf(error_deg) < dead_band_deg:
 		return
 	var stick_limit: float = 1.0
 	# Heading up turns right on starboard tack and left on port tack. At speed a sailor heads up

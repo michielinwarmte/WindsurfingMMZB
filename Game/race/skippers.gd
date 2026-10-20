@@ -19,7 +19,9 @@ static func make(skipper_name: String) -> Skipper:
 		push_error("No skipper called '%s' (the characters are: %s)." % [skipper_name, ", ".join(names())])
 		return null
 	var skipper: Skipper = Skipper.new()
-	skipper.config = config
+	# A copy of its own: skippers sailed side by side on threads would otherwise all read the one
+	# loaded resource, which slows each of them down.
+	skipper.config = config.duplicate()
 	return skipper
 
 
