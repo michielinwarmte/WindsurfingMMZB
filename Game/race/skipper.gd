@@ -102,38 +102,51 @@ const FOOT_MAX_DEG: float = 10.0
 ## Its memory of the mean wind direction, for the wind shifts, seconds.
 const WIND_MEMORY_S: float = 90.0
 ## The start (rule 5). The run in to the spot on the line is a close reach at this wind angle when
-## the first leg is a beat, or the first leg's own course. Not wider: on a line square to the wind
-## a board on a close reach sails further along the line than toward it (1.4 m per metre at 50
-## degrees and its leeway, 2.2 m at 60), and the line is only 60 m long.
-const START_RUN_IN_TWA_DEG: float = 50.0
-## Its waiting point is on the run-in line this far behind the start line, metres; within
-## START_HOLD_REACHED_M of it, or nearer the line than it, the board runs in.
+## the first leg is a beat, or the first leg's own course. On a line square to the wind a board on
+## a close reach sails further along the line than toward it (2.2 m per metre at 60 degrees and its
+## leeway), and the line is only 60 m long; but closer to the wind a board getting going from a
+## hold (slow, so slipping sideways and pointing low) could not lay its spot (at 50 degrees from 20
+## m behind the line it ran along the line past its end).
+const START_RUN_IN_TWA_DEG: float = 60.0
+## Its waiting point is at least this far behind the start line, metres; within
+## START_HOLD_REACHED_M of the way in from it to its spot, the board sails in.
 const START_HOLD_BEHIND_M: float = 20.0
 const START_HOLD_REACHED_M: float = 15.0
+## A board holding back slows by about this much a second (m/s2): easing the sheet does not stop it
+## at once (from 10.5 to 2.5 m/s took some 10 s on T2 at 18 kt).
+const HOLD_DECEL_MS2: float = 0.9
+## It joins the way in when holding back from where it is can use up its spare time but for this
+## many seconds; with more time than that it sails on to the waiting point first.
+const START_HOLD_TOLERANCE_S: float = 2.0
+## Before the gun, a board that would cross the line within START_GUARD_S seconds at its speed
+## toward it, and before the gun or less than START_GUARD_MARGIN_S after it, holds back as slow as it
+## steers: over the line at the gun is OCS.
+const START_GUARD_S: float = 6.0
+const START_GUARD_MARGIN_S: float = 0.5
+## Out past an end of the line by more than START_WALL_ENDS_M, within START_WALL_M of the line's
+## extension and sailing toward it, it tacks or gybes away, metres.
+const START_WALL_M: float = 12.0
+const START_WALL_ENDS_M: float = 2.0
+## It goes from its hold when the time left is the time it needs to cross, give or take this
+## (seconds; a little less than nothing: it crosses just after the time it aims for, never before).
+const HOLD_GO_SPARE_S: float = -0.25
+## Too fast holding back, it luffs up no closer to the wind than this, degrees; nearly stopped
+## (slower than the steerage speed and half a metre a second), it bears away this much to get the
+## board moving again, degrees.
+const HOLD_LUFF_TWA_DEG: float = 45.0
+const HOLD_BEAR_AWAY_DEG: float = 15.0
+## Holding back it steers for a point this far ahead on its way in, metres (so it keeps to it).
+const HOLD_CARROT_M: float = 30.0
 ## What a tack or gybe costs, seconds: the turn and getting going again (a tack stops the board).
 ## The gybe back from the broad reach away from the line, at 10 m/s, costs START_GYBE_EXTRA_S
-## more: the board comes out of it at 1 to 2 m/s (T2 at 18 kt).
+## more: the board comes out of it at 1 to 2 m/s (T2 at 18 kt), and the gybe and getting going
+## again took some 15 s in the races from random spots.
 const START_TURN_S: float = 6.5
 const START_GYBE_EXTRA_S: float = 9.0
-## With more time than this to spare at the line it sails away and comes back (two gybes and the
-## legs between them); with less it loses the time by crossing further along the line.
-const START_LOOP_SPARE_S: float = 2.0 * START_TURN_S + 6.0
-## With that much time it sails away at once if it is further behind the line than this, metres.
-const START_LOOP_FROM_M: float = 60.0
-## Using up time on the beat up to the line, it sails on past the layline at most until the reach
-## back to the waiting point is this wide, degrees.
-const START_OVERSTAND_TWA_DEG: float = 70.0
-## With more than START_OFF_SPARE_S to spare far from the line, it first bears away to this wind
-## angle (away from the line), and turns back once it has that little left (see _start_heading()).
-const START_OFF_TWA_DEG: float = 100.0
-const START_OFF_SPARE_S: float = 4.0
 ## It is on time when it has less than this to spare, seconds.
 const START_GO_SPARE_S: float = 1.0
 ## Near the line it looks at this many points of the line to choose where to cross.
 const START_CROSSING_SAMPLES: int = 21
-## Within START_HOLD_BEHIND_M of the line counts as at the waiting point only this near the line's
-## ends or between them, metres: a board far out to the side (it appeared there) first sails in.
-const START_NEAR_ENDS_M: float = 30.0
 ## Over the line early: the point it goes back to is this far behind the nearest point of the line,
 ## metres.
 const START_BACK_BEHIND_M: float = 15.0
@@ -144,25 +157,53 @@ const START_ROUND_END_M: float = 15.0
 ## sends a skipper keen on the favoured end (SkipperConfig.favoured_end_bias 1) all the way to it.
 ## 10 degrees on T1's 60 m line puts one end 10 m nearer the wind: two boat lengths and more.
 const FULL_BIAS_DEG: float = 10.0
-## The hold (SkipperConfig.start_style HOLD): the board waits luffed up to this wind angle with the
-## sheet eased to the hold speed (the hands' hold-back skill). Higher than 60 degrees a board
-## holding back at 2.5 m/s in 12 kt stops (measured on the open water's sea: at 45 degrees it was
-## fully sheeted and still slower than 2.5 m/s); at 60 degrees it holds 2.2 to 2.5 m/s in 12 to 24
-## kt and is back at 6 m/s 2 to 6 s after letting go.
-const HOLD_TWA_DEG: float = 60.0
-## Holding, it lets go anyway when it is this near the line, metres (it creeps toward it at about a
-## metre a second, and the gun is near).
-const HOLD_NEAREST_M: float = 6.0
+## Holding back, the board sails no closer to the wind than this, degrees, with the sheet eased to
+## the hold speed (the hands' hold-back skill). Measured on the open water's sea, holding back to
+## 2.5 m/s: at 45 degrees in 12 kt the sail was fully sheeted and the board still made 2.0 to 2.3
+## m/s (it does not stop); at 60 degrees it holds 2.2 to 2.5 m/s in 12 to 24 kt and is back at 6 m/s
+## 2 to 6 s after letting go. 50 keeps the way in on an upwind start steep enough to the line.
+const HOLD_TWA_DEG: float = 50.0
 ## Slow, a board holding back slips sideways: its track runs about this much further off the wind
-## than its bow (measured 6 to 13 degrees at 2.5 m/s), degrees.
-const HOLD_LEEWAY_DEG: float = 9.0
-## A skipper who holds (HOLD) holds back as long as it must, up to this, seconds; one who loops
-## (LOOP) loops again once it has more than START_LOOP_MIN_S to spare at the line (two gybes at
-## speed and getting going after each cost some 15 s each on the open water's sea), and plans to
-## come to the line START_SLACK_S early, held back near it (surer than just in time).
+## than its bow (measured 6 to 16 degrees at 2 to 2.5 m/s, more the closer to the wind), degrees.
+const HOLD_LEEWAY_DEG: float = 11.0
+## Holding back, its track runs at least this far off the wind, degrees (see _hold_twa_deg()).
+const HOLD_TRACK_MIN_TWA_DEG: float = 75.0
+## It holds back no further off the wind than this, degrees: wider, the eased sail cannot slow the
+## board (the boom goes out no further than 85 degrees, and a sail let out on a broad reach still
+## drives).
+const HOLD_WIDEST_TWA_DEG: float = 90.0
+## In a strong wind on a reach the eased sail still drives the board faster than its hold speed
+## (4.5 m/s at 24 kt): it then luffs up too, this much for each m/s too fast, degrees per m/s.
+const HOLD_LUFF_DEG_PER_MS: float = 10.0
+## It luffs so only after holding back this long, seconds, and by at most this much, degrees.
+const HOLD_LUFF_AFTER_S: float = 4.0
+const HOLD_LUFF_MOST_DEG: float = 15.0
+## Going from its hold within START_GO_LATCH_M of the line it keeps going (further back it may still
+## change its mind), metres; nearly stopped it does not go unless it is late by more than
+## START_STALLED_GO_S, seconds.
+const START_GO_LATCH_M: float = 40.0
+const START_STALLED_GO_S: float = 3.0
+## Further back, gone, it holds back again only with more than this to spare, seconds (as it gains
+## speed the time it needs shrinks, and its spare time grows a little).
+const START_GO_HYSTERESIS_S: float = 4.0
+## The way in is long enough to hold back for up to HOLD_LONGEST_S seconds, as far as the sailing
+## area allows. A skipper who holds (HOLD) never loops; one who loops (LOOP) sails its timing loop
+## when it has more than START_LOOP_EXCESS_S to spare beyond what its way in can use up (a gybe at
+## speed and getting going again cost some 15 s on the open water's sea, so a shorter loop would
+## make it late).
 const HOLD_LONGEST_S: float = 60.0
-const START_LOOP_MIN_S: float = 35.0
-const START_SLACK_S: float = 4.0
+const START_LOOP_EXCESS_S: float = 35.0
+## The way in from the waiting point is at most this long (and the way it needs to slow down),
+## metres: held back at 2 m/s it uses up some 35 s.
+const START_WAY_IN_MAX_M: float = 70.0
+## Sailing out to its waiting point the other way along the way in, it holds back this near it,
+## metres, to turn there at a moderate speed.
+const START_SLOW_FOR_TURN_M: float = 50.0
+## The timing loop's way away from the line is sailed held back to this speed, m/s, and it turns
+## back with what the way in can use up still to spare plus START_LOOP_RETURN_S (the gybe back and
+## getting going again, counted generously: early is put right by holding back, late is not).
+const LOOP_AWAY_SPEED_MS: float = 5.0
+const START_LOOP_RETURN_S: float = 20.0
 ## Free sailing (D4): legs on these points of sail (wind angles, degrees; never deeper than the
 ## angle it runs at), each sailed this long (seconds, at random between the two), then a tack (from
 ## closer to the wind than FREE_GYBE_FROM_TWA_DEG) or a gybe.
@@ -239,10 +280,10 @@ var _gate_end: int = -1
 var _start_phase: StartPhase = StartPhase.TO_LINE
 ## The tack it runs in to the start line on, chosen at the first look (_start_run_in_tack()).
 var _run_in_tack: float = 0.0
-## True once it has reached its waiting point behind the start line (it runs in from there), and
-## once it has turned back from sailing off the line.
+## True once it is on its way in from the waiting point to its spot (it holds back and goes from
+## there), and once it has gone from its hold.
 var _reached_hold: bool = false
-var _off_done: bool = false
+var _going: bool = false
 ## Whether the point of the line it chose near the line can be reached on its present tack.
 var _crossing_on_this_tack: bool = true
 ## When it decided to turn back toward the line (the start's TURNING phase).
@@ -281,6 +322,14 @@ var _settling: bool = false
 var _pointing: bool = false
 ## Downwind: true while the board is off the plane (see _downwind_twa_deg()).
 var _off_plane: bool = false
+## The speed it has found it holds back to in this wind (it learns it while holding back: in a
+## strong wind the eased sail still drives the board faster than its hold speed), m/s; and since
+## when it has been holding back (-1 when it is not).
+var _held_ms: float = 0.0
+var _holding_since_s: float = -1.0
+## True while it goes from its hold for the start: it points at once (a board coming out of a hold
+## at 2.5 m/s sailed the bear-away angle along the line past its end).
+var _going_from_hold: bool = false
 
 ## What it has measured: its leeway (degrees), its speed against the polar's, the mean wind.
 var _leeway_deg: float = 5.0
@@ -353,7 +402,7 @@ func _forget_the_race() -> void:
 	_start_phase = StartPhase.TO_LINE
 	_run_in_tack = 0.0
 	_reached_hold = false
-	_off_done = false
+	_going = false
 	_crossing_on_this_tack = true
 	_round_end = -1
 	_past_the_end = false
@@ -395,6 +444,7 @@ func update(telemetry: Telemetry, dt: float) -> void:
 	_time_s += dt
 	_watch_manoeuvres(telemetry)
 	_measure(telemetry, dt)
+	_watch_the_start()
 	# The sheet is the auto-sheet's: the skipper never moves the sheet stick.
 	_hands.sheet = 0.0
 	if _sim.sailor_state != WindsurferSim.SailorState.SAILING:
@@ -419,9 +469,9 @@ func update(telemetry: Telemetry, dt: float) -> void:
 ## start's hold asks for it).
 func _think(telemetry: Telemetry) -> void:
 	_others_dt_s = maxf(_time_s - _others_time_s, 1e-3)
-	_watch_the_start()
 	state = state_for(_race, _index, _clear_of_finish)
 	_hands.hold_speed_ms = 0.0
+	_going_from_hold = false
 	_new_step_check()
 	_keeping_clear = false
 	var decided_deg: float = _decide(telemetry)
@@ -583,7 +633,10 @@ static func chosen_start_share(own_spot: float, keenness: float, bias_deg: float
 ## can only be gone round from one tack, the start's run in). Until it lays the target on that tack
 ## it makes for the point of that tack's layline APPROACH_ROOM_M short of the target; so its last
 ## tack or gybe is onto the arriving tack, with room to get going on it.
-func _course_to(telemetry: Telemetry, target: Vector2, arrive_tack: float = 0.0) -> float:
+##
+## With turn_now (going to a point before the start or sailing free, not round a mark), a target
+## on a reach on the other tack is a tack or gybe at once, not one at the layline.
+func _course_to(telemetry: Telemetry, target: Vector2, arrive_tack: float = 0.0, turn_now: bool = false) -> float:
 	var position: Vector2 = _position(telemetry)
 	var wind_deg: float = telemetry.wind_from_bearing_deg
 	var tack: float = _tack()
@@ -638,7 +691,14 @@ func _course_to(telemetry: Telemetry, target: Vector2, arrive_tack: float = 0.0)
 		# Downwind the turn is a gybe, which the controller makes only from further off the wind than
 		# its tacking angle: it is asked for once the board has borne away that far.
 		var turn_ready: bool = upwind or absf(telemetry.twa_deg) > _controller.tack_up_to_twa_deg + 5.0
-		if turn_ready and _past_layline_m(position, aim, wind_deg, tack, up_track_deg if upwind else down_track_deg) >= margin_m:
+		# Going to a point rather than round a mark (turn_now), it turns onto the other tack at once:
+		# the fewest manoeuvres (Navigation.route()).
+		if turn_now and upwind and not _pointing:
+			# Too slow to tack (and too slow to gybe well, off the plane): it first gets going on a
+			# beam reach, then tacks.
+			note = "reach, other tack (getting going to tack)"
+			return wind_deg - tack * 90.0 + _keep_clear_deg(telemetry, tack)
+		if turn_ready and (turn_now or _past_layline_m(position, aim, wind_deg, tack, up_track_deg if upwind else down_track_deg) >= margin_m):
 			_ask_for_manoeuvre(true)
 	if aim != target:
 		note += " (for the layline)"
@@ -700,6 +760,9 @@ func _headed_deg(wind_deg: float, tack: float) -> float:
 ## to grip, the autopilot's bear-away angle until it has speed (a sailor does not point high from a
 ## standstill).
 func _upwind_twa_deg() -> float:
+	if _going_from_hold and not _pointing:
+		# Going from its hold it points at once, but a noisy helm no closer than its hold allows.
+		return maxf(_pointing_twa_deg(), HOLD_TWA_DEG + 2.0 * config.steering_noise_deg)
 	if not _pointing:
 		return maxf(_pointing_twa_deg(), _controller.auto_sheet_pilot.bear_away_twa_deg)
 	return _pointing_twa_deg()
@@ -898,167 +961,333 @@ func _watch_the_start() -> void:
 
 # ---------------------------------------------------------------- the start
 
-## Rule 5, the timed start. The spot on the line is approached along a run-in line (a close reach
-## when the first leg is a beat, the first leg's own course on a reaching start), from a waiting
-## point on it just behind the start line. The time it has to spare (the time until it wants to
-## cross, the gun plus its timing error, less the time it expects to need) is used up away from
-## the line, where being early does no harm:
-##   - with plenty of it (a reaching start) it sails away on a broad reach and gybes back when the
-##     way back (the gybe, and the distance over the speed it expects) takes the time left;
-##   - with some of it far from the line (the beat up to T1's line in a strong wind) it first bears
-##     away off the line and comes back to the beat;
-##   - beating up to the waiting point, it sails on past the layline on its first tack and tacks
-##     when the way from there takes the time left.
-## Near the line, with time to spare, it holds back (the hands' hold-back skill: luffed up, the sheet
-## eased, slow but steering), from a waiting point placed so that the hold's slow drift brings it to
-## the go point on the run-in line, START_HOLD_BEHIND_M behind the line, when the time left is the
-## time it needs to cross at speed; there it bears away, sheets in and goes. A skipper who loops
-## (start_style LOOP) holds only for what is left after its loop; one who holds (HOLD) never loops
-## and comes to the line hold_s early. From the go point it crosses where it would arrive on time:
-## of the points of the line it can reach on its present tack, the first one it would not reach
-## early; when it would be early everywhere, the one it reaches last (further along the line). On
-## the course side before the gun (over early, or past an end of the line) it goes back behind the
-## line; over it at the gun (OCS) it goes back round the nearer end; then it starts again.
+## Rule 5, the timed start (AI_FLEET_PLAN.md, D4), from wherever the countdown finds the board. It
+## crosses its spot on the line (its character's spot, pulled toward the favoured end) at the time it
+## aims for (the gun plus its timing error), at speed. The time it has to spare (that time less the
+## time it expects to need, by the navigation skill) is used up so:
+##   - it sails to its waiting point: behind its spot along the way a board holding back sails
+##     (slow, luffed up, slipping sideways), far enough back that holding back from there (slowing
+##     down first) uses up the spare time: a long way in for a skipper who holds (start_style HOLD),
+##     a short one for a skipper who loops (LOOP), who first sails its timing loop when it has more
+##     time than that: away on a broad reach, a gybe back when the way back takes the time left;
+##   - from there, or from wherever it meets the way in close enough to use up its time, it sails
+##     in holding back (the hands' hold-back skill: the sheet eased to the speed that brings it to
+##     the line on time, never less than its hold speed); when the time left is the time it needs
+##     to get going and cross, it lets the sheet go back in and goes (bearing away first: a slow
+##     board sails no closer to the wind than the bear-away angle until it has speed);
+##   - near the line and about to cross it before the gun, it luffs right up, as slow as it steers.
+## Going, it crosses where it would arrive on time: of the points of the line it can reach on its
+## present tack, the first one it would not reach early; when it would be early everywhere, the one
+## it reaches last. On the course side before the gun (over early, or past an end of the line) it
+## goes back behind the line; over it at the gun (OCS) it goes back round the nearer end; then it
+## starts again.
 func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 	var position: Vector2 = _position(telemetry)
 	var wind_deg: float = telemetry.wind_from_bearing_deg
 	var spot: Vector2 = _start_spot(step)
 	var forward: Vector2 = step.in_dir
-	var run_in: Vector2 = _run_in_direction(step, wind_deg)
+	var run_in_tack: float = _start_run_in_tack(step, wind_deg)
 	var holds: bool = config.start_style == SkipperConfig.StartStyle.HOLD
-	# The go point is on the run-in line, START_HOLD_BEHIND_M behind the start line.
-	var go_point: Vector2 = spot - run_in * (START_HOLD_BEHIND_M / maxf(run_in.dot(forward), 0.3))
+	var before_gun: bool = _race.clock_s() < 0.0
 	# How far behind the line (or its extensions) it is, metres; negative over it.
 	var behind_m: float = -RoundingCheck.over_line_m(position, step.points[0], step.points[1], forward)
 	# The seconds until it wants to cross: the gun plus its timing error (after the gun it counts down
-	# past zero, so a late starter goes at once). What it has to spare is that, less the time it
-	# needs to get to the line: to its spot from afar, to the point it chooses near the line. On the
-	# way to the line its spare time is counted _planned_hold_s() smaller (approach_spare_s): it
-	# plans to come a little early and hold back the rest, which is surer than coming just in time.
+	# past zero, so a late starter goes at once), and what it has to spare: that, less the time it
+	# needs to get to its spot.
 	var aim_s: float = -_race.clock_s() + config.start_timing_error_s
-	var cross_at: Vector2 = spot
-	if _reached_hold:
-		cross_at = _choose_crossing(telemetry, step, aim_s)
-	var spare_s: float = aim_s - _time_to_s(telemetry, cross_at)
-	var approach_spare_s: float = spare_s - _planned_hold_s()
+	var spare_s: float = aim_s - _time_to_s(telemetry, spot)
 	start_spare_s = spare_s
-	# The waiting point: back from the go point by the drift of the hold it expects there (the time it
-	# has to spare, at most its longest hold), inside the sailing area. At it (or on the drift's way
-	# from it to the go point, or nearer the line than the go point and not far out past an end) it
-	# holds and then runs in (a skipper who loops may still sail away for another loop).
-	var wait_s: float = clampf(spare_s - START_GO_SPARE_S, 0.0, _longest_hold_s())
-	var hold: Vector2 = _inside_area(go_point - _hold_drift(wind_deg, _start_run_in_tack(step, wind_deg)) * wait_s)
-	var to_drift_m: float = position.distance_to(Geometry2D.get_closest_point_to_segment(position, hold, go_point))
-	if to_drift_m <= START_HOLD_REACHED_M or (behind_m <= START_HOLD_BEHIND_M and _off_the_ends_m(step, position) <= START_NEAR_ENDS_M):
-		_reached_hold = true
 	# On the course side of the line or its extensions, and not started: over early (OCS at the gun),
 	# or past an end of the line. A start counts only from behind the line.
 	if behind_m < 0.0:
 		_start_phase = StartPhase.BACK_BEHIND
-	match _start_phase:
-		StartPhase.BACK_BEHIND:
-			if _race.is_ocs(_index) and _race.clock_s() >= 0.0:
-				# Over the line at the gun: back round the nearer end, as the rules say.
-				return _round_the_end_heading(telemetry, step)
-			if behind_m < 0.0:
-				var back_deg: float = _course_to(telemetry, _nearest_on_line(step, position) - forward * START_BACK_BEHIND_M)
-				note = "start: back behind the line"
-				return back_deg
-			_start_phase = StartPhase.RUN_IN
-			_round_end = -1
-		StartPhase.TO_LINE:
-			# Far behind the line with plenty of time (a reaching start, whose boards wait on the run in
-			# itself), a skipper who loops sails away at once: near the line the gybe away would carry
-			# it over. One who holds goes straight to its waiting point.
-			if holds:
-				_start_phase = StartPhase.RUN_IN
-			elif approach_spare_s > START_LOOP_SPARE_S + START_GO_SPARE_S and behind_m > START_LOOP_FROM_M:
-				_start_phase = StartPhase.AWAY
-			elif approach_spare_s > START_GO_SPARE_S and not _reached_hold:
-				# Some time to spare far from the line (a beat up to it in a strong wind): first off the
-				# line on the same tack, then back up to the beat; the way out and back uses the time
-				# far from the line, where being early does no harm. Once it turns back, it keeps going.
-				var off_deg: float = wind_deg - _tack() * START_OFF_TWA_DEG
-				var leads_away: bool = Course.direction_of(off_deg).dot(forward) < 0.0
-				if approach_spare_s <= START_OFF_SPARE_S or behind_m < START_LOOP_FROM_M or not leads_away:
-					_off_done = true
-				if not _off_done:
-					note = "start: off the line"
-					return off_deg
-				return _to_the_line_deg(telemetry, step, hold, spot, aim_s - _planned_hold_s())
-			else:
-				_start_phase = StartPhase.AWAY if approach_spare_s > START_LOOP_SPARE_S else StartPhase.RUN_IN
-		StartPhase.AWAY:
-			# The time it needs counts a turn (the way back is a reach on the other tack); a gybe from
-			# the broad reach at speed costs START_GYBE_EXTRA_S more.
-			if approach_spare_s <= START_GO_SPARE_S + START_GYBE_EXTRA_S:
-				_start_phase = StartPhase.TURNING
-				_turn_back_from_s = _time_s
+	if _start_phase == StartPhase.BACK_BEHIND:
+		if _race.is_ocs(_index) and _race.clock_s() >= 0.0:
+			# Over the line at the gun: back round the nearer end, as the rules say.
+			return _round_the_end_heading(telemetry, step)
+		if behind_m < 0.0:
+			var back_deg: float = _course_to(telemetry, _nearest_on_line(step, position) - forward * START_BACK_BEHIND_M)
+			note = "start: back behind the line"
+			return back_deg
+		_start_phase = StartPhase.RUN_IN
+		_round_end = -1
+		_reached_hold = false
+		_going = false
+	# The way in. The go point is on the run in, START_HOLD_BEHIND_M behind the line: from there the
+	# board gets going and crosses at speed. Before it, it holds back on the run-in tack at the wind
+	# angle whose track runs most nearly along the line (HOLD_TWA_DEG to HOLD_WIDEST_TWA_DEG: on an
+	# upwind start a reach along the line, on a reaching start luffed up), so that waiting brings it
+	# no nearer the line than it must. The waiting point is back along that track from the go point
+	# by the way it sails holding back for the time it has to spare (at most its longest hold), and
+	# the way it needs to slow down from full speed first; inside the area.
+	var run_in: Vector2 = _run_in_direction(step, wind_deg)
+	var go_point: Vector2 = spot - run_in * (START_HOLD_BEHIND_M / maxf(run_in.dot(forward), 0.3))
+	var hold_twa: float = _hold_twa_deg(wind_deg, run_in_tack, forward)
+	var track: Vector2 = Course.direction_of(wind_deg - run_in_tack * (hold_twa + HOLD_LEEWAY_DEG))
+	var expected_ms: float = _run_in_speed_ms(step, wind_deg)
+	var hold_ms: float = minf(_hold_speed_ms(), expected_ms)
+	var slowing_m: float = maxf(expected_ms * expected_ms - hold_ms * hold_ms, 0.0) / (2.0 * HOLD_DECEL_MS2)
+	var wait_s: float = clampf(spare_s - START_GO_SPARE_S, 0.0, _longest_hold_s())
+	# No longer than START_WAY_IN_MAX_M (and the slowing down): a long wait is held back slower on it,
+	# down to as slow as the board steers, rather than sailed far out and back.
+	var wait_at: Vector2 = _inside_area(go_point - track * (minf(hold_ms * wait_s, START_WAY_IN_MAX_M) + slowing_m))
+	# The time the way in can use up when it is sailed from the waiting point, held back as slowly as
+	# the board steers well.
+	var slowest_ms: float = minf(_controller.hold_back_steerage_ms + 0.5, hold_ms)
+	var at_wait_s: float = wait_at.distance_to(go_point) * maxf(1.0 / slowest_ms - 1.0 / expected_ms, 0.0)
+	# The timing loop: with more time to spare than the way in can use up, by more than a loop
+	# costs; one who loops (LOOP) has a short way in, one who holds (HOLD) a long one.
+	if _start_phase == StartPhase.RUN_IN and before_gun and not _reached_hold and not holds:
+		if spare_s - START_GO_SPARE_S > at_wait_s + START_LOOP_EXCESS_S:
+			_start_phase = StartPhase.AWAY
 	if _start_phase == StartPhase.AWAY:
-		note = "start: away"
-		return _away_heading(telemetry, step)
+		# The time it needs counts a turn (the way back is a reach on the other tack); a gybe from the
+		# broad reach at speed costs START_GYBE_EXTRA_S more. It turns back with what the way in can
+		# use up still to spare.
+		if spare_s - START_GO_SPARE_S <= at_wait_s + START_LOOP_RETURN_S:
+			_start_phase = StartPhase.TURNING
+			_turn_back_from_s = _time_s
+		else:
+			note = "start: away"
+			return _away_heading(telemetry, step)
 	if _start_phase == StartPhase.TURNING:
 		var turning: bool = _tack_due_s >= 0.0 or _controller.manoeuvre != PlayerController.Manoeuvre.NONE
-		if turning:
+		if turning or _manoeuvre_ended_s <= _turn_back_from_s:
+			# Held back through the turn too (bearing away for the gybe it would otherwise run off).
+			_hands.hold_speed_ms = LOOP_AWAY_SPEED_MS
 			note = "start: turning back"
-			return _last_wanted_deg
-		if _manoeuvre_ended_s <= _turn_back_from_s:
-			note = "start: turning back"
-			return _gybe_now(telemetry)
-		_start_phase = StartPhase.RUN_IN
-	# RUN_IN.
-	var before_gun: bool = _race.clock_s() < 0.0
+			return _last_wanted_deg if turning else _gybe_now(telemetry)
+	_start_phase = StartPhase.RUN_IN
+	# On the way in: near the stretch from the waiting point to the go point, behind the line, with
+	# enough of it ahead to hold back for the time it has to spare (else on to the waiting point).
+	var on_way: Vector2 = Geometry2D.get_closest_point_to_segment(position, wait_at, go_point)
+	var way_left_m: float = on_way.distance_to(go_point)
+	var can_use_s: float = way_left_m * maxf(1.0 / hold_ms - 1.0 / expected_ms, 0.0)
+	var at_waiting_point: bool = position.distance_to(wait_at) <= START_HOLD_REACHED_M
+	# (Met on the way out to the waiting point, sailing the other way at speed, it does not count: it
+	# would carry on far past it while slowing down.)
+	var along_way: bool = _velocity.dot(track) > 0.3 * maxf(_velocity.length(), 0.1)
+	if not _reached_hold and position.distance_to(on_way) <= START_HOLD_REACHED_M and behind_m > 0.0 \
+			and (at_waiting_point or (along_way and spare_s - START_GO_SPARE_S <= can_use_s + START_HOLD_TOLERANCE_S)):
+		_reached_hold = true
+		_going = false
 	if not _reached_hold:
-		if before_gun and holds and spare_s > START_GO_SPARE_S:
-			# Straight to the waiting point (the navigation skill: the fewest manoeuvres), arriving on
-			# the run-in tack.
-			var wait_deg: float = _course_to(telemetry, hold, _start_run_in_tack(step, wind_deg))
+		var free_deg: float
+		if before_gun and spare_s > START_GO_SPARE_S:
+			# To the waiting point by the navigation skill: the fewest manoeuvres.
+			free_deg = _course_to(telemetry, wait_at, 0.0, true)
 			note = "start: to the waiting point (%s)" % note
-			return wait_deg
-		if before_gun and approach_spare_s > START_GO_SPARE_S:
-			return _to_the_line_deg(telemetry, step, hold, spot, aim_s - _planned_hold_s())
-		# Late: straight for its spot.
-		var late_deg: float = _course_to(telemetry, _through(position, spot))
-		note = "start: for the spot"
-		return late_deg
-	if before_gun and not holds and approach_spare_s > START_LOOP_MIN_S:
-		_start_phase = StartPhase.AWAY
-		_reached_hold = false
-		note = "start: away again"
-		return _away_heading(telemetry, step)
-	if before_gun and spare_s > START_GO_SPARE_S and behind_m > HOLD_NEAREST_M:
-		# The hold: luffed up, the sheet eased to the hold speed (the hands' hold-back skill), until
-		# the time left is the time it needs to get going and cross; then it bears away and sheets
-		# in (the run in below: a slow board sails no closer than the bear-away angle until it has
-		# speed, Autopilot.pointing_speed_ms).
-		_hands.hold_speed_ms = config.hold_speed_ms
-		note = "start: holding back"
-		return wind_deg - _tack() * HOLD_TWA_DEG + _keep_clear_deg(telemetry, _tack())
+			# Out to it the other way along the way in (it will turn there): held back near it, so that
+			# it does not run far past it while turning.
+			if _velocity.dot(track) < 0.0 and position.distance_to(wait_at) < START_SLOW_FOR_TURN_M:
+				_hands.hold_speed_ms = LOOP_AWAY_SPEED_MS
+		else:
+			# Late: straight for its spot.
+			free_deg = _course_to(telemetry, _through(position, spot), 0.0, true)
+			note = "start: for the spot"
+		if before_gun:
+			_keep_behind_the_line(telemetry, step, behind_m)
+			if spare_s <= START_GO_SPARE_S and _too_early_at_the_line(telemetry, step, behind_m):
+				# Late for its spot but about to cross the line elsewhere before the gun.
+				_hands.hold_speed_ms = _controller.hold_back_steerage_ms
+				note += ", holding back hard, early at the line"
+		return free_deg
+	# Where it will cross: its spot, when that is a reach on this tack (it came in on the way to it);
+	# else where on the line it would arrive on time.
+	# (Reachable at the angle it points once it has speed: a slow board's own angle is wider.)
+	var spot_twa: float = Navigation.wind_angle_deg(position, spot, wind_deg)
+	var cross_at: Vector2 = spot
+	var at_speed_track_deg: float = config.upwind_vmg_twa_deg + config.pointing_offset_deg + _leeway_deg
+	if signf(spot_twa) != _tack() or absf(spot_twa) < at_speed_track_deg:
+		cross_at = _choose_crossing(telemetry, step, aim_s)
+	else:
+		_crossing_on_this_tack = true
+	# Holding back until the time left is the time it needs to get going and cross there (worked out
+	# from its speed now and how fast it gains speed): then it goes, so as to cross at the time it
+	# aims for (HOLD_GO_SPARE_S). Past the go point, or about to cross the line before the gun, it
+	# holds back as slow as it steers.
+	var go_spare_s: float = aim_s - _time_to_cross_s(telemetry, cross_at)
+	start_spare_s = go_spare_s
+	var early_at_line: bool = before_gun and _too_early_at_the_line(telemetry, step, behind_m)
+	# Once it has gone near the line it keeps going (its spare time jumps about as it gains speed),
+	# unless it is about to cross early; further back it may still change its mind. It does not go
+	# while it is nearly stopped (just turned, say: from a crawl the time it needs is guessed long)
+	# unless it is late by more than START_STALLED_GO_S.
+	var stalled: bool = telemetry.speed_ms < _controller.hold_back_steerage_ms + 0.5 and go_spare_s > -START_STALLED_GO_S
+	if (go_spare_s <= HOLD_GO_SPARE_S and not stalled) or not before_gun:
+		_going = true
+	elif behind_m > START_GO_LATCH_M and go_spare_s > START_GO_HYSTERESIS_S:
+		_going = false
+	if before_gun and (not _going or early_at_line):
+		if _tack() != run_in_tack:
+			# On the other tack (it has just come to its waiting point, say): it turns onto the run-in
+			# tack first, keeping its speed for the turn.
+			note = "start: turning onto the way in (%+.1f s to spare)" % go_spare_s
+			# Held back to LOOP_AWAY_SPEED_MS meanwhile: bearing away for a gybe in a strong wind, a board
+			# runs off far before the gybe begins.
+			_hands.hold_speed_ms = LOOP_AWAY_SPEED_MS
+			if absf(telemetry.twa_deg) < 90.0:
+				_ask_for_manoeuvre(true)
+				return wind_deg - _tack() * absf(telemetry.twa_deg)
+			return _gybe_now(telemetry)
+		# No faster than its hold speed, and slower (down to as slow as it steers) when what is left
+		# of the way to the go point is short for the time it has to spare.
+		var to_go_point_m: float = (go_point - position).dot(track)
+		var past_go_point: bool = to_go_point_m < 0.0
+		_hands.hold_speed_ms = clampf(to_go_point_m / maxf(go_spare_s, 0.5), _controller.hold_back_steerage_ms, config.hold_speed_ms)
+		note = "start: holding back (%+.1f s to spare)" % go_spare_s
+		if past_go_point or early_at_line:
+			_hands.hold_speed_ms = _controller.hold_back_steerage_ms
+			note = "start: holding back hard, early (%+.1f s to spare)" % go_spare_s
+		var hold_deg: float = _hold_heading(telemetry, hold_twa, run_in_tack, on_way + track * HOLD_CARROT_M)
+		_keep_behind_the_line(telemetry, step, behind_m)
+		return hold_deg
+	_going_from_hold = true
 	var go_deg: float = _course_to(telemetry, _through(position, cross_at))
-	note = "start: run in" if before_gun and spare_s > START_GO_SPARE_S else "start: go"
+	note = "start: go"
 	if not _crossing_on_this_tack:
 		# No point of the line can be reached on this tack: near the line, sailing on to the
 		# layline would take it past the end of the line. It tacks (or gybes) now.
 		_ask_for_manoeuvre(true)
 		note += ", the line is on the other tack"
+	elif before_gun:
+		_keep_behind_the_line(telemetry, step, behind_m)
 	return go_deg
 
 
-## The seconds early it plans to come to the line to hold there: its hold_s with the HOLD start
-## plan, START_SLACK_S with the timing loop.
-func _planned_hold_s() -> float:
-	return config.hold_s if config.start_style == SkipperConfig.StartStyle.HOLD else START_SLACK_S
+## The speed it holds back to, m/s: its character's hold speed, or what it has found it gets down to
+## in this wind if that is faster.
+func _hold_speed_ms() -> float:
+	return maxf(config.hold_speed_ms, _held_ms)
 
 
-## The longest it holds back near the line, seconds (see HOLD_LONGEST_S).
+## The longest it plans to hold back on its way in, seconds (HOLD_LONGEST_S).
 func _longest_hold_s() -> float:
-	return HOLD_LONGEST_S if config.start_style == SkipperConfig.StartStyle.HOLD else START_LOOP_MIN_S
+	return HOLD_LONGEST_S
 
 
-## The way a board holding back moves over the water (game X, Z, m/s): luffed up to HOLD_TWA_DEG on
-## a tack at the hold speed, its track HOLD_LEEWAY_DEG further off the wind than its bow.
-func _hold_drift(wind_deg: float, tack: float) -> Vector2:
-	return Course.direction_of(wind_deg - tack * (HOLD_TWA_DEG + HOLD_LEEWAY_DEG)) * config.hold_speed_ms
+## Near the line: how long it needs to sail straight to a point on its present tack, seconds, from
+## its speed now, gaining speed at _acceleration_ms2() up to the speed it expects there, plus the time
+## to turn onto the course. (_time_to_s() counts a whole loss for the speed it lacks, which is right
+## far from the line but too much over the last few metres, where a slow board is nearly there.)
+func _time_to_cross_s(telemetry: Telemetry, target: Vector2) -> float:
+	var position: Vector2 = _position(telemetry)
+	var needed_twa: float = Navigation.wind_angle_deg(position, target, telemetry.wind_from_bearing_deg)
+	var sail_deg: float = clampf(absf(needed_twa) - _leeway_deg, _pointing_twa_deg(), _downwind_twa_deg())
+	if signf(needed_twa) != _tack() or absf(needed_twa) - _leeway_deg < _pointing_twa_deg():
+		return _time_to_s(telemetry, target)
+	var distance_m: float = position.distance_to(target)
+	var expected_ms: float = maxf(_speed_ratio * _polar_speed_ms(sail_deg), 1.0)
+	var speed_ms: float = clampf(telemetry.speed_ms, 0.5, expected_ms)
+	var gain_ms2: float = _acceleration_ms2()
+	var gaining_s: float = (expected_ms - speed_ms) / gain_ms2
+	var gaining_m: float = speed_ms * gaining_s + 0.5 * gain_ms2 * gaining_s * gaining_s
+	var takes_s: float
+	if distance_m <= gaining_m:
+		takes_s = (sqrt(speed_ms * speed_ms + 2.0 * gain_ms2 * distance_m) - speed_ms) / gain_ms2
+	else:
+		takes_s = gaining_s + (distance_m - gaining_m) / expected_ms
+	# (No time for the turn onto the course: from a hold the board bears away as it gains speed.)
+	return takes_s
+
+
+## How fast the board gains speed when it sheets in from a hold, m/s2, in the wind of the moment:
+## measured on the open water's sea from 2.5 to 6 m/s, 5.5 s at 12 kt, 2.4 s at 18, 2 s at 24.
+func _acceleration_ms2() -> float:
+	return clampf(lerpf(0.65, 1.45, (_sim.telemetry.tws_10m_kt - 12.0) / 6.0), 0.65, 1.75)
+
+
+## True when the board, at the speed it has toward the start line, would cross it within
+## START_GUARD_S, START_GUARD_MARGIN_S or more before the gun.
+func _too_early_at_the_line(telemetry: Telemetry, step: RaceStep, behind_m: float) -> bool:
+	var toward_ms: float = Course.direction_of(telemetry.heading_deg).dot(step.in_dir) * telemetry.speed_ms
+	if toward_ms <= 0.3:
+		return false
+	var crossing_in_s: float = behind_m / toward_ms
+	if crossing_in_s >= START_GUARD_S or crossing_in_s >= -_race.clock_s() + START_GUARD_MARGIN_S:
+		return false
+	# Only a crossing of the line itself: the extension past an end is _keep_behind_the_line()'s.
+	var crossing: Vector2 = _position(telemetry) + Course.direction_of(telemetry.heading_deg) * telemetry.speed_ms * crossing_in_s
+	return _off_the_ends_m(step, crossing) <= START_WALL_ENDS_M
+
+
+## Before the gun, out past an end of the start line: the line's extension is a wall (over it, the
+## board is on the course side and must come back; at the gun it is OCS). Within START_WALL_M of it
+## and sailing toward it, the board tacks or gybes away (beating up behind the line to the boat
+## end, it tacks off the extension).
+func _keep_behind_the_line(telemetry: Telemetry, step: RaceStep, behind_m: float) -> void:
+	if behind_m > START_WALL_M or _off_the_ends_m(step, _position(telemetry)) <= START_WALL_ENDS_M:
+		return
+	var heading: Vector2 = Course.direction_of(telemetry.heading_deg)
+	var toward: float = heading.dot(step.in_dir)
+	if toward <= 0.2:
+		return
+	# Heading for the line itself (it will cross between the ends): no wall.
+	var crossing: Vector2 = _position(telemetry) + heading * behind_m / toward
+	if _off_the_ends_m(step, crossing) <= START_WALL_ENDS_M:
+		return
+	_ask_for_manoeuvre(true)
+	note += ", off the line's extension"
+
+
+## The speed it expects on its run in, m/s (its polar at the run-in's wind angle, times what it has
+## measured against the polar).
+func _run_in_speed_ms(step: RaceStep, wind_deg: float) -> float:
+	var run_in_twa: float = absf(Navigation.wind_angle_deg(Vector2.ZERO, _run_in_direction(step, wind_deg), wind_deg))
+	return maxf(_speed_ratio * _polar_speed_ms(run_in_twa), 3.0)
+
+
+## The wind angle it holds back at on a tack, degrees: of HOLD_TWA_DEG to HOLD_WIDEST_TWA_DEG (in 5
+## degree steps), the one whose track (HOLD_LEEWAY_DEG further off the wind than the bow) runs most
+## nearly along the start line, whose direction across is `forward`: on a line square to the wind a
+## reach along it, on a line along the wind (a reaching start) as close to the wind as it holds.
+static func _hold_twa_deg(wind_deg: float, tack: float, forward: Vector2) -> float:
+	# Its track at least HOLD_TRACK_MIN_TWA_DEG off the wind, and of those the track least toward
+	# the wind counts as more along the line: the waiting point lies back along the track, and a
+	# track up toward the wind puts it downwind of the line (on a reaching start out past the
+	# downwind end, from where the line is a beat that runs into its extension).
+	var up: Vector2 = Course.direction_of(wind_deg)
+	var first_twa: float = maxf(HOLD_TWA_DEG, HOLD_TRACK_MIN_TWA_DEG - HOLD_LEEWAY_DEG)
+	var best_twa: float = first_twa
+	var best_score: float = INF
+	var twa: float = first_twa
+	while twa <= HOLD_WIDEST_TWA_DEG + 0.01:
+		var track: Vector2 = Course.direction_of(wind_deg - tack * (twa + HOLD_LEEWAY_DEG))
+		var score: float = absf(track.dot(forward)) + 0.5 * maxf(track.dot(up), 0.0)
+		if score < best_score - 0.01:
+			best_score = score
+			best_twa = twa
+		twa += 5.0
+	return best_twa
+
+
+## The heading of a board holding back on the run-in tack: for a point `ahead` on its way in (so
+## that it keeps to the way in, at its distance behind the line), at a wind angle between
+## HOLD_TWA_DEG and HOLD_WIDEST_TWA_DEG, or at the hold's own wind angle when the point is not on a
+## reach on this tack. Still faster than its hold speed with the sheet eased (a strong wind on a
+## reach), it luffs up too, HOLD_LUFF_DEG_PER_MS for each m/s too fast, no closer than
+## HOLD_LUFF_TWA_DEG. On the other tack it tacks or gybes onto the run-in tack.
+func _hold_heading(telemetry: Telemetry, hold_twa: float, run_in_tack: float, ahead: Vector2) -> float:
+	var tack: float = _tack()
+	var needed_twa: float = Navigation.wind_angle_deg(_position(telemetry), ahead, telemetry.wind_from_bearing_deg)
+	var twa_deg: float = hold_twa
+	if signf(needed_twa) == tack:
+		twa_deg = clampf(absf(needed_twa) - HOLD_LEEWAY_DEG, HOLD_TWA_DEG, HOLD_WIDEST_TWA_DEG)
+	# A noisy helm holds further off the wind, by twice its wobble: luffed up at a crawl, a wobble
+	# toward the wind puts the board in irons.
+	twa_deg = maxf(twa_deg, HOLD_TWA_DEG + 2.0 * config.steering_noise_deg)
+	if tack != run_in_tack:
+		_ask_for_manoeuvre(true)
+	# (Only after HOLD_LUFF_AFTER_S of holding back: slowing down from full speed takes a while, and
+	# luffing at speed on an upwind start points the board at the line.)
+	var too_fast_ms: float = telemetry.speed_ms - config.hold_speed_ms - 0.5
+	var holding_s: float = _time_s - _holding_since_s if _holding_since_s >= 0.0 else 0.0
+	if too_fast_ms > 0.0 and holding_s > HOLD_LUFF_AFTER_S:
+		twa_deg = maxf(twa_deg - minf(too_fast_ms * HOLD_LUFF_DEG_PER_MS, HOLD_LUFF_MOST_DEG), minf(twa_deg, HOLD_LUFF_TWA_DEG))
+	elif telemetry.speed_ms < _controller.hold_back_steerage_ms + 0.5:
+		# Too slow to steer well: bear away to get the board moving again.
+		twa_deg += HOLD_BEAR_AWAY_DEG
+	return telemetry.wind_from_bearing_deg - tack * twa_deg + _keep_clear_deg(telemetry, tack)
 
 
 ## A point moved inside the sailing area, at least 10 m from its sides.
@@ -1123,7 +1352,7 @@ func _choose_crossing(telemetry: Telemetry, step: RaceStep, aim_s: float) -> Vec
 		if signf(needed_twa) != tack:
 			on_other_tack = true
 			continue
-		var need_s: float = _time_to_s(telemetry, point)
+		var need_s: float = _time_to_cross_s(telemetry, point)
 		if need_s >= aim_s and need_s < on_time_s:
 			on_time = point
 			on_time_s = need_s
@@ -1138,36 +1367,6 @@ func _choose_crossing(telemetry: Telemetry, step: RaceStep, aim_s: float) -> Vec
 	# _crossing_on_this_tack); if neither does, it is a beat, sailed as any beat is.
 	_crossing_on_this_tack = not on_other_tack
 	return _nearest_on_line(step, position)
-
-
-## On the way to the waiting point behind the line, with time to spare, arriving on the run-in
-## tack. When that is a beat, it sails on past the layline on the other tack and tacks when the way
-## from there (the tack, the reach to the waiting point, the run in from it) takes the time it has
-## left: the longer way uses the time at full speed.
-func _to_the_line_deg(telemetry: Telemetry, step: RaceStep, hold: Vector2, spot: Vector2, aim_s: float) -> float:
-	var position: Vector2 = _position(telemetry)
-	var wind_deg: float = telemetry.wind_from_bearing_deg
-	var tack: float = _tack()
-	var run_in_tack: float = _start_run_in_tack(step, wind_deg)
-	note = "start: to the line"
-	var needed_twa: float = wrapf(wind_deg - Course.bearing_deg(position, hold), -180.0, 180.0)
-	var up_track_deg: float = _pointing_twa_deg() + _leeway_deg
-	if tack != run_in_tack and signf(needed_twa) == run_in_tack and absf(needed_twa) >= up_track_deg and absf(needed_twa) < 90.0:
-		# Past the layline: the waiting point is a reach on the run-in tack.
-		var reach_ms: float = maxf(_speed_ratio * _polar_speed_ms(absf(needed_twa) - _leeway_deg), 1.0)
-		var run_in_deg: float = Course.bearing_deg(Vector2.ZERO, _run_in_direction(step, wind_deg))
-		var run_in_ms: float = maxf(_speed_ratio * _polar_speed_ms(wrapf(wind_deg - run_in_deg, -180.0, 180.0)), 1.0)
-		var after_s: float = START_TURN_S + position.distance_to(hold) / reach_ms + hold.distance_to(spot) / run_in_ms
-		# Not further than a reach of START_OVERSTAND_TWA_DEG back to the waiting point, though: from
-		# further down the line the board would come back along it rather than toward it, and could
-		# not turn in to cross before the end of the line.
-		if after_s >= aim_s - START_GO_SPARE_S or absf(needed_twa) >= START_OVERSTAND_TWA_DEG:
-			_ask_for_manoeuvre(true)
-		note = "start: to the line, timing the tack"
-		return wind_deg - tack * _upwind_twa_deg() + _keep_clear_deg(telemetry, tack)
-	var heading_deg: float = _course_to(telemetry, hold, run_in_tack)
-	note = "start: to the line (%s)" % note
-	return heading_deg
 
 
 ## A point THROUGH_LINE_M beyond a point on the line, straight on from a position: the straight
@@ -1208,10 +1407,11 @@ func _run_in_direction(step: RaceStep, wind_deg: float) -> Vector2:
 	return run_in if run_in.dot(step.in_dir) > 0.3 else step.in_dir
 
 
-## The tack of the run in, chosen once: on a reaching start the first leg's tack; otherwise the
-## tack other than the one the board waits on before the start, so that the beat up to the line
-## needs one tack only (the boards wait downwind of the line). A tack on which the close reach would
-## not cross the line is not chosen.
+## The tack of the run in, chosen once (at the countdown's first look): on a reaching start the first
+## leg's tack; otherwise the tack whose way in to the spot comes from the board's side of it (its
+## waiting point lies back along that tack's run in, toward where the board is), so that it does not
+## cross the fleet's way in to get there. A tack on which the close reach would not cross the line is
+## not chosen.
 func _start_run_in_tack(step: RaceStep, wind_deg: float) -> float:
 	if _run_in_tack != 0.0:
 		return _run_in_tack
@@ -1219,7 +1419,10 @@ func _start_run_in_tack(step: RaceStep, wind_deg: float) -> float:
 	if absf(first_twa) >= START_RUN_IN_TWA_DEG and absf(first_twa) <= config.downwind_vmg_twa_deg:
 		_run_in_tack = signf(first_twa)
 	else:
-		_run_in_tack = -_tack()
+		var from_spot: Vector2 = _position(_sim.telemetry) - _start_spot(step)
+		var on_starboard: float = from_spot.dot(Course.direction_of(wind_deg - START_RUN_IN_TWA_DEG))
+		var on_port: float = from_spot.dot(Course.direction_of(wind_deg + START_RUN_IN_TWA_DEG))
+		_run_in_tack = 1.0 if on_starboard <= on_port else -1.0
 		if Course.direction_of(wind_deg - _run_in_tack * START_RUN_IN_TWA_DEG).dot(step.in_dir) <= 0.3:
 			_run_in_tack = -_run_in_tack
 	return _run_in_tack
@@ -1242,6 +1445,9 @@ func _away_heading(telemetry: Telemetry, step: RaceStep) -> float:
 	var away_tack: float = -_start_run_in_tack(step, wind_deg)
 	if tack != away_tack:
 		return _gybe_now(telemetry)
+	# Held back to LOOP_AWAY_SPEED_MS: a loop sailed at full speed in a strong wind went far out of the
+	# area, and its gybe back at 13 m/s took 12 s to begin.
+	_hands.hold_speed_ms = LOOP_AWAY_SPEED_MS
 	var back_deg: float = Course.bearing_deg(Vector2.ZERO, -_run_in_direction(step, wind_deg))
 	var back_twa: float = absf(wrapf(wind_deg - back_deg, -180.0, 180.0))
 	return wind_deg - tack * clampf(back_twa, config.upwind_vmg_twa_deg + 15.0, config.downwind_vmg_twa_deg)
@@ -1435,7 +1641,8 @@ func _measure(telemetry: Telemetry, dt: float) -> void:
 	var share: float = clampf(dt / MEASURE_SMOOTH_S, 0.0, 1.0)
 	# The leeway is measured whenever the board sails steadily with some speed: in light wind a beat
 	# is slower than the pointing speed, and its leeway (8 degrees and more) is what the laylines need.
-	if steady and telemetry.speed_ms > MEASURE_LEEWAY_FROM_MS:
+	# (Not while holding back: a board slipping sideways at a crawl says nothing of its leeway at speed.)
+	if steady and telemetry.speed_ms > MEASURE_LEEWAY_FROM_MS and _hands.hold_speed_ms <= 0.0:
 		_leeway_deg = lerpf(_leeway_deg, clampf(absf(telemetry.leeway_deg), 0.0, 12.0), share)
 	# The speed against the polar, where the polar has the board planing (its slow rows, a board
 	# that did not plane from rest, say little about a board that came in planing).
@@ -1447,6 +1654,14 @@ func _measure(telemetry: Telemetry, dt: float) -> void:
 		_off_plane = true
 	elif telemetry.speed_ms > ON_PLANE_MS:
 		_off_plane = false
+	# How slow holding back really gets it, after 3 s of holding back (smoothed over 3 s).
+	if _hands.hold_speed_ms > 0.0 and _controller.manoeuvre == PlayerController.Manoeuvre.NONE:
+		if _holding_since_s < 0.0:
+			_holding_since_s = _time_s
+		elif _time_s - _holding_since_s > 3.0:
+			_held_ms = lerpf(_held_ms if _held_ms > 0.0 else telemetry.speed_ms, telemetry.speed_ms, share)
+	else:
+		_holding_since_s = -1.0
 	var memory_share: float = clampf(dt / WIND_MEMORY_S, 0.0, 1.0)
 	_wind_memory_deg = wrapf(_wind_memory_deg + memory_share * wrapf(telemetry.wind_from_bearing_deg - _wind_memory_deg, -180.0, 180.0), 0.0, 360.0)
 

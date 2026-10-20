@@ -289,7 +289,7 @@ func test_the_hold_back_slows_the_board_without_stalling() -> void:
 		slowest_ms = minf(slowest_ms, sim.telemetry.speed_ms)
 		speeds.append(sim.telemetry.speed_ms)
 		shown.append("%.2f" % sim.telemetry.speed_ms)
-	gut.p("Holding back to 2.5 m/s at 60 degrees: %s m/s" % ", ".join(shown))
+	gut.p("Holding back to 2.5 m/s at %.0f degrees: %s m/s" % [Skipper.HOLD_TWA_DEG, ", ".join(shown)])
 	assert_eq(sim.sailor_state, WindsurferSim.SailorState.SAILING, "Still on the board")
 	assert_gt(slowest_ms, controller.hold_back_steerage_ms, "Never so slow that it cannot steer (no stall)")
 	for speed_ms: float in speeds:

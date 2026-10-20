@@ -59,10 +59,9 @@ enum StartStyle { LOOP, HOLD }
 ## turn back to reach it at the gun at full speed), or a hold (come to the line early, luff and
 ## ease the sheet near it to wait without stopping, then bear away and sheet in for the gun).
 @export var start_style: StartStyle = StartStyle.LOOP
-## The hold: how many seconds early it plans to come to its waiting point behind the line, and the
-## speed it holds back to there, m/s (2 to 3 m/s keeps the fin gripping: below 1.5 m/s the board
-## cannot be steered and rounds up into the wind).
-@export_range(0.0, 20.0) var hold_s: float = 8.0
+## The slowest it holds back to before the start, m/s (2 to 3 m/s keeps the fin gripping: below
+## 1.5 m/s the board cannot be steered and rounds up into the wind). A slower hold uses up more time
+## on a shorter way in to the line.
 @export_range(1.5, 4.0) var hold_speed_ms: float = 2.5
 
 @export_group("Tactics")
