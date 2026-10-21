@@ -159,3 +159,27 @@ func test_the_observation_has_one_name_per_number() -> void:
 	for name: String in names:
 		assert_false(seen.has(name), "the name %s is used once" % name)
 		seen[name] = true
+
+
+## RD4: the GDScript network gives the same outputs as Python on saved inputs. The fixture is made
+## by tools/train/parity.py (a brain exported the trainer's way, 20 random inputs, torch's outputs).
+func test_the_network_agrees_with_python_on_the_parity_fixture_to_1e_5() -> void:
+	var path: String = "res://tests/unit/fixtures/brain_parity.json"
+	assert_true(FileAccess.file_exists(path), "the fixture is there (python tools/train/parity.py makes it)")
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	assert_true(parsed is Dictionary)
+	var fixture: Dictionary = parsed
+	var net: NeuralNet = NeuralNet.from_dict(fixture["brain"])
+	assert_not_null(net)
+	assert_eq(net.layers[-1].activation, "linear", "the trainer's last layer is linear")
+	var inputs: Array = fixture["inputs"]
+	var outputs: Array = fixture["outputs"]
+	assert_eq(inputs.size(), 20)
+	var worst: float = 0.0
+	for k: int in inputs.size():
+		var got: PackedFloat32Array = net.forward(PackedFloat32Array(inputs[k]))
+		var expected: Array = outputs[k]
+		assert_eq(got.size(), expected.size())
+		for o: int in got.size():
+			worst = maxf(worst, absf(got[o] - float(expected[o])))
+	assert_true(worst < 1e-5, "the largest difference over 20 inputs is %.8f" % worst)
