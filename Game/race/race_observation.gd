@@ -70,6 +70,10 @@ static func names() -> PackedStringArray:
 	for n: int in OTHERS_SEEN:
 		for part: String in ["present", "forward", "right", "vforward", "vright"]:
 			list.append("board%d_%s" % [n + 1, part])
+	# The point the course pulls toward (AI_FLEET_PLAN.md, D6b), the leg after the next step, how far
+	# there is still to sail, and what the hands were last told.
+	list.append_array(PackedStringArray(["aim_distance", "aim_ahead_sin", "aim_ahead_cos", "aim_wind_sin", "aim_wind_cos",
+		"next_out_sin", "next_out_cos", "remaining", "wanted_twa", "holding"]))
 	return list
 
 
@@ -83,10 +87,13 @@ static func size() -> int:
 ##   wind: the wind field it sails in (null: the four samples around it read as calm water, zeros);
 ##   others_positions / others_velocities: the other boards (game X, Z, and m/s in X, Z), any order;
 ##   in_manoeuvre: a tack or gybe is under way (PlayerController.manoeuvre);
-##   since_manoeuvre_s: the seconds since the last one ended (advance_since_manoeuvre()).
+##   since_manoeuvre_s: the seconds since the last one ended (advance_since_manoeuvre());
+##   wanted_twa_deg, hold_speed_ms: what the hands were last told (LearnedSkipper.Driver): the
+##     wind angle wanted and the hold-back speed (0: none), so a brain without a memory of its own
+##     knows which tack it meant to be on and whether it is holding back.
 static func build(telemetry: Telemetry, race: RaceSim, index: int, wind: WindField,
 		others_positions: PackedVector2Array, others_velocities: PackedVector2Array,
-		in_manoeuvre: bool, since_manoeuvre_s: float) -> PackedFloat32Array:
+		in_manoeuvre: bool, since_manoeuvre_s: float, wanted_twa_deg: float = 0.0, hold_speed_ms: float = 0.0) -> PackedFloat32Array:
 	var obs: PackedFloat32Array = PackedFloat32Array()
 	var here: Vector2 = Vector2(telemetry.position.x, telemetry.position.z)
 	var heading_deg: float = telemetry.heading_deg
@@ -133,6 +140,22 @@ static func build(telemetry: Telemetry, race: RaceSim, index: int, wind: WindFie
 
 	# The two nearest other boards.
 	_append_others(obs, telemetry, here, heading_deg, others_positions, others_velocities)
+
+	# The point the course pulls toward (SailingDistance: a mark's rounding point, past the mark on
+	# its correct side, or the best point of a line to cross), from the bow and from the wind; the
+	# way the course goes on after the next step, from the wind; how far there is still to sail
+	# round the course; and what the hands were last told. The yardstick's wind is the course's axis.
+	var axis_deg: float = race.course.axis_deg
+	var aim: Vector2 = SailingDistance.next_point(race, index, here, axis_deg)
+	obs.append(minf(here.distance_to(aim), DISTANCE_SCALE_M) / DISTANCE_SCALE_M)
+	var aim_bearing_deg: float = Course.bearing_deg(here, aim)
+	_append_angle(obs, Course.turn_deg(heading_deg, aim_bearing_deg))
+	_append_angle(obs, Course.turn_deg(wind_from_deg, aim_bearing_deg))
+	var out_dir: Vector2 = steps[next_number].out_dir
+	_append_angle(obs, Course.turn_deg(wind_from_deg, Course.bearing_deg(Vector2.ZERO, out_dir)))
+	obs.append(clampf(SailingDistance.remaining_m(race, index, here, axis_deg) / SailingDistance.REMAINING_SCALE_M, 0.0, CLIP))
+	obs.append(clampf(wanted_twa_deg / 180.0, -1.0, 1.0))
+	obs.append(clampf(hold_speed_ms / SPEED_SCALE_MS, 0.0, 1.0))
 	return obs
 
 

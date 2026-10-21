@@ -103,6 +103,8 @@ func test_a_brain_sails_through_the_skipper_exactly_as_in_the_trainer() -> void:
 func _sail_both_ways(mode: LearnedSkipper.ActionMode) -> void:
 	var brain: NeuralNet = _random_brain(8)
 	brain.meta["actions"] = LearnedSkipper.mode_name(mode)
+	# A wind-angle brain with a hold output, as the trainer makes them.
+	brain.action_names = LearnedSkipper.TWA_ACTION_NAMES if mode == LearnedSkipper.ActionMode.TWA else LearnedSkipper.ACTION_NAMES
 	var course: Course = _course()
 	var options: RaceEnv.Options = RaceEnv.Options.new()
 	options.actions = mode
@@ -220,3 +222,60 @@ func test_a_brain_is_read_in_the_mode_it_was_trained_in() -> void:
 	assert_eq(LearnedSkipper.mode_of(brain), LearnedSkipper.ActionMode.TWA)
 	brain.meta["actions"] = "stick"
 	assert_eq(LearnedSkipper.mode_of(brain), LearnedSkipper.ActionMode.STICK)
+
+
+func test_the_hold_output_becomes_the_hands_hold_back_speed_when_the_brain_has_one() -> void:
+	# The mapping: nothing at 0 or below, 8 m/s just above 0, 1.5 m/s at 1.
+	assert_eq(LearnedSkipper.hold_from_output(-0.3), 0.0)
+	assert_eq(LearnedSkipper.hold_from_output(0.0), 0.0)
+	assert_almost_eq(LearnedSkipper.hold_from_output(0.001), LearnedSkipper.HOLD_FASTEST_MS, 0.01)
+	assert_almost_eq(LearnedSkipper.hold_from_output(1.0), LearnedSkipper.HOLD_SLOWEST_MS, 1e-6)
+	assert_almost_eq(LearnedSkipper.hold_from_output(0.5), 0.5 * (LearnedSkipper.HOLD_FASTEST_MS + LearnedSkipper.HOLD_SLOWEST_MS), 1e-6)
+	# A driver with the hold puts it on the hands; one without leaves them alone.
+	var hands: AiHands = AiHands.new()
+	var driver: LearnedSkipper.Driver = LearnedSkipper.Driver.new(hands, LearnedSkipper.ActionMode.TWA)
+	driver.uses_hold = true
+	driver.decide(PackedFloat32Array([0.25, 0.0, 1.0]), false)
+	assert_almost_eq(hands.hold_speed_ms, LearnedSkipper.HOLD_SLOWEST_MS, 1e-6)
+	driver.decide(PackedFloat32Array([0.25, 0.0, -1.0]), false)
+	assert_eq(hands.hold_speed_ms, 0.0)
+	driver.uses_hold = false
+	driver.decide(PackedFloat32Array([0.25, 0.0, 1.0]), false)
+	assert_eq(hands.hold_speed_ms, 0.0, "a brain without a hold output never holds back")
+	# A brain says so by the name of its third output.
+	var brain: NeuralNet = _random_brain(2)
+	assert_false(LearnedSkipper.uses_hold_of(brain), "no names")
+	brain.action_names = LearnedSkipper.TWA_ACTION_NAMES
+	assert_true(LearnedSkipper.uses_hold_of(brain))
+	brain.action_names = PackedStringArray(["twa", "sheet", "unused"])
+	assert_false(LearnedSkipper.uses_hold_of(brain), "the night's brains")
+
+
+func test_a_brain_picks_its_inputs_by_name_and_decides_as_often_as_its_note_says() -> void:
+	var names: PackedStringArray = RaceObservation.names()
+	# A brain from before the last ten numbers were added: it takes the first names only.
+	var old_names: PackedStringArray = names.slice(0, names.size() - 10)
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 5
+	var old: NeuralNet = NeuralNet.make([old_names.size(), 4, 3], rng)
+	old.obs_names = old_names
+	var observation: PackedFloat32Array = PackedFloat32Array()
+	for k: int in names.size():
+		observation.append(float(k))
+	var picked: PackedFloat32Array = old.select_inputs(observation, names)
+	assert_eq(picked.size(), old_names.size())
+	assert_eq(picked[0], 0.0)
+	assert_eq(picked[picked.size() - 1], float(old_names.size() - 1))
+	# A brain with the inputs in another order gets them in its order.
+	var shuffled: NeuralNet = NeuralNet.make([3, 2, 3], rng)
+	shuffled.obs_names = PackedStringArray([names[5], names[0], names[2]])
+	assert_eq(shuffled.select_inputs(observation, names), PackedFloat32Array([5.0, 0.0, 2.0]))
+	# The same names: the observation as it is.
+	var current: NeuralNet = NeuralNet.make([names.size(), 2, 3], rng)
+	current.obs_names = names.duplicate()
+	assert_eq(current.select_inputs(observation, names), observation)
+	# The note's decision_ticks is how often the skipper asks it.
+	current.meta["decision_ticks"] = 30
+	var skipper: LearnedSkipper = LearnedSkipper.new()
+	skipper.brain = current
+	assert_eq(skipper.decision_ticks, 30)

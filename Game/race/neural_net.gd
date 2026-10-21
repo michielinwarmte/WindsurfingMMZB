@@ -75,6 +75,11 @@ var action_names: PackedStringArray = PackedStringArray()
 ## Where the brain came from: the course, the training run, the generation, its fitness, the date,
 ## the physics commit. Free-form; saved and loaded as it is.
 var meta: Dictionary = {}
+## select_inputs()'s map from this brain's inputs to the observation's numbers, and the list of
+## names it was made for.
+var _input_map: PackedInt32Array = PackedInt32Array()
+var _input_map_for: PackedStringArray = PackedStringArray()
+var _input_map_warned: bool = false
 
 
 ## A new network with small random weights. sizes lists the number of neurons from the inputs to
@@ -140,6 +145,33 @@ func forward(input: PackedFloat32Array) -> PackedFloat32Array:
 	for layer: Layer in layers:
 		values = layer.forward(values)
 	return values
+
+
+## The inputs this brain wants, picked by name from an observation whose numbers are called
+## `names` (RaceObservation.names()): the observation itself when the brain's inputs have the same
+## names, or none; otherwise each of the brain's inputs is the observation's number of that name,
+## so a brain from before a number was added to the observation still sails (a name the
+## observation no longer has reads 0, with one warning). The map is worked out once per list.
+func select_inputs(observation: PackedFloat32Array, names: PackedStringArray) -> PackedFloat32Array:
+	if obs_names.is_empty() or obs_names == names:
+		return observation
+	if _input_map_for != names or _input_map.size() != obs_names.size():
+		_input_map_for = names.duplicate()
+		_input_map.resize(obs_names.size())
+		var missing: PackedStringArray = PackedStringArray()
+		for i: int in obs_names.size():
+			_input_map[i] = names.find(obs_names[i])
+			if _input_map[i] < 0:
+				missing.append(obs_names[i])
+		if not missing.is_empty() and not _input_map_warned:
+			_input_map_warned = true
+			push_warning("NeuralNet: the observation has no %s; those inputs read 0." % ", ".join(missing))
+	var picked: PackedFloat32Array = PackedFloat32Array()
+	picked.resize(_input_map.size())
+	for i: int in _input_map.size():
+		var k: int = _input_map[i]
+		picked[i] = observation[k] if k >= 0 and k < observation.size() else 0.0
+	return picked
 
 
 ## A copy of this network: the same weights, the names and the note.

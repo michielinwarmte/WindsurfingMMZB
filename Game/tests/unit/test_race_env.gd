@@ -1,9 +1,11 @@
 extends GutTest
-## RaceEnv, a race as a learning environment (RACING_PLAN.md, Part 9C): what a board sees stays
-## within -3 and 3; the progress reward is the metres gained toward the next step / 100, and a step
-## completed is not counted as a loss of the next leg; a fall costs 20 and being over the line at
-## the gun 10; the same seed and the same actions give the same rewards; an episode ends at the
-## time limit, far from the course, or (if asked) when the board stops gaining; and a hand-written
+## RaceEnv, a race as a learning environment (RACING_PLAN.md, Part 9C; AI_FLEET_PLAN.md, D6b): what
+## a board sees stays within -3 and 3; the progress reward is the fall of the sailing distance still
+## to go round the course, in metres / 100, so a detour pays nothing and a completed step pays its
+## bonus and never a loss; a tack costs 5 m, a fall 50, being over the line at the gun 50, and every
+## second 2; the same seed and the same actions give the same rewards; an episode ends at the time
+## limit, far from the course, or (if asked) when the board stops gaining; a board can be dropped
+## at any step of the course and respawned for a new episode in the same race; and a hand-written
 ## wind-angle policy, answering as a network does in the "twa" mode, starts and rounds mark 1 within
 ## 240 s (the ceiling a learner chases).
 ##
@@ -24,11 +26,14 @@ static func _course() -> Course:
 
 ## Options with only the parts of the reward a test looks at, and the stick mode, so that the action
 ## [0, 0, 0] lets go of the stick and the controller holds the heading.
-static func _options(progress: bool, decisions: bool) -> RaceEnv.Options:
+static func _options(progress: bool, time: bool) -> RaceEnv.Options:
 	var options: RaceEnv.Options = RaceEnv.Options.new()
 	options.actions = LearnedSkipper.ActionMode.STICK
-	options.progress_per_m = 0.01 if progress else 0.0
-	options.decision_cost = 0.01 if decisions else 0.0
+	options.progress_per_m = 0.01
+	if not progress:
+		options.rounding_bonus_m = 0.0
+		options.finish_bonus_m = 0.0
+	options.time_cost_m_per_s = 2.0 if time else 0.0
 	return options
 
 
@@ -46,11 +51,16 @@ static func _decide(env: RaceEnv, action: PackedFloat32Array) -> float:
 	return env.reward(0)
 
 
+static func _remaining(env: RaceEnv) -> float:
+	var p: Vector3 = env.board(0).sim.telemetry.position
+	return SailingDistance.remaining_m(env.race, 0, Vector2(p.x, p.z), env.course.axis_deg)
+
+
 func test_every_observation_stays_within_minus_3_and_3_over_60_s_with_a_constant_action() -> void:
 	# The stick: a steady turn, the sheet pulled in by hand, and the tack output held high.
 	_check_the_observation_over_60_s(LearnedSkipper.ActionMode.STICK, PackedFloat32Array([0.4, 0.8, 1.0]))
-	# The wind angle: 45 degrees on starboard, the sheet pulled in by hand.
-	_check_the_observation_over_60_s(LearnedSkipper.ActionMode.TWA, PackedFloat32Array([0.25, 0.8, 0.0]))
+	# The wind angle: 45 degrees on starboard, the sheet pulled in by hand, holding back a little.
+	_check_the_observation_over_60_s(LearnedSkipper.ActionMode.TWA, PackedFloat32Array([0.25, 0.8, 0.3]))
 
 
 func _check_the_observation_over_60_s(mode: LearnedSkipper.ActionMode, action: PackedFloat32Array) -> void:
@@ -76,24 +86,46 @@ func _check_the_observation_over_60_s(mode: LearnedSkipper.ActionMode, action: P
 	assert_true(worst <= 3.0, "every number stays within -3 and 3 (the largest is %s at %.2f)" % [worst_name, worst])
 
 
-func test_the_progress_reward_is_the_metres_gained_toward_the_next_step_over_100() -> void:
+func test_the_progress_reward_is_the_fall_of_the_sailing_distance_still_to_go_over_100() -> void:
 	var options: RaceEnv.Options = _options(true, false)
 	options.prestart_s = 30.0
 	var env: RaceEnv = RaceEnv.new(_course(), 1, 15.0, options)
 	env.reset(1)
 	_point(env, CLOSE_REACH_DEG)
-	var start_m: float = env.race.distance_to_next_m(0)
+	var at_start_m: float = _remaining(env)
 	var total: float = 0.0
 	while env.time_s < 15.0:
 		total += _decide(env, PackedFloat32Array([0.0, 0.0, 0.0]))  # hold the heading
-	var gained_m: float = start_m - env.race.distance_to_next_m(0)
+	var gained_m: float = at_start_m - _remaining(env)
 	assert_eq(env.race.next_step_index(0), 0, "still sailing to the start line")
-	assert_true(gained_m > 10.0, "the board came closer to the line: %.1f m" % gained_m)
-	assert_almost_eq(total, gained_m / 100.0, 1e-4, "the reward is the metres gained / 100")
-	assert_almost_eq(env.board(0).progress_m, gained_m, 1e-3)
+	assert_true(gained_m > 10.0, "the board came closer to the course: %.1f m" % gained_m)
+	assert_almost_eq(total, gained_m / 100.0, 1e-3, "the reward is the metres gained / 100")
+	assert_almost_eq(env.board(0).progress_m, gained_m, 1e-2)
 
 
-func test_a_completed_step_earns_its_bonus_and_the_next_leg_is_not_a_loss() -> void:
+func test_a_detour_pays_nothing_the_progress_is_the_same_whichever_way() -> void:
+	# Two boards on the same race: one holds its heading, the other weaves. Each one's progress is
+	# exactly the fall of its own remaining distance: the way between two places is what it is.
+	var options: RaceEnv.Options = _options(true, false)
+	options.prestart_s = 60.0
+	var env: RaceEnv = RaceEnv.new(_course(), 2, 15.0, options)
+	env.reset(2)
+	var before: PackedFloat32Array = PackedFloat32Array()
+	for i: int in 2:
+		var p: Vector3 = env.board(i).sim.telemetry.position
+		before.append(SailingDistance.remaining_m(env.race, i, Vector2(p.x, p.z), env.course.axis_deg))
+	for k: int in 120:
+		env.act(0, PackedFloat32Array([0.0, 0.0, 0.0]))
+		env.act(1, PackedFloat32Array([0.6 * sin(k * 0.3), 0.0, 0.0]))
+		for t: int in env.decision_ticks:
+			env.tick()
+	for i: int in 2:
+		var p: Vector3 = env.board(i).sim.telemetry.position
+		var now: float = SailingDistance.remaining_m(env.race, i, Vector2(p.x, p.z), env.course.axis_deg)
+		assert_almost_eq(env.board(i).progress_m, before[i] - now, 0.05, "board %d: progress is the fall of its remaining distance" % i)
+
+
+func test_a_completed_step_earns_its_bonus_and_never_a_loss() -> void:
 	var options: RaceEnv.Options = _options(true, false)
 	options.prestart_s = 0.0
 	options.start_behind_m = 10.0  # close enough to reach the 60 m line close-hauled
@@ -102,40 +134,75 @@ func test_a_completed_step_earns_its_bonus_and_the_next_leg_is_not_a_loss() -> v
 	var env: RaceEnv = RaceEnv.new(_course(), 1, 15.0, options)
 	env.reset(1)
 	_point(env, CLOSE_HAULED_DEG)
-	var at_start: float = 0.0
 	var crossing_reward: float = 0.0
+	var remaining_before: float = 0.0
+	var remaining_after: float = 0.0
 	while env.time_s < 30.0 and env.race.next_step_index(0) == 0:
 		if env.ticks % env.decision_ticks == 0:
 			env.act(0, PackedFloat32Array([0.0, 0.0, 0.0]))
-		var distance_before_m: float = env.race.distance_to_next_m(0)
+		remaining_before = _remaining(env)
 		env.tick()
 		var earned: float = env.reward(0)
 		if env.race.next_step_index(0) == 1:
 			crossing_reward = earned
-			at_start = distance_before_m
+			remaining_after = _remaining(env)
 	assert_eq(env.race.next_step_index(0), 1, "the board started")
-	# The tick of the crossing earns the bonus and the last metres to the line; the 556 m to mark 1
-	# that now lie ahead are not a loss.
-	assert_almost_eq(crossing_reward, 50.0 + at_start / 100.0, 1e-4, "50 for the start and the last metres")
+	# The tick of the crossing earns the bonus (50 m) and the metres of that tick; the 556 m to
+	# mark 1 that now lie ahead were in the yardstick all along, so they are no loss.
+	assert_true(crossing_reward >= 0.5, "50 m for the start and the tick's progress: %.3f" % crossing_reward)
+	assert_true(crossing_reward < 0.6, "and no windfall: %.3f" % crossing_reward)
+	assert_true(remaining_after <= remaining_before + 1e-3, "the remaining distance did not grow at the crossing")
 	assert_false(env.race.is_ocs(0))
 
 
-func test_a_fall_costs_20() -> void:
+func test_a_tack_costs_5_m() -> void:
+	var options: RaceEnv.Options = _options(false, false)
+	options.actions = LearnedSkipper.ActionMode.TWA
+	options.prestart_s = 60.0
+	var env: RaceEnv = RaceEnv.new(_course(), 1, 15.0, options)
+	env.reset(1)
+	# Close-hauled on starboard for 20 s, then the other tack asked for.
+	var progress: float = 0.0
+	for k: int in 40:
+		progress += _decide(env, PackedFloat32Array([0.25, 0.0, 0.0]))
+	var board: RaceEnv.Board = env.board(0)
+	assert_eq(board.manoeuvres, 0)
+	var manoeuvres_seen: int = 0
+	var cost_tick: float = 0.0
+	for k: int in 300:
+		env.act(0, PackedFloat32Array([-0.25, 0.0, 0.0]))
+		for t: int in env.decision_ticks:
+			var before: int = board.manoeuvres
+			env.tick()
+			if board.manoeuvres > before:
+				manoeuvres_seen += 1
+				cost_tick = env.reward(0)
+			else:
+				env.reward(0)
+		if manoeuvres_seen > 0:
+			break
+	assert_eq(manoeuvres_seen, 1, "one tack")
+	# The tick of the tack: 5 m less, and whatever the board gained or lost in that tick (a bit).
+	assert_almost_eq(cost_tick, -0.05, 0.01, "5 m for the tack")
+
+
+func test_a_fall_costs_50_m() -> void:
 	var env: RaceEnv = RaceEnv.new(_course(), 1, 15.0, _options(false, false))
 	env.reset(1)
 	for t: int in 30:
 		env.tick()
-	assert_eq(env.reward(0), 0.0, "nothing earned with only the fall counted")
+	env.reward(0)
 	env.board(0).sim.force_fall("catapult")
 	env.tick()
-	assert_eq(env.reward(0), -20.0, "the fall")
+	var earned: float = env.reward(0)
+	assert_almost_eq(earned, -0.5, 0.01, "the fall (and the tick's progress, a bit)")
 	assert_eq(env.board(0).falls, 1)
 	for t: int in 60:
 		env.tick()
-	assert_eq(env.reward(0), 0.0, "a fall is counted once")
+	assert_true(env.reward(0) > -0.1, "a fall is counted once")
 
 
-func test_being_over_the_line_at_the_gun_costs_10() -> void:
+func test_being_over_the_line_at_the_gun_costs_50_m() -> void:
 	var options: RaceEnv.Options = _options(false, false)
 	options.prestart_s = 2.0
 	options.start_behind_m = -15.0  # waiting on the course side of the line
@@ -145,16 +212,19 @@ func test_being_over_the_line_at_the_gun_costs_10() -> void:
 	while env.time_s < 4.0:
 		total += _decide(env, PackedFloat32Array([0.0, 0.0, 0.0]))
 	assert_true(env.race.is_ocs(0), "over the line at the gun")
-	assert_eq(total, -10.0, "OCS costs 10, once")
+	assert_almost_eq(total - env.board(0).progress_m / 100.0, -0.5, 1e-3, "OCS costs 50 m, once")
 
 
-func test_each_decision_costs_a_hundredth() -> void:
-	var env: RaceEnv = RaceEnv.new(_course(), 1, 15.0, _options(false, true))
+func test_each_second_costs_2_m() -> void:
+	var options: RaceEnv.Options = _options(false, true)
+	options.progress_per_m = 0.01
+	var env: RaceEnv = RaceEnv.new(_course(), 1, 15.0, options)
 	env.reset(1)
 	var total: float = 0.0
 	for k: int in 10:
 		total += _decide(env, PackedFloat32Array([0.0, 0.0, 0.0]))
-	assert_almost_eq(total, -0.1, 1e-6)
+	var seconds: float = 10.0 * env.decision_ticks * DT
+	assert_almost_eq(total - env.board(0).progress_m / 100.0, -0.02 * seconds, 1e-4)
 	assert_eq(env.board(0).decisions, 10)
 
 
@@ -192,6 +262,7 @@ func test_an_episode_ends_at_the_time_limit_and_the_board_is_parked() -> void:
 	var brain: NeuralNet = NeuralNet.make([RaceObservation.size(), 8, 3], rng)
 	var total: float = env.run_episode(brain)
 	assert_true(env.done(0))
+	assert_true(env.board(0).truncated, "cut by the time limit, not ended")
 	assert_almost_eq(env.time_s, 2.0, DT, "it ran to the time limit")
 	assert_almost_eq(total, env.board(0).total, 1e-4, "run_episode() returns the episode's reward")
 	var parked_at: Vector3 = env.board(0).sim.telemetry.position
@@ -207,9 +278,11 @@ func test_a_board_far_from_the_course_is_done() -> void:
 	env.reset(1)
 	env.tick()
 	assert_true(env.done(0))
-	# Out early, it pays for the decisions it would have made up to the time limit (240 s, ten a
-	# second): giving up must not be cheaper than sailing on.
-	assert_almost_eq(env.reward(0), -0.01 * 2400.0, 0.011, "the rest of the time is charged")
+	assert_true(env.board(0).out_of_bounds)
+	assert_false(env.board(0).truncated)
+	# Out early, it pays for the time it would have sailed to the limit (240 s at 2 m a second):
+	# giving up must not be cheaper than sailing on.
+	assert_almost_eq(env.reward(0) - env.board(0).progress_m / 100.0, -0.02 * 240.0, 0.05, "the rest of the time is charged")
 
 
 func test_a_board_that_stops_gaining_is_done_when_asked() -> void:
@@ -222,7 +295,51 @@ func test_a_board_that_stops_gaining_is_done_when_asked() -> void:
 	while not env.done(0) and env.time_s < 20.0:
 		_decide(env, PackedFloat32Array([0.0, 0.0, 0.0]))
 	assert_true(env.done(0), "done")
+	assert_true(env.board(0).stalled)
 	assert_true(env.time_s < 10.0, "a few seconds after it stopped gaining: %.1f s" % env.time_s)
+
+
+func test_a_dropped_board_starts_at_its_step_and_a_respawn_begins_a_new_episode() -> void:
+	var options: RaceEnv.Options = RaceEnv.Options.new()
+	options.actions = LearnedSkipper.ActionMode.TWA
+	options.episode_s = 60.0
+	options.prestart_s = 30.0
+	var course: Course = _course()
+	var env: RaceEnv = RaceEnv.new(course, 2, 15.0, options)
+	var mark1: Vector2 = course.mark("1").position
+	# Board 0 dropped 300 m east (downwind) of mark 1 on its way to it, the start behind it; board 1
+	# at the pre-start spot with the start still to do.
+	var drops: Array[RaceEnv.Drop] = [RaceEnv.Drop.at(mark1 + Vector2(300.0, 0.0), 225.0, 1),
+		RaceEnv.Drop.at(RaceCourses.pre_start_spot(course), 180.0, 0)]
+	env.reset_dropped(4, drops)
+	assert_eq(env.race.next_step_index(0), 1, "board 0 is sailing to mark 1")
+	assert_eq(env.race.next_step_index(1), 0, "board 1 has the start to do")
+	assert_almost_eq(env.race.clock_s(), -30.0, 1e-3, "the countdown runs for board 1")
+	var p: Vector3 = env.board(0).sim.telemetry.position
+	assert_almost_eq(Vector2(p.x, p.z).distance_to(drops[0].position), 0.0, 0.5, "where it was dropped")
+	for k: int in 100:
+		env.act(0, PackedFloat32Array([0.25, 0.0, 0.0]))
+		for t: int in env.decision_ticks:
+			env.tick()
+	assert_true(env.board(0).progress_m > 10.0, "it sailed toward mark 1 in 10 s: %.0f m" % env.board(0).progress_m)
+	assert_true(env.board(0).decisions == 100)
+	# Dropped again, 200 m south of mark 1: a fresh board, its counters cleared, the race going on.
+	var again: RaceEnv.Drop = RaceEnv.Drop.at(mark1 + Vector2(0.0, 200.0), 270.0, 1)
+	var clock_before: float = env.race.clock_s()
+	env.respawn(0, again, 9)
+	p = env.board(0).sim.telemetry.position
+	assert_almost_eq(Vector2(p.x, p.z).distance_to(again.position), 0.0, 0.5, "at the new drop")
+	assert_eq(env.board(0).decisions, 0)
+	assert_eq(env.board(0).progress_m, 0.0)
+	assert_false(env.done(0))
+	assert_almost_eq(env.board(0).episode_until_s, env.time_s + 60.0, 1e-3, "a new episode's time")
+	assert_eq(env.race.clock_s(), clock_before, "the race clock is not touched")
+	env.tick()
+	assert_true(absf(env.reward(0)) < 0.1, "no windfall and no loss at the respawn")
+	# With no board still to start, a dropped race has no countdown.
+	var started: Array[RaceEnv.Drop] = [RaceEnv.Drop.at(mark1 + Vector2(300.0, 0.0), 225.0, 1)]
+	env.reset_dropped(5, started)
+	assert_eq(env.race.clock_s(), 0.0, "the gun has gone")
 
 
 # ---------------------------------------------------------------- the ceiling: a hand-written wind-angle policy
@@ -248,7 +365,7 @@ func test_a_hand_written_wind_angle_policy_starts_and_rounds_mark_1_within_240_s
 	assert_eq(env.race.next_step_index(0), 2, "started and rounded mark 1")
 	assert_eq(env.board(0).falls, 0, "without a fall")
 	if splits.size() >= 2:
-		gut.p("The wind-angle policy: start at %.1f s, mark 1 at %.1f s of race time (%.1f s after reset)" % [splits[0], splits[1], env.time_s])
+		gut.p("The wind-angle policy: start at %.1f s, mark 1 at %.1f s of race time (%.1f s after reset), reward %.2f" % [splits[0], splits[1], env.time_s, env.board(0).total])
 		assert_true(env.time_s < 240.0, "within the 240 s of an episode: %.1f s" % env.time_s)
 
 

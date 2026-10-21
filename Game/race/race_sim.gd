@@ -129,6 +129,25 @@ func update_board(index: int, position: Vector2) -> void:
 	_order_stale = true
 
 
+## Puts a board somewhere on the course with the steps before `next_step` counted as done (the
+## trainer's drops, AI_FLEET_PLAN.md D6b: a board set down below a windward mark with the start
+## behind it). Its move history starts afresh there, so the jump is not checked as a crossing; the
+## steps it is given are split at the race clock as it stands; over the line early is forgotten.
+## steps().size() or more makes it a finisher, at the clock's time.
+func place_board(index: int, position: Vector2, next_step: int) -> void:
+	var board: Board = _boards[index]
+	board.position = position
+	board.last_position = position
+	board.has_position = true
+	board.next_step = clampi(next_step, 0, _steps.size())
+	board.splits.resize(board.next_step)
+	board.splits.fill(maxf(_clock_s, 0.0))
+	board.finish_time_s = maxf(_clock_s, 0.0) if board.next_step >= _steps.size() else -1.0
+	board.ocs = false
+	board.wrong_side_until_s = -INF
+	_order_stale = true
+
+
 ## Moves the race clock on by dt seconds and checks every board's move since the last step().
 ## Before start() and after the race has ended nothing is checked; the boards may sail about.
 func step(dt: float) -> void:

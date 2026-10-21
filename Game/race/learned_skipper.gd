@@ -16,6 +16,9 @@ extends RaceSkipper
 ## - "stick": the first number is the steering stick itself, held until the next decision, and the
 ##   third asks for a tack or gybe as it rises above 0.5.
 ## In both, the second number is the sheet, through a dead zone that leaves the auto-sheet trimming.
+## In the wind-angle mode a brain whose third output is called "hold" (the trainer's brains since
+## F5) uses it for the hands' hold-back skill (AI_FLEET_PLAN.md, D1): above 0 the sheet is eased
+## until the board sails no faster than hold_from_output() says, down to 1.5 m/s at 1.
 ##
 ## The trainer (RaceEnv) uses the same Driver as here, so a brain sails in the game exactly as it
 ## sailed in training.
@@ -33,8 +36,14 @@ const STEER: int = 0
 const SHEET: int = 1
 const TACK: int = 2
 const ACTION_NAMES: PackedStringArray = ["steer", "sheet", "tack"]
-## The names of the outputs in the wind-angle mode (the third is not used).
-const TWA_ACTION_NAMES: PackedStringArray = ["twa", "sheet", "unused"]
+## The names of the outputs in the wind-angle mode: the wind angle, the sheet, and the hold-back
+## speed (the night's first brains had "unused" there and never hold back).
+const HOLD: int = 2
+const TWA_ACTION_NAMES: PackedStringArray = ["twa", "sheet", "hold"]
+## The hold-back speed for a hold output just above 0 (as good as no hold) and at 1 (the controller's
+## slowest, where the board still steers), m/s.
+const HOLD_FASTEST_MS: float = 8.0
+const HOLD_SLOWEST_MS: float = 1.5
 ## Stick mode: a tack or gybe is asked for when the tack output rises above this.
 const TACK_THRESHOLD: float = 0.5
 ## The sheet output only takes the sheet over from the auto-sheet beyond this, either way. The
@@ -72,6 +81,8 @@ const CLEAR_TACK_TO_DEG: float = 165.0
 class Driver:
 	var mode: ActionMode = ActionMode.TWA
 	var hands: AiHands
+	## Wind-angle mode: whether the third output is the hold-back speed (uses_hold_of()).
+	var uses_hold: bool = false
 	## Wind-angle mode: the angle the last decision asked for (degrees, positive from starboard),
 	## and whether there has been a decision yet.
 	var wanted_twa_deg: float = 0.0
@@ -93,6 +104,8 @@ class Driver:
 			return
 		wanted_twa_deg = TWA_FULL_SCALE_DEG * clampf(action[STEER], -1.0, 1.0)
 		hands.sheet = LearnedSkipper.sheet_from_output(action[SHEET])
+		if uses_hold:
+			hands.hold_speed_ms = LearnedSkipper.hold_from_output(action[HOLD]) if action.size() > HOLD else 0.0
 		has_wish = true
 
 	## Every tick, before the controller's update (wind-angle mode only; the stick mode's hands stay
@@ -118,7 +131,12 @@ class Driver:
 		hands.steer = LearnedSkipper.steer_toward_twa(telemetry.twa_deg, tack, off_wind_deg)
 
 
-var brain: NeuralNet = null
+## The brain, and with it how often it decides (its note's decision_ticks, if it has one).
+var brain: NeuralNet = null:
+	set(value):
+		brain = value
+		if value != null and value.meta.has("decision_ticks"):
+			decision_ticks = maxi(int(value.meta["decision_ticks"]), 1)
 ## The brain file's name (night_best, ...), shown on the results and the labels.
 var brain_name: String = "brain"
 var decision_ticks: int = DECISION_TICKS
@@ -216,9 +234,11 @@ func _decide(telemetry: Telemetry, in_manoeuvre: bool) -> void:
 		_hands.tack = false
 		return
 	_driver.mode = mode_of(brain)
+	_driver.uses_hold = uses_hold_of(brain)
 	var observation: PackedFloat32Array = RaceObservation.build(telemetry, _race, _index, _wind,
-			_others_positions, _others_velocities, in_manoeuvre, _since_manoeuvre_s)
-	last_action = brain.forward(observation)
+			_others_positions, _others_velocities, in_manoeuvre, _since_manoeuvre_s, _driver.wanted_twa_deg, _hands.hold_speed_ms)
+	# The brain's inputs by name: a brain from before a number was added still sails.
+	last_action = brain.forward(brain.select_inputs(observation, RaceObservation.names()))
 	_driver.decide(last_action, in_manoeuvre)
 
 
@@ -237,6 +257,19 @@ static func mode_named(name: String) -> ActionMode:
 
 static func mode_name(mode: ActionMode) -> String:
 	return ACTION_MODE_NAMES[mode]
+
+
+## Whether a brain's third output is the hold-back speed: its outputs' names say so.
+static func uses_hold_of(net: NeuralNet) -> bool:
+	return net.action_names.size() > HOLD and net.action_names[HOLD] == "hold"
+
+
+## The hold-back speed (m/s) for a hold output: none at 0 or below; from HOLD_FASTEST_MS just above
+## 0 (as good as no hold on a beat) down to HOLD_SLOWEST_MS at 1.
+static func hold_from_output(output: float) -> float:
+	if output <= 0.0:
+		return 0.0
+	return lerpf(HOLD_FASTEST_MS, HOLD_SLOWEST_MS, clampf(output, 0.0, 1.0))
 
 
 ## Stick mode: puts the network's three numbers on the hands: the steer as it is (a stick from -1 to
