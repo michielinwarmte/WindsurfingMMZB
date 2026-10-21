@@ -17,7 +17,12 @@ Options (the defaults in brackets):
   --seed=<n>            [1]
   --save_every_min=<m>  [30] a brain file (<run>_gen<N>.json, N counting up) and the model this often
   --n_steps=128 --batch=512 --epochs=10 --lr=3e-4 --gamma=auto --gae=0.95 --clip=0.2 --ent=0.0
-  --log_std_init=-1.0   how much the policy explores at first (the log of the noise on each action)
+  --log_std_init=-1.5   how much the policy explores at first (the log of the noise on each action:
+                        0.22 of the -1 to 1 range; a wider noise crosses 0 on the wind-angle output,
+                        which is a tack, every few seconds)
+  --twa_bias=0.3        a fresh policy's wind-angle output starts here (54 degrees on starboard, a
+                        close reach), not at 0, which is head to wind: a board that starts in irons
+                        learns nothing. Not used when resuming from a brain or a model.
   --hidden=64,64        the policy's hidden layers (the game's NeuralNet runs whatever is exported)
 
 Every rollout prints one line: the wall time, the timesteps and episodes done, the speed (decisions
@@ -76,7 +81,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--gae", type=float, default=0.95)
     parser.add_argument("--clip", type=float, default=0.2)
     parser.add_argument("--ent", type=float, default=0.0)
-    parser.add_argument("--log_std_init", type=float, default=-1.0)
+    parser.add_argument("--log_std_init", type=float, default=-1.5)
+    parser.add_argument("--twa_bias", type=float, default=0.3)
     parser.add_argument("--hidden", default="64,64")
     args = parser.parse_args()
     args.stage = args.stage.upper()
@@ -155,7 +161,7 @@ class Progress(BaseCallback):
 
     def policy_std(self) -> float:
         try:
-            return float(torch.exp(self.model.policy.log_std).mean())
+            return float(torch.exp(self.model.policy.log_std.detach()).mean())
         except AttributeError:
             return 0.0
 
@@ -245,8 +251,14 @@ def main() -> None:
                 brain_path = REPO_ROOT / brain_path
             policy_from_brain(model.policy, load_brain(brain_path), obs_names)
             print(f"the policy starts from the brain {brain_path.name}", flush=True)
-        elif args.resume not in ("auto", "none", ""):
-            print(f"nothing to resume from at {args.resume}: starting from scratch", flush=True)
+        else:
+            if args.resume not in ("auto", "none", ""):
+                print(f"nothing to resume from at {args.resume}: starting from scratch", flush=True)
+            if args.twa_bias != 0.0:
+                # A fresh policy's mean wind angle: a close reach on starboard, so the boards sail
+                # from the first decision (0 would be head to wind).
+                with torch.no_grad():
+                    model.policy.action_net.bias[0] = args.twa_bias
     print(f"the policy: {hidden} hidden, {sum(p.numel() for p in model.policy.parameters())} parameters in all "
           f"(the value network included)", flush=True)
 
