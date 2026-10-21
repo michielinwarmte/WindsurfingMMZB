@@ -130,6 +130,10 @@ const START_WALL_ENDS_M: float = 2.0
 ## It goes from its hold when the time left is the time it needs to cross, give or take this
 ## (seconds; a little less than nothing: it crosses just after the time it aims for, never before).
 const HOLD_GO_SPARE_S: float = -0.25
+## Going, a spot further along the line than this wind angle (degrees) is too shallow a run in: it
+## crosses where a run in at START_GO_TWA_DEG (and its leeway) meets the line instead.
+const START_GO_SHALLOWEST_TWA_DEG: float = 72.0
+const START_GO_TWA_DEG: float = 62.0
 ## Too fast holding back, it luffs up no closer to the wind than this, degrees; nearly stopped
 ## (slower than the steerage speed and half a metre a second), it bears away this much to get the
 ## board moving again, degrees.
@@ -214,7 +218,7 @@ const FREE_GYBE_FROM_TWA_DEG: float = 80.0
 ## It ends a leg early when the course would leave the area within FREE_LOOKAHEAD_S, keeping
 ## FREE_EDGE_M inside it; and when choosing a new leg it looks FREE_LEG_CHECK_S ahead.
 const FREE_LOOKAHEAD_S: float = 10.0
-const FREE_EDGE_M: float = 20.0
+const FREE_EDGE_M: float = 35.0
 const FREE_LEG_CHECK_S: float = 20.0
 ## A turn asked for that has not begun after this long is given up (the board had no speed, say).
 const FREE_TURN_GIVE_UP_S: float = 15.0
@@ -808,6 +812,10 @@ func _best_downwind_twa_deg() -> float:
 ## of it), never deeper than the angle it runs at (deeper the board stops planing). The change of
 ## heading, degrees.
 func _keep_clear_deg(telemetry: Telemetry, tack: float) -> float:
+	# Not while it goes from its hold for the start: bearing away there slides the board along the
+	# line, and it misses its spot (no right of way yet: F3's rules).
+	if _going_from_hold:
+		return 0.0
 	var position: Vector2 = _position(telemetry)
 	for j: int in _race.board_count():
 		if j == _index:
@@ -1100,6 +1108,14 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 	var at_speed_track_deg: float = config.upwind_vmg_twa_deg + config.pointing_offset_deg + _leeway_deg
 	if signf(spot_twa) != _tack() or absf(spot_twa) < at_speed_track_deg:
 		cross_at = _choose_crossing(telemetry, step, aim_s)
+	elif absf(spot_twa) > START_GO_SHALLOWEST_TWA_DEG:
+		# Far along the line from its spot: a run in that shallow would slide along the line and,
+		# pushed off by its leeway and the boards it keeps clear of, come too close to it to lay any
+		# point of it. It crosses where a run in at START_GO_TWA_DEG meets the line instead.
+		cross_at = _crossing_at_angle(step, position, wind_deg, START_GO_TWA_DEG + _leeway_deg)
+		_crossing_on_this_tack = true
+		if cross_at == Vector2.INF:
+			cross_at = spot
 	else:
 		_crossing_on_this_tack = true
 	# Holding back until the time left is the time it needs to get going and cross there (worked out
@@ -1288,6 +1304,20 @@ func _hold_heading(telemetry: Telemetry, hold_twa: float, run_in_tack: float, ah
 		# Too slow to steer well: bear away to get the board moving again.
 		twa_deg += HOLD_BEAR_AWAY_DEG
 	return telemetry.wind_from_bearing_deg - tack * twa_deg + _keep_clear_deg(telemetry, tack)
+
+
+## Where a track at a wind angle on the present tack (degrees, the leeway included) from a position
+## meets the start line, kept a few metres in from the ends; Vector2.INF when it does not meet it
+## ahead.
+func _crossing_at_angle(step: RaceStep, position: Vector2, wind_deg: float, track_twa_deg: float) -> Vector2:
+	var track: Vector2 = Course.direction_of(wind_deg - _tack() * track_twa_deg)
+	var toward: float = track.dot(step.in_dir)
+	var behind_m: float = -RoundingCheck.over_line_m(position, step.points[0], step.points[1], step.in_dir)
+	if toward <= 0.05 or behind_m <= 0.0:
+		return Vector2.INF
+	var meets: Vector2 = position + track * (behind_m / toward)
+	var inset: float = _line_inset(step)
+	return step.points[1].lerp(step.points[0], clampf(_share_along_line(step, meets), inset, 1.0 - inset))
 
 
 ## A point moved inside the sailing area, at least 10 m from its sides.
