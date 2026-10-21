@@ -141,3 +141,30 @@ func test_a_respawn_drop_fits_the_stage_and_a_scripted_skipper_can_sail_a_drop()
 			env.tick()
 	assert_true(env.board(0).progress_m > 30.0, "the all-rounder made progress on its drop in 20 s: %.0f m" % env.board(0).progress_m)
 	assert_eq(env.board(0).decisions, 0, "the network's decisions are not counted for a scripted board")
+
+
+func test_a_race_on_the_lake_has_the_maps_wind_and_a_course_fitted_to_the_water() -> void:
+	if not TrainingDrops.lake_available():
+		pending("the lake's data is not here (Git LFS)")
+		return
+	var stage: TrainingDrops.Stage = TrainingDrops.stage_named("S4")
+	stage.lake_share = 1.0
+	var env: RaceEnv = TrainingDrops.make_env(stage, 3, 2)
+	assert_not_null(env.options.environment, "the lake's environment")
+	assert_true(env.board(0).sim.wind is MapWindField, "the map's wind")
+	assert_between(env.options.time_of_day_s / 3600.0, TrainingDrops.LAKE_HOUR_MIN, TrainingDrops.LAKE_HOUR_MAX)
+	assert_true(env.wind_kt > 3.0 and env.wind_kt < 40.0, "the lake's wind of the hour: %.1f kt" % env.wind_kt)
+	# The course keeps 200 m of water at every mark, and its axis is the lake's wind of the hour.
+	var fitter: CourseFitter = TrainingDrops.lake_fitter()
+	assert_true(fitter.smallest_mark_clearance_m(env.course) >= fitter.mark_margin_m - 1.0, "every mark %.0f m from the shore" % fitter.smallest_mark_clearance_m(env.course))
+	var lake_from_deg: float = env.options.environment.map_wind().lake_from_deg(env.options.time_of_day_s)
+	assert_true(absf(Course.turn_deg(env.course.axis_deg, lake_from_deg)) <= fitter.axis_tolerance_deg + 0.1, "set to the lake's wind")
+	# It sails: a board dropped past the line makes progress in 10 s.
+	for k: int in 20:
+		env.act(0, PackedFloat32Array([0.3, 0.0, 0.0]))
+		for t: int in env.decision_ticks:
+			env.tick()
+	assert_true(absf(env.board(0).progress_m) > 1.0, "the board moved on the lake: %.1f m" % env.board(0).progress_m)
+	# The stages without a lake share stay on the open water.
+	var open: RaceEnv = TrainingDrops.make_env(TrainingDrops.stage_named("S1"), 3, 1)
+	assert_null(open.options.environment)

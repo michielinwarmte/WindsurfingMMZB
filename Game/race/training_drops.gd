@@ -19,12 +19,28 @@ extends RefCounted
 ##   S6 company        6 to 12 boards from random spots, the countdown, the whole race, the boards
 ##                     seeing each other; the race ends 60 s after the first finisher
 ##
+## From S4 on, a share of the races (lake_share, 30 %) are sailed on Lake Silvaplana: the course
+## (the saved T2, a template or a random shape) fitted to the water by CourseFitter, in the map's
+## wind at a random hour of the Maloja's day, thin air and fresh water (D6), the sailing area kept
+## off the shore; the rest on the open water in a random wind.
+##
 ## The stages' names are S1 to S6; make_env() builds a race for a stage from a seed, drop() sets a
 ## board down again for its next episode in the same race.
 
 enum Kind { BEAT, ROUNDING, DOWNWIND, LAPS, START, COMPANY }
 
 const RULES_PATH: String = "res://maps/course/iqfoil_courses.tres"
+## Lake Silvaplana (D6: "on the open water or on Lake Silvaplana, fitted to the water by
+## CourseFitter, in the map's wind at a random hour"): its environment, its shore grid, its map.
+const LAKE_ENVIRONMENT_PATH: String = "res://maps/silvaplana/environment_silvaplana.tres"
+const LAKE_SHORE_PATH: String = "res://maps/silvaplana/terrain/shore_heights.json"
+const LAKE_MAP_CONFIG_PATH: String = "res://maps/silvaplana/map_config.tres"
+## The hours of the lake's day a race may be set at (the Maloja wind blows from late morning).
+const LAKE_HOUR_MIN: float = 11.0
+const LAKE_HOUR_MAX: float = 18.0
+## The lake's fitter (the shore's clearance grid), built once.
+static var _lake_fitter: CourseFitter = null
+static var _lake_shore: TerrainGrid = null
 const NAMES: PackedStringArray = ["S1", "S2", "S3", "S4", "S5", "S6"]
 ## A beat is a leg within this many degrees of straight upwind; a run within this of straight
 ## downwind (the cones of SailingDistance).
@@ -63,12 +79,16 @@ class Stage:
 	var wind_bias_max_deg: float = 0.0
 	## A board that gains nothing for this long is done (0: off).
 	var stall_s: float = 0.0
+	## The share of the races sailed on Lake Silvaplana (the course fitted to the water, the map's
+	## wind at a random hour, thin air and fresh water) instead of the open water.
+	var lake_share: float = 0.0
 
 	func describe() -> String:
-		return "%s (%s): %d boards%s%s%s, %.0f s episodes, %.0f to %.0f kt, %s water, %s%s" % [name, Kind.keys()[kind].to_lower(),
+		return "%s (%s): %d boards%s%s%s, %.0f s episodes, %.0f to %.0f kt, %s water, %s%s%s" % [name, Kind.keys()[kind].to_lower(),
 			boards, " blind" if blind else "", " with wind shadows" if shadows else "", " and the rules" if rules else "", episode_s, wind_min_kt, wind_max_kt, "wavy" if waves else "flat",
 			"gusts and shifts" if gusts and shifts else ("gusts" if gusts else ("shifts" if shifts else "a steady wind")),
-			(", a countdown of %.0f to %.0f s" % [prestart_min_s, prestart_max_s]) if prestart_max_s > 0.0 else ""]
+			(", a countdown of %.0f to %.0f s" % [prestart_min_s, prestart_max_s]) if prestart_max_s > 0.0 else "",
+			(", %.0f %% on Lake Silvaplana" % (100.0 * lake_share)) if lake_share > 0.0 else ""]
 
 
 ## The stage of a name (S1 to S6); null for any other name.
@@ -92,6 +112,7 @@ static func stage_named(name: String) -> Stage:
 			stage.gusts = true
 			stage.shifts = true
 			stage.stall_s = 60.0
+			stage.lake_share = 0.3
 		"S5":
 			stage.kind = Kind.START
 			stage.episode_s = 120.0
@@ -105,6 +126,7 @@ static func stage_named(name: String) -> Stage:
 			stage.prestart_min_s = 45.0
 			stage.prestart_max_s = 90.0
 			stage.wind_bias_max_deg = 10.0
+			stage.lake_share = 0.3
 		"S6":
 			stage.kind = Kind.COMPANY
 			stage.episode_s = 480.0
@@ -120,6 +142,7 @@ static func stage_named(name: String) -> Stage:
 			stage.prestart_max_s = 60.0
 			stage.wind_bias_max_deg = 5.0
 			stage.stall_s = 90.0
+			stage.lake_share = 0.3
 		_:
 			return null
 	return stage
@@ -132,8 +155,23 @@ static func make_env(stage: Stage, seed: int, boards: int = 0) -> RaceEnv:
 	rng.seed = seed
 	var count: int = boards if boards > 0 else stage.boards
 	var wind_kt: float = rng.randf_range(stage.wind_min_kt, stage.wind_max_kt)
-	var course: Course = _course_for(stage, rng, wind_kt)
+	var on_lake: bool = stage.lake_share > 0.0 and rng.randf() < stage.lake_share and lake_available()
 	var options: RaceEnv.Options = RaceEnv.Options.new()
+	var course: Course = null
+	if on_lake:
+		# The map's wind at a random hour sets the course's direction and the wind's strength.
+		var environment: EnvironmentConfig = load(LAKE_ENVIRONMENT_PATH)
+		options.environment = environment
+		options.time_of_day_s = rng.randf_range(LAKE_HOUR_MIN, LAKE_HOUR_MAX) * 3600.0
+		var map_wind: MapWind = environment.map_wind()
+		var lake_from_deg: float = map_wind.lake_from_deg(options.time_of_day_s)
+		wind_kt = map_wind.moment(options.time_of_day_s).lake_speed_ms / SimMath.KNOT_MS
+		course = _lake_course_for(stage, rng, wind_kt, lake_from_deg)
+		if course == null:
+			on_lake = false
+			options.environment = null
+	if course == null:
+		course = _course_for(stage, rng, wind_kt)
 	options.actions = LearnedSkipper.ActionMode.TWA
 	options.decision_ticks = 30
 	options.waves = stage.waves
@@ -151,7 +189,7 @@ static func make_env(stage: Stage, seed: int, boards: int = 0) -> RaceEnv:
 	var race: RaceSim = RaceSim.new(course, 1, 0.0)
 	var drops: Array[RaceEnv.Drop] = []
 	if stage.kind == Kind.START or stage.kind == Kind.COMPANY:
-		drops = _spawn_drops(stage, course, count, rng)
+		drops = _spawn_drops(stage, course, count, rng, _lake_shore if on_lake else null)
 	else:
 		for i: int in count:
 			drops.append(drop(stage, race, course, rng))
@@ -226,10 +264,58 @@ static func _course_for(stage: Stage, rng: RandomNumberGenerator, wind_kt: float
 	return RandomCourses.windward_leeward(rng, rules, rng.randi_range(8, 24), rng.randf_range(0.0, 360.0))
 
 
-## Random spots in the sailing area round the start line (as the game spawns the fleet, F2), the
-## start to do. START's episodes end once mark 1 is rounded (goal step 2); COMPANY's at the finish.
-static func _spawn_drops(stage: Stage, course: Course, count: int, rng: RandomNumberGenerator) -> Array[RaceEnv.Drop]:
-	var area: SailingArea = SailingArea.around_start(course)
+## True when the lake's data is there (the map's big files come with Git LFS).
+static func lake_available() -> bool:
+	return ResourceLoader.exists(LAKE_ENVIRONMENT_PATH) and FileAccess.file_exists(LAKE_SHORE_PATH)
+
+
+## The lake's fitter (built once from the shore grid: a fifth of a second) and its shore grid.
+static func lake_fitter() -> CourseFitter:
+	if _lake_fitter == null:
+		_lake_shore = TerrainGrid.load_from(LAKE_SHORE_PATH)
+		var t2: Course = RaceCourses.load_named(RaceCourses.T2_NAME, load(LAKE_MAP_CONFIG_PATH))
+		var inside: Vector2 = t2.start_middle() if t2 != null else Vector2.ZERO
+		_lake_fitter = CourseFitter.from_heights(_lake_shore.height_at, inside)
+	return _lake_fitter
+
+
+## A random course on the lake, fitted to the water in the lake's wind of the hour: the saved T2
+## (a third of the time), a template, or a random shape, each fitted (shrunk, turned up to 15
+## degrees, moved) so that every mark keeps 200 m of water; null when nothing fits or the stage's
+## kind has no step on it.
+static func _lake_course_for(stage: Stage, rng: RandomNumberGenerator, wind_kt: float, lake_from_deg: float) -> Course:
+	var fitter: CourseFitter = lake_fitter()
+	if not fitter.has_water():
+		return null
+	var rules: CourseRules = load(RULES_PATH) as CourseRules
+	var t2: Course = RaceCourses.load_named(RaceCourses.T2_NAME, load(LAKE_MAP_CONFIG_PATH))
+	var centre: Vector2 = t2.bounds().get_center() if t2 != null else Vector2.ZERO
+	for _try: int in COURSE_TRIES:
+		var fitted: Course = null
+		var share: float = rng.randf()
+		if share < 0.33 and t2 != null:
+			fitted = fitter.fit_course(t2, lake_from_deg)
+		elif share < 0.66:
+			var id: String = CourseTemplates.ALL[rng.randi_range(0, CourseTemplates.ALL.size() - 1)]
+			fitted = fitter.fit_template(id, rules, wind_kt, lake_from_deg, centre, rng.randi_range(8, 24))
+		else:
+			var shape: Course = RandomCourses.draw(rng, wind_kt, rules)
+			shape.move_by(centre - shape.bounds().get_center())
+			fitted = fitter.fit_course(shape, lake_from_deg)
+		if fitted == null:
+			continue
+		var needs_step: bool = stage.kind == Kind.BEAT or stage.kind == Kind.ROUNDING or stage.kind == Kind.DOWNWIND
+		if needs_step and _steps_of_kind(RaceSim.new(fitted, 1, 0.0).steps(), fitted.axis_deg, stage.kind).is_empty():
+			continue
+		return fitted
+	return null
+
+
+## Random spots in the sailing area round the start line (as the game spawns the fleet, F2; kept
+## off the shore on the lake), the start to do. START's episodes end once mark 1 is rounded (goal
+## step 2); COMPANY's at the finish.
+static func _spawn_drops(stage: Stage, course: Course, count: int, rng: RandomNumberGenerator, shore: TerrainGrid = null) -> Array[RaceEnv.Drop]:
+	var area: SailingArea = SailingArea.for_course(course, shore)
 	var places: Array[Vector3] = area.spawn_places(count, rng.randi())
 	var drops: Array[RaceEnv.Drop] = []
 	for place: Vector3 in places:

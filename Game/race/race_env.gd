@@ -62,6 +62,13 @@ class Options:
 	var shifts: bool = false
 	## The wind comes from the course's axis turned by this much (degrees): the start line's bias.
 	var wind_bias_deg: float = 0.0
+	## A place's environment (EnvironmentConfig: Lake Silvaplana's thin air, fresh water and the
+	## map's wind at time_of_day_s) instead of the open water's default; null for the open water.
+	## With a map's wind, the wind's strength, direction, gusts and shifts are the map's (wind_kt
+	## and the options' gusts and shifts are not used), and the course should be set to its mean
+	## direction of that hour (TrainingDrops does).
+	var environment: EnvironmentConfig = null
+	var time_of_day_s: float = 14.5 * 3600.0
 	## The boards see no other board (as if alone on the course).
 	var blind: bool = false
 	## The sails cast wind shadows on each other (WindShadows, AI_FLEET_PLAN.md D5).
@@ -451,14 +458,21 @@ func run_episode(brain: NeuralNet) -> float:
 ## they write to), and the player's beginner controller with the auto-sheet on, its hands an AI's.
 func _make_board(at: Vector2, heading_deg: float, _seed: int) -> Board:
 	var b: Board = Board.new()
-	b.sim = WindsurferSim.create_default(options.waves)
-	var wind_config: WindConfig = b.sim.wind_config.duplicate()
-	wind_config.speed_kt = wind_kt
-	wind_config.from_bearing_deg = _wind_from_deg
-	wind_config.gusts_enabled = options.gusts
-	wind_config.shifts_enabled = options.shifts
-	b.sim.wind_config = wind_config
-	b.sim.wind = WindField.new(wind_config)
+	if options.environment != null:
+		# A place: its own air, water, wind and waves (the map's wind at the hour, when it has one).
+		b.sim = WindsurferSim.create_for(options.environment, options.waves, true)
+		var map_field: MapWindField = b.sim.wind as MapWindField
+		if map_field != null:
+			map_field.set_time_of_day(options.time_of_day_s)
+	else:
+		b.sim = WindsurferSim.create_default(options.waves)
+		var wind_config: WindConfig = b.sim.wind_config.duplicate()
+		wind_config.speed_kt = wind_kt
+		wind_config.from_bearing_deg = _wind_from_deg
+		wind_config.gusts_enabled = options.gusts
+		wind_config.shifts_enabled = options.shifts
+		b.sim.wind_config = wind_config
+		b.sim.wind = WindField.new(wind_config)
 	b.sim.set_waves(options.waves)  # again, so the waves line up with this wind
 	b.sim.reset(Vector3(at.x, 0.0, at.y), deg_to_rad(fposmod(heading_deg, 360.0)))
 	b.controller = PlayerController.new()

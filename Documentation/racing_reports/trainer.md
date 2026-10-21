@@ -36,7 +36,7 @@ Built 21 October 2026 (Session 53) by Claude Fable 5.1 itself, on `f5/trainer` (
 ## Not verified
 
 - Whether the head learns the stages to their "done when" numbers: that is the nights' work, with the curve read each morning. The 8-minute try only shows the loop running and the first rollouts.
-- The lake's wind and water in the trainer: the stages sail the open water's physics on courses of all shapes; a course fitted to Lake Silvaplana in the map's wind (D6) is a follow-up (the lake's wind field and the shore grid in a headless `RaceEnv`).
+- ~~The lake's wind and water in the trainer~~: **built the same afternoon** (`RaceEnv.Options.environment` and `time_of_day_s`; `TrainingDrops.Stage.lake_share`, 30 % of the races from S4 on): the course (the saved T2, a template or a random shape) fitted to the water by `CourseFitter`, in the map's wind at a random hour between 11:00 and 18:00, thin air and fresh water, the sailing area off the shore; a unit test makes one and sails it. The stages S4 to S6 of the running nights will use it when they start (each stage launches fresh Godot workers). Not measured: the lake's wind query's cost in a 12-board race (it is cached per 3 m).
 - S5's and S6's idle steps for parked boards (bounded, but not measured in a long run).
 - How a trained brain feels to race against (nobody has one yet).
 
