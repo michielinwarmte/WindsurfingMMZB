@@ -53,6 +53,30 @@ static func t2_stand_in(wind_from_deg: float, centre: Vector2) -> Course:
 	return course
 
 
+## A template as a race course, from a name "template:<ID>" or "template:<ID>@<percent>" (template:O2,
+## template:PD3@60): the iQFOiL template at that size (the class's full size without one), set for a
+## wind direction with the middle of its start line at a point, for 24 boards; the start line at
+## least T1's 60 m. Null for any other name, or an unknown template. This is how the trained head is
+## raced on every template (AI_FLEET_PLAN.md, D6: "the test before the game").
+static func template_named(course_name: String, wind_from_deg: float, start_middle: Vector2) -> Course:
+	if not course_name.begins_with("template:"):
+		return null
+	var spec: PackedStringArray = course_name.trim_prefix("template:").split("@", true, 1)
+	var id: String = spec[0].strip_edges().to_upper()
+	if not CourseTemplates.ALL.has(id):
+		push_error("No course template called '%s' (they are %s)." % [id, ", ".join(CourseTemplates.ALL)])
+		return null
+	var rules: CourseRules = load(RULES_PATH) as CourseRules
+	var course: Course = CourseTemplates.build(id, rules, T1_WIND_KT, 24, wind_from_deg, start_middle)
+	var percent: float = clampf(spec[1].to_float(), 10.0, 200.0) if spec.size() > 1 and spec[1].to_float() > 0.0 else 100.0
+	if percent != 100.0:
+		course.set_size(percent)
+	var line_m: float = course.mark(CourseMark.START_BOAT).position.distance_to(course.mark(CourseMark.START_PIN).position)
+	course.set_start_line_length(maxf(line_m, T1_START_LINE_M))
+	course.name = "%s at %.0f %%" % [id, percent]
+	return course
+
+
 ## A course saved by the course maker, by its file name (t2_slalom for t2_slalom.json), placed on
 ## the map with config; null if there is no such file. A file in game metres needs no map (null).
 static func load_named(course_name: String, config: MapConfig) -> Course:

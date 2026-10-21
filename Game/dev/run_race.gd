@@ -10,6 +10,8 @@ extends SceneTree
 ##                         300 m upwind (port), the gate 4S/4P 100 m above the line, and the finish
 ##                         line 150 m to the left of the gate
 ##   --course=t1_loop      the T1 training loop on open water (RaceCourses), the start line at the origin
+##   --course=template:O2  an iQFOiL template at the class's full size, or template:PD3@60 at 60 % (any of
+##                         LG2, LR2, O2, I2, US3, US4, PD3, SD3, PM1, SM1): the trained head on every template
 ##   --course=<name>       a course saved by the course maker, by name (t2_slalom, ...)
 ##   --course=<file.json>  a course saved by the course maker (a res:// path, a full path, or a path
 ##                         from the repository's folder), placed with the Silvaplana map's frame
@@ -291,6 +293,8 @@ static func course_named(name: String) -> Course:
 	# The built-in courses and the team's saved ones, by name (RaceCourses); anything else is a path.
 	if name == "t1_loop":
 		return RaceCourses.t1_loop(EnvironmentConfig.new().wind_or_default().from_bearing_deg, Vector2.ZERO)
+	if name.begins_with("template:"):
+		return RaceCourses.template_named(name, EnvironmentConfig.new().wind_or_default().from_bearing_deg, Vector2.ZERO)
 	var named: Course = RaceCourses.load_named(name, load(MAP_CONFIG_PATH))
 	if named != null:
 		return named

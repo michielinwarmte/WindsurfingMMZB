@@ -86,3 +86,20 @@ func test_the_boards_wait_150_m_behind_the_line_on_a_beam_reach() -> void:
 	assert_almost_eq(behind.distance_to(pd3.start_middle()), 150.0, 0.01)
 	assert_gt(behind.distance_to(pd3.mark("1").position), pd3.start_middle().distance_to(pd3.mark("1").position), "Behind the line, away from mark 1")
 	assert_almost_eq(RaceCourses.pre_start_heading_deg(pd3), 312.0, 0.001, "Toward mark 1, 90 degrees from the wind")
+
+
+func test_a_template_by_name_is_a_race_course_at_the_size_asked() -> void:
+	var full: Course = RaceCourses.template_named("template:O2", 0.0, Vector2.ZERO)
+	assert_not_null(full)
+	assert_eq(full.template, "O2")
+	assert_eq(full.name, "O2 at 100 %")
+	assert_true(RaceSim.new(full, 1, 0.0).steps().size() >= 5, "a race with its steps")
+	var small: Course = RaceCourses.template_named("template:pd3@60", 90.0, Vector2(100.0, 50.0))
+	assert_not_null(small)
+	assert_eq(small.template, "PD3")
+	assert_almost_eq(small.size_percent, 60.0, 1e-6)
+	assert_almost_eq(small.start_middle().x, 100.0, 1e-3)
+	assert_almost_eq(small.axis_deg, 90.0, 1e-6)
+	var line_m: float = small.mark(CourseMark.START_BOAT).position.distance_to(small.mark(CourseMark.START_PIN).position)
+	assert_true(line_m >= RaceCourses.T1_START_LINE_M - 1e-3, "the start line is at least 60 m")
+	assert_null(RaceCourses.template_named("t1_loop", 0.0, Vector2.ZERO), "not a template name")

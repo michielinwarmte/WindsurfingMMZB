@@ -403,12 +403,15 @@ func _course_from_options(usual_start: Vector2) -> Course:
 
 ## A course by name for this scene. The open water knows T1, placed for the settings' wind with the
 ## middle of its start line 150 m upwind of the usual start, so the board starts that far behind it;
-## and courses saved in game metres. A map scene knows its own (sail_silvaplana.gd).
+## any iQFOiL template the same way (template:O2, template:PD3@60: RaceCourses.template_named()); and
+## courses saved in game metres. A map scene knows its own (sail_silvaplana.gd).
 func _course_named(course_name: String, usual_start: Vector2) -> Course:
+	var wind_from_deg: float = GameSettings.values.wind_from_deg
+	var start_middle: Vector2 = usual_start + Course.direction_of(wind_from_deg) * RaceCourses.PRE_START_BEHIND_M
 	if course_name == RaceCourses.T1_NAME:
-		var wind_from_deg: float = GameSettings.values.wind_from_deg
-		var start_middle: Vector2 = usual_start + Course.direction_of(wind_from_deg) * RaceCourses.PRE_START_BEHIND_M
 		return RaceCourses.t1_loop(wind_from_deg, start_middle)
+	if course_name.begins_with("template:"):
+		return RaceCourses.template_named(course_name, wind_from_deg, start_middle)
 	return RaceCourses.load_named(course_name, null)
 
 
