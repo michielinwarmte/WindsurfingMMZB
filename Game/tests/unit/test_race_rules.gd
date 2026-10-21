@@ -99,6 +99,39 @@ func test_a_touch_by_the_board_that_had_to_keep_clear_is_one_penalty_per_inciden
 	assert_eq(rules.penalties(1), 1)
 
 
+func test_no_penalty_before_the_gun_nor_for_drifting_in_slowly() -> void:
+	# The same port-tack board sailing into the starboard one, during the countdown: judged, not
+	# penalised.
+	var rules: RaceRules = _two()
+	var from: Vector2 = Vector2(6.0, 6.0)
+	for t: int in 120:
+		rules.set_board(0, Vector2.ZERO, 315.0, 1.0, 8.0)
+		rules.set_board(1, from.lerp(Vector2(0.5, 0.5), float(t) / 120.0), 225.0, -1.0, 8.0)
+		rules.step(DT, PackedVector2Array(), false)
+	assert_eq(rules.burdened_by(1), 0, "it still knows who keeps clear")
+	assert_eq(rules.penalties(1), 0, "no penalty before the gun")
+	# After the gun, drifting in at 0.3 m/s (slower than CLOSING_MS): no penalty either.
+	var slow: RaceRules = _two()
+	for t: int in 600:
+		slow.set_board(0, Vector2.ZERO, 315.0, 1.0, 8.0)
+		slow.set_board(1, Vector2(1.5, 1.5) - Vector2(0.3, 0.3) * 0.7071 * (t * DT), 225.0, -1.0, 0.3)
+		slow.step(DT)
+	assert_eq(slow.penalties(1), 0, "drifting in slowly is not sailing into it")
+
+
+func test_one_board_gets_no_second_penalty_within_20_s() -> void:
+	# Board 1 (port) sails into board 0, then straight on into a third starboard board 4 m further.
+	var rules: RaceRules = RaceRules.new(3, 0.0)
+	var from: Vector2 = Vector2(6.0, 6.0)
+	for t: int in 240:
+		var share: float = float(t) / 240.0
+		rules.set_board(0, Vector2.ZERO, 315.0, 1.0, 8.0)
+		rules.set_board(2, Vector2(-4.0, -4.0), 315.0, 1.0, 8.0)
+		rules.set_board(1, from.lerp(Vector2(-4.5, -4.5), share), 225.0, -1.0, 8.0)
+		rules.step(DT)
+	assert_eq(rules.penalties(1), 1, "one penalty for the two touches within 4 s")
+
+
 func test_the_right_of_way_board_sailing_into_a_board_keeping_clear_gives_no_penalty() -> void:
 	var rules: RaceRules = _two()
 	# The port-tack board 1 holds still (keeping clear by stopping, say); starboard board 0 sails

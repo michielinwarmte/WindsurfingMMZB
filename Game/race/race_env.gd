@@ -517,7 +517,7 @@ func _judge() -> void:
 		rules.set_board(i, Vector2(t.position.x, t.position.z), t.heading_deg, 1.0 if t.twa_deg >= 0.0 else -1.0, t.speed_ms, sailing)
 		var step: RaceStep = race.next_step(i)
 		marks.append(step.points[0] if step != null and step.kind == RaceStep.Kind.MARK else Vector2.INF)
-	rules.step(DT, marks)
+	rules.step(DT, marks, race.clock_s() >= 0.0)
 
 
 ## A board's episode begins where it is: the yardstick set to the distance it has to go.

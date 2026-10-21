@@ -18,8 +18,11 @@ extends RefCounted
 ## when its whole hull is behind the line across the other's stern.
 ##
 ## A breach: two boards come within CONTACT_M of each other (the boards pass through each other,
-## so that stands for a touch), and the one that had to keep clear was closing on the other. It
-## gets one penalty for the incident (not another from the same pair for INCIDENT_S). A penalty is
+## so that stands for a touch), and the one that had to keep clear was closing on the other at
+## CLOSING_MS or more. It gets one penalty for the incident (not another from the same pair for
+## INCIDENT_S, nor any within BOARD_INCIDENT_S of its last). Before the gun the judge says who must
+## keep clear (the skippers keep clear by it) but gives no penalties: the crowd on the line holds
+## back and brushes past; the race starts with the gun. A penalty is
 ## cleared by a full turn (one tack and one gybe: the heading sweeping FULL_TURN_DEG since it was
 ## given, the way the sailing rules' one-turn penalty goes) or, uncleared at the finish, it costs
 ## TIME_PENALTY_S of race time (the player's choice; the scripted skippers turn).
@@ -29,8 +32,17 @@ extends RefCounted
 
 ## A board's hull length, metres: what "clear astern" and "a touch" are measured with.
 const HULL_M: float = 2.4
-## Two boards this close touch (their centres; about a hull length).
-const CONTACT_M: float = 2.6
+## Two boards this close touch (their centres: the hulls overlap by then). The first judge said 2.6
+## and gave twelve personas 27 penalties in a four-minute slalom (Session 53): boards that pass
+## through each other brush past at 2.5 m all the time in a pack.
+const CONTACT_M: float = 2.0
+## A touch counts against the board that had to keep clear only when it was closing on the other
+## at least this fast, m/s (a board holding its course while the other drifts into it is not sailing
+## into it).
+const CLOSING_MS: float = 1.0
+## One board gets no second penalty within this long, seconds, whoever it touched (a pack at a
+## mark would otherwise give one board three in a minute).
+const BOARD_INCIDENT_S: float = 20.0
 ## The rules are looked at for pairs this close only, metres.
 const NEAR_M: float = 15.0
 ## The zone round a mark where mark room applies, metres (the rules say three hull lengths;
@@ -66,9 +78,11 @@ class BoardState:
 	## Why it last had to keep clear (this tick), and of whom (-1: nobody).
 	var burdened_by: int = -1
 	var why: Why = Why.NONE
-	## The last breach: why, and when (race time), for the warning.
+	## The last breach: why, and when (race time), for the warning and BOARD_INCIDENT_S.
 	var last_breach_why: Why = Why.NONE
 	var last_breach_s: float = -INF
+	## The judge's time at the last tick, for the closing speed.
+	var last_dt_s: float = 1.0 / 60.0
 	## Penalties taken by a turn, and the time penalty carried to the finish.
 	var turns_done: int = 0
 
@@ -77,6 +91,8 @@ var _boards: Array[BoardState] = []
 ## When each pair last had an incident (seconds): pair (i, j) with i < j at i * 10000 + j.
 var _incidents: Dictionary[int, float] = {}
 var _time_s: float = 0.0
+var _dt_s: float = 1.0 / 60.0
+var _after_gun: bool = true
 ## Where the wind comes from, degrees: what windward means.
 var wind_from_deg: float = 0.0
 
@@ -104,9 +120,12 @@ func set_board(index: int, position: Vector2, heading_deg: float, tack: float, s
 
 ## One tick: the heading swept for the penalty turns, who must keep clear of whom among the
 ## boards near each other, and the breaches. `next_marks` is where each board's next mark is (for
-## mark room; Vector2.INF for a board sailing to a line or finished).
-func step(dt: float, next_marks: PackedVector2Array = PackedVector2Array()) -> void:
+## mark room; Vector2.INF for a board sailing to a line or finished); `after_gun` false (the
+## countdown) judges who keeps clear but gives no penalties.
+func step(dt: float, next_marks: PackedVector2Array = PackedVector2Array(), after_gun: bool = true) -> void:
 	_time_s += dt
+	_dt_s = maxf(dt, 1e-6)
+	_after_gun = after_gun
 	for b: BoardState in _boards:
 		if b.penalties > 0:
 			b.turn_deg += absf(wrapf(b.heading_deg - b.last_heading_deg, -180.0, 180.0))
@@ -142,7 +161,7 @@ func step(dt: float, next_marks: PackedVector2Array = PackedVector2Array()) -> v
 				if loser.burdened_by < 0 or loser.position.distance_to(_boards[other].position) < loser.position.distance_to(_boards[loser.burdened_by].position):
 					loser.burdened_by = other
 					loser.why = why
-				if distance_m <= CONTACT_M and _closing(loser, _boards[other]):
+				if _after_gun and distance_m <= CONTACT_M and _closing(loser, _boards[other]):
 					_breach(i, j, burdened, why)
 	for b: BoardState in _boards:
 		b.last_position = b.position
@@ -246,16 +265,21 @@ func _why_of(i: int, j: int, burdened: int, mark: Vector2) -> Why:
 	return Why.ASTERN_GIVES_WAY
 
 
-## True when a board moves toward another (the distance between them is shrinking by its own
-## motion): it did not keep clear.
+## True when a board moves toward another at CLOSING_MS or more (the distance between them
+## shrinking by its own motion): it sailed into it.
 func _closing(loser: BoardState, other: BoardState) -> bool:
-	var motion: Vector2 = loser.position - loser.last_position
-	return motion.dot(other.position - loser.position) > 0.0
+	var motion: Vector2 = (loser.position - loser.last_position) / _dt_s
+	var toward: Vector2 = other.position - loser.position
+	if toward.length_squared() < 1e-6:
+		return motion.length() >= CLOSING_MS
+	return motion.dot(toward.normalized()) >= CLOSING_MS
 
 
 func _breach(i: int, j: int, burdened: int, why: Why) -> void:
 	var key: int = mini(i, j) * 10000 + maxi(i, j)
 	if _incidents.has(key) and _time_s - _incidents[key] < INCIDENT_S:
+		return
+	if _time_s - _boards[burdened].last_breach_s < BOARD_INCIDENT_S:
 		return
 	_incidents[key] = _time_s
 	penalise(burdened, why)

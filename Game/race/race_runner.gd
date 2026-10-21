@@ -280,7 +280,7 @@ func _judge(delta: float) -> void:
 		marks.append(step.points[0] if step != null and step.kind == RaceStep.Kind.MARK else Vector2.INF)
 	if _boards.size() > 0:
 		rules.wind_from_deg = _boards[0].sim.telemetry.wind_from_bearing_deg
-	rules.step(delta, marks)
+	rules.step(delta, marks, race.clock_s() >= 0.0)
 	for i: int in _boards.size():
 		race.set_time_penalty_s(i, rules.time_penalty_s(i))
 

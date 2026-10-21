@@ -341,7 +341,7 @@ static func judge(rules: RaceRules, race: RaceSim, entries: Array[Entry]) -> voi
 			t.sailor_state == WindsurferSim.SailorState.SAILING)
 		var step: RaceStep = race.next_step(i)
 		marks.append(step.points[0] if step != null and step.kind == RaceStep.Kind.MARK else Vector2.INF)
-	rules.step(DT, marks)
+	rules.step(DT, marks, race.clock_s() >= 0.0)
 	for i: int in entries.size():
 		race.set_time_penalty_s(i, rules.time_penalty_s(i))
 
