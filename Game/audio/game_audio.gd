@@ -54,6 +54,11 @@ class LoopPlayer:
 	var filter: AudioEffectFilter
 
 
+## The board whose sounds are heard (a race's spectator hears the board the camera follows).
+func follow(windsurfer: WindsurferNode) -> void:
+	_windsurfer = windsurfer
+
+
 ## The sound node for a sailing scene. is_in_menu returns true behind the start menu.
 static func create(windsurfer: WindsurferNode, camera_rig: CameraRig, is_in_menu: Callable) -> GameAudio:
 	var audio: GameAudio = GameAudio.new()

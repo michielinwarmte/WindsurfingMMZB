@@ -122,6 +122,12 @@ var brain: NeuralNet = null
 ## The brain file's name (night_best, ...), shown on the results and the labels.
 var brain_name: String = "brain"
 var decision_ticks: int = DECISION_TICKS
+## The sail's colour (sail_colour()).
+var sail: Color = Color(0.6, 0.35, 0.9)
+## Blind: the skipper sees no other board, whatever set_others() gives it, as the night's brains
+## were trained (alone on the course: the others' inputs were zeros). --blind=1 (RaceSetup, the
+## race tool) sets it, so generations can be compared in the conditions they learned in.
+var blind: bool = false
 
 var _sim: WindsurferSim = null
 var _controller: PlayerController = null
@@ -155,13 +161,17 @@ func setup(sim: WindsurferSim, controller: PlayerController, hands: AiHands, rac
 	_since_manoeuvre_s = RaceObservation.SINCE_MANOEUVRE_SCALE_S
 
 
+## A night's brain by its generation ("gen 40", "best": Generations.label_of()); any other brain
+## by its file name.
 func skipper_name() -> String:
-	return brain_name
+	var generation_label: String = Generations.label_of(brain_name)
+	return generation_label if not generation_label.is_empty() else brain_name
 
 
-## A learned skipper sails under a purple sail.
+## A learned skipper sails under a purple sail, or the colour of its generation in a race of
+## several generations (Generations.colour_fleet()).
 func sail_colour() -> Color:
-	return Color(0.6, 0.35, 0.9)
+	return sail
 
 
 ## The wind field to sample the gusts around the board from.
@@ -172,6 +182,8 @@ func set_wind_field(wind: WindField) -> void:
 ## The other boards: where they are (game X, Z) and how fast they move (m/s in X, Z). Never given:
 ## the skipper sees no one.
 func set_others(positions: PackedVector2Array, velocities: PackedVector2Array) -> void:
+	if blind:
+		return
 	_others_positions = positions
 	_others_velocities = velocities
 
