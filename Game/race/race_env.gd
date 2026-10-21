@@ -95,12 +95,17 @@ class Drop:
 	var position: Vector2 = Vector2.ZERO
 	var heading_deg: float = 0.0
 	var next_step: int = 0
+	## The episode ends (as a finish, not cut short) once the board has completed the steps before
+	## this one: the stage's goal (a drop below a windward mark ends when the mark is rounded). 0
+	## or less: only the finish line ends it.
+	var goal_step: int = 0
 
-	static func at(spot: Vector2, heading: float, step: int = 0) -> Drop:
+	static func at(spot: Vector2, heading: float, step: int = 0, goal: int = 0) -> Drop:
 		var drop: Drop = Drop.new()
 		drop.position = spot
 		drop.heading_deg = heading
 		drop.next_step = step
+		drop.goal_step = goal
 		return drop
 
 
@@ -111,6 +116,9 @@ class Board:
 	var hands: AiHands
 	## Turns the network's numbers into the hands (LearnedSkipper.Driver).
 	var driver: LearnedSkipper.Driver
+	## A scripted skipper sailing this board instead of the network (set_scripted()): the yardstick
+	## on the same drops, or company in a race. Its own hands; act() leaves it alone.
+	var scripted: RaceSkipper = null
 	var controls: SimControls
 	## The reward earned since the last reward() call.
 	var pending: float = 0.0
@@ -130,9 +138,11 @@ class Board:
 	var was_fallen: bool = false
 	var last_manoeuvre: PlayerController.Manoeuvre = PlayerController.Manoeuvre.NONE
 	var since_manoeuvre_s: float = RaceObservation.SINCE_MANOEUVRE_SCALE_S
-	## When this board's episode began (seconds since reset) and when its time is up.
+	## When this board's episode began (seconds since reset) and when its time is up, and the step
+	## that ends it early (Drop.goal_step; 0 for none).
 	var episode_from_s: float = 0.0
 	var episode_until_s: float = 0.0
+	var goal_step: int = 0
 	var done: bool = false
 	## Why it is done: it finished, its time ran out (truncated: the episode was cut, not ended),
 	## it left the course's bounds, or it stalled.
@@ -214,6 +224,7 @@ func reset_dropped(seed: int, drops: Array[Drop]) -> void:
 	for i: int in _board_count:
 		var drop: Drop = drops[mini(i, drops.size() - 1)]
 		var board: Board = _make_board(drop.position, drop.heading_deg, seed + i)
+		board.goal_step = drop.goal_step
 		_boards.append(board)
 		race.add_board("board%d" % (i + 1))
 		race.place_board(i, drop.position, drop.next_step)
@@ -227,9 +238,21 @@ func reset_dropped(seed: int, drops: Array[Drop]) -> void:
 ## steps counted as done. The other boards sail on.
 func respawn(index: int, drop: Drop, seed: int) -> void:
 	var board: Board = _make_board(drop.position, drop.heading_deg, seed)
+	board.goal_step = drop.goal_step
 	_boards[index] = board
 	race.place_board(index, drop.position, drop.next_step)
 	_begin_episode(board, index)
+
+
+## Puts a scripted skipper (Skipper, with a character sheet) on a board in place of the network:
+## it sails the same drop, in the same race, through the same hands. The yardstick for a stage
+## (the all-rounder on the trainer's drops), or company. Null takes it off again.
+func set_scripted(index: int, skipper: RaceSkipper) -> void:
+	var b: Board = _boards[index]
+	b.scripted = skipper
+	if skipper != null:
+		skipper.random_seed = index + 1
+		skipper.setup(b.sim, b.controller, b.hands, race, index)
 
 
 func board_count() -> int:
@@ -267,7 +290,7 @@ func observe(index: int) -> PackedFloat32Array:
 ## stick mode, the tack).
 func act(index: int, action: PackedFloat32Array) -> void:
 	var b: Board = _boards[index]
-	if b.done:
+	if b.done or b.scripted != null:
 		return
 	b.decisions += 1
 	if b.sim.sailor_state != WindsurferSim.SailorState.SAILING:
@@ -284,9 +307,13 @@ func tick() -> void:
 		if b.done:
 			continue  # parked: it no longer moves, and earns nothing
 		b.since_manoeuvre_s = RaceObservation.advance_since_manoeuvre(b.since_manoeuvre_s, _in_manoeuvre(b), DT)
+		if b.scripted != null:
+			# A scripted skipper sets the hands itself, every tick, in the water or not.
+			b.scripted.update(b.sim.telemetry, DT)
 		if b.sim.sailor_state == WindsurferSim.SailorState.SAILING:
 			# The hands first (steering for the wind angle wanted), then the controller reads them.
-			b.driver.steer(b.sim.telemetry, _in_manoeuvre(b), DT)
+			if b.scripted == null:
+				b.driver.steer(b.sim.telemetry, _in_manoeuvre(b), DT)
 			b.controller.update(b.sim.telemetry, b.controls, DT)
 		var manoeuvre: PlayerController.Manoeuvre = b.controller.manoeuvre
 		if manoeuvre != PlayerController.Manoeuvre.NONE and b.last_manoeuvre == PlayerController.Manoeuvre.NONE:
@@ -319,7 +346,7 @@ func tick() -> void:
 		if b.progress_m > b.best_progress_m:
 			b.best_progress_m = b.progress_m
 			b.best_progress_at_s = time_s
-		b.finished = race.is_finished(i)
+		b.finished = race.is_finished(i) or (b.goal_step > 0 and race.next_step_index(i) >= b.goal_step)
 		b.stalled = options.stall_s > 0.0 and time_s - b.best_progress_at_s > options.stall_s
 		b.out_of_bounds = not _bounds.has_point(_where(b))
 		b.truncated = not b.finished and not b.stalled and not b.out_of_bounds and time_s >= b.episode_until_s - 0.5 * DT
@@ -357,6 +384,8 @@ func info(index: int) -> Dictionary:
 		"steps_total": race.steps().size(),
 		"finished": b.finished,
 		"finish_s": race.finish_time_s(index),
+		"goal_step": b.goal_step,
+		"splits": Array(race.splits_s(index)),
 		"truncated": b.truncated,
 		"out_of_bounds": b.out_of_bounds,
 		"stalled": b.stalled,
