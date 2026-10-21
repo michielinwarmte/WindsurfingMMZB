@@ -1,47 +1,12 @@
 extends GutTest
-## The frame's work with a big fleet (F1 fleet_frame, AI_FLEET_PLAN.md D2): the boards shared over
-## at most eight worker-thread tasks (RaceRunner.batches), and the race order worked out once per
-## tick instead of a sort per question (RaceSim.race_order, place; RaceHud.fleet_text).
+## The frame's work with a big fleet (F1 fleet_frame, AI_FLEET_PLAN.md D2): the measure's summary
+## of the AI boards' costs, and the race order worked out once per tick instead of a sort per
+## question (RaceSim.race_order, place; RaceHud.fleet_text).
 
 const BOARDS: int = 33
 
 
-# ---------------------------------------------------------------- the batches
-
-func test_33_boards_over_8_tasks_are_5_then_4_each_with_the_player_first() -> void:
-	var shared: Array[PackedInt32Array] = RaceRunner.batches(BOARDS, 8)
-	assert_eq(shared.size(), 8, "eight tasks")
-	var sizes: Array[int] = []
-	for batch: PackedInt32Array in shared:
-		sizes.append(batch.size())
-	assert_eq(sizes, [5, 4, 4, 4, 4, 4, 4, 4] as Array[int], "shared as evenly as can be")
-	assert_eq(shared[0][0], 0, "the player's board is in the first batch")
-	_assert_every_board_once(shared, BOARDS)
-
-
-func test_even_and_small_fleets() -> void:
-	var even: Array[PackedInt32Array] = RaceRunner.batches(32, 8)
-	for batch: PackedInt32Array in even:
-		assert_eq(batch.size(), 4, "32 boards: four per task")
-	_assert_every_board_once(even, 32)
-	var small: Array[PackedInt32Array] = RaceRunner.batches(3, 8)
-	assert_eq(small.size(), 3, "fewer boards than tasks: one task each")
-	_assert_every_board_once(small, 3)
-	assert_eq(RaceRunner.batches(0, 8).size(), 0, "no boards, no tasks")
-	assert_eq(RaceRunner.batches(5, 0).size(), 1, "no thread count: one batch, never none")
-	_assert_every_board_once(RaceRunner.batches(41, 8), 41)
-
-
-func _assert_every_board_once(shared: Array[PackedInt32Array], count: int) -> void:
-	var seen: Array[int] = []
-	for batch: PackedInt32Array in shared:
-		for i: int in batch:
-			seen.append(i)
-	var expected: Array[int] = []
-	for i: int in count:
-		expected.append(i)
-	assert_eq(seen, expected, "every board once, in order")
-
+# ---------------------------------------------------------------- the measure's summary
 
 func test_the_median_and_the_worst() -> void:
 	assert_eq(RaceRunner.median(PackedFloat64Array([3.0, 1.0, 2.0])), 2.0)
