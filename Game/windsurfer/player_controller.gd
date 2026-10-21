@@ -114,6 +114,28 @@ var auto_sheet_pilot: Autopilot = Autopilot.new()
 ## An AI skipper's hands on the controls (RACING_PLAN.md, RD1). While set, the controller
 ## reads steer, sheet and tack from here and ignores the keyboard.
 var hands: AiHands = null
+## The hold-back skill (AiHands.hold_speed_ms; AI_FLEET_PLAN.md, D1): the auto-sheet is let
+## trim no closer than an angle of attack that a speed loop sets (Autopilot.max_alpha_deg, the
+## sailor easing on purpose). The sail eases by hold_back_gain_deg_per_ms degrees for every m/s
+## the board is too fast, and the loop's trim keeps easing by hold_back_trim_dps_per_ms degrees
+## per second per m/s, so that the board settles at the wanted speed. Never further out than
+## hold_back_min_alpha_deg (the sail still draws a little), and never so slow that the fin
+## stops gripping: below hold_back_steerage_ms the loop sheets in whatever was asked, because
+## a board without way on cannot be steered and rounds up into the wind. The sailor judges the
+## speed hold_back_lead_s ahead (the speed now plus how fast it is changing): a board slowing
+## fast is sheeted in before it gets too slow, or it stops.
+var hold_back_gain_deg_per_ms: float = 4.0
+var hold_back_trim_dps_per_ms: float = 3.0
+var hold_back_min_alpha_deg: float = 2.0
+var hold_back_max_alpha_deg: float = 20.0
+var hold_back_steerage_ms: float = 1.5
+var hold_back_lead_s: float = 1.5
+## The trim of the hold-back loop (degrees of angle of attack), whether it is holding back, and
+## the speed at the last update and how fast it changes (m/s2, smoothed over half a second).
+var _hold_trim_deg: float = 0.0
+var _holding_back: bool = false
+var _hold_last_speed_ms: float = 0.0
+var _hold_acceleration_ms2: float = 0.0
 
 var _manual_sheet_timer_s: float = 0.0
 var _scratch: SimControls = SimControls.new()
@@ -183,7 +205,7 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 	# inside the turn, a fully powered sail would pull them over it. The bank does the
 	# turning; afterwards the pilot sheets back in at the pace the body can lean out.
 	var gybing: bool = manoeuvre == Manoeuvre.GYBE_BEARING_AWAY or manoeuvre == Manoeuvre.GYBE_HEADING_UP
-	auto_sheet_pilot.max_alpha_deg = gybe_entry_alpha_deg if gybing else 90.0
+	auto_sheet_pilot.max_alpha_deg = gybe_entry_alpha_deg if gybing else _hold_back_alpha_deg(telemetry, dt)
 	_turn_wanted = 0.0
 	if manoeuvre != Manoeuvre.NONE:
 		var is_gybe: bool = manoeuvre == Manoeuvre.GYBE_BEARING_AWAY or manoeuvre == Manoeuvre.GYBE_HEADING_UP
@@ -310,6 +332,42 @@ func _steer_beginner(telemetry: Telemetry, controls: SimControls, turn_key: floa
 	_steer_at_rate(telemetry, controls, rate, turn_key != 0.0, dt)
 
 
+## The hold-back skill: the most angle of attack the auto-sheet may trim to, degrees (90, no
+## limit, unless the hands ask for a wanted speed; never during a manoeuvre, which needs the
+## sail). See hold_back_gain_deg_per_ms.
+func _hold_back_alpha_deg(telemetry: Telemetry, dt: float) -> float:
+	var wanted_ms: float = hands.hold_speed_ms if hands != null else 0.0
+	if wanted_ms <= 0.0 or manoeuvre != Manoeuvre.NONE:
+		_holding_back = false
+		return 90.0
+	if not _holding_back:
+		# It starts from the trim the sail has now, so the sheet does not jump.
+		_holding_back = true
+		_hold_trim_deg = clampf(telemetry.alpha_deg, hold_back_min_alpha_deg, hold_back_max_alpha_deg)
+		_hold_last_speed_ms = telemetry.speed_ms
+		_hold_acceleration_ms2 = 0.0
+	var acceleration_ms2: float = (telemetry.speed_ms - _hold_last_speed_ms) / maxf(dt, 1e-6)
+	_hold_acceleration_ms2 = lerpf(_hold_acceleration_ms2, acceleration_ms2, clampf(dt / 0.5, 0.0, 1.0))
+	_hold_last_speed_ms = telemetry.speed_ms
+	# Positive when the board is (about to be) too fast; slower than the steerage speed counts as
+	# too slow whatever was asked.
+	var ahead_ms: float = telemetry.speed_ms + _hold_acceleration_ms2 * hold_back_lead_s
+	var excess_ms: float = ahead_ms - maxf(wanted_ms, hold_back_steerage_ms)
+	var alpha_deg: float = _hold_trim_deg - hold_back_gain_deg_per_ms * excess_ms
+	# The trim keeps easing only while the sail is not already eased as far as it goes (and
+	# sheeting in only while it is not fully trimmed): a trim run on past its stop would hold
+	# the sail out long after the board has slowed.
+	var at_stop: bool = (excess_ms > 0.0 and alpha_deg <= hold_back_min_alpha_deg) or (excess_ms < 0.0 and alpha_deg >= hold_back_max_alpha_deg)
+	if not at_stop:
+		_hold_trim_deg = clampf(_hold_trim_deg - hold_back_trim_dps_per_ms * excess_ms * dt, hold_back_min_alpha_deg, hold_back_max_alpha_deg)
+	return clampf(alpha_deg, hold_back_min_alpha_deg, hold_back_max_alpha_deg)
+
+
+## True while the hold-back skill is easing the sail (for the tools and the tests).
+func is_holding_back() -> bool:
+	return _holding_back
+
+
 ## The tack: carved up to the wind at tack_rate_dps on the windward rail; then, within
 ## pivot_within_deg of the wind or with the rig held by the auto-sheet pilot, the rig fully
 ## back and no weight on a rail while the backed sail swings the bow through. On the new
@@ -367,6 +425,7 @@ func set_mode(new_mode: Mode) -> void:
 ## Forgets the sheet and the manoeuvre (after a reset or a waterstart).
 func reset_controls(controls: SimControls) -> void:
 	_settling = false
+	_holding_back = false
 	wanted_sheet = 0.0
 	ease = 0.0
 	manoeuvre = Manoeuvre.NONE

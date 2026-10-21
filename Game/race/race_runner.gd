@@ -38,6 +38,8 @@ var opponents: Array[WindsurferNode] = []
 var hud: RaceHud = null
 var _hud_layer: Hud = null
 var _skippers: Array[RaceSkipper] = []
+## Where the AI boards appear and sail free (SailingArea), round the start line and off the shore.
+var _area: SailingArea = null
 var _running: bool = false
 ## Every board, the player's first, for the tick.
 var _boards: Array[WindsurferNode] = []
@@ -69,11 +71,11 @@ func setup_race(race_course: Course, player_node: WindsurferNode, race_setup: Ra
 	# The runner steps the player's board with the others (its own _physics_process steps nothing).
 	player.stepped_by_runner = true
 	_boards = [player]
+	# The sailing area round the start line, kept off the shore on a map (the scene's shore grid).
+	var sailing_scene: SailingScene = player.get_parent() as SailingScene
+	_area = SailingArea.for_course(course, sailing_scene.shore_grid if sailing_scene != null else null)
 	var scene: PackedScene = load(WINDSURFER_SCENE)
-	for skipper_name: String in setup.skippers:
-		var skipper: RaceSkipper = Skippers.make(skipper_name)
-		if skipper == null:
-			continue
+	for skipper: RaceSkipper in Skippers.make_fleet(setup.skippers):
 		var node: WindsurferNode = scene.instantiate()
 		node.name = "Opponent%d" % (opponents.size() + 1)
 		# The same place, wind and sea as the player's board; its simulation is built in its _ready().
@@ -92,33 +94,46 @@ func setup_race(race_course: Course, player_node: WindsurferNode, race_setup: Ra
 		node.controller.hands = node.hands
 		node.skipper = skipper
 		node.set_sail_colour(skipper.sail_colour())
-		node.set_name_label(skipper.skipper_name())
+		node.set_name_label(skipper.board_name())
 		opponents.append(node)
 		_boards.append(node)
 		_skippers.append(skipper)
 	restart()
 
 
-## Everyone back behind the line and a new countdown (the first start, and R).
+## Everyone back to the start and a new countdown (the first start, and R): the player behind the
+## line, the AI boards at their random spots in the sailing area (or behind the line too, with the
+## setup's spawn LINE). The countdown starts at once, or after the setup's free sailing.
 func restart() -> void:
 	race = RaceSim.new(course, setup.laps, setup.prestart_s)
 	race.add_board(PLAYER_NAME)
 	for skipper: RaceSkipper in _skippers:
-		race.add_board(skipper.skipper_name())
+		race.add_board(skipper.board_name())
 	var behind_m: float = clampf(setup.prestart_s * WAIT_M_PER_S, NEAREST_M, FARTHEST_M)
 	var spots: PackedVector2Array = pre_start_spots(course, race.steps()[0], opponents.size() + 1, behind_m)
 	var heading_deg: float = RaceCourses.pre_start_heading_deg(course)
 	_place(player, spots[0], heading_deg)
-	for i: int in opponents.size():
-		_place(opponents[i], spots[i + 1], heading_deg)
+	if setup.spawn == RaceSetup.Spawn.RANDOM:
+		var places: Array[Vector3] = _area.spawn_places(opponents.size(), setup.spawn_seed, spots[0])
+		for i: int in opponents.size():
+			_place(opponents[i], Vector2(places[i].x, places[i].y), places[i].z)
+	else:
+		for i: int in opponents.size():
+			_place(opponents[i], spots[i + 1], heading_deg)
 	# The skippers look at the whole fleet, so they are set up once every board is in the race.
 	for i: int in opponents.size():
 		_skippers[i].random_seed = i + 1
+		_skippers[i].sailing_area = _area
 		_skippers[i].setup(opponents[i].sim, opponents[i].controller, opponents[i].hands, race, i + 1)
 	_tell_the_race()
-	race.start()
+	race.start_in(setup.free_sail_s)
 	hud.reset()
 	_running = true
+
+
+## The sailing area of this race (where the AI boards appear and sail free).
+func sailing_area() -> SailingArea:
+	return _area
 
 
 ## Where the boards wait: `behind_m` behind the start line, spread evenly along it, the player (the

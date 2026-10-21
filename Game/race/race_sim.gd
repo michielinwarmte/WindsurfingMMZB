@@ -62,6 +62,8 @@ var _started: bool = false
 var _clock_s: float = 0.0
 ## When the first board finished, seconds; -1 until then.
 var _first_finish_s: float = -1.0
+## Seconds until the countdown starts by itself (start_in()); -1 when it is not waiting.
+var _start_in_s: float = -1.0
 ## The race order, worked out once after the boards moved (see _order()): the boards' numbers
 ## first to last, and each board's place. A big fleet's HUD asks for the places every frame; a
 ## sort per question made 33 boards' fleet lines cost 0.3 s (F1 fleet_frame).
@@ -102,6 +104,21 @@ func start() -> void:
 				board.ocs = RoundingCheck.over_line_m(board.position, _steps[0].points[0], _steps[0].points[1], _steps[0].in_dir) >= 0.0
 
 
+## Starts the countdown after the boards have sailed free for a while (AI_FLEET_PLAN.md, D4),
+## seconds; 0 starts it now. step() counts the time down.
+func start_in(delay_s: float) -> void:
+	if delay_s <= 0.0:
+		start()
+	elif not _started:
+		_start_in_s = delay_s
+
+
+## Seconds until the countdown starts by itself (start_in()); 0 once it has started or when it is
+## not waiting.
+func seconds_to_countdown() -> float:
+	return maxf(_start_in_s, 0.0) if not _started else 0.0
+
+
 ## Where a board is now (game X, Z, metres). Call it for every board, then step(), every tick.
 func update_board(index: int, position: Vector2) -> void:
 	var board: Board = _boards[index]
@@ -115,6 +132,11 @@ func update_board(index: int, position: Vector2) -> void:
 ## Moves the race clock on by dt seconds and checks every board's move since the last step().
 ## Before start() and after the race has ended nothing is checked; the boards may sail about.
 func step(dt: float) -> void:
+	if not _started and _start_in_s >= 0.0:
+		_start_in_s -= dt
+		if _start_in_s <= 0.0:
+			_start_in_s = -1.0
+			start()
 	if _started and _phase != Phase.FINISHED and dt > 0.0:
 		var from_s: float = _clock_s
 		var to_s: float = _clock_s + dt

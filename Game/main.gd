@@ -361,6 +361,7 @@ func _course_from_options(usual_start: Vector2) -> Course:
 			prestart.to_float() if not prestart.is_empty() else RaceSetup.DEFAULT_PRESTART_S)
 		_race_setup.opponent_effects = _user_option("opponent_effects") == "1"
 		_race_setup.threads = RaceSetup.threads_from_option(_user_option("threads"))
+		_race_setup.read_spawn_options()
 	var found: Course = _course_named(course_name, usual_start)
 	if found == null:
 		push_warning("No course called \"%s\" in this scene. The open water has %s; Lake Silvaplana has %s and the courses saved in %s." % [

@@ -11,11 +11,25 @@ extends RefCounted
 var random_seed: int = 0
 ## A few words on what the skipper is doing right now, for the HUD and the race tool's CSV.
 var note: String = ""
+## Where it sails when it is not racing (AI_FLEET_PLAN.md, D4): given by whoever sets up the race
+## (RaceRunner, the race tool) before setup(); null lets a skipper make its own round the course's
+## start line, without a shore.
+var sailing_area: SailingArea = null
+
+
+## The board's own name in a fleet where a character sails more than once ("Rookie 2", set by
+## Skippers.make_fleet()); empty for skipper_name().
+var label: String = ""
 
 
 ## The name shown on the results and the labels.
 func skipper_name() -> String:
 	return "skipper"
+
+
+## The name of this board in the race: its label, or the skipper's name.
+func board_name() -> String:
+	return label if not label.is_empty() else skipper_name()
 
 
 ## The sail's colour in the game, so the boards tell apart.

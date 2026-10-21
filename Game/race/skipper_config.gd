@@ -6,6 +6,9 @@ extends Resource
 ## wind (decision RD7). One .tres per character in Game/race/skippers/, so the team can edit a
 ## skipper in the inspector. The rules that use these numbers are in Skipper.
 
+## The start plans (start_style below).
+enum StartStyle { LOOP, HOLD }
+
 ## Shown on the label, the results and the mini-map. The four shipped characters have placeholder
 ## names; the team names them.
 @export var name: String = "Skipper"
@@ -47,6 +50,19 @@ extends Resource
 ## Its timing error at the start, seconds: negative aims to cross before the gun (a risk of being
 ## over early, OCS), positive after it (safe, but metres lost).
 @export_range(-3.0, 6.0) var start_timing_error_s: float = 0.5
+## How keen it is on the favoured end of the line (the end nearer the wind, AI_FLEET_PLAN.md D4),
+## 0 to 1: 0 starts at its own start_spot whatever the line; 1 goes all the way to the favoured
+## end once the line is skewed by Skipper.FULL_BIAS_DEG or more (less of the way on a line that is
+## nearly square to the wind, where the ends are nearly as good).
+@export_range(0.0, 1.0) var favoured_end_bias: float = 0.5
+## Its start plan (AI_FLEET_PLAN.md, D4): a timing loop (sail away from the line on a reach and
+## turn back to reach it at the gun at full speed), or a hold (come to the line early, luff and
+## ease the sheet near it to wait without stopping, then bear away and sheet in for the gun).
+@export var start_style: StartStyle = StartStyle.LOOP
+## The slowest it holds back to before the start, m/s (2 to 3 m/s keeps the fin gripping: below
+## 1.5 m/s the board cannot be steered and rounds up into the wind). A slower hold uses up more time
+## on a shorter way in to the line.
+@export_range(1.5, 4.0) var hold_speed_ms: float = 2.5
 
 @export_group("Tactics")
 ## How big a header (a wind shift that forces it away from the mark) makes it tack, degrees.

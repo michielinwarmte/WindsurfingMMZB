@@ -191,7 +191,8 @@ func _apply_command_line_options() -> void:
 				_open_page(_quit_confirm)
 
 
-## --race=t1_loop|t2_slalom [--skippers=a,b,c] [--prestart=<s>]: the menu starts that race at once,
+## --race=t1_loop|t2_slalom [--skippers=a,b,c] [--prestart=<s>] [--spawn=random|line]
+## [--spawn_seed=<n>] [--free_sail=<s>] (RaceSetup.read_spawn_options()): the menu starts that race at once,
 ## for measuring and screenshots, and for exported builds, which take no scene on the command line.
 func _start_race_from_options() -> void:
 	var course: String = _race_option("race")
@@ -205,6 +206,7 @@ func _start_race_from_options() -> void:
 		prestart = _race_option("prestart").to_float()
 	var setup: RaceSetup = RaceSetup.race(course, who, 1, prestart)
 	setup.threads = RaceSetup.threads_from_option(_race_option("threads"))
+	setup.read_spawn_options()
 	if course == RaceCourses.T1_NAME:
 		set_process_unhandled_input(false)
 		_menu.queue_free()

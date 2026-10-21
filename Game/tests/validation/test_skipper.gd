@@ -139,7 +139,11 @@ func test_the_four_characters_load_with_the_polars_angles() -> void:
 	assert_gt(rookie.reaction_time_s, allrounder.reaction_time_s, "The rookie reacts later")
 	assert_gt(rookie.steering_noise_deg, allrounder.steering_noise_deg, "The rookie's helm is noisier")
 	assert_gt(Skippers.load_config("cautious").start_timing_error_s, 2.0, "The cautious one starts late")
-	assert_lt(Skippers.load_config("gambler").start_timing_error_s, 0.0, "The gambler starts early")
+	# The gambler cuts it finest: it aims nearest the gun (with the start's exact timer since F2 a
+	# negative aim, before the gun, was a certain OCS; AI_FLEET_PLAN.md, F2).
+	var gambler_s: float = Skippers.load_config("gambler").start_timing_error_s
+	for other: String in ["allrounder", "cautious", "rookie"]:
+		assert_lt(gambler_s, Skippers.load_config(other).start_timing_error_s, "The gambler aims nearer the gun than the %s" % other)
 
 
 func test_a_skipper_is_made_from_a_character_sheets_name() -> void:
