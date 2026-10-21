@@ -19,6 +19,9 @@ extends Node3D
 ## board 150 m behind its start line and puts it on the HUD and the mini-map; --lines=1 draws its
 ## start and finish lines on the water; --course_view=all puts a fixed camera above the whole
 ## course, --course_view=<mark> (1, 4S, start_boat, ...) one beside that mark (for screenshots).
+## Watching a night's generations race (tools/gens.sh): --behind=<m> --wind=<kt> --blind=1
+## --spectate=1 with the race (RaceSetup.read_options()); while spectating Tab and Shift+Tab pick
+## the next or the previous board to watch and L follows the leader again (RaceRunner).
 ##
 ## A map scene sails with this script too (maps/silvaplana/sail_silvaplana.gd extends it): the
 ## map brings its own sun and sky (so Sun is optional), its own wind and start (it overrides
@@ -65,6 +68,8 @@ var _course_on_water: CourseOnWater = null
 ## and the node that runs it (RaceRunner).
 var _race_setup: RaceSetup = null
 var _race_runner: RaceRunner = null
+## The sounds; they follow the board the camera follows.
+var _audio: GameAudio = null
 
 
 func _enter_tree() -> void:
@@ -72,11 +77,12 @@ func _enter_tree() -> void:
 	# hand it the wind, the sea and the start heading now.
 	var windsurfer: WindsurferNode = $Windsurfer
 	var settings: SettingsValues = GameSettings.values
+	# With a course the board starts behind its start line (RaceCourses.pre_start_spot()), placed
+	# from the scene's usual start spot (a map scene sets it before this runs). The race comes
+	# first: it may bring its own wind (--wind).
+	_course = _course_from_options(Vector2(windsurfer.start_position.x, windsurfer.start_position.z))
 	windsurfer.wind_config = _build_wind_config()
 	windsurfer.wave_set_config = settings.build_wave_set_config()
-	# With a course the board starts behind its start line (RaceCourses.pre_start_spot()), placed
-	# from the scene's usual start spot (a map scene sets it before this runs).
-	_course = _course_from_options(Vector2(windsurfer.start_position.x, windsurfer.start_position.z))
 	if _course != null:
 		var spot: Vector2 = RaceCourses.pre_start_spot(_course)
 		windsurfer.start_position = Vector3(spot.x, 0.0, spot.y)
@@ -106,7 +112,8 @@ func _ready() -> void:
 		_enter_menu_mode()
 	_apply_command_line_options()
 	# The sounds (audio/game_audio.gd): they follow the windsurfer's telemetry every frame.
-	add_child(GameAudio.create(_windsurfer, _camera_rig, func() -> bool: return _in_menu))
+	_audio = GameAudio.create(_windsurfer, _camera_rig, func() -> bool: return _in_menu)
+	add_child(_audio)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -115,6 +122,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event.is_action_pressed("pause"):
 		_set_paused(true)
+	elif _is_spectating() and event.is_action_pressed("toggle_mode"):
+		# Tab: the next board in race order; Shift+Tab the previous one.
+		var key: InputEventWithModifiers = event as InputEventWithModifiers
+		_race_runner.step_followed(-1 if key != null and key.shift_pressed else 1)
+	elif _is_spectating() and event is InputEventKey and event.is_pressed() and not event.is_echo() and (event as InputEventKey).physical_keycode == KEY_L:
+		_race_runner.follow_leader()
 	elif event.is_action_pressed("reset"):
 		if _windsurfer.is_fallen() and not _aground:
 			_windsurfer.waterstart_now()
@@ -148,9 +161,19 @@ func _process(delta: float) -> void:
 		_set_paused(true)
 		if _pause_page != "":
 			_pause_menu.open_page(_pause_page)
-	_hud.update_from(_windsurfer.telemetry(), _windsurfer.controller, _camera_rig.mode_name(), _windsurfer.use_autopilot)
+	# The board on the screen: the player's, or while spectating the AI board being watched.
+	var shown: WindsurferNode = _race_runner.followed_node() if _race_runner != null else _windsurfer
+	_camera_rig.set_target(shown)
+	if _audio != null:
+		_audio.follow(shown)
+	_hud.update_from(shown.telemetry(), shown.controller, _camera_rig.mode_name(), shown.use_autopilot)
 	if _race_runner != null:
 		_hud.set_other_boards(_race_runner.other_positions())
+
+
+## Whether a race is on with the player's board parked (--spectate=1).
+func _is_spectating() -> bool:
+	return _race_runner != null and _race_runner.spectating
 
 
 ## The start menu's "Sail on open water": the board goes back to the start and the player
@@ -232,9 +255,16 @@ func _apply_start_settings() -> void:
 		_sun.shadow_enabled = settings.shadow_quality > 0
 
 
-## The wind the board sails in: the settings' wind. A map scene has its own (sail_silvaplana.gd).
+## The wind the board sails in: the settings' wind, or a race's own (--wind: a steady wind of that
+## strength from the settings' direction, no gusts or shifts, as the brains were trained). A map
+## scene has its own (sail_silvaplana.gd).
 func _build_wind_config() -> WindConfig:
-	return GameSettings.values.build_wind_config()
+	var config: WindConfig = GameSettings.values.build_wind_config()
+	if _race_setup != null and _race_setup.wind_kt > 0.0:
+		config.speed_kt = _race_setup.wind_kt
+		config.gusts_enabled = false
+		config.shifts_enabled = false
+	return config
 
 
 ## The start heading: the settings' one, or with a course a beam reach behind its start line
@@ -247,6 +277,8 @@ func _start_heading_deg() -> float:
 
 ## The settings' wind blows at once, with its gusts and shifts. A map scene keeps its own wind.
 func _apply_wind_settings_live() -> void:
+	if _race_setup != null and _race_setup.wind_kt > 0.0:
+		return  # the race's own wind (--wind) stays
 	var settings: SettingsValues = GameSettings.values
 	var wind: WindField = _windsurfer.sim.wind
 	settings.apply_wind_to(wind.config)
@@ -361,7 +393,7 @@ func _course_from_options(usual_start: Vector2) -> Course:
 			prestart.to_float() if not prestart.is_empty() else RaceSetup.DEFAULT_PRESTART_S)
 		_race_setup.opponent_effects = _user_option("opponent_effects") == "1"
 		_race_setup.threads = RaceSetup.threads_from_option(_user_option("threads"))
-		_race_setup.read_spawn_options()
+		_race_setup.read_options()
 	var found: Course = _course_named(course_name, usual_start)
 	if found == null:
 		push_warning("No course called \"%s\" in this scene. The open water has %s; Lake Silvaplana has %s and the courses saved in %s." % [
@@ -483,6 +515,9 @@ func start_race(setup: RaceSetup) -> void:
 		return
 	var spot: Vector2 = RaceCourses.pre_start_spot(_course)
 	_windsurfer.start_position = Vector3(spot.x, 0.0, spot.y)
+	if setup.wind_kt > 0.0:
+		# The race's own wind (--wind); the opponents take the player's.
+		_windsurfer.set_sea(_build_wind_config(), null)
 	_show_course()
 	start_playing()
 	_start_race_runner()

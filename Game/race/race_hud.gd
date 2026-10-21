@@ -8,6 +8,8 @@ extends Control
 ## the wrong side of a mark; and the results when you finish or the race is over. RaceRunner
 ## updates it every frame from the race (RaceSim) and the player's telemetry; the HUD's own
 ## telemetry strip and panel are hidden meanwhile (Hud.set_race_mode), F1 brings the panel back.
+## While spectating (set_watching) the block is about the board the camera follows, with its name
+## on a line above, and the fleet marks that board instead of "you".
 
 const SPLIT_SHOWN_S: float = 4.0
 const GO_SHOWN_S: float = 2.0
@@ -19,6 +21,8 @@ const TEXT_COLOR: Color = Color(0.95, 0.97, 1.0)
 const PANEL_COLOR: Color = Color(0.0, 0.0, 0.0, 0.45)
 const COMPASS_NAMES: PackedStringArray = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
 
+## The name of the board watched while spectating, above the speed (hidden otherwise).
+var _title: Label
 var _speed: Label
 var _info: Label
 var _fleet: Label
@@ -27,6 +31,10 @@ var _split: Label
 var _warning: Label
 var _results: PanelContainer
 var _results_text: Label
+## The board watched while spectating ("" when racing yourself), and whether the camera follows the
+## leader by itself.
+var _watching: String = ""
+var _follows_leader: bool = true
 ## How many splits have been shown, so a new one is noticed.
 var _splits_seen: int = 0
 var _split_until_s: float = -1.0
@@ -55,6 +63,9 @@ func _ready() -> void:
 	var column: VBoxContainer = VBoxContainer.new()
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	block.add_child(column)
+	_title = _text_label(font, 20, COUNTDOWN_COLOR)
+	_title.hide()
+	column.add_child(_title)
 	_speed = _text_label(font, 30, TEXT_COLOR)
 	column.add_child(_speed)
 	_info = _text_label(font, 17, TEXT_COLOR)
@@ -114,8 +125,22 @@ func reset() -> void:
 	_fleet.text = ""
 
 
-## What the race says about board `index` (the player), and the player's own telemetry, every
-## frame.
+## Spectating: the name of the board the camera follows, and whether it follows the leader by
+## itself (Tab: by hand). An empty name: racing yourself, no title.
+func set_watching(board_name: String, follows_leader: bool) -> void:
+	if board_name == _watching and follows_leader == _follows_leader:
+		return
+	_watching = board_name
+	_follows_leader = follows_leader
+	_title.visible = not board_name.is_empty()
+	_title.text = "Watching %s   %s" % [board_name, "(the leader; Tab: another board)" if follows_leader else "(L: follow the leader)"]
+	# A new board: its own splits from now on, and the fleet list marks it at once.
+	_splits_seen = -1
+	_fleet_refresh_at_s = -INF
+
+
+## What the race says about board `index` (the player, or the board watched), and that board's
+## telemetry, every frame.
 func update_from(race: RaceSim, index: int, t: Telemetry) -> void:
 	var tack: String = "starboard tack" if t.twa_deg >= 0.0 else "port tack"
 	var state: String = "planing" if t.is_planing else ("luffing" if t.is_luffing else "")
@@ -145,7 +170,7 @@ func update_from(race: RaceSim, index: int, t: Telemetry) -> void:
 	_info.text = "\n".join(lines)
 	var refresh: bool = race.clock_s() >= _fleet_refresh_at_s
 	if refresh:
-		_fleet.text = fleet_text(race, index)
+		_fleet.text = fleet_text(race, index, "you" if _watching.is_empty() else "<< camera")
 		_fleet_refresh_at_s = race.clock_s() + FLEET_REFRESH_S
 	_show_split(race, index)
 	if race.is_ocs(index):
@@ -167,6 +192,9 @@ func update_from(race: RaceSim, index: int, t: Telemetry) -> void:
 ## The time at a step just completed, for a few seconds.
 func _show_split(race: RaceSim, index: int) -> void:
 	var splits: PackedFloat32Array = race.splits_s(index)
+	if _splits_seen < 0:
+		# A board just picked by the spectator: its old splits are not news.
+		_splits_seen = splits.size()
 	if splits.size() > _splits_seen:
 		_splits_seen = splits.size()
 		var step: RaceStep = race.steps()[_splits_seen - 1]
@@ -178,13 +206,14 @@ func _show_split(race: RaceSim, index: int) -> void:
 
 
 ## The fleet in race order: place, name, where it is going, and its gap to the player at the last
-## step both have completed (negative: it got there first). The race works its order out once per
-## tick (RaceSim.race_order), so this costs a line per board, not a sort per line.
-static func fleet_text(race: RaceSim, player: int) -> String:
+## step both have completed (negative: it got there first); the player's own line says `mark`
+## ("you", or "<< camera" for the board watched while spectating). The race works its order out once
+## per tick (RaceSim.race_order), so this costs a line per board, not a sort per line.
+static func fleet_text(race: RaceSim, player: int, mark: String = "you") -> String:
 	var lines: PackedStringArray = PackedStringArray()
 	for i: int in race.race_order():
 		var going: String = "finished" if race.is_finished(i) else "to " + race.next_step_name(i)
-		var gap: String = "you" if i == player else gap_text(race.splits_s(i), race.splits_s(player))
+		var gap: String = mark if i == player else gap_text(race.splits_s(i), race.splits_s(player))
 		lines.append("%d. %-12s %-16s %s" % [race.place(i), race.board_name(i).left(12), going, gap])
 	return "\n".join(lines)
 

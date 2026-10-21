@@ -6,6 +6,11 @@ extends Node
 ## _physics_process, and this node, added after them so it runs after them each tick, tells the
 ## race where they are. The skippers sail through the beginner controller with their AiHands, as
 ## the player does (RD1); nothing here touches the physics.
+##
+## Spectating (RaceSetup.spectate, tools/gens.sh): the player's board does not race. It is parked
+## where it is, hidden and not stepped, and it is not in the race; the camera, the HUD's block and
+## the sounds follow one AI board instead, chosen by a SpectateChoice (the leader, or the board Tab
+## stepped to).
 
 const WINDSURFER_SCENE: String = "res://windsurfer/windsurfer.tscn"
 ## How far back from the line the boards wait per second of countdown, and the nearest and the
@@ -50,6 +55,12 @@ var _us_race: int = 0
 var _ticks_counted: int = 0
 ## The ticks since the race was built, for posing the far boards on alternate ticks.
 var _tick: int = 0
+## Spectating (RaceSetup.spectate): the player's board is parked out of the race.
+var spectating: bool = false
+## Which AI board the camera follows while spectating.
+var choice: SpectateChoice = SpectateChoice.new()
+## The race's number of the first AI board: 1 after the player's, 0 while spectating.
+var _first_ai: int = 1
 
 
 func _ready() -> void:
@@ -67,10 +78,16 @@ func setup_race(race_course: Course, player_node: WindsurferNode, race_setup: Ra
 	hud = RaceHud.new()
 	hud.name = "RaceHud"
 	hud_layer.add_child(hud)
-	hud_layer.set_race_mode(true)
+	spectating = setup.spectate
+	_first_ai = 0 if spectating else 1
+	hud_layer.set_race_mode(true, spectating)
 	# The runner steps the player's board with the others (its own _physics_process steps nothing).
 	player.stepped_by_runner = true
 	_boards = [player]
+	if spectating:
+		# Parked: hidden, not stepped (stepped_by_runner, and not among the boards), not in the race.
+		_boards = []
+		player.visible = false
 	# The sailing area round the start line, kept off the shore on a map (the scene's shore grid).
 	var sailing_scene: SailingScene = player.get_parent() as SailingScene
 	_area = SailingArea.for_course(course, sailing_scene.shore_grid if sailing_scene != null else null)
@@ -93,6 +110,9 @@ func setup_race(race_course: Course, player_node: WindsurferNode, race_setup: Ra
 		node.hands = AiHands.new()
 		node.controller.hands = node.hands
 		node.skipper = skipper
+		var learned: LearnedSkipper = skipper as LearnedSkipper
+		if learned != null and setup.blind:
+			learned.blind = true
 		node.set_sail_colour(skipper.sail_colour())
 		node.set_name_label(skipper.board_name())
 		opponents.append(node)
@@ -106,12 +126,16 @@ func setup_race(race_course: Course, player_node: WindsurferNode, race_setup: Ra
 ## setup's spawn LINE). The countdown starts at once, or after the setup's free sailing.
 func restart() -> void:
 	race = RaceSim.new(course, setup.laps, setup.prestart_s)
-	race.add_board(PLAYER_NAME)
+	if not spectating:
+		race.add_board(PLAYER_NAME)
 	for skipper: RaceSkipper in _skippers:
 		race.add_board(skipper.board_name())
-	var behind_m: float = clampf(setup.prestart_s * WAIT_M_PER_S, NEAREST_M, FARTHEST_M)
+	var behind_m: float = setup.wait_behind_m()
 	var spots: PackedVector2Array = pre_start_spots(course, race.steps()[0], opponents.size() + 1, behind_m)
 	var heading_deg: float = RaceCourses.pre_start_heading_deg(course)
+	if spectating:
+		# The AI boards in their order along the line (no player's slot in the middle).
+		spots = PackedVector2Array([spots[0]]) + line_spots(course, race.steps()[0], opponents.size(), behind_m)
 	_place(player, spots[0], heading_deg)
 	if setup.spawn == RaceSetup.Spawn.RANDOM:
 		var places: Array[Vector3] = _area.spawn_places(opponents.size(), setup.spawn_seed, spots[0])
@@ -124,10 +148,11 @@ func restart() -> void:
 	for i: int in opponents.size():
 		_skippers[i].random_seed = i + 1
 		_skippers[i].sailing_area = _area
-		_skippers[i].setup(opponents[i].sim, opponents[i].controller, opponents[i].hands, race, i + 1)
+		_skippers[i].setup(opponents[i].sim, opponents[i].controller, opponents[i].hands, race, i + _first_ai)
 	_tell_the_race()
 	race.start_in(setup.free_sail_s)
 	hud.reset()
+	choice = SpectateChoice.new()
 	_running = true
 
 
@@ -154,6 +179,17 @@ static func pre_start_spots(race_course: Course, start: RaceStep, count: int, be
 	return spots
 
 
+## Where `count` boards wait `behind_m` behind the start line, spread evenly along it in their
+## order, from the line's second point to its first (as the race tool puts them).
+static func line_spots(race_course: Course, start: RaceStep, count: int, behind_m: float) -> PackedVector2Array:
+	var spots: PackedVector2Array = PackedVector2Array()
+	var along: Vector2 = start.points[0] - start.points[1]
+	var middle: Vector2 = RaceCourses.pre_start_spot(race_course) + start.in_dir * (RaceCourses.PRE_START_BEHIND_M - behind_m)
+	for i: int in count:
+		spots.append(middle + along * (float(i + 1) / float(count + 1) - 0.5))
+	return spots
+
+
 func _place(node: WindsurferNode, spot: Vector2, heading_deg: float) -> void:
 	node.start_position = Vector3(spot.x, 0.0, spot.y)
 	node.start_heading_deg = heading_deg
@@ -169,7 +205,7 @@ func _physics_process(delta: float) -> void:
 	if not _running:
 		return
 	var scene: SailingScene = get_parent() as SailingScene
-	var player_stopped: bool = scene != null and scene.is_aground()
+	var player_stopped: bool = not spectating and scene != null and scene.is_aground()
 	for node: WindsurferNode in _boards:
 		if not (player_stopped and node == player):
 			node.sail(delta)
@@ -205,7 +241,7 @@ func _step_board(i: int, delta: float, player_stopped: bool) -> void:
 ## FAR_DETAIL_M from the camera is posed on alternate ticks (half of them on the even ticks, half
 ## on the odd, so the cost is even); its place on the water is set every tick.
 func _pose_boards(player_stopped: bool) -> void:
-	if not player_stopped:
+	if not player_stopped and not spectating:
 		player.after_step()
 	var camera: Camera3D = get_viewport().get_camera_3d()
 	var eye: Vector3 = camera.global_position if camera != null else player.global_position
@@ -266,24 +302,60 @@ static func worst(values: PackedFloat64Array) -> float:
 	return largest
 
 
-func _process(_delta: float) -> void:
-	if _running:
-		hud.update_from(race, 0, player.telemetry())
-		_hud_layer.set_next_mark_bearing(Course.bearing_deg(_where(player), race.next_target(0)))
+func _process(delta: float) -> void:
+	if not _running:
+		return
+	if spectating and not opponents.is_empty():
+		choice.update(race.race_order(), delta)
+	var index: int = followed_index()
+	var node: WindsurferNode = followed_node()
+	hud.set_watching(node.skipper.board_name() if spectating and node.skipper != null else "", choice.follows_leader)
+	hud.update_from(race, index, node.telemetry())
+	_hud_layer.set_next_mark_bearing(Course.bearing_deg(_where(node), race.next_target(index)))
 
 
-## The race is told where every board is (the player first).
+## The race's number of the board the camera follows: the player's (0), or while spectating the
+## AI board the SpectateChoice follows.
+func followed_index() -> int:
+	if not spectating or opponents.is_empty():
+		return 0
+	return choice.followed if choice.followed >= 0 else 0
+
+
+## The board the camera, the HUD's block and the sounds follow (the player's when not spectating).
+func followed_node() -> WindsurferNode:
+	if not spectating or opponents.is_empty():
+		return player
+	return opponents[followed_index() - _first_ai]
+
+
+## Tab (+1) and Shift+Tab (-1) while spectating: the next or the previous board in race order.
+func step_followed(by: int) -> void:
+	if spectating and race != null:
+		choice.step(race.race_order(), by)
+
+
+## L while spectating: follow the leader again.
+func follow_leader() -> void:
+	if spectating and race != null:
+		choice.follow_leader(race.race_order())
+
+
+## The race is told where every board is (the player first, unless spectating).
 func _tell_the_race() -> void:
-	race.update_board(0, _where(player))
+	if not spectating:
+		race.update_board(0, _where(player))
 	for i: int in opponents.size():
-		race.update_board(i + 1, _where(opponents[i]))
+		race.update_board(i + _first_ai, _where(opponents[i]))
 
 
-## The other boards' places, for the small map.
+## The other boards' places, for the small map (all but the one followed).
 func other_positions() -> PackedVector3Array:
 	var positions: PackedVector3Array = PackedVector3Array()
+	var followed: WindsurferNode = followed_node()
 	for node: WindsurferNode in opponents:
-		positions.append(node.sim.telemetry.position)
+		if node != followed:
+			positions.append(node.sim.telemetry.position)
 	return positions
 
 

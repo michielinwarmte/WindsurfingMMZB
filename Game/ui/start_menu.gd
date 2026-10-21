@@ -206,7 +206,7 @@ func _start_race_from_options() -> void:
 		prestart = _race_option("prestart").to_float()
 	var setup: RaceSetup = RaceSetup.race(course, who, 1, prestart)
 	setup.threads = RaceSetup.threads_from_option(_race_option("threads"))
-	setup.read_spawn_options()
+	setup.read_options()
 	if course == RaceCourses.T1_NAME:
 		set_process_unhandled_input(false)
 		_menu.queue_free()

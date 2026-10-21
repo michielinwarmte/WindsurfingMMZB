@@ -221,13 +221,16 @@ func set_other_boards(positions: PackedVector3Array) -> void:
 
 
 ## A race (RaceRunner): the telemetry strip and the panel make way for the race's own block
-## (RaceHud); F1 still brings the panel back. The key help names the racing keys.
-func set_race_mode(on: bool) -> void:
+## (RaceHud); F1 still brings the panel back. The key help names the racing keys, or while
+## spectating (the player's board parked) the keys that pick the board to watch.
+func set_race_mode(on: bool, spectating: bool = false) -> void:
 	_race_mode = on
 	_strip.visible = not on
 	if on:
 		set_detail_visible(false)
 		_help.text = "A/D turn   W/S sheet   Space tack/gybe   1-4 camera   R race again   Esc menu   F1 telemetry"
+		if spectating:
+			_help.text = "Tab next board   Shift+Tab previous   L follow the leader   1-4 camera   R race again   Esc menu   F1 telemetry"
 
 
 ## The bearing of a race's next mark, as a dot on the compass rose (NAN clears it).
