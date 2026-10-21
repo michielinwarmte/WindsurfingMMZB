@@ -141,7 +141,9 @@ func set_watching(board_name: String, follows_leader: bool) -> void:
 
 ## What the race says about board `index` (the player, or the board watched), and that board's
 ## telemetry, every frame.
-func update_from(race: RaceSim, index: int, t: Telemetry) -> void:
+## shadow_deficit: the share of the wind the other sails' shadows take from this board right now
+## (RaceRunner.shadow_deficit(); 0: none), shown on the wind line when it is more than a few percent.
+func update_from(race: RaceSim, index: int, t: Telemetry, shadow_deficit: float = 0.0) -> void:
 	var tack: String = "starboard tack" if t.twa_deg >= 0.0 else "port tack"
 	var state: String = "planing" if t.is_planing else ("luffing" if t.is_luffing else "")
 	if t.sailor_state == 1:
@@ -152,7 +154,8 @@ func update_from(race: RaceSim, index: int, t: Telemetry) -> void:
 	var distance_m: float = race.distance_to_next_m(index)
 	var turn: String = turn_text(relative_bearing_deg(here, race.next_target(index), t.heading_deg))
 	var lines: PackedStringArray = PackedStringArray()
-	lines.append("wind %2.0f kt from %s" % [t.tws_10m_kt, compass_name(t.wind_from_bearing_deg)])
+	var shadow: String = "   in a wind shadow: %d %% less" % roundi(100.0 * shadow_deficit) if shadow_deficit >= 0.03 else ""
+	lines.append("wind %2.0f kt from %s%s" % [t.tws_10m_kt, compass_name(t.wind_from_bearing_deg), shadow])
 	if race.phase() == RaceSim.Phase.PRE_START:
 		var left: float = race.countdown_s()
 		_countdown.text = "%d" % ceili(left)

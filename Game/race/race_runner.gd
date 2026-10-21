@@ -349,7 +349,7 @@ func _process(delta: float) -> void:
 	var index: int = followed_index()
 	var node: WindsurferNode = followed_node()
 	hud.set_watching(node.skipper.board_name() if spectating and node.skipper != null else "", choice.follows_leader)
-	hud.update_from(race, index, node.telemetry())
+	hud.update_from(race, index, node.telemetry(), shadow_deficit(node))
 	_hud_layer.set_next_mark_bearing(Course.bearing_deg(_where(node), race.next_target(index)))
 
 

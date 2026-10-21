@@ -4061,6 +4061,12 @@ Literature:
 
 ---
 
+#### 8.11 What else disturbs the air: `WindField.disturbance` (F3, the fleet's wind shadows)
+
+Added 21 October 2026 (AI_FLEET_PLAN.md D5, part F3). A race needs the other sails' wind shadows: a sail leaves a cone of slower air behind it, and the boards in a pack slow each other. The field itself knows nothing of sails. It has one hook: `disturbance`, a `WindDisturbance` (`Game/sim/wind_disturbance.gd`, a plain class whose `factor_at(point, undisturbed)` answers 1), null by default. Both fields' `velocity_at(point)` compute the wind as before and, when a disturbance is set, multiply the result by `disturbance.factor_at(point, velocity)` (the undisturbed velocity goes in, so the implementation knows which way the air moves at that point: on the lake it varies). Nothing else changes; with no disturbance set the answer is bit for bit what it was, and the tests, the validation suite and the matrix run without one.
+
+The race's implementation is `WindShadows` (`Game/race/wind_shadows.gd`, outside the physics): behind every sail that is up, a cone `half_width_m` wide at the sail widening at `spread_deg`, `deficit` of the wind missing within `full_until_m` and fading to nothing at `length_m`, a smooth profile across the cone, the shadows adding up to at most `most_deficit`; the numbers in `Game/config/wind_shadow_default.tres` (30 m, 30 %, 2.5 m, 8 degrees, 5 m, 50 %: the sailing books' five to seven mast heights, strongest within two) are Michiel's to set. Each board's field gets its own `WindShadows` with its own copy of the fleet's places every tick (RaceRunner, RaceEnv, the race tool), so a board stepped on a worker thread reads only its own fields in `factor_at` (section 17's F1 finding: a read of another object's field waits on the engine's lock). The sail's `true_wind_at_ce_world` and `apparent_wind_world` and the sailor's windage are the three queries that feel it.
+
 ## 9. Gerstner waves and the water surface
 
 ### Purpose
