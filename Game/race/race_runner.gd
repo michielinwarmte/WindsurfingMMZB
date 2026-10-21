@@ -156,6 +156,9 @@ func restart() -> void:
 		_skippers[i].sailing_area = _area
 		_skippers[i].rules = rules
 		_skippers[i].setup(opponents[i].sim, opponents[i].controller, opponents[i].hands, race, i + _first_ai)
+		var scripted: Skipper = _skippers[i] as Skipper
+		if setup.gear and scripted != null and scripted.persona != null:
+			scripted.persona.rig(opponents[i].sim, opponents[i].sim.telemetry.tws_10m_kt)
 	_tell_the_race()
 	race.start_in(setup.free_sail_s)
 	hud.reset()

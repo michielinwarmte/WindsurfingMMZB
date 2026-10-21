@@ -38,6 +38,8 @@ extends SceneTree
 ##   [--shadows=1]         the sails cast wind shadows on each other (F3, WindShadows); 0 turns them off
 ##   [--rules=1]           the racing rules are kept (F3, RaceRules): a scripted skipper turns a circle for a
 ##                         penalty, a learned one carries 20 s to the finish; 0 turns them off
+##   [--gear=0]            1: the personas rig their own sail for the wind (Persona.rig()); off until the sail
+##                         sizes are tuned (a bigger sail is slower in this physics, Session 53)
 ##   [--stop_after_gun=<s>] stop the race this long after the gun (to look at the start only)
 ##   [--out_dir=<folder>: a CSV per board: race time, x, z, heading, speed, its next step, and what
 ##                         its skipper is doing]
@@ -130,6 +132,7 @@ func _initialize() -> void:
 	var blind: bool = options.get("blind", "0") != "0"
 	var shadows: bool = options.get("shadows", "1") != "0"
 	var with_rules: bool = options.get("rules", "1") != "0"
+	var with_gear: bool = options.get("gear", "0") == "1"
 
 	var course_name: String = options.get("course", "test")
 	var course: Course = course_named(course_name)
@@ -154,6 +157,8 @@ func _initialize() -> void:
 	if shadows:
 		give_shadows(entries)
 	var rules: RaceRules = give_rules(entries, race, course) if with_rules else null
+	if with_gear:
+		rig_personas(entries, wind_kt)
 	for entry: Entry in entries:
 		entry.file = FileAccess.open(out_dir.path_join(_file_name(entry.name) + ".csv"), FileAccess.WRITE)
 		if entry.file != null:
@@ -306,6 +311,14 @@ static func give_shadows(entries: Array[Entry]) -> void:
 	for entry: Entry in entries:
 		entry.shadows = WindShadows.make()
 		entry.sim.wind.disturbance = entry.shadows
+
+
+## The personas' gear: each rigs its own sail for the wind (the other skippers keep the default).
+static func rig_personas(entries: Array[Entry], wind_kt: float) -> void:
+	for entry: Entry in entries:
+		var scripted: Skipper = entry.skipper as Skipper
+		if scripted != null and scripted.persona != null:
+			scripted.persona.rig(entry.sim, wind_kt)
 
 
 ## The racing rules' judge for the race, given to every scripted skipper (it keeps clear by the

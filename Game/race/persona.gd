@@ -108,6 +108,20 @@ func sail_m2_for(wind_kt: float) -> float:
 	return sail_light_m2 if wind_kt < gear_switch_kt else sail_strong_m2
 
 
+## Rigs a simulation's sail for a wind (F3's gear, D5): the persona's sail area for the wind, on
+## the same rig (the luff, the boom and the centre of effort stay: a fuller sail, not a taller one;
+## a taller rig overpowered the sailor even in 12 kt when it was tried). Measured (Session 53, 21
+## October 2026): even so, a 7.8 is slower off the line than the default 6.5 in 12 kt (5.1 against
+## 6.8 m/s after 10 s on a reach), so the gear is off by default (RaceSetup.gear) until the sail
+## sizes are tuned with Michiel (the sailor's strength, the sheeting, the camber of a bigger sail).
+## Nothing else changes (the sailor, the board, the fin). The simulation must own its sail config
+## (the race's boards do: own copies), and the sail model takes the new number at its next tick.
+## The 3D sail is not redrawn to the new size.
+func rig(sim: WindsurferSim, wind_kt: float) -> void:
+	var config: SailConfig = sim.sail_config
+	config.area_m2 = maxf(sail_m2_for(wind_kt), 1.0)
+
+
 ## Two lines for the menu: the name, the home water and the profile.
 func card() -> String:
 	return "%s (%s): %s" % [name, home_water, profile]

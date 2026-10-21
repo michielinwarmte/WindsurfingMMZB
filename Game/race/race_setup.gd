@@ -55,6 +55,10 @@ var shadows: bool = true
 ## The racing rules are kept (RaceRules, F3): the AI turns a circle for a penalty, the player is
 ## warned and carries 20 s to the finish unless it turns one. --rules=0 turns them off.
 var rules: bool = true
+## The personas rig their own sail for the wind (Persona.rig(); F3's gear per persona): a bigger
+## sail in light wind, a smaller one in a breeze. Off until the sail sizes are tuned (Michiel): in
+## this physics a 7.8 is slower off the line than the 6.5 even in 12 kt (Session 53). --gear=1.
+var gear: bool = false
 
 
 ## The spawn option's value from its name ("random" or "line"; anything else is RANDOM).
@@ -114,6 +118,8 @@ func read_options_from(args: PackedStringArray) -> void:
 			shadows = value != "0"
 		elif arg.begins_with("--rules="):
 			rules = value != "0"
+		elif arg.begins_with("--gear="):
+			gear = value != "0"
 
 
 ## How far behind the start line the boards wait, metres: behind_m when it is set, else 1 m per
