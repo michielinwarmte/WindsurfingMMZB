@@ -561,7 +561,8 @@ func _measure_frame_rate(seconds: float) -> void:
 		process_ms += Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0
 		frames += 1
 	var total_s: float = (Time.get_ticks_usec() - start_us) / 1e6
-	var boards: int = 1 + (_race_runner.opponents.size() if _race_runner != null else 0)
+	# The boards sailing: the player's (unless parked by --spectate) and the AI boards.
+	var boards: int = (0 if _is_spectating() else 1) + (_race_runner.opponents.size() if _race_runner != null else 0)
 	print("Measured %.0f s with %d boards: %.0f fps; a frame %.1f ms on average, %.1f ms at worst; physics %.1f ms and the rest %.1f ms of a frame" % [
 		total_s, boards, frames / total_s, 1000.0 * total_s / frames, worst_ms, physics_ms / frames, process_ms / frames])
 	print("  the player's board: %s" % _windsurfer.cost_text())
