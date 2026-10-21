@@ -69,27 +69,38 @@ def load_brain(path: Path) -> dict:
         return json.load(file)
 
 
-def policy_from_brain(policy, brain: dict, obs_names: list[str]) -> None:
+def policy_from_brain(policy, brain: dict, obs_names: list[str]) -> list[str]:
     """Copies a brain file's weights into a policy's action network (the value network and the
-    noise are left as they are). The brain must have been made for the same inputs, in the same
-    order, and the same layer sizes; otherwise a ValueError says what differs."""
-    if list(brain.get("obs_names", [])) != list(obs_names):
-        theirs = brain.get("obs_names", [])
-        raise ValueError(f"the brain was made for {len(theirs)} inputs and the observation now has {len(obs_names)}: "
-                         "a brain cannot be resumed across a change of the observation (train from scratch, "
-                         "or export the old brain's stage again).")
+    noise are left as they are). The brain's inputs are matched to the observation by name, as the
+    game matches them (NeuralNet.select_inputs): a number the observation has gained since the brain
+    was made starts with zero weights, so the brain sails as before and learns the new number from
+    there; a number the brain had and the observation lost is dropped. Returns the names of the new
+    numbers. The hidden layers must be the same sizes; otherwise a ValueError says what differs."""
+    theirs = list(brain.get("obs_names", []))
     linears = policy_layers(policy)
     layers = brain["layers"]
     if len(layers) != len(linears):
         raise ValueError(f"the brain has {len(layers)} layers and the policy {len(linears)}")
+    new_names: list[str] = []
     with torch.no_grad():
-        for linear, layer in zip(linears, layers):
-            weights = torch.tensor(np.asarray(layer["w"], dtype=np.float32))
-            biases = torch.tensor(np.asarray(layer["b"], dtype=np.float32))
+        for n, (linear, layer) in enumerate(zip(linears, layers)):
+            weights = np.asarray(layer["w"], dtype=np.float32)
+            biases = np.asarray(layer["b"], dtype=np.float32)
+            if n == 0 and theirs and theirs != list(obs_names):
+                # The first layer's columns by the inputs' names.
+                mapped = np.zeros((weights.shape[0], len(obs_names)), dtype=np.float32)
+                column_of = {name: k for k, name in enumerate(theirs)}
+                for k, name in enumerate(obs_names):
+                    if name in column_of:
+                        mapped[:, k] = weights[:, column_of[name]]
+                    else:
+                        new_names.append(name)
+                weights = mapped
             if tuple(weights.shape) != tuple(linear.weight.shape):
                 raise ValueError(f"a layer of the brain is {tuple(weights.shape)} and the policy's {tuple(linear.weight.shape)}")
-            linear.weight.copy_(weights)
-            linear.bias.copy_(biases)
+            linear.weight.copy_(torch.tensor(weights))
+            linear.bias.copy_(torch.tensor(biases))
+    return new_names
 
 
 def forward_numpy(brain: dict, inputs: np.ndarray) -> np.ndarray:

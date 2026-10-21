@@ -386,8 +386,9 @@ def train_one(args: argparse.Namespace) -> str:
             brain_path = Path(args.resume)
             if not brain_path.is_absolute():
                 brain_path = REPO_ROOT / brain_path
-            policy_from_brain(model.policy, load_brain(brain_path), obs_names)
-            print(f"the policy starts from the brain {brain_path.name}", flush=True)
+            new_names = policy_from_brain(model.policy, load_brain(brain_path), obs_names)
+            print(f"the policy starts from the brain {brain_path.name}"
+                  + (f" ({len(new_names)} new inputs start at zero weight: {', '.join(new_names)})" if new_names else ""), flush=True)
         else:
             if args.resume not in ("auto", "none", ""):
                 print(f"nothing to resume from at {args.resume}: starting from scratch", flush=True)
