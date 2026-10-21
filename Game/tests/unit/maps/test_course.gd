@@ -9,6 +9,8 @@ const CONFIG_PATH: String = "res://maps/silvaplana/map_config.tres"
 const RULES_PATH: String = "res://maps/course/iqfoil_courses.tres"
 const SHORE_GRID_PATH: String = "res://maps/silvaplana/terrain/shore_heights.json"
 const SAVE_PATH: String = "user://test_course.json"
+const OPEN_WATER_PATH: String = "user://test_course_open_water.json"
+const OLD_LAKE_PATH: String = "user://test_course_old_lake.json"
 const NM: float = 1852.0
 
 var _config: MapConfig
@@ -21,7 +23,8 @@ func before_all() -> void:
 
 
 func after_all() -> void:
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+	for path: String in [SAVE_PATH, OPEN_WATER_PATH, OLD_LAKE_PATH]:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 
 func test_the_class_distances_for_the_wind() -> void:
@@ -167,6 +170,68 @@ func test_save_and_load() -> void:
 		var back: CourseMark = loaded.mark(mark.id)
 		assert_almost_eq(back.position.distance_to(mark.position), 0.0, 0.01, mark.id + " to the centimetre")
 		assert_eq(back.side, mark.side, mark.id + " keeps its side")
+
+
+## The open water has no Swiss coordinates (RACING_PLAN.md, RD5): saved without a map, the file
+## says "frame": "game" and keeps the game metres, and loads back to the centimetre.
+func test_an_open_water_course_in_game_metres() -> void:
+	var course: Course = CourseTemplates.build("LG2", _rules, 15.0, 4, 263.0, Vector2(-1234.567, 789.012))
+	course.name = "Open water"
+	course.set_size(30.0)
+	assert_eq(course.save(OPEN_WATER_PATH, null), OK)
+	var data: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(OPEN_WATER_PATH))
+	assert_eq(str(data.get("frame", "")), "game", "The file says its positions are game metres")
+	assert_false(data.has("map"), "No map")
+	assert_almost_eq(float(data["marks"][0]["x"]), course.marks[0].position.x, 0.01, "Game metres, not LV95")
+	assert_almost_eq(float(data["marks"][0]["z"]), course.marks[0].position.y, 0.01)
+	var loaded: Course = Course.load_from(OPEN_WATER_PATH, null)
+	assert_not_null(loaded)
+	if loaded == null:
+		return
+	assert_eq(loaded.name, "Open water")
+	assert_eq(loaded.template, "LG2")
+	assert_eq(loaded.sequence, course.sequence)
+	assert_almost_eq(loaded.axis_deg, 263.0, 0.05)
+	assert_almost_eq(loaded.size_percent, 30.0, 0.001)
+	assert_eq(loaded.boards, 4)
+	assert_eq(loaded.marks.size(), course.marks.size())
+	# The frame decides how the positions are read, not whether a map is given.
+	var with_a_map: Course = Course.load_from(OPEN_WATER_PATH, _config)
+	for mark: CourseMark in course.marks:
+		var back: CourseMark = loaded.mark(mark.id)
+		assert_almost_eq(back.position.distance_to(mark.position), 0.0, 0.01, mark.id + " to the centimetre")
+		assert_eq(back.side, mark.side, mark.id + " keeps its side")
+		assert_almost_eq(with_a_map.mark(mark.id).position.distance_to(mark.position), 0.0, 0.01, mark.id + " with a map too")
+
+
+## A lake course file as the course maker has always written it (LV95, no "frame") loads exactly as
+## before; without its map it can't be placed, and says so.
+func test_a_lake_file_without_a_frame_loads_as_before() -> void:
+	var text: String = JSON.stringify({
+		"name": "Old lake course", "map": _config.map_name, "template": "PD3", "sequence": "Start-1-Finish",
+		"axis_deg": 222.0, "size_percent": 100.0, "boards": 24,
+		"marks": [
+			{"id": "start boat", "side": "", "east": 2780880.25, "north": 1147510.5},
+			{"id": "start pin", "side": "", "east": 2780800.0, "north": 1147400.75},
+			{"id": "1", "side": "starboard", "east": 2780300.5, "north": 1147000.25},
+			{"id": "finish boat", "side": "", "east": 2779900.0, "north": 1146800.0},
+			{"id": "finish pin", "side": "", "east": 2779880.0, "north": 1146770.0}]})
+	var file: FileAccess = FileAccess.open(OLD_LAKE_PATH, FileAccess.WRITE)
+	file.store_string(text)
+	file.close()
+	var loaded: Course = Course.load_from(OLD_LAKE_PATH, _config)
+	assert_not_null(loaded)
+	if loaded == null:
+		return
+	assert_eq(loaded.name, "Old lake course")
+	assert_eq(loaded.marks.size(), 5)
+	var mark1: Vector3 = _config.lv95_to_game(2780300.5, 1147000.25, _config.lake_level_m)
+	assert_almost_eq(loaded.mark("1").position.distance_to(Vector2(mark1.x, mark1.z)), 0.0, 0.001, "Placed from LV95 as before")
+	assert_eq(loaded.mark("1").side, CourseMark.Rounding.STARBOARD)
+	var boat: Vector3 = _config.lv95_to_game(2780880.25, 1147510.5, _config.lake_level_m)
+	assert_almost_eq(loaded.mark(CourseMark.START_BOAT).position.distance_to(Vector2(boat.x, boat.z)), 0.0, 0.001)
+	assert_null(Course.load_from(OLD_LAKE_PATH, null), "LV95 without its map: no course")
+	assert_push_error("Swiss coordinates")
 
 
 func test_the_land_warnings() -> void:

@@ -6,6 +6,10 @@
 #   tools/play.sh silvaplana     the Silvaplana map: fly around the terrain (map track, M1)
 #   tools/play.sh wind           the wind viewer: the Maloja over Silvaplana, with the course maker (map track, W2, W4a)
 #
+# Options for the game go after the scene, for example a race course (RACING_PLAN.md, 9A):
+#   tools/play.sh res://main.tscn --course=t1_loop     the training loop on the open water
+#   tools/play.sh lake --course=t2_slalom --lines=1    the sprint slalom on the lake, its lines drawn
+#
 # Double-clicked, it asks what to start; Enter opens the game's start menu.
 set -euo pipefail
 source "$(dirname "$0")/common.sh"
@@ -43,6 +47,11 @@ if [[ $# -eq 0 ]] && double_clicked; then
 	if [[ "$choice" == "4" ]]; then args=(wind); fi
 fi
 if [[ ${#args[@]} -gt 0 ]]; then args[0]="$(scene_for "${args[0]}")"; fi
+# Options after the scene are the game's (tools/play.sh lake --course=t2_slalom): Godot hands the
+# game only what comes after "--", so put one in front of them unless it is already there.
+if [[ ${#args[@]} -gt 1 && "${args[0]}" != -* && "${args[1]}" != "--" ]]; then
+	args=("${args[0]}" -- "${args[@]:1}")
+fi
 
 godot="$(find_godot)"
 exec "$godot" --path "$PROJECT_DIR" ${args[@]+"${args[@]}"}

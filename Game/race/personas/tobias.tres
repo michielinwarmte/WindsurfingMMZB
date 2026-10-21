@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="Persona" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://race/persona.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+name = "Tobias"
+sail_colour = Color(0.2, 0.4, 0.95, 1)
+home_water = "Kiel"
+profile = "course racer, points high, tacks like a machine"
+start_timing = 0.7
+start_nerve = 0.6
+tacking = 0.95
+gybing = 0.5
+boat_speed = 0.7
+upwind_sense = 0.95
+downwind_sense = 0.5
+gust_appetite = 0.3
+risk = 0.4
+aggression = 0.5
+consistency = 0.8
+start_spot = 0.5
+start_style = 0
+pointing_offset_deg = -2.0
+sail_light_m2 = 8.0
+sail_strong_m2 = 6.5
+gear_switch_kt = 15.0

@@ -23,6 +23,9 @@ extends WindField
 ## water, and those decisions must not flip back and forth when a gust's local direction swings
 ## a few degrees. The forces use the local wind (velocity_at(): the sail and the sailor's
 ## windage), so the board feels every gust, lull and shift where it is.
+##
+## Boards on threads (F1 no_wait): the height profile uses WindField's copies of the config's
+## numbers (copy_config(), see there), not the config's fields, which take an engine lock.
 
 ## Within this distance (m) of the last point asked in the same step, the wind at the
 ## pattern's height is taken as the same. The sail's mast point, its centre of effort and the
@@ -87,9 +90,13 @@ func speed_at_height(height_m: float) -> float:
 	return _now.lake_speed_ms * _profile_from_pattern(height_m)
 
 
-## The map's wind at a world point (the direction the air moves), with the height profile.
+## The map's wind at a world point (the direction the air moves), with the height profile, less
+## what disturbs it there (WindField.disturbance).
 func velocity_at(point: Vector3) -> Vector3:
-	return map_velocity_at(point) * _profile_from_pattern(point.y)
+	var velocity: Vector3 = map_velocity_at(point) * _profile_from_pattern(point.y)
+	if disturbance != null:
+		return velocity * disturbance.factor_at(point, velocity)
+	return velocity
 
 
 ## The map's wind at a point at the pattern's height, horizontal, m/s. Outside the map's
@@ -121,7 +128,7 @@ func _update() -> void:
 		return
 	_now = map_wind.moment(clock.time_of_day_s)
 	current_from_bearing_rad = deg_to_rad(map_wind.lake_from_deg(clock.time_of_day_s))
-	current_speed_ms = speed_at_height(config.reference_height_m)
+	current_speed_ms = speed_at_height(_reference_height_m)
 	_cache_valid = false
 
 
@@ -133,7 +140,7 @@ func _lake_mean_velocity() -> Vector3:
 ## How much stronger the wind is at a height than at the pattern's height (the power law of
 ## WindField.speed_at_height(), measured from the pattern's height instead of 10 m).
 func _profile_from_pattern(height_m: float) -> float:
-	if not config.height_gradient_enabled:
+	if not _height_gradient_enabled:
 		return 1.0
-	var height: float = maxf(height_m, config.min_height_m)
-	return pow(height / pattern_height_m, config.shear_exponent)
+	var height: float = maxf(height_m, _min_height_m)
+	return pow(height / pattern_height_m, _shear_exponent)

@@ -355,7 +355,13 @@ func test_beam_reach_sets_off_and_planes() -> void:
 	t = sim.telemetry
 	assert_between(t.twa_deg, 70.0, 110.0, "holding the beam reach")
 	assert_gt(t.speed_kmh, 18.0, "fast after 45 s")
-	assert_gt(t.planing_ratio, 0.5, "planing: the dynamic lift carries more than half the weight")
+	# The dynamic lift is the planing bottom's plus the fin's upward part: hooked in, the
+	# sailor loads the fin (a few degrees of leeward bank, U1.6) and the tilted fin carries
+	# some of the weight that the bottom carried before.
+	var weight_n: float = sim.mass_model.total_mass_kg * sim.sim_config.gravity_ms2
+	var dynamic_share: float = t.planing_ratio + maxf(sim.fin.force_world.y, 0.0) / weight_n
+	assert_gt(dynamic_share, 0.5, "planing: the dynamic lift carries more than half the weight")
+	assert_gt(sim.fin.force_world.y, 0.0, "the loaded fin lifts")
 	assert_lt(absf(t.heel_deg), 25.0, "not capsized")
 	assert_between(t.pitch_deg, -3.0, 10.0, "sensible trim")
 	assert_lt(t.submersion_ratio, 0.5, "riding high")

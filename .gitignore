@@ -27,3 +27,7 @@ Thumbs.db
 
 # Python bytecode caches (tools/map)
 __pycache__/
+
+# Git worktrees of Claude Code sub-agents
+/.claude/worktrees/
+.release/

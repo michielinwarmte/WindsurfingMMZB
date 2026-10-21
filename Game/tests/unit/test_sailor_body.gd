@@ -14,6 +14,14 @@ func _sim(wind_kt: float) -> WindsurferSim:
 	return sim
 
 
+## Heading South (wind from the West: starboard tack) at this speed, the sailor with it.
+func _sailing_south(speed_ms: float) -> WindsurferSim:
+	var sim: WindsurferSim = _sim(15.0)
+	sim.body.velocity = SimMath.forward(sim.body.basis) * speed_ms
+	sim.sailor.velocity = sim.body.velocity
+	return sim
+
+
 func _run(sim: WindsurferSim, seconds: float, controls: SimControls) -> void:
 	for i: int in int(seconds / DT):
 		sim.step(DT, controls)
@@ -34,7 +42,7 @@ func test_at_rest_the_legs_carry_the_weight_into_the_hull_and_nothing_else() -> 
 
 
 func test_a_sailor_leaning_to_starboard_at_rest_heels_the_board_to_starboard() -> void:
-	# No reflex: the controls place the body 0.1 m to starboard. (Without a sail to hang
+	# No reflex: the controls place the body a tenth of the full lean (about 0.09 m) to starboard. (Without a sail to hang
 	# on, 0.2 m puts the rail of a 120 L board under with 3 cm of freeboard, and the sailor
 	# swims: the feet can hold the body, the board cannot hold the feet.) The toes press
 	# against the heel, so it stays small.
@@ -46,7 +54,7 @@ func test_a_sailor_leaning_to_starboard_at_rest_heels_the_board_to_starboard() -
 	_run(sim, 4.0, controls)
 	var t: Telemetry = sim.telemetry
 	assert_eq(sim.sailor_state, WindsurferSim.SailorState.SAILING, "still standing")
-	assert_almost_eq(t.sailor_position_body.x, 0.1, 0.04, "the body is 0.1 m to starboard")
+	assert_almost_eq(t.sailor_position_body.x, 0.1 * sim.sailor_config.lean_max_m, 0.04, "the body is a tenth of the full lean to starboard")
 	assert_between(t.heel_deg, 0.5, 15.0, "the starboard rail goes down (heel positive), held by the toes")
 	# The sailor presses the starboard side down: the feet stand under the body, off the
 	# centreline, and the toes press back against the heel. On the board's real outline
@@ -83,6 +91,118 @@ func test_the_rig_balance_splits_the_sail_force_between_mast_foot_and_hands() ->
 	assert_gt(sim.harness_tension_n, 0.0, "the sailor hangs in the harness")
 	assert_gt(sim.hand_force_world.y, 0.0, "pulled upward by the line")
 	assert_lt(sim.mast_foot_force_world.y, -8.0 * 9.81, "the mast foot carries more than the rig's own weight")
+
+
+func test_a_rig_leaned_to_windward_lifts_and_the_lift_reaches_the_sailor_and_the_board() -> void:
+	# Sailing at 10 m/s on a beam reach, so the apparent wind comes from ahead and the
+	# sail's lift (square to the wind and the mast) points sideways: leaning the mast tilts
+	# it up. (At rest in a beam wind the lift points forward and leaning changes nothing.)
+	var rig_weight: Vector3 = Vector3(0.0, -8.0 * 9.81, 0.0)
+	var upright: WindsurferSim = _sailing_south(10.0)
+	var controls: SimControls = SimControls.new()
+	controls.sheet = 0.8
+	controls.balance_reflex = false
+	upright.step(DT, controls)
+	var leaned: WindsurferSim = _sailing_south(10.0)
+	# Starboard tack: the sailor and the wind are to starboard, so windward is +x.
+	controls.rig_tilt = 1.0
+	leaned.step(DT, controls)
+	var lean_rad: float = leaned.sail.rig_lean_rad
+	assert_gt(lean_rad, deg_to_rad(20.0), "the rig leans to windward")
+	var side_n: float = absf(upright.sail.side_force_n)
+	assert_gt(leaned.sail.force_world.y - upright.sail.force_world.y, 0.5 * side_n * sin(lean_rad), "the sail's lift tilts up with the rig")
+	var total: Vector3 = leaned.mast_foot_force_world + leaned.hand_force_world
+	assert_almost_eq(total.y, leaned.sail.force_world.y + rig_weight.y, 1.0, "and the hands (the sailor) and the mast foot (the board) carry it between them")
+
+
+func test_a_hiked_sailor_in_the_straps_heels_the_board_to_leeward_to_load_the_fin() -> void:
+	var sim: WindsurferSim = _sim(0.0)
+	var bank_rad: float = deg_to_rad(sim.sailor_config.fin_load_bank_deg)
+	assert_gt(bank_rad, 0.0, "the default sailor loads the fin")
+	sim.stance = 1.0
+	sim.lean = 1.0
+	assert_almost_eq(sim._fin_load_bank_rad(0.0), -bank_rad, 1e-6, "hiked out to starboard: the port (leeward) rail down")
+	sim.lean = -0.5
+	assert_almost_eq(sim._fin_load_bank_rad(0.0), 0.5 * bank_rad, 1e-6, "half hiked to port: half as much, starboard rail down")
+	assert_almost_eq(sim._fin_load_bank_rad(1.0), 0.0, 1e-6, "not while the controls ask for a turn")
+	sim.stance = 0.0
+	assert_almost_eq(sim._fin_load_bank_rad(0.0), 0.0, 1e-6, "not when standing by the mast, off the plane")
+	# The angle is the board's heel, and the sailor holds it: the feet aim that much
+	# further the other way as the board heels beyond their aim (the soft feet giving to
+	# the fin's roll moment), so the heel ends where it is wanted.
+	sim.stance = 1.0
+	sim.lean = 1.0
+	sim._felt_heel_beyond_rad = 0.4 * bank_rad
+	assert_almost_eq(sim._fin_load_bank_rad(0.0), -0.6 * bank_rad, 1e-6, "the board already heels 40 % of the way: bank the rest")
+	# U2: where the fin heels the board further than wanted, the heels press the windward
+	# rail down (before U2 the aim stopped at level, and the fin heeled the board 3.4
+	# degrees on the 18 kt beam reach with no bank wanted at all).
+	sim._felt_heel_beyond_rad = 2.0 * bank_rad
+	assert_almost_eq(sim._fin_load_bank_rad(0.0), bank_rad, 1e-6, "already heeled further than aimed: the feet press the windward rail")
+	# Never further than the feet's reflex reaches, from its full moment one way to its
+	# full moment the other.
+	var reach_rad: float = 2.0 * sim.sailor_config.feet_moment_max_nm / sim.sailor_config.feet_roll_stiffness_nm_per_rad
+	sim._felt_heel_beyond_rad = 1.0
+	assert_almost_eq(sim._fin_load_bank_rad(0.0), reach_rad - bank_rad, 1e-6, "railed out: the feet's aim stops at their reach")
+
+
+## U2: the bank by point of sail. The sailor rails the board to load the fin across and
+## toward the wind and keeps it flat off the wind, fading over fin_load_twa_fade_deg so
+## nothing jumps, on either tack, by the true wind the sail meets.
+func test_the_sailor_rails_the_board_across_the_wind_and_keeps_it_flat_off_it() -> void:
+	var sim: WindsurferSim = _sim(15.0)
+	sim.sailor_config = sim.sailor_config.duplicate()
+	sim.sailor_config.fin_load_twa_max_deg = 120.0
+	sim.sailor_config.fin_load_twa_fade_deg = 20.0
+	var from_deg: float = rad_to_deg(sim.wind.current_from_bearing_rad)
+	var shares: Dictionary[float, float] = {60.0: 1.0, 100.0: 1.0, 110.0: 0.5, 120.0: 0.0, 135.0: 0.0, -100.0: 1.0, -110.0: 0.5, -135.0: 0.0}
+	for twa_deg: float in shares:
+		sim.reset(Vector3.ZERO, deg_to_rad(from_deg - twa_deg))
+		assert_almost_eq(sim._rail_share_by_point_of_sail(), shares[twa_deg], 1e-3, "the share of the bank at a true wind angle of %.0f deg" % twa_deg)
+	# The wind is the one the sail met, not the mean wind: on a beam reach by the mean
+	# wind, a local wind at the sail from 40 degrees further aft means a broad reach.
+	sim.reset(Vector3.ZERO, deg_to_rad(from_deg - 95.0))
+	sim.sail.true_wind_at_ce_world = -SimMath.dir_from_bearing(deg_to_rad(from_deg + 40.0)) * 7.0
+	assert_almost_eq(sim._rail_share_by_point_of_sail(), 0.0, 1e-3, "the wind at the sail says broad reach: flat")
+	# The bank aimed for follows the share: half the bank at 110 degrees.
+	sim.reset(Vector3.ZERO, deg_to_rad(from_deg - 110.0))
+	sim.sail.true_wind_at_ce_world = Vector3.ZERO
+	sim.stance = 1.0
+	sim.lean = 1.0
+	assert_almost_eq(sim._fin_load_bank_rad(0.0), -0.5 * deg_to_rad(sim.sailor_config.fin_load_bank_deg), 1e-4, "half the bank at the border")
+	# The default rails the board on every reach and is flat only on a run.
+	var defaults: SailorConfig = load("res://config/sailor_default.tres") as SailorConfig
+	assert_gt(defaults.fin_load_twa_max_deg - defaults.fin_load_twa_fade_deg, 135.0, "the default keeps the bank on the 135 deg broad reach")
+
+
+## U2: the trim by speed. The sailor's wanted trim is running_trim_deg up to
+## running_trim_fast_speed_ms and falls linearly to running_trim_fast_deg at
+## running_trim_fastest_speed_ms, held beyond.
+func test_the_trim_aimed_for_falls_with_speed() -> void:
+	var sim: WindsurferSim = _sim(15.0)
+	var c: SailorConfig = sim.sailor_config
+	assert_gt(c.running_trim_deg, c.running_trim_fast_deg, "the weight goes forward as the board gets faster")
+	assert_almost_eq(sim._running_trim_target_deg(5.0), c.running_trim_deg, 1e-6, "slow: the running trim")
+	assert_almost_eq(sim._running_trim_target_deg(c.running_trim_fast_speed_ms), c.running_trim_deg, 1e-6, "up to the fast speed")
+	var middle_ms: float = 0.5 * (c.running_trim_fast_speed_ms + c.running_trim_fastest_speed_ms)
+	assert_almost_eq(sim._running_trim_target_deg(middle_ms), 0.5 * (c.running_trim_deg + c.running_trim_fast_deg), 1e-6, "halfway: halfway")
+	assert_almost_eq(sim._running_trim_target_deg(c.running_trim_fastest_speed_ms), c.running_trim_fast_deg, 1e-6, "at the fastest speed: the fast trim")
+	assert_almost_eq(sim._running_trim_target_deg(30.0), c.running_trim_fast_deg, 1e-6, "and held beyond")
+
+
+func test_pressing_the_back_foot_moves_the_weight_aft_with_it() -> void:
+	# U1.3: the board feels the sailor's weight at the centre of mass, so a press that
+	# moved only the feet would trim nothing; the weight has to go over the back foot.
+	var sim: WindsurferSim = _sim(0.0)
+	sim._set_posture()
+	var com_before_z: float = sim.mass_model.sailor_position_body.z
+	var feet_before_z: float = sim.feet_body.z
+	sim.trim_press_m = 0.2
+	sim.hang_back_m = 0.1
+	sim._set_posture()
+	assert_almost_eq(sim.feet_body.z - feet_before_z, 0.2, 1e-4, "the feet's pressure goes 0.2 m aft")
+	assert_almost_eq(sim.mass_model.sailor_position_body.z - com_before_z, 0.3, 1e-4, "the weight goes with it, and hangs back 0.1 m behind it")
+	assert_almost_eq(sim.posture_centre_body.z, sim.feet_body.z, 1e-4, "the posture hangs from the feet's pressure point")
 
 
 func test_the_hull_is_kicked_but_the_body_is_not() -> void:

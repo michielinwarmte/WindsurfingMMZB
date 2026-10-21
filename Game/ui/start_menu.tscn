@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" path="res://ui/controls_page.tscn" id="5_controls"]
 [ext_resource type="PackedScene" path="res://ui/howto_page.tscn" id="6_howto"]
 [ext_resource type="PackedScene" path="res://ui/confirm_dialog.tscn" id="7_confirm"]
+[ext_resource type="PackedScene" path="res://ui/race_page.tscn" id="8_race"]
 
 [sub_resource type="Gradient" id="Gradient_shade"]
 offsets = PackedFloat32Array(0, 0.36, 0.62)
@@ -112,6 +113,34 @@ layout_mode = 2
 theme_type_variation = &"HintLabel"
 text = "The real lake in the Engadin, a Maloja wind from the south-west."
 
+[node name="RaceOpenWaterButton" type="Button" parent="Menu/Root/MainPage/Layout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+theme_type_variation = &"BigButton"
+text = "Race on open water"
+alignment = 0
+
+[node name="RaceOpenWaterButtonHint" type="Label" parent="Menu/Root/MainPage/Layout"]
+layout_mode = 2
+theme_type_variation = &"HintLabel"
+text = "The T1 training loop against three AI skippers, a 60 s countdown."
+
+[node name="RaceLakeButton" type="Button" parent="Menu/Root/MainPage/Layout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+theme_type_variation = &"BigButton"
+text = "Race on Lake Silvaplana"
+alignment = 0
+
+[node name="RaceLakeButtonHint" type="Label" parent="Menu/Root/MainPage/Layout"]
+layout_mode = 2
+theme_type_variation = &"HintLabel"
+text = "The T2 sprint slalom against three AI skippers."
+
 [node name="WindButton" type="Button" parent="Menu/Root/MainPage/Layout"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(520, 0)
@@ -209,6 +238,11 @@ visible = false
 layout_mode = 1
 
 [node name="HowTo" parent="Menu/Root" instance=ExtResource("6_howto")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+
+[node name="Race" parent="Menu/Root" instance=ExtResource("8_race")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1

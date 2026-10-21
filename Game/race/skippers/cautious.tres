@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="SkipperConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://race/skipper_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+name = "Cautious"
+sail_colour = Color(0.2, 0.45, 0.9, 1)
+upwind_vmg_twa_deg = 45.0
+downwind_vmg_twa_deg = 135.0
+pointing_offset_deg = 1.0
+layline_margin_m = 35.0
+mark_margin_m = 15.0
+max_tacks_per_beat = 3
+reaction_time_s = 0.4
+steering_noise_deg = 1.0
+start_spot = 0.35
+start_timing_error_s = 4.0
+favoured_end_bias = 0.2
+start_style = 1
+hold_speed_ms = 2.5
+shift_sensitivity_deg = 15.0
+gust_appetite = 0.0

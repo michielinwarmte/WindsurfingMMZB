@@ -15,6 +15,8 @@ uniform vec3 sleeve_color : source_color = vec3(0.13, 0.13, 0.15);
 uniform float roughness_value = 0.55;
 // How much of the light on the other side shines through.
 uniform float translucency = 0.35;
+// A race's sail colour, multiplied into the panels (RigVisuals.tint_sail); white changes nothing.
+uniform vec3 sail_tint : source_color = vec3(1.0, 1.0, 1.0);
 
 
 void vertex() {
@@ -23,7 +25,7 @@ void vertex() {
 
 
 void fragment() {
-	vec3 colour = is_sleeve ? sleeve_color : texture(panel_texture, UV).rgb;
+	vec3 colour = (is_sleeve ? sleeve_color : texture(panel_texture, UV).rgb) * sail_tint;
 	ALBEDO = colour;
 	ROUGHNESS = roughness_value;
 	BACKLIGHT = colour * translucency;

@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="Persona" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://race/persona.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+name = "Pavel"
+sail_colour = Color(0.5, 0.5, 0.5, 1)
+home_water = "Lake Balaton"
+profile = "holds at the boat end and goes on the gun"
+start_timing = 0.85
+start_nerve = 0.85
+tacking = 0.7
+gybing = 0.5
+boat_speed = 0.65
+upwind_sense = 0.65
+downwind_sense = 0.5
+gust_appetite = 0.2
+risk = 0.5
+aggression = 0.6
+consistency = 0.85
+start_spot = 0.9
+start_style = 1
+pointing_offset_deg = -0.5
+sail_light_m2 = 7.8
+sail_strong_m2 = 6.2
+gear_switch_kt = 16.0

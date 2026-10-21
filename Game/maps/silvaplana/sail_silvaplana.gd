@@ -23,10 +23,12 @@ extends SailingScene
 ##   --heading=<degrees>              start with this heading instead of 132
 ##   --start=<east>,<north>           start at this spot instead of off the camping beach
 ##   --overview=<east>,<north>,<height>  a fixed camera there, looking at the board
-##   --measure=1                      print the frame rate (no vsync) and quit; run it with
-##       tools/godot.sh --path Game res://maps/silvaplana/sail_silvaplana.tscn -- --measure=1
+##   --measure=<seconds>              print the frame rate and the frame times (main.gd) and quit
 ##   --check-gusts=1                  compare the gust picture the graphics card drew with
 ##       MapWind's numbers, print the result and quit (run it the same way)
+##   --course=<name>                  a race course on the lake (main.gd): t2_slalom, or any course
+##       the course maker saved; until t2_slalom.json is saved, t2_slalom is a stand-in placed by
+##       code at the start spot (RaceCourses.t2_stand_in(), not fitted to the water)
 ## tools/screenshot.sh res://maps/silvaplana/sail_silvaplana.tscn out.png 480 --autopilot=1 --camera=2
 
 const MAP_CONFIG_PATH: String = "res://maps/silvaplana/map_config.tres"
@@ -59,8 +61,9 @@ func _enter_tree() -> void:
 	_map_config = load(MAP_CONFIG_PATH)
 	var windsurfer: WindsurferNode = $Windsurfer
 	windsurfer.environment = load(ENVIRONMENT_PATH)
-	super()
+	# Before main.gd's part, which moves the start behind a race course's start line (--course).
 	windsurfer.start_position = start_position()
+	super()
 
 
 func _ready() -> void:
@@ -70,10 +73,12 @@ func _ready() -> void:
 	# it is higher than the lake the terrain hides it, and outside it there is no water at all.
 	_ocean.far_area_xz = Rect2(shore_grid.x0_m, shore_grid.z0_m,
 		(shore_grid.columns - 1) * shore_grid.cell_m, (shore_grid.rows - 1) * shore_grid.cell_m)
+	# The small map of the lake, before main.gd's part puts a race course on it (--course). Its
+	# ring is where the board starts: behind the start line when there is a course.
+	_hud.show_mini_map(_lake_area, _windsurfer.start_position)
 	super()
 	_start_the_clock()
 	_add_gust_picture()
-	_hud.show_mini_map(_lake_area, start_position())
 	_apply_map_options()
 
 
@@ -102,7 +107,21 @@ func _build_wind_config() -> WindConfig:
 
 func _start_heading_deg() -> float:
 	var numbers: PackedFloat64Array = _option_numbers("heading")
-	return numbers[0] if numbers.size() == 1 else START_HEADING_DEG
+	if numbers.size() == 1:
+		return numbers[0]
+	# With a race course: a beam reach behind its start line (main.gd).
+	return super() if _course != null else START_HEADING_DEG
+
+
+## The lake's race courses by name (main.gd's --course): any course the course maker saved; and
+## t2_slalom, until Max's fitted one is saved, as a stand-in placed by code for the lake's wind at
+## the start spot.
+func _course_named(course_name: String, usual_start: Vector2) -> Course:
+	var saved: Course = RaceCourses.load_named(course_name, _map_config)
+	if saved != null or course_name != RaceCourses.T2_NAME:
+		return saved
+	var windsurfer: WindsurferNode = $Windsurfer
+	return RaceCourses.t2_stand_in(windsurfer.environment.wind.from_bearing_deg, usual_start)
 
 
 ## The lake keeps its own wind when the settings change (the settings' wind is the open water's).
@@ -181,8 +200,6 @@ func _apply_map_options() -> void:
 	if overview.size() == 3:
 		_overview_at = _map_config.lv95_to_game(overview[0], overview[1], overview[2] + _map_config.lake_level_m)
 		_camera_rig.set_process(false)
-	if _option_numbers("measure").size() == 1:
-		_measure_frame_rate()
 	if _option_numbers("check-gusts").size() == 1:
 		_check_gust_picture()
 
@@ -197,19 +214,6 @@ func _option_numbers(option: String) -> PackedFloat64Array:
 
 ## How fast the lake draws while sailing, without waiting for the screen (no vsync): printed to
 ## the console, then the game quits.
-func _measure_frame_rate() -> void:
-	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
-	print("Graphics card: %s (%s)" % [RenderingServer.get_video_adapter_name(), RenderingServer.get_video_adapter_vendor()])
-	for i: int in 180:  # warm up: shaders, the probe, shadows
-		await get_tree().process_frame
-	var start_us: int = Time.get_ticks_usec()
-	for i: int in 300:
-		await get_tree().process_frame
-	var seconds: float = (Time.get_ticks_usec() - start_us) / 1e6
-	print("Sailing on Lake Silvaplana: %.0f fps (camera: %s)" % [300.0 / seconds, _camera_rig.mode_name()])
-	get_tree().quit()
-
-
 ## --check-gusts: reads the gust picture back from the graphics card and compares it, every 8th
 ## pixel, with MapWind.velocity_in() for the same moment (as the picture's red channel: the wind
 ## relative to the lake's mean, to the shader's contrast, halved, in 8-bit steps of 0.004). Prints

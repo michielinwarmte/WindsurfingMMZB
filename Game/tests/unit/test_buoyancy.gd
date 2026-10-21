@@ -44,7 +44,7 @@ func test_grid_geometry_matches_the_spec() -> void:
 	assert_almost_eq(total, 0.120, 1e-9, "the point volumes add up to the board volume")
 	var tail: Vector3 = model.sample_points[model.tail_centre_index]
 	var bow: Vector3 = model.sample_points[model.bow_centre_index]
-	assert_almost_eq(tail, Vector3(0.0, -0.05, 1.2), Vector3.ONE * 1e-6, "tail row: z aft, bottom raised by the tail rocker")
+	assert_almost_eq(tail, Vector3(0.0, -0.06, 1.2), Vector3.ONE * 1e-6, "tail row: z aft, the bottom flat to the tail (U1.4)")
 	assert_almost_eq(bow, Vector3(0.0, 0.02, -1.2), Vector3.ONE * 1e-6, "bow row: z forward, raised by the nose rocker")
 	# Middle row (row 3, 1.2 m from the tail, 0.1 m forward of the widest point): the rails
 	# at +-0.3586 m. The nose tip is thin and narrow (1.31 L per point), the middle thick and
@@ -238,7 +238,8 @@ func test_no_damping_conserves_energy() -> void:
 	var initial_energy: float = -INF
 	var lowest_energy: float = INF
 	var highest_energy: float = -INF
-	var highest_late: float = -INF
+	var late_heights: Vector2 = Vector2(INF, -INF)  # lowest, highest
+	var late_pitches_deg: Vector2 = Vector2(INF, -INF)
 	for i: int in int(6.0 / DT):
 		body.add_force(Vector3(0.0, -G * body.mass_kg, 0.0))
 		model.apply(body, water, i * DT, G)
@@ -249,12 +250,21 @@ func test_no_damping_conserves_energy() -> void:
 		highest_energy = maxf(highest_energy, energy)
 		body.integrate(DT)
 		if i * DT > 4.0:
-			highest_late = maxf(highest_late, body.origin_world().y)
+			var height: float = body.origin_world().y
+			var pitch_deg: float = rad_to_deg(SimMath.pitch_rad(body.basis))
+			late_heights = Vector2(minf(late_heights.x, height), maxf(late_heights.y, height))
+			late_pitches_deg = Vector2(minf(late_pitches_deg.x, pitch_deg), maxf(late_pitches_deg.y, pitch_deg))
 	var excess: float = initial_energy - rest_energy
 	assert_gt(excess, 1.0, "the release stores a few joules")
 	assert_lt(highest_energy - initial_energy, 0.03 * excess, "no energy appears")
 	assert_lt(initial_energy - lowest_energy, 0.03 * excess, "no energy disappears")
-	assert_gt(highest_late, rest_y + 0.02, "it is still bouncing after 4 s")
+	# Undamped, the bounce turns into a pitch tumble of 30 to 40 degrees, so whether the
+	# height still swings 2 cm after 4 s depends on the phase (U1.4, the flat tail); the
+	# board must still swing in height or in pitch.
+	var height_swing: float = late_heights.y - late_heights.x
+	var pitch_swing_deg: float = late_pitches_deg.y - late_pitches_deg.x
+	gut.p("after 4 s: height swing %.3f m, pitch swing %.1f deg" % [height_swing, pitch_swing_deg])
+	assert_true(height_swing > 0.02 or pitch_swing_deg > 2.0, "it is still moving after 4 s (height swing %.3f m, pitch swing %.1f deg)" % [height_swing, pitch_swing_deg])
 
 
 func test_identical_runs() -> void:

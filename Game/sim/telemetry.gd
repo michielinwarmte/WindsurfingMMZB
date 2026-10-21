@@ -58,6 +58,18 @@ var fin_lift_n: float = 0.0
 var fin_drag_n: float = 0.0
 var fin_stalled: bool = false
 var fin_immersed: float = 1.0
+## The world-upward part of the fin's force (N): how much the fin lifts the kit. A stiff
+## fin's force lies in the board's plane, so it points up only as far as the board heels
+## (the leeward rail down); a bent fin's force also tilts toward the deck with the bend (U2).
+var fin_up_n: float = 0.0
+## The fin's lift coefficient as a share of its peak, where it stalls (spins out): 1 = at
+## the stall. Past the stall the coefficient falls again; fin_stalled says which side it is.
+var fin_load_share: float = 0.0
+## How far the fin's lift is tilted out of the board's plane toward the deck by the fin's
+## bend (degrees). Zero for a stiff fin.
+var fin_tilt_deg: float = 0.0
+## The angle the fin's tip has turned through under the bend (degrees). Zero for a stiff fin.
+var fin_bend_tip_deg: float = 0.0
 
 # Hull and water
 var buoyancy_n: float = 0.0
@@ -71,6 +83,13 @@ var planing_cop_z_m: float = 0.0
 var bow_immersion_m: float = 0.0
 var wetted_length_m: float = 0.0
 var wetted_aft_m: float = 0.0
+## The area the hull's skin friction acts on (m2): the planing wet span times its mean width,
+## or the buoyancy grid's wetted_area_m2 when that is larger. This is the area that costs speed.
+var friction_area_m2: float = 0.0
+## The front of the wet part of the bottom, measured forward from the tail (m).
+var wet_front_m: float = 0.0
+## The centre of the water's planing push, measured forward from the tail (m).
+var push_centre_m: float = 0.0
 var spray_root_factor: float = 1.0
 var heave_added_mass_kg: float = 0.0
 var is_planing: bool = false
@@ -159,7 +178,7 @@ static func csv_header() -> String:
 		+ "hull_friction_n,hull_residuary_n,hull_lateral_n,stance,lean,hang_back_m,knee_bend_m," \
 		+ "wetted_length_m,wetted_aft_m,spray_root_factor,heave_added_mass_kg,rig_tilt,rig_lean_deg,sailor_state,boom_across,fin_immersed," \
 		+ "bow_immersion_m,planing_cop_z_m,fall_kind,wanted_bank_deg,felt_push_ms2,felt_heel_deg,bow_drag_n,water_height_m," \
-		+ "hand_force_n,foot_force_n,mast_foot_force_n,feet_moment_roll_nm,hand_moment_roll_nm,leg_sway_m,feet_moment_excess_nm,rail_press,sailor_x_m,sailor_y_m,target_x_m,target_y_m,feet_x_m,feet_z_m,hull_resistance_n,hand_force_up_n,mast_foot_force_up_n,pitch_from_mast_foot_nm,pitch_from_feet_force_nm,pitch_from_feet_moment_nm,attachment_x_n,attachment_z_n,harness_tension_n,yaw_fin_nm,yaw_rig_nm,yaw_sailor_nm,yaw_water_nm,yaw_net_nm,roll_fin_nm,roll_rig_nm,roll_sailor_nm,roll_water_nm,roll_net_nm,rail_grip_n,rail_yaw_nm,twa_at_sail_deg"
+		+ "hand_force_n,foot_force_n,mast_foot_force_n,feet_moment_roll_nm,hand_moment_roll_nm,leg_sway_m,feet_moment_excess_nm,rail_press,sailor_x_m,sailor_y_m,target_x_m,target_y_m,feet_x_m,feet_z_m,hull_resistance_n,hand_force_up_n,mast_foot_force_up_n,pitch_from_mast_foot_nm,pitch_from_feet_force_nm,pitch_from_feet_moment_nm,attachment_x_n,attachment_z_n,harness_tension_n,yaw_fin_nm,yaw_rig_nm,yaw_sailor_nm,yaw_water_nm,yaw_net_nm,roll_fin_nm,roll_rig_nm,roll_sailor_nm,roll_water_nm,roll_net_nm,rail_grip_n,rail_yaw_nm,twa_at_sail_deg," 		+ "friction_area_m2,wet_front_m,push_centre_m,fin_up_n,fin_load_share,fin_tilt_deg,fin_bend_tip_deg"
 
 
 func to_csv_row() -> String:
@@ -172,7 +191,8 @@ func to_csv_row() -> String:
 		wetted_length_m, wetted_aft_m, spray_root_factor, heave_added_mass_kg, rig_tilt, rig_lean_deg, sailor_state, boom_across, fin_immersed,
 		bow_immersion_m, planing_cop_z_m, fall_kind, wanted_bank_deg, felt_push_ms2, felt_heel_deg, bow_drag_n, water_height_m,
 		hand_force_n, foot_force_n, mast_foot_force_n, feet_moment_roll_nm, hand_moment_roll_nm, leg_sway_m, feet_moment_excess_nm, rail_press,
-		sailor_position_body.x, sailor_position_body.y, posture_target_body.x, posture_target_body.y, feet_body.x, feet_body.z, hull_resistance_n, hand_force_up_n, mast_foot_force_up_n, pitch_from_mast_foot_nm, pitch_from_feet_force_nm, pitch_from_feet_moment_nm, attachment_x_n, attachment_z_n, harness_tension_n, yaw_fin_nm, yaw_rig_nm, yaw_sailor_nm, yaw_water_nm, yaw_net_nm, roll_fin_nm, roll_rig_nm, roll_sailor_nm, roll_water_nm, roll_net_nm, rail_grip_n, rail_yaw_nm, twa_at_sail_deg]
+		sailor_position_body.x, sailor_position_body.y, posture_target_body.x, posture_target_body.y, feet_body.x, feet_body.z, hull_resistance_n, hand_force_up_n, mast_foot_force_up_n, pitch_from_mast_foot_nm, pitch_from_feet_force_nm, pitch_from_feet_moment_nm, attachment_x_n, attachment_z_n, harness_tension_n, yaw_fin_nm, yaw_rig_nm, yaw_sailor_nm, yaw_water_nm, yaw_net_nm, roll_fin_nm, roll_rig_nm, roll_sailor_nm, roll_water_nm, roll_net_nm, rail_grip_n, rail_yaw_nm, twa_at_sail_deg,
+		friction_area_m2, wet_front_m, push_centre_m, fin_up_n, fin_load_share, fin_tilt_deg, fin_bend_tip_deg]
 	var parts: PackedStringArray = PackedStringArray()
 	for value: Variant in values:
 		if value is float:

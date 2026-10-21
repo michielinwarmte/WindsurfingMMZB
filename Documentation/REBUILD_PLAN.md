@@ -22,9 +22,11 @@ Written 28 September 2026 (Session 28), for the AI sessions doing the work and f
 | 6 | Rig visuals: board, sail, boom, mast | ✅ Done (Session 38; the force-vector debug view in Phase 7): Blender models built by `tools/blender/build_rig_models.py` from the config numbers, a sail that bends with the simulation, the sailor figure on a fixed-length skeleton. The same session gave the game its start, settings and pause menus (no phase of its own) |
 | 7 | Environment and effects | 🔶 Built (Session 39), team check next: one water shader for sea and lake, sky and haze, spray, wake, splashes, streamer, wind flag, force view (F3), gust patches on the lake from the map's wind; islands are covered by the real lake |
 | 8 | Audio | 🔶 Built (Session 39), team listens next: every sound made from noise at startup, Wind, Water and Sail buses driven by the simulation, sliders on the Audio tab; nobody has heard it yet |
-| 9 | Gameplay: racing | ⬜ |
+| 9 | Gameplay: racing | 📝 Planned (Session 50): [RACING_PLAN.md](RACING_PLAN.md), parts 9A to 9D: the race alone, scripted skippers, the learning harness, learned skippers |
 
 Side track (the map: `Game/maps/` and `tools/map/`, developed on `feature/map-silvaplana` and merged with the physics on 16 October 2026): the first real map, Lake Silvaplana, from Swiss open data. See [MAP_SILVAPLANA_PLAN.md](MAP_SILVAPLANA_PLAN.md). It covers the parts of Phase 7 (sky, fog, shoreline) that belong to that map, and it doesn't change the physics. Michiel does the physics; Max does the map and the wind patterns that belong to it (built first as a wind analyser, phases W0 to W4; connected to the physics through `WindField` in W5). What the map would need from the physics is in [PHYSICS_REQUESTS_FROM_MAP.md](PHYSICS_REQUESTS_FROM_MAP.md): map-specific air, water and wind; thin air at 1791 m; a lakebed and running aground; moving gusts; wind waves. Each request comes with measured numbers.
+
+Play-test upgrades (from 19 October 2026): the game is playable, and the team play-tests it and writes down what should improve. Each piece of feedback is researched and turned into a plan in [PLAYTEST_UPGRADES.md](PLAYTEST_UPGRADES.md) (U1, U2, ...), to be carried out later in the order the team chooses. U1: the board planes on too big a wet area (1.87 m instead of 0.6 to 1.0 m). Michiel gave the go-ahead to build U1 on 19 October 2026, on the branch `feature/u1-planing-wet-area`; its execution brief says how. U2 (the fin bends) comes after it. **State on 19 October 2026 (Session 49):** U1 and U2 are built, on `feature/u1-planing-wet-area` and `feature/u2-fin` (U2 on top of U1); Max play-tested both ("feels quite nice now"); Michiel's review of U2's physics and the full manoeuvre matrix come before the pull requests (U1 first). The live state is in U1_PROGRESS.md and U2_PROGRESS.md.
 
 ## What we are building
 
@@ -297,13 +299,15 @@ Change the layout when there is a good reason, and update this section when you 
 
 ## Phase 9: Gameplay: racing
 
-- [ ] Buoys and a slalom course, with a start line and a countdown.
-- [ ] Timer, splits and a results screen.
-- [ ] AI opponents: the Phase 4 autopilot plus a simple course-following layer.
-- [ ] Menus: start, pause and settings (control mode, volume).
+> Planned in Session 50 (19 October 2026): the full plan is [RACING_PLAN.md](RACING_PLAN.md). The menus this phase used to list (start, pause, settings) were built in Session 38; what is left is a Race page. The AI skippers sail through the same controller as the player, with no hidden help (RACING_PLAN.md, decision RD1).
 
-**Done when:** you can sail a full race against three AI opponents.
-**Stop:** team check.
+- [ ] 9A: a race you can sail alone: the course on the water (buoys, the boats, the lines), the countdown and the start, the rounding check, the clock and the splits, the results page, the Race page in the menu. Two built-in courses: T1, a short windward-leeward loop on open water; T2, the sprint slalom on Lake Silvaplana. Any course saved in the course maker (W4a) is a race too.
+- [ ] 9B: scripted skippers: the Phase 4 autopilot under a course-following layer (laylines, tacks and gybes, the timed start, gust hunting on the lake), with a character sheet each (how high it points, its margins, its reaction time, its start). Three opponents in the scene, collisions as soft pushes, the frame time measured.
+- [ ] 9C: the learning harness: the race as a training environment, a small bridge to Python, PPO in Stable-Baselines3, the trained network run in GDScript, the first learned skipper on T1.
+- [ ] 9D: learned skippers in the game: the curriculum T1 to T2 to a fleet, personalities from the reward and the age of the network, the evaluation table against the scripted skippers.
+
+**Done when:** you can sail a full race against three AI opponents (the end of 9B). 9C and 9D are Max's neural-network track on top of it.
+**Stop:** team check at the end of every part.
 
 ## Later (not planned yet)
 

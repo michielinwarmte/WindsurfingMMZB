@@ -18,7 +18,8 @@ extends Node3D
 ## The sail cloth bends in a vertex shader (sail_cloth.gdshader): belly to leeward, twist,
 ## and flutter when it has no pressure in it, from the instance uniforms that shape_sail()
 ## sets. The mast (mast.gdshader) and the sail bend together: the top back and, with the
-## pull, to leeward.
+## pull, to leeward. The fin bends in fin_bend.gdshader by the simulation's beam (U2): its tip
+## toward the side the fin's lift points, by FinModel.bend_tip_m, set every frame (_process).
 
 const BOARD_MODEL: PackedScene = preload("res://assets/models/board.glb")
 const FIN_MODEL: PackedScene = preload("res://assets/models/fin.glb")
@@ -29,6 +30,7 @@ const SAIL_PANELS: Texture2D = preload("res://assets/models/sail_panels.png")
 const SAIL_CLOTH_SHADER: Shader = preload("res://windsurfer/sail_cloth.gdshader")
 const SAIL_WINDOW_SHADER: Shader = preload("res://windsurfer/sail_window.gdshader")
 const MAST_SHADER: Shader = preload("res://windsurfer/mast.gdshader")
+const FIN_BEND_SHADER: Shader = preload("res://windsurfer/fin_bend.gdshader")
 
 ## The sail's head sits this far below the mast top (TOP_Y in build_rig_models.py), m.
 const SAIL_HEAD_BELOW_MAST_TOP_M: float = 0.02
@@ -72,6 +74,12 @@ var _sail: Node3D
 var _boom: Node3D
 var _cloth: MeshInstance3D
 var _mast_tube: MeshInstance3D
+var _fin_mesh: MeshInstance3D
+var _fin_material: ShaderMaterial
+## The cloth's material, for a race's sail colours (tint_sail).
+var _sail_cloth_material: ShaderMaterial
+# The tip's sideways movement last given to the fin's shader, m (+ toward starboard).
+var _fin_tip_deflection_m: float = 0.0
 
 var _sail_config: SailConfig
 # The pose at the last sailing tick, from which a fall starts.
@@ -92,6 +100,7 @@ func build(_board_config: BoardConfig, sail_config: SailConfig, fin_config: FinC
 	_board = _add_model(BOARD_MODEL, "Board", self)
 	_fin = _add_model(FIN_MODEL, "Fin", self)
 	_fin.position = fin_config.root_local
+	_set_up_fin(fin_config)
 	_mast = _add_model(MAST_MODEL, "Mast", self)
 	_sail = _add_model(SAIL_MODEL, "Sail", self)
 	_boom = _add_model(BOOM_MODEL, "Boom", _sail)
@@ -101,6 +110,59 @@ func build(_board_config: BoardConfig, sail_config: SailConfig, fin_config: FinC
 	_set_up_cloth(sail_config)
 	_set_up_mast(sail_config)
 	_set_cloth(_belly_side, sail_config.camber, deg_to_rad(TWIST_LIGHT_DEG), 0.0, 0.0)
+
+
+## Every frame, the fin's bend from the simulation, when this rig belongs to a sailing
+## windsurfer (WindsurferNode, which holds the simulation as `sim`). It only reads.
+func _process(_delta: float) -> void:
+	var parent: Node = get_parent()
+	var sim: WindsurferSim = parent.get("sim") as WindsurferSim if parent != null else null
+	if sim != null and sim.fin != null:
+		bend_fin(sim.fin, sim.body.basis)
+
+
+## The fin's bend on screen: the tip moves sideways by the beam's deflection under the fin's
+## lift (FinModel.bend_tip_m), toward the side the lift points. That is the windward side on
+## either tack, the side the sail's pull is held against. `board_basis` is the board's
+## orientation in the world (the simulation's body basis), to bring the force into the board's
+## axes. The fin's drag lies along the flow, nearly fore and aft, so the force's sideways part
+## has the lift's sign.
+func bend_fin(fin: FinModel, board_basis: Basis) -> void:
+	var side: float = signf(SimMath.to_body(board_basis, fin.force_world).x)
+	_fin_tip_deflection_m = side * fin.bend_tip_m
+	_fin_material.set_shader_parameter("tip_deflection_m", _fin_tip_deflection_m)
+
+
+## The tip's sideways movement last given to the fin's shader (m, + toward starboard), for
+## tests and dev views.
+func fin_tip_deflection_m() -> float:
+	return _fin_tip_deflection_m
+
+
+## The fin's mesh, for tests and dev views.
+func fin_mesh() -> MeshInstance3D:
+	return _fin_mesh
+
+
+## The bending fin's shape along the span, from the simulation's own beam (FinModel): at each
+## of its 21 strip edges, root to tip, the sideways movement as a share of the tip's, and the
+## slope of that share per span length. A beam's deflection is its load over its stiffness, so
+## the shape is the same whatever the load and the stiffness scale S: it is worked out with
+## S = 1, and the simulation's tip movement scales it.
+static func fin_bend_shape(fin_config: FinConfig) -> Array[PackedFloat32Array]:
+	var beam: FinModel = FinModel.new(fin_config)
+	var span: float = fin_config.span_m
+	var step: float = span / FinModel.BEND_STRIPS
+	var stiffness: PackedFloat64Array = beam.edge_stiffness(span, fin_config.root_chord_m(), 1.0)
+	var slopes: PackedFloat64Array = FinModel.beam_slopes(FinModel.elliptic_moments_per_n(span), stiffness, step)
+	var deflections: PackedFloat64Array = FinModel.beam_deflections(slopes, step)
+	var tip: float = deflections[FinModel.BEND_STRIPS]
+	var shape: PackedFloat32Array = PackedFloat32Array()
+	var slope: PackedFloat32Array = PackedFloat32Array()
+	for j: int in FinModel.BEND_STRIPS + 1:
+		shape.append(deflections[j] / tip)
+		slope.append(slopes[j] * span / tip)
+	return [shape, slope]
 
 
 ## The rig while sailing: the mast from the mast foot along `mast_dir`, the sail and the
@@ -223,6 +285,7 @@ func _add_model(model: PackedScene, node_name: String, parent: Node3D) -> Node3D
 func _set_up_cloth(sail_config: SailConfig) -> void:
 	var cloth_material: ShaderMaterial = _cloth_material(SAIL_CLOTH_SHADER, sail_config)
 	cloth_material.set_shader_parameter("panel_texture", SAIL_PANELS)
+	_sail_cloth_material = cloth_material
 	var sleeve_material: ShaderMaterial = _cloth_material(SAIL_CLOTH_SHADER, sail_config)
 	sleeve_material.set_shader_parameter("is_sleeve", true)
 	var window_material: ShaderMaterial = _cloth_material(SAIL_WINDOW_SHADER, sail_config)
@@ -240,6 +303,33 @@ func _set_up_cloth(sail_config: SailConfig) -> void:
 	# The shader moves the cloth up to about 0.3 m off its flat shape: widen the box the
 	# engine uses to decide whether the sail is on screen.
 	_cloth.extra_cull_margin = 0.5
+
+
+## Gives the fin the shader that bends it (fin_bend.gdshader), with the model's own colour and
+## shine. The model was built for the default fin; another span (a 44 cm fin from the command
+## line) stretches it down to that span, so the bend is drawn on a fin of the right length.
+## Its chord stays the model's (2.6 % wider at the root than a 44 cm fin's chord law).
+func _set_up_fin(fin_config: FinConfig) -> void:
+	_fin_mesh = _fin.find_children("*", "MeshInstance3D", true, false)[0] as MeshInstance3D
+	var model_span_m: float = -_fin_mesh.get_aabb().position.y
+	_fin.scale = Vector3(1.0, fin_config.span_m / model_span_m, 1.0)
+	_fin_material = ShaderMaterial.new()
+	_fin_material.shader = FIN_BEND_SHADER
+	_fin_material.set_shader_parameter("span_m", model_span_m)
+	var shape: Array[PackedFloat32Array] = fin_bend_shape(fin_config)
+	_fin_material.set_shader_parameter("bend_shape", shape[0])
+	_fin_material.set_shader_parameter("bend_slope", shape[1])
+	_fin_material.set_shader_parameter("tip_deflection_m", 0.0)
+	var imported: BaseMaterial3D = _fin_mesh.mesh.surface_get_material(0) as BaseMaterial3D
+	if imported != null:
+		_fin_material.set_shader_parameter("albedo", imported.albedo_color)
+		_fin_material.set_shader_parameter("roughness_value", imported.roughness)
+		_fin_material.set_shader_parameter("metallic_value", imported.metallic)
+		_fin_material.set_shader_parameter("specular_value", imported.metallic_specular)
+	_fin_mesh.material_override = _fin_material
+	# The shader moves the tip up to about 0.15 m sideways (a 44 cm fin under a hard push):
+	# widen the box the engine uses to decide whether the fin is on screen.
+	_fin_mesh.extra_cull_margin = 0.2
 
 
 ## Gives the mast's carbon tube the shader that bends it (the extension below stays straight).
@@ -287,3 +377,9 @@ func _cloth_time_step(time_s: float) -> float:
 	var dt: float = SNAP_STEP_S if snap else minf(time_s - _last_cloth_time_s, 0.1)
 	_last_cloth_time_s = time_s
 	return dt
+
+
+## Tints the sail's panels, so the boards of a race tell apart (white keeps the panel picture).
+func tint_sail(colour: Color) -> void:
+	if _sail_cloth_material != null:
+		_sail_cloth_material.set_shader_parameter("sail_tint", colour)

@@ -74,8 +74,13 @@ const ONE_FOOT_M: float = 0.3048
 @export var residuary_peak_froude: float = 0.55
 ## Width of the hump in Froude number.
 @export var residuary_froude_width: float = 0.25
-## Deadrise angle of the bottom near the tail. Freeride boards are nearly flat.
-@export var deadrise_deg: float = 2.0
+## Deadrise of the bottom: the vee across it, the angle each half rises from the keel
+## toward its rail. Freeride boards carry a slight vee in the tail: surf-magazin's 2024
+## freeride test measured 4 to 16.5 mm (median 8 mm) under a ruler laid on one half, 33 cm
+## from the tail, which is 0.5 to 2 degrees (median 1) on a 0.47 m wide tail
+## (PHYSICS_SPEC.md section 14). The hull model wets the vee (HullModel._wet_width) and
+## takes it in Savitsky's lift; the buoyancy grid keeps a flat bottom.
+@export var deadrise_deg: float = 1.0
 ## The unsteady lift factor of the spray root running forward along a sinking hull (the
 ## slamming part of planing, section 5) is held at most at this: a flat bottom meeting
 ## rising water at a small angle would otherwise see an unbounded root speed.
@@ -85,6 +90,14 @@ const ONE_FOOT_M: float = 0.3048
 ## 10 m/s) lifts with a lag and well below its quasi-steady value (the unsteady planing
 ## models of Zarnick 1978 and Fridsma 1969 carry this). Zero takes it as instant.
 @export var planing_lift_lag_s: float = 0.0
+## The share of Archimedes' buoyancy a planing bottom still gets. At planing speed the
+## water leaves the transom and the rails, so the pressure there is the air's, not the
+## water's weight above it: the bottom carries about half its still-water buoyancy
+## (Shuford 1958 for steady planing, used by Zarnick 1978; Savitsky's 1964 buoyant term
+## gives 0.43 to 0.61 for wet lengths of 1.5 to 3 beams). HullModel phases it in across
+## the semi-displacement range (Faltinsen 2005). 1.0 keeps Archimedes at every speed: the
+## default until the team decides (PHYSICS_SPEC.md section 5, F21; 0.5 is the sourced value).
+@export_range(0.0, 1.0) var planing_buoyancy_factor: float = 1.0
 ## Drag coefficient of the nose and deck when the bow goes under water (a blunt body
 ## meeting the water face-on: 0.8 to 1.0 for a box section; 0.8 as section 14 assumes).
 ## This is what stops a board that pearls, and what pitches it over the nose.

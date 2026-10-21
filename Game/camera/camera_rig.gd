@@ -47,6 +47,22 @@ func _ready() -> void:
 	_target = get_node_or_null(target_path) as Node3D
 
 
+## Another board to follow (a race's spectator moves the camera from board to board); the follow
+## camera jumps to it instead of gliding across the water. Nothing changes for the same board.
+func set_target(target: Node3D) -> void:
+	if target == _target:
+		return
+	_target = target
+	_follow_initialised = false
+	# The free camera stands still in the world: it moves to the new board's side.
+	if mode == Mode.FREE and target != null:
+		_free_position = target.global_position + Vector3(12.0, 4.0, 12.0)
+
+
+func target() -> Node3D:
+	return _target
+
+
 func set_mode(new_mode: Mode) -> void:
 	if new_mode == Mode.FREE and mode != Mode.FREE:
 		if _placed:

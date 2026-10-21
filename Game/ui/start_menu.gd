@@ -11,7 +11,7 @@ extends Node
 ##
 ## Keys: arrows (or the gamepad's stick/d-pad) move, Enter (or A) chooses, Esc (or B) goes
 ## back, and on the main page asks whether to quit.
-## For screenshots (after "--"): --page=settings/<tab>|controls|howto|quit opens that page.
+## For screenshots (after "--"): --page=settings/<tab>|controls|howto|race|quit opens that page.
 
 const SAIL_SILVAPLANA_SCENE: String = "res://maps/silvaplana/sail_silvaplana.tscn"
 const FLY_OVER_SCENE: String = "res://maps/silvaplana/dev/terrain_view.tscn"
@@ -19,13 +19,15 @@ const WIND_VIEWER_SCENE: String = "res://maps/silvaplana/wind_viewer.tscn"
 
 ## The play options, as last_play_option in the settings saves them (new ones go at the end, so
 ## a saved choice keeps its meaning; the menu shows them in its own order).
-enum PlayOption { OPEN_WATER, FLY_OVER, WIND_VIEWER, SAIL_SILVAPLANA }
+enum PlayOption { OPEN_WATER, FLY_OVER, WIND_VIEWER, SAIL_SILVAPLANA, RACE_OPEN_WATER, RACE_LAKE }
 
 @onready var _sailing: SailingScene = $Sailing
 @onready var _menu: CanvasLayer = $Menu
 @onready var _main_page: Control = %MainPage
 @onready var _open_water_button: Button = %OpenWaterButton
 @onready var _sail_silvaplana_button: Button = %SailSilvaplanaButton
+@onready var _race_open_water_button: Button = %RaceOpenWaterButton
+@onready var _race_lake_button: Button = %RaceLakeButton
 @onready var _silvaplana_button: Button = %SilvaplanaButton
 @onready var _wind_button: Button = %WindButton
 @onready var _settings_button: Button = %SettingsButton
@@ -38,12 +40,15 @@ enum PlayOption { OPEN_WATER, FLY_OVER, WIND_VIEWER, SAIL_SILVAPLANA }
 @onready var _settings: SettingsMenu = %Settings
 @onready var _controls: ControlsPage = %Controls
 @onready var _howto: HowToPage = %HowTo
+@onready var _race: RacePage = %Race
 @onready var _quit_confirm: ConfirmDialog = %QuitConfirm
 
 
 func _ready() -> void:
 	_open_water_button.pressed.connect(_on_open_water_pressed)
 	_sail_silvaplana_button.pressed.connect(_open_map_scene.bind(PlayOption.SAIL_SILVAPLANA, SAIL_SILVAPLANA_SCENE, "Lake Silvaplana"))
+	_race_open_water_button.pressed.connect(_on_race_open_water_pressed)
+	_race_lake_button.pressed.connect(_on_race_lake_pressed)
 	_silvaplana_button.pressed.connect(_open_map_scene.bind(PlayOption.FLY_OVER, FLY_OVER_SCENE, "the map of Lake Silvaplana"))
 	_wind_button.pressed.connect(_open_map_scene.bind(PlayOption.WIND_VIEWER, WIND_VIEWER_SCENE, "the wind viewer"))
 	_settings_button.pressed.connect(_open_page.bind(_settings))
@@ -51,13 +56,17 @@ func _ready() -> void:
 	_howto_button.pressed.connect(_open_page.bind(_howto))
 	_quit_button.pressed.connect(_open_page.bind(_quit_confirm))
 	_quit_confirm.confirmed.connect(_on_quit_confirmed)
-	for page: MenuPage in [_settings, _controls, _howto, _quit_confirm]:
+	_race.start_race.connect(_on_race_page_start)
+	for page: MenuPage in [_settings, _controls, _howto, _race, _quit_confirm]:
 		page.closed.connect(_on_page_closed.bind(page))
-	MenuFocus.setup_buttons([_open_water_button, _sail_silvaplana_button, _wind_button, _silvaplana_button,
+	MenuFocus.setup_buttons([_open_water_button, _sail_silvaplana_button, _race_open_water_button, _race_lake_button, _wind_button, _silvaplana_button,
 		_settings_button, _controls_button, _howto_button, _quit_button])
 	_version.text = _version_text()
 	_show_main_page(_play_buttons()[GameSettings.values.last_play_option])
 	_apply_command_line_options()
+	if _run_bench_from_options():
+		return
+	_start_race_from_options()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -69,7 +78,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 ## The play buttons in the order of PlayOption.
 func _play_buttons() -> Array[Button]:
-	return [_open_water_button, _silvaplana_button, _wind_button, _sail_silvaplana_button]
+	return [_open_water_button, _silvaplana_button, _wind_button, _sail_silvaplana_button, _race_open_water_button, _race_lake_button]
 
 
 ## Sail on open water: the menu goes away and the backdrop becomes the game.
@@ -78,6 +87,32 @@ func _on_open_water_pressed() -> void:
 	set_process_unhandled_input(false)
 	_menu.queue_free()
 	_sailing.start_playing()
+
+
+## Race on open water: the Race page, on the open water (the course, the fleet, who, the countdown);
+## its Start makes the backdrop a race.
+func _on_race_open_water_pressed() -> void:
+	_main_page.hide()
+	_race.open_on(false)
+
+
+## Race on Lake Silvaplana: the Race page, on the lake; its Start opens the lake scene with the race
+## pending (the lake scene takes it from RaceSetup.pending when it starts).
+func _on_race_lake_pressed() -> void:
+	_main_page.hide()
+	_race.open_on(true)
+
+
+## The Race page's Start: the race it set up, on the water it chose.
+func _on_race_page_start(setup: RaceSetup, on_lake: bool) -> void:
+	if on_lake:
+		RaceSetup.pending = setup
+		_open_map_scene(PlayOption.RACE_LAKE, SAIL_SILVAPLANA_SCENE, "Lake Silvaplana")
+		return
+	_remember_choice(PlayOption.RACE_OPEN_WATER)
+	set_process_unhandled_input(false)
+	_menu.queue_free()
+	_sailing.start_race(setup)
 
 
 ## One of the map track's scenes. Loading the terrain takes a moment, so a line says so
@@ -113,7 +148,8 @@ func _on_page_closed(page: MenuPage) -> void:
 		# The new wind and waves show behind the menu at once.
 		_sailing.apply_settings_live()
 	var buttons: Dictionary[MenuPage, Button] = {
-		_settings: _settings_button, _controls: _controls_button, _howto: _howto_button, _quit_confirm: _quit_button}
+		_settings: _settings_button, _controls: _controls_button, _howto: _howto_button, _quit_confirm: _quit_button,
+		_race: _race_lake_button if RacePage.chosen_lake else _race_open_water_button}
 	_show_main_page(buttons[page])
 
 
@@ -164,5 +200,55 @@ func _apply_command_line_options() -> void:
 				_open_page(_controls)
 			"howto":
 				_open_page(_howto)
+			"race":
+				_main_page.hide()
+				_race.open_on(false)
 			"quit":
 				_open_page(_quit_confirm)
+
+
+## --race=t1_loop|t2_slalom [--skippers=a,b,c] [--prestart=<s>] [--spawn=random|line]
+## [--spawn_seed=<n>] [--free_sail=<s>] (RaceSetup.read_spawn_options()): the menu starts that race at once,
+## for measuring and screenshots, and for exported builds, which take no scene on the command line.
+func _start_race_from_options() -> void:
+	var course: String = _race_option("race")
+	if course.is_empty():
+		return
+	var who: PackedStringArray = RaceSetup.DEFAULT_SKIPPERS
+	if not _race_option("skippers").is_empty():
+		who = _race_option("skippers").split(",")
+	var prestart: float = RaceSetup.DEFAULT_PRESTART_S
+	if not _race_option("prestart").is_empty():
+		prestart = _race_option("prestart").to_float()
+	var setup: RaceSetup = RaceSetup.race(course, who, 1, prestart)
+	setup.threads = RaceSetup.threads_from_option(_race_option("threads"))
+	setup.read_options()
+	if course == RaceCourses.T1_NAME:
+		set_process_unhandled_input(false)
+		_menu.queue_free()
+		_sailing.start_race(setup)
+	else:
+		RaceSetup.pending = setup
+		_open_map_scene(PlayOption.RACE_LAKE, SAIL_SILVAPLANA_SCENE, "Lake Silvaplana")
+
+
+## --bench=thread [--threads=1,4,8,16] [--iterations=<n>] [--only=a,b]: runs the thread bench
+## (Game/dev/thread_bench.gd) and quits; the way to run it on the release engine, which runs no
+## script of its own. Returns true when it ran.
+func _run_bench_from_options() -> bool:
+	if _race_option("bench") != "thread":
+		return false
+	var options: Dictionary[String, String] = {}
+	for name: String in ["threads", "iterations", "only"]:
+		if not _race_option(name).is_empty():
+			options[name] = _race_option(name)
+	ThreadBench.new().run(options)
+	get_tree().quit()
+	return true
+
+
+static func _race_option(option: String) -> String:
+	for arg: String in OS.get_cmdline_user_args():
+		if arg.begins_with("--%s=" % option):
+			return arg.get_slice("=", 1)
+	return ""

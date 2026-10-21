@@ -6,7 +6,9 @@ extends RefCounted
 ## round 4S, finish. A mark is left on the same side every time it is rounded.
 ##
 ## Positions are game metres (X east, Z south) on the lake's surface. Saved as JSON with Swiss
-## LV95 coordinates (MD1), so a saved course stays where it is (WD6).
+## LV95 coordinates (MD1), so a saved course stays where it is (WD6). A course on the open water
+## has no Swiss coordinates: saved without a map (a null MapConfig), its file says
+## "frame": "game" and keeps the game metres themselves (RACING_PLAN.md, RD5).
 ##
 ## Directions are compass bearings: 0 is north, 90 east. The course's axis is the wind direction it
 ## is set for: where the wind comes from, which is also where mark 1 lies from the start.
@@ -28,6 +30,9 @@ class Leg:
 
 ## How finely a leg is checked for land, metres.
 const LAND_CHECK_STEP_M: float = 10.0
+## The "frame" of a course file whose positions are game metres (x east, z south) instead of
+## Swiss LV95. A file without a frame is in LV95, as every lake course saved before it.
+const GAME_FRAME: String = "game"
 
 var name: String = ""
 ## The template the course was made from, as in the Notice of Race (for example "LG2").
@@ -386,8 +391,11 @@ func copy() -> Course:
 
 # ---------------------------------------------------------------- course files
 
-## The course as a dictionary for a JSON file, with LV95 positions to the centimetre.
+## The course as a dictionary for a JSON file, with LV95 positions to the centimetre. Without a map
+## (config null: the open water) the positions are game metres, and the file says so.
 func to_dict(config: MapConfig) -> Dictionary:
+	if config == null:
+		return _to_game_frame_dict()
 	var mark_list: Array[Dictionary] = []
 	for each: CourseMark in marks:
 		var lv95: PackedFloat64Array = config.game_to_lv95(Vector3(each.position.x, 0.0, each.position.y))
@@ -410,7 +418,36 @@ func to_dict(config: MapConfig) -> Dictionary:
 	}
 
 
+## The open water's file: the same course, with game metres (x east, z south) to the centimetre.
+func _to_game_frame_dict() -> Dictionary:
+	var mark_list: Array[Dictionary] = []
+	for each: CourseMark in marks:
+		mark_list.append({
+			"id": each.id,
+			"side": CourseMark.side_name(each.side),
+			"x": snappedf(each.position.x, 0.01),
+			"z": snappedf(each.position.y, 0.01),
+		})
+	return {
+		"about": "A race course on the open water (RACING_PLAN.md, RD5). Positions are game metres, x east and z south; sides are the side each mark is left on.",
+		"frame": GAME_FRAME,
+		"name": name,
+		"template": template,
+		"sequence": sequence,
+		"axis_deg": snappedf(axis_deg, 0.1),
+		"size_percent": size_percent,
+		"boards": boards,
+		"marks": mark_list,
+	}
+
+
+## A course from its file's dictionary. A file in game metres needs no map (config may be null);
+## a file in LV95 needs the map it was made on, and without one there is no course (null).
 static func from_dict(data: Dictionary, config: MapConfig) -> Course:
+	var in_game_metres: bool = str(data.get("frame", "")) == GAME_FRAME
+	if not in_game_metres and config == null:
+		push_error("The course \"%s\" is in Swiss coordinates: it needs its map to be placed." % str(data.get("name", "")))
+		return null
 	var course: Course = Course.new()
 	course.name = str(data.get("name", ""))
 	course.template = str(data.get("template", ""))
@@ -419,11 +456,16 @@ static func from_dict(data: Dictionary, config: MapConfig) -> Course:
 	course.size_percent = float(data.get("size_percent", 100.0))
 	course.boards = int(data.get("boards", 40))
 	for item: Dictionary in data.get("marks", []):
-		var at: Vector3 = config.lv95_to_game(float(item["east"]), float(item["north"]), config.lake_level_m)
-		course.add_mark(str(item["id"]), Vector2(at.x, at.z), CourseMark.side_from_name(str(item.get("side", ""))))
+		var side: CourseMark.Rounding = CourseMark.side_from_name(str(item.get("side", "")))
+		if in_game_metres:
+			course.add_mark(str(item["id"]), Vector2(float(item["x"]), float(item["z"])), side)
+		else:
+			var at: Vector3 = config.lv95_to_game(float(item["east"]), float(item["north"]), config.lake_level_m)
+			course.add_mark(str(item["id"]), Vector2(at.x, at.z), side)
 	return course
 
 
+## Saves the course as JSON: in LV95 on a map, in game metres without one (config null).
 func save(path: String, config: MapConfig) -> Error:
 	DirAccess.make_dir_recursive_absolute(path.get_base_dir())
 	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
@@ -433,7 +475,7 @@ func save(path: String, config: MapConfig) -> Error:
 	return OK
 
 
-## Reads a course file; null if it can't be read.
+## Reads a course file; null if it can't be read. config may be null for a file in game metres.
 static func load_from(path: String, config: MapConfig) -> Course:
 	var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
 	if not (data is Dictionary):

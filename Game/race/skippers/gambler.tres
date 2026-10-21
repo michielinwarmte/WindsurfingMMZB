@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="SkipperConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://race/skipper_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+name = "Gambler"
+sail_colour = Color(0.85, 0.1, 0.15, 1)
+upwind_vmg_twa_deg = 45.0
+downwind_vmg_twa_deg = 135.0
+pointing_offset_deg = 4.0
+layline_margin_m = 4.0
+mark_margin_m = 5.0
+max_tacks_per_beat = 8
+reaction_time_s = 0.3
+steering_noise_deg = 1.0
+start_spot = 1.0
+start_timing_error_s = 0.5
+favoured_end_bias = 1.0
+start_style = 1
+hold_speed_ms = 3.0
+shift_sensitivity_deg = 6.0
+gust_appetite = 1.0
