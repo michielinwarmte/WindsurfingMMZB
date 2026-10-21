@@ -1,6 +1,6 @@
 # Physics Specification
 
-Written for Phase 1 of the [rebuild plan](REBUILD_PLAN.md) in Session 29 (28 September to 2 October 2026). This is the engine-neutral description of every force model in the windsurfing simulator, taken from the Unity version in `Legacy/` and translated into the conventions the Godot rebuild uses (plan decision D4). Phase 2 builds `Game/sim/` from this document alone, without opening `Legacy/` again.
+Written for Phase 1 of the [rebuild plan](archive/REBUILD_PLAN.md) in Session 29 (28 September to 2 October 2026). This is the engine-neutral description of every force model in the windsurfing simulator, taken from the Unity version in `Legacy/` and translated into the conventions the Godot rebuild uses (plan decision D4). Phase 2 builds `Game/sim/` from this document alone, without opening `Legacy/` again.
 
 **Core mechanic (plan decision D8).** The game simulates real windsurfing physics; it does not imitate it. Every force below comes from a physical model with real-world coefficients and real equipment dimensions, and the speeds, the fastest point of sail, the planing onset and the response to the controls are outcomes of the simulation, never numbers we choose. There are no behaviour targets, no speed caps and no artificial torques. The Unity version is used as a list of lessons (section 12), not as a reference for behaviour; section 14 gives real-world ranges for Phase 4 to compare against, and a disagreement means a model error to find.
 

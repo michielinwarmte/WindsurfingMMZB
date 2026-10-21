@@ -224,7 +224,7 @@ grow_horizontal = 0
 grow_vertical = 0
 theme_type_variation = &"HintLabel"
 theme_override_font_sizes/font_size = 14
-text = "v0.5"
+text = "v0.1.0"
 horizontal_alignment = 2
 
 [node name="Settings" parent="Menu/Root" instance=ExtResource("4_settings")]

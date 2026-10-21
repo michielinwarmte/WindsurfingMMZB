@@ -1,12 +1,14 @@
 # Rebuild Plan: Windsurfing Simulator in Godot 4.7
 
-Written 28 September 2026 (Session 28), for the AI sessions doing the work and for the MMZB team reviewing it. The rules and commands are in [CLAUDE.md](../CLAUDE.md); this file says what to build and in which order.
+> **Archived with version 0.1 (21 October 2026).** This document is kept exactly as it was when the work in it was finished and merged. What is still open from it lives in [ROADMAP.md](../../ROADMAP.md); the map of all documents is [Documentation/README.md](../README.md).
+
+Written 28 September 2026 (Session 28), for the AI sessions doing the work and for the MMZB team reviewing it. The rules and commands are in [CLAUDE.md](../../CLAUDE.md); this file says what to build and in which order.
 
 ## How to use this plan
 
 - Work through the phases in order. Within a phase, work top to bottom and tick a box (`- [x]`) only when the task is done **and verified**.
 - Every phase ends with a **Stop**: give the team a plain-language summary and the play-test checklist, suggest a commit, and wait for their go-ahead before starting the next phase.
-- Record every session at the top of [PROGRESS_LOG.md](PROGRESS_LOG.md).
+- Record every session at the top of [PROGRESS_LOG.md](../PROGRESS_LOG.md).
 - If the plan turns out to be wrong somewhere, change it, write down why in the progress log, and mention it at the next Stop.
 
 ## Status
@@ -20,11 +22,11 @@ Written 28 September 2026 (Session 28), for the AI sessions doing the work and f
 | 4 | Autopilot, validation suite and tuning | ✅ Done (Session 35): `tools/test.sh validation`, 17 checks green, polar in `Documentation/POLAR_15KT.md` |
 | 5 | Waves and ocean | ✅ Done (Session 36): Gerstner field, shader and mesh, validation on a swell-dominated sea. Session 37: the sailor is a body of their own and the rig is held by the sailor (spec 7.5); flat water and the strong chop sail without a fall, one fall each remains on the sea and the medium chop at a landing (spec 17.13) |
 | 6 | Rig visuals: board, sail, boom, mast | ✅ Done (Session 38; the force-vector debug view in Phase 7): Blender models built by `tools/blender/build_rig_models.py` from the config numbers, a sail that bends with the simulation, the sailor figure on a fixed-length skeleton. The same session gave the game its start, settings and pause menus (no phase of its own) |
-| 7 | Environment and effects | 🔶 Built (Session 39), team check next: one water shader for sea and lake, sky and haze, spray, wake, splashes, streamer, wind flag, force view (F3), gust patches on the lake from the map's wind; islands are covered by the real lake |
-| 8 | Audio | 🔶 Built (Session 39), team listens next: every sound made from noise at startup, Wind, Water and Sail buses driven by the simulation, sliders on the Audio tab; nobody has heard it yet |
-| 9 | Gameplay: racing | 📝 Planned (Session 50): [RACING_PLAN.md](RACING_PLAN.md), parts 9A to 9D: the race alone, scripted skippers, the learning harness, learned skippers |
+| 7 | Environment and effects | ✅ In 0.1 (built in Session 39; the team's look is still open, see ROADMAP.md): one water shader for sea and lake, sky and haze, spray, wake, splashes, streamer, wind flag, force view (F3), gust patches on the lake from the map's wind; islands are covered by the real lake |
+| 8 | Audio | ✅ In 0.1 (built in Session 39; nobody has listened yet, see ROADMAP.md): every sound made from noise at startup, Wind, Water and Sail buses driven by the simulation, sliders on the Audio tab; nobody has heard it yet |
+| 9 | Gameplay: racing | ✅ In 0.1 (planned in Session 50, built in Sessions 50 to 53; the AI fleet continues in [AI_FLEET_PLAN.md](../AI_FLEET_PLAN.md)): [RACING_PLAN.md](RACING_PLAN.md), parts 9A to 9D: the race alone, scripted skippers, the learning harness, learned skippers |
 
-Side track (the map: `Game/maps/` and `tools/map/`, developed on `feature/map-silvaplana` and merged with the physics on 16 October 2026): the first real map, Lake Silvaplana, from Swiss open data. See [MAP_SILVAPLANA_PLAN.md](MAP_SILVAPLANA_PLAN.md). It covers the parts of Phase 7 (sky, fog, shoreline) that belong to that map, and it doesn't change the physics. Michiel does the physics; Max does the map and the wind patterns that belong to it (built first as a wind analyser, phases W0 to W4; connected to the physics through `WindField` in W5). What the map would need from the physics is in [PHYSICS_REQUESTS_FROM_MAP.md](PHYSICS_REQUESTS_FROM_MAP.md): map-specific air, water and wind; thin air at 1791 m; a lakebed and running aground; moving gusts; wind waves. Each request comes with measured numbers.
+Side track (the map: `Game/maps/` and `tools/map/`, developed on `feature/map-silvaplana` and merged with the physics on 16 October 2026): the first real map, Lake Silvaplana, from Swiss open data. See [MAP_SILVAPLANA_PLAN.md](../MAP_SILVAPLANA_PLAN.md). It covers the parts of Phase 7 (sky, fog, shoreline) that belong to that map, and it doesn't change the physics. Michiel does the physics; Max does the map and the wind patterns that belong to it (built first as a wind analyser, phases W0 to W4; connected to the physics through `WindField` in W5). What the map would need from the physics is in [PHYSICS_REQUESTS_FROM_MAP.md](../PHYSICS_REQUESTS_FROM_MAP.md): map-specific air, water and wind; thin air at 1791 m; a lakebed and running aground; moving gusts; wind waves. Each request comes with measured numbers.
 
 Play-test upgrades (from 19 October 2026): the game is playable, and the team play-tests it and writes down what should improve. Each piece of feedback is researched and turned into a plan in [PLAYTEST_UPGRADES.md](PLAYTEST_UPGRADES.md) (U1, U2, ...), to be carried out later in the order the team chooses. U1: the board planes on too big a wet area (1.87 m instead of 0.6 to 1.0 m). Michiel gave the go-ahead to build U1 on 19 October 2026, on the branch `feature/u1-planing-wet-area`; its execution brief says how. U2 (the fin bends) comes after it. **State on 19 October 2026 (Session 49):** U1 and U2 are built, on `feature/u1-planing-wet-area` and `feature/u2-fin` (U2 on top of U1); Max play-tested both ("feels quite nice now"); Michiel's review of U2's physics and the full manoeuvre matrix come before the pull requests (U1 first). The live state is in U1_PROGRESS.md and U2_PROGRESS.md.
 
@@ -86,7 +88,7 @@ Visual scripts read the simulation state (sail angle, forces, planing ratio and 
 - Tell the team clearly what could not be verified.
 
 ### D8. The physics is simulated, not tuned (added in Session 29)
-Real windsurfing physics is the core mechanic of the game. Every force comes from a physical model with real-world coefficients and real equipment dimensions. How fast the board goes, which point of sail is fastest, when it starts planing and how it reacts to the rig are outcomes of the simulation, never numbers we choose: there are no behaviour targets, no speed caps, no artificial torques and no "feel" constants. Validation compares the simulation with what real windsurfing kit does (a planing freeride board in 15 kt goes faster than the wind, fastest on a broad reach, planes from about 15 km/h, points about 45° to the wind). When a check fails we look for the physical cause (a coefficient that does not match real equipment, a missing effect, a force applied at the wrong point) and fix the model, writing the real-world source of the fix in the spec's tuning log. The Unity version is a list of lessons, not a reference for behaviour. Where real life is unplayable in a game (balance reflexes, falling in), the sailor model may help the player in beginner mode; such help is explicit, documented in the spec and switchable off. The decisions this replaced are in [PHYSICS_SPEC.md](PHYSICS_SPEC.md) section 15.
+Real windsurfing physics is the core mechanic of the game. Every force comes from a physical model with real-world coefficients and real equipment dimensions. How fast the board goes, which point of sail is fastest, when it starts planing and how it reacts to the rig are outcomes of the simulation, never numbers we choose: there are no behaviour targets, no speed caps, no artificial torques and no "feel" constants. Validation compares the simulation with what real windsurfing kit does (a planing freeride board in 15 kt goes faster than the wind, fastest on a broad reach, planes from about 15 km/h, points about 45° to the wind). When a check fails we look for the physical cause (a coefficient that does not match real equipment, a missing effect, a force applied at the wrong point) and fix the model, writing the real-world source of the fix in the spec's tuning log. The Unity version is a list of lessons, not a reference for behaviour. Where real life is unplayable in a game (balance reflexes, falling in), the sailor model may help the player in beginner mode; such help is explicit, documented in the spec and switchable off. The decisions this replaced are in [PHYSICS_SPEC.md](../PHYSICS_SPEC.md) section 15.
 
 ## Target project layout
 
@@ -149,7 +151,7 @@ Change the layout when there is a good reason, and update this section when you 
 
   Default: start without the fudge, and add it back only when a Phase 4 test shows it is needed, with a note saying why.
 
-  Session 29 note: this list was written from the legacy docs. [PHYSICS_SPEC.md](PHYSICS_SPEC.md) section 12 corrects it against the code that actually ran (the final rake torque is 0.3 × sail force + 200 to 350 N·m + 25 × speed, the high-speed scale-down goes to 0.5 at 30 kt, the planing lift was a speed ramp rather than Savitsky, and the played cap was 0.4 × 0.15 of the weight) and adds 27 more items, F-10 to F-36.
+  Session 29 note: this list was written from the legacy docs. [PHYSICS_SPEC.md](../PHYSICS_SPEC.md) section 12 corrects it against the code that actually ran (the final rake torque is 0.3 × sail force + 200 to 350 N·m + 25 × speed, the high-speed scale-down goes to 0.5 at 30 kt, the planing lift was a speed ramp rather than Savitsky, and the played cap was 0.4 × 0.15 of the weight) and adds 27 more items, F-10 to F-36.
 - [x] Resolve the legacy contradictions listed under "Known legacy pitfalls" below, and write down the resolution.
 - [x] Write a validation targets table (what Phase 4 will test), with a source or reason for every number.
 - [x] Pick a default configuration: board (volume, length, width, mass), sail (area, luff and boom length), fin (area, aspect ratio), sailor mass. The legacy config says 120 L, 2.5 m × 0.6 m, 6 m² sail, 75 kg sailor plus 15 kg of equipment. The old board model measures 2.28 m × 0.80 m. Choose, and say why.
@@ -329,7 +331,7 @@ Multiplayer, a rigged sailor, more boards and sails, exported builds for Windows
 
 ## Former open questions (settled in Session 29 under D8)
 
-The plan used to ask the team four questions here: the top speed, the fastest point of sail, the default equipment and the control modes. They are not questions any more. The top speed and the fastest point of sail are whatever the simulation gives (real life: faster than the wind, fastest on a broad reach); the equipment is a real, common freeride setup (120 L board, 6.5 m² sail, 38 cm fin, 75 kg sailor); the game has a beginner and an advanced mode. The decisions, with reasons, are in [PHYSICS_SPEC.md](PHYSICS_SPEC.md) section 15.
+The plan used to ask the team four questions here: the top speed, the fastest point of sail, the default equipment and the control modes. They are not questions any more. The top speed and the fastest point of sail are whatever the simulation gives (real life: faster than the wind, fastest on a broad reach); the equipment is a real, common freeride setup (120 L board, 6.5 m² sail, 38 cm fin, 75 kg sailor); the game has a beginner and an advanced mode. The decisions, with reasons, are in [PHYSICS_SPEC.md](../PHYSICS_SPEC.md) section 15.
 
 ## Tooling notes (from Session 28)
 
