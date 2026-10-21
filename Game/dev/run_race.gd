@@ -29,6 +29,10 @@ extends SceneTree
 ##                         game puts them: SailingArea; on the lake kept off the shore)
 ##   [--spawn_seed=0]      the seed of the random spots: the same seed, the same spots
 ##   [--free_sail=0]       seconds of free sailing before the countdown starts
+##   [--behind=<m>]        how far behind the start line the skippers' boards wait (the usual is 1 m
+##                         per second of countdown, 40 to 150 m); 150 with --prestart=30 is where the
+##                         learned brains were trained
+##   [--blind=1]           the learned brains see no other boards (as in their training)
 ##   [--stop_after_gun=<s>] stop the race this long after the gun (to look at the start only)
 ##   [--out_dir=<folder>: a CSV per board: race time, x, z, heading, speed, its next step, and what
 ##                         its skipper is doing]
@@ -115,6 +119,8 @@ func _initialize() -> void:
 	var spawn_seed: int = options.get("spawn_seed", "0").to_int()
 	var free_sail_s: float = maxf(options.get("free_sail", "0").to_float(), 0.0)
 	var stop_after_gun_s: float = options["stop_after_gun"].to_float() if options.has("stop_after_gun") else INF
+	var behind_m: float = options.get("behind", "-1").to_float()
+	var blind: bool = options.get("blind", "0") != "0"
 
 	var course_name: String = options.get("course", "test")
 	var course: Course = course_named(course_name)
@@ -132,7 +138,7 @@ func _initialize() -> void:
 	var who: PackedStringArray = PackedStringArray()
 	for i: int in boards:
 		who.append(names[i % names.size()])
-	var entries: Array[Entry] = make_entries(race, course, who, wind_kt, twa_deg, random_seed, spawn, area, spawn_seed)
+	var entries: Array[Entry] = make_entries(race, course, who, wind_kt, twa_deg, random_seed, spawn, area, spawn_seed, behind_m)
 	if entries.is_empty():
 		quit(2)
 		return
@@ -146,7 +152,7 @@ func _initialize() -> void:
 	var gun_seen: bool = false
 	var ticks: int = roundi((free_sail_s + prestart_s + seconds) / DT)
 	for tick: int in ticks:
-		step_race(race, entries)
+		step_race(race, entries, blind)
 		if tick % CSV_EVERY == 0:
 			for i: int in entries.size():
 				_write_row(entries[i], race, i)
@@ -164,7 +170,10 @@ func _initialize() -> void:
 		", ".join(who) + (" at TWA %.0f" % twa_deg if who.has("autopilot") else ""), random_seed, prestart_s, spawn, spawn_seed])
 	for result: RaceResult in race.results():
 		var entry: Entry = entries[result.index]
-		print("%s  falls %d  tacks %d  gybes %d" % [result.to_line(), entry.falls, entry.tacks, entry.gybes])
+		# An unfinished board: how far it still is from its next step, so that boards that never
+		# finish can still be compared (the generations of a night, tools/gens.sh).
+		var to_next: String = "" if result.finished else "  to %s %.0f m" % [race.next_step_name(result.index), race.distance_to_next_m(result.index)]
+		print("%s  falls %d  tacks %d  gybes %d%s" % [result.to_line(), entry.falls, entry.tacks, entry.gybes, to_next])
 	print("%s at race time %s; CSV files in %s" % [
 		"Finished" if race.phase() == RaceSim.Phase.FINISHED else "Stopped", RaceResult.format_time(race.race_time_s()), out_dir])
 	print(start_report(race, entries, outside_at_gun))
@@ -224,7 +233,7 @@ static func sailing_area_for(course_name: String, course: Course) -> SailingArea
 ## in the game), seeded by spawn_seed; with "line" behind the start line. Every skipper sails free in
 ## the area (one round the start line when none is given). Empty if a name is not a skipper.
 static func make_entries(race: RaceSim, course: Course, who: PackedStringArray, wind_kt: float, twa_deg: float = 50.0, random_seed: int = 0,
-		spawn: String = "line", area: SailingArea = null, spawn_seed: int = 0) -> Array[Entry]:
+		spawn: String = "line", area: SailingArea = null, spawn_seed: int = 0, behind_m: float = -1.0) -> Array[Entry]:
 	var entries: Array[Entry] = []
 	var used: Dictionary[String, int] = {}
 	if area == null:
@@ -239,7 +248,7 @@ static func make_entries(race: RaceSim, course: Course, who: PackedStringArray, 
 			entry = _make_autopilot_board(race, course.axis_deg, wind_kt, twa_deg, share)
 			entry.name = "board%d" % (i + 1)
 		else:
-			entry = _make_skipper_board(who[i], race, course, wind_kt, share)
+			entry = _make_skipper_board(who[i], race, course, wind_kt, share, behind_m)
 			if entry == null:
 				var none: Array[Entry] = []
 				return none
@@ -263,10 +272,11 @@ static func make_entries(race: RaceSim, course: Course, who: PackedStringArray, 
 
 
 ## One tick of the race: every board (its sailor, the physics, the falls and the manoeuvres
-## counted), the race told where each one is, and the race clock moved on.
-static func step_race(race: RaceSim, entries: Array[Entry]) -> void:
+## counted), the race told where each one is, and the race clock moved on. With `blind` the
+## skippers are not told where the others are (the learned brains were trained alone).
+static func step_race(race: RaceSim, entries: Array[Entry], blind: bool = false) -> void:
 	for i: int in entries.size():
-		if entries[i].skipper != null and entries.size() > 1:
+		if entries[i].skipper != null and entries.size() > 1 and not blind:
 			_tell_others(entries, i)
 		if race.clock_s() >= entries[i].set_off_s:
 			_sail(entries[i])
@@ -350,7 +360,7 @@ static func _make_sim(wind_from_deg: float, wind_kt: float) -> WindsurferSim:
 ## A skipper's board: at the pre-start spot (brought nearer the line for a short countdown), at
 ## `share` of the way across the line's width, on the pre-start's beam reach, at rest. Its skipper
 ## drives the beginner controller (auto-sheet on), as the player's board is set up in the game.
-static func _make_skipper_board(skipper_name: String, race: RaceSim, course: Course, wind_kt: float, share: float) -> Entry:
+static func _make_skipper_board(skipper_name: String, race: RaceSim, course: Course, wind_kt: float, share: float, behind_m: float = -1.0) -> Entry:
 	var skipper: RaceSkipper = Skippers.make(skipper_name)
 	if skipper == null:
 		return null
@@ -364,9 +374,10 @@ static func _make_skipper_board(skipper_name: String, race: RaceSim, course: Cou
 	entry.controller.hands = entry.hands
 	entry.controls = _fresh_controls()
 	var start: RaceStep = race.steps()[0]
-	var behind_m: float = clampf(race.prestart_s * SKIPPER_WAIT_M_PER_S, SKIPPER_NEAREST_M, RaceCourses.PRE_START_BEHIND_M)
+	# Where it waits: --behind, or 1 m per second of countdown within the usual bounds.
+	var behind: float = behind_m if behind_m > 0.0 else clampf(race.prestart_s * SKIPPER_WAIT_M_PER_S, SKIPPER_NEAREST_M, RaceCourses.PRE_START_BEHIND_M)
 	var along: Vector2 = start.points[0] - start.points[1]
-	var at: Vector2 = RaceCourses.pre_start_spot(course) + start.in_dir * (RaceCourses.PRE_START_BEHIND_M - behind_m) + along * (share - 0.5)
+	var at: Vector2 = RaceCourses.pre_start_spot(course) + start.in_dir * (RaceCourses.PRE_START_BEHIND_M - behind) + along * (share - 0.5)
 	entry.sim.reset(Vector3(at.x, 0.0, at.y), deg_to_rad(RaceCourses.pre_start_heading_deg(course)))
 	entry.controller.reset_controls(entry.controls)
 	return entry
