@@ -12,7 +12,7 @@ config_version=5
 
 config/name="Windsurfing Simulator"
 config/description="Physics-first windsurfing simulator by the MMZB team."
-config/version="0.5"
+config/version="0.1.0"
 run/main_scene="res://ui/start_menu.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"

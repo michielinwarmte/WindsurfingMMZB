@@ -1,6 +1,8 @@
 # Phase 9 Plan: Racing, and the skippers who race you
 
-Written 19 October 2026 (Session 50) by Claude Fable 5.1 for Max, Michiel and the AI sessions that will build it. It fills in Phase 9 of [REBUILD_PLAN.md](REBUILD_PLAN.md) ("Gameplay: racing"). The rules and commands are in [CLAUDE.md](../CLAUDE.md); the course maker this plan builds on is W4a in [MAP_SILVAPLANA_PLAN.md](MAP_SILVAPLANA_PLAN.md).
+> **Archived with version 0.1 (21 October 2026).** This document is kept exactly as it was when the work in it was finished and merged. What is still open from it lives in [ROADMAP.md](../../ROADMAP.md); the map of all documents is [Documentation/README.md](../README.md).
+
+Written 19 October 2026 (Session 50) by Claude Fable 5.1 for Max, Michiel and the AI sessions that will build it. It fills in Phase 9 of [REBUILD_PLAN.md](REBUILD_PLAN.md) ("Gameplay: racing"). The rules and commands are in [CLAUDE.md](../../CLAUDE.md); the course maker this plan builds on is W4a in [MAP_SILVAPLANA_PLAN.md](../MAP_SILVAPLANA_PLAN.md).
 
 Max asked for three things on 19 October 2026: races with AI opponents; opponents that are a little different from each other; and, because he is fascinated by neural networks that learn by reinforcement, one or two courses to train such skippers on. This plan does all three, in an order where the game gets a playable race first and the learning comes on top of it.
 
@@ -8,7 +10,7 @@ Max asked for three things on 19 October 2026: races with AI opponents; opponent
 
 - Work through the parts in order (9A to 9D; 9E is optional polish). Tick a box only when the task is done **and verified**.
 - Every part ends with a **Stop**: a plain-language summary and a play-test checklist for the team, a suggested commit, and the team's go-ahead before the next part.
-- Record every session at the top of [PROGRESS_LOG.md](PROGRESS_LOG.md). If the plan is wrong somewhere, change it, say why in the log, and mention it at the next Stop.
+- Record every session at the top of [PROGRESS_LOG.md](../PROGRESS_LOG.md). If the plan is wrong somewhere, change it, say why in the log, and mention it at the next Stop.
 - The execution brief at the end says who builds what (the lead, the agents, the branches) and when to stop.
 
 ## Status
@@ -20,7 +22,7 @@ Max asked for three things on 19 October 2026: races with AI opponents; opponent
 | 9C | The learning harness: the race as a training environment, the bridge to Python, the first learned skipper on course T1 | ✅ The harness built with an in-Godot evolution trainer first (Session 51, the night run: a brain learnt to start and beat to mark 1 on T1, not to round it); the bridge to Python and PPO built in Session 53 (21 October 2026) as the AI fleet's F5 (`tools/train.sh`, AI_FLEET_PLAN.md D6b: the reward follows the course, a curriculum of six stages on random courses); the first trained head is the nights' work from here |
 | 9D | Learned skippers in the game: the curriculum T1 to T2, personalities, evaluation | ⬜ |
 | 9E | Later: racing rules and penalties, replays, a leaderboard | ⬜ |
-| 9F | The AI fleet: a head and hands, polar boards for the far ones, personas as skill sheets, a living fleet that free-sails and gathers for the start, wind shadows and rules, a trained head, 20 to 40 boards | 📝 Planned (Session 51): [AI_FLEET_PLAN.md](AI_FLEET_PLAN.md), parts F1 to F6, five decisions for Max and Michiel first |
+| 9F | The AI fleet: a head and hands, polar boards for the far ones, personas as skill sheets, a living fleet that free-sails and gathers for the start, wind shadows and rules, a trained head, 20 to 40 boards | 📝 Planned (Session 51): [AI_FLEET_PLAN.md](../AI_FLEET_PLAN.md), parts F1 to F6, five decisions for Max and Michiel first |
 
 **Phase 9 is done** (the rebuild plan's "done when") at the end of 9B: a full race against three AI opponents. 9C and 9D are Max's neural-network track on top of it.
 
@@ -112,7 +114,7 @@ The Phase 4 `Autopilot` holds a wind angle and trims the sheet; the beginner `Pl
 1. **The target point** for the current step: a mark, offset by a margin (5 to 15 m, by character) to its required side; a gate, the mark that is nearer or better placed for the wind; the start, a spot on the line chosen by character (the boat end, the middle, the pin); the finish, its middle.
 2. **Can I sail straight there?** The bearing to the target gives the true wind angle it needs. Between the close-hauled limit (about 45°, plus the character's pointing offset) and the running limit (about 165°) it holds that heading.
 3. **Upwind:** hold close-hauled on the present tack until the layline to the target (with a margin in metres by character), then tack. Tack earlier when the wind has headed by more than the character's shift sensitivity and the other tack is lifted, or when the shore (on the lake) is closer than a safety distance. A cap on the number of tacks per beat.
-4. **Downwind:** the same with gybes: sail the fast broad reach, gybe on the downwind layline. Dead downwind is slow on a windsurfer, and the polar in [POLAR_15KT.md](POLAR_15KT.md) says so; the skipper reads its gybe angle from the polar, not from a constant.
+4. **Downwind:** the same with gybes: sail the fast broad reach, gybe on the downwind layline. Dead downwind is slow on a windsurfer, and the polar in [POLAR_15KT.md](../POLAR_15KT.md) says so; the skipper reads its gybe angle from the polar, not from a constant.
 5. **The start:** a timed run. Sail away from the chosen spot on a reach, turn back when the time left equals the distance divided by the expected speed, plus the character's timing error (early starters risk OCS, late ones lose metres). Cross at speed.
 6. **Keep clear:** a board within 15 m and converging makes the skipper bear away a little to leeward of it. No rules are enforced on anyone in version one (RD6).
 7. **Gust hunting** (the lake only): sample the wind 100 to 200 m ahead on both tacks and lean the decision toward the side with more wind, weighted by the character's gust appetite.
@@ -353,10 +355,10 @@ Make the branch and the progress file, then launch `race_core` and `course_on_wa
 
 ## Sources
 
-- The iQFOiL course shapes and distances: the Notice of Race of the 2026 U23 Worlds, Addendum A ([Document_146274_20260925081258_en.pdf](Document_146274_20260925081258_en.pdf)) and the Class Race Management Guideline (2023), as already used by W4a in [MAP_SILVAPLANA_PLAN.md](MAP_SILVAPLANA_PLAN.md).
+- The iQFOiL course shapes and distances: the Notice of Race of the 2026 U23 Worlds, Addendum A ([Document_146274_20260925081258_en.pdf](../iqfoil_2026_u23_worlds_notice_of_race.pdf)) and the Class Race Management Guideline (2023), as already used by W4a in [MAP_SILVAPLANA_PLAN.md](../MAP_SILVAPLANA_PLAN.md).
 - PPO: Schulman et al., "Proximal Policy Optimization Algorithms" (2017), https://arxiv.org/abs/1707.06347; the implementation is Stable-Baselines3, https://stable-baselines3.readthedocs.io/.
 - Godot and Python for reinforcement learning, the design the bridge borrows: Godot RL Agents, Beeching et al. (2021), https://arxiv.org/abs/2112.03636 and https://github.com/edbeeching/godot_rl_agents.
 - Reinforcement learning for sailing upwind in a changing wind: Suda and Nikovski, "Deep Reinforcement Learning for Optimal Sailing Upwind", IJCNN 2022, https://merl.com/publications/TR2022-102.
 - Reinforcement learning on a sailing simulator with sail and rudder control through waypoints: "Reinforcement-learning robotic sailboats: simulator and preliminary results" (2024), https://arxiv.org/abs/2402.03337.
 - Neuroevolution for racing opponents of rising skill: Togelius and Lucas, "Evolving controllers for simulated car racing" (2005), and Aguilera et al., "Driving-bots with a neuroevolved brain: Screaming Racers" (2005), https://rua.ua.es/dspace/handle/10045/692.
-- The game's own polar at 15 kt, which the skippers read their angles from: [POLAR_15KT.md](POLAR_15KT.md).
+- The game's own polar at 15 kt, which the skippers read their angles from: [POLAR_15KT.md](../POLAR_15KT.md).

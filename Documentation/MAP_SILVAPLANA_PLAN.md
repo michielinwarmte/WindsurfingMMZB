@@ -1,6 +1,6 @@
 # Map Plan: Lake Silvaplana (Silvaplanersee), Switzerland
 
-Written 14 October 2026 (Session 37, map track), for the AI sessions doing the work and for the MMZB team reviewing it. Work on the branch `feature/map-silvaplana`. The rules and commands in [CLAUDE.md](../CLAUDE.md) still apply, and so does the "How to use this plan" section of [REBUILD_PLAN.md](REBUILD_PLAN.md): phases in order, tick a box only when it is done and verified, stop at the end of every phase so the team can play-test.
+Written 14 October 2026 (Session 37, map track), for the AI sessions doing the work and for the MMZB team reviewing it. Work on the branch `feature/map-silvaplana`. The rules and commands in [CLAUDE.md](../CLAUDE.md) still apply, and so does the "How to use this plan" section of [REBUILD_PLAN.md](archive/REBUILD_PLAN.md): phases in order, tick a box only when it is done and verified, stop at the end of every phase so the team can play-test.
 
 This is a side track next to the main plan. It builds the first real map: Lake Silvaplana in the Upper Engadin, one of the best-known windsurf spots in the Alps, famous for the afternoon Maloja wind.
 
@@ -504,7 +504,7 @@ Done in Session 43 as well:
 Asked for by Max on 15 October 2026, in two parts: first a **course maker** (W4a), so the team can put any iQFOiL course on the lake by dragging the marks, from templates; then the **tactics tools** on top of it (W4b), which need a course to measure against.
 
 **Sources for the courses:**
-- The iQFOiL Notice of Race and Sailing Instructions of the 2026 U23 Worlds in Puck, Addendum A: the course diagrams, the mark order and the side each mark is left on. Added by Max: [Document_146274_20260925081258_en.pdf](Document_146274_20260925081258_en.pdf).
+- The iQFOiL Notice of Race and Sailing Instructions of the 2026 U23 Worlds in Puck, Addendum A: the course diagrams, the mark order and the side each mark is left on. Added by Max: [Document_146274_20260925081258_en.pdf](iqfoil_2026_u23_worlds_notice_of_race.pdf).
 - The [iQFOiL Class Race Management Guideline](https://www.iqfoilclassofficial.org/_files/ugd/297cf0_da903893fa6a436ca1e1a103a1c8b198.pdf) (published 9 August 2023): the distances, angles, gate and line sizes. The Notice of Race gives none of these: the race committee sets them on the day.
 - The [iQFOiL Class Racing Policies](https://www.iqfoilclassofficial.org/_files/ugd/297cf0_68270a37800b4a41b4b149cab8d9e5af.pdf) (5 July 2025): course racing above 9 kt, sprints under 15 kt; in the medal series MR1 above 9 kt and the slalom MR2 below.
 

@@ -1,6 +1,8 @@
 # Play-test upgrades
 
-From 19 October 2026 the team play-tests the game and writes down what should improve. Each piece of feedback becomes an upgrade in this file: what was felt, what the game does (measured), what the real world says (with sources), why it happens, and a step-by-step plan. Upgrades that change the physics (`Game/sim/`) need Michiel's go-ahead, like every physics change (team decision 5 in [MAP_SILVAPLANA_PLAN.md](MAP_SILVAPLANA_PLAN.md)).
+> **Archived with version 0.1 (21 October 2026).** This document is kept exactly as it was when the work in it was finished and merged. What is still open from it lives in [ROADMAP.md](../../ROADMAP.md); the map of all documents is [Documentation/README.md](../README.md).
+
+From 19 October 2026 the team play-tests the game and writes down what should improve. Each piece of feedback becomes an upgrade in this file: what was felt, what the game does (measured), what the real world says (with sources), why it happens, and a step-by-step plan. Upgrades that change the physics (`Game/sim/`) need Michiel's go-ahead, like every physics change (team decision 5 in [MAP_SILVAPLANA_PLAN.md](../MAP_SILVAPLANA_PLAN.md)).
 
 ## Status
 
@@ -74,7 +76,7 @@ Fable can run out at any moment, so everything needed to go on lives in git:
 
 #### Rules
 
-From [CLAUDE.md](../CLAUDE.md) and PHYSICS_SPEC.md, the ones that matter here:
+From [CLAUDE.md](../../CLAUDE.md) and PHYSICS_SPEC.md, the ones that matter here:
 
 **Code**
 - Godot 4.7, GDScript with static types.
@@ -426,7 +428,7 @@ Two kinds of bouncing must not be confused (Max asked, 19 October 2026):
 - [x] The railing-out test, as information for the team's later decision on a player control. In a test, raise the wanted bank step by step. Does the board lift and then rail out above some angle, because the fin's rolling moment beats what the feet can hold (`feet_moment_max_nm`)? Report the angle. Build nothing on it in U1.
 
 **U1.7. Validate again: the board gets faster** (agent 5)
-- [x] Friction drops by about half, so the speeds rise. Run the validation suite, the reach check and the three straight runs against the baseline, and the polar against the real ranges in [POLAR_15KT.md](POLAR_15KT.md). No manoeuvres.
+- [x] Friction drops by about half, so the speeds rise. Run the validation suite, the reach check and the three straight runs against the baseline, and the polar against the real ranges in [POLAR_15KT.md](../POLAR_15KT.md). No manoeuvres.
 - [x] The planing onset band (8 to 10 kn, Michiel's open decision from Session 39) may move. Report where the onset is now.
 - [x] If the board becomes faster than real boards, look for a drag that is missing, with a source: spray drag (up to 15 % of a planing hull's drag; Savitsky, DeLorme & Datla 2007), the fin, the sailor's windage. Never make the wet part longer again to slow it down.
 

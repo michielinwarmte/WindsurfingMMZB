@@ -1,5 +1,7 @@
 # U2 progress (handoff)
 
+> **Archived with version 0.1 (21 October 2026).** This document is kept exactly as it was when the work in it was finished and merged. What is still open from it lives in [ROADMAP.md](../../ROADMAP.md); the map of all documents is [Documentation/README.md](../README.md).
+
 The live state of U2, "the fin bends, and its size". The plan and its execution brief are in [PLAYTEST_UPGRADES.md](PLAYTEST_UPGRADES.md). **The lead updates and commits this file after every launch, report and merge.** A lead who takes over starts here; U1's take-over prompt in [U1_PROGRESS.md](U1_PROGRESS.md) applies with U2 in place of U1.
 
 - **Branch:** `feature/u2-fin` (from `feature/u1-planing-wet-area` at c1eee63). Agents work on `u2/<name>` branches, made from it in their own worktrees.
@@ -9,12 +11,12 @@ The live state of U2, "the fin bends, and its size". The plan and its execution 
 
 | # | Agent | Package | State | Branch | Report |
 |---|---|---|---|---|---|
-| 1 | `fin_sources` | the stiffness, the catalogue fins, the literature | merged | `u2/fin_sources` | [fin_sources.md](u2_reports/fin_sources.md) |
-| 2 | `fin_measure` | the fin's baseline, the overrides, the telemetry, the what-ifs, the pending check | merged | `u2/fin_measure` | [fin_measure.md](u2_reports/fin_measure.md) |
-| 3 | `fin_physics` | all merged: the bending fin, the riding round (reported only), the heeled hull's lift, the sailor's technique | merged (b84060c) | `u2/fin_physics`, `u2/fin_physics_heel`, `u2/fin_technique` | [fin_physics.md](u2_reports/fin_physics.md), [fin_ride_physics.md](u2_reports/fin_ride_physics.md), [fin_heel_physics.md](u2_reports/fin_heel_physics.md), [fin_technique.md](u2_reports/fin_technique.md) |
-| 4 | `fin_look` | the bending mesh, the HUD, the screenshots, the checklist | merged (de0a6e8) | `u2/fin_look` | [fin_look.md](u2_reports/fin_look.md) |
-| 5 | `fin_ride` | experiments: the sailor riding the fin (weight aft, rail down, fin size), no game file changed | merged | `u2/fin_ride` | [fin_ride.md](u2_reports/fin_ride.md) |
-| 6 | `hull_lift` | diagnosis: the hull's planing lift against Savitsky, level and heeled; the literature on heeled planing | merged | `u2/hull_lift` | [hull_lift.md](u2_reports/hull_lift.md) |
+| 1 | `fin_sources` | the stiffness, the catalogue fins, the literature | merged | `u2/fin_sources` | [fin_sources.md](../u2_reports/fin_sources.md) |
+| 2 | `fin_measure` | the fin's baseline, the overrides, the telemetry, the what-ifs, the pending check | merged | `u2/fin_measure` | [fin_measure.md](../u2_reports/fin_measure.md) |
+| 3 | `fin_physics` | all merged: the bending fin, the riding round (reported only), the heeled hull's lift, the sailor's technique | merged (b84060c) | `u2/fin_physics`, `u2/fin_physics_heel`, `u2/fin_technique` | [fin_physics.md](../u2_reports/fin_physics.md), [fin_ride_physics.md](../u2_reports/fin_ride_physics.md), [fin_heel_physics.md](../u2_reports/fin_heel_physics.md), [fin_technique.md](../u2_reports/fin_technique.md) |
+| 4 | `fin_look` | the bending mesh, the HUD, the screenshots, the checklist | merged (de0a6e8) | `u2/fin_look` | [fin_look.md](../u2_reports/fin_look.md) |
+| 5 | `fin_ride` | experiments: the sailor riding the fin (weight aft, rail down, fin size), no game file changed | merged | `u2/fin_ride` | [fin_ride.md](../u2_reports/fin_ride.md) |
+| 6 | `hull_lift` | diagnosis: the hull's planing lift against Savitsky, level and heeled; the literature on heeled planing | merged | `u2/hull_lift` | [hull_lift.md](../u2_reports/hull_lift.md) |
 
 | Stop | State |
 |---|---|

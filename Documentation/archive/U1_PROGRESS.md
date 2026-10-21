@@ -1,5 +1,7 @@
 # U1 progress (handoff)
 
+> **Archived with version 0.1 (21 October 2026).** This document is kept exactly as it was when the work in it was finished and merged. What is still open from it lives in [ROADMAP.md](../../ROADMAP.md); the map of all documents is [Documentation/README.md](../README.md).
+
 The live state of U1, "planing on a smaller wet area". The plan and its execution brief are in [PLAYTEST_UPGRADES.md](PLAYTEST_UPGRADES.md). **The lead updates and commits this file after every launch, report and merge.** A lead who takes over starts here.
 
 - **U2 continues from this branch** on `feature/u2-fin` (see [U2_PROGRESS.md](U2_PROGRESS.md)); U2 found the cause of U1's long wet part (the heeled hull's lift). The pull requests go U1 first, then U2, after the manoeuvre matrix.
@@ -10,11 +12,11 @@ The live state of U1, "planing on a smaller wet area". The plan and its executio
 
 | # | Agent | Package | State | Branch | Report |
 |---|---|---|---|---|---|
-| 1 | `measure` | baseline, the reach check, U1.1, then U1.4 (flat tail) | merged (U1.4 reverted) | `u1/measure` | [measure.md](u1_reports/measure.md) |
-| 2 | `sources` | the four numbers that need a source | merged | `u1/sources` | [sources.md](u1_reports/sources.md) |
-| 3 | `porpoising` | U1.5's diagnosis | merged | `u1/porpoising` | [porpoising.md](u1_reports/porpoising.md) |
-| 4 | `physics` | all merged: U1.5 fix, grid, U1.4 back, onset (off), U1.2, U1.3, rake-first on. **Stop rule on targets 3 to 5** | merged (round 3, 1cf467a) | `u1/physics` | [physics.md](u1_reports/physics.md), [physics_onset.md](u1_reports/physics_onset.md), [physics_harness.md](u1_reports/physics_harness.md) |
-| 5 | `finish` | U1.6, U1.7, U1.8: all merged | merged (a649a4a) | `u1/finish` | [finish_u16.md](u1_reports/finish_u16.md), [finish_u178.md](u1_reports/finish_u178.md) |
+| 1 | `measure` | baseline, the reach check, U1.1, then U1.4 (flat tail) | merged (U1.4 reverted) | `u1/measure` | [measure.md](../u1_reports/measure.md) |
+| 2 | `sources` | the four numbers that need a source | merged | `u1/sources` | [sources.md](../u1_reports/sources.md) |
+| 3 | `porpoising` | U1.5's diagnosis | merged | `u1/porpoising` | [porpoising.md](../u1_reports/porpoising.md) |
+| 4 | `physics` | all merged: U1.5 fix, grid, U1.4 back, onset (off), U1.2, U1.3, rake-first on. **Stop rule on targets 3 to 5** | merged (round 3, 1cf467a) | `u1/physics` | [physics.md](../u1_reports/physics.md), [physics_onset.md](../u1_reports/physics_onset.md), [physics_harness.md](../u1_reports/physics_harness.md) |
+| 5 | `finish` | U1.6, U1.7, U1.8: all merged | merged (a649a4a) | `u1/finish` | [finish_u16.md](../u1_reports/finish_u16.md), [finish_u178.md](../u1_reports/finish_u178.md) |
 
 The possible states are: not started → running → reported → merged.
 
