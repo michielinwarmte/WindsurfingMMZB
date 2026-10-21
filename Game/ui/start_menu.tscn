@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" path="res://ui/controls_page.tscn" id="5_controls"]
 [ext_resource type="PackedScene" path="res://ui/howto_page.tscn" id="6_howto"]
 [ext_resource type="PackedScene" path="res://ui/confirm_dialog.tscn" id="7_confirm"]
+[ext_resource type="PackedScene" path="res://ui/race_page.tscn" id="8_race"]
 
 [sub_resource type="Gradient" id="Gradient_shade"]
 offsets = PackedFloat32Array(0, 0.36, 0.62)
@@ -237,6 +238,11 @@ visible = false
 layout_mode = 1
 
 [node name="HowTo" parent="Menu/Root" instance=ExtResource("6_howto")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+
+[node name="Race" parent="Menu/Root" instance=ExtResource("8_race")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1

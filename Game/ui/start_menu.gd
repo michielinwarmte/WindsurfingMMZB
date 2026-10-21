@@ -11,7 +11,7 @@ extends Node
 ##
 ## Keys: arrows (or the gamepad's stick/d-pad) move, Enter (or A) chooses, Esc (or B) goes
 ## back, and on the main page asks whether to quit.
-## For screenshots (after "--"): --page=settings/<tab>|controls|howto|quit opens that page.
+## For screenshots (after "--"): --page=settings/<tab>|controls|howto|race|quit opens that page.
 
 const SAIL_SILVAPLANA_SCENE: String = "res://maps/silvaplana/sail_silvaplana.tscn"
 const FLY_OVER_SCENE: String = "res://maps/silvaplana/dev/terrain_view.tscn"
@@ -40,6 +40,7 @@ enum PlayOption { OPEN_WATER, FLY_OVER, WIND_VIEWER, SAIL_SILVAPLANA, RACE_OPEN_
 @onready var _settings: SettingsMenu = %Settings
 @onready var _controls: ControlsPage = %Controls
 @onready var _howto: HowToPage = %HowTo
+@onready var _race: RacePage = %Race
 @onready var _quit_confirm: ConfirmDialog = %QuitConfirm
 
 
@@ -55,7 +56,8 @@ func _ready() -> void:
 	_howto_button.pressed.connect(_open_page.bind(_howto))
 	_quit_button.pressed.connect(_open_page.bind(_quit_confirm))
 	_quit_confirm.confirmed.connect(_on_quit_confirmed)
-	for page: MenuPage in [_settings, _controls, _howto, _quit_confirm]:
+	_race.start_race.connect(_on_race_page_start)
+	for page: MenuPage in [_settings, _controls, _howto, _race, _quit_confirm]:
 		page.closed.connect(_on_page_closed.bind(page))
 	MenuFocus.setup_buttons([_open_water_button, _sail_silvaplana_button, _race_open_water_button, _race_lake_button, _wind_button, _silvaplana_button,
 		_settings_button, _controls_button, _howto_button, _quit_button])
@@ -87,20 +89,30 @@ func _on_open_water_pressed() -> void:
 	_sailing.start_playing()
 
 
-## Race on open water: the backdrop becomes a race on the T1 training loop against three AI
-## skippers (RACING_PLAN.md, 9A and 9B).
+## Race on open water: the Race page, on the open water (the course, the fleet, who, the countdown);
+## its Start makes the backdrop a race.
 func _on_race_open_water_pressed() -> void:
+	_main_page.hide()
+	_race.open_on(false)
+
+
+## Race on Lake Silvaplana: the Race page, on the lake; its Start opens the lake scene with the race
+## pending (the lake scene takes it from RaceSetup.pending when it starts).
+func _on_race_lake_pressed() -> void:
+	_main_page.hide()
+	_race.open_on(true)
+
+
+## The Race page's Start: the race it set up, on the water it chose.
+func _on_race_page_start(setup: RaceSetup, on_lake: bool) -> void:
+	if on_lake:
+		RaceSetup.pending = setup
+		_open_map_scene(PlayOption.RACE_LAKE, SAIL_SILVAPLANA_SCENE, "Lake Silvaplana")
+		return
 	_remember_choice(PlayOption.RACE_OPEN_WATER)
 	set_process_unhandled_input(false)
 	_menu.queue_free()
-	_sailing.start_race(RaceSetup.race(RaceCourses.T1_NAME))
-
-
-## Race on Lake Silvaplana: the sprint slalom T2 against three AI skippers; the lake scene takes
-## the race from RaceSetup.pending when it starts.
-func _on_race_lake_pressed() -> void:
-	RaceSetup.pending = RaceSetup.race(RaceCourses.T2_NAME)
-	_open_map_scene(PlayOption.RACE_LAKE, SAIL_SILVAPLANA_SCENE, "Lake Silvaplana")
+	_sailing.start_race(setup)
 
 
 ## One of the map track's scenes. Loading the terrain takes a moment, so a line says so
@@ -136,7 +148,8 @@ func _on_page_closed(page: MenuPage) -> void:
 		# The new wind and waves show behind the menu at once.
 		_sailing.apply_settings_live()
 	var buttons: Dictionary[MenuPage, Button] = {
-		_settings: _settings_button, _controls: _controls_button, _howto: _howto_button, _quit_confirm: _quit_button}
+		_settings: _settings_button, _controls: _controls_button, _howto: _howto_button, _quit_confirm: _quit_button,
+		_race: _race_lake_button if RacePage.chosen_lake else _race_open_water_button}
 	_show_main_page(buttons[page])
 
 
@@ -187,6 +200,9 @@ func _apply_command_line_options() -> void:
 				_open_page(_controls)
 			"howto":
 				_open_page(_howto)
+			"race":
+				_main_page.hide()
+				_race.open_on(false)
 			"quit":
 				_open_page(_quit_confirm)
 
