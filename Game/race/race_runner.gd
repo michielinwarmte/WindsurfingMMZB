@@ -48,6 +48,9 @@ var _area: SailingArea = null
 var _running: bool = false
 ## Every board, the player's first, for the tick.
 var _boards: Array[WindsurferNode] = []
+## The other sails' wind shadows on each board's wind (one per board of _boards, its own copy of
+## the fleet's places each tick; AI_FLEET_PLAN.md D5), empty with the setup's shadows off.
+var _shadows: Array[WindShadows] = []
 ## What the runner's own tick costs (the physics of all boards, side by side or not, and the
 ## race's checks), microseconds since the last cost_text().
 var _us_physics: int = 0
@@ -209,6 +212,7 @@ func _physics_process(delta: float) -> void:
 	for node: WindsurferNode in _boards:
 		if not (player_stopped and node == player):
 			node.sail(delta)
+	_cast_shadows()
 	var t0: int = Time.get_ticks_usec()
 	if setup.threads > 0:
 		# One element per board, pulled by at most setup.threads worker tasks as each finishes its
@@ -227,6 +231,41 @@ func _physics_process(delta: float) -> void:
 	_us_race += Time.get_ticks_usec() - t1
 	_ticks_counted += 1
 	_tick += 1
+
+
+## Every board's place and whether its sail is up, into every board's shadows (each its own copy),
+## on this thread before the physics; and each board's wind field told its shadows (set_sea()
+## gives a board a new field, so it is told every tick: one field write).
+func _cast_shadows() -> void:
+	if not setup.shadows:
+		return
+	if _shadows.size() != _boards.size():
+		_shadows.clear()
+		for _node: WindsurferNode in _boards:
+			_shadows.append(WindShadows.make())
+	var xs: PackedFloat32Array = PackedFloat32Array()
+	var zs: PackedFloat32Array = PackedFloat32Array()
+	var casts: PackedByteArray = PackedByteArray()
+	for node: WindsurferNode in _boards:
+		var position: Vector3 = node.sim.telemetry.position
+		xs.append(position.x)
+		zs.append(position.z)
+		casts.append(1 if node.sim.sailor_state == WindsurferSim.SailorState.SAILING else 0)
+	for i: int in _boards.size():
+		_shadows[i].set_fleet(xs, zs, casts, i)
+		_boards[i].sim.wind.disturbance = _shadows[i]
+
+
+## How much of the wind a board is missing to the other sails' shadows right now, 0 to 1 (for the
+## HUD: "in a wind shadow"); 0 with the shadows off.
+func shadow_deficit(node: WindsurferNode) -> float:
+	var i: int = _boards.find(node)
+	if i < 0 or i >= _shadows.size():
+		return 0.0
+	var position: Vector3 = node.sim.telemetry.position
+	var point: Vector3 = Vector3(position.x, 3.0, position.z)
+	var clear: Vector3 = -node.sim.wind.from_direction() * node.sim.wind.speed_at_height(3.0)
+	return 1.0 - _shadows[i].factor_at(point, clear)
 
 
 ## Board i's physics (a worker task's element, or the loop's).

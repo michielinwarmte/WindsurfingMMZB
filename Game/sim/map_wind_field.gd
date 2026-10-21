@@ -90,9 +90,13 @@ func speed_at_height(height_m: float) -> float:
 	return _now.lake_speed_ms * _profile_from_pattern(height_m)
 
 
-## The map's wind at a world point (the direction the air moves), with the height profile.
+## The map's wind at a world point (the direction the air moves), with the height profile, less
+## what disturbs it there (WindField.disturbance).
 func velocity_at(point: Vector3) -> Vector3:
-	return map_velocity_at(point) * _profile_from_pattern(point.y)
+	var velocity: Vector3 = map_velocity_at(point) * _profile_from_pattern(point.y)
+	if disturbance != null:
+		return velocity * disturbance.factor_at(point, velocity)
+	return velocity
 
 
 ## The map's wind at a point at the pattern's height, horizontal, m/s. Outside the map's

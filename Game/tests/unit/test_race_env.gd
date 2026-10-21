@@ -342,6 +342,35 @@ func test_a_dropped_board_starts_at_its_step_and_a_respawn_begins_a_new_episode(
 	assert_eq(env.race.clock_s(), 0.0, "the gun has gone")
 
 
+func test_with_the_shadows_on_a_board_in_anothers_wind_shadow_is_slower() -> void:
+	# Two boards dropped close-hauled on starboard with the wind from the west: the second 6 m
+	# east (downwind) of the first, in its shadow. 30 s later it is the slower one when the shadows
+	# are on, and as fast when they are off.
+	var speeds: Array[float] = []
+	for shadows: bool in [false, true]:
+		var options: RaceEnv.Options = RaceEnv.Options.new()
+		options.actions = LearnedSkipper.ActionMode.TWA
+		options.shadows = shadows
+		options.prestart_s = 60.0
+		var env: RaceEnv = RaceEnv.new(_course(), 2, 15.0, options)
+		var spot: Vector2 = RaceCourses.pre_start_spot(_course())
+		var drops: Array[RaceEnv.Drop] = [RaceEnv.Drop.at(spot, CLOSE_HAULED_DEG, 0), RaceEnv.Drop.at(spot + Vector2(6.0, 0.0), CLOSE_HAULED_DEG, 0)]
+		env.reset_dropped(7, drops)
+		assert_eq(env.board(1).shadows != null, shadows, "the shadows are there when asked")
+		for k: int in 60:
+			for i: int in 2:
+				env.act(i, PackedFloat32Array([0.25, 0.0, 0.0]))
+			for t: int in env.decision_ticks:
+				env.tick()
+		speeds.append(env.board(1).sim.telemetry.speed_ms - env.board(0).sim.telemetry.speed_ms)
+		if shadows:
+			var wind_at_sail: float = env.board(1).sim.sail.true_wind_at_ce_world.length()
+			var clear_wind: float = env.board(0).sim.sail.true_wind_at_ce_world.length()
+			assert_true(wind_at_sail < 0.95 * clear_wind, "less wind at the shadowed sail: %.2f against %.2f m/s" % [wind_at_sail, clear_wind])
+	assert_true(absf(speeds[0]) < 0.2, "without shadows the two are as fast: %.2f m/s apart" % speeds[0])
+	assert_true(speeds[1] < speeds[0] - 0.1, "in the shadow the second board is slower: %.2f m/s against %.2f without shadows" % [speeds[1], speeds[0]])
+
+
 # ---------------------------------------------------------------- the ceiling: a hand-written wind-angle policy
 
 ## Close-hauled at this angle, broad reaching at RUN_TWA_DEG, and the other tack once the aim is this far

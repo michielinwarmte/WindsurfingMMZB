@@ -49,6 +49,9 @@ var blind: bool = false
 ## Spectating: the player's board does not race (it is parked, hidden and not stepped) and the
 ## camera follows the AI boards, the leader first (RaceRunner, SpectateChoice). --spectate=1.
 var spectate: bool = false
+## The sails cast wind shadows on each other (WindShadows, AI_FLEET_PLAN.md D5), the player's
+## included. --shadows=0 turns them off (to compare, or for the brains trained without them).
+var shadows: bool = true
 
 
 ## The spawn option's value from its name ("random" or "line"; anything else is RANDOM).
@@ -91,7 +94,8 @@ func read_options() -> void:
 	read_options_from(OS.get_cmdline_user_args())
 
 
-## --behind=<m>, --wind=<kt>, --blind=1 and --spectate=1 from a list of arguments; others are left.
+## --behind=<m>, --wind=<kt>, --blind=1, --spectate=1 and --shadows=0 from a list of arguments;
+## others are left.
 func read_options_from(args: PackedStringArray) -> void:
 	for arg: String in args:
 		var value: String = arg.get_slice("=", 1)
@@ -103,6 +107,8 @@ func read_options_from(args: PackedStringArray) -> void:
 			blind = value == "1"
 		elif arg.begins_with("--spectate="):
 			spectate = value == "1"
+		elif arg.begins_with("--shadows="):
+			shadows = value != "0"
 
 
 ## How far behind the start line the boards wait, metres: behind_m when it is set, else 1 m per

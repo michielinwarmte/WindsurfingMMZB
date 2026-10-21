@@ -14,6 +14,10 @@ extends RefCounted
 ## inside a tick, so the copies are the config's numbers wherever they are used.
 
 var config: WindConfig
+## What else disturbs the air at a point, on top of this field's wind (WindDisturbance: the other
+## sails' wind shadows in a race, AI_FLEET_PLAN.md D5); null disturbs nothing. Given by whoever
+## runs the race, never by the physics; a board stepped on a thread must have its own.
+var disturbance: WindDisturbance = null
 ## Simulation time since the field was created. Advanced by step(), never read from a clock.
 var time_s: float = 0.0
 ## Wind speed at the reference height right now (base speed times the gust factor).
@@ -75,9 +79,12 @@ func speed_at_height(height_m: float) -> float:
 	return current_speed_ms * pow(height / _reference_height_m, _shear_exponent)
 
 
-## True wind velocity (the direction the air moves) at a world point.
+## True wind velocity (the direction the air moves) at a world point, less what disturbs it there.
 func velocity_at(point: Vector3) -> Vector3:
-	return -from_direction() * speed_at_height(point.y)
+	var velocity: Vector3 = -from_direction() * speed_at_height(point.y)
+	if disturbance != null:
+		return velocity * disturbance.factor_at(point, velocity)
+	return velocity
 
 
 ## Changes the base wind while the game runs. The gust phase keeps running.

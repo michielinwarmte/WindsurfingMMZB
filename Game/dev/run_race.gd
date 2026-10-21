@@ -35,6 +35,7 @@ extends SceneTree
 ##                         per second of countdown, 40 to 150 m); 150 with --prestart=30 is where the
 ##                         learned brains were trained
 ##   [--blind=1]           the learned brains see no other boards (as in their training)
+##   [--shadows=1]         the sails cast wind shadows on each other (F3, WindShadows); 0 turns them off
 ##   [--stop_after_gun=<s>] stop the race this long after the gun (to look at the start only)
 ##   [--out_dir=<folder>: a CSV per board: race time, x, z, heading, speed, its next step, and what
 ##                         its skipper is doing]
@@ -97,6 +98,8 @@ class Entry:
 	var tacks: int = 0
 	var gybes: int = 0
 	var last_manoeuvre: PlayerController.Manoeuvre = PlayerController.Manoeuvre.NONE
+	## The other sails' wind shadows on this board's wind (--shadows=1), or null.
+	var shadows: WindShadows = null
 	var file: FileAccess = null
 
 
@@ -123,6 +126,7 @@ func _initialize() -> void:
 	var stop_after_gun_s: float = options["stop_after_gun"].to_float() if options.has("stop_after_gun") else INF
 	var behind_m: float = options.get("behind", "-1").to_float()
 	var blind: bool = options.get("blind", "0") != "0"
+	var shadows: bool = options.get("shadows", "1") != "0"
 
 	var course_name: String = options.get("course", "test")
 	var course: Course = course_named(course_name)
@@ -144,6 +148,8 @@ func _initialize() -> void:
 	if entries.is_empty():
 		quit(2)
 		return
+	if shadows:
+		give_shadows(entries)
 	for entry: Entry in entries:
 		entry.file = FileAccess.open(out_dir.path_join(_file_name(entry.name) + ".csv"), FileAccess.WRITE)
 		if entry.file != null:
@@ -167,9 +173,10 @@ func _initialize() -> void:
 		if entry.file != null:
 			entry.file.close()
 
-	print("Race on %s (%s, %d lap%s, %d steps): wind %.0f kt from %.0f deg, %s, seed %d, pre-start %.0f s, spawn %s (seed %d)" % [
+	print("Race on %s (%s, %d lap%s, %d steps): wind %.0f kt from %.0f deg, %s, seed %d, pre-start %.0f s, spawn %s (seed %d)%s" % [
 		course.name, course.sequence, laps, "" if laps == 1 else "s", race.steps().size(), wind_kt, course.axis_deg,
-		", ".join(who) + (" at TWA %.0f" % twa_deg if who.has("autopilot") else ""), random_seed, prestart_s, spawn, spawn_seed])
+		", ".join(who) + (" at TWA %.0f" % twa_deg if who.has("autopilot") else ""), random_seed, prestart_s, spawn, spawn_seed,
+		", wind shadows" if shadows else ""])
 	for result: RaceResult in race.results():
 		var entry: Entry = entries[result.index]
 		# An unfinished board: how far it still is from its next step, so that boards that never
@@ -273,10 +280,35 @@ static func make_entries(race: RaceSim, course: Course, who: PackedStringArray, 
 	return entries
 
 
+## The other sails' wind shadows on every board's wind (F3): one WindShadows per board, its own
+## copy of the fleet's places each tick (cast_shadows()).
+static func give_shadows(entries: Array[Entry]) -> void:
+	for entry: Entry in entries:
+		entry.shadows = WindShadows.make()
+		entry.sim.wind.disturbance = entry.shadows
+
+
+## Every board's place and whether its sail is up, into every board's shadows, before the physics.
+static func cast_shadows(entries: Array[Entry]) -> void:
+	var xs: PackedFloat32Array = PackedFloat32Array()
+	var zs: PackedFloat32Array = PackedFloat32Array()
+	var casts: PackedByteArray = PackedByteArray()
+	for entry: Entry in entries:
+		var position: Vector3 = entry.sim.telemetry.position
+		xs.append(position.x)
+		zs.append(position.z)
+		casts.append(1 if entry.sim.sailor_state == WindsurferSim.SailorState.SAILING else 0)
+	for i: int in entries.size():
+		if entries[i].shadows != null:
+			entries[i].shadows.set_fleet(xs, zs, casts, i)
+
+
 ## One tick of the race: every board (its sailor, the physics, the falls and the manoeuvres
 ## counted), the race told where each one is, and the race clock moved on. With `blind` the
 ## skippers are not told where the others are (the learned brains were trained alone).
 static func step_race(race: RaceSim, entries: Array[Entry], blind: bool = false) -> void:
+	if entries.size() > 1 and entries[0].shadows != null:
+		cast_shadows(entries)
 	for i: int in entries.size():
 		if entries[i].skipper != null and entries.size() > 1 and not blind:
 			_tell_others(entries, i)

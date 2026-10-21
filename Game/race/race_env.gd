@@ -64,6 +64,8 @@ class Options:
 	var wind_bias_deg: float = 0.0
 	## The boards see no other board (as if alone on the course).
 	var blind: bool = false
+	## The sails cast wind shadows on each other (WindShadows, AI_FLEET_PLAN.md D5).
+	var shadows: bool = false
 	## A board further than this from the course's marks is out of the race.
 	var bounds_margin_m: float = 1500.0
 	## When above 0: a board whose progress (progress_m) has not reached a new best for this many
@@ -119,6 +121,8 @@ class Board:
 	## A scripted skipper sailing this board instead of the network (set_scripted()): the yardstick
 	## on the same drops, or company in a race. Its own hands; act() leaves it alone.
 	var scripted: RaceSkipper = null
+	## The other sails' wind shadows on this board's wind (options.shadows), or null.
+	var shadows: WindShadows = null
 	var controls: SimControls
 	## The reward earned since the last reward() call.
 	var pending: float = 0.0
@@ -306,6 +310,8 @@ func act(index: int, action: PackedFloat32Array) -> void:
 ## the physics, the falls and the manoeuvres; then the race is told where everyone is, and the
 ## rewards are counted.
 func tick() -> void:
+	if options.shadows:
+		_cast_shadows()
 	for i: int in _boards.size():
 		var b: Board = _boards[i]
 		if b.done:
@@ -449,7 +455,26 @@ func _make_board(at: Vector2, heading_deg: float, _seed: int) -> Board:
 	b.driver.uses_hold = options.hold and options.actions == LearnedSkipper.ActionMode.TWA
 	b.controls = SimControls.new()
 	b.controller.reset_controls(b.controls)
+	if options.shadows:
+		b.shadows = WindShadows.make()
+		b.sim.wind.disturbance = b.shadows
 	return b
+
+
+## Every board's place and whether its sail is up, into every board's shadows (each its own copy),
+## before the physics of a tick. A parked board's sail casts none.
+func _cast_shadows() -> void:
+	var xs: PackedFloat32Array = PackedFloat32Array()
+	var zs: PackedFloat32Array = PackedFloat32Array()
+	var casts: PackedByteArray = PackedByteArray()
+	for b: Board in _boards:
+		var position: Vector3 = b.sim.telemetry.position
+		xs.append(position.x)
+		zs.append(position.z)
+		casts.append(1 if not b.done and b.sim.sailor_state == WindsurferSim.SailorState.SAILING else 0)
+	for i: int in _boards.size():
+		if _boards[i].shadows != null:
+			_boards[i].shadows.set_fleet(xs, zs, casts, i)
 
 
 ## A board's episode begins where it is: the yardstick set to the distance it has to go.
