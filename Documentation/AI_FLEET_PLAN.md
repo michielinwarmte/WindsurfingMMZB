@@ -162,7 +162,7 @@ Not answered yet: pushing `feature/p9-racing` to GitHub.
 
 ## To continue in another chat
 
-F1 and F2 were built in the night of 20 to 21 October 2026 (Session 52), F5's trainer on 21 October (Session 53). Paste the "To continue" prompt at the end of P9_PROGRESS.md.
+F1 and F2 were built in the night of 20 to 21 October 2026 (Session 52); F5's trainer, F3 and F4 on 21 October (Session 53), and the nights of F5 started that afternoon. Paste the "To continue" prompt at the end of P9_PROGRESS.md.
 
 ## Sources and prior art
 
