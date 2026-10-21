@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="Persona" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://race/persona.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+name = "Lena"
+sail_colour = Color(0.95, 0.25, 0.55, 1)
+home_water = "Lake Garda"
+profile = "slalom specialist, fearless starts, loses the beat"
+start_timing = 0.8
+start_nerve = 0.9
+tacking = 0.4
+gybing = 0.9
+boat_speed = 0.8
+upwind_sense = 0.3
+downwind_sense = 0.8
+gust_appetite = 0.4
+risk = 0.8
+aggression = 0.7
+consistency = 0.7
+start_spot = 0.6
+start_style = 0
+pointing_offset_deg = 1.0
+sail_light_m2 = 7.8
+sail_strong_m2 = 6.2
+gear_switch_kt = 16.0

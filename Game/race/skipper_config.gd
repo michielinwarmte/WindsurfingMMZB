@@ -64,6 +64,11 @@ enum StartStyle { LOOP, HOLD }
 ## on a shorter way in to the line.
 @export_range(1.5, 4.0) var hold_speed_ms: float = 2.5
 
+@export_group("Company")
+## Another board this close, metres, and getting closer, makes it bear away to keep clear (when it
+## is the one that must, under the rules). An aggressive skipper lets others come closer.
+@export_range(5.0, 30.0) var keep_clear_m: float = 15.0
+
 @export_group("Tactics")
 ## How big a header (a wind shift that forces it away from the mark) makes it tack, degrees.
 @export_range(5.0, 20.0) var shift_sensitivity_deg: float = 10.0

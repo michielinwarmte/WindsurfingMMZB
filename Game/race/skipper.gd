@@ -65,8 +65,8 @@ const THROUGH_LINE_M: float = 30.0
 ## swings wide). See _course_to().
 const APPROACH_ROOM_M: float = 40.0
 const APPROACH_ROOM_S: float = 6.0
-## Rule 6: another board this close, metres, and getting closer, makes it bear away this much.
-const KEEP_CLEAR_M: float = 15.0
+## Rule 6: another board within the sheet's keep_clear_m and getting closer makes it bear away this
+## much, degrees.
 const KEEP_CLEAR_BEAR_AWAY_DEG: float = 15.0
 ## The best downwind angle of POLAR_15KT.md, which the character sheets' downwind angles are
 ## measured from (see _downwind_twa_deg()).
@@ -258,6 +258,9 @@ const POLAR_SPEED_MS: PackedFloat32Array = [
 ## The character sheet. (random_seed seeds its steering noise, and note says what it is doing:
 ## "beat", "run", "start: away", ...; both are RaceSkipper's.)
 var config: SkipperConfig = SkipperConfig.new()
+## The persona this skipper plays (F4), if any: its sheet is drawn afresh for every race in
+## setup() (the day's form, seeded by random_seed, and the gear for the wind).
+var persona: Persona = null
 ## Before its start: the seconds it has to spare (the time until it wants to cross, less the time
 ## it expects to need to get to its spot), for the tools.
 var start_spare_s: float = 0.0
@@ -389,6 +392,8 @@ func setup(sim: WindsurferSim, controller: PlayerController, hands: AiHands, rac
 	_race = race
 	_index = index
 	_controller.hands = hands
+	if persona != null:
+		config = persona.to_skipper_config(random_seed, sim.telemetry.tws_10m_kt)
 	_rng.seed = random_seed
 	_time_s = 0.0
 	_wind_memory_deg = sim.telemetry.wind_from_bearing_deg
@@ -881,7 +886,7 @@ func _keep_clear_deg(telemetry: Telemetry, tack: float) -> float:
 			continue
 		var other: Vector2 = _race.board_position(j)
 		var apart: Vector2 = other - position
-		if apart.length() > KEEP_CLEAR_M:
+		if apart.length() > config.keep_clear_m:
 			continue
 		var other_velocity: Vector2 = (other - _others_last[j]) / _others_dt_s
 		if apart.dot(other_velocity - _velocity) < 0.0:

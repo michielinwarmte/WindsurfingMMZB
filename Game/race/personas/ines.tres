@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="Persona" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://race/persona.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+name = "Ines"
+sail_colour = Color(0.8, 0.8, 0.3, 1)
+home_water = "Cascais"
+profile = "careful: wide margins, never over early, rarely falls"
+start_timing = 0.8
+start_nerve = 0.3
+tacking = 0.6
+gybing = 0.6
+boat_speed = 0.6
+upwind_sense = 0.6
+downwind_sense = 0.6
+gust_appetite = 0.1
+risk = 0.15
+aggression = 0.2
+consistency = 0.95
+start_spot = 0.4
+start_style = 1
+pointing_offset_deg = 0.0
+sail_light_m2 = 7.8
+sail_strong_m2 = 6.2
+gear_switch_kt = 17.0

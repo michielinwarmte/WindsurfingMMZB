@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="Persona" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://race/persona.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+name = "Kofi"
+sail_colour = Color(0.35, 0.25, 0.15, 1)
+home_water = "Lake Victoria"
+profile = "the fastest board on the water, on the days it all comes together"
+start_timing = 0.5
+start_nerve = 0.6
+tacking = 0.6
+gybing = 0.6
+boat_speed = 0.95
+upwind_sense = 0.6
+downwind_sense = 0.7
+gust_appetite = 0.4
+risk = 0.6
+aggression = 0.6
+consistency = 0.2
+start_spot = 0.5
+start_style = 0
+pointing_offset_deg = 0.5
+sail_light_m2 = 7.8
+sail_strong_m2 = 6.2
+gear_switch_kt = 16.0
