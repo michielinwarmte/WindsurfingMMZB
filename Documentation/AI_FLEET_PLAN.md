@@ -94,6 +94,31 @@ Every skipper runs a small state machine:
 - **The hands** stay the scripted controller and autopilot, improved where the skipper agent found them short (the tack stops the board for 6.5 s; no way to slow down without stalling; the gybe entry), and optionally refined by the evolution trainer on the fine physics with a speed reward, per wind. The night's harness, the observation and the brain file carry over.
 - **The test before the game:** the trained head races on fine boards in `tools/race.sh` against the scripted skipper on all ten templates at three winds; it must finish them all and beat the all-rounder more often than not.
 
+### D6b. F5's training design (21 October 2026, after two nights of evolution)
+
+Agreed with Max on 21 October 2026, after the gens tool showed what two nights of evolution buy: brains that start, beat to mark 1 and park beside it. The inputs were not the problem (the brain already sees the next two steps with their distance, bearing, bearing from the wind and the side to leave them on); the candy was, and the rehearsal.
+
+**1. The candy follows the course, not the straight line to the mark.** The old reward paid "metres closer to the next mark", so the best-paid place on the course was beside the mark, and going round it (sailing away first) cost candy. The new reward, per tick:
+- On a leg whose next point lies inside the tacking cone (its bearing from the wind within the pointing angle plus a margin), the reward is the **speed made good to windward along the course axis**, so going out to a layline pays the same as pointing at the mark, and the brain can learn that sailing further from the mark before tacking is faster (Max). Inside the gybing cone downwind, the same with the speed made good downwind.
+- Otherwise (the mark can be laid), the reward is the **closing speed to the rounding point**: the point past the mark where the rounding completes, on the correct side, not the mark itself.
+- **A bonus for every completed rounding** (worth about 50 m of progress), a **small penalty for every tack and gybe** (about 5 m: the lost speed already costs progress; the candy makes the lesson clear early), the penalties for falls (50 m) and OCS (50 m), a bonus for finishing (100 m) and the time penalty, with the weights in `RaceEnv`'s table as before.
+- Two numbers more in what it sees: the bearing to the rounding point, and the direction of the leg after the mark.
+
+**2. Training in parts (a curriculum), each from random situations with short episodes**, the same brain carried from part to part, each part ended by a criterion or by the morning:
+
+| Stage | Dropped where | Episode | Paid for | Done when |
+|---|---|---|---|---|
+| S1 the beat | 150 to 600 m below a windward mark, up to 200 m to either side, any heading, 10 to 24 kt | 90 s | speed made good, few tacks | its speed made good is 80 % of the all-rounder's |
+| S2 the rounding | 60 to 150 m from a mark at any bearing, inside and outside the laylines, port and starboard roundings | 60 s | the rounding, then the next leg | 80 % of the drops round within 40 s |
+| S3 the run and the gybe mark, the gate | the same, downwind steps and gates | 60 s | the same | the same |
+| S4 full laps | the ten templates at random sizes and random shapes, 10 to 24 kt, both waters (D6) | 8 min | the whole course | finishes 90 %, within 1.3 times the all-rounder's time |
+| S5 the start | F2's sailing area, the countdown, the line and its bias | 3 min | the start, OCS | starts within 10 s of the gun, OCS under 10 % |
+| S6 company | 6 to 12 boards in self-play, the wind shadows once F3 lands | 8 min | the place and the time | beats the all-rounder more often than not on all templates |
+
+**3. PPO in Python over the bridge** (decision 3: torch and Stable-Baselines3 on Max's PC), as RACING_PLAN.md's 9C planned and the night of 19 to 20 October did not build (it built the evolution harness instead). The head decides at 2 Hz (D1); between decisions the hands sail. Each Godot worker runs one race of up to 12 boards and exchanges all its boards' observations and actions with Python once per decision, so a 16-process laptop gives about 300 decisions per second. The trainer writes a brain file every half hour of training as `Game/race/brains/<run>_gen<N>.json` and the best as `<run>_best.json`, so `tools/gens.sh --run=<run>` shows the progress of any night, and `brain:<run>_best` races in the game.
+
+**What it costs.** The learning costs the laptop's nights, not tokens: the short stages (S1 to S3) a few hours each, S4 and S5 a night each, S6 two nights or more: four to six nights in all, each started with one command (`tools/train.sh --stage=<name> --hours=<n>`, resuming from the last brain). The tokens go to building it: one agent at extra-high effort for the bridge, the reward, the curriculum's drops and the Python package with its parity test (about 0.6 to 1.0 M, the size of the night's physics package), the lead's briefs and merges (about 0.1 M), and a look at the curve each morning (under 50,000). Needed once on Max's PC: `pip install torch stable-baselines3`.
+
 ### D7. Tokens: how the process stays cheap
 
 This is a long process, and Max's tokens are the scarce thing; the laptop's nights are not. So:
@@ -111,7 +136,7 @@ This is a long process, and Max's tokens are the scarce thing; the laptop's nigh
 - **F2. The living skipper.** The state machine, free sailing in an area, the navigation skill, the start plan with the timing loop and the hold-back skill in the hands, the end choice from the line bias; spawning anywhere; the countdown gathers the fleet. In the game with the scripted head. **Built** (the agent `living_skipper`, merged babc43b, 21 October 2026: 16 boards from random spots all start within 6 s of the gun on both courses at 15 kt; the head thinks at 2 Hz). *Stop: Max watches 16 boards gather and start.* (Open for Max, P9_PROGRESS.md.)
 - **F3. Real life.** Wind shadows, the keep-clear rules with penalties, gear per persona. *Stop: Max races in a crowd.*
 - **F4. Personas.** The skill sheet, the profiles, 12 personas, the fleet picker in the menu (size, who), the results by course family showing the specialists. *Stop: the team names them.*
-- **F5. The trained head.** The random-course trainer (all ten templates and random shapes, random winds, both waters), the bridge, PPO in self-play on the release engine, the nights with `brains/latest.json` and the morning race for Max, the evaluation on all templates against the scripted head, the personas on the trained head. *Stop: the first fleet race against the trained head.*
+- **F5. The trained head.** The training design of D6b (the candy along the course, the curriculum S1 to S6, PPO over the bridge), the random-course drops, the Python package, the nights with `<run>_gen<N>.json` for `tools/gens.sh` and the morning race for Max, the evaluation on all templates against the scripted head, the personas on the trained head. Moved ahead of F3 and F4 on 21 October 2026 so the laptop's nights are used. *Stop: the first fleet race against the trained head.*
 - **F6. The big fleet in the game.** 24 and 32 boards measured and played; 40 if the frame allows. *Stop: 32 boards at 60 fps on the laptop.*
 
 ## The decisions (answered 20 October 2026)
