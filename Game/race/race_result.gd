@@ -15,6 +15,8 @@ var finish_time_s: float = -1.0
 var gap_s: float = -1.0
 ## The race time at each completed step, seconds: the start, every mark and gate, the finish.
 var splits: PackedFloat32Array = PackedFloat32Array()
+## Race time added for penalties (RaceRules), already in finish_time_s; 0 for none.
+var penalty_s: float = 0.0
 var steps_done: int = 0
 var steps_total: int = 0
 
@@ -26,9 +28,10 @@ func to_line() -> String:
 	var split_texts: PackedStringArray = PackedStringArray()
 	for split: float in splits:
 		split_texts.append(format_time(split))
-	return "%d. %-12s %9s %10s  %d/%d steps  splits %s" % [
+	var penalty_text: String = "  (+%.0f s penalty)" % penalty_s if penalty_s > 0.0 else ""
+	return "%d. %-12s %9s %10s  %d/%d steps  splits %s%s" % [
 		place, name, time_text, gap_text, steps_done, steps_total,
-		" ".join(split_texts) if not split_texts.is_empty() else "-"]
+		" ".join(split_texts) if not split_texts.is_empty() else "-", penalty_text]
 
 
 ## A race time as minutes, seconds and tenths: 102.34 is "1:42.3". "-" for a negative time.

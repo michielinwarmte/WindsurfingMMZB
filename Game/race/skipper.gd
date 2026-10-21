@@ -17,7 +17,11 @@ extends RaceSkipper
 ##      beat at most (max_tacks_per_beat).
 ##   4. Downwind: the same with the polar's downwind angle and gybes.
 ##   5. The start: a timed run (see _start_heading()).
-##   6. Keep clear: another board within KEEP_CLEAR_M and closing makes it bear away a little.
+##   6. Keep clear: another board within KEEP_CLEAR_M and closing makes it bear away a little; with
+##      the racing rules (RaceRules, F3) only when it is the one that must keep clear (port of
+##      starboard, windward of leeward, astern of ahead, outside at the mark); a right-of-way board
+##      holds its course. A penalty from the judge (it touched a board it had to keep clear of) is
+##      taken at once: a full turn, a tack and a gybe (_penalty_turn_heading()).
 ##   7. Gust hunting: a hook only (_gust_lean_deg()), for the lake's wind field.
 ##   8. Reaction and noise: the wanted heading reaches the stick reaction_time_s late, plus a slow
 ##      random wander of steering_noise_deg; the tack requests wait the reaction time too.
@@ -351,6 +355,16 @@ var _others_dt_s: float = THINK_INTERVAL_S
 ## whether it is keeping clear of one this tick (for the note).
 var _others_last: PackedVector2Array = PackedVector2Array()
 var _keeping_clear: bool = false
+## The penalty turn (F3): its phase (0 none; 1 the tack asked for; 2 bearing away for the gybe;
+## 3 the gybe asked for), when it began, and how many it has taken.
+var _penalty_phase: int = 0
+var _penalty_from_s: float = 0.0
+var penalty_turns: int = 0
+## A penalty turn that has not come round in this long is given up (the judge keeps the penalty,
+## and the skipper tries again), seconds.
+const PENALTY_TURN_GIVE_UP_S: float = 45.0
+## Bearing away to this wind angle between the tack and the gybe of a penalty turn, degrees.
+const PENALTY_GYBE_FROM_TWA_DEG: float = 120.0
 ## Its own copies of the polar's tables (see _polar_speed_ms()).
 var _polar_winds: PackedFloat32Array = POLAR_WINDS_KT.duplicate()
 var _polar_twa: PackedFloat32Array = POLAR_TWA_DEG.duplicate()
@@ -416,6 +430,7 @@ func _forget_the_race() -> void:
 	_free_returning = false
 	_finish_clear_point = Vector2.INF
 	_clear_of_finish = false
+	_penalty_phase = 0
 	if _hands != null:
 		_hands.hold_speed_ms = 0.0
 
@@ -478,6 +493,11 @@ func _think(telemetry: Telemetry) -> void:
 	_going_from_hold = false
 	_new_step_check()
 	_keeping_clear = false
+	# A penalty from the judge is taken at once, while racing (not in the pre-start crowd, where
+	# a circle would be a danger to everyone; it is carried to the start and taken on the first leg).
+	if rules != null and _penalty_phase == 0 and state == State.RACING and rules.penalties(_index) > 0:
+		_penalty_phase = 1
+		_penalty_from_s = _time_s
 	var decided_deg: float = _decide(telemetry)
 	if _keeping_clear:
 		note += ", keeping clear"
@@ -503,6 +523,8 @@ func manoeuvres_on_step(step: int) -> int:
 ## The heading it wants now, before its reaction time and its noise: free sailing, clearing the
 ## finish, or the next step of the race (the start included).
 func _decide(telemetry: Telemetry) -> float:
+	if _penalty_phase > 0:
+		return _penalty_turn_heading(telemetry)
 	match state:
 		State.FREE_SAILING:
 			return _free_sail_heading(telemetry)
@@ -808,17 +830,54 @@ func _best_downwind_twa_deg() -> float:
 	return best_twa
 
 
+## The penalty turn: a full circle, the tack first and then the gybe, so the judge sees the heading
+## sweep round and clears the penalty (RaceRules.FULL_TURN_DEG). The hands are pressed directly:
+## the usual manoeuvre gating (the reaction time, the tacks per beat) does not apply to a penalty.
+func _penalty_turn_heading(telemetry: Telemetry) -> float:
+	note = "penalty turn"
+	var tack: float = _tack()
+	var wind_deg: float = telemetry.wind_from_bearing_deg
+	var free: bool = _controller.manoeuvre == PlayerController.Manoeuvre.NONE
+	if _time_s - _penalty_from_s > PENALTY_TURN_GIVE_UP_S:
+		_penalty_phase = 0  # given up for now; it is asked for again while the penalty stands
+		return _last_wanted_deg
+	match _penalty_phase:
+		1:
+			# The tack: pressed as soon as the controller is free, from the beat's angle.
+			if free and _pointing:
+				_hands.tack = true
+				_penalty_phase = 2
+			return wind_deg - tack * _upwind_twa_deg()
+		2:
+			# After the tack (on the new tack now): bear away for the gybe.
+			if free and absf(telemetry.twa_deg) >= PENALTY_GYBE_FROM_TWA_DEG - 15.0 and _time_s - _penalty_from_s > 4.0:
+				_hands.tack = true
+				_penalty_phase = 3
+			return wind_deg - tack * PENALTY_GYBE_FROM_TWA_DEG
+		_:
+			# The gybe is under way or done: round it comes; the judge clears the penalty when the
+			# circle is complete, and the turn is over once the controller is free again.
+			if free and _time_s - _penalty_from_s > 8.0:
+				_penalty_phase = 0
+				penalty_turns += 1
+			return wind_deg - tack * _upwind_twa_deg()
+
+
 ## Rule 6: another board close and getting closer makes it bear away a little (to pass to leeward
 ## of it), never deeper than the angle it runs at (deeper the board stops planing). The change of
-## heading, degrees.
+## heading, degrees. With the judge (rules), only the board that must keep clear bears away, and
+## only from the board it must keep clear of; a right-of-way board holds its course.
 func _keep_clear_deg(telemetry: Telemetry, tack: float) -> float:
 	# Not while it goes from its hold for the start: bearing away there slides the board along the
-	# line, and it misses its spot (no right of way yet: F3's rules).
+	# line, and it misses its spot (the rules apply, but a start is a start).
 	if _going_from_hold:
 		return 0.0
 	var position: Vector2 = _position(telemetry)
+	var must_avoid: int = rules.burdened_by(_index) if rules != null else -2
 	for j: int in _race.board_count():
 		if j == _index:
+			continue
+		if must_avoid != -2 and j != must_avoid:
 			continue
 		var other: Vector2 = _race.board_position(j)
 		var apart: Vector2 = other - position

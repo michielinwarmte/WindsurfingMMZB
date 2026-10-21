@@ -29,6 +29,8 @@ var _fleet: Label
 var _countdown: Label
 var _split: Label
 var _warning: Label
+## How long the penalty's reason is shown large after a breach, seconds (then the shorter line).
+const PENALTY_WARNING_S: float = 8.0
 var _results: PanelContainer
 var _results_text: Label
 ## The board watched while spectating ("" when racing yourself), and whether the camera follows the
@@ -143,7 +145,8 @@ func set_watching(board_name: String, follows_leader: bool) -> void:
 ## telemetry, every frame.
 ## shadow_deficit: the share of the wind the other sails' shadows take from this board right now
 ## (RaceRunner.shadow_deficit(); 0: none), shown on the wind line when it is more than a few percent.
-func update_from(race: RaceSim, index: int, t: Telemetry, shadow_deficit: float = 0.0) -> void:
+## rules: the judge (RaceRules), for the penalty warning and the penalty carried; null for none.
+func update_from(race: RaceSim, index: int, t: Telemetry, shadow_deficit: float = 0.0, rules: RaceRules = null) -> void:
 	var tack: String = "starboard tack" if t.twa_deg >= 0.0 else "port tack"
 	var state: String = "planing" if t.is_planing else ("luffing" if t.is_luffing else "")
 	if t.sailor_state == 1:
@@ -176,11 +179,18 @@ func update_from(race: RaceSim, index: int, t: Telemetry, shadow_deficit: float 
 		_fleet.text = fleet_text(race, index, "you" if _watching.is_empty() else "<< camera")
 		_fleet_refresh_at_s = race.clock_s() + FLEET_REFRESH_S
 	_show_split(race, index)
+	var penalised_s: float = race.race_time_s() - rules.last_breach_s(index) if rules != null else INF
 	if race.is_ocs(index):
 		_warning.text = "Over the line early: go back behind it"
 		_warning.show()
 	elif race.wrong_side_warning(index):
 		_warning.text = "Wrong side of the mark"
+		_warning.show()
+	elif rules != null and penalised_s < PENALTY_WARNING_S and rules.penalties(index) > 0:
+		_warning.text = "Penalty: %s. Turn a full circle, or +%.0f s at the finish" % [rules.breach_text(index), RaceRules.TIME_PENALTY_S]
+		_warning.show()
+	elif rules != null and rules.penalties(index) > 0 and not race.is_finished(index):
+		_warning.text = "A penalty stands: turn a full circle, or +%.0f s" % rules.time_penalty_s(index)
 		_warning.show()
 	else:
 		_warning.hide()
@@ -248,7 +258,8 @@ static func results_table(race: RaceSim) -> String:
 	var lines: PackedStringArray = PackedStringArray(["  Results", ""])
 	for result: RaceResult in race.results():
 		if result.finished:
-			lines.append("  %d. %-14s %s   +%s" % [result.place, result.name, clock(result.finish_time_s), clock(result.gap_s)])
+			var penalty: String = "   (%.0f s penalty)" % result.penalty_s if result.penalty_s > 0.0 else ""
+			lines.append("  %d. %-14s %s   +%s%s" % [result.place, result.name, clock(result.finish_time_s), clock(result.gap_s), penalty])
 		else:
 			lines.append("  %d. %-14s sailing, %d of %d" % [result.place, result.name, result.steps_done, result.steps_total])
 	lines.append("")

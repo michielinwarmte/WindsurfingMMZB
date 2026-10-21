@@ -38,6 +38,9 @@ class Board:
 	var splits: PackedFloat32Array = PackedFloat32Array()
 	## -1 while it races.
 	var finish_time_s: float = -1.0
+	## Race time added at the finish for penalties not cleared by then (RaceRules; the race asks
+	## for it every tick, set_time_penalty_s()), seconds.
+	var penalty_s: float = 0.0
 	var ocs: bool = false
 	## The race time until which its "wrong side" warning shows.
 	var wrong_side_until_s: float = -INF
@@ -289,6 +292,20 @@ func is_finished(index: int) -> bool:
 	return _boards[index].finish_time_s >= 0.0
 
 
+## The race time a board's uncleared penalties will add at its finish (RaceRules.time_penalty_s();
+## whoever runs the race sets it every tick, so the finish adds what stands then). Nothing after
+## the board has finished.
+func set_time_penalty_s(index: int, seconds: float) -> void:
+	var board: Board = _boards[index]
+	if board.finish_time_s < 0.0:
+		board.penalty_s = maxf(seconds, 0.0)
+
+
+## The race time a board's penalties added (or will add), seconds.
+func time_penalty_s(index: int) -> float:
+	return _boards[index].penalty_s
+
+
 ## True for WRONG_SIDE_WARNING_S after a board went round or past its next mark on the wrong side.
 func wrong_side_warning(index: int) -> bool:
 	return _clock_s < _boards[index].wrong_side_until_s
@@ -311,6 +328,7 @@ func results() -> Array[RaceResult]:
 		result.finish_time_s = board.finish_time_s
 		result.gap_s = board.finish_time_s - winner_s if result.finished else -1.0
 		result.splits = board.splits.duplicate()
+		result.penalty_s = board.penalty_s
 		result.steps_done = board.next_step
 		result.steps_total = _steps.size()
 		list.append(result)
@@ -366,7 +384,8 @@ func _complete_step(board: Board, at_s: float) -> void:
 	board.next_step += 1
 	_order_stale = true
 	if board.next_step == _steps.size():
-		board.finish_time_s = at_s
+		# Its time is the crossing plus any penalty it still carries (the race ends by the crossing).
+		board.finish_time_s = at_s + board.penalty_s
 		if _first_finish_s < 0.0 or at_s < _first_finish_s:
 			_first_finish_s = at_s
 

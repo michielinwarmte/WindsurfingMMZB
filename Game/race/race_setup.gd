@@ -52,6 +52,9 @@ var spectate: bool = false
 ## The sails cast wind shadows on each other (WindShadows, AI_FLEET_PLAN.md D5), the player's
 ## included. --shadows=0 turns them off (to compare, or for the brains trained without them).
 var shadows: bool = true
+## The racing rules are kept (RaceRules, F3): the AI turns a circle for a penalty, the player is
+## warned and carries 20 s to the finish unless it turns one. --rules=0 turns them off.
+var rules: bool = true
 
 
 ## The spawn option's value from its name ("random" or "line"; anything else is RANDOM).
@@ -109,6 +112,8 @@ func read_options_from(args: PackedStringArray) -> void:
 			spectate = value == "1"
 		elif arg.begins_with("--shadows="):
 			shadows = value != "0"
+		elif arg.begins_with("--rules="):
+			rules = value != "0"
 
 
 ## How far behind the start line the boards wait, metres: behind_m when it is set, else 1 m per

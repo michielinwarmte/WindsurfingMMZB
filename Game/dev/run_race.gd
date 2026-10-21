@@ -36,6 +36,8 @@ extends SceneTree
 ##                         learned brains were trained
 ##   [--blind=1]           the learned brains see no other boards (as in their training)
 ##   [--shadows=1]         the sails cast wind shadows on each other (F3, WindShadows); 0 turns them off
+##   [--rules=1]           the racing rules are kept (F3, RaceRules): a scripted skipper turns a circle for a
+##                         penalty, a learned one carries 20 s to the finish; 0 turns them off
 ##   [--stop_after_gun=<s>] stop the race this long after the gun (to look at the start only)
 ##   [--out_dir=<folder>: a CSV per board: race time, x, z, heading, speed, its next step, and what
 ##                         its skipper is doing]
@@ -127,6 +129,7 @@ func _initialize() -> void:
 	var behind_m: float = options.get("behind", "-1").to_float()
 	var blind: bool = options.get("blind", "0") != "0"
 	var shadows: bool = options.get("shadows", "1") != "0"
+	var with_rules: bool = options.get("rules", "1") != "0"
 
 	var course_name: String = options.get("course", "test")
 	var course: Course = course_named(course_name)
@@ -150,6 +153,7 @@ func _initialize() -> void:
 		return
 	if shadows:
 		give_shadows(entries)
+	var rules: RaceRules = give_rules(entries, race, course) if with_rules else null
 	for entry: Entry in entries:
 		entry.file = FileAccess.open(out_dir.path_join(_file_name(entry.name) + ".csv"), FileAccess.WRITE)
 		if entry.file != null:
@@ -160,7 +164,7 @@ func _initialize() -> void:
 	var gun_seen: bool = false
 	var ticks: int = roundi((free_sail_s + prestart_s + seconds) / DT)
 	for tick: int in ticks:
-		step_race(race, entries, blind)
+		step_race(race, entries, blind, rules)
 		if tick % CSV_EVERY == 0:
 			for i: int in entries.size():
 				_write_row(entries[i], race, i)
@@ -176,7 +180,7 @@ func _initialize() -> void:
 	print("Race on %s (%s, %d lap%s, %d steps): wind %.0f kt from %.0f deg, %s, seed %d, pre-start %.0f s, spawn %s (seed %d)%s" % [
 		course.name, course.sequence, laps, "" if laps == 1 else "s", race.steps().size(), wind_kt, course.axis_deg,
 		", ".join(who) + (" at TWA %.0f" % twa_deg if who.has("autopilot") else ""), random_seed, prestart_s, spawn, spawn_seed,
-		", wind shadows" if shadows else ""])
+		(", wind shadows" if shadows else "") + (", the rules" if with_rules else "")])
 	for result: RaceResult in race.results():
 		var entry: Entry = entries[result.index]
 		# An unfinished board: how far it still is from its next step, so that boards that never
@@ -186,6 +190,8 @@ func _initialize() -> void:
 	print("%s at race time %s; CSV files in %s" % [
 		"Finished" if race.phase() == RaceSim.Phase.FINISHED else "Stopped", RaceResult.format_time(race.race_time_s()), out_dir])
 	print(start_report(race, entries, outside_at_gun))
+	if rules != null:
+		print(penalty_report(rules, entries))
 	quit(0)
 
 
@@ -212,6 +218,20 @@ static func start_report(race: RaceSim, entries: Array[Entry], outside_at_gun: P
 		lines.append("  %-16s start %s%s" % [entries[i].name, "%+6.1f s" % delay_s if started else "   -   ", "  OCS" if skipper.was_ocs else ""])
 	lines.append("  longest start delay %.1f s, %d not started, %d OCS, %d outside the sailing area at the gun%s" % [
 		longest_s, not_started, ocs, outside_at_gun.size(), (": " + ", ".join(outside_at_gun)) if not outside_at_gun.is_empty() else ""])
+	return "\n".join(lines)
+
+
+## The penalties: one line per board that got any (how many, how many it cleared by turning, the
+## time it carried), and the total.
+static func penalty_report(rules: RaceRules, entries: Array[Entry]) -> String:
+	var lines: PackedStringArray = PackedStringArray()
+	var total: int = 0
+	for i: int in entries.size():
+		var given: int = rules.penalties(i) + rules.turns_done(i)
+		total += given
+		if given > 0:
+			lines.append("  %-16s %d penalt%s, %d turned, %.0f s carried" % [entries[i].name, given, "y" if given == 1 else "ies", rules.turns_done(i), rules.time_penalty_s(i)])
+	lines.insert(0, "Penalties: %d" % total)
 	return "\n".join(lines)
 
 
@@ -288,6 +308,31 @@ static func give_shadows(entries: Array[Entry]) -> void:
 		entry.sim.wind.disturbance = entry.shadows
 
 
+## The racing rules' judge for the race, given to every scripted skipper (it keeps clear by the
+## rules and turns a circle for a penalty).
+static func give_rules(entries: Array[Entry], race: RaceSim, course: Course) -> RaceRules:
+	var rules: RaceRules = RaceRules.new(race.board_count(), course.axis_deg)
+	for entry: Entry in entries:
+		if entry.skipper != null:
+			entry.skipper.rules = rules
+	return rules
+
+
+## The judge told where everyone is after the tick, and every board's time penalty as it stands
+## handed to the race.
+static func judge(rules: RaceRules, race: RaceSim, entries: Array[Entry]) -> void:
+	var marks: PackedVector2Array = PackedVector2Array()
+	for i: int in entries.size():
+		var t: Telemetry = entries[i].sim.telemetry
+		rules.set_board(i, Vector2(t.position.x, t.position.z), t.heading_deg, 1.0 if t.twa_deg >= 0.0 else -1.0, t.speed_ms,
+			t.sailor_state == WindsurferSim.SailorState.SAILING)
+		var step: RaceStep = race.next_step(i)
+		marks.append(step.points[0] if step != null and step.kind == RaceStep.Kind.MARK else Vector2.INF)
+	rules.step(DT, marks)
+	for i: int in entries.size():
+		race.set_time_penalty_s(i, rules.time_penalty_s(i))
+
+
 ## Every board's place and whether its sail is up, into every board's shadows, before the physics.
 static func cast_shadows(entries: Array[Entry]) -> void:
 	var xs: PackedFloat32Array = PackedFloat32Array()
@@ -306,7 +351,7 @@ static func cast_shadows(entries: Array[Entry]) -> void:
 ## One tick of the race: every board (its sailor, the physics, the falls and the manoeuvres
 ## counted), the race told where each one is, and the race clock moved on. With `blind` the
 ## skippers are not told where the others are (the learned brains were trained alone).
-static func step_race(race: RaceSim, entries: Array[Entry], blind: bool = false) -> void:
+static func step_race(race: RaceSim, entries: Array[Entry], blind: bool = false, rules: RaceRules = null) -> void:
 	if entries.size() > 1 and entries[0].shadows != null:
 		cast_shadows(entries)
 	for i: int in entries.size():
@@ -316,6 +361,8 @@ static func step_race(race: RaceSim, entries: Array[Entry], blind: bool = false)
 			_sail(entries[i])
 		race.update_board(i, _where(entries[i]))
 	race.step(DT)
+	if rules != null:
+		judge(rules, race, entries)
 
 
 ## The course to race: the test loop, T1, or a course file.

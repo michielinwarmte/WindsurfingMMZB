@@ -50,8 +50,10 @@ class Stage:
 	var waves: bool = false
 	var gusts: bool = false
 	var shifts: bool = false
-	## The sails shadow each other (F3's WindShadows): the stages with company.
+	## The sails shadow each other (F3's WindShadows), and the racing rules are kept (RaceRules):
+	## the stages with company.
 	var shadows: bool = false
+	var rules: bool = false
 	var wind_min_kt: float = 10.0
 	var wind_max_kt: float = 24.0
 	## The countdown, seconds, drawn between the two (0: no countdown; the boards are started).
@@ -63,8 +65,8 @@ class Stage:
 	var stall_s: float = 0.0
 
 	func describe() -> String:
-		return "%s (%s): %d boards%s%s, %.0f s episodes, %.0f to %.0f kt, %s water, %s%s" % [name, Kind.keys()[kind].to_lower(),
-			boards, " blind" if blind else "", " with wind shadows" if shadows else "", episode_s, wind_min_kt, wind_max_kt, "wavy" if waves else "flat",
+		return "%s (%s): %d boards%s%s%s, %.0f s episodes, %.0f to %.0f kt, %s water, %s%s" % [name, Kind.keys()[kind].to_lower(),
+			boards, " blind" if blind else "", " with wind shadows" if shadows else "", " and the rules" if rules else "", episode_s, wind_min_kt, wind_max_kt, "wavy" if waves else "flat",
 			"gusts and shifts" if gusts and shifts else ("gusts" if gusts else ("shifts" if shifts else "a steady wind")),
 			(", a countdown of %.0f to %.0f s" % [prestart_min_s, prestart_max_s]) if prestart_max_s > 0.0 else ""]
 
@@ -97,6 +99,7 @@ static func stage_named(name: String) -> Stage:
 			stage.blind = false
 			stage.respawn_alone = false
 			stage.shadows = true
+			stage.rules = true
 			stage.waves = true
 			stage.gusts = true
 			stage.prestart_min_s = 45.0
@@ -109,6 +112,7 @@ static func stage_named(name: String) -> Stage:
 			stage.blind = false
 			stage.respawn_alone = false
 			stage.shadows = true
+			stage.rules = true
 			stage.waves = true
 			stage.gusts = true
 			stage.shifts = true
@@ -137,6 +141,7 @@ static func make_env(stage: Stage, seed: int, boards: int = 0) -> RaceEnv:
 	options.shifts = stage.shifts
 	options.blind = stage.blind
 	options.shadows = stage.shadows
+	options.rules = stage.rules
 	options.stall_s = stage.stall_s
 	options.laps = 1
 	options.prestart_s = rng.randf_range(stage.prestart_min_s, stage.prestart_max_s) if stage.prestart_max_s > 0.0 else 0.0

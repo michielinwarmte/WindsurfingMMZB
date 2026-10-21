@@ -15,6 +15,9 @@ var note: String = ""
 ## (RaceRunner, the race tool) before setup(); null lets a skipper make its own round the course's
 ## start line, without a shore.
 var sailing_area: SailingArea = null
+## The racing rules' judge of the race it sails in (RaceRules, F3), given by whoever sets up the
+## race; null: no rules (a scripted skipper then bears away from any board close by, as before).
+var rules: RaceRules = null
 
 
 ## The board's own name in a fleet where a character sails more than once ("Rookie 2", set by

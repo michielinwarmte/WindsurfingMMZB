@@ -66,6 +66,8 @@ class Options:
 	var blind: bool = false
 	## The sails cast wind shadows on each other (WindShadows, AI_FLEET_PLAN.md D5).
 	var shadows: bool = false
+	## The racing rules are kept (RaceRules): a penalty costs rule_cost_m, as a time penalty would.
+	var rules: bool = false
 	## A board further than this from the course's marks is out of the race.
 	var bounds_margin_m: float = 1500.0
 	## When above 0: a board whose progress (progress_m) has not reached a new best for this many
@@ -88,6 +90,7 @@ class Options:
 	var manoeuvre_cost_m: float = 5.0
 	var fall_cost_m: float = 50.0
 	var ocs_cost_m: float = 50.0
+	var rule_cost_m: float = 50.0
 	var time_cost_m_per_s: float = 2.0
 
 
@@ -137,6 +140,8 @@ class Board:
 	var manoeuvres: int = 0
 	## Over the line at the gun (once per start at most).
 	var ocs: int = 0
+	## Penalties under the racing rules (options.rules), and how many were charged so far.
+	var penalties_charged: int = 0
 	var decisions: int = 0
 	## The sailing distance still to go at the last tick, and how many steps were done then.
 	var remaining_m: float = 0.0
@@ -170,6 +175,8 @@ var wind_kt: float = 15.0
 ## The network decides every this many ticks (from the options).
 var decision_ticks: int = 6
 var race: RaceSim
+## The judge, with options.rules; null without.
+var rules: RaceRules = null
 ## The seconds since reset().
 var time_s: float = 0.0
 var ticks: int = 0
@@ -237,6 +244,7 @@ func reset_dropped(seed: int, drops: Array[Drop]) -> void:
 		race.add_board("board%d" % (i + 1))
 		race.place_board(i, drop.position, drop.next_step)
 	race.start()
+	rules = RaceRules.new(_boards.size(), _wind_from_deg) if options.rules else null
 	for i: int in _boards.size():
 		_begin_episode(_boards[i], i)
 
@@ -343,6 +351,8 @@ func tick() -> void:
 		race.update_board(i, _where(b))
 	var before_gun: bool = race.clock_s() < 0.0
 	race.step(DT)
+	if rules != null:
+		_judge()
 	time_s += DT
 	ticks += 1
 	for i: int in _boards.size():
@@ -352,6 +362,9 @@ func tick() -> void:
 		if before_gun and race.clock_s() >= 0.0 and race.is_ocs(i):
 			b.ocs += 1
 			_add_metres(b, -options.ocs_cost_m)
+		if rules != null and rules.penalties(i) > b.penalties_charged:
+			_add_metres(b, -options.rule_cost_m * (rules.penalties(i) - b.penalties_charged))
+			b.penalties_charged = rules.penalties(i)
 		_add_metres(b, -options.time_cost_m_per_s * DT)
 		_count_progress(i, b)
 		if b.progress_m > b.best_progress_m:
@@ -403,6 +416,7 @@ func info(index: int) -> Dictionary:
 		"falls": b.falls,
 		"manoeuvres": b.manoeuvres,
 		"ocs": b.ocs,
+		"penalties": b.penalties_charged,
 		"had_start": b.had_start,
 		# The race time of its start, seconds after the gun, for a board that had the start to do in
 		# this episode and did it; -1 otherwise (a board dropped past the start has no start of its own).
@@ -477,6 +491,21 @@ func _cast_shadows() -> void:
 			_boards[i].shadows.set_fleet(xs, zs, casts, i)
 
 
+## The judge told where everyone is (a parked board is in the water for the rules: kept clear of
+## by nobody, keeping no rule), then the tick's breaches. A penalty here is never cleared by a turn:
+## it costs the reward at once (the brain is not asked to turn circles).
+func _judge() -> void:
+	var marks: PackedVector2Array = PackedVector2Array()
+	for i: int in _boards.size():
+		var b: Board = _boards[i]
+		var t: Telemetry = b.sim.telemetry
+		var sailing: bool = not b.done and t.sailor_state == WindsurferSim.SailorState.SAILING
+		rules.set_board(i, Vector2(t.position.x, t.position.z), t.heading_deg, 1.0 if t.twa_deg >= 0.0 else -1.0, t.speed_ms, sailing)
+		var step: RaceStep = race.next_step(i)
+		marks.append(step.points[0] if step != null and step.kind == RaceStep.Kind.MARK else Vector2.INF)
+	rules.step(DT, marks)
+
+
 ## A board's episode begins where it is: the yardstick set to the distance it has to go.
 func _begin_episode(b: Board, index: int) -> void:
 	b.episode_from_s = time_s
@@ -484,6 +513,7 @@ func _begin_episode(b: Board, index: int) -> void:
 	b.remaining_m = SailingDistance.remaining_m(race, index, _where(b), course.axis_deg)
 	b.last_steps = race.next_step_index(index)
 	b.had_start = b.last_steps == 0
+	b.penalties_charged = rules.penalties(index) if rules != null else 0
 	b.best_progress_at_s = time_s
 
 

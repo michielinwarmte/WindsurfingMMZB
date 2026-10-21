@@ -51,6 +51,8 @@ var _boards: Array[WindsurferNode] = []
 ## The other sails' wind shadows on each board's wind (one per board of _boards, its own copy of
 ## the fleet's places each tick; AI_FLEET_PLAN.md D5), empty with the setup's shadows off.
 var _shadows: Array[WindShadows] = []
+## The racing rules' judge (RaceRules, F3), new with each race; null with the setup's rules off.
+var rules: RaceRules = null
 ## What the runner's own tick costs (the physics of all boards, side by side or not, and the
 ## race's checks), microseconds since the last cost_text().
 var _us_physics: int = 0
@@ -133,6 +135,7 @@ func restart() -> void:
 		race.add_board(PLAYER_NAME)
 	for skipper: RaceSkipper in _skippers:
 		race.add_board(skipper.board_name())
+	rules = RaceRules.new(race.board_count(), course.axis_deg) if setup.rules else null
 	var behind_m: float = setup.wait_behind_m()
 	var spots: PackedVector2Array = pre_start_spots(course, race.steps()[0], opponents.size() + 1, behind_m)
 	var heading_deg: float = RaceCourses.pre_start_heading_deg(course)
@@ -151,6 +154,7 @@ func restart() -> void:
 	for i: int in opponents.size():
 		_skippers[i].random_seed = i + 1
 		_skippers[i].sailing_area = _area
+		_skippers[i].rules = rules
 		_skippers[i].setup(opponents[i].sim, opponents[i].controller, opponents[i].hands, race, i + _first_ai)
 	_tell_the_race()
 	race.start_in(setup.free_sail_s)
@@ -227,6 +231,7 @@ func _physics_process(delta: float) -> void:
 	_pose_boards(player_stopped)
 	_tell_the_race()
 	race.step(delta)
+	_judge(delta)
 	_us_physics += t1 - t0
 	_us_race += Time.get_ticks_usec() - t1
 	_ticks_counted += 1
@@ -254,6 +259,27 @@ func _cast_shadows() -> void:
 	for i: int in _boards.size():
 		_shadows[i].set_fleet(xs, zs, casts, i)
 		_boards[i].sim.wind.disturbance = _shadows[i]
+
+
+## The judge told where everyone is, this tick's breaches, and every board's time penalty as it
+## stands handed to the race (a scripted skipper turns a circle and clears its own; the player and
+## the learned skippers carry theirs to the finish unless they turn one).
+func _judge(delta: float) -> void:
+	if rules == null:
+		return
+	var marks: PackedVector2Array = PackedVector2Array()
+	for i: int in _boards.size():
+		var t: Telemetry = _boards[i].sim.telemetry
+		var in_race: int = i if spectating else i  # the boards' order is the race's order
+		rules.set_board(in_race, Vector2(t.position.x, t.position.z), t.heading_deg, 1.0 if t.twa_deg >= 0.0 else -1.0, t.speed_ms,
+			t.sailor_state == WindsurferSim.SailorState.SAILING)
+		var step: RaceStep = race.next_step(in_race)
+		marks.append(step.points[0] if step != null and step.kind == RaceStep.Kind.MARK else Vector2.INF)
+	if _boards.size() > 0:
+		rules.wind_from_deg = _boards[0].sim.telemetry.wind_from_bearing_deg
+	rules.step(delta, marks)
+	for i: int in _boards.size():
+		race.set_time_penalty_s(i, rules.time_penalty_s(i))
 
 
 ## How much of the wind a board is missing to the other sails' shadows right now, 0 to 1 (for the
@@ -349,7 +375,7 @@ func _process(delta: float) -> void:
 	var index: int = followed_index()
 	var node: WindsurferNode = followed_node()
 	hud.set_watching(node.skipper.board_name() if spectating and node.skipper != null else "", choice.follows_leader)
-	hud.update_from(race, index, node.telemetry(), shadow_deficit(node))
+	hud.update_from(race, index, node.telemetry(), shadow_deficit(node), rules)
 	_hud_layer.set_next_mark_bearing(Course.bearing_deg(_where(node), race.next_target(index)))
 
 
