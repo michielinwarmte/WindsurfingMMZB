@@ -91,7 +91,7 @@ The recommended next stage from the first night, started 21 October 2026 at 00:0
 
 ## Next action
 
-**The nights of F5 (the trainer is built, Session 53).** One command per stage, the curve read each morning, the next stage from the last one's best brain (AI_FLEET_PLAN.md, D6b's table has the "done when" numbers):
+**The nights of F5 (the trainer is built, Session 53).** **One command runs them all unattended:** `tools/train.sh --stages=S1,S2,S3,S4,S5,S6 --hours_each=4` (every stage in turn, each from the one before's best brain, each ended when its "done when" number holds at an hourly check or after 4 hours; the log says `=== stage S2 over: ... ===` as it goes; run again after an interruption and it continues). Max had no time on 21 October 2026, so the lead started it itself that afternoon (the log is `.logs/nights.log`, the checks `.sim_output/train/<run>/checks.log`). Stage by stage, the same by hand, the curve read each morning (AI_FLEET_PLAN.md, D6b's table has the "done when" numbers):
 
 1. `tools/train.sh --stage=S1 --hours=3` (the beat; or overnight with `--hours=8`), then `tools/train.sh --evaluate=Game/race/brains/s1_best.json --stage=S1 --episodes=20 --reference=allrounder`: done when the brain's speed made good is 80 % of the all-rounder's (the tool prints the share).
 2. `tools/train.sh --stage=S2 --hours=3 --resume=Game/race/brains/s1_best.json`, the same for S3 (`--resume=...s2_best.json`): done when 80 % of the drops reach the goal within 40 s (the `goal` column and the mean time).

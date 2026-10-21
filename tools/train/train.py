@@ -6,9 +6,21 @@ every so often for the game and for tools/gens.sh. Use tools/train.sh; it finds 
 
 Options (the defaults in brackets):
   --stage=S1            the curriculum stage (Game/race/training_drops.gd: S1 to S6)
+  --stages=S1,S2,S3     the nights unattended: the stages one after another, each run named after
+                        its stage (s1, s2, ...), each starting from the one before's best brain (or
+                        continuing its own model if it has one), each ended when its "done when"
+                        number holds at a check (--check_every_min, --check_episodes: the brain
+                        evaluated on fresh drops, against the all-rounder where the number needs it)
+                        or after --hours_each. AI_FLEET_PLAN.md D6b's table: S1 the speed made good
+                        80 % of the all-rounder's; S2 and S3 80 % of the drops round within 40 s; S4
+                        finishes 90 % within 1.3 times the all-rounder's time; S5 starts 90 % within
+                        10 s of the gun with OCS under 10 %; S6 only ends by the hours.
   --run=<name>          [the stage, lower case] the run's name: the brains are <run>_gen<N>.json and
                         <run>_best.json in Game/race/brains, the logs and the model .sim_output/train/<run>/
   --hours=<h>           [6] stop after this long (also --minutes=<m> for a short try)
+  --hours_each=<h>      [4] with --stages: the most a stage gets (also --minutes_each=<m>)
+  --check_every_min=<m> [60] with --stages: how often a stage's number is checked (S4 to S6: twice that)
+  --check_episodes=<n>  [20] with --stages: the drops of a check (S4 and S5: 8, S6: 6)
   --resume=auto|<file>  [auto] continue from this run's own model if it has one; a brain .json from
                         another run (the stage before) to start from its weights; a model .zip; or
                         "none" to start from scratch
@@ -36,6 +48,7 @@ from __future__ import annotations
 import argparse
 import csv
 import os
+import re
 import subprocess
 import sys
 import time
@@ -68,6 +81,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--run", default="")
     parser.add_argument("--hours", type=float, default=6.0)
     parser.add_argument("--minutes", type=float, default=0.0)
+    parser.add_argument("--stages", default="")
+    parser.add_argument("--hours_each", type=float, default=4.0)
+    parser.add_argument("--minutes_each", type=float, default=0.0)
+    parser.add_argument("--check_every_min", type=float, default=60.0)
+    parser.add_argument("--check_episodes", type=int, default=20)
     parser.add_argument("--resume", default="auto")
     parser.add_argument("--workers", type=int, default=0)
     parser.add_argument("--boards", type=int, default=0)
@@ -90,6 +108,8 @@ def parse_args() -> argparse.Namespace:
         args.run = args.stage.lower()
     if args.minutes > 0.0:
         args.hours = args.minutes / 60.0
+    if args.minutes_each > 0.0:
+        args.hours_each = args.minutes_each / 60.0
     if args.workers <= 0:
         args.workers = min(os.cpu_count() or 4, 16)
     args.gamma = GAMMA_BY_STAGE.get(args.stage, 0.995) if args.gamma == "auto" else float(args.gamma)
@@ -103,14 +123,89 @@ def physics_commit() -> str:
         return "unknown"
 
 
+# ---------------------------------------------------------------- a stage's "done when" number
+
+SUMMARY_LINE = re.compile(r"^(?P<who>\w+): (?P<episodes>\d+) episodes, mean reward (?P<reward>-?[\d.]+), goal reached in "
+                          r"(?P<goals>\d+) \((?P<goal_share>[\d.]+) %, mean (?P<goal_s>[\d.]+) s\), speed made good "
+                          r"(?P<vmg>-?[\d.]+) m/s, (?P<falls>[\d.]+) falls and (?P<manoeuvres>[\d.]+) manoeuvres per episode"
+                          r"(?:, started in (?P<starts>\d+) of (?P<with_start>\d+) \(mean (?P<start_s>[\d.]+) s after the gun\), "
+                          r"OCS (?P<ocs>\d+) \((?P<ocs_share>[\d.]+) %\))?")
+SHARE_LINE = re.compile(r"^The brain's speed made good is (?P<share>-?\d+) % of the")
+# How much longer between checks and on how many drops, for the stages whose episodes take minutes.
+CHECK_SCALE = {"S4": (2.0, 8), "S5": (2.0, 8), "S6": (2.0, 6)}
+
+
+def needs_reference(stage: str) -> bool:
+    return stage in ("S1", "S4")
+
+
+def evaluate(brain_path: Path, stage: str, episodes: int, reference: str | None, log: Path) -> dict:
+    """Runs the worker's evaluation on a brain (Game/dev/train_worker.gd --evaluate) and returns the
+    summaries as the lines parse: {"brain": {...}, "allrounder": {...}, "share": P}."""
+    from bridge import GAME_DIR, find_godot
+    arguments = [find_godot(), "--headless", "--no-header", "--path", str(GAME_DIR), "-s", "res://dev/train_worker.gd", "--",
+                 f"--evaluate={brain_path}", f"--stage={stage}", f"--episodes={episodes}", "--boards=1",
+                 f"--seed={int(time.time()) % 100000}"]
+    if reference:
+        arguments.append(f"--reference={reference}")
+    output = subprocess.run(arguments, capture_output=True, text=True, cwd=str(GAME_DIR), timeout=7200).stdout
+    with open(log, "a", encoding="utf-8") as file:
+        file.write(output + "\n")
+    result: dict = {}
+    for line in output.splitlines():
+        match = SUMMARY_LINE.match(line.strip())
+        if match:
+            row = {k: (v if k == "who" else (float(v) if v is not None else None)) for k, v in match.groupdict().items()}
+            result[match.group("who")] = row
+            continue
+        match = SHARE_LINE.match(line.strip())
+        if match:
+            result["share"] = float(match.group("share"))
+    return result
+
+
+def stage_done(stage: str, result: dict) -> tuple[bool, str]:
+    """Whether a stage's "done when" number holds, and the number in words."""
+    brain = result.get("brain")
+    if brain is None:
+        return False, "no summary (the evaluation failed; see checks.log)"
+    if stage == "S1":
+        share = result.get("share", 0.0)
+        return share >= 80.0, f"speed made good {brain['vmg']:.2f} m/s, {share:.0f} % of the all-rounder's (done at 80)"
+    if stage in ("S2", "S3"):
+        return (brain["goal_share"] >= 80.0 and brain["goal_s"] <= 40.0,
+                f"rounds {brain['goal_share']:.0f} % of the drops, in {brain['goal_s']:.1f} s on average (done at 80 % within 40 s)")
+    if stage == "S4":
+        other = result.get("allrounder")
+        ratio = brain["goal_s"] / max(other["goal_s"], 1.0) if other and other["goal_s"] > 0.0 else 9.9
+        return (brain["goal_share"] >= 90.0 and ratio <= 1.3,
+                f"finishes {brain['goal_share']:.0f} % of its laps in {brain['goal_s']:.0f} s, {ratio:.2f} times the all-rounder's "
+                f"(done at 90 % within 1.3)")
+    if stage == "S5":
+        starts = brain.get("starts")
+        with_start = brain.get("with_start") or 0.0
+        if starts is None or with_start <= 0.0:
+            return False, "no starts seen"
+        started_share = 100.0 * starts / with_start
+        ocs_share = brain.get("ocs_share") or 0.0
+        return (started_share >= 90.0 and brain["start_s"] <= 10.0 and ocs_share <= 10.0,
+                f"starts {started_share:.0f} % of the time, {brain['start_s']:.1f} s after the gun on average, OCS {ocs_share:.0f} % "
+                f"(done at 90 % within 10 s and OCS under 10 %)")
+    return False, f"reward {brain['reward']:.2f}, goal {brain['goal_share']:.0f} % (S6 ends by its hours)"
+
+
 class Progress(BaseCallback):
-    """Prints a line per rollout, keeps the curve, writes the brains and stops when the time is up."""
+    """Prints a line per rollout, keeps the curve, writes the brains and stops when the time is up
+    or the stage's number holds at a check."""
 
     def __init__(self, args: argparse.Namespace, run_dir: Path, env: GodotWorkers, obs_names: list[str],
                  action_names: list[str], started_generation: int) -> None:
         super().__init__(verbose=0)
         self.args = args
         self.run_dir = run_dir
+        self.stage_is_done = False
+        self.last_check = time.time()
+        self.check_note = ""
         self.workers = env
         self.obs_names = obs_names
         self.action_names = action_names
@@ -142,7 +237,22 @@ class Progress(BaseCallback):
                     "falls": info.get("falls", 0),
                     "manoeuvres": info.get("manoeuvres", 0),
                 })
-        return time.time() - self.started < self.args.hours * 3600.0
+        return time.time() - self.started < self.args.hours * 3600.0 and not self.stage_is_done
+
+    def check_stage(self) -> None:
+        """With --stages: the latest brain on fresh drops; the stage is done when its number holds."""
+        scale, episodes = CHECK_SCALE.get(self.args.stage, (1.0, self.args.check_episodes))
+        if time.time() - self.last_check < self.args.check_every_min * 60.0 * scale:
+            return
+        self.last_check = time.time()
+        started = time.time()
+        result = evaluate(BRAINS_DIR / f"{self.args.run}_latest.json", self.args.stage, episodes,
+                          "allrounder" if needs_reference(self.args.stage) else None, self.run_dir / "checks.log")
+        done, note = stage_done(self.args.stage, result)
+        self.check_note = note
+        print(f"  check ({episodes} drops, {(time.time() - started) / 60.0:.1f} min): {note}{' -- DONE' if done else ''}", flush=True)
+        if done:
+            self.stage_is_done = True
 
     def stats(self) -> dict:
         if not self.recent:
@@ -186,6 +296,8 @@ class Progress(BaseCallback):
         if now - self.last_save >= self.args.save_every_min * 60.0:
             self.last_save = now
             self.save_generation()
+            if self.args.stages:
+                self.check_stage()
 
     def save_generation(self, final: bool = False) -> None:
         """The model (to resume from) and a brain file for the game; the best so far kept apart."""
@@ -213,6 +325,31 @@ class Progress(BaseCallback):
 
 def main() -> None:
     args = parse_args()
+    if args.stages:
+        stages = [part.strip().upper() for part in args.stages.split(",") if part.strip()]
+        previous = ""
+        for stage in stages:
+            args.stage = stage
+            args.run = stage.lower()
+            args.hours = args.hours_each
+            args.gamma = GAMMA_BY_STAGE.get(stage, 0.995)
+            own_model = OUTPUT_DIR / args.run / "model.zip"
+            if own_model.exists():
+                args.resume = "auto"
+            elif previous and (BRAINS_DIR / f"{previous}_best.json").exists():
+                args.resume = str(BRAINS_DIR / f"{previous}_best.json")
+            else:
+                args.resume = "none"
+            print(f"\n=== stage {stage} (run {args.run}, up to {args.hours:.1f} h, from {args.resume}) ===", flush=True)
+            note = train_one(args)
+            print(f"=== stage {stage} over: {note} ===", flush=True)
+            previous = args.run
+        return
+    train_one(args)
+
+
+def train_one(args: argparse.Namespace) -> str:
+    """One run of one stage; returns the last check's note (or the hours)."""
     run_dir = OUTPUT_DIR / args.run
     run_dir.mkdir(parents=True, exist_ok=True)
     torch.set_num_threads(max(1, min(4, (os.cpu_count() or 4) // 4)))
@@ -273,6 +410,7 @@ def main() -> None:
         workers.close()
     print(f"done: {model.num_timesteps} timesteps, {workers.episodes_done} episodes, the curve in {progress.curve_path}, "
           f"the brains {args.run}_gen<N>.json, {args.run}_best.json and {args.run}_latest.json in {BRAINS_DIR}", flush=True)
+    return progress.check_note if progress.check_note else f"{args.hours:.1f} h"
 
 
 if __name__ == "__main__":

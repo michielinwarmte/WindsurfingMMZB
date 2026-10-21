@@ -231,8 +231,24 @@ static func _summary(sailor: String, rows: Array[Dictionary]) -> Dictionary:
 			goals += 1
 			goal_time_s += row["episode_s"]
 	var vmg: float = progress_m / maxf(time_s, 0.1)
-	return {"vmg": vmg, "line": "%s: %d episodes, mean reward %.2f, goal reached in %d (%.0f %%, mean %.1f s), speed made good %.2f m/s, %.2f falls and %.1f manoeuvres per episode" % [
-		sailor, rows.size(), reward / count, goals, 100.0 * goals / count, goal_time_s / maxf(goals, 1), vmg, falls / count, manoeuvres / count]}
+	# The starts, where the episodes had one: how long after the gun on average, and how many OCS.
+	var starts: int = 0
+	var start_delay_s: float = 0.0
+	var ocs: int = 0
+	var with_start: int = 0
+	for row: Dictionary in rows:
+		if row.get("start_s", -1.0) >= 0.0:
+			starts += 1
+			start_delay_s += row["start_s"]
+		if row.get("ocs", 0) > 0:
+			ocs += 1
+		if row.get("had_start", false):
+			with_start += 1
+	var start_text: String = ""
+	if with_start > 0:
+		start_text = ", started in %d of %d (mean %.1f s after the gun), OCS %d (%.0f %%)" % [starts, with_start, start_delay_s / maxf(starts, 1), ocs, 100.0 * ocs / with_start]
+	return {"vmg": vmg, "line": "%s: %d episodes, mean reward %.2f, goal reached in %d (%.0f %%, mean %.1f s), speed made good %.2f m/s, %.2f falls and %.1f manoeuvres per episode%s" % [
+		sailor, rows.size(), reward / count, goals, 100.0 * goals / count, goal_time_s / maxf(goals, 1), vmg, falls / count, manoeuvres / count, start_text]}
 
 
 # ---------------------------------------------------------------- arguments and paths

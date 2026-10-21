@@ -131,6 +131,8 @@ class Board:
 	var best_progress_at_s: float = 0.0
 	var falls: int = 0
 	var manoeuvres: int = 0
+	## Over the line at the gun (once per start at most).
+	var ocs: int = 0
 	var decisions: int = 0
 	## The sailing distance still to go at the last tick, and how many steps were done then.
 	var remaining_m: float = 0.0
@@ -143,6 +145,8 @@ class Board:
 	var episode_from_s: float = 0.0
 	var episode_until_s: float = 0.0
 	var goal_step: int = 0
+	## True when the episode began with the start still to do (its first split is then its start).
+	var had_start: bool = false
 	var done: bool = false
 	## Why it is done: it finished, its time ran out (truncated: the episode was cut, not ended),
 	## it left the course's bounds, or it stalled.
@@ -340,6 +344,7 @@ func tick() -> void:
 		if b.done:
 			continue
 		if before_gun and race.clock_s() >= 0.0 and race.is_ocs(i):
+			b.ocs += 1
 			_add_metres(b, -options.ocs_cost_m)
 		_add_metres(b, -options.time_cost_m_per_s * DT)
 		_count_progress(i, b)
@@ -391,6 +396,11 @@ func info(index: int) -> Dictionary:
 		"stalled": b.stalled,
 		"falls": b.falls,
 		"manoeuvres": b.manoeuvres,
+		"ocs": b.ocs,
+		"had_start": b.had_start,
+		# The race time of its start, seconds after the gun, for a board that had the start to do in
+		# this episode and did it; -1 otherwise (a board dropped past the start has no start of its own).
+		"start_s": _start_s(index, b),
 		"progress_m": snappedf(b.progress_m, 0.1),
 		"remaining_m": snappedf(b.remaining_m, 0.1),
 		"episode_s": snappedf(b.episode_s(time_s), 0.1),
@@ -448,6 +458,7 @@ func _begin_episode(b: Board, index: int) -> void:
 	b.episode_until_s = time_s + options.episode_s
 	b.remaining_m = SailingDistance.remaining_m(race, index, _where(b), course.axis_deg)
 	b.last_steps = race.next_step_index(index)
+	b.had_start = b.last_steps == 0
 	b.best_progress_at_s = time_s
 
 
@@ -472,6 +483,15 @@ func _count_progress(index: int, b: Board) -> void:
 ## the time cost (nothing at the time limit itself).
 func _charge_the_rest_of_the_time(b: Board) -> void:
 	_add_metres(b, -options.time_cost_m_per_s * maxf(b.episode_until_s - time_s, 0.0))
+
+
+## The race time of a board's start, if it had the start to do in this episode and crossed the line;
+## -1 otherwise.
+func _start_s(index: int, b: Board) -> float:
+	var splits: PackedFloat32Array = race.splits_s(index)
+	if not b.had_start or splits.is_empty():
+		return -1.0
+	return splits[0]
 
 
 func _add_metres(b: Board, metres: float) -> void:

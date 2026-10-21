@@ -3,6 +3,10 @@
 # curriculum stage at a time, a brain file for the game every half hour. Needs, once:
 # pip install torch stable-baselines3 (the CPU torch is enough: the network is tiny).
 #
+#   tools/train.sh --stages=S1,S2,S3,S4,S5,S6 --hours_each=4  the nights unattended: every stage in turn,
+#                                                             each from the one before's best brain, each
+#                                                             ended when its "done when" number holds at an
+#                                                             hourly check or after 4 hours (up to a day)
 #   tools/train.sh --stage=S1 --hours=3                       stage 1 (the beat), 3 hours, run "s1"
 #   tools/train.sh --stage=S2 --hours=3 --resume=Game/race/brains/s1_best.json
 #                                                             the next stage from the last one's best brain
