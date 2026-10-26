@@ -22,10 +22,11 @@ extends SceneTree
 ##      1 + threshold x intensity, the timing_ease settings replace the case's own
 ##   [--slice=<i>/<n>] (run every n-th case from the i-th) [--out=<csv>] [--falls_out=<csv>]
 ##   [--label=<text>] (a column in the CSV, to tell runs apart)
+##   [--hold_sheet=1] the player holds W (sheet in) all the time, over the auto-sheet
 ##   [--reaction_s=<s>] the sailor feels the apparent wind's strength this late: the controller
 ##      is handed the apparent wind speed of that long ago (only the controller; the physics sails
 ##      in the real wind). The autopilot otherwise answers a gust in the same tick
-## The groups are pilot (the auto-sheet's Autopilot), sailor (SailorConfig) and timing
+## The groups are pilot (the auto-sheet's Autopilot), sailor (SailorConfig), sail (SailConfig) and timing
 ## (timing.lead_s, timing.threshold: to sweep the timing itself).
 
 const DT: float = 1.0 / 60.0
@@ -77,6 +78,11 @@ class PushResult:
 	var lean_mean: float = 0.0
 	var planing_share: float = 0.0
 	var wet_front_m: float = 0.0
+	## The sheet (0 eased out to 1 fully in), and how fast it moves back and forth: the root mean
+	## square of its change per second, and the angle of attack's spread (both show a jerking trim).
+	var sheet_mean: float = 0.0
+	var sheet_rate_rms: float = 0.0
+	var alpha_sd_deg: float = 0.0
 	var eased_share: float = 0.0
 	var nan: bool = false
 
@@ -112,7 +118,7 @@ func _initialize() -> void:
 func _build_cases() -> Array[PushCase]:
 	var fixed: Dictionary[String, float] = {}
 	for key: String in _options:
-		if key.begins_with("pilot.") or key.begins_with("sailor."):
+		if key.begins_with("pilot.") or key.begins_with("sailor.") or key.begins_with("sail."):
 			fixed[key] = _options[key].to_float()
 	var sweeps: Array[Array] = [_parse_sweep(_options.get("sweep", "")), _parse_sweep(_options.get("sweep2", ""))]
 	var cases: Array[PushCase] = []
@@ -158,6 +164,7 @@ func _parse_sweep(text: String) -> Array[Dictionary]:
 func _run_case(case: PushCase, falls: Array[String]) -> PushResult:
 	var sim: WindsurferSim = _make_sim(case.wind_kt)
 	_apply_settings(case.settings, "sailor.", sim.sailor_config)
+	_apply_settings(case.settings, "sail.", sim.sail_config)
 	var controller: PlayerController = PlayerController.new()
 	var hands: AiHands = AiHands.new()
 	controller.hands = hands
@@ -189,6 +196,10 @@ func _run_case(case: PushCase, falls: Array[String]) -> PushResult:
 	var previous_state: WindsurferSim.SailorState = sim.sailor_state
 	var reaction_ticks: int = int(round(_options.get("reaction_s", "0").to_float() / DT))
 	var felt_aws: PackedFloat64Array = PackedFloat64Array()
+	var hold_sheet: bool = _options.get("hold_sheet", "0") == "1"
+	var last_sheet: float = 0.0
+	var sheet_rate_square_sum: float = 0.0
+	var alpha_square_sum: float = 0.0
 	for i: int in steps:
 		var t: Telemetry = sim.telemetry
 		var easing: bool = false
@@ -209,6 +220,7 @@ func _run_case(case: PushCase, falls: Array[String]) -> PushResult:
 			pointing = false
 		var wanted_twa: float = case.twa_deg if pointing else clampf(case.twa_deg, START_TWA_DEG, START_TWA_MAX_DEG)
 		hands.steer = LearnedSkipper.steer_toward_twa(t.twa_deg, 1.0, wanted_twa)
+		hands.sheet = 1.0 if hold_sheet else 0.0
 		if reaction_ticks > 0:
 			# The telemetry is written afresh by the next step, so this changes only what the
 			# controller reads now.
@@ -224,6 +236,8 @@ func _run_case(case: PushCase, falls: Array[String]) -> PushResult:
 			controller.reset_controls(controls)
 		var fell_now: bool = sim.sailor_state == WindsurferSim.SailorState.FALLEN and previous_state == WindsurferSim.SailorState.SAILING
 		previous_state = sim.sailor_state
+		var sheet_before: float = last_sheet
+		last_sheet = controls.sheet
 		history.append(_warning_sample(t))
 		if history.size() > int(WARNING_BACK_S[0] / DT) + 2:
 			history.pop_front()
@@ -260,11 +274,19 @@ func _run_case(case: PushCase, falls: Array[String]) -> PushResult:
 		result.lean_mean += absf(t.lean)
 		result.planing_share += 1.0 if t.is_planing else 0.0
 		result.wet_front_m += t.wet_front_m
+		result.sheet_mean += controls.sheet
+		var sheet_rate: float = (controls.sheet - sheet_before) / DT
+		sheet_rate_square_sum += sheet_rate * sheet_rate
+		alpha_square_sum += t.alpha_deg * t.alpha_deg
 	var elapsed_s: float = maxf(result.samples * DT, DT)
 	var moved: Vector3 = sim.telemetry.position - start_position
 	result.made_good_ms = moved.dot(course) / elapsed_s
 	result.vmg_ms = moved.dot(upwind) / elapsed_s
 	_finish(result, fin_shares, slips, pitch_square_sum)
+	var n: float = float(maxi(result.sailing_samples, 1))
+	result.sheet_mean /= n
+	result.sheet_rate_rms = sqrt(sheet_rate_square_sum / n)
+	result.alpha_sd_deg = sqrt(maxf(alpha_square_sum / n - result.alpha_mean_deg * result.alpha_mean_deg, 0.0))
 	return result
 
 
@@ -398,7 +420,7 @@ func _format(c: PushCase, r: PushResult) -> String:
 
 
 func _csv_header() -> String:
-	return "label,wind_kt,twa_deg,sweep,made_good_ms,vmg_ms,sailing_share,falls,fall_kinds,speed_sailing_ms,heel_leeward_max_deg,fin_share_max,fin_share_p95,fin_stalled_share,slip_max_deg,slip_p95_deg,pitch_sd_deg,trim_mean_deg,heel_mean_deg,alpha_mean_deg,lean_mean,planing_share,wet_front_m,eased_share,nan"
+	return "label,wind_kt,twa_deg,sweep,made_good_ms,vmg_ms,sailing_share,falls,fall_kinds,speed_sailing_ms,heel_leeward_max_deg,fin_share_max,fin_share_p95,fin_stalled_share,slip_max_deg,slip_p95_deg,pitch_sd_deg,trim_mean_deg,heel_mean_deg,alpha_mean_deg,lean_mean,planing_share,wet_front_m,eased_share,nan,sheet_mean,sheet_rate_rms,alpha_sd_deg"
 
 
 func _csv_row(c: PushCase, r: PushResult) -> String:
@@ -407,7 +429,7 @@ func _csv_row(c: PushCase, r: PushResult) -> String:
 		"%.3f" % r.speed_sailing_ms, "%.2f" % r.heel_leeward_max_deg, "%.3f" % r.fin_share_max, "%.3f" % r.fin_share_p95,
 		"%.3f" % r.fin_stalled_share, "%.2f" % r.slip_max_deg, "%.2f" % r.slip_p95_deg, "%.3f" % r.pitch_sd_deg,
 		"%.2f" % r.trim_mean_deg, "%.2f" % r.heel_mean_deg, "%.2f" % r.alpha_mean_deg, "%.3f" % r.lean_mean,
-		"%.3f" % r.planing_share, "%.3f" % r.wet_front_m, "%.3f" % r.eased_share, "1" if r.nan else "0"]))
+		"%.3f" % r.planing_share, "%.3f" % r.wet_front_m, "%.3f" % r.eased_share, "1" if r.nan else "0", "%.3f" % r.sheet_mean, "%.3f" % r.sheet_rate_rms, "%.2f" % r.alpha_sd_deg]))
 
 
 ## Appends a line, writing the header first when the file is new (several processes may share

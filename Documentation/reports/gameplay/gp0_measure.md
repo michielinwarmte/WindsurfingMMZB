@@ -250,6 +250,49 @@ The autopilot reads the apparent wind's strength in the same tick a gust arrives
 - **The report's "the flattest board is always the fastest" holds only once fully planing** (18 kt and up on the beam reach). It came from runs whose 12 kt cases never planed, because there the height gradient leaves about 10.5 kt at the sail.
 - **What looks wrong:** fully planing, the leeward rail makes the wet part *longer* (18/100: 1.19 m flat, 1.71 m at 6°), so the rail costs speed. A heeled flat bottom should be wet over less of its width, so the friction should fall. The hull model narrows the planing beam with the heel only by its cosine (`lift_beam_m`, `hull_model.gd`; 99.8 % at 4°), though its strips do wet only part of a heeled bottom's width. Whether a 72 cm board railed at speed should be faster is Michiel's to check against Max's experience. This is PH27.
 
+## Follow-up 2: the sail that never closes, and the jerking sheet
+
+Max, after sailing `tools/play_push.sh`: "the character cannot fully close the sail, and the auto-sheet starts jerking; experiment with the rider's maximum strength and weight; there is something wrong; find it and back it up with real physics." New in `run_push.gd` for this: the sheet's mean, how fast it moves back and forth (the root mean square of its change per second, "jerk"), the angle of attack's spread, `--hold_sheet=1` (W held over the auto-sheet), and `--sail.<field>`. 18 and 24 kt, the 100 and 120° reaches (and 48° upwind for the last table), gusts 0.2 and waves, 80 s per case.
+
+### The rider's weight and strength (today's auto-sheet)
+
+| Rider | 24/100: speed, sheet, angle of attack | 24/120 | 18/100 | 18/120 |
+|---|---|---|---|---|
+| 65 kg | 12.08, 62 %, 4.0° | 13.65, 63 %, 6.5° | 11.10, 74 %, 5.8° | 11.88, 80 %, 11.4° |
+| **75 kg (now)** | 12.57, 64 %, 4.3° | 14.22, 67 %, 7.1° | 11.63, 77 %, 5.9° | 12.22, 83 %, 12.4° |
+| 90 kg | 13.18, 67 %, 4.7° | 14.77, 70 %, 8.2° | 11.67, 80 %, 8.3° | 12.58, 87 %, 14.2° |
+| 110 kg | 14.01, 71 %, 5.2° | 15.44, 75 %, 9.3° | 12.21, 84 %, 9.4° | 12.86, 92 %, 16.8° |
+
+- A heavier rider sheets in further and goes faster (75 to 110 kg: +5 to +11 %), as in real life. But no rider closes the sail at 24 kt, and at 18 kt on the beam reach a 75 kg rider sails a 6.5 m² eased to a 6° angle of attack. A real 75 kg rider is sheeted in at 18 kt on a 6.5, and a 110 kg one at 24 kt.
+- **Strength:** the rider's numbers are realistic. 120 N m (`feet_moment_max_nm`) is about what two feet can pass to a deck (body weight on a foot about 10 cm wide), and 0.88 m (`lean_max_m`) puts a straight-legged body at about 45°. Raised beyond (300 to 600 N m, 1.1 to 1.3 m), the rider falls more, the sheet jerks hard (up to 2.7 per second), and in 7 of 36 runs the simulation blows up (NaN). The body model should not break a little beyond its numbers (PH29).
+
+### Why, in numbers anyone can check
+
+- The air at 34 kt of apparent wind (the 24 kt reach at 44 km/h) pushes q = ½ ρ V² = 187 Pa: 1,218 N on the 6.5 m² sail for every unit of lift coefficient.
+- The rider's balance allows 75 × 9.81 × (0.88 − 0.22) + 120 = 606 N m about the feet, about 470 N of side force on the sim's heeling arm (about 1.3 m). That is a lift coefficient of about 0.48: on the sim's lift curve (10 % camber, aspect ratio 3.3: 0.33 at 3°, 0.67 at 5°, 0.98 at 10°, 1.40 at 18°) a 3 to 4° angle of attack. A 110 kg rider gets 0.66, about 5°. That is exactly where the auto-sheet sits.
+- Fully sheeted, the sim's rigid sail would pull about 1,700 N at that wind, so the only way to hold it is to ease the whole sail to the edge of luffing. Below 5° the sim fades the lift out (`luff_factor`), so there the force changes two to three times faster per degree than in the sail's normal range, and every gust or correction moves the sheet.
+- **A flatter sail is not the answer.** With the camber cut from 10 to 4 % (the downhaul's effect) the rider sheets in 2 to 4° further, but the speed stays the same (24/100: 12.57 and 12.70; 24/120: 14.22 and 14.15). The force comes out at whatever the rider can hold, whatever the sail's shape.
+- **The centre of effort is the lever.** A real sail's leech twists open under load, by design, so its top carries less and the centre of effort moves down; the same rider then holds more pull on a shorter lever. The sim's sail is rigid, its centre of effort fixed at 40 % of the mast (1.84 m above the foot). Lowered as twist would:
+
+| `ce_height_fraction` | 18/48 VMG | 18/100 | 18/120 | 24/48 VMG | 24/100 | 24/120 |
+|---|---|---|---|---|---|---|
+| 0.40 (now) | 3.89 (91 %) | 11.63 (77 %) | 12.22 (83 %) | 4.03 (84 %) | 12.57 (64 %) | 14.22 (67 %) |
+| 0.35 | 4.11 (93 %) | 11.68 (79 %) | 12.40 (87 %) | 4.30 (86 %) | 13.07 (67 %) | 14.52 (70 %) |
+| 0.30 | 4.31 (96 %) | 12.03 (84 %) | 12.65 (92 %) | 4.61 (88 %) | 13.64 (71 %) | 14.91 (74 %) |
+
+(the sheet in brackets). Lowered to 30 %, the board is 3 to 14 % faster, the sheet comes in further, and nothing falls. So the missing piece is the sail's twist under load. It is the same limit as the low top speed (PH8), because the rider's balance caps the drive. This is PH28 for Michiel. The numbers above are a stand-in (a fixed lower centre of effort), not the model: a twist that grows with the load would also take force off the top, and leave light wind as it is.
+
+### The jerk
+
+| | Sheet's movement (per second) | Falls in 80 s |
+|---|---|---|
+| The auto-sheet alone, any rider | 0.10 to 0.16 | none |
+| Pushed (the dial's top), 24 kt | 0.6 to 1.2 | 1 to 4 |
+| **W held**, 24 kt | 1.0 to 3.5 | 1 to 9 |
+| **W held**, 18 kt | 1.6 to 2.6, and the board never gets going (the sail stalled at about 47°) | 3 to 6 |
+
+The auto-sheet on its own does not jerk. Holding W does: when the rider sheets by hand, the beginner's controller eases when overpowered with an on-off switch (`ease_when_overpowered`: on at 1 per second once 85 % of the hike is used or the board heels 10°, off at 0.8 per second), which pumps the sheet, and 3 s after the key the auto-sheet takes over again. That is the controller (GP10), not the physics. The push jerks for a different reason: its weakened reflexes fight its higher limit at the edge of luffing above (GP3 tunes it; PH28 removes the edge).
+
 ## The commands
 
 ```
@@ -274,6 +317,12 @@ tools/push_check.sh --winds=18,24 --twas=48,100,135 --seconds=150 --from=40 --jo
 # The follow-up: the reaction time (and --gust_period=4), and the rail both ways
 tools/push_check.sh --winds=12,18 --twas=48,100,135 --seconds=240 --from=40 --jobs=3 --gust_intensity=0.3 --gust_period=8 --reaction_s=0.3 $LATE --run=e1_p8_r0.3
 tools/reach_check.sh --winds=12,18 --twas=60,100 --sailor.fin_load_bank_deg=-4   # and -2, 0, 2, 4, 6
+# Follow-up 2: the rider (also with $LATE and with --hold_sheet=1), the strength, the sail
+C="--winds=18,24 --twas=100,120 --seconds=120 --from=40 --jobs=4"
+tools/push_check.sh $C --run=f1_auto --sweep=sailor.mass_kg=65,75,90,110
+tools/push_check.sh $C --run=f2_strength --sweep=sailor.feet_moment_max_nm=120,300,600 --sweep2=sailor.lean_max_m=0.88,1.1,1.3
+tools/push_check.sh $C --run=g1_camber --sweep=sail.camber=0.10,0.08,0.06,0.04
+tools/push_check.sh --winds=18,24 --twas=48,100,120 --seconds=120 --from=40 --jobs=4 --run=g2_ce --sweep=sail.ce_height_fraction=0.40,0.35,0.30
 ```
 
 All in all about 600 cases, run four processes at a time (the laptop crashed under full load before; four never came close).
