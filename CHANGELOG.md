@@ -4,6 +4,10 @@ What each version of the Windsurfing Simulator contains, newest first. The versi
 
 Version numbers: `0.x` while the team still changes the physics freely. A patch (`0.1.1`) is fixes only; a minor (`0.2.0`) adds features. How a release is made is in [ROADMAP.md](ROADMAP.md).
 
+## Next version (0.2, not released yet)
+
+- **GP0, the push and the body measured before they are built** (Session 56, 26 October 2026; [the report](Documentation/reports/gameplay/gp0_measure.md)): `tools/push_check.sh` sails the player's beginner controller headless with the autopilot's margin or the sailor's technique targets set per case, on the game's open water with waves and gusts. About 600 cases. It found the dial's three settings, that easing for the gusts beats both the safe and the reckless sailor at 24 kt, the warning signs before a catapult (not the fin), and the mouse's ranges. Nothing in `Game/sim/` changed.
+
 ## 0.1.0 — 21 October 2026
 
 The first release: the state of the game after Session 53, merged into `main` from `feature/p9-racing` (which carried U1, U2, Phase 9 and the AI fleet's F1 to F5). The first version that can be downloaded and played without Godot.
