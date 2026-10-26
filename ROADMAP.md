@@ -4,6 +4,8 @@ What comes after version 0.1.0, and who does what. **The overview below is the s
 
 Last update: 26 October 2026 (Session 56: GP0 measured). An AI session reads this file after [CLAUDE.md](CLAUDE.md); the newest entry in [Documentation/PROGRESS_LOG.md](Documentation/PROGRESS_LOG.md) says where the last session stopped.
 
+**GP0's code is not on `main` yet** (26 October 2026): `tools/push_check.sh`, `tools/play_push.sh`, `Game/dev/run_push.gd`, the F1 panel's last-fall table (`Game/ui/fall_watch.gd`), `PlayerController.pilot_overrides` and the tests `test_fall_watch.gd` and `test_push_warning.gd` live on the branch `gp0/measure` (pushed, not merged). This documentation already describes them and came to `main` ahead of the code, so nobody misses the findings. Check that branch out (`git fetch`, `git checkout gp0/measure`) to run them or to build on GP0 (GP1, GP2, GP10). Remove this note when the branch is merged.
+
 ## Overview
 
 **Where we are.** Version 0.1.0 is out (21 October 2026): real windsurfing physics, Lake Silvaplana in the Maloja wind, and races against up to 20 AI boards. Next is **version 0.2: the player becomes the sailor.** In 0.1 the autopilot sails and the player mostly watches. In 0.2:
