@@ -22,6 +22,9 @@ extends SceneTree
 ##      1 + threshold x intensity, the timing_ease settings replace the case's own
 ##   [--slice=<i>/<n>] (run every n-th case from the i-th) [--out=<csv>] [--falls_out=<csv>]
 ##   [--label=<text>] (a column in the CSV, to tell runs apart)
+##   [--reaction_s=<s>] the sailor feels the apparent wind's strength this late: the controller
+##      is handed the apparent wind speed of that long ago (only the controller; the physics sails
+##      in the real wind). The autopilot otherwise answers a gust in the same tick
 ## The groups are pilot (the auto-sheet's Autopilot), sailor (SailorConfig) and timing
 ## (timing.lead_s, timing.threshold: to sweep the timing itself).
 
@@ -184,6 +187,8 @@ func _run_case(case: PushCase, falls: Array[String]) -> PushResult:
 	var history: Array[Dictionary] = []
 	var pointing: bool = false
 	var previous_state: WindsurferSim.SailorState = sim.sailor_state
+	var reaction_ticks: int = int(round(_options.get("reaction_s", "0").to_float() / DT))
+	var felt_aws: PackedFloat64Array = PackedFloat64Array()
 	for i: int in steps:
 		var t: Telemetry = sim.telemetry
 		var easing: bool = false
@@ -204,6 +209,13 @@ func _run_case(case: PushCase, falls: Array[String]) -> PushResult:
 			pointing = false
 		var wanted_twa: float = case.twa_deg if pointing else clampf(case.twa_deg, START_TWA_DEG, START_TWA_MAX_DEG)
 		hands.steer = LearnedSkipper.steer_toward_twa(t.twa_deg, 1.0, wanted_twa)
+		if reaction_ticks > 0:
+			# The telemetry is written afresh by the next step, so this changes only what the
+			# controller reads now.
+			felt_aws.append(t.aws_kt)
+			if felt_aws.size() > reaction_ticks + 1:
+				felt_aws.remove_at(0)
+			t.aws_kt = felt_aws[0]
 		if sim.sailor_state == WindsurferSim.SailorState.SAILING:
 			controller.update(t, controls, DT)
 		sim.step(DT, controls)

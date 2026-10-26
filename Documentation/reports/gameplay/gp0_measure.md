@@ -8,7 +8,7 @@
 2. **The risk is real and comes with the wind.** At 12 kt nothing changes. At 18 kt in the default gusts nothing falls, even fully pushed. At 24 kt, a board pushed all the time catapults 3 to 15 times in 200 to 400 s on the 100 to 135° reaches and ends up slower than neutral. With stronger gusts (0.3), the fully pushed board also falls upwind at 18 kt.
 3. **The timing skill works.** A sailor who pushes and eases as each gust arrives sails the 24 kt beam reach at **13.00 m/s with no falls**. Neutral does 12.22 to 12.52, and pushing all the time gives 12.39 with 6 falls. Easing up to 1 s early works; 2 s is too early.
 4. **Falls come with a warning, but not from the fin.** 117 of the 124 falls are catapults, and 101 of them round up just before. For a second the sail pulls harder than the feet can hold while the board speeds up in the gust; in the last half second the nose lifts and the bow swings up at 15 to 27 °/s. The fin is not part of it: before a fall it carries a tenth to a fifth of its stall, and it stalls only in the moments around a fall and the restart after it. The heel stays small until the fall itself. There are no spin-outs (PH6).
-5. **Package B has something to find.** On the 18 kt broad reach the back foot is worth about 10 % over 0.1's trim (in steady wind, 20 % between the least and the most trim). On the beam reaches a flat board beats 8 to 10° of rail by 3 to 10 %. The fastest rail is always the flattest; rail buys stability at speed. More trim is faster until the board bounces, and that limit falls with speed. At 24 kt too much trim on a flat board catapults, and with 5 to 6° of rail the same trim is safe and fastest. Upwind and below planing the two do almost nothing.
+5. **Package B has something to find.** On the 18 kt broad reach the back foot is worth about 10 % over 0.1's trim (in steady wind, 20 % between the least and the most trim). On the beam reaches a flat board beats 8 to 10° of rail by 3 to 10 %. Once fully planing, the flattest rail is the fastest and rail buys stability at speed; at the edge of planing (12 kt) a railed board is 2 to 6 % faster, either way (see the follow-up at the end). More trim is faster until the board bounces, and that limit falls with speed. At 24 kt too much trim on a flat board catapults, and with 5 to 6° of rail the same trim is safe and fastest. Upwind and below planing the two do almost nothing.
 6. **Neutral (GD3):** `hike_share` 1.0 with today's safety nets. It is 1 to 3 % slower than 0.1's 1.1, and it does not catapult on the 24 kt broad reach, where 1.1 falls twice in 400 s. Neutral is then 82 to 84 % of the full push upwind and 94 to 98 % on the reaches.
 
 ## How it was measured
@@ -169,7 +169,7 @@ The slowed correction changes the other columns by about 2 % or less, apart from
 ### What the map says
 
 - **The back foot is the big one.** On the 18 kt broad reach a trim of 3 to 3.5° is 10 % faster than 0.1's 2° in gusts and waves (11.67 against 10.54) and 20 % faster than 0.5° in steady wind. On the beam reaches it is worth 1 to 6 %. 0.1's trim was chosen in U2 for a steady ride, not for speed ([fin_technique.md](../u2/fin_technique.md)), so a player who learns the back foot really does go faster.
-- **The rail has no sweet spot in the middle.** The flattest board is always the fastest on the reaches: 3 to 10 % over 8 to 10° of rail. Rail buys stability: at 24 kt, 3° of trim on a flat board catapults (0 and 2° of bank: 1 to 3 falls), and with 5 to 6° of rail the same trim is safe and the fastest of all (14.17 in gusts, 14.35 steady). The edge to play is "as flat and as far back as you dare, more rail when it gets wild". It does not sit at a fixed angle.
+- **The rail has no sweet spot in the middle once planing.** (At the edge of planing it does: see the follow-up.) The flattest board is the fastest on the planing reaches: 3 to 10 % over 8 to 10° of rail. Rail buys stability: at 24 kt, 3° of trim on a flat board catapults (0 and 2° of bank: 1 to 3 falls), and with 5 to 6° of rail the same trim is safe and the fastest of all (14.17 in gusts, 14.35 steady). The edge to play is "as flat and as far back as you dare, more rail when it gets wild". It does not sit at a fixed angle.
 - **The peak's sharpness:** on the trim, about 1 m/s (8 to 10 %) between 2° and 3° on the 18 kt broad reach, and at 24 kt the bounce or the fall within 1° beyond the best. On the rail, 0.1 to 0.4 m/s per 2° on the 18 kt beam reach.
 - **What too much does:** too much trim bounces (in steady wind the pitch SD rises to 1 to 1.7° first), and at 24 kt it catapults. Too much rail is only slower. The fin did not let go in any of these cases.
 - **Where it does nothing:** upwind (the board planes a third of the time at 48°, and the targets act only planing in the straps; ±3 %) and below planing. At 12 kt the broad reach stays at 5 m/s whatever is set, and rail upwind at 12 kt costs up to 20 % (3.05 → 2.45). The roadmap's "below planing the mouse does nothing yet" holds.
@@ -213,6 +213,43 @@ The stop rule was "if more push gives no speed, or the risk comes with no warnin
 5. **The run is slow:** at 150° the board makes 5.0 to 5.2 m/s at 18 kt and 9.6 m/s at 24 kt, against 10.6 and 14.1 m/s at 135° (PH17).
 6. **The technique's trim** (U2: 2.0° to 1.5° at speed) is 10 to 20 % slow on the 18 kt broad reach against 3 to 3.5°, at the cost of a bounce in steady wind. That was chosen for steadiness; with package B the player chooses.
 
+## Follow-up: Max's answers (the same day)
+
+Max: "in 12 knots in real life you can push too much, and for sure in 18 knots, so there is something in the physics that needs changing"; and "in real life a flat board is not the fastest, in light winds with wider boards, 75 cm and up (I think even 70 cm)". Two checks followed, at no change to `Game/sim/`.
+
+### A sailor who feels the gust late
+
+The autopilot reads the apparent wind's strength in the same tick a gust arrives and eases at once (`_alpha_for_torque_deg()` uses `telemetry.aws_kt` as it is). No person does that. `--reaction_s` (new in `run_push.gd`) hands the controller the apparent wind speed of that long ago; the physics sails in the real wind. The top of the dial (1.6 with the late ease), gusts 0.3, 200 s per case:
+
+| | 12/48 | 12/100 | 12/135 | 18/48 | 18/100 | 18/135 |
+|---|---|---|---|---|---|---|
+| 8 s gusts, feels at once (as now) | 2.74 | 9.02 | 5.55 | 4.00/2 | 12.30 | 10.67 |
+| 8 s gusts, 0.3 s late | 2.71 | 9.00 | 5.56 | 3.12/6 | 11.81/1 | 10.61 |
+| 8 s gusts, 0.6 s late | 2.74 | 9.00 | 5.56 | 2.56/9 | 8.67/6 | 10.55 |
+| 4 s gusts (sharper), at once | 2.74 | 8.95 | 5.58 | 4.17/1 | 12.24 | 10.71 |
+| 4 s gusts, 0.3 s late | 2.74 | 8.95 | 5.56 | 2.73/7 | 12.30 | 10.70 |
+| 4 s gusts, 0.6 s late | 2.74 | 8.95 | 5.56 | 0.42/17 | 12.40 | 10.73 |
+
+- **At 18 kt the risk is there once the sailor reacts like a person.** With 0.3 s the pushed board falls 6 to 7 times in 200 s upwind, and with 0.6 s, 9 to 17 times. The missing risk at 18 kt is the sailor model's instant reaction more than the board's physics. A reaction time in the autopilot is PH25; at 0 it must give today's numbers bit for bit.
+- **At 12 kt nothing falls and nothing changes,** whatever the push, the reaction time or the gusts' sharpness: the 6.5 m² sail in 12 kt (15.6 kt in the gusts) never pulls more than the sailor can hold. Max's "in real life you can push too much at 12 kt" points at the physics: the board starts planing at 13.4 kn against 8 to 10 kn on real boards (PH16), and its top speed is about 50 km/h against 60 (PH8). So the sim's 12 kt sails like a real 9 to 10 kt. This is PH26.
+
+### The rail both ways, in light wind
+
+`tools/reach_check.sh` (the Autopilot holding the course, a steady wind without the height gradient, flat water, 0.1's trim rule), with the rail target set both ways. A negative `fin_load_bank_deg` puts the windward rail down. Speed in m/s, and the wet length in m:
+
+| Bank° | 12/60 | 12/100 | 18/60 | 18/100 |
+|---|---|---|---|---|
+| −4 (windward rail down) | 7.29, 1.69 | **10.65**, 1.43 | 8.52, 1.42 | 13.09, 1.27 |
+| −2 | 7.51, 2.13 | **10.65**, 1.43 | 8.31, 1.49 | 13.08, 1.27 |
+| 0 (flat) | 7.53, 2.20 | 10.09, 2.20 | 8.48, 2.07 | **13.34**, 1.19 |
+| 2 (0.1) | **7.62**, 2.24 | 10.34, 1.75 | **8.90**, 1.49 | 13.17, 1.42 |
+| 4 | 7.53, 1.83 | 10.40, 1.76 | 8.74, 1.68 | 12.90, 1.63 |
+| 6 | 7.53, 1.90 | 10.31, 1.83 | 8.72, 1.76 | 12.77, 1.71 |
+
+- **In light wind the sim agrees with Max: a flat board is the slowest.** On the 12 kt beam reach the flat board does not get fully free: the whole 2.2 m of the hull is wet, and the planing share is 0.42. Either rail lets it go: the leeward rail down is 2 to 3 % faster, and the windward rail down 6 % faster, with 1.4 m wet and a planing share of 0.64. On the close reaches 2° of leeward rail is the best, by 1 to 5 %.
+- **The report's "the flattest board is always the fastest" holds only once fully planing** (18 kt and up on the beam reach). It came from runs whose 12 kt cases never planed, because there the height gradient leaves about 10.5 kt at the sail.
+- **What looks wrong:** fully planing, the leeward rail makes the wet part *longer* (18/100: 1.19 m flat, 1.71 m at 6°), so the rail costs speed. A heeled flat bottom should be wet over less of its width, so the friction should fall. The hull model narrows the planing beam with the heel only by its cosine (`lift_beam_m`, `hull_model.gd`; 99.8 % at 4°), though its strips do wet only part of a heeled bottom's width. Whether a 72 cm board railed at speed should be faster is Michiel's to check against Max's experience. This is PH27.
+
 ## The commands
 
 ```
@@ -234,6 +271,9 @@ tools/push_check.sh --winds=12,18,24 --twas=48,100,135 --seconds=90 --from=40 --
   --sweep=sailor.fin_load_bank_deg=0,2,4,6,8,10 --sweep2=sailor.running_trim_deg+sailor.running_trim_fast_deg=0.5,1.5,2.5,3.5
 tools/push_check.sh --winds=18,24 --twas=48,100,135 --seconds=150 --from=40 --jobs=4 --run=d2_map_gusty \
   --sweep=sailor.fin_load_bank_deg=0,2,5,8 --sweep2=sailor.running_trim_deg+sailor.running_trim_fast_deg=1,2,3   # and d3 with --sailor.lean_feel_time_s=2.0
+# The follow-up: the reaction time (and --gust_period=4), and the rail both ways
+tools/push_check.sh --winds=12,18 --twas=48,100,135 --seconds=240 --from=40 --jobs=3 --gust_intensity=0.3 --gust_period=8 --reaction_s=0.3 $LATE --run=e1_p8_r0.3
+tools/reach_check.sh --winds=12,18 --twas=60,100 --sailor.fin_load_bank_deg=-4   # and -2, 0, 2, 4, 6
 ```
 
 All in all about 600 cases, run four processes at a time (the laptop crashed under full load before; four never came close).
