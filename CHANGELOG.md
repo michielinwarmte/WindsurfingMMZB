@@ -4,6 +4,10 @@ What each version of the Windsurfing Simulator contains, newest first. The versi
 
 Version numbers: `0.x` while the team still changes the physics freely. A patch (`0.1.1`) is fixes only; a minor (`0.2.0`) adds features. How a release is made is in [ROADMAP.md](ROADMAP.md).
 
+## Next version (0.2, not released yet)
+
+- **GP0, the push and the body measured before they are built** (Session 56, 26 October 2026; [the report](Documentation/reports/gameplay/gp0_measure.md); on the branch `gp0/measure`, not merged into `main` yet): `tools/push_check.sh` sails the player's beginner controller headless with the autopilot's margin or the sailor's technique targets set per case, on the game's open water with waves and gusts. About 600 cases. It found the dial's three settings, that easing for the gusts beats both the safe and the reckless sailor at 24 kt, and the mouse's ranges; the fin does not warn before a catapult, and the round-up comes only in the last half second. From Max's answers and his play it found six things for the physics: the open sea's gusts jump every period (PH24), the sailor reacts instantly (PH25), light wind is too weak (PH26), the leeward rail costs speed when planing (PH27), the rigid sail cannot be sheeted in because it has no twist (PH28), and the rider's body breaks beyond its numbers (PH29). `tools/play_push.sh` is a playtest of the pushed sailor in 24 kt with gusts: the F1 panel shows the feet's overload and the fin live and freezes them from before each fall. Nothing in `Game/sim/` changed.
+
 ## 0.1.0 — 21 October 2026
 
 The first release: the state of the game after Session 53, merged into `main` from `feature/p9-racing` (which carried U1, U2, Phase 9 and the AI fleet's F1 to F5). The first version that can be downloaded and played without Godot.

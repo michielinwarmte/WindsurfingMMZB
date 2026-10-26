@@ -54,6 +54,7 @@ One report per package, written by whoever built it and read by the lead before 
 
 | Folder | Work |
 |---|---|
+| [reports/gameplay/](reports/gameplay/) | Version 0.2's gameplay: GP0's measurement of the push and the body (`gp0_measure.md`: the dial's three settings, easing for the gusts, the warning signs before a catapult, the map of the rail against the back foot) |
 | [reports/racing/](reports/racing/) | Phase 9 and the AI fleet: the race core, the courses on the water, the course fitter, the skipper, the learning harness, the sea query (with its before and after reach checks, identical on purpose), the physics without the engine's locks (`no_wait.md`, for Michiel's review PH2), the fleet frame, the living skipper, the trainer, real life (wind shadows and the rules), the personas, the generations' race |
 | [reports/u1/](reports/u1/) | U1, planing on a smaller wet area: the sources, the measurements, the physics, the planing onset, the porpoising, the finish (`finish_u16.md` measured where the board rails out) |
 | [reports/u2/](reports/u2/) | U2, the fin bends: the sources, the measurements (`fin_measure.md` has a sweep of the rail from 0 to 24 degrees), the fin's physics, the heeled hull, the technique (`fin_technique.md`: the map of rail against trim), the look, riding the fin (`fin_ride.md`: the weight aft), the hull's lift. For Michiel's review PH1 |
