@@ -104,6 +104,12 @@ var ease_heel_deg: float = 10.0
 var ease_rate_per_s: float = 1.0
 var ease_recovery_rate_per_s: float = 0.8
 
+## The auto-sheet pilot's margin set from outside, field by field (hike_share, the depower and
+## catch settings of Autopilot): GP1's push dial will write it here; until then GP0's playtest sets
+## it from the command line (main.gd, --push=1 or --pilot.<field>=<n>). Applied at every update,
+## because reset_controls() makes a new pilot after a waterstart. Empty: the pilot's own numbers.
+var pilot_overrides: Dictionary[String, float] = {}
+
 ## Beginner mode holds the heading when no steering key is pressed.
 var hold_heading: bool = true
 ## The trim, kept as "heading up" so that it stays right when the tack changes.
@@ -173,6 +179,8 @@ func set_sail(sail: SailModel, sailor: SailorConfig = null, air_density_kg_m3: f
 
 ## Reads the keys and writes the controls: sheet, boom across, rake, rig tilt and lean.
 func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
+	for field: String in pilot_overrides:
+		auto_sheet_pilot.set(field, pilot_overrides[field])
 	auto_sheet_pilot.update_tack(telemetry)
 	if telemetry.sail_side != _last_sail_side:
 		if _last_sail_side != 0:

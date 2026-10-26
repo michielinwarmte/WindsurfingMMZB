@@ -21,7 +21,11 @@ extends GutTest
 ## 3. the board rounded up at the end: in the last ROUND_UP_WITHIN_S the bow turned toward the
 ##    wind faster than ROUND_UP_DPS.
 ## 1 must hold for every catapult; 2 and 3 for most (MOST_SHARE), as in the report (76 and 101
-## of 124 falls). Nothing here sets a physics number: if the physics changes so that the fin
+## of 124 falls). Check 2 is not a warning on its own: the pushed sailor is overloaded in about half
+## of all sailing time here (printed; 52 % on 26 October 2026), and in 66 to 89 % of the time before a
+## catapult, so the overload marks the edge rather than the fall. To see it for yourself, sail
+## tools/play_push.sh: the detail panel (F1) shows the overload and the fin live, and freezes them
+## from 1 s and 0.5 s before each fall. Nothing here sets a physics number: if the physics changes so that the fin
 ## warns, or the sailor no longer strains first, this test says so, and the feedback (SO1, GR1)
 ## must follow. Takes about half a minute.
 
@@ -110,6 +114,8 @@ func _sail_and_read_the_catapults() -> Array[Warning]:
 	var keep: int = int(WARNING_S / DT) + 1
 	var pointing: bool = false
 	var was_sailing: bool = true
+	var sailing_ticks: int = 0
+	var overloaded_ticks: int = 0
 	for i: int in int(RUN_S / DT):
 		var t: Telemetry = sim.telemetry
 		for field: String in PUSH:
@@ -130,9 +136,14 @@ func _sail_and_read_the_catapults() -> Array[Warning]:
 		if was_sailing and not sailing_now and sim.fall_kind == "catapult" and t.time_s > SPIN_UP_S:
 			warnings.append(_read_warning(history, t.time_s))
 		was_sailing = sailing_now
+		if sailing_now and t.time_s > SPIN_UP_S:
+			sailing_ticks += 1
+			if t.feet_moment_excess_nm > OVERLOAD_NM:
+				overloaded_ticks += 1
 		history.append(_sample(t))
 		if history.size() > keep:
 			history.pop_front()
+	gut.p("overloaded in %.0f %% of all sailing time after the spin-up" % (100.0 * overloaded_ticks / maxi(sailing_ticks, 1)))
 	return warnings
 
 

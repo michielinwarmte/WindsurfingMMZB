@@ -375,6 +375,30 @@ func _apply_command_line_options() -> void:
 			_look_at_the_course(options["course_view"])
 	if options.has("measure"):
 		_measure_frame_rate(options["measure"].to_float())
+	_apply_pilot_options(options)
+
+
+## GP0's playtest (tools/play_push.sh): --push=1 has the player's sailor hold the margin of the push
+## dial's top, as measured in Documentation/reports/gameplay/gp0_measure.md ("Pushed"); any
+## --pilot.<field>=<n> sets one of the auto-sheet pilot's numbers (Autopilot) on top. Until GP1
+## builds the dial, this is the way to sail it.
+const PUSHED_MARGIN: Dictionary[String, float] = {
+	"hike_share": 1.6, "depower_alpha_per_deg": 0.3, "depower_rate_per_s": 0.05,
+	"depower_urgent_rate_per_s": 0.5, "catch_alpha_max_deg": 0.0}
+
+
+func _apply_pilot_options(options: Dictionary[String, String]) -> void:
+	var overrides: Dictionary[String, float] = _windsurfer.controller.pilot_overrides
+	if options.get("push", "0") == "1":
+		overrides.merge(PUSHED_MARGIN, true)
+	for key: String in options:
+		if not key.begins_with("pilot."):
+			continue
+		var field: String = key.trim_prefix("pilot.")
+		if field in _windsurfer.controller.auto_sheet_pilot:
+			overrides[field] = options[key].to_float()
+		else:
+			push_error("The autopilot has no number '%s'." % field)
 
 
 # ---------------------------------------------------------------- the race course (RACING_PLAN.md, 9A)
