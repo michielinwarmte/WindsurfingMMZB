@@ -1,6 +1,8 @@
 # Physics requests from the map track (Lake Silvaplana)
 
-Written 14 October 2026 (Session 37, map track) for Michiel and the AI sessions on the physics track. From Max and the map track ([MAP_SILVAPLANA_PLAN.md](MAP_SILVAPLANA_PLAN.md)).
+> **Archived on 26 October 2026 (Session 55).** R1, R2, R3, R5 and R9 are done and in version 0.1.0. The open ones are tracked in [ROADMAP.md](../../ROADMAP.md): R4 (running aground) is PH13, R6 (waves made by the wind) is PH11, R7 (replay and live weather) is MA6, and R8 (other sailors on the water) is the AI fleet (section RA). The measurements here (the thin air, the fresh water, the Maloja at Segl-Maria, the lake's fetch-limited waves) are still the sources the physics spec and the map's code cite. Kept as it was; the map of all documents is [Documentation/README.md](../README.md).
+
+Written 14 October 2026 (Session 37, map track) for Michiel and the AI sessions on the physics track. From Max and the map track ([MAP_SILVAPLANA_PLAN.md](../MAP_SILVAPLANA_PLAN.md)).
 
 The map track builds the first real spot, Lake Silvaplana (1791 m, Upper Engadin), on the branch `feature/map-silvaplana`. It does not change anything in `Game/sim/`, the shared configs in `Game/config/`, `Game/world/` or `PHYSICS_SPEC.md` (map plan MD7). This document lists what the map would need from the physics, with the numbers and sources we found, so you can decide what to do, how, and when.
 
@@ -112,7 +114,7 @@ Tests could be:
 
 It should stay deterministic (a seed), so tests and replays repeat. `WindField.velocity_at(point)` already takes a position, so the interface may not need to change.
 
-**Update, 14 October 2026 (Session 42, map track):** Max's wind analyser (map plan, phases W0 to W4) builds these patterns map-side first, as a viewer, without touching `Game/sim/`. The full research, with more stations, 2014 to 2026 and satellite photos of the lake, is in [MALOJA_WIND_RESEARCH.md](MALOJA_WIND_RESEARCH.md); its numbers replace the ones below (they agree within a few per cent). The connection to `WindField` (W5) is still this request.
+**Update, 14 October 2026 (Session 42, map track):** Max's wind analyser (map plan, phases W0 to W4) builds these patterns map-side first, as a viewer, without touching `Game/sim/`. The full research, with more stations, 2014 to 2026 and satellite photos of the lake, is in [MALOJA_WIND_RESEARCH.md](../MALOJA_WIND_RESEARCH.md); its numbers replace the ones below (they agree within a few per cent). The connection to `WindField` (W5) is still this request.
 
 **Update, 16 October 2026 (W5, physics track): connected.** `MapWindField` (`Game/sim/map_wind_field.gd`, spec section 8.10) extends `WindField` and answers with `MapWind`: the time of day runs with the simulation (from 14:30 on the lake, `--time=hh:mm`), `velocity_at(p)` is `MapWind`'s velocity at the point with the height profile from the pattern's 5 m (exponent 0.11), and the direction the simulation uses for its decisions (the sail's side, the water start, the TWA, the waves) is the lake's mean of the moment, while the sail and the windage feel the local wind. Outside the map it is the lake's mean; no NaN anywhere. The lake scene sails in it and the HUD shows the time, the lake's mean at 10 m, the local wind at the sail and the mean direction. The validation is unchanged (it sails on the open water).
 

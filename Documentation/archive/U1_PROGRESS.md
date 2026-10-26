@@ -12,11 +12,11 @@ The live state of U1, "planing on a smaller wet area". The plan and its executio
 
 | # | Agent | Package | State | Branch | Report |
 |---|---|---|---|---|---|
-| 1 | `measure` | baseline, the reach check, U1.1, then U1.4 (flat tail) | merged (U1.4 reverted) | `u1/measure` | [measure.md](../u1_reports/measure.md) |
-| 2 | `sources` | the four numbers that need a source | merged | `u1/sources` | [sources.md](../u1_reports/sources.md) |
-| 3 | `porpoising` | U1.5's diagnosis | merged | `u1/porpoising` | [porpoising.md](../u1_reports/porpoising.md) |
-| 4 | `physics` | all merged: U1.5 fix, grid, U1.4 back, onset (off), U1.2, U1.3, rake-first on. **Stop rule on targets 3 to 5** | merged (round 3, 1cf467a) | `u1/physics` | [physics.md](../u1_reports/physics.md), [physics_onset.md](../u1_reports/physics_onset.md), [physics_harness.md](../u1_reports/physics_harness.md) |
-| 5 | `finish` | U1.6, U1.7, U1.8: all merged | merged (a649a4a) | `u1/finish` | [finish_u16.md](../u1_reports/finish_u16.md), [finish_u178.md](../u1_reports/finish_u178.md) |
+| 1 | `measure` | baseline, the reach check, U1.1, then U1.4 (flat tail) | merged (U1.4 reverted) | `u1/measure` | [measure.md](../reports/u1/measure.md) |
+| 2 | `sources` | the four numbers that need a source | merged | `u1/sources` | [sources.md](../reports/u1/sources.md) |
+| 3 | `porpoising` | U1.5's diagnosis | merged | `u1/porpoising` | [porpoising.md](../reports/u1/porpoising.md) |
+| 4 | `physics` | all merged: U1.5 fix, grid, U1.4 back, onset (off), U1.2, U1.3, rake-first on. **Stop rule on targets 3 to 5** | merged (round 3, 1cf467a) | `u1/physics` | [physics.md](../reports/u1/physics.md), [physics_onset.md](../reports/u1/physics_onset.md), [physics_harness.md](../reports/u1/physics_harness.md) |
+| 5 | `finish` | U1.6, U1.7, U1.8: all merged | merged (a649a4a) | `u1/finish` | [finish_u16.md](../reports/u1/finish_u16.md), [finish_u178.md](../reports/u1/finish_u178.md) |
 
 The possible states are: not started → running → reported → merged.
 
@@ -72,7 +72,7 @@ Screenshots (not in git): `.screenshots/u1/before_beam_{12,18,24}kt.png` (`main`
 
 **The merged branch** (lead, 19 October 2026, e2f1563): `tools/check.sh` 190 files, 0 failed; `tools/test.sh` all passed; `tools/test.sh validation` no failures, 3 pending (the new check's targets). Green.
 
-**Round 3, U1.2 and U1.3 (agent 4, merged 1cf467a), agent 4's own numbers:** unit 343 of 343; check 0 failed; validation fails only the onset (11.6 kn). 18 kt beam reach: harness 683 N, rig 63 %, line 0.77 m, wet front 1.71 m, push 1.13 m, trim 1.64°. All 9 steady (worst 0.26° at 24 kt 135°). Speeds: the beam and broad reaches 4 to 11 % faster than Latest, the close reaches 3 % slower (the 45° stance). Full table in `u1_reports/physics_harness.md`.
+**Round 3, U1.2 and U1.3 (agent 4, merged 1cf467a), agent 4's own numbers:** unit 343 of 343; check 0 failed; validation fails only the onset (11.6 kn). 18 kt beam reach: harness 683 N, rig 63 %, line 0.77 m, wet front 1.71 m, push 1.13 m, trim 1.64°. All 9 steady (worst 0.26° at 24 kt 135°). Speeds: the beam and broad reaches 4 to 11 % faster than Latest, the close reaches 3 % slower (the 45° stance). Full table in `reports/u1/physics_harness.md`.
 
 **U1.7 (agent 5, merged a649a4a, no game file changed):** validation 26 pass, 1 fail (onset 11.6 kn), 2 pending; the reach check equals Latest; no fall, no NaN. Straight runs flat 8.60, 10.49, 11.53 m/s (baseline 8.77, 11.10, 12.01); the sea 8.47, 10.42, 11.44 (8.72, 10.90, 12.07); the lake 20.8, 18.4, 21.9 kt (22.1, 19.2, 23.3). Polar at 15 kt inside every range: 12.7, 16.2, 19.1, 21.5, 23.2, 24.1, 19.1, 12.2, 9.3 kt at 45° to 165°. Friction on the 18 kt beam reach 224 → 216 N: it did not halve, because the wet front barely moved.
 
@@ -106,7 +106,7 @@ Screenshots (not in git): `.screenshots/u1/before_beam_{12,18,24}kt.png` (`main`
 | 24 kt 100° | 13.74 | 1.94 | 1.61 | 1.32 | 0.01 | 925 | 84 | 630 | 272 | 1.07 |
 | 24 kt 135° | 15.46 | 1.95 | 1.65 | 1.21 | 0.07 | 921 | 87 | 668 | 335 | 1.07 |
 
-**Onset work (agent 4, merged, off by default):** the reach check and all checks are unchanged from the table below (`check.sh` 0 failed, `test.sh` all passed with one new test, validation 21 pass, onset fails, 2 pending). The onset without the correction is 16.0, 13.3, 11.0, 11.0 kn at 12, 15, 18, 24 kt (it jumps with the wind because the planing share hovers near 0.5); with factor 0.5 it is 8.8, 9.9, 9.4, 9.5 kn, and the 12 kt broad reach drops to 3.75 m/s at 9.3° trim, the 24 kt broad reach bounces at 0.64°. Full table in `u1_reports/physics_onset.md`.
+**Onset work (agent 4, merged, off by default):** the reach check and all checks are unchanged from the table below (`check.sh` 0 failed, `test.sh` all passed with one new test, validation 21 pass, onset fails, 2 pending). The onset without the correction is 16.0, 13.3, 11.0, 11.0 kn at 12, 15, 18, 24 kt (it jumps with the wind because the planing share hovers near 0.5); with factor 0.5 it is 8.8, 9.9, 9.4, 9.5 kn, and the 12 kt broad reach drops to 3.75 m/s at 9.3° trim, the 24 kt broad reach bounces at 0.64°. Full table in `reports/u1/physics_onset.md`.
 
 **Earlier: `feature/u1-planing-wet-area` after agent 4's first merge** (verified by the lead on `u1/physics` at 18e2a82) (verified by the lead, 19 October 2026, not merged): `tools/check.sh` 190 files, 0 failed; `tools/test.sh` 337 of 337; `tools/test.sh validation` 21 pass, **1 fail** (`test_planing_onset_and_fully_planing`: onset 6.85 m/s = 13.3 kn, band 8 to 10 kn), 2 pending (targets 3 and 4). The reach check (means over t ≥ 25 s, positions from the tail):
 
@@ -124,7 +124,7 @@ Screenshots (not in git): `.screenshots/u1/before_beam_{12,18,24}kt.png` (`main`
 
   Steady: 9 of 9 (target 2 met). Not met: the wet front (target 0.6 to 1.0 m), the trim (1.5° up) and the harness (350 to 480 N); the 18 kt broad reach is 1.1 m/s slower than the baseline with a longer wet part (2.24 m), which agent 1 tied to the flat tail and the feet (U1.3).
 
-**Earlier: U1.4, the flat tail, first attempt** (agent 1; `tail_rocker_m` 0, commit 54282ee, **reverted** in d55bd6a until the lead decides; see `u1_reports/measure.md`):
+**Earlier: U1.4, the flat tail, first attempt** (agent 1; `tail_rocker_m` 0, commit 54282ee, **reverted** in d55bd6a until the lead decides; see `reports/u1/measure.md`):
 - `tools/test.sh validation` 20 of 20, plus the new check (1 pass, 3 pending). `tools/test.sh` 333 of 335: two tests in `test_buoyancy.gd` (outside agent 1's files) fail, which is why it is reverted.
 - Straight runs, no fall, no NaN: flat 8.87, 11.07 and 11.99 m/s; the sea 8.65, 10.76 and 11.84 m/s (calmer: 4 and 11 sheet reversals instead of 9 and 17); the lake 22.0, 19.0 and 23.1 kt.
 - The reach check:
@@ -197,7 +197,7 @@ Start with the Next action in U1_PROGRESS.md.
 ```
 Take over as the lead of U1 in WindsurfingMMZB; the previous lead stopped. Read CLAUDE.md, Documentation/U1_PROGRESS.md and the U1 execution brief in Documentation/PLAYTEST_UPGRADES.md, and follow the brief.
 1. Check out feature/u1-planing-wet-area. Run git worktree list and git branch --list "u1/*", and compare them with the state table in U1_PROGRESS.md.
-2. An agent whose report is committed on its branch (Documentation/u1_reports/<name>.md) is finished: merge its branch if that hasn't been done.
+2. An agent whose report is committed on its branch (Documentation/reports/u1/<name>.md) is finished: merge its branch if that hasn't been done.
 3. Launch any agent that was running but didn't finish again, with the brief's agent prompt. It continues on its existing branch. A relaunch doesn't count toward the 5.
 4. Update and commit U1_PROGRESS.md, then go on from its Next action. Sub-agents: Opus 5.5 at extra-high effort (model opus, effort xhigh, isolation worktree), at most 3 at a time.
 Keep your own reading and writing short. Stop at the brief's stops and tell me in plain language.

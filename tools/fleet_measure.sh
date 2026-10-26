@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The fleet's frame time by fleet size (F1, Documentation/AI_FLEET_PLAN.md, D2): the release build
+# The fleet's frame time by fleet size (F1, Documentation/archive/AI_FLEET_PLAN.md, D2): the release build
 # (tools/release.sh) runs a race once per size with that many AI boards and --measure, and this
 # prints one table row per size. The AI boards are the four characters repeated (allrounder,
 # gambler, rookie, cautious, allrounder, ...), so their names repeat: fine for a measurement.

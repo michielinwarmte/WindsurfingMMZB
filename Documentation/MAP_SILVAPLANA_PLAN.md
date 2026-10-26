@@ -1,5 +1,7 @@
 # Map Plan: Lake Silvaplana (Silvaplanersee), Switzerland
 
+> **Status, 26 October 2026 (Session 55).** The map track was merged into `main` on 16 October 2026 and is in version 0.1.0, so the instructions below about working on `feature/map-silvaplana` and merging the physics branch into it are history. M0 to M3 and W0 to W5 are built. What is still open is section MA of [ROADMAP.md](../ROADMAP.md) (MA1 to MA8: the lake play-test, the credits screen, M4's details, W4b's tactics tools, the day types, replay and live weather, other spots, the Linux check); the M4 and W4b tasks below are the detail behind those items. The physics requests are archived ([archive/PHYSICS_REQUESTS_FROM_MAP.md](archive/PHYSICS_REQUESTS_FROM_MAP.md)); the open ones are PH11 and PH13 in the roadmap. The tools table below describes the PC Max used on 14 October; on the PC used since 19 October, Blender 4.5 and the map's Python packages are still to install (roadmap, TE2).
+
 Written 14 October 2026 (Session 37, map track), for the AI sessions doing the work and for the MMZB team reviewing it. Work on the branch `feature/map-silvaplana`. The rules and commands in [CLAUDE.md](../CLAUDE.md) still apply, and so does the "How to use this plan" section of [REBUILD_PLAN.md](archive/REBUILD_PLAN.md): phases in order, tick a box only when it is done and verified, stop at the end of every phase so the team can play-test.
 
 This is a side track next to the main plan. It builds the first real map: Lake Silvaplana in the Upper Engadin, one of the best-known windsurf spots in the Alps, famous for the afternoon Maloja wind.
@@ -20,7 +22,7 @@ The branch starts from `feature/physics-sim` (Phases 1 to 5), because `main` doe
 |---|---|---|
 | M0 | Tools, round-trip test, data download | ✅ Done on Windows (Session 38). The 10 cm photos were agreed and downloaded in M2. Still open: the Linux PC check, and the surface model (M4) |
 | M1 | Terrain and lakebed in Godot | ✅ Built on Windows (Session 39). Max's look, with the photos of M2 (Session 41): the terrain "is really good and nice" |
-| M2 | The look: aerial photo, sky, the mountains you can see | ✅ Built on Windows (Sessions 40 and 41), with see-through lake water in the terrain view. Max's look (Session 41): the terrain really good, the first water "really bad", so the see-through water was built. Max, 16 October: the new water works well. Waiting for Michiel on R9 (the water in the game) |
+| M2 | The look: aerial photo, sky, the mountains you can see | ✅ Built on Windows (Sessions 40 and 41), with see-through lake water in the terrain view. Max's look (Session 41): the terrain really good, the first water "really bad", so the see-through water was built. Max, 16 October: the new water works well. R9 done the same day: one water for the sea and the lake in the game (Phase 7) |
 | M3 | Sailing on the lake: start spot, one Maloja weather setting, shoreline | 🔶 Built (16 October 2026): `tools/play.sh lake` or the start menu's "Sail on Lake Silvaplana": the board off the camping beach in the map's own wind (`MapWind`, W5, from 14:30 with the time on the HUD), the thin air (0.98 kg/m³), the fresh water, the shore stop, the game's see-through water in the lake's look with the gusts on it, and a small map. Next: the team's play-test |
 | M4 | Details: camping and beach, village, trees, landmarks | ⬜ |
 | W0 | Wind analyser: research into how the Maloja behaves | ✅ Done (Session 42): [MALOJA_WIND_RESEARCH.md](MALOJA_WIND_RESEARCH.md). Max answered its questions on 15 October (in SILVAPLANA_SPOT_NOTES.md and the research document) |
@@ -72,7 +74,7 @@ The station at Segl-Maria (2020 to 2025) confirms the pattern:
 - it comes from 244°,
 - it builds from 11:00, holds about 12 to 13 kt mean with 19 to 20 kt gusts from 13:00 to 16:00, and fades after 18:00.
 
-The station stands on land, so its speeds are probably lower than on the water. Details: [PHYSICS_REQUESTS_FROM_MAP.md](PHYSICS_REQUESTS_FROM_MAP.md).
+The station stands on land, so its speeds are probably lower than on the water. Details: [PHYSICS_REQUESTS_FROM_MAP.md](archive/PHYSICS_REQUESTS_FROM_MAP.md).
 
 Found since (W0 and W1, Sessions 42 and 43; all of it in [MALOJA_WIND_RESEARCH.md](MALOJA_WIND_RESEARCH.md), five stations, 2014 to 2026, and satellite photos of the lake):
 - The 244° is the station's own spot turning the wind. Over the lake the Maloja blows along the lake, from about 222° (WindNinja; Max: "pretty good").
@@ -327,7 +329,7 @@ Max's look (Session 41): the terrain "is really good and nice"; the first water 
 **Goal:** you launch from the real spot and sail in a Maloja wind until you reach the other shore.
 
 **Tasks:**
-- [x] The wind direction (done in Session 37): the Maloja at Segl-Maria comes from **244°** (summers 2020 to 2025, 13:00 to 18:00), very steadily. The lake's long axis would give about 224°. Start with 244° and let Max judge on the water. The method and all numbers: [PHYSICS_REQUESTS_FROM_MAP.md](PHYSICS_REQUESTS_FROM_MAP.md), "The Maloja, measured"; the script is `tools/map/maloja_stats.py`.
+- [x] The wind direction (done in Session 37): the Maloja at Segl-Maria comes from **244°** (summers 2020 to 2025, 13:00 to 18:00), very steadily. The lake's long axis would give about 224°. Start with 244° and let Max judge on the water. The method and all numbers: [PHYSICS_REQUESTS_FROM_MAP.md](archive/PHYSICS_REQUESTS_FROM_MAP.md), "The Maloja, measured"; the script is `tools/map/maloja_stats.py`.
   - **Changed by W1 (Session 42):** the 244° is the station's spot turning the wind about 20°. Over the lake the Maloja blows along the lake, from about 222° (WindNinja in stable air; Max, 15 October: "pretty good"). So the weather setting below uses 222°.
 - [x] The weather setting (team decision 4), in `Game/maps/silvaplana/wind_silvaplana.tres`, using only the options `WindConfig` already has:
   - `speed_kt = 16` with `gusts_enabled = true` and `gust_intensity = 0.25`, which gives 12 to 20 knots,
@@ -607,7 +609,7 @@ The sailing reads the same wind (R5): `WindField.velocity_at(point)` asks the ma
 
 ## Later: big projects, for every spot, with Michiel
 
-Most of these change the physics (`Game/sim/`), so Michiel leads them, on the physics branch and with the physics rules (D8, the validation suite, PHYSICS_SPEC.md). The exception is L1, the wind patterns: Max leads those as part of the map work. They plug into the physics through `WindField`, and Michiel agrees that connection. They are general systems, so every future spot gets them too; Silvaplana is the first test case. The written request to Michiel, with the measured numbers, the sources and suggested interfaces, is [PHYSICS_REQUESTS_FROM_MAP.md](PHYSICS_REQUESTS_FROM_MAP.md):
+Most of these change the physics (`Game/sim/`), so Michiel leads them, on the physics branch and with the physics rules (D8, the validation suite, PHYSICS_SPEC.md). The exception is L1, the wind patterns: Max leads those as part of the map work. They plug into the physics through `WindField`, and Michiel agrees that connection. They are general systems, so every future spot gets them too; Silvaplana is the first test case. The written request to Michiel, with the measured numbers, the sources and suggested interfaces, is [PHYSICS_REQUESTS_FROM_MAP.md](archive/PHYSICS_REQUESTS_FROM_MAP.md):
 
 - **L1. Wind patterns (Max, connected with Michiel):** gusts and lulls that move across the water, shifts, the daily cycle, and less wind under the shores. They are built from the measured Maloja statistics and Max's local knowledge (request R5).
   - Max builds the patterns: the data, the model, and the visible gusts on the water.

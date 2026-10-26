@@ -241,7 +241,7 @@ const ACCELERATION_MS2: float = 1.0
 ## What the skipper knows of its board, to say how long a stretch will take: the settled speed
 ## (m/s) at each true wind angle in 12, 18 and 24 kt, one row of POLAR_TWA_DEG's angles per wind.
 ## Measured on the open water's sea (the headless race's) under the beginner controller with a
-## skipper's stick: 50 s from rest, the mean of the last 20 s (Documentation/racing_reports/
+## skipper's stick: 50 s from rest, the mean of the last 20 s (Documentation/reports/racing/
 ## skipper.md). 30, 165 and 180 degrees were not measured and are guesses. In 12 kt the board
 ## does not get planing from rest deeper than 125 degrees. It is not POLAR_15KT.md's polar (flat
 ## water, the plain autopilot), which the board does not reach on the sea: 74 % of it on a run at

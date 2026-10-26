@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Times the sea's queries and a whole board's physics tick on the waves (F1, the sea query;
-# Documentation/AI_FLEET_PLAN.md, D2). About half a minute. The numbers depend on the
+# Documentation/archive/AI_FLEET_PLAN.md, D2). About half a minute. The numbers depend on the
 # machine and on what else it is doing: compare runs on the same machine, back to back.
 #
 #   tools/sea_bench.sh                      20 000 points, 600 ticks
