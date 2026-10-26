@@ -15,7 +15,7 @@ extends GutTest
 ## A target that is not yet a check calls pending() with the measured numbers when it is
 ## unmet: the suite stays green and the numbers stay in the output. Target 2 is met since
 ## U1.5's fix (agent 4) and is a check. Targets 3 and 4 wait for U1.2 (the harness load),
-## which stopped at Stop 2 for the team (Documentation/u1_reports/physics.md).
+## which stopped at Stop 2 for the team (Documentation/reports/u1/physics.md).
 const TARGET_2_IS_A_CHECK: bool = true
 const TARGETS_3_AND_4_ARE_CHECKS: bool = false
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Where do boards on worker threads wait for each other? Times small pieces of GDScript work on
 # 1, 4, 8 and 16 threads at once (Game/dev/thread_bench.gd; F1 `fleet_wait` in
-# Documentation/AI_FLEET_PLAN.md). About a minute.
+# Documentation/archive/AI_FLEET_PLAN.md). About a minute.
 #
 #   tools/thread_bench.sh                     on the editor engine
 #   tools/thread_bench.sh --release           on the release engine (tools/release.sh build first)

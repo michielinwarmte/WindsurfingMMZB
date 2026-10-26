@@ -7,7 +7,7 @@ Three kinds of sources:
 - **Satellite photos:** Sentinel-2 photographs the lake at 12:28 local time; rough water shows where the wind is. Script: `tools/map/satellite_wind.py`.
 - **What people wrote:** an old measurement study (Mörikofer, 1938), weather services, spot guides, glider pilots and race reports. They are listed under [Sources](#sources).
 
-The numbers here replace the first ones in [PHYSICS_REQUESTS_FROM_MAP.md](PHYSICS_REQUESTS_FROM_MAP.md) (R5, 2020 to 2025 only). They agree within a few per cent.
+The numbers here replace the first ones in [PHYSICS_REQUESTS_FROM_MAP.md](archive/PHYSICS_REQUESTS_FROM_MAP.md) (R5, 2020 to 2025 only). They agree within a few per cent.
 
 ## In short: what the simulation has to do
 

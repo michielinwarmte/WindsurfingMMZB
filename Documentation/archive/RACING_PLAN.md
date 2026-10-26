@@ -22,7 +22,7 @@ Max asked for three things on 19 October 2026: races with AI opponents; opponent
 | 9C | The learning harness: the race as a training environment, the bridge to Python, the first learned skipper on course T1 | ✅ The harness built with an in-Godot evolution trainer first (Session 51, the night run: a brain learnt to start and beat to mark 1 on T1, not to round it); the bridge to Python and PPO built in Session 53 (21 October 2026) as the AI fleet's F5 (`tools/train.sh`, AI_FLEET_PLAN.md D6b: the reward follows the course, a curriculum of six stages on random courses); the first trained head is the nights' work from here |
 | 9D | Learned skippers in the game: the curriculum T1 to T2, personalities, evaluation | ⬜ |
 | 9E | Later: racing rules and penalties, replays, a leaderboard | ⬜ |
-| 9F | The AI fleet: a head and hands, polar boards for the far ones, personas as skill sheets, a living fleet that free-sails and gathers for the start, wind shadows and rules, a trained head, 20 to 40 boards | 📝 Planned (Session 51): [AI_FLEET_PLAN.md](../AI_FLEET_PLAN.md), parts F1 to F6, five decisions for Max and Michiel first |
+| 9F | The AI fleet: a head and hands, polar boards for the far ones, personas as skill sheets, a living fleet that free-sails and gathers for the start, wind shadows and rules, a trained head, 20 to 40 boards | 📝 Planned (Session 51): [AI_FLEET_PLAN.md](AI_FLEET_PLAN.md), parts F1 to F6, five decisions for Max and Michiel first |
 
 **Phase 9 is done** (the rebuild plan's "done when") at the end of 9B: a full race against three AI opponents. 9C and 9D are Max's neural-network track on top of it.
 
@@ -260,12 +260,12 @@ Small, and none of it changes how a board sails:
 **Goal:** the curriculum through T2 and the opponents; a cast of learned skippers with characters; the evaluation table.
 
 **Tasks:**
-- [ ] Stages 2 to 5 of the curriculum, each a config file, each run overnight where needed; the curves kept in `Documentation/racing_reports/`.
+- [ ] Stages 2 to 5 of the curriculum, each a config file, each run overnight where needed; the curves kept in `Documentation/reports/racing/`.
 - [ ] Personalities: at least three brains with different reward weights or seeds (a bold one, a careful one, a gust hunter), plus three ages of one of them (rookie, club, pro). Their `SkipperConfig` names them, colours them, and points at the brain file.
 - [ ] The evaluation table in this file: every skipper (scripted and learned) on T1 and T2 at 12, 18 and 24 kt, alone and in a fleet of four: finish rate, mean time, falls, tacks. The learned skippers' times against the all-rounder's. Max's own times beside them if he likes.
 - [ ] The "brains race" mode (four checkpoints on one line) and `tools/play.sh race --brain=<file>` for watching a checkpoint.
 - [ ] The retraining command (`tools/race_train.sh all`) documented, and the brain files carrying the physics commit they were trained on; a check that warns when the game's physics commit is newer than the brains'.
-- [ ] Anything the learned skippers found: a way to sail that is faster than the polar, a manoeuvre the controller allows but a sailor could not do, a place on the lake where the wind model misbehaves. Each is a finding for Michiel (a learned skipper is an untiring tester of the physics), written up in `Documentation/racing_reports/findings.md`, and never trained into the brain on purpose.
+- [ ] Anything the learned skippers found: a way to sail that is faster than the polar, a manoeuvre the controller allows but a sailor could not do, a place on the lake where the wind model misbehaves. Each is a finding for Michiel (a learned skipper is an untiring tester of the physics), written up in `Documentation/reports/racing/findings.md`, and never trained into the brain on purpose.
 
 **Done when:** the table is filled, the learned skippers are in the menu, and Max has raced a fleet of them on both courses.
 **Stop:** the team's checklist: Do the learned skippers feel different from the scripted ones, and from each other? Which is the most fun to race against? What did they find in the physics?
@@ -286,7 +286,7 @@ Game/dev/race_server.gd    the bridge's Godot side (headless)
 Game/tests/unit/test_race_*.gd, test_skipper.gd, test_race_env.gd, test_neural_net.gd
 tools/race.sh, race_matrix.sh, race_train.sh, race_plot.sh
 tools/race/                env.py, train.py, export_brain.py, evaluate.py, plot.py, stages/*.yaml, requirements.txt
-Documentation/racing_reports/   the agents' reports, the learning curves, the findings for Michiel
+Documentation/reports/racing/   the agents' reports, the learning curves, the findings for Michiel
 ```
 
 ## Execution brief
@@ -323,7 +323,7 @@ An agent that needs a file outside its list stops and says so. Any change to `Ga
 - **Read narrowly.** Read this plan, CLAUDE.md, and the files of your package. PHYSICS_SPEC.md is over 6000 lines: never read it whole.
 - **Measure with the one-line tools** (`tools/race.sh`, `tools/race_matrix.sh`), not by reading CSV files. Pipe long outputs through `tail`.
 - **Pace the checks.** `tools/test.sh` after each change; `tools/check.sh` after scene or resource changes; a screenshot before saying a visual works; the validation suite is not needed unless `Game/sim/` changed.
-- **Report briefly.** At most 300 words plus one table, committed as `Documentation/racing_reports/<name>.md`, and returned to the lead as the same text.
+- **Report briefly.** At most 300 words plus one table, committed as `Documentation/reports/racing/<name>.md`, and returned to the lead as the same text.
 
 ### Stop rules (tell Max in plain language, with the options)
 

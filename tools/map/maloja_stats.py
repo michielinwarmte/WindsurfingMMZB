@@ -1,6 +1,6 @@
 """Maloja wind and air statistics from MeteoSwiss station Segl-Maria (SIA).
 
-The numbers in Documentation/PHYSICS_REQUESTS_FROM_MAP.md ("The Maloja, measured") come
+The numbers in Documentation/archive/PHYSICS_REQUESTS_FROM_MAP.md ("The Maloja, measured") come
 from this script. Get the 10-minute data first (about 40 MB, not committed):
 
     mkdir -p .map_data/raw/meteoswiss

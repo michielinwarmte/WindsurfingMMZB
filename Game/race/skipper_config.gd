@@ -17,12 +17,12 @@ enum StartStyle { LOOP, HOLD }
 
 @export_group("Angles")
 ## The best upwind wind angle: where the boat's speed toward the wind (VMG) is highest. From
-## Documentation/POLAR_15KT.md: 45 degrees gives 7.9 kt of VMG at 15 kt of wind, more than 40
-## (7.6 kt) or 60 (7.1 kt).
+## Documentation/POLAR_15KT.md: 45 degrees gives 8.0 kt of VMG at 15 kt of wind, more than 40
+## (7.8 kt) or 60 (7.0 kt).
 @export_range(35.0, 70.0) var upwind_vmg_twa_deg: float = 45.0
 ## The best downwind wind angle: where the boat's speed away from the wind is highest. From
-## Documentation/POLAR_15KT.md: 135 degrees gives 14.4 kt of VMG, more than 120 (12.4 kt) or 150
-## (9.3 kt, the board stops planing).
+## Documentation/POLAR_15KT.md: 135 degrees gives 13.4 kt of VMG, more than 120 (12.7 kt) or 150
+## (10.3 kt, the board comes off the plane).
 @export_range(110.0, 170.0) var downwind_vmg_twa_deg: float = 135.0
 ## Sails higher than the polar's best upwind angle (negative) or lower and faster (positive).
 @export_range(-4.0, 6.0) var pointing_offset_deg: float = 0.0
