@@ -27,13 +27,14 @@ const TWA_DEG: float = 100.0
 ## of 4.5 (SailorConfig.fin_load_bank_deg), so the heel's upward part is smaller (it was
 ## 40.9 N at a 1.98 degree slip and 526 N of lift). Re-pinned in Session 57 (PH28, the sail
 ## from the wind tunnel): the sailor sheets the twisting sail further in, so it pulls harder on
-## this reach and the fin carries more (it was 475 N at a 1.64 degree slip, 16 N upward).
-const STIFF_SLIP_DEG: float = 1.81
+## this reach and the fin carries more (it was 475 N at a 1.64 degree slip, 16 N upward; the
+## numbers below are with the twist's final floor, 0.75).
+const STIFF_SLIP_DEG: float = 1.74
 const SLIP_TOLERANCE_DEG: float = 0.25
-const STIFF_LIFT_N: float = 559.0
+const STIFF_LIFT_N: float = 526.0
 ## A share of the lift.
 const LIFT_TOLERANCE: float = 0.05
-const STIFF_UP_N: float = 19.0
+const STIFF_UP_N: float = 18.0
 const UP_TOLERANCE_N: float = 10.0
 ## A stiff fin's force has no part out of the board's plane, and its tip does not turn.
 const STIFF_TILT_MAX_DEG: float = 0.01

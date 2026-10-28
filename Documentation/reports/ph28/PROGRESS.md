@@ -13,19 +13,19 @@ Max, 28 October 2026: build the sail from the iQFOiL wind-tunnel study, combine 
 | 5 | Roadmap, progress log, docs index | done, 63754be |
 | 6 | `tools/test.sh validation` | run: 36 pass, 8 fail, 2 pending (before PH28: only the onset, red on purpose). The fin's pin re-pinned (below); the rest are kept red as the evidence, not loosened |
 | 7 | The twist's floor (`twist_min_factor`) and the push's catapult at 24 kt | done, 1b1f2d5: the floor is 0.75, the tunnel's lowest measured share (the report's measurement 5); the push catapults again in the push check |
-| 8 | The final set with the final defaults: `push_check --seconds=120 --run=ph28_final`, `reach_check`, `test.sh`, `check.sh`, `test.sh validation` (logs `.logs/ph28_final_*.txt`, status in `.logs/ph28_final_status.txt`) | running |
+| 8 | The final set with the final defaults: `push_check --seconds=120 --run=ph28_final`, `reach_check`, `test.sh`, `check.sh`, `test.sh validation` (logs `.logs/ph28_final_*.txt`, status in `.logs/ph28_final_status.txt`) | done: unit 539 of 539, check passes, validation 36 pass, 8 red (the same causes; the fin re-pinned to the final floor: slip 1.74°, lift 526 N, up 18 N), the report's measurement 6 |
 
 ## The validation run (Session 57), red tests by cause
 
 | Cause | Test | What it says |
 |---|---|---|
-| The hull's drag (PH16): slower in light wind and on broad reaches | `test_skipper.gd`, the all-rounder on T1 | does not finish at 12 kt; 8:04.6 at 18 kt against 8:00 |
+| The hull's drag (PH16): slower in light wind and on broad reaches | `test_skipper.gd`, the all-rounder on T1 | does not finish at 12 kt (with the floor at 0.5 also 8:04.6 at 18 kt against 8:00; in time with 0.75) |
 | | `test_polar_sweep.gd`, real-world range | 7.41 m/s at 135° against 10.80 ± 20 % |
 | | `test_polar_sweep.gd`, planing onset (red on purpose before) | 15.6 kn, was 13.4 (band 8 to 10) |
-| | `test_living_skipper_fleet.gd`, the fleet starts | "Gambler 4" starts more than 20 s after the gun |
-| Porpoising (Savitsky's limit for this light board, U1 agent 3) | `test_planing_wet_area.gd`, target 2 | 24 kt 135°: pitch SD 0.84° (limit 0.30) |
-| | `test_rig_lean_and_fin_loading.gd`, steady on course | pitch SD 0.314° against 0.30 |
-| The twist depowers the pushed sail at 24 kt | `test_push_warning.gd` | the pushed board does not catapult (0 against at least 2): step 7 |
+| | `test_living_skipper_fleet.gd`, the fleet starts | one board ("Gambler 4"; with the final floor "All-rounder 4") starts more than 20 s after the gun |
+| Porpoising (Savitsky's limit for this light board, U1 agent 3) | `test_planing_wet_area.gd`, target 2 | 24 kt 135°: pitch SD 0.87° (limit 0.30) |
+| | `test_rig_lean_and_fin_loading.gd`, steady on course | pitch SD 0.49° against 0.30 (0.314° with the floor at 0.5) |
+| The push, measured on the legacy sail | `test_push_warning.gd` | its one run does not catapult (0 against at least 2), while the push check at the same settings catapults twice in 150 s at 100° and 120°: GP3 re-measures the dial (step 7) |
 | The sail pulls harder on the 18 kt reach | `test_fin_bend.gd`, the stiff fin's pin | 559 N against 475: re-pinned (slip 1.81°, lift 559 N, up 19 N), as Session 49 did for U2 |
 
 ## Commands used

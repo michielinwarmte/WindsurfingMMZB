@@ -93,6 +93,16 @@ A note on the tunnel's uniform wind: at sea the apparent wind twists with height
 
 With 0.5 pushing at 24 kt had no risk at all, which is not real and takes package A's point away. The floor is now 0.75, the lowest share the tunnel measured: the twist is not extrapolated beyond the data. With it, the push again catapults (run `ph28_push_harder`, 24 kt): at hike_share 1.6 twice in 150 s on both the 100° and the 120° reach (12.54 and 12.70 m/s made good), at 2.0 and 2.5 three or four times. GP0's own validation test (`test_push_warning.gd`, one 150 s run at 24 kt 120°) saw none in its gust sequence; GP3 re-measures the dial on this sail anyway, since GP0's settings were found on the legacy one.
 
+**6. The final defaults (the floor 0.75), `tools/push_check.sh --seconds=120 --jobs=3 --run=ph28_final`, gusts 0.2 and waves.** Speed made good (VMG upwind) against the legacy sail of run 1, the mean angle of attack and the sheet:
+
+| Wind | Upwind (48°) | Beam reach (100°) | Broad reach (135°) |
+|---|---|---|---|
+| 24 kt | 4.30, **+7 %**, 7.3°, sheet 0.90 (legacy 3.7°, 0.84) | 13.05, **+4 %**, 9.4°, 0.73 (legacy 4.3°, 0.64) | 12.74, −10 % |
+| 18 kt | 3.90, 0 %, 10.8°, 0.99 (legacy 5.2°) | 11.56, −1 %, 14.5°, 0.88 (legacy 5.9°) | 7.55, −29 % |
+| 12 kt | 1.76, −36 % | 7.16, −19 % | 4.05, −28 % |
+
+No case fell; the sheet's movement stays 0.07 to 0.18 per second, as calm as before. The reach check (flat, steady) with the final defaults: 24 kt 100° 15.20 m/s (legacy 14.80), 18 kt 100° 13.08 (13.17), 18 kt 135° 9.62 (13.09), 12 kt 100° 9.21 (10.34). The unit tests pass (539 of 539), `tools/check.sh` passes, and validation keeps the eight red tests of the progress file, all from the hull or the re-measured push.
+
 ## What this means
 
 The legacy sail made about twice the measured lift at small angles and a third more at the peak. That extra lift hid a hull that is too draggy at speed: its wet part is too long, because the board rides at about 1° of trim. U1 found the two reasons: Savitsky's porpoising limit for this light load is about 1.2°, and the sailor-and-rig loads (the harness, the mast foot) push the bow down (U1.2, U1.3, archived `U1_PROGRESS.md` and `Documentation/reports/u1/`). The planing buoyancy (`board.planing_buoyancy_factor` 0.5) moves the onset but wins no speed.
