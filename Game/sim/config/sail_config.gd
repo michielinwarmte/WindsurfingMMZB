@@ -88,10 +88,11 @@ extends Resource
 ## area) on a softer mast (back toward 125): 140 here. The share is twist_factor() in the
 ## sail model. 0 switches the twist off: a rigid sail, as before PH28.
 @export var twist_pressure_pa: float = 140.0
-## The twist's share is not allowed below this. The tunnel only went to 8 m/s (39 Pa); beyond
-## it this is an extrapolation, held at the point where the top of a real sail luffs and
-## flutters at the top of its range (half the rigid lift, about 31 kt of apparent wind).
-@export var twist_min_factor: float = 0.5
+## The twist's share is not allowed below this: the lowest share the tunnel measured (0.75 at
+## 8 m/s, 39 Pa; the share reaches it at about 17 kt of apparent wind). The twist is not
+## extrapolated past what was measured. A floor of 0.5 (half the rigid lift) left a pushed
+## sailor unable to catapult at 24 kt, and 0.8 brings the catapults back (Session 57's sweep).
+@export var twist_min_factor: float = 0.75
 ## Near the stall the twisted top carries the load the bottom has lost, so less of the lift is
 ## lost: at 8 m/s the peak fell to 0.89 of the light-wind peak where the linear part fell to
 ## 0.75, so this share (0.45) of the linear part's loss remains at the peak and beyond.

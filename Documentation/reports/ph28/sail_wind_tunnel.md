@@ -25,7 +25,7 @@ Its limits: only 4 to 8 m/s (8 to 16 kt of apparent wind), a race sail of 8 m²,
 
 `Game/sim/sail_model.gd`, `Game/sim/config/sail_config.gd`, `Game/config/sail_default.tres`, `Game/sim/autopilot.gd`, spec section 2.17:
 - The numbers: camber 0.07, zero-lift 28° per unit camber (−1.96°), lift slope factor 1.0, transition gain 0.15 (peak 1.10 untwisted), luff fade within 2°.
-- The twist: `SailModel.twist_factor(q) = max(1 / (1 + q / 140 Pa), 0.5)` scales the lift below the stall, less of it at the peak (share 0.45), the separation drag, and lowers the centre of effort (0.32 × (1 − f)). `twist_pressure_pa = 0` is the rigid sail.
+- The twist: `SailModel.twist_factor(q) = max(1 / (1 + q / 140 Pa), 0.75)` (the floor first 0.5, then the tunnel's lowest measured share, measurement 5) scales the lift below the stall, less of it at the peak (share 0.45), the separation drag, and lowers the centre of effort (0.32 × (1 − f)). `twist_pressure_pa = 0` is the rigid sail.
 - The autopilot reads the same twisted curves at the pressure it feels.
 - Visual only: the cloth's flutter threshold follows the new curve (`RigVisuals.FLUTTER_NONE_LOAD` 0.55 to 0.45).
 - Tests: the default sail against Fig. 8a at 4, 6 and 8 m/s (within 0.08, most within 0.03); the twist; the lower centre of effort. The spec's legacy worked examples are kept on the legacy curve. The catapult test sheets in at 24 kt now: at 18 kt a 75 kg sailor holds the measured 6.5 sheeted in, as a real one does.
@@ -82,6 +82,16 @@ At 18 kt on the beam reach (B) the hull's friction is 231 N of the 312 N drive. 
 No case fell, with any sail. In 24 kt the twisted sail is what a loose leech is for: the sailor sheets in fully and goes 7 to 11 % faster than with the legacy sail, as Max asked ("the character cannot fully close the sail"). The sheet's movement stays as calm as before (0.08 to 0.18 per second). In 12 kt the board does not get through the hump upwind: about 2.6 m/s through the water, where the hull's residuary drag peaks (`residuary_peak_froude` 0.55 on 2.4 m, 2.7 m/s).
 
 A note on the tunnel's uniform wind: at sea the apparent wind twists with height (more than 5° upwind at 15 kt, [W-T] section 5), and the sail's own rest twist is made for it. The sim measures its angle of attack against the wind at the centre of effort, halfway up, while the tunnel measured it at the bottom section, so the sim reads the tunnel's curve a few degrees further up. That roughly makes up for the twisted wind, and nothing more is added for it.
+
+**5. The twist's floor at 24 kt, gusts and waves, 150 s per case** (`--sweep=sail.twist_min_factor=0.5,0.65,0.8`, runs `ph28_floor_push` with GP0's push at the top of the dial, `ph28_floor_neutral` without). Speed made good (m/s) and falls:
+
+| Floor | Pushed 100° | Pushed 120° | Pushed 135° | Neutral 100° | Neutral 120° | Neutral 135° |
+|---|---|---|---|---|---|---|
+| 0.5 | 14.71, 0 | 14.44, 0 | 12.77, 0 | 13.48, 0 | 14.36, 0 | 12.79, 0 |
+| 0.65 | 14.55, 0 | 14.56, 0 | 12.80, 0 | 13.33, 0 | 14.44, 0 | 12.78, 0 |
+| 0.8 | 14.31, 0 | 11.37, 4 catapults | 12.92, 0 | 13.09, 0 | 14.45, 0 | 12.85, 0 |
+
+With 0.5 pushing at 24 kt had no risk at all, which is not real and takes package A's point away. The floor is now 0.75, the lowest share the tunnel measured: the twist is not extrapolated beyond the data. With it, the push again catapults (run `ph28_push_harder`, 24 kt): at hike_share 1.6 twice in 150 s on both the 100° and the 120° reach (12.54 and 12.70 m/s made good), at 2.0 and 2.5 three or four times. GP0's own validation test (`test_push_warning.gd`, one 150 s run at 24 kt 120°) saw none in its gust sequence; GP3 re-measures the dial on this sail anyway, since GP0's settings were found on the legacy one.
 
 ## What this means
 
