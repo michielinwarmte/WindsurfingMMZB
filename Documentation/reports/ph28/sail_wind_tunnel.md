@@ -65,6 +65,24 @@ In strong wind the sail closes 2 to 4° further at the same speed (the sailor's 
 
 At 18 kt on the beam reach (B) the hull's friction is 231 N of the 312 N drive. Its friction area is 0.96 m² (1.74 m wet), and its friction coefficient (0.0027) is the ITTC line's. So the area is too large, not the friction law. The trim is only 0.76°. Pressing for 3° with the back foot (D) does not move it on that reach: the rig's load on the mast foot (365 N, the harness 663 N) holds the bow down.
 
+**4. The twist on against off, gusts 0.2 and waves, 120 s per case** (`tools/push_check.sh --sweep=sail.twist_pressure_pa=140,0 --seconds=120 --jobs=2 --run=ph28_twist`; the legacy column is run 1's). The speed made good (VMG upwind), and the sheet:
+
+| Wind, course | Legacy | Tunnel curve, rigid | Tunnel curve, twisted (default) |
+|---|---|---|---|
+| 24 kt upwind | 4.03 | 4.08, sheet 0.86 | **4.46**, sheet 0.97 |
+| 24 kt beam reach | 12.57 | 12.65, sheet 0.67 | **13.46**, sheet 0.81 |
+| 24 kt broad reach | 14.21 | 13.28 | 12.76 |
+| 18 kt upwind | 3.89 | 3.92 | 3.64, sheet 1.00 |
+| 18 kt beam reach | 11.64 | 11.47 | 11.82, sheet 0.92 |
+| 18 kt broad reach | 10.57 | 8.18 | 7.55 |
+| 12 kt upwind | 2.74 | 2.42 | 1.76 |
+| 12 kt beam reach | 8.89 | 7.92 | 7.16 |
+| 12 kt broad reach | 5.59 | 4.25 | 4.05 |
+
+No case fell, with any sail. In 24 kt the twisted sail is what a loose leech is for: the sailor sheets in fully and goes 7 to 11 % faster than with the legacy sail, as Max asked ("the character cannot fully close the sail"). The sheet's movement stays as calm as before (0.08 to 0.18 per second). In 12 kt the board does not get through the hump upwind: about 2.6 m/s through the water, where the hull's residuary drag peaks (`residuary_peak_froude` 0.55 on 2.4 m, 2.7 m/s).
+
+A note on the tunnel's uniform wind: at sea the apparent wind twists with height (more than 5° upwind at 15 kt, [W-T] section 5), and the sail's own rest twist is made for it. The sim measures its angle of attack against the wind at the centre of effort, halfway up, while the tunnel measured it at the bottom section, so the sim reads the tunnel's curve a few degrees further up. That roughly makes up for the twisted wind, and nothing more is added for it.
+
 ## What this means
 
 The legacy sail made about twice the measured lift at small angles and a third more at the peak. That extra lift hid a hull that is too draggy at speed: its wet part is too long, because the board rides at about 1° of trim. U1 found the two reasons: Savitsky's porpoising limit for this light load is about 1.2°, and the sailor-and-rig loads (the harness, the mast foot) push the bow down (U1.2, U1.3, archived `U1_PROGRESS.md` and `Documentation/reports/u1/`). The planing buoyancy (`board.planing_buoyancy_factor` 0.5) moves the onset but wins no speed.
