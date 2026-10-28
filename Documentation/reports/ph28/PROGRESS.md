@@ -12,7 +12,8 @@ Max, 28 October 2026: build the sail from the iQFOiL wind-tunnel study, combine 
 | 4 | The hull: why the board rides at 1° of trim with 1.7 m wet | measured, not changed (the report's "What this means"); the levers are the rig's load path (U1.2: harness 663 N, mast foot 365 N) and the porpoising limit, both in Michiel's sailor and hull models, where U1's stop rules fired. The roadmap's PH16 has it |
 | 5 | Roadmap, progress log, docs index | done, 63754be |
 | 6 | `tools/test.sh validation` | run: 36 pass, 8 fail, 2 pending (before PH28: only the onset, red on purpose). The fin's pin re-pinned (below); the rest are kept red as the evidence, not loosened |
-| 7 | The twist's floor (`twist_min_factor`) and the push's catapult at 24 kt | running: `--sweep=sail.twist_min_factor=0.5,0.65,0.8`, pushed and neutral (`ph28_floor_push`, `ph28_floor_neutral`) |
+| 7 | The twist's floor (`twist_min_factor`) and the push's catapult at 24 kt | done, 1b1f2d5: the floor is 0.75, the tunnel's lowest measured share (the report's measurement 5); the push catapults again in the push check |
+| 8 | The final set with the final defaults: `push_check --seconds=120 --run=ph28_final`, `reach_check`, `test.sh`, `check.sh`, `test.sh validation` (logs `.logs/ph28_final_*.txt`, status in `.logs/ph28_final_status.txt`) | running |
 
 ## The validation run (Session 57), red tests by cause
 
