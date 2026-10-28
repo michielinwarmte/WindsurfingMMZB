@@ -32,6 +32,10 @@ var _side_hysteresis_deg: float = 0.0
 var _alpha_luff_deg: float = 0.0
 var _boom_across_max_deg: float = 0.0
 var _min_apparent_wind_ms: float = 0.0
+var _twist_pressure_pa: float = 0.0
+var _twist_min_factor: float = 0.0
+var _twist_peak_share: float = 0.0
+var _twist_ce_drop: float = 0.0
 
 ## +1 = boom and clew on the starboard side (port tack), -1 = boom on the port side
 ## (starboard tack). Starts on starboard tack.
@@ -57,6 +61,9 @@ var boom_direction_local: Vector3 = Vector3.BACK
 var is_luffing: bool = false
 ## The wind is on the sail's leeward face: the sail has inverted and pushes the other way.
 var is_backwinded: bool = false
+## The share of the rigid sail's lift the twisted sail keeps in this wind (twist_factor()):
+## 1 in a breath of wind, falling as the top twists open.
+var twist_share: float = 1.0
 var apparent_wind_world: Vector3 = Vector3.ZERO
 var aws_ms: float = 0.0
 var awa_rad: float = 0.0
@@ -85,6 +92,10 @@ func copy_config() -> void:
 	_alpha_luff_deg = config.alpha_luff_deg
 	_boom_across_max_deg = config.boom_across_max_deg
 	_min_apparent_wind_ms = config.min_apparent_wind_ms
+	_twist_pressure_pa = config.twist_pressure_pa
+	_twist_min_factor = config.twist_min_factor
+	_twist_peak_share = config.twist_peak_share
+	_twist_ce_drop = config.twist_ce_drop
 
 
 ## Puts the sail on the leeward side of a given apparent wind angle, keeping the current
@@ -166,11 +177,19 @@ func compute(rig: RigFrame, wind: WindField, sheet: float, rake: float, rho_air:
 	is_luffing = absf(alpha_rad) < deg_to_rad(_alpha_luff_deg)
 	is_backwinded = alpha_rad <= -deg_to_rad(_alpha_luff_deg)
 
-	cl = lift_coefficient(alpha_rad)
-	cd = drag_coefficient(cl, alpha_rad)
 	var q: float = 0.5 * rho_air * aws_ms * aws_ms
+	twist_share = twist_factor(q)
+	cl = lift_coefficient(alpha_rad, q)
+	cd = drag_coefficient(cl, alpha_rad, q)
 	lift_n = q * _area_m2 * cl
 	drag_n = q * _area_m2 * cd
+	# The twisted top carries less, so the force acts lower on the mast (PH28). The wind was
+	# sampled at the untwisted centre of effort above; a few tens of centimetres change it
+	# by next to nothing, and it keeps the wind's point independent of the wind itself.
+	if twist_share < 1.0:
+		var lowered: float = 1.0 - _twist_ce_drop * (1.0 - twist_share)
+		ce_local = _mast_foot_local + mast_direction() * (ce_height * lowered) + chord_local * (_ce_boom_fraction * _boom_m)
+		ce_world = rig.point_world(ce_local)
 
 	# Lift: perpendicular to the apparent wind, on the suction side of the sail (section 2.11).
 	var force_normal: Vector3 = -signf(alpha_rad) * n0
@@ -209,6 +228,7 @@ func _clear_forces() -> void:
 	side_force_n = 0.0
 	is_luffing = true
 	is_backwinded = false
+	twist_share = 1.0
 	torque_body = Vector3.ZERO
 
 
@@ -223,11 +243,23 @@ func mast_direction() -> Vector3:
 	return Vector3(sin(rig_lean_rad), cos(rig_lean_rad) * cos(rake_rad), cos(rig_lean_rad) * sin(rake_rad))
 
 
+## The share of the rigid sail's lift the sail keeps at this dynamic pressure of the apparent
+## wind (Pa), because its top twists open under load (PH28; SailConfig, "Twist under load"):
+## 1 / (1 + q / twist_pressure_pa), never below twist_min_factor. 1 with the twist off.
+func twist_factor(q_pa: float) -> float:
+	if _twist_pressure_pa <= 0.0:
+		return 1.0
+	return maxf(1.0 / (1.0 + q_pa / _twist_pressure_pa), _twist_min_factor)
+
+
 ## Size of the lift coefficient against the angle of attack: the legacy curve made
 ## continuous, with the luff fade within alpha_luff of zero (section 2.7 and 2.9). The
 ## direction of the force is decided in compute(): a backwinded sail (negative angle) pushes
 ## the other way with backwind_efficiency of the lift, as an inverted cambered sail does.
-func lift_coefficient(alpha: float) -> float:
+## q_pa is the apparent wind's dynamic pressure: the twisted sail keeps twist_factor() of the
+## rigid curve below the stall and less of a loss at and past the peak (twist_peak_share).
+## Without it (0) the curve is the rigid sail's.
+func lift_coefficient(alpha: float, q_pa: float = 0.0) -> float:
 	var a_deg: float = rad_to_deg(absf(alpha))
 	var slope: float = lift_slope_per_rad()
 	var alpha_zero_lift: float = -deg_to_rad(config.zero_lift_deg_per_camber * config.camber)
@@ -245,7 +277,11 @@ func lift_coefficient(alpha: float) -> float:
 	else:
 		value = config.deep_stall_cl * cos(deg_to_rad(a_deg - config.cl_deep_stall_deg))
 	var backwinded: float = config.backwind_efficiency if alpha < 0.0 else 1.0
-	return value * luff_factor(alpha) * backwinded
+	var share: float = twist_factor(q_pa)
+	if share < 1.0:
+		var toward_peak: float = clampf((a_deg - config.cl_linear_end_deg) / (config.cl_peak_deg - config.cl_linear_end_deg), 0.0, 1.0)
+		share = lerpf(share, 1.0 - (1.0 - share) * _twist_peak_share, toward_peak)
+	return value * luff_factor(alpha) * backwinded * share
 
 
 ## Near zero angle of attack the luff collapses and the sail flaps: the lift fades out
@@ -258,15 +294,18 @@ func luff_factor(alpha: float) -> float:
 	return 1.0
 
 
-## Parasitic, induced, separation and flat-plate drag, capped at cd_max (section 2.8).
-func drag_coefficient(lift_coeff: float, alpha: float) -> float:
+## Parasitic, induced, separation and flat-plate drag, capped at cd_max (section 2.8). The
+## induced drag follows the lift handed in (the twisted sail's, when q_pa is given), and the
+## separation drag of a twisted sail falls by its twist_factor(): its top meets the wind at a
+## smaller angle (in the tunnel the drag at 20 degrees fell 39 % from 4 to 8 m/s; PH28).
+func drag_coefficient(lift_coeff: float, alpha: float, q_pa: float = 0.0) -> float:
 	var a_deg: float = rad_to_deg(absf(alpha))
 	# The induced drag sees the aspect ratio with the deck's end-plate effect.
 	var induced: float = lift_coeff * lift_coeff / (PI * config.aspect_ratio() * config.oswald_e)
 	var separation: float = 0.0
 	if a_deg > config.cd_separation_start_deg:
 		var x: float = (a_deg - config.cd_separation_start_deg) / config.cd_separation_span_deg
-		separation = config.cd_separation_gain * x * x
+		separation = config.cd_separation_gain * x * x * twist_factor(q_pa)
 	var form: float = 0.0
 	if a_deg > config.cl_deep_stall_deg:
 		form = config.cd_form_gain * sin(deg_to_rad(a_deg))

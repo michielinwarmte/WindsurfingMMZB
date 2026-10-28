@@ -1,7 +1,8 @@
 extends GutTest
 ## The sail model against the worked examples of PHYSICS_SPEC.md section 2. The spec's
 ## coefficient numbers are for the legacy sail (6.5 m2, luff 4.7 m), so that sail is built
-## explicitly where numbers are checked.
+## explicitly where numbers are checked. The default sail is checked against the full-scale
+## wind-tunnel measurements of an iQFOiL sail (PH28; Zhang et al. 2025) at the end.
 
 const TOL: float = 1e-6
 
@@ -13,6 +14,13 @@ func _legacy_sail() -> SailConfig:
 	config.cd_parasitic = 0.015  # the spec's worked examples use the legacy clean-sail value
 	# The sail of the worked examples stands alone in a wind tunnel: no deck under its foot.
 	config.end_plate_factor = 1.0
+	# The legacy lift curve, rigid, as the worked examples were made with (before PH28).
+	config.camber = 0.10
+	config.zero_lift_deg_per_camber = 60.0
+	config.lift_slope_factor = 0.9
+	config.cl_transition_gain = 0.3
+	config.alpha_luff_deg = 5.0
+	config.twist_pressure_pa = 0.0
 	return config
 
 
@@ -205,3 +213,63 @@ func test_no_force_without_wind() -> void:
 	sail.compute(RigFrame.rigid_on(body, sail.config.mast_foot_local), _constant_wind(0.3, 90.0), 0.5, 0.0, 1.225)
 	assert_eq(sail.force_world, Vector3.ZERO)
 	assert_eq(sail.lift_n, 0.0)
+
+
+# The default sail against the full-scale iQFOiL 8 m2 sail in the wind tunnel (PH28; Zhang et
+# al. 2025, Documentation/2501.13254v1.pdf, Fig. 8a, the outhaul on). Lift at the bottom
+# section's angle of attack, read off the figure at 4, 6 and 8 m/s of wind.
+const TUNNEL_ANGLES_DEG: Array[float] = [5.3, 8.7, 12.2, 16.5]
+const TUNNEL_LIFT: Dictionary[float, Array] = {
+	4.0: [0.50, 0.66, 0.96, 0.98],
+	6.0: [0.42, 0.60, 0.82, 0.98],
+	8.0: [0.37, 0.54, 0.73, 0.90],
+}
+
+
+func _pressure_pa(wind_ms: float) -> float:
+	return 0.5 * 1.225 * wind_ms * wind_ms
+
+
+func test_the_default_sail_lifts_as_the_wind_tunnel_sail() -> void:
+	var sail: SailModel = SailModel.new(load("res://config/sail_default.tres"))
+	for wind_ms: float in TUNNEL_LIFT:
+		var measured: Array = TUNNEL_LIFT[wind_ms]
+		for i: int in TUNNEL_ANGLES_DEG.size():
+			var alpha_deg: float = TUNNEL_ANGLES_DEG[i]
+			var cl: float = sail.lift_coefficient(deg_to_rad(alpha_deg), _pressure_pa(wind_ms))
+			assert_almost_eq(cl, float(measured[i]), 0.08, "lift at %.1f degrees in %.0f m/s" % [alpha_deg, wind_ms])
+	# Its lift starts near -2 degrees, as both the full-scale and the rigid model's did: at
+	# 1.3 degrees the tunnel sail still carried 0.15 to 0.18 (inside the narrow luff fade).
+	assert_almost_eq(sail.lift_coefficient(deg_to_rad(1.3), _pressure_pa(4.0)), 0.16, 0.05, "a little lift just above zero")
+
+
+func test_the_sail_twists_open_as_the_wind_rises() -> void:
+	var sail: SailModel = SailModel.new(load("res://config/sail_default.tres"))
+	var alpha: float = deg_to_rad(10.0)
+	var light: float = sail.lift_coefficient(alpha, _pressure_pa(4.0))
+	var fresh: float = sail.lift_coefficient(alpha, _pressure_pa(8.0))
+	assert_almost_eq(fresh / light, 0.80, 0.05, "the tunnel lost a fifth of the lift from 4 to 8 m/s")
+	assert_eq(sail.lift_coefficient(alpha), sail.lift_coefficient(alpha, 0.0), "no pressure: the rigid curve")
+	assert_almost_eq(sail.twist_factor(1e6), sail.config.twist_min_factor, 1e-9, "never below the floor")
+	# Past the linear part less is lost: the twisted top takes up the load near the stall.
+	var peak: float = deg_to_rad(sail.config.cl_peak_deg)
+	assert_gt(sail.lift_coefficient(peak, _pressure_pa(8.0)) / sail.lift_coefficient(peak), fresh / sail.lift_coefficient(alpha))
+	# The separation drag of the twisted sail falls too (the tunnel's drag at 20 degrees fell).
+	var stalled: float = deg_to_rad(20.0)
+	assert_lt(sail.drag_coefficient(1.0, stalled, _pressure_pa(8.0)), sail.drag_coefficient(1.0, stalled))
+
+
+func test_the_twisted_sail_pulls_lower_on_the_mast() -> void:
+	var sail: SailModel = SailModel.new(load("res://config/sail_default.tres"))
+	var sheet: float = 1.0 - (75.0 - 12.0) / 73.0
+	sail.compute(RigFrame.rigid_on(_body(), sail.config.mast_foot_local), _constant_wind(4.0, 90.0), sheet, 0.0, 1.225)
+	var light_height: float = sail.ce_local.y
+	sail.compute(RigFrame.rigid_on(_body(), sail.config.mast_foot_local), _constant_wind(8.0, 90.0), sheet, 0.0, 1.225)
+	assert_lt(sail.twist_share, 0.85)
+	assert_almost_eq(sail.ce_local.y / light_height, 0.95, 0.015, "about 6 % lower in the tunnel from 4 to 8 m/s")
+	var rigid: SailConfig = sail.config.duplicate()
+	rigid.twist_pressure_pa = 0.0
+	var stiff: SailModel = SailModel.new(rigid)
+	stiff.compute(RigFrame.rigid_on(_body(), rigid.mast_foot_local), _constant_wind(8.0, 90.0), sheet, 0.0, 1.225)
+	assert_eq(stiff.twist_share, 1.0)
+	assert_almost_eq(stiff.ce_local.y, rigid.mast_foot_local.y + rigid.ce_height_fraction * rigid.luff_m, 1e-6, "a rigid sail keeps its centre of effort")

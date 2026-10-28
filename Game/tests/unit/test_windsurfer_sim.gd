@@ -77,13 +77,15 @@ func test_legs_flex_on_a_kick_and_settle_again() -> void:
 
 
 func test_overpowered_sailor_is_catapulted_and_the_board_stays_upright() -> void:
-	var sim: WindsurferSim = _sim(18.0)
+	var sim: WindsurferSim = _sim(24.0)
 	sim.reset(Vector3.ZERO, deg_to_rad(180.0))
 	var controls: SimControls = _eased()
 	var pilot: Autopilot = _pilot(90.0, sim)
 	_run(sim, 20.0, controls, pilot)
 	assert_eq(sim.sailor_state, WindsurferSim.SailorState.SAILING)
-	# Head up with the sail pulled fully in and held there: more than a 75 kg sailor holds.
+	# Head up with the sail pulled fully in and held there: more than a 75 kg sailor holds
+	# in 24 kt. (In 18 kt the sail measured in the wind tunnel can be held sheeted in, as a
+	# real 6.5 can at 75 kg; the legacy sail catapulted there. PH28.)
 	pilot.target_twa_deg = 60.0
 	pilot.trim_sheet = false
 	var fell_at: float = -1.0

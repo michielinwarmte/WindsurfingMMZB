@@ -1054,7 +1054,42 @@ Neither was active in the validated build. The spec keeps the sim free of trimmi
 
 The same rig at `awa = +45°` and `alpha = 15°` (boom at 30°): `w_hat = (−0.707, 0, 0.707)`, lift direction `(−0.707, 0, −0.707)`, `f_sail_local = (−284.5, 0, −219.7) N`: drive `L sin 45° − D cos 45° = 219.7 N`, side force `L cos 45° + D sin 45° = 284.5 N` to port.
 
+**2.17 The sail measured in the wind tunnel, and its twist under load (PH28, 28 October 2026; on the branch `ph28/sail-and-hull`, for Michiel's review).** The numbers of 2.4 to 2.9 came from the legacy code. The first full-scale measurement of a windsurf sail, an iQFOiL 8 m² (Severne HGO on an Apex 490, rig-back 18°) in the 6 m by 6 m S6 tunnel at 4 to 8 m/s, with its flying shape filmed and its forces weighed together ([W-T] Zhang, Bertrand, Rabaud, Augier and Fermigier 2025, `Documentation/2501.13254v1.pdf`), replaces them where it can:
+
+| | Legacy (2.5 to 2.9) | Tunnel [W-T] | Now |
+|---|---|---|---|
+| Camber at the third batten | 0.10 | 0.063 to 0.066 (outhaul on), 0.071 to 0.076 (eased) (Fig. 5d) | `camber` 0.07 |
+| Zero-lift angle | −6° (60° per unit camber) | about −2°: lift 0.15 to 0.18 at 1.3°, the same on the rigid quarter-scale model (Mok et al. 2023) (Fig. 8a) | `zero_lift_deg_per_camber` 28 (−1.96°) |
+| Lift slope | 0.9 × 2πAR/(AR+2) | 0.069 per degree at 4 m/s, where the sail barely twists; the formula gives 0.068 for AR 3.36 | `lift_slope_factor` 1.0 |
+| Peak lift | 1.42 at 18° | 1.21 at 17 to 18° rigid; 0.98 to 1.08 full scale in light wind, stall delayed to about 20° | `cl_transition_gain` 0.15: 1.10 at 18° untwisted |
+| Luff fade | within 5° | still 0.15 to 0.18 at 1.3° | `alpha_luff_deg` 2 |
+| Twist | none | grows with the angle and the wind: up to 10° (outhaul on) and 14° (eased) at 8 m/s; the top always keeps a positive angle (Fig. 6) | `twist_factor()` below |
+
+The angle of attack of [W-T] is the chord of the section 67 cm above the board, below the boom; the sim's is the boom's chord. Both are the bottom of the sail, the part that twists least.
+
+*The twist.* At a fixed angle of attack the tunnel's lift falls as the wind rises, by about the same share at every angle below the stall: 0.94, 0.85 and 0.75 of the light-wind curve at 4, 6 and 8 m/s. That share is `f(q) = 1 / (1 + q / q_twist)` with the dynamic pressure `q = ½ρV²` of the apparent wind and `q_twist` about 125 Pa (118 to 153 from the three speeds). The physics behind it: the leech and the mast give way under the pressure until their stress balances it ([W-T] section 4), so the upper sections meet the wind at a smaller angle, and the elastic washout of a wing has this form. For the sim's 6.5 m² sail on a 460 mast, `twist_pressure_pa` is 140 Pa: the smaller sail loads its mast less at the same pressure (125 × 8 / 6.5 = 154) on a softer mast (back toward 125). This is an estimate for Michiel.
+
+    f = max(1 / (1 + q / twist_pressure_pa), twist_min_factor)
+    CL_twisted(alpha, q) = CL(alpha) × lerp(f, 1 − (1 − f) × twist_peak_share, s)
+        s = clamp((|alpha| − cl_linear_end_deg) / (cl_peak_deg − cl_linear_end_deg), 0, 1)
+    CD_twisted = cd_parasitic + CL_twisted² / (π AR_eff e) + separation(alpha) × f + form(alpha)
+    centre of effort height = ce_height_fraction × luff × (1 − twist_ce_drop × (1 − f))
+
+- `twist_peak_share` 0.45: at the peak less is lost, because the twisted top takes up load near the stall. At 8 m/s the peak fell to 0.89 of the light-wind peak where the linear part fell to 0.75.
+- `twist_ce_drop` 0.32: the centre of the rolling force sat about 6 % lower at 8 m/s than at 4 m/s at the angles a sailor uses (Fig. 8d). It came down only a little, so the legacy height of 40 % of the luff stands (the tunnel's 2.0 m above the board is 41 % of its mast). GP0's stand-in of 30 % is not supported.
+- `twist_min_factor` 0.5: the tunnel stopped at 39 Pa, and the sim's sail meets up to about 190 Pa (34 kt of apparent wind). The floor is an extrapolation: half the rigid lift, which the share reaches at 31 kt of apparent wind, where the top of a real sail at the top of its range luffs and flutters.
+- The separation drag falls with `f` (the tunnel's drag at 20° fell 39 % from 4 to 8 m/s). [W-T]'s drag is otherwise not used: its authors doubt it, because some values lie below the induced drag of an elliptic wing. The legacy drag model (2.8) stays.
+- The wall of the tunnel may add lift at large angles (up to a third at 25°, by a 2D estimate [W-T] calls rough). It is not corrected for, here or there.
+
+The wind is still sampled at the untwisted centre of effort. Only the force's point comes down, so the wind's point does not depend on the wind itself. The autopilot reads the same twisted curves at the pressure it feels (`Autopilot._sail_pressure_pa()`), for the most drive, for what the sailor can hold and for the backed sail. With `twist_pressure_pa` 0 the sail is rigid.
+
+The tests (`tests/unit/test_sail.gd`): the default sail's lift at 5.3, 8.7, 12.2 and 16.5° in 4, 6 and 8 m/s lies within 0.08 of Fig. 8a (most points within 0.03); from 4 to 8 m/s the lift at 10° falls by about a fifth; the twisted centre of effort is 5 % lower at 8 m/s; a rigid sail keeps its centre of effort. The worked examples of 2.16 are kept, on the legacy curve, which the test builds explicitly.
+
+What it does to the board (the measurements are in `Documentation/reports/ph28/sail_wind_tunnel.md`): in strong wind the sailor sheets 2 to 4° further in at the same speed or a little faster, upwind and across. In light wind and on the broad reaches, where the sail is the limit and not the sailor, the board is 10 to 27 % slower. The legacy curve's extra lift was hiding a hull whose wet part is too long (PH16).
+
 ### Values
+
+*The legacy values, kept with their sources. PH28 (2.17) has since changed the camber, the zero-lift angle, the lift slope, the peak, the luff fade and added the twist; `Game/config/sail_default.tres` holds the values in use.*
 
 | Name | Value | Unit | Source | Conflicts |
 |---|---|---|---|---|

@@ -54,7 +54,13 @@ func test_thin_air_takes_a_fifth_off_the_sail_force() -> void:
 		sim.reset(Vector3.ZERO, deg_to_rad(180.0))
 		sim.step(1e-4, controls)
 	assert_gt(sea_level.telemetry.sail_lift_n, 50.0, "the sail pulls")
-	assert_almost_eq(mountain.telemetry.sail_lift_n / sea_level.telemetry.sail_lift_n, 0.8, 0.01, "lift")
+	# The thinner air also presses less on the sail, so it twists open a little less (PH28):
+	# the lift falls by the density times the change of the twist's share.
+	var aws_ms: float = sea_level.sail.aws_ms  # at the sail's own height, below the 10 m wind
+	var q_sea_pa: float = 0.5 * 1.225 * aws_ms * aws_ms
+	var alpha: float = sea_level.sail.alpha_rad
+	var twist_change: float = mountain.sail.lift_coefficient(alpha, q_sea_pa * 0.8) / sea_level.sail.lift_coefficient(alpha, q_sea_pa)
+	assert_almost_eq(mountain.telemetry.sail_lift_n / sea_level.telemetry.sail_lift_n, 0.8 * twist_change, 0.01, "lift")
 	assert_almost_eq(mountain.telemetry.sail_drag_n / sea_level.telemetry.sail_drag_n, 0.8, 0.01, "drag")
 	# The sailor's windage uses the same density, but the sailor's body starts to move at once
 	# (the legs take up the sail's pull), so its apparent wind is not the same on the two boards.

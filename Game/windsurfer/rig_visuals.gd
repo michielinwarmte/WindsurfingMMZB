@@ -45,10 +45,11 @@ const FLUTTER_RATE: float = 3.0
 ## The sail's load as a force coefficient (the aerodynamic force over the dynamic pressure
 ## of the apparent wind times the sail area): at or below FLUTTER_FULL_LOAD the cloth has no
 ## pressure in it and flaps all over; from FLUTTER_NONE_LOAD up it is a taut membrane and
-## does not move. A powered sail (angle of attack 10 to 18 degrees) has 1.0 to 1.4; the
-## luff starts to collapse below about 0.6 (angle of attack 4 to 5 degrees).
+## does not move. A powered sail (angle of attack 10 to 18 degrees) has 0.8 to 1.1; the
+## luff starts to collapse below about 0.45 (angle of attack 4 to 5 degrees, on the sail's
+## curve measured in the wind tunnel, PH28).
 const FLUTTER_FULL_LOAD: float = 0.1
-const FLUTTER_NONE_LOAD: float = 0.55
+const FLUTTER_NONE_LOAD: float = 0.45
 ## How fast the cloth flaps per m/s of apparent wind, Hz. A flapping flag keeps a nearly
 ## constant Strouhal number (frequency x length / wind speed, about 0.2 to 0.3), so its
 ## frequency grows in step with the wind (Virot et al. 2013; arXiv 2602.06237): with the

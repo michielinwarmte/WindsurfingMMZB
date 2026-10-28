@@ -193,7 +193,7 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 			Helm.steer(controls, clampf(head_up, -1.0, 1.0) * tack, tack, 0.0 if pivot else lean_share, dt, rake_rate_per_s, 0.0 if pivot else 1.0)
 	if trim_sheet:
 		_feel_the_pull(telemetry, dt)
-		var alpha_deg: float = minf(best_alpha_deg(deg_to_rad(telemetry.awa_deg)), max_alpha_deg)
+		var alpha_deg: float = minf(best_alpha_deg(deg_to_rad(telemetry.awa_deg), _sail_pressure_pa(telemetry)), max_alpha_deg)
 		# Leeward heel is heel away from the wind: negative on starboard tack (wind from
 		# starboard). The bank the sailor holds on purpose (carving) is not overpowering:
 		# only the heel beyond it counts. The felt version adds the push of a sustained
@@ -314,9 +314,17 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		controls.boom_across = move_toward(controls.boom_across, across, sheet_rate_per_s * dt)
 
 
+## The apparent wind's dynamic pressure on the sail (Pa): the sail twists open with it, so its
+## curves depend on it (SailModel.twist_factor(), PH28).
+func _sail_pressure_pa(telemetry: Telemetry) -> float:
+	var aws_ms: float = telemetry.aws_kt * SimMath.KNOT_MS
+	return 0.5 * air_density_kg_m3 * aws_ms * aws_ms
+
+
 ## The angle of attack that gives the most drive at this apparent wind angle, from the
-## sail's own lift and drag curves (drive = lift along the course minus drag against it).
-func best_alpha_deg(awa_rad: float) -> float:
+## sail's own lift and drag curves (drive = lift along the course minus drag against it),
+## twisted as the sail is at the pressure q_pa (0: the rigid sail).
+func best_alpha_deg(awa_rad: float, q_pa: float = 0.0) -> float:
 	if sail == null:
 		return target_alpha_deg
 	var awa: float = absf(awa_rad)
@@ -325,8 +333,8 @@ func best_alpha_deg(awa_rad: float) -> float:
 	var alpha_deg: float = 4.0
 	while alpha_deg <= 24.0:
 		var alpha: float = deg_to_rad(alpha_deg)
-		var cl: float = sail.lift_coefficient(alpha)
-		var cd: float = sail.drag_coefficient(cl, alpha)
+		var cl: float = sail.lift_coefficient(alpha, q_pa)
+		var cd: float = sail.drag_coefficient(cl, alpha, q_pa)
 		var drive: float = cl * sin(awa) - cd * cos(awa)
 		if drive > best_drive:
 			best_drive = drive
@@ -418,15 +426,15 @@ func _heeling_arm_m(_telemetry: Telemetry) -> float:
 func _alpha_for_torque_deg(telemetry: Telemetry, limit_nm: float) -> float:
 	if sail == null or limit_nm == INF:
 		return INF
-	var aws_ms: float = telemetry.aws_kt * SimMath.KNOT_MS
-	var q_area: float = 0.5 * air_density_kg_m3 * aws_ms * aws_ms * sail.config.area_m2
+	var q: float = _sail_pressure_pa(telemetry)
+	var q_area: float = q * sail.config.area_m2
 	var awa: float = deg_to_rad(absf(telemetry.awa_deg))
 	var arm_m: float = _heeling_arm_m(telemetry)
 	var alpha_deg: float = 24.0
 	while alpha_deg > 0.25:
 		var alpha: float = deg_to_rad(alpha_deg)
-		var cl: float = sail.lift_coefficient(alpha)
-		var cd: float = sail.drag_coefficient(cl, alpha)
+		var cl: float = sail.lift_coefficient(alpha, q)
+		var cd: float = sail.drag_coefficient(cl, alpha, q)
 		var side_n: float = q_area * absf(cl * cos(awa) + cd * sin(awa))
 		if side_n * arm_m <= limit_nm:
 			return alpha_deg
@@ -442,11 +450,11 @@ func _alpha_for_torque_deg(telemetry: Telemetry, limit_nm: float) -> float:
 func _alpha_rise_limit_dps(telemetry: Telemetry) -> float:
 	if sail == null or sailor == null:
 		return INF
-	var aws_ms: float = telemetry.aws_kt * SimMath.KNOT_MS
-	var q_area: float = 0.5 * air_density_kg_m3 * aws_ms * aws_ms * sail.config.area_m2
+	var q: float = _sail_pressure_pa(telemetry)
+	var q_area: float = q * sail.config.area_m2
 	if q_area < 1.0:
 		return INF
-	var slope_per_deg: float = sail.lift_slope_per_rad() * PI / 180.0
+	var slope_per_deg: float = sail.lift_slope_per_rad() * sail.twist_factor(q) * PI / 180.0
 	var torque_rate_nm_s: float = sheet_in_share * sailor.lean_rate_per_s * _max_righting_moment_nm()
 	return torque_rate_nm_s / (q_area * _heeling_arm_m(telemetry) * slope_per_deg)
 
@@ -457,10 +465,9 @@ func _alpha_rise_limit_dps(telemetry: Telemetry) -> float:
 func _backing_alpha_deg(telemetry: Telemetry) -> float:
 	if sail == null:
 		return backing_alpha_deg
-	var aws_ms: float = telemetry.aws_kt * SimMath.KNOT_MS
-	var q: float = 0.5 * air_density_kg_m3 * aws_ms * aws_ms
+	var q: float = _sail_pressure_pa(telemetry)
 	var cl_allowed: float = backing_force_max_n / maxf(q * sail.config.area_m2, 1e-6)
 	var alpha_deg: float = backing_alpha_deg
-	while alpha_deg > 0.5 and sail.lift_coefficient(deg_to_rad(alpha_deg)) > cl_allowed:
+	while alpha_deg > 0.5 and sail.lift_coefficient(deg_to_rad(alpha_deg), q) > cl_allowed:
 		alpha_deg -= 0.5
 	return alpha_deg
