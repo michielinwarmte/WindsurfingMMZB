@@ -45,6 +45,7 @@ Updated 26 October 2026 (Session 55): `AI_FLEET_PLAN.md` and `PHYSICS_REQUESTS_F
 | [POLAR_15KT.md](POLAR_15KT.md) | The board's speeds by course at 15 kt, from the validation suite; regenerated 26 October 2026 for the physics of 0.1.0 |
 | [MALOJA_WIND_RESEARCH.md](MALOJA_WIND_RESEARCH.md) | How the Maloja wind behaves over Lake Silvaplana: the stations, the satellite photos, the gusts, the lee; the research behind the map's wind |
 | [SILVAPLANA_SPOT_NOTES.md](SILVAPLANA_SPOT_NOTES.md) | Max's notes on the spot and his answers to the wind research's questions (some questions still open) |
+| [2501.13254v1.pdf](2501.13254v1.pdf) | The full-scale wind-tunnel study of an iQFOiL 8 m² sail (Zhang et al. 2025, arXiv 2501.13254): its flying shape, twist, lift, drag and rolling moment at 4 to 8 m/s. The source of the sail's curve and twist (PH28, PHYSICS_SPEC.md 2.17) |
 | [iqfoil_2026_u23_worlds_notice_of_race.pdf](iqfoil_2026_u23_worlds_notice_of_race.pdf) | The iQFOiL Notice of Race of the 2026 U23 Worlds in Puck; Addendum A has the ten course diagrams the course maker's templates follow |
 | [images/](images/) | The wind research's figures (`maloja/`) and the README's screenshots (`readme/`) |
 
@@ -54,6 +55,7 @@ One report per package, written by whoever built it and read by the lead before 
 
 | Folder | Work |
 |---|---|
+| [reports/ph28/](reports/ph28/) | PH28, the sail rebuilt from the wind tunnel (`sail_wind_tunnel.md`: the tunnel against the legacy sail, the speeds before and after, the drag budget, why the hull is next) and the branch's live state (`PROGRESS.md`) |
 | [reports/gameplay/](reports/gameplay/) | Version 0.2's gameplay: GP0's measurement of the push and the body (`gp0_measure.md`: the dial's three settings, easing for the gusts, the warning signs before a catapult, the map of the rail against the back foot) |
 | [reports/racing/](reports/racing/) | Phase 9 and the AI fleet: the race core, the courses on the water, the course fitter, the skipper, the learning harness, the sea query (with its before and after reach checks, identical on purpose), the physics without the engine's locks (`no_wait.md`, for Michiel's review PH2), the fleet frame, the living skipper, the trainer, real life (wind shadows and the rules), the personas, the generations' race |
 | [reports/u1/](reports/u1/) | U1, planing on a smaller wet area: the sources, the measurements, the physics, the planing onset, the porpoising, the finish (`finish_u16.md` measured where the board rails out) |
