@@ -115,6 +115,19 @@ func _place_mini_map() -> void:
 
 
 ## A short message in the middle of the screen; an empty text hides it.
+## The gear the board sails, one line for the F1 panel (set by the scene from the board's
+## simulation: the configs it was built from).
+var gear_text: String = ""
+
+
+## The gear of a simulation as one line: what the panel shows and the game prints at its start.
+static func gear_line(sim: WindsurferSim) -> String:
+	return "gear  board %.2f x %.2f m %.0f l   sail %.1f m2 (luff %.1f m)   trim by feel %s   rig pitch lag %.1f s" % [
+		sim.board_config.length_m, sim.board_config.width_m, sim.board_config.volume_m3 * 1000.0,
+		sim.sail_config.area_m2, sim.sail_config.luff_m,
+		"on" if sim.sailor_config.trim_feel_time_s > 0.0 else "off", sim.sailor_config.rig_pitch_follow_s]
+
+
 func set_message(text: String) -> void:
 	_message.text = text
 	_message.visible = text != ""
@@ -158,7 +171,8 @@ func update_from(t: Telemetry, controller: PlayerController, camera_name: String
 		return
 	var windward: float = 1.0 if t.twa_deg >= 0.0 else -1.0
 	_detail.text = (
-		"heading %5.1f   TWA %6.1f   AWA %6.1f   AWS %4.1f kt   VMG %5.2f m/s   leeway %4.1f\n" % [t.heading_deg, t.twa_deg, t.awa_deg, t.aws_kt, t.vmg_ms, t.leeway_deg]
+		(gear_text + "\n" if gear_text != "" else "")
+		+ "heading %5.1f   TWA %6.1f   AWA %6.1f   AWS %4.1f kt   VMG %5.2f m/s   leeway %4.1f\n" % [t.heading_deg, t.twa_deg, t.awa_deg, t.aws_kt, t.vmg_ms, t.leeway_deg]
 		+ "pitch %5.1f   heel %5.1f   yaw rate %5.1f deg/s\n" % [t.pitch_deg, t.heel_deg, t.yaw_rate_dps]
 		+ "sheet %3.0f %%  boom %4.0f deg%s   rake %5.2f   rig tilt %5.2f (%4.0f deg)   alpha %5.1f deg%s   helm %5.2f\n" % [t.sheet * 100.0, t.sail_angle_deg, "  across %3.0f %%" % (t.boom_across * 100.0) if t.boom_across > 0.005 else "", t.rake, t.rig_tilt, t.rig_lean_deg, t.alpha_deg, "  BACKWINDED" if t.is_backwinded else "", controller.helm_right]
 		+ "lean %5.2f   stance %4.2f   hang-back %4.2f m   knees %5.2f m   sway %4.2f m   hands %4.0f N   feet %4.0f N   feet moment %5.0f Nm\n" % [t.lean, t.stance, t.hang_back_m, t.knee_bend_m, t.leg_sway_m, t.hand_force_n, t.foot_force_n, t.feet_moment_roll_nm]

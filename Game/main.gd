@@ -101,6 +101,9 @@ func _ready() -> void:
 	if _sun != null:
 		_sun.rotation_degrees = Vector3(-59.0, -45.0, 0.0)
 	_ocean.setup(_windsurfer.sim, _camera_rig.camera)
+	# Which gear the player's board sails, on the F1 panel and in the terminal.
+	_hud.gear_text = Hud.gear_line(_windsurfer.sim)
+	print(_hud.gear_text)
 	_show_course()
 	_start_race_runner()
 	_apply_start_settings()
