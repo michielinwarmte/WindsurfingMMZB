@@ -17,8 +17,8 @@ extends RefCounted
 ## out from where the hands and the feet are, so a sailor in balance sails the board flat
 ## and an overpowered one heels it, as on the water. The rig stands on the mast foot (a
 ## joint) and points the way the mast foot and the hands make it (`rig`): it pitches with
-## the hull but does not roll with it, so the light hull can roll under the sailor without
-## swinging the sail through the wind.
+## the hull (or follows it a little behind, rig_pitch_follow_s) but does not roll with it, so
+## the light hull can roll under the sailor without swinging the sail through the wind.
 ##
 ## Boards on threads (F1 no_wait). A race steps every board's simulation on a worker thread,
 ## side by side. In this engine, reading or writing a field of another object (body.basis,
@@ -79,6 +79,10 @@ var time_s: float = 0.0
 var sailor_state: SailorState = SailorState.SAILING
 ## Where the rig leans right now (rad, positive toward starboard), for the mass model.
 var _rig_lean_now_rad: float = 0.0
+## The pitch the rig is held at (rad, bow up), following the hull's (rig_pitch_follow_s), and
+## whether it has been set since the sailor was last put on the board.
+var _rig_pitch_rad: float = 0.0
+var _rig_pitch_set: bool = false
 ## The sailor's own acceleration along the deck (m/s2, x toward starboard, y up the mast),
 ## averaged over balance_feel_time_s: what a hard turn or a slam adds to gravity.
 var _felt_push_ms2: float = 0.0
@@ -226,6 +230,7 @@ var _leg_natural_frequency_hz: float = 0.0
 var _leg_travel_m: float = 0.0
 var _sailor_mass_kg: float = 0.0
 var _max_rig_lean_deg: float = 0.0
+var _rig_pitch_follow_s: float = 0.0
 var _max_total_rig_lean_deg: float = 0.0
 var _nose_dive_ramp_m: float = 0.0
 var _pitch_reflex_m_per_rad_s: float = 0.0
@@ -406,7 +411,7 @@ func step(dt: float, controls: SimControls) -> void:
 		body.set_mass_properties(_hull_mass_kg, inertia_with_water, Vector3.ZERO)
 		fin.compute(body, water, time_s, _water_density_kg_m3)
 		if sailing:
-			_hold_the_rig()
+			_hold_the_rig(sub_dt)
 			sail.compute(rig, wind, _controls_sheet, _controls_rake, air_density_kg_m3, _rig_lean_rad(), _controls_boom_across, _controls_hold_side)
 			_apply_rig_forces()
 			_apply_windage()
@@ -484,6 +489,7 @@ func _copy_configs() -> void:
 	_leg_travel_m = sailor_config.leg_travel_m
 	_sailor_mass_kg = sailor_config.mass_kg
 	_max_rig_lean_deg = sailor_config.max_rig_lean_deg
+	_rig_pitch_follow_s = sailor_config.rig_pitch_follow_s
 	_max_total_rig_lean_deg = sailor_config.max_total_rig_lean_deg
 	_nose_dive_ramp_m = sailor_config.nose_dive_ramp_m
 	_pitch_reflex_m_per_rad_s = sailor_config.pitch_reflex_m_per_rad_s
@@ -639,6 +645,7 @@ func waterstart() -> void:
 ## Stands the sailor on the board in the current posture, moving with it, holding nothing.
 func _place_sailor() -> void:
 	_set_posture()
+	_rig_pitch_set = false
 	_hold_the_rig()
 	sailor.mass_kg = _sailor_mass_kg
 	var at: Vector3 = body.point_world(posture_target_body)
@@ -843,13 +850,34 @@ func _posture_frame() -> Basis:
 ## Puts the rig on the mast foot, pointing the way the mast foot and the hands make it
 ## (RigFrame): with the hull's heading and pitch, but upright in roll, leaned and raked
 ## from there as the controls ask. The rig turns with the hull's yaw and pitch rates, not
-## its roll rate. (Held in the apparent gravity like the posture, every sideways jolt of
-## the hull leaned the rig, the sail's force swung with it and pushed the hull again, and
-## the board wobbled in yaw at about 1 Hz on flat water.)
-func _hold_the_rig() -> void:
+## its roll rate. (Held in the apparent gravity like the posture, every sideways jolt of the hull
+## leaned the rig, the sail's force swung with it and pushed the hull again, and the board
+## wobbled in yaw at about 1 Hz on flat water.) The pitch can follow the hull's with a lag
+## of rig_pitch_follow_s (PH16, off by default): a mast foot is a joint, and a board
+## bouncing under the rig does not pitch it.
+func _hold_the_rig(dt: float = 0.0) -> void:
 	# The hull's state, read once (see the note at the top).
 	var angular_velocity: Vector3 = body.angular_velocity
 	var forward: Vector3 = body.forward()
+	# The pitch the rig is held at follows the hull's with a lag (rig_pitch_follow_s): the
+	# mast foot is a joint, and a board pitching quickly under the rig does not pitch it. Put
+	# on the board (and with no lag), the rig takes the hull's pitch at once.
+	var hull_pitch: float = body.pitch_rad()
+	var level: Vector3 = SimMath.horizontal(forward)
+	if _rig_pitch_follow_s > 0.0 and _rig_pitch_set and dt > 0.0 and level.length() > 0.2:
+		var held: float = lerpf(_rig_pitch_rad, hull_pitch, clampf(dt / _rig_pitch_follow_s, 0.0, 1.0))
+		var held_rate: float = (held - _rig_pitch_rad) / dt
+		_rig_pitch_rad = held
+		# The rig points along the hull's heading at the held pitch, and turns with the
+		# held pitch's rate instead of the hull's (about the level across axis; + lifts the
+		# bow).
+		var heading: Vector3 = level.normalized()
+		var across: Vector3 = heading.cross(Vector3.UP)
+		angular_velocity += across * (held_rate - angular_velocity.dot(across))
+		forward = heading * cos(held) + Vector3.UP * sin(held)
+	else:
+		_rig_pitch_rad = hull_pitch
+		_rig_pitch_set = true
 	var z: Vector3 = -forward
 	var x: Vector3 = Vector3.UP.cross(z)
 	if x.length() < 0.2:

@@ -219,6 +219,18 @@ extends Resource
 ## full lean. Raking the rig to windward is what real sailors do when hooked in; it brings
 ## the sail's centre of effort back over the board and gives the sail an upward component.
 @export var max_rig_lean_deg: float = 25.0
+## How slowly the rig follows the board's pitch, seconds (PH16). The mast foot is a
+## universal joint: it passes no moment, so a board pitching quickly under the rig does not
+## pitch it. The rig's pitch is what the sailor's hands and harness hold, and the rig's own
+## inertia about the foot (8 kg with its centre 1.7 m up, about 25 kg m2) and the sailor
+## hanging on the boom keep it where it is through a bounce (1.8 Hz, 0.55 s a cycle); it
+## follows the board's slower changes of attitude. A first-order lag of this time; 0 = the
+## rig pitches with the hull at once (the default, as before PH16). Measured with 0.3 s: the
+## 24 kt broad reach on flat water stayed steady for 40 s instead of bouncing (pitch SD 0.10
+## against 0.93 deg) but bounced the same after a minute (0.74 against 0.77), and gusts, waves
+## and the other reaches were unchanged within 1 %: physically the better rig, with no
+## measured gain, so it is off until Michiel decides (Documentation/reports/ph28/hull_balance.md).
+@export var rig_pitch_follow_s: float = 0.0
 ## How far the sailor can tilt the rig sideways with the arms and shoulders on top of that
 ## (the mast foot is a free joint; what limits the tilt is the reach of the arms and, at
 ## speed, the pull in the sail). At 20 degrees a board on a run in light wind could not

@@ -54,6 +54,7 @@ lean_max_m = 0.88
 lean_height_drop_m = 0.28
 lean_rate_per_s = 1.0
 max_rig_lean_deg = 25.0
+rig_pitch_follow_s = 0.0
 rig_tilt_range_deg = 30.0
 max_total_rig_lean_deg = 45.0
 windage_area_cd_m2 = 0.5
