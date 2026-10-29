@@ -4,22 +4,22 @@
 
 [resource]
 script = ExtResource("1")
-area_m2 = 6.5
-luff_m = 4.6
-boom_m = 1.95
+area_m2 = 8.0
+luff_m = 4.9
+boom_m = 2.0
 boom_height_m = 1.4
-mast_foot_local = Vector3(0, 0.06, -0.1)
-ce_height_fraction = 0.4
+mast_foot_local = Vector3(0, 0.06, -0.16)
+ce_height_fraction = 0.41
 ce_boom_fraction = 0.35
 camber = 0.07
-rig_mass_kg = 8.0
-rig_com_height_m = 1.7
-mast_m = 4.6
+rig_mass_kg = 9.5
+rig_com_height_m = 1.8
+mast_m = 4.9
 sheet_angle_in_deg = 12.0
 sheet_angle_out_deg = 85.0
 max_rake_deg = 25.0
 side_hysteresis_deg = 15.0
-lift_slope_factor = 1.0
+lift_slope_factor = 1.03
 zero_lift_deg_per_camber = 28.0
 cl_linear_end_deg = 12.0
 cl_peak_deg = 18.0

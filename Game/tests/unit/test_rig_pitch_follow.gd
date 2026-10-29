@@ -25,6 +25,11 @@ func _pitch_hull_up(sim: WindsurferSim, degrees: float) -> void:
 	sim.body.basis = Basis(sim.body.starboard_axis(), deg_to_rad(degrees)) * sim.body.basis
 
 
+## The bow's rise in the world (degrees): what the rig, held upright in roll, follows.
+func _bow_rise_deg(sim: WindsurferSim) -> float:
+	return rad_to_deg(asin(clampf(sim.body.forward().y, -1.0, 1.0)))
+
+
 func test_a_quick_pitch_of_the_board_does_not_pitch_the_rig_at_once() -> void:
 	var sim: WindsurferSim = _sailing_sim(0.3)
 	var before_deg: float = _rig_pitch_deg(sim)
@@ -40,21 +45,21 @@ func test_the_rig_takes_up_the_board_s_new_attitude_within_a_second_or_so() -> v
 	var sim: WindsurferSim = _sailing_sim(0.3)
 	var before_deg: float = _rig_pitch_deg(sim)
 	_pitch_hull_up(sim, 1.0)
+	var step_deg: float = _bow_rise_deg(sim) - before_deg
 	for i: int in 90:  # 0.5 s of substeps (three to a frame)
 		sim._hold_the_rig(DT / 3.0)
 	# A first-order lag of 0.3 s: 1 - exp(-0.5 / 0.3) = 0.81 of the way after 0.5 s.
-	assert_almost_eq(_rig_pitch_deg(sim) - before_deg, 0.81, 0.02, "most of the way after half a second")
+	assert_almost_eq((_rig_pitch_deg(sim) - before_deg) / step_deg, 0.81, 0.02, "most of the way after half a second")
 	for i: int in 180:  # another 1.0 s: 1.5 s in all, five times the lag
 		sim._hold_the_rig(DT / 3.0)
-	assert_almost_eq(_rig_pitch_deg(sim) - before_deg, 1.0, 0.02, "the rig has followed the board")
+	assert_almost_eq((_rig_pitch_deg(sim) - before_deg) / step_deg, 1.0, 0.02, "the rig has followed the board")
 
 
 func test_with_no_lag_the_rig_pitches_with_the_board_at_once() -> void:
 	var sim: WindsurferSim = _sailing_sim(0.0)
-	var before_deg: float = _rig_pitch_deg(sim)
 	_pitch_hull_up(sim, 1.0)
 	sim._hold_the_rig(DT / 3.0)
-	assert_almost_eq(_rig_pitch_deg(sim) - before_deg, 1.0, 0.01, "as before PH16")
+	assert_almost_eq(_rig_pitch_deg(sim), _bow_rise_deg(sim), 0.001, "as before PH16")
 
 
 func test_a_board_put_back_on_the_water_takes_the_rig_with_it_at_once() -> void:

@@ -33,8 +33,9 @@ func test_at_rest_the_legs_carry_the_weight_into_the_hull_and_nothing_else() -> 
 	_run(sim, 6.0, controls)
 	assert_almost_eq(sim.leg_force_world.y, 75.0 * 9.81, 5.0, "the legs hold the sailor's weight")
 	assert_lt(SimMath.horizontal(sim.leg_force_world).length(), 5.0, "and push nowhere else")
-	assert_almost_eq(sim.mast_foot_force_world.y, -8.0 * 9.81, 2.0, "the rig's weight stands on the mast foot")
-	assert_lt(sim.hand_force_world.length(), 2.0, "the hands hold nothing")
+	assert_almost_eq(sim.mast_foot_force_world.y, -sim.sail_config.rig_mass_kg * 9.81, 2.0, "the rig's weight stands on the mast foot")
+	# Nearly nothing: the rig stands with the board's rest attitude, a little off upright.
+	assert_lt(sim.hand_force_world.length(), 5.0, "the hands hold nothing")
 	assert_lt(absf(sim.knee_bend_m), 0.003, "the legs are at their posture")
 	assert_lt(sim.leg_sway_m, 0.003)
 	assert_lt(absf(sim.telemetry.heel_deg), 1.0, "level")
@@ -70,7 +71,7 @@ func test_the_rig_balance_splits_the_sail_force_between_mast_foot_and_hands() ->
 	controls.sheet = 0.6
 	controls.balance_reflex = false
 	sim.step(DT, controls)
-	var rig_weight: Vector3 = Vector3(0.0, -8.0 * 9.81, 0.0)
+	var rig_weight: Vector3 = Vector3(0.0, -sim.sail_config.rig_mass_kg * 9.81, 0.0)
 	var total: Vector3 = sim.mast_foot_force_world + sim.hand_force_world
 	assert_almost_eq(total, sim.sail.force_world + rig_weight, Vector3.ONE * 1.0, "mast foot plus hands is the sail force plus the rig's weight")
 	assert_gt(sim.hand_force_world.length(), 0.5 * sim.sail.force_world.length(), "the hands take more than half of a pull high on the rig")
@@ -90,14 +91,14 @@ func test_the_rig_balance_splits_the_sail_force_between_mast_foot_and_hands() ->
 	# carries part of the weight and the rig presses the mast foot down.
 	assert_gt(sim.harness_tension_n, 0.0, "the sailor hangs in the harness")
 	assert_gt(sim.hand_force_world.y, 0.0, "pulled upward by the line")
-	assert_lt(sim.mast_foot_force_world.y, -8.0 * 9.81, "the mast foot carries more than the rig's own weight")
+	assert_lt(sim.mast_foot_force_world.y, -sim.sail_config.rig_mass_kg * 9.81, "the mast foot carries more than the rig's own weight")
 
 
 func test_a_rig_leaned_to_windward_lifts_and_the_lift_reaches_the_sailor_and_the_board() -> void:
 	# Sailing at 10 m/s on a beam reach, so the apparent wind comes from ahead and the
 	# sail's lift (square to the wind and the mast) points sideways: leaning the mast tilts
 	# it up. (At rest in a beam wind the lift points forward and leaning changes nothing.)
-	var rig_weight: Vector3 = Vector3(0.0, -8.0 * 9.81, 0.0)
+	var rig_weight: Vector3 = Vector3(0.0, -(load("res://config/sail_default.tres") as SailConfig).rig_mass_kg * 9.81, 0.0)
 	var upright: WindsurferSim = _sailing_south(10.0)
 	var controls: SimControls = SimControls.new()
 	controls.sheet = 0.8

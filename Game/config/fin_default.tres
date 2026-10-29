@@ -6,7 +6,7 @@
 script = ExtResource("1")
 area_m2 = 0.0365
 span_m = 0.38
-root_local = Vector3(0, -0.06, 0.9)
+root_local = Vector3(0, -0.06, 0.84)
 cop_span_fraction = 0.4
 end_plate_factor = 2.0
 tip_chord_ratio = 0.37

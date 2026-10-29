@@ -9,7 +9,7 @@ const G: float = 9.81
 
 
 func _board() -> BoardConfig:
-	return (load("res://config/board_default.tres") as BoardConfig).duplicate()
+	return (load("res://config/board_freeride_240.tres") as BoardConfig).duplicate()
 
 
 func _water() -> WaterConfig:

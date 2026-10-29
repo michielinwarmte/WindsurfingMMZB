@@ -8,7 +8,7 @@ const TOL: float = 1e-6
 
 
 func _legacy_sail() -> SailConfig:
-	var config: SailConfig = load("res://config/sail_default.tres").duplicate()
+	var config: SailConfig = load("res://config/sail_6_5.tres").duplicate()
 	config.luff_m = 4.7
 	config.boom_m = 2.0
 	config.cd_parasitic = 0.015  # the spec's worked examples use the legacy clean-sail value

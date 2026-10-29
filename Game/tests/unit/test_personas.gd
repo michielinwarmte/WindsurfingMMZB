@@ -114,7 +114,7 @@ func test_a_persona_rigs_its_sail_for_the_wind_and_the_physics_feels_it() -> voi
 	assert_almost_eq(lena.sail_m2_for(20.0), 6.2, 1e-6)
 	var course: Course = RaceCourses.t1_loop(270.0, Vector2.ZERO)
 	var race: RaceSim = RaceSim.new(course, 1, 10.0)
-	# In 12 kt: Lena rigs her 7.8, Sven his 7.0, the all-rounder keeps the default 6.5.
+	# In 12 kt: Lena rigs her 7.8, Sven his 7.0, the all-rounder keeps the default sail.
 	var entries: Array = RunRace.make_entries(race, course, PackedStringArray(["persona:lena", "persona:sven", "allrounder"]), 12.0, 50.0, 2)
 	RunRace.rig_personas(entries, 12.0)
 	var big: SailConfig = entries[0].sim.sail_config
@@ -122,16 +122,17 @@ func test_a_persona_rigs_its_sail_for_the_wind_and_the_physics_feels_it() -> voi
 	var plain: SailConfig = entries[2].sim.sail_config
 	assert_almost_eq(big.area_m2, 7.8, 1e-6, "Lena's 7.8 in 12 kt")
 	assert_almost_eq(middle.area_m2, 7.0, 1e-6, "Sven's 7.0")
-	assert_almost_eq(plain.area_m2, 6.5, 1e-6, "the all-rounder keeps the default sail")
+	assert_almost_eq(plain.area_m2, (load("res://config/sail_default.tres") as SailConfig).area_m2, 1e-6, "the all-rounder keeps the default sail")
 	assert_almost_eq(big.luff_m, plain.luff_m, 1e-6, "the same rig: a fuller sail, not a taller one")
 	assert_eq(entries[0].sim.sail.config, big, "the sail model holds the board's own config")
-	# Sailed for 10 s side by side from rest on a reach in 12 kt: the bigger sail pulls harder.
+	# Sailed for 10 s side by side from rest on a reach in 12 kt: Lena's 7.8 against Sven's 7.0
+	# (the default 8.0 since PH16 is too near Lena's to tell apart).
 	race.start()
 	for t: int in 600:
 		RunRace.step_race(race, entries)
 	var big_ms: float = entries[0].sim.telemetry.speed_ms
-	var plain_ms: float = entries[2].sim.telemetry.speed_ms
+	var plain_ms: float = entries[1].sim.telemetry.speed_ms
 	assert_true(absf(big_ms - plain_ms) > 0.2, "the sail's size makes a difference the physics feels: %.2f against %.2f m/s" % [big_ms, plain_ms])
 	# For Michiel: with the sails as they are, the bigger one is the slower one off the line (which is
 	# why the gear is off by default until the sizes are tuned).
-	gut.p("Off the line in 12 kt after 10 s: the 7.8 makes %.2f m/s, the default 6.5 makes %.2f" % [big_ms, plain_ms])
+	gut.p("Off the line in 12 kt after 10 s: the 7.8 makes %.2f m/s, the 7.0 makes %.2f" % [big_ms, plain_ms])

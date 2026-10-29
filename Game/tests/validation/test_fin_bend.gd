@@ -28,13 +28,15 @@ const TWA_DEG: float = 100.0
 ## 40.9 N at a 1.98 degree slip and 526 N of lift). Re-pinned in Session 57 (PH28, the sail
 ## from the wind tunnel): the sailor sheets the twisting sail further in, so it pulls harder on
 ## this reach and the fin carries more (it was 475 N at a 1.64 degree slip, 16 N upward; the
-## numbers below are with the twist's final floor, 0.75).
-const STIFF_SLIP_DEG: float = 1.74
+## numbers were 1.74 degrees, 526 N and 18 N with the twist's final floor, 0.75). Re-pinned in
+## Session 58 (PH16, the JP SL 72 with an 8.0 m2 sail and the sailor trimming by feel: the board
+## is faster and lighter on this reach, and the fin carries less).
+const STIFF_SLIP_DEG: float = 1.59
 const SLIP_TOLERANCE_DEG: float = 0.25
-const STIFF_LIFT_N: float = 526.0
+const STIFF_LIFT_N: float = 479.0
 ## A share of the lift.
 const LIFT_TOLERANCE: float = 0.05
-const STIFF_UP_N: float = 18.0
+const STIFF_UP_N: float = 16.0
 const UP_TOLERANCE_N: float = 10.0
 ## A stiff fin's force has no part out of the board's plane, and its tip does not turn.
 const STIFF_TILT_MAX_DEG: float = 0.01

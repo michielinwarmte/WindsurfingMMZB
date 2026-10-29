@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="BoardConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://sim/config/board_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+length_m = 2.4
+width_m = 0.72
+widest_point_from_tail_m = 1.1
+tail_width_m = 0.45
+nose_width_m = 0.45
+thickness_m = 0.12
+tail_thickness_m = 0.055
+nose_thickness_m = 0.04
+volume_m3 = 0.12
+mass_kg = 9.0
+nose_rocker_m = 0.08
+nose_rocker_length_m = 0.9
+tail_rocker_m = 0.0
+tail_rocker_length_m = 0.35
+hard_rail_to_m = 1.2
+soft_rail_from_m = 2.0
+rail_edge_height_m = 0.03
+length_samples = 7
+width_samples = 3
+lateral_drag_cd = 1.0
+residuary_peak_fraction = 0.09
+residuary_peak_froude = 0.55
+residuary_froude_width = 0.25
+deadrise_deg = 1.0
+bow_drag_cd = 0.8
+spray_root_factor_max = 2.0
+planing_lift_lag_s = 0.0

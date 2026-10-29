@@ -127,6 +127,10 @@ var hang_back_m: float = 0.0
 var rail_press: float = 0.0
 ## Trimming with the feet: how far aft (positive) of the stance the feet's pressure is.
 var trim_press_m: float = 0.0
+## What the rider feels of the board's attitude (SailorConfig.trim_feel_time_s): the pitch
+## averaged (degrees, bow up) and its bounce (the pitch rate's RMS, degrees a second).
+var felt_trim_deg: float = 0.0
+var felt_bounce_dps: float = 0.0
 ## Where the posture puts the centre of mass, where the feet stand and where the hands hold
 ## the boom, all in body axes (relative to the board origin). The posture is measured from
 ## the deck's centreline at the stance (posture_centre_body), at the feet's deck height.
@@ -250,6 +254,9 @@ var _tip_time_s: float = 0.0
 var _trim_press_band_deg: float = 0.0
 var _trim_press_max_m: float = 0.0
 var _trim_press_rate_ms: float = 0.0
+var _trim_feel_time_s: float = 0.0
+var _bounce_tolerance_dps: float = 0.0
+var _trim_press_release_ms: float = 0.0
 var _waterstart_time_s: float = 0.0
 var _windage_area_cd_m2: float = 0.0
 ## What the controls ask for this tick, copied at its start (_read_controls()).
@@ -358,6 +365,8 @@ func reset(origin_xz: Vector3, heading_rad: float) -> void:
 	hang_back_m = 0.0
 	rail_press = 0.0
 	trim_press_m = 0.0
+	felt_trim_deg = 0.0
+	felt_bounce_dps = 0.0
 	body = SimRigidBody.new()
 	_set_hull_mass_properties()
 	# The water's last answers are where the next solves start (WaveField.sample_at); a board
@@ -509,6 +518,9 @@ func _copy_configs() -> void:
 	_trim_press_band_deg = sailor_config.trim_press_band_deg
 	_trim_press_max_m = sailor_config.trim_press_max_m
 	_trim_press_rate_ms = sailor_config.trim_press_rate_ms
+	_trim_feel_time_s = sailor_config.trim_feel_time_s
+	_bounce_tolerance_dps = sailor_config.bounce_tolerance_dps
+	_trim_press_release_ms = sailor_config.trim_press_release_ms
 	_waterstart_time_s = sailor_config.waterstart_time_s
 	_windage_area_cd_m2 = sailor_config.windage_area_cd_m2
 
@@ -970,15 +982,19 @@ func _update_sailor(dt: float) -> void:
 	# Trimming with the feet over the hump: the back foot presses when the bow is below
 	# hump_trim_deg, the front foot when it is above (nothing below hump speed, where the
 	# stance does the work; nothing while stepping round the mast in a tack).
-	var press_target: float = 0.0
-	if forward_speed > hump_speed and not stepping and _controls_balance_reflex:
-		# Only as far as the board is planing: standing on the tail of a board that has
-		# dropped off the plane sinks the stern and rears the nose.
-		# The trim aimed for falls with the speed (_running_trim_target_deg).
-		var trim_target_deg: float = _running_trim_target_deg(forward_speed)
-		press_target = clampf((trim_target_deg - rad_to_deg(body.pitch_rad())) / _trim_press_band_deg, -1.0, 1.0) * _trim_press_max_m * clampf(hull.planing_ratio, 0.0, 1.0)
-	if not _controls_freeze_fore_aft:
-		trim_press_m = move_toward(trim_press_m, press_target, _trim_press_rate_ms * dt)
+	var trimming: bool = forward_speed > hump_speed and not stepping and _controls_balance_reflex
+	if _trim_feel_time_s > 0.0:
+		_trim_by_feel(trimming, forward_speed, dt)
+	else:
+		var press_target: float = 0.0
+		if trimming:
+			# Only as far as the board is planing: standing on the tail of a board that has
+			# dropped off the plane sinks the stern and rears the nose.
+			# The trim aimed for falls with the speed (_running_trim_target_deg).
+			var trim_target_deg: float = _running_trim_target_deg(forward_speed)
+			press_target = clampf((trim_target_deg - rad_to_deg(body.pitch_rad())) / _trim_press_band_deg, -1.0, 1.0) * _trim_press_max_m * clampf(hull.planing_ratio, 0.0, 1.0)
+		if not _controls_freeze_fore_aft:
+			trim_press_m = move_toward(trim_press_m, press_target, _trim_press_rate_ms * dt)
 
 	var asked: float = clampf(_controls_lean, -1.0, 1.0)
 	_asked_lean = asked
@@ -1026,6 +1042,35 @@ func _update_sailor(dt: float) -> void:
 	# mass leans with the rig.
 	_rig_lean_now_rad = _rig_lean_rad()
 	_set_posture()
+
+
+## Trimming by feel (SailorConfig.trim_feel_time_s): the rider feels the board's attitude and
+## its bounce over a second or two. While planing, the weight keeps moving aft (slowly, at
+## trim_press_rate_ms) as long as the board rides below the trim aimed for, and forward when it
+## rides above it (quickly, at trim_press_release_ms) or starts to chatter (the bounce felt
+## beyond bounce_tolerance_dps, at the slow rate). The press
+## reaches as far as trim_press_max_m times the share of the weight the hull planes on, as the
+## press of the moment does. Off the plane (or stepping in a tack) it goes back to nothing at
+## once (trim_press_release_ms: the rider steps off the tail).
+func _trim_by_feel(trimming: bool, forward_speed: float, dt: float) -> void:
+	var blend: float = clampf(dt / _trim_feel_time_s, 0.0, 1.0)
+	var pitch_rate_dps: float = rad_to_deg(body.angular_velocity_body().x)
+	felt_trim_deg = lerpf(felt_trim_deg, rad_to_deg(body.pitch_rad()), blend)
+	felt_bounce_dps = sqrt(lerpf(felt_bounce_dps * felt_bounce_dps, pitch_rate_dps * pitch_rate_dps, blend))
+	if _controls_freeze_fore_aft:
+		return
+	if not trimming:
+		trim_press_m = move_toward(trim_press_m, 0.0, _trim_press_release_ms * dt)
+		return
+	var reach_m: float = _trim_press_max_m * clampf(hull.planing_ratio, 0.0, 1.0)
+	var aim: float = clampf((_running_trim_target_deg(forward_speed) - felt_trim_deg) / _trim_press_band_deg, -1.0, 1.0)
+	var chatter: float = clampf((felt_bounce_dps - _bounce_tolerance_dps) / _bounce_tolerance_dps, 0.0, 1.0)
+	# Easing off on a chatter wins over the aim: a board that bounces goes forward.
+	var push: float = aim * (1.0 - chatter) - chatter
+	# Onto the tail slowly, searching; off it quickly when the nose rides above the aim (a board
+	# heading up into a tack slows with its nose rising, and a rider still on the tail rears it).
+	var rate: float = _trim_press_release_ms if aim < 0.0 else _trim_press_rate_ms
+	trim_press_m = clampf(trim_press_m + push * rate * dt, -reach_m, reach_m)
 
 
 ## The water the fin carries when it moves broadside: a flat plate of chord c moving

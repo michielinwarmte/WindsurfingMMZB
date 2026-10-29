@@ -7,7 +7,7 @@ const DT: float = 1.0 / 240.0
 
 
 func _board() -> BoardConfig:
-	return load("res://config/board_default.tres")
+	return load("res://config/board_freeride_240.tres")
 
 
 func _water() -> WaterConfig:

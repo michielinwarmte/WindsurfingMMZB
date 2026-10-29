@@ -85,6 +85,28 @@ extends Resource
 ## hang-back is what damps a bounce).
 @export var trim_press_band_deg: float = 1.0
 @export var trim_press_rate_ms: float = 0.1
+## Trimming by feel (PH16; 0 = off, the press above as it was). A rider sets the board's
+## attitude by what they feel over a second or two, not by each bounce: the press follows the
+## pitch averaged over trim_feel_time_s, and keeps moving (slowly, at trim_press_rate_ms)
+## while the board rides below the trim aimed for, so it gets there instead of stopping short
+## (the press above holds where its pull balances the error: 0.13 m and 0.9 deg on the 18 kt
+## beam reach against an aim of 1.65 deg). And the rider eases off as soon as the board starts
+## to chatter: the bounce felt (the pitch rate's RMS over the same time) above
+## bounce_tolerance_dps moves the weight forward again. Riding at the edge of the bounce is
+## what a rider does with a planing board, and where it sits is the board's own, not a number
+## per speed.
+@export var trim_feel_time_s: float = 0.0
+## The bounce a rider lets the board have before easing off: the pitch rate's RMS, degrees
+## a second. 1.7 deg/s is a bounce of 0.15 deg SD at 1.8 Hz, half the steadiness the team set
+## for a planing board (pitch SD 0.3 deg, U1 Stop 1).
+@export var bounce_tolerance_dps: float = 1.7
+## Off the plane (or stepping round the mast), or with the nose riding above the trim aimed for,
+## the rider steps off the tail at once, not at the slow trimming rate: metres a second (0.3:
+## the weight comes off the tail in about a second).
+## Standing on the tail of a board that has slowed sinks the stern and rears the nose; at the
+## trimming rate of 0.03 m/s the press took 12 s to go, and a beginner's board reared up to
+## 70 degrees after a tack and turned over.
+@export var trim_press_release_ms: float = 0.3
 ## Hanging back against the sail's pull: the boom pulls the sailor forward, and the sailor
 ## leans back until their weight's moment about the feet balances the pull's (the same
 ## balance as the sideways lean, fore and aft). The furthest the weight can hang back

@@ -149,7 +149,7 @@ The reach check, with the outline of section 6, the rocker above, 2.28 m, 117 l,
 
 At the same trim (about 1°) the planing reaches ride 0.2 to 0.5 m shorter and 4 to 6 % faster, steadier at 24 kt. The slow and broad cases are 6 to 8 % slower (more rocker in the water before the board planes). The cut-outs add 0.3 to 1 %, and the kick changes nothing useful.
 
-**But the gain comes from one assumption of the hull model, and the measurements say it is wrong.** The probe (`hull_probe.gd`, which now takes `--board.<field>=`) at the SL 72's own state (13.7 m/s, 1.0°, 2° of heel):
+**But the gain comes from one assumption of the hull model, and theory says it is too much.** The probe (`hull_probe.gd`, which now takes `--board.<field>=`) at the SL 72's own state (13.7 m/s, 1.0°, 2° of heel):
 
 | Wet length | Today's board: model / Savitsky, N | SL 72: model / Savitsky, N | SL 72: the clip's share |
 |---|---|---|---|
@@ -157,9 +157,42 @@ At the same trim (about 1°) the planing reaches ride 0.2 to 0.5 m shorter and 4
 | 1.22 m | 259 / 493 | **908 / 532** | **528 N** |
 | 1.5 m | 440 / 579 | 2000 / 623 | 1441 N |
 
-Where the scoop runs into the wet part, the spray root meets the water at the rocker's own angle (3° more than the pitch at 1.22 m), and the strips behind it, where the bottom flattens and lifts away from the water, would pull: the strip theory's suction. The model does not let a strip pull ("the water has let go instead", `HullModel._apply_planing_lift` step 6), so the root's push stays and the suction is dropped: 528 of the 908 N. In consistent strip theory the suction cancels it, and the total follows the angle at the aft end. Savitsky and Brown (1976) measured that a bottom with rocker (convex buttocks) lifts *less* than a flat one at the same trim, which is what suction does. A ventilated bottom would let go as the model has it; the suction this would take here (about 4500 Pa) is far more than the 100 to 300 Pa of water above the bottom, so air from the rails could get in. Which one a real board does is the open question. **So the SL 72's 4 to 6 % is not to be trusted** until the pressure on a curved bottom is settled. That is a hull-model item, not a board, and it touches today's board too wherever its wet part reaches the nose rocker (level at 1.7 m wet the clip gives 495 of 966 N; at 2° of heel, 40 of 510).
+Where the scoop runs into the wet part, the spray root meets the water at the rocker's own angle (3° more than the pitch at 1.22 m), and the strips behind it, where the bottom flattens and lifts away from the water, would pull: the strip theory's suction. The model does not let a strip pull ("the water has let go instead", `HullModel._apply_planing_lift` step 6), so the root's push stays and the suction is dropped: 528 of the 908 N. In consistent strip theory the suction cancels it, and the total follows the angle at the aft end. Thin-wing theory (the lift's weight on the camber is small near the front edge) gives this scoop about 0.1 to 0.2° of effective trim more than the flat tail, so 10 to 20 % more lift, where the model gives 70 %. (A correction: this report first said Savitsky and Brown (1976) measured rocker lifting less. Their measured additions are stern wedges and flaps, not rocker. No measurement of a rockered planing bottom was found.) A ventilated bottom would let go as the model has it; the suction this would take here (about 4500 Pa) is far more than the 100 to 300 Pa of water above the bottom, so air from the rails could get in. Which one a real board does is the open question. **So the SL 72's 4 to 6 % is not to be trusted** until the pressure on a curved bottom is settled. That is a hull-model item, not a board, and it touches today's board too wherever its wet part reaches the nose rocker (level at 1.7 m wet the clip gives 495 of 966 N; at 2° of heel, 40 of 510).
 
 ## 8. For Michiel (added)
 
-7. **The clip on the strips (`_apply_planing_lift`, step 6).** Is a strip allowed to pull (suction, as Savitsky and Brown's measured rocker loss says) or not (ventilation)? It decides what rocker does in the model, and so whether a slalom board's scoop rocker is faster here or slower. A bound in between, the suction no larger than the water's head above the bottom plus a sourced ventilation limit, would be physics rather than a choice.
+7. **The clip on the strips (`_apply_planing_lift`, step 6).** Is a strip allowed to pull (suction, as consistent strip theory and thin-wing theory have it) or not (ventilation)? It decides what rocker does in the model, and so whether a slalom board's scoop rocker is faster here or slower. A bound in between, the suction no larger than the water's head above the bottom plus a sourced ventilation limit, would be physics rather than a choice.
+
+## 9. The most realistic setup we know, as the default (Max: "implement the most realistic settings we know"; "the 72 and the 8.0 from the data")
+
+Now the default gear:
+- **The board is the JP Slalom SL 72:** 2.28 × 0.72 m and 117 l (JP's data), 7.8 kg (6.6 published, plus straps and fin, an estimate), with the outline and the scoop rocker traced from JP's photos (sections 6 and 7). Cut-outs off, since their size is unknown.
+- **The sail is an 8.0 m²:** the wind tunnel's own sail, with a 4.9 m luff and mast, a 2.0 m boom and the centre of effort at 0.41 of the luff. On its aspect ratio of 3.0 the lift slope factor is 1.03, which gives the curve Session 57 checked against the tunnel. The rig weighs 9.5 kg with its centre 1.8 m up (estimates). JP recommends 7.0 to 8.2 m² for the SL 72.
+- **The mast foot, the fin box and the stances** stay at their distances from the tail.
+- **The rig's pitch lag** is on (0.3 s).
+- **The sailor trims by feel:** the pitch is averaged over 1.5 s, the weight keeps moving aft at 0.03 m/s while the board rides below its aim, and it moves forward when the board starts to chatter (pitch-rate RMS above 1.7°/s). It comes off the tail quickly (0.3 m/s) when the nose rides above the aim and off the plane. With the slow release a beginner's tack reared the board to 72° as it slowed heading up, and it turned over.
+
+The old gear is kept as `board_freeride_240.tres` and `sail_6_5.tres`. The tests that pin the old board's and the old sail's own numbers load those files.
+
+| Reach check, 90 s, means from 60 s (m/s, pitch SD) | The old default (2.40 freeride, 6.5) | The new default |
+|---|---|---|
+| 12 kt 60° | 7.16 | 7.58 |
+| 12 kt 100° | 9.21 | **11.00** (+19 %) |
+| 12 kt 135° | 5.42 | 5.96 |
+| 18 kt 60° | 8.98 | 8.74 |
+| 18 kt 100° | 13.08 (1.70 m wet) | **13.52** (1.00 m wet) |
+| 18 kt 135° | 9.62 | **14.52** (+51 %, now planing) |
+| 24 kt 60° | 9.71 | 9.06 (an 8.0 is big for 24 kt) |
+| 24 kt 100° | 15.20 (0.25°) | 15.35 (0.00°) |
+| 24 kt 135° | 14.70 (0.93°, bouncing) | **17.93** (0.17°, steady) |
+
+On the planing reaches the wet part is now 0.93 to 1.27 m long. Two things are not right yet:
+- **The scoop rocker's share of the gain is overstated** by the strips' clip (section 7).
+- **The 3D models still show the 2.40 m board and the 6.5 sail.** They are rebuilt with `tools/blender.sh tools/blender/build_rig_models.py` once Blender 4.5 is installed on this PC.
+
+**What still needs research:**
+1. The pressure on a curved bottom, suction against ventilation (section 8, item 7).
+2. The hooked-in posture: the harness carries about 400 N in the measurement against 610 to 690 N here, and the boom sits behind the hips at 12 kt (section 5).
+3. The cut-outs' size and the V of a slalom tail.
+4. The mast track's and the straps' places on the SL 72.
 

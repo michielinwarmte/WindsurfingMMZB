@@ -10,8 +10,8 @@ const MAST_PATH: String = "res://assets/models/mast.glb"
 const SAIL_PATH: String = "res://assets/models/sail.glb"
 const BOOM_PATH: String = "res://assets/models/boom.glb"
 
-var board_config: BoardConfig = preload("res://config/board_default.tres")
-var sail_config: SailConfig = preload("res://config/sail_default.tres")
+var board_config: BoardConfig = preload("res://config/board_freeride_240.tres")
+var sail_config: SailConfig = preload("res://config/sail_6_5.tres")
 var fin_config: FinConfig = preload("res://config/fin_default.tres")
 var sailor_config: SailorConfig = preload("res://config/sailor_default.tres")
 
