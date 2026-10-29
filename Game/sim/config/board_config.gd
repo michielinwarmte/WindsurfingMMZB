@@ -81,6 +81,14 @@ const ONE_FOOT_M: float = 0.3048
 ## (PHYSICS_SPEC.md section 14). The hull model wets the vee (HullModel._wet_width) and
 ## takes it in Savitsky's lift; the buoyancy grid keeps a flat bottom.
 @export var deadrise_deg: float = 1.0
+## The tail cut-outs of a slalom board (PH16): over this distance forward of the tail the
+## bottom is narrower than the deck's outline, by cutout_depth_m on each side at the tail,
+## narrowing to nothing at the cut-out's front. The rail is stepped up there, so the water
+## leaves the bottom at the step and wets only the narrower bottom (JP's Slalom: "the
+## Cut-Out configuration reduces the outline width and the wetted surface of the bottom").
+## Makers do not publish the sizes; 0 = no cut-outs (a freeride or wave tail).
+@export var cutout_from_tail_m: float = 0.0
+@export var cutout_depth_m: float = 0.0
 ## The unsteady lift factor of the spray root running forward along a sinking hull (the
 ## slamming part of planing, section 5) is held at most at this: a flat bottom meeting
 ## rising water at a small angle would otherwise see an unbounded root speed.
@@ -171,12 +179,22 @@ func rail_hardness(from_transom_m: float) -> float:
 	return (soft_rail_from_m - from_transom_m) / maxf(soft_rail_from_m - hard_rail_to_m, 0.01)
 
 
-## Planform area of the bottom: the outline's width integrated over the length (midpoint
+## Width of the bottom at a distance forward of the transom: the outline less the tail
+## cut-outs (cutout_from_tail_m, cutout_depth_m), what the water meets. The same as width_at
+## on a board without cut-outs.
+func bottom_width_at(from_transom_m: float) -> float:
+	var width: float = width_at(from_transom_m)
+	if cutout_from_tail_m > 0.0 and from_transom_m < cutout_from_tail_m:
+		width -= 2.0 * cutout_depth_m * (1.0 - maxf(from_transom_m, 0.0) / cutout_from_tail_m)
+	return maxf(width, 0.0)
+
+
+## Planform area of the bottom: the bottom's width integrated over the length (midpoint
 ## rule; 1.346 m2 for the default board). Not cheap: models compute it once and keep it.
 func planform_area_m2() -> float:
 	var steps: int = 240
 	var step_length: float = length_m / float(steps)
 	var area: float = 0.0
 	for i: int in steps:
-		area += width_at((float(i) + 0.5) * step_length) * step_length
+		area += bottom_width_at((float(i) + 0.5) * step_length) * step_length
 	return area

@@ -117,7 +117,7 @@ func _build_grid() -> void:
 		var from_transom: float = board.length_m * t
 		var z: float = half_length - from_transom
 		var rocker: float = board.bottom_rise_m(from_transom)
-		var row_width: float = board.width_at(from_transom)
+		var row_width: float = board.bottom_width_at(from_transom)
 		var row_section: float = row_width * board.thickness_at(from_transom)
 		var row_half_width: float = 0.5 * row_width
 		for j: int in n_wid:

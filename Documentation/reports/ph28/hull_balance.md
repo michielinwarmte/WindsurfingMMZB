@@ -119,3 +119,47 @@ The outlines are close. The slalom tail is 3 to 4 cm wider, and its cut-outs mak
 | 24 kt 135° | 14.70 (SD 0.93°) | 14.47 (1.05°) | 14.31 (1.16°) |
 
 **The outline is not the cause:** the speeds are within 3 % and the bounce is the same. What makes a slalom board a slalom board is not in the model: the cut-outs (less wet width at the tail, a clean release), the V that changes along the bottom, and the scoop rocker. JP's own text says the new SL 72 is faster by "trimming the board to a higher water position, reducing wetted surface and drag" while staying stable. That points to the same question as section 3 (a real board rides higher without bouncing), but it is a maker's description, not a measurement.
+
+## 7. The whole slalom board: rocker, thickness and cut-outs (Max: "model the whole board also rocker and stuff and try again")
+
+**The rocker**, traced from the side view (the bottom's edge against the straight line through it from 0.15 to 0.9 m from the tail, 2 mm scatter there):
+
+| From the tail | 0.2 to 0.9 m | 1.1 m | 1.3 m | 1.6 m | 1.8 m | 2.0 m | 2.2 m | nose tip |
+|---|---|---|---|---|---|---|---|---|
+| JP SL 72, rise | flat | 7 mm | 16 mm | 36 mm | 60 mm | 93 mm | 156 mm | 208 mm |
+| The game's board | flat to 1.5 m | 0 | 0 | 1 mm | 9 mm | 25 mm | 49 mm | 80 mm |
+
+A scoop: it rises from about 0.7 m from the tail, where the game's board stays flat to 1.5 m. As `BoardConfig`'s parabola it is `nose_rocker_m` 0.128 over `nose_rocker_length_m` 1.6, fitted from 1.0 to 1.9 m, where the board meets the water. The last 30 cm of the nose is higher than the parabola. The tail rises 7 to 12 mm over its last 15 cm in the photo, which may be a small kick or the thin tail edge, so both were run. The straps hide the thickness except near the tips: about 45 mm at the tail and 40 mm at the nose, and 130 mm in the middle where nothing stands out.
+
+**The cut-outs** are new in the model: `BoardConfig.cutout_from_tail_m` and `cutout_depth_m`, with the bottom narrower than the deck by the depth on each side at the tail, narrowing to nothing at the cut-out's front (`bottom_width_at`, used by the hull model and the buoyancy grid; the visuals keep the deck's outline). JP does not publish their size, so 0.45 m long and 1.5 or 3 cm deep were run (estimates). Off by default; `test_board_cutouts.gd`.
+
+The reach check, with the outline of section 6, the rocker above, 2.28 m, 117 l, 7.2 kg, thickness 0.13, tail 0.045 and nose 0.04, and the mast foot, fin and stances kept from the tail:
+
+| m/s (pitch SD) | The game's board | SL 72 | + cut-outs 1.5 cm | + cut-outs 3 cm | + tail kick 8 mm |
+|---|---|---|---|---|---|
+| 12 kt 60° | 7.16 | 6.59 | 6.59 | 6.60 | 6.47 |
+| 12 kt 100° | 9.21 | 9.61 | 9.68 | 9.75 | 9.26 |
+| 12 kt 135° | 5.42 | 5.07 | 5.07 | 5.08 | 5.03 |
+| 18 kt 60° | 8.98 | 9.22 | 9.25 | 9.28 | 9.25 |
+| 18 kt 100° | 13.08 (1.70 m wet) | **13.72** (1.22 m) | 13.76 | 13.80 | 13.74 |
+| 18 kt 135° | 9.62 | 8.91 | 8.94 | 8.96 | 8.78 |
+| 24 kt 60° | 9.71 | 9.73 | 9.74 | 9.76 | 9.73 |
+| 24 kt 100° | 15.20 (0.25°) | **15.78** (0.01°) | 15.81 | 15.83 | 15.85 |
+| 24 kt 135° | 14.70 (0.93°) | **15.62** (0.43°) | 15.67 | 15.69 | 15.64 |
+
+At the same trim (about 1°) the planing reaches ride 0.2 to 0.5 m shorter and 4 to 6 % faster, steadier at 24 kt. The slow and broad cases are 6 to 8 % slower (more rocker in the water before the board planes). The cut-outs add 0.3 to 1 %, and the kick changes nothing useful.
+
+**But the gain comes from one assumption of the hull model, and the measurements say it is wrong.** The probe (`hull_probe.gd`, which now takes `--board.<field>=`) at the SL 72's own state (13.7 m/s, 1.0°, 2° of heel):
+
+| Wet length | Today's board: model / Savitsky, N | SL 72: model / Savitsky, N | SL 72: the clip's share |
+|---|---|---|---|
+| 1.0 m | 147 / 408 | 333 / 444 | 48 N |
+| 1.22 m | 259 / 493 | **908 / 532** | **528 N** |
+| 1.5 m | 440 / 579 | 2000 / 623 | 1441 N |
+
+Where the scoop runs into the wet part, the spray root meets the water at the rocker's own angle (3° more than the pitch at 1.22 m), and the strips behind it, where the bottom flattens and lifts away from the water, would pull: the strip theory's suction. The model does not let a strip pull ("the water has let go instead", `HullModel._apply_planing_lift` step 6), so the root's push stays and the suction is dropped: 528 of the 908 N. In consistent strip theory the suction cancels it, and the total follows the angle at the aft end. Savitsky and Brown (1976) measured that a bottom with rocker (convex buttocks) lifts *less* than a flat one at the same trim, which is what suction does. A ventilated bottom would let go as the model has it; the suction this would take here (about 4500 Pa) is far more than the 100 to 300 Pa of water above the bottom, so air from the rails could get in. Which one a real board does is the open question. **So the SL 72's 4 to 6 % is not to be trusted** until the pressure on a curved bottom is settled. That is a hull-model item, not a board, and it touches today's board too wherever its wet part reaches the nose rocker (level at 1.7 m wet the clip gives 495 of 966 N; at 2° of heel, 40 of 510).
+
+## 8. For Michiel (added)
+
+7. **The clip on the strips (`_apply_planing_lift`, step 6).** Is a strip allowed to pull (suction, as Savitsky and Brown's measured rocker loss says) or not (ventilation)? It decides what rocker does in the model, and so whether a slalom board's scoop rocker is faster here or slower. A bound in between, the suction no larger than the water's head above the bottom plus a sourced ventilation limit, would be physics rather than a choice.
+

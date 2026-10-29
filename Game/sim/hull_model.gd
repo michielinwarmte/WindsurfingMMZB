@@ -805,10 +805,10 @@ func _wet_part(middle: float, slope: float, a: float, b: float) -> Vector3:
 	return Vector3(b - a, area, moment)
 
 
-## Width of the bottom at a distance forward of the transom: the board's outline, the same
-## one the buoyancy grid uses (BoardConfig.width_at).
+## Width of the bottom at a distance forward of the transom: the board's outline less any
+## tail cut-outs, the same one the buoyancy grid uses (BoardConfig.bottom_width_at).
 func _width_at(from_transom: float) -> float:
-	return board.width_at(from_transom)
+	return board.bottom_width_at(from_transom)
 
 
 ## Mean width of the bottom between two points along the length (9-point average).

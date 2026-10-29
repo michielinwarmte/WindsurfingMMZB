@@ -53,6 +53,16 @@ func _initialize() -> void:
 	var heels: PackedFloat64Array = _number_list(_options.get("heels", "0,2,4.5,8"))
 	var lengths: PackedFloat64Array = _number_list(_options.get("lengths", "1,1.4,1.76"))
 	_sim = WindsurferSim.create_default()
+	# --board.<field>=<number>: another board, built again on a copy (as run_reach.gd does).
+	var board: BoardConfig = _sim.board_config.duplicate() as BoardConfig
+	var changed: bool = false
+	for key: String in _options:
+		if key.begins_with("board.") and key.substr(6) in board:
+			board.set(key.substr(6), _options[key].to_float())
+			changed = true
+	if changed:
+		_sim = WindsurferSim.new(board, _sim.sail_config, _sim.fin_config, _sim.sailor_config,
+			_sim.water_config, _sim.wind_config, _sim.sim_config, _sim.wave_set_config)
 	print("Hull probe: %.2f m/s, slip %.1f deg toward the low rail, flat still water, the hull alone held at a trim and a heel; forces in N, lengths in m" % [_speed_ms, rad_to_deg(_slip_rad)])
 	print("trim heel  L    | lift  buoy | lam   tauref beam  | Sav   slend  3D    | root  strip0 strip1 clip  | sum/sl chk   | chdry wmax  wwag  hidry | Lwag  Lwet  Ltn")
 	for trim_deg: float in trims:
