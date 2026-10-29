@@ -94,3 +94,28 @@ In gusts (0.2) and waves it is neutral (`tools/push_check.sh --sweep=sailor.rig_
 4. **U1's wet-length target.** On this board 0.6 to 1.0 m wet needs 1.5 to 2.2° of trim, above where the model bounces. No measured porpoising limit of a windsurf board is known (spec section 5 F22). If Max's own feel or a photo says real boards ride at 2° without bouncing, then the bounce is the model's to fix. If not, the target is too short for this board.
 5. **The 24 kt broad reach's low-trim bounce** (section 4). It is in the default after a minute, and it is what validation's `test_planing_wet_area.gd` target 2 and `test_rig_lean_and_fin_loading.gd` catch.
 6. **The heeled lift at short wet lengths** is 7 to 20 % below TN 4187 at 1.5 to 2.2° (section 1). Small today, and it matters once the board rides higher.
+
+## 6. Is it the board's shape? A slalom outline (Max's question, the same day)
+
+Max asked whether the board's shape is the cause, since he wants a slalom board, and gave JP's Slalom S-TEC (sizes 62.5 to 85; the SL 72 is 228 × 72 cm, 117 l, 6.6 kg) with a product photo. The bottom view's silhouette was traced (width against length). Its width over length is 0.323, and the SL 72's published 72/228 is 0.316, so the photo is to scale. It is widest at 0.50 of the length from the tail, within 1 % of that from 0.48 to 0.60 (the "parallel outline"). Against the game's board at the same distance from the tail:
+
+| From the tail | The game's board (2.40 × 0.72) | JP SL 72 (the photo, scaled) |
+|---|---|---|
+| 0.1 m | 0.32 m | 0.29 m |
+| 0.2 m | 0.38 m | 0.41 m |
+| 0.3 m (one foot) | 0.45 m | 0.49 m |
+| 0.5 m | 0.57 m | 0.59 m |
+| 0.7 m | 0.65 m | 0.66 m |
+| widest | 0.72 m at 1.10 m | 0.72 m at 1.14 m |
+
+The outlines are close. The slalom tail is 3 to 4 cm wider, and its cut-outs make the wet bottom narrower again, which the silhouette cannot show. Sailed in the reach check as `BoardConfig` length 2.28, width 0.72, widest point 1.14, tail width 0.49, nose width 0.56 (the photo at one foot from the nose) and volume 0.117. The mast foot, the fin and the stances were kept at the same distances from the tail (`--sail.mast_foot_local=0,0.06,-0.16 --fin.root_local=0,-0.06,0.84 --sailor.stance_planing_z_m=0.54 --sailor.stance_rest_z_m=0.09 --sailor.stance_tack_z_m=-0.26`; `run_reach.gd` now takes a point as x,y,z):
+
+| Reach check, m/s | The game's board | SL 72 outline | SL 72 outline at 7.2 kg (6.6 and the straps, an estimate) |
+|---|---|---|---|
+| 12 kt 100° | 9.21 | 9.53 | 9.34 |
+| 18 kt 100° | 13.08 (1.70 m wet) | 13.02 (1.63 m) | 13.04 (1.63 m) |
+| 18 kt 135° | 9.62 | 9.56 | 9.71 |
+| 24 kt 100° | 15.20 | 14.84 | 15.21 |
+| 24 kt 135° | 14.70 (SD 0.93°) | 14.47 (1.05°) | 14.31 (1.16°) |
+
+**The outline is not the cause:** the speeds are within 3 % and the bounce is the same. What makes a slalom board a slalom board is not in the model: the cut-outs (less wet width at the tail, a clean release), the V that changes along the bottom, and the scoop rocker. JP's own text says the new SL 72 is faster by "trimming the board to a higher water position, reducing wetted surface and drag" while staying stable. That points to the same question as section 3 (a real board rides higher without bouncing), but it is a maker's description, not a measurement.

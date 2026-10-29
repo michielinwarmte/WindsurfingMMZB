@@ -177,6 +177,15 @@ func _apply_overrides(targets: Dictionary) -> bool:
 			push_error("No field '%s' to override." % key)
 			continue
 		var current: Variant = target.get(parts[1])
+		if current is Vector3:
+			# A point as three numbers: --sail.mast_foot_local=0,0.06,-0.16
+			var xyz: PackedStringArray = _options[key].split(",")
+			if xyz.size() != 3:
+				push_error("'%s' needs three numbers, x,y,z." % key)
+				continue
+			target.set(parts[1], Vector3(xyz[0].to_float(), xyz[1].to_float(), xyz[2].to_float()))
+			changed = true
+			continue
 		var number: float = _options[key].to_float()
 		target.set(parts[1], (number != 0.0) if current is bool else (int(number) if current is int else number))
 		changed = true
