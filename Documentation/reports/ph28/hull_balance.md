@@ -196,3 +196,35 @@ On the planing reaches the wet part is now 0.93 to 1.27 m long. Two things are n
 3. The cut-outs' size and the V of a slalom tail.
 4. The mast track's and the straps' places on the SL 72.
 
+## 10. Max's play-test of the new gear (the same evening)
+
+Max: "the fin is the problem for the bouncing and weird falls: it pushes the board straight up at high speeds and high load; in real life this translates more in the nose lifting up". "The sailor is too weak: in 15 kn not being able to close the sail in a broad reach is not acceptable." "If you slingshot downwind you gain a lot of speed, and closing the sail then keeps the pressure through the apparent wind." "If the physics are correct then I'm wrong."
+
+**The slingshot** (`Game/dev/slingshot.gd`: 60 s on a beam reach at 15 kt, flat water, then a bear-away to 135°). The sim's sailor *eased* the sail in the bear-away: the boom went from 24 to 31°, the angle of attack from 9 to 5.8° where 18° drove best, the drive from 216 to 124 N, and the board fell from 12.5 to 8.5 m/s. The board that started on the broad reach went just as fast. The cause was the autopilot's cap on the pull, the alpha the sailor's righting moment *now* can hold. On the beam reach the sailor was at full lean and held 9.5° of the best 18. In the bear-away the pull dropped, the body came in, the cap fell with it, and the sail was let go.
+
+**The sailor too weak: Max is right.** The full lean was a 45° stance (U1.2), 0.66 m outboard of the feet. Gourlay & Martellotta (2011, section 6.1) put a real sailor's body "at least 20 to 30 degrees above horizontal", with the centre of mass 1.03 m along it. At 30° that is 0.89 m outboard of the feet: `lean_max_m` 1.11, `lean_height_drop_m` 0.48, now the default. Results:
+- **The slingshot:** the sail stays in through the bear-away (boom 17 to 24°), and the speed holds at 13 m/s for 3 s.
+- **The reach check:** 15 kt beam 12.54 → 12.99 m/s, 18 kt beam 13.53 → 14.26, 24 kt beam 15.35 → 16.16.
+- **Gusts and waves, no falls:**
+
+| | Upwind (VMG) | Beam reach | Broad reach |
+|---|---|---|---|
+| 24 kt | 3.85 → 4.46 | 12.40 → 13.32 | 12.75 → 12.78 |
+| 18 kt | 3.70 → 4.04 | 11.10 → 11.92 | 8.14 → 8.10 |
+| 12 kt | 2.16 → 2.16 | 7.90 → 7.83 | 5.48 → 5.57 |
+
+The harness now carries 770 to 850 N, against about 415 N measured (the hooked-in posture, still open). In validation's steady 24 kt reach at 120° the autopilot now holds enough of the 8.0 to catapult, which is what an 8.0 in 24 kt does. A change of the autopilot's cap alone (never below the pull it holds) measured no gain and was not kept.
+
+**The broad reach at 15 kt still does not plane.** Kept sheeted in, the board still slows from 13 to 9 m/s over 20 s. At 12 m/s on 135° the sail at its best angle drives with about 155 N (apparent wind 16 kt at 37°), and the board's drag is about 190 N (friction about 125, the bottom's tilt 30, the fin 22, the sailor's windage 16). In the game the wind is set at 10 m: "15 kt" there is about 12.5 kt at the sail (the height gradient). If Max's 15 kn is a reading on the beach or felt at the sail, the game's 18 kt is his 15.
+
+**The fin: Max's observation holds in the sim, with the sign the other way.** Under load the bending fin's force turns upward (the tip bends to windward). With the full hike, flat water:
+
+| | Bending fin: up force, trim, wet length, speed | Stiff fin |
+|---|---|---|
+| 15 kt 100° | 105 N, 0.73°, 1.28 m, 12.99 m/s | 20 N, 1.47°, 1.12 m, 13.24 |
+| 18 kt 100° | 111 N, 0.71°, 1.25 m, 14.26 | 20 N, 1.32°, 1.09 m, 14.53 |
+| 24 kt 100° | 120 N, 0.80°, 1.20 m, 16.16 | 20 N, 1.37°, 1.01 m, 16.55 |
+| 24 kt 135° | 123 N, 0.20°, 1.27 m, 18.10 | 22 N, 0.70°, 1.19 m, 18.44 |
+
+In the sim the push at the tail lifts the tail and the nose goes down, 0.6° less trim and 2 % slower, and in a gust it is a likely trigger of a nose dive. An upward push at the tail lifts the nose only if the riders weight is behind the fin. In the sim the sailors weight is right above it (the whole windsurfers centre of mass 0.31 m from the tail, the fin 0.30 m). A real hooked-in rider hangs behind the boom, so further aft. That is the same open point as the harness: **the hooked-in posture is now the one physics item behind three findings**: the trim (section 2), the harness load, and the fin's effect. The fin's own stiffness (the Nascimento 2017 flex test of a 37 cm fin, 20 mm under 100 N) is also a soft fin for a slalom board, but no slalom fin's flex was found.
+

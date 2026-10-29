@@ -224,15 +224,18 @@ extends Resource
 
 @export_group("Lean (sideways)")
 ## Sideways distance of the sailor's centre of mass from the centreline at full lean:
-## hooked in with the feet on the windward rail (feet_rail_m) and the body in a planing
-## stance, a straight line from the feet to the hips about 45 degrees above the water
-## (PHYSICS_SPEC.md section 14, "U1: the harness"): 0.66 m outboard of the feet. (Until
-## U1.2 it was a full hike, 1.0 m, the body at 25 degrees: with the hook within 0.4 m of
-## the boom no harness line allows that under a boom 1.4 m up the mast.)
-@export var lean_max_m: float = 0.88
-## The centre of mass drops by this much at full lean: the same 45 degree stance puts it
-## 0.66 m above the deck (the hook 0.65 to 0.70 m up, section 14), 0.28 m below standing.
-@export var lean_height_drop_m: float = 0.28
+## hooked in with the feet on the windward rail (feet_rail_m) and the body in a full hike,
+## the body 30 degrees above the water. Gourlay & Martellotta (2011, RS:X, section 6.1): a
+## sailor keeps the body "at least 20 to 30 degrees above horizontal", the centre of mass
+## 1.03 m from the feet (0.57 of a 1.80 m body), so 0.89 m outboard of the feet at 30
+## degrees: 1.11 m from the centreline. (PH16, Max: "the sailor is too weak". U1.2 had set a
+## 45 degree stance, 0.88 m, to keep a short harness line under the boom; with it the sailor
+## could not hold an 8.0 m2 sheeted in at 15 kt and eased it off in a bear-away. The short
+## line against this hike is the open question of the hooked-in posture.)
+@export var lean_max_m: float = 1.11
+## The centre of mass drops by this much at full lean: the same 30 degree hike puts it
+## 1.03 x sin 30 = 0.52 m above the feet, 0.48 m below standing.
+@export var lean_height_drop_m: float = 0.48
 ## How fast the sailor means to change the lean (fraction of full lean per second): the
 ## hips move about a metre a second. The body follows as the legs, the ankles and the
 ## pull in the hands let it (it is an inverted pendulum on the feet).

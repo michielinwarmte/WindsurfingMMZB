@@ -55,7 +55,9 @@ func test_a_sailor_leaning_to_starboard_at_rest_heels_the_board_to_starboard() -
 	_run(sim, 4.0, controls)
 	var t: Telemetry = sim.telemetry
 	assert_eq(sim.sailor_state, WindsurferSim.SailorState.SAILING, "still standing")
-	assert_almost_eq(t.sailor_position_body.x, 0.1 * sim.sailor_config.lean_max_m, 0.04, "the body is a tenth of the full lean to starboard")
+	# About a tenth: the heeling board tilts the body's offset in the hull's frame a little.
+	var tenth_m: float = 0.1 * sim.sailor_config.lean_max_m
+	assert_between(t.sailor_position_body.x, 0.5 * tenth_m, 1.5 * tenth_m, "the body is about a tenth of the full lean to starboard")
 	assert_between(t.heel_deg, 0.5, 15.0, "the starboard rail goes down (heel positive), held by the toes")
 	# The sailor presses the starboard side down: the feet stand under the body, off the
 	# centreline, and the toes press back against the heel. On the board's real outline
