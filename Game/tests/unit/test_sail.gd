@@ -216,7 +216,7 @@ func test_no_force_without_wind() -> void:
 
 
 # The default sail against the full-scale iQFOiL 8 m2 sail in the wind tunnel (PH28; Zhang et
-# al. 2025, Documentation/2501.13254v1.pdf, Fig. 8a, the outhaul on). Lift at the bottom
+# al. 2025, Documentation/Science/2501.13254v1.pdf, Fig. 8a, the outhaul on). Lift at the bottom
 # section's angle of attack, read off the figure at 4, 6 and 8 m/s of wind.
 const TUNNEL_ANGLES_DEG: Array[float] = [5.3, 8.7, 12.2, 16.5]
 const TUNNEL_LIFT: Dictionary[float, Array] = {

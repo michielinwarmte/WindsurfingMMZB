@@ -4,7 +4,7 @@ Session 57, 28 October 2026, on the branch `ph28/sail-and-hull` (from `gp0/measu
 
 ## The source
 
-Zhang, Bertrand, Rabaud, Augier and Fermigier (2025), *Flying shape and aerodynamics of a full-scale flexible Olympic windsurf sail*, arXiv 2501.13254 (`Documentation/2501.13254v1.pdf`; the journal version is in the Journal of Sailing Technology, doi 10.5957/jst/2026.11.1.31). A Severne HGO iQFOiL 8 m² on an Apex 490 in the 6 m by 6 m S6 tunnel at 4 to 8 m/s, rig-back 18°. Stereo cameras give the flying shape, a balance gives lift, drag and the rolling moment.
+Zhang, Bertrand, Rabaud, Augier and Fermigier (2025), *Flying shape and aerodynamics of a full-scale flexible Olympic windsurf sail*, arXiv 2501.13254 (`Documentation/Science/2501.13254v1.pdf`; the journal version is in the Journal of Sailing Technology, doi 10.5957/jst/2026.11.1.31). A Severne HGO iQFOiL 8 m² on an Apex 490 in the 6 m by 6 m S6 tunnel at 4 to 8 m/s, rig-back 18°. Stereo cameras give the flying shape, a balance gives lift, drag and the rolling moment.
 
 What it measured, against the game's sail as it was:
 

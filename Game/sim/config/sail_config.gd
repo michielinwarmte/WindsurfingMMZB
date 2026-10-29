@@ -21,7 +21,7 @@ extends Resource
 ## Fraction of the boom behind the mast at which the centre of effort sits (section 2.13).
 @export var ce_boom_fraction: float = 0.35
 ## Camber: depth of the sail's curve divided by its chord. The full-scale iQFOiL sail in the
-## wind tunnel (Zhang et al. 2025, Documentation/2501.13254v1.pdf, Fig. 5d) has 6.3 to 6.6 %
+## wind tunnel (Zhang et al. 2025, Documentation/Science/2501.13254v1.pdf, Fig. 5d) has 6.3 to 6.6 %
 ## at its third batten with the outhaul on and 7.1 to 7.6 % with it eased (PH28).
 @export var camber: float = 0.07
 

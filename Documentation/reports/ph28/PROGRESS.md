@@ -6,7 +6,7 @@ Max, 28 October 2026: build the sail from the iQFOiL wind-tunnel study, combine 
 
 | # | Step | State |
 |---|---|---|
-| 1 | The paper committed (`Documentation/2501.13254v1.pdf`) | done, a71c5bf |
+| 1 | The paper committed (`Documentation/Science/2501.13254v1.pdf`) | done, a71c5bf |
 | 2 | The sail's numbers and its twist (sail model, config, autopilot, spec 2.17, tests) | done, 8584330. Four tests brought to the new sail: the catapult test sheets in at 24 kt (a 75 kg sailor now holds the 6.5 at 18 kt, as in real life); `test_race_env.gd`'s dropped board 5 m in 10 s (7 m now, 10 before) and the course policy within 270 s (245 s now, under 240 before); thin air with the twist. `tools/check.sh` passes. The validation run is in `.logs/ph28_valid.txt` |
 | 3 | The measurements: push check, reach check A to D, drag budget | done (the report). The twist on against off in gusts and waves: `tools/push_check.sh --sweep=sail.twist_pressure_pa=140,0 --seconds=120 --jobs=2 --run=ph28_twist` |
 | 4 | The hull: why the board rides at 1° of trim with 1.7 m wet | measured, not changed (the report's "What this means"); the levers are the rig's load path (U1.2: harness 663 N, mast foot 365 N) and the porpoising limit, both in Michiel's sailor and hull models, where U1's stop rules fired. The roadmap's PH16 has it |

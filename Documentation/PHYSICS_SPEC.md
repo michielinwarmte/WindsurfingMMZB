@@ -1054,7 +1054,7 @@ Neither was active in the validated build. The spec keeps the sim free of trimmi
 
 The same rig at `awa = +45°` and `alpha = 15°` (boom at 30°): `w_hat = (−0.707, 0, 0.707)`, lift direction `(−0.707, 0, −0.707)`, `f_sail_local = (−284.5, 0, −219.7) N`: drive `L sin 45° − D cos 45° = 219.7 N`, side force `L cos 45° + D sin 45° = 284.5 N` to port.
 
-**2.17 The sail measured in the wind tunnel, and its twist under load (PH28, 28 October 2026; on the branch `ph28/sail-and-hull`, for Michiel's review).** The numbers of 2.4 to 2.9 came from the legacy code. The first full-scale measurement of a windsurf sail, an iQFOiL 8 m² (Severne HGO on an Apex 490, rig-back 18°) in the 6 m by 6 m S6 tunnel at 4 to 8 m/s, with its flying shape filmed and its forces weighed together ([W-T] Zhang, Bertrand, Rabaud, Augier and Fermigier 2025, `Documentation/2501.13254v1.pdf`), replaces them where it can:
+**2.17 The sail measured in the wind tunnel, and its twist under load (PH28, 28 October 2026; on the branch `ph28/sail-and-hull`, for Michiel's review).** The numbers of 2.4 to 2.9 came from the legacy code. The first full-scale measurement of a windsurf sail, an iQFOiL 8 m² (Severne HGO on an Apex 490, rig-back 18°) in the 6 m by 6 m S6 tunnel at 4 to 8 m/s, with its flying shape filmed and its forces weighed together ([W-T] Zhang, Bertrand, Rabaud, Augier and Fermigier 2025, `Documentation/Science/2501.13254v1.pdf`), replaces them where it can:
 
 | | Legacy (2.5 to 2.9) | Tunnel [W-T] | Now |
 |---|---|---|---|
