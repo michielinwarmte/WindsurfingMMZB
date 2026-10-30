@@ -80,6 +80,8 @@ var _spray_root_factor_max: float = 0.0
 var _planing_lift_lag_s: float = 0.0
 var _planing_buoyancy_factor: float = 1.0
 var _bow_drag_cd: float = 0.0
+var _strip_suction_heads: float = 0.0
+var _heel_as_rolled_plate: float = 0.0
 var _density_kg_m3: float = 0.0
 var _kinematic_viscosity_m2_s: float = 0.0
 
@@ -103,6 +105,15 @@ var lateral_n: float = 0.0
 var resistance_n: float = 0.0  # friction + residuary + pressure drag, along the flow
 var planing_lift_n: float = 0.0  # vertical component of the planing force
 var planing_normal_force_n: float = 0.0
+## The pull the strips applied (BoardConfig.strip_suction_heads): the sum of the negative
+## strip forces, normal to the bottom, as a positive number. 0 with the option off.
+var planing_pull_n: float = 0.0
+## What the strips were not allowed to apply: with the option off, every pull (the clip,
+## A-05); with it on, the part of a pull beyond the water's head. The force as it would have
+## acted (down and along the bottom's normal) and its torque about the centre of mass, in
+## world axes, so a tool can say what the clip does to the pitch (Game/dev/pitch_budget.gd).
+var clipped_force_world: Vector3 = Vector3.ZERO
+var clipped_torque_world: Vector3 = Vector3.ZERO
 ## The planing lift as a share of the whole weight of board, rig and sailor: what the trim
 ## press, the onset check and the HUD read. The fin and the rig carry part of the weight
 ## too, so a planing hull can show well under 1 here.
@@ -211,6 +222,8 @@ func copy_config() -> void:
 	_planing_lift_lag_s = board.planing_lift_lag_s
 	_planing_buoyancy_factor = board.planing_buoyancy_factor
 	_bow_drag_cd = board.bow_drag_cd
+	_strip_suction_heads = board.strip_suction_heads
+	_heel_as_rolled_plate = board.heel_as_rolled_plate
 	_density_kg_m3 = water.density_kg_m3
 	_kinematic_viscosity_m2_s = water.kinematic_viscosity_m2_s
 
@@ -399,6 +412,7 @@ func _apply_planing_lift(aft: float, forward: float, time_s: float, gravity_ms2:
 	var m_per_m: PackedFloat64Array = PackedFloat64Array()
 	var full_widths: PackedFloat64Array = PackedFloat64Array()
 	var wet_fractions: PackedFloat64Array = PackedFloat64Array()
+	var wet_centres: PackedFloat64Array = PackedFloat64Array()  # body x of each strip's wet centre
 	var sink_ms: PackedFloat64Array = PackedFloat64Array()  # down through the surface
 	var v_mean: float = 0.0
 	for k: int in STRIPS:
@@ -422,6 +436,7 @@ func _apply_planing_lift(aft: float, forward: float, time_s: float, gravity_ms2:
 		m_per_m.append(rho * PI * width * width / 8.0)
 		full_widths.append(full_width)
 		wet_fractions.append(wet.x)
+		wet_centres.append(wet.y)
 		sink_ms.append(-v_rel.dot(WaterSurface.sample_normal(_sea_at_strips, k)))
 		v_mean += v_into[k] / float(STRIPS)
 	trim_deg = rad_to_deg(atan2(v_mean, u))
@@ -440,13 +455,20 @@ func _apply_planing_lift(aft: float, forward: float, time_s: float, gravity_ms2:
 	#    The added mass the water gains between two neighbouring strips is shared by the two
 	#    (the front strip's gain from nothing is the spray root's, step 3), so the gains add
 	#    up to the added mass under the widest wet section, as the theory has it.
+	#    With the strips allowed to pull (BoardConfig.strip_suction_heads), the push where the
+	#    water reaches further across the bottom (the spray root running obliquely across a
+	#    vee or a heeled bottom) joins the front root's push and is spread with it (step 5),
+	#    for the same reason the front root's is: the pressure peaks at the root and decays
+	#    aft (A-03). The convective part (dV/dx) stays on its strip.
 	var strip_forces: PackedFloat64Array = PackedFloat64Array()
+	var oblique_root_force: float = 0.0
 	for k: int in STRIPS:
 		var k0: int = maxi(k - 1, 0)
 		var k1: int = mini(k + 1, STRIPS - 1)
 		var dx: float = float(k1 - k0) * strip_length
 		var dv_dx: float = (v_into[k1] - v_into[k0]) / dx
 		var force: float = -u * m_per_m[k] * dv_dx * strip_length
+		var gained: float = 0.0
 		var advance: float = _root_advance_factor(sink_ms[k], u, pitch + board.bottom_slope(x_k[k]))
 		for j: int in range(k - 1, k + 1):  # k - 1 and k (a range: an array literal takes the lock)
 			if j < 0 or j >= STRIPS - 1:
@@ -456,9 +478,13 @@ func _apply_planing_lift(aft: float, forward: float, time_s: float, gravity_ms2:
 			var wetting_gain_kg_m: float = rho * PI / 8.0 * full_widths[k] * full_widths[k] * (wet_fractions[j] * wet_fractions[j] - wet_fractions[j + 1] * wet_fractions[j + 1])
 			var gain: float = gain_kg_m + (advance - 1.0) * wetting_gain_kg_m
 			if gain > 0.0:
-				force += 0.5 * u * v_into[k] * gain
+				gained += 0.5 * u * v_into[k] * gain
 		var relief: float = clampf((x_k[k] - aft) / (TRANSOM_RELIEF_BEAMS * beam), 0.0, 1.0)
-		strip_forces.append(force * relief)
+		if _strip_suction_heads > 0.0:
+			oblique_root_force += gained * relief
+			strip_forces.append(force * relief)
+		else:
+			strip_forces.append((force + gained) * relief)
 
 	# 3. The spray root: still water is set in motion at the rate the root sweeps along it.
 	#    When the hull also sinks, the root runs forward along the hull (sinking speed over
@@ -475,15 +501,27 @@ func _apply_planing_lift(aft: float, forward: float, time_s: float, gravity_ms2:
 	var root_normal: Vector3 = WaterSurface.sample_normal(_sea_at_spray_root, 0)
 	var root_down_speed: float = -(_body.point_velocity(root_world) - WaterSurface.sample_velocity(_sea_at_spray_root, 0)).dot(root_normal)
 	spray_root_factor = _root_advance_factor(root_down_speed, u, pitch + board.bottom_slope(forward))
-	var root_force: float = maxf(u * spray_root_factor * m_per_m[last] * v_root, 0.0)
+	var root_force: float = maxf(u * spray_root_factor * m_per_m[last] * v_root, 0.0) + oblique_root_force
 
 	# 4. Three-dimensional correction: the strip theory is two-dimensional and gives a flat
 	#    plate m' u^2 trim; Savitsky (1964) measured the lift of real planing plates, with
 	#    the deadrise correction. Their ratio at the geometric trim (or at one degree, below
 	#    that) scales everything. This is how slender-body planing models are anchored.
 	var tau_ref_deg: float = maxf(rad_to_deg(trim_geometric), 1.0)
-	var cl_flat: float = 0.012 * pow(minf(tau_ref_deg, 15.0), 1.1) * sqrt(lambda_ratio)
-	var cl_dynamic: float = maxf(cl_flat - 0.0065 * _deadrise_deg * pow(cl_flat, 0.6), 0.0)
+	#    The heeled bottom as a rolled flat plate (BoardConfig.heel_as_rolled_plate, NACA TN
+	#    4187): Savitsky's lift at the mean wetted length of the two rails, with the heel as an
+	#    added deadrise, and the strips' total anchored on the widest wet strip, since Savitsky's
+	#    lambda already carries the vee's chine-dry front (the strips' narrower wet front must
+	#    not count it again). Level, that is Savitsky's lift exactly at every wet length.
+	var lift_lambda: float = lambda_ratio
+	var lift_deadrise_deg: float = _deadrise_deg
+	var anchor_on_wet_width: bool = false
+	if _heel_as_rolled_plate > 0.0:
+		lift_lambda = _rolled_plate_lambda(aft, forward, beam, heel)
+		lift_deadrise_deg = maxf(_deadrise_deg, absf(rad_to_deg(heel)))
+		anchor_on_wet_width = true
+	var cl_flat: float = 0.012 * pow(minf(tau_ref_deg, 15.0), 1.1) * sqrt(lift_lambda)
+	var cl_dynamic: float = maxf(cl_flat - 0.0065 * lift_deadrise_deg * pow(cl_flat, 0.6), 0.0)
 	var savitsky_lift: float = cl_dynamic * 0.5 * rho * u * u * beam * beam
 	# The slender-body total for the plate is the momentum flux of the water set moving
 	# under its widest wet section: the root's push, plus the push where the hull widens
@@ -496,7 +534,7 @@ func _apply_planing_lift(aft: float, forward: float, time_s: float, gravity_ms2:
 	# force, spread along the oblique spray root), and it keeps the scaling finite.
 	var widest_full_width: float = 0.0
 	for k: int in STRIPS:
-		widest_full_width = maxf(widest_full_width, _width_at(x_k[k]))
+		widest_full_width = maxf(widest_full_width, full_widths[k] * (wet_fractions[k] if anchor_on_wet_width else 1.0))
 	var slender_lift: float = rho * PI * widest_full_width * widest_full_width / 8.0 * u * u * sin(deg_to_rad(tau_ref_deg))
 	var three_d_factor: float = savitsky_lift / maxf(slender_lift, 1e-6)
 
@@ -506,23 +544,52 @@ func _apply_planing_lift(aft: float, forward: float, time_s: float, gravity_ms2:
 	var cv: float = u / sqrt(gravity_ms2 * beam)
 	var cop_fraction: float = 0.75 - 1.0 / (5.21 * cv * cv / (lambda_ratio * lambda_ratio) + 2.39)
 	var spread: float = maxf(3.0 * (1.0 - cop_fraction) * length, strip_length)
+
+	# 6. What each strip may pull (BoardConfig.strip_suction_heads). The theory has the water
+	#    sucking on a bottom that lifts away from it (a rocker behind the spray root). With the
+	#    option off no strip may pull: the water has let go instead (A-05, the clip). With it
+	#    on, a strip may pull as hard as the still water's head above its bottom (rho g depth
+	#    over its wet area) times the option, and no harder: below that the air from the rails
+	#    would get in. A strip wet only by the water's climb (its centre above the still
+	#    surface) has no head and may not pull.
+	var pull_max: PackedFloat64Array = PackedFloat64Array()
+	for k: int in STRIPS:
+		var head_pa: float = 0.0
+		if _strip_suction_heads > 0.0:
+			head_pa = rho * gravity_ms2 * maxf(_bottom_depth_at(x_k[k], wet_centres[k]), 0.0)
+		pull_max.append(_strip_suction_heads * head_pa * full_widths[k] * wet_fractions[k] * strip_length)
+	# With the strips allowed to pull, the strips on a rocker take back part of the root's
+	# push just behind it, and the push of the whole would sit behind Savitsky's centre. So the
+	# root's triangle is then spread so that the whole (the strips and the root) has its centre
+	# where Savitsky measured it: the same anchor as before, on the whole instead of the root.
+	if _strip_suction_heads > 0.0 and root_force > 1e-6:
+		spread = _spread_for_centroid(x_k, strip_forces, pull_max, three_d_factor, root_force, forward, aft + cop_fraction * length, strip_length, spread)
 	var weights: PackedFloat64Array = PackedFloat64Array()
 	var weight_sum: float = 0.0
 	for k: int in STRIPS:
 		weights.append(maxf(1.0 - (forward - x_k[k]) / spread, 0.0))
 		weight_sum += weights[k]
 
-	# 6. Apply. No strip may pull: where the theory would have the water sucking on a
-	#    bottom that lifts away, the water has let go instead.
+	# 7. Apply, each strip's push or (bounded) pull normal to its bottom.
 	var flow_dir: Vector3 = SimMath.horizontal(_body.velocity)
 	flow_dir = flow_dir.normalized() if flow_dir.length() > 0.01 else Vector3.ZERO
 	var weighted_position: Vector3 = Vector3.ZERO
+	var centre_of_mass: Vector3 = _body.position
 	# The unsteady lag (BoardConfig.planing_lift_lag_s): the quasi-steady total is followed
 	# with a first-order lag, and every strip is scaled by the same factor.
+	var bounded: PackedFloat64Array = PackedFloat64Array()
 	var quasi_steady_n: float = 0.0
 	for k: int in STRIPS:
 		var share_k: float = root_force * weights[k] / weight_sum if weight_sum > 0.0 else 0.0
-		quasi_steady_n += maxf(three_d_factor * (strip_forces[k] + share_k), 0.0)
+		var wanted: float = three_d_factor * (strip_forces[k] + share_k)
+		var allowed: float = maxf(wanted, -pull_max[k])
+		if wanted < allowed:
+			# What the strip was not allowed to pull, as it would have acted: reported only.
+			var withheld: Vector3 = normals_world[k] * (wanted - allowed)
+			clipped_force_world += withheld
+			clipped_torque_world += (points_world[k] - centre_of_mass).cross(withheld)
+		bounded.append(allowed)
+		quasi_steady_n += allowed
 	var lag_factor: float = 1.0
 	if _planing_lift_lag_s > 0.0 and quasi_steady_n > 0.0:
 		var blend: float = clampf(_dt / _planing_lift_lag_s, 0.0, 1.0)
@@ -531,19 +598,72 @@ func _apply_planing_lift(aft: float, forward: float, time_s: float, gravity_ms2:
 	else:
 		_lagged_normal_n = quasi_steady_n
 	for k: int in STRIPS:
-		var share: float = root_force * weights[k] / weight_sum if weight_sum > 0.0 else 0.0
-		var magnitude: float = three_d_factor * (strip_forces[k] + share) * lag_factor
-		if magnitude <= 0.0:
+		var magnitude: float = bounded[k] * lag_factor
+		if magnitude == 0.0:
 			continue
 		var force: Vector3 = normals_world[k] * magnitude
 		_body.add_force_at(points_world[k], force)
 		planing_lift_n += force.y
 		planing_normal_force_n += magnitude
+		planing_pull_n -= minf(magnitude, 0.0)
 		planing_drag_n -= force.dot(flow_dir)
 		weighted_position += points_world[k] * magnitude
 	if planing_normal_force_n > 0.0:
 		cop_local = _body.to_body(weighted_position / planing_normal_force_n - _body.origin_world())
 	planing_ratio = clampf(planing_lift_n / (total_mass_kg * gravity_ms2), 0.0, 1.0)
+
+
+## How far back from the spray root the root's push is spread (the triangle of step 5) so
+## that the whole push, the strips' pushes and pulls (each pull bounded as in step 6) plus
+## the root's, has its centre at the target: Savitsky's centre of pressure. Found by halving
+## between the shortest triangle (one strip) and a nearly even spread over the wet part: a
+## longer triangle moves the root's push aft. Where no spread reaches the target (the strips'
+## pulls would need the root's push ahead of the root, or behind the middle of the wet
+## part), the nearest end is taken. With the strips' sum at zero (a flat plate) the answer is
+## the old spread, so a flat plate is unchanged.
+func _spread_for_centroid(x_k: PackedFloat64Array, strip_forces: PackedFloat64Array, pull_max: PackedFloat64Array, three_d_factor: float, root_force: float, forward: float, target: float, strip_length: float, fallback: float) -> float:
+	var low: float = strip_length
+	var high: float = 50.0 * (forward - x_k[0])
+	for i: int in 30:
+		var middle: float = 0.5 * (low + high)
+		var weight_sum: float = 0.0
+		for k: int in STRIPS:
+			weight_sum += maxf(1.0 - (forward - x_k[k]) / middle, 0.0)
+		var total: float = 0.0
+		var moment: float = 0.0
+		for k: int in STRIPS:
+			var share: float = root_force * maxf(1.0 - (forward - x_k[k]) / middle, 0.0) / weight_sum
+			var bounded: float = maxf(three_d_factor * (strip_forces[k] + share), -pull_max[k])
+			total += bounded
+			moment += bounded * x_k[k]
+		if total <= 1e-6:
+			return fallback
+		if moment / total > target:
+			low = middle  # the push sits too far forward: spread the root further aft
+		else:
+			high = middle
+	return 0.5 * (low + high)
+
+
+## Still-water depth of the bottom at a point of it (metres forward of the transom, metres
+## across in body x), between the rail points of the two nearest grid rows: the same plane
+## across the section as _wet_width takes, less the vee's rise toward the rail. Negative
+## above the still surface.
+func _bottom_depth_at(from_transom: float, across: float) -> float:
+	var rows: int = maxi(_length_samples, 2)
+	var columns: int = maxi(_width_samples, 1)
+	var spacing: float = _length_m / float(rows - 1)
+	var position: float = clampf(from_transom / spacing, 0.0, float(rows - 1))
+	var i0: int = mini(int(floor(position)), rows - 2)
+	var t: float = position - float(i0)
+	var port: float = lerpf(_depths[i0 * columns], _depths[(i0 + 1) * columns], t)
+	var starboard: float = lerpf(_depths[i0 * columns + columns - 1], _depths[(i0 + 1) * columns + columns - 1], t)
+	var half_width: float = 0.5 * _width_at(from_transom)
+	var middle: float = 0.5 * (port + starboard)
+	if columns < 3 or half_width < 1e-6:
+		return middle
+	var slope: float = (starboard - port) / (2.0 * half_width)
+	return middle + slope * across - absf(across) * _vee_rise_per_m
 
 
 ## At planing speed the water leaves the transom and the rails clear of the bottom, so the
@@ -897,6 +1017,21 @@ func _chine_dry_length(aft: float, forward: float) -> float:
 	return minf(beam * _vee_rise_per_m / (PI * tan(trim)), length)
 
 
+## Savitsky's wetted length-to-beam ratio for the bottom as a rolled flat plate (NACA TN
+## 4187, Savitsky, Prowse and Lueders 1958): the mean wetted length of the two rails over the
+## beam. The high rail is dry over 2 b tan(heel) / (pi tan(trim)) more of the length than the
+## low one (equation 2, figure 23: Wagner's climb across the heeled bottom), on top of the
+## vee's chine-dry part; the wet bottom is then a trapezoid, or a triangle once the high rail
+## is dry back to the transom. The trim is the wet chord's, at least one degree, as for the
+## chine-dry length.
+func _rolled_plate_lambda(aft: float, forward: float, beam: float, heel: float) -> float:
+	var length: float = forward - aft
+	var trim: float = maxf(_body.pitch_rad() + _chord_angle(aft, forward), MIN_SPRAY_ROOT_ANGLE_RAD)
+	var dry: float = chine_dry_length_m + 2.0 * beam * tan(absf(heel)) / (PI * tan(trim))
+	var mean_length: float = length - 0.5 * dry if dry < length else 0.5 * length * length / dry
+	return clampf(mean_length / beam, 0.2, _length_m / beam)
+
+
 ## How far the wet bottom bulges below its chord, at most (zero if it does not).
 func _camber_sag(aft: float, forward: float) -> float:
 	var length: float = maxf(forward - aft, 0.05)
@@ -941,6 +1076,9 @@ func _clear() -> void:
 	resistance_n = 0.0
 	planing_lift_n = 0.0
 	planing_normal_force_n = 0.0
+	planing_pull_n = 0.0
+	clipped_force_world = Vector3.ZERO
+	clipped_torque_world = Vector3.ZERO
 	planing_drag_n = 0.0
 	bow_drag_n = 0.0
 	rail_grip_n = 0.0

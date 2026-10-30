@@ -53,25 +53,31 @@ func _initialize() -> void:
 	var heels: PackedFloat64Array = _number_list(_options.get("heels", "0,2,4.5,8"))
 	var lengths: PackedFloat64Array = _number_list(_options.get("lengths", "1,1.4,1.76"))
 	_sim = WindsurferSim.create_default()
-	# --board.<field>=<number>: another board, built again on a copy (as run_reach.gd does).
+	# --board_file=res://config/board_freeride_240.tres: another board's file (the old
+	# default), then --board.<field>=<number> on top: built again on a copy (as run_reach.gd does).
 	var board: BoardConfig = _sim.board_config.duplicate() as BoardConfig
 	var changed: bool = false
+	if _options.has("board_file"):
+		board = (load(_options["board_file"]) as BoardConfig).duplicate() as BoardConfig
+		changed = true
 	for key: String in _options:
 		if key.begins_with("board.") and key.substr(6) in board:
-			board.set(key.substr(6), _options[key].to_float())
+			var current: Variant = board.get(key.substr(6))
+			var number: float = _options[key].to_float()
+			board.set(key.substr(6), (number != 0.0) if current is bool else (int(number) if current is int else number))
 			changed = true
 	if changed:
 		_sim = WindsurferSim.new(board, _sim.sail_config, _sim.fin_config, _sim.sailor_config,
 			_sim.water_config, _sim.wind_config, _sim.sim_config, _sim.wave_set_config)
 	print("Hull probe: %.2f m/s, slip %.1f deg toward the low rail, flat still water, the hull alone held at a trim and a heel; forces in N, lengths in m" % [_speed_ms, rad_to_deg(_slip_rad)])
-	print("trim heel  L    | lift  buoy | lam   tauref beam  | Sav   slend  3D    | root  strip0 strip1 clip  | sum/sl chk   | chdry wmax  wwag  hidry | Lwag  Lwet  Ltn")
+	print("trim heel  L    | lift  buoy | lam   tauref beam  | Sav   slend  3D    | root  strip0 strip1 clip  | sum/sl chk   | chdry wmax  wwag  hidry | Lwag  Lwet  Ltn  | xcop  xsav  pull")
 	for trim_deg: float in trims:
 		for heel_deg: float in heels:
 			for length_m: float in lengths:
 				var h: float = _height_for_length(trim_deg, heel_deg, length_m)
 				var r: Dictionary[String, float] = _evaluate(trim_deg, heel_deg, h)
 				print(_format(trim_deg, heel_deg, r))
-	print("lift/buoy = the model's planing lift (vertical) and buoyancy; lam = lambda_ratio; tauref = the reference trim (deg); beam = planing_beam_m x cos(heel); Sav = Savitsky's lift (normal) at lam, tauref and beam, the 3D anchor; slend = the slender reference (widest full width); 3D = Sav / slend; root = the spray root's 2D force; strip0 = the strips' 2D sum before the transom relief, strip1 after it; clip = what the clipping of pulling strips adds back; sum/sl = the 2D total (root + strips, relieved, clipped) over slend, so the model's normal force over Sav; chk = recomputed over the model's normal force; chdry = the vee's chine-dry length; wmax = the widest wet strip (the model's wet width); wwag = the same with Wagner's climb on the heeled bottom; hidry = how far the high rail is dry from the low rail's front (still surface); Lwag / Lwet / Ltn = the planing lift (vertical) with the what-ifs wag / wet / tn.")
+	print("lift/buoy = the model's planing lift (vertical) and buoyancy; lam = lambda_ratio; tauref = the reference trim (deg); beam = planing_beam_m x cos(heel); Sav = Savitsky's lift (normal) at lam, tauref and beam, the 3D anchor; slend = the slender reference (widest full width); 3D = Sav / slend; root = the spray root's 2D force; strip0 = the strips' 2D sum before the transom relief, strip1 after it; clip = what the clipping (or the bound, strip_suction_heads) of pulling strips adds back, 2D; sum/sl = the 2D total (root + strips, relieved, clipped or bounded) over slend, so the model's normal force over Sav; chk = recomputed over the model's normal force; chdry = the vee's chine-dry length; wmax = the widest wet strip (the model's wet width); wwag = the same with Wagner's climb on the heeled bottom; hidry = how far the high rail is dry from the low rail's front (still surface); Lwag / Lwet / Ltn = the planing lift (vertical) with the what-ifs wag / wet / tn; xcop = the push's centre from the tail, xsav = Savitsky's; pull = the pull the strips apply (N, normal).")
 	if _options.has("load"):
 		_print_load_table(_options["load"].to_float(), trims, heels)
 	quit(0)
@@ -177,6 +183,7 @@ func _strip_theory(wagner_heel: bool, wet_reference: bool) -> Dictionary[String,
 	var m_per_m: PackedFloat64Array = PackedFloat64Array()
 	var full_widths: PackedFloat64Array = PackedFloat64Array()
 	var fractions: PackedFloat64Array = PackedFloat64Array()
+	var wet_centres: PackedFloat64Array = PackedFloat64Array()
 	var sink: PackedFloat64Array = PackedFloat64Array()
 	var wmax: float = 0.0
 	for k: int in STRIPS:
@@ -196,18 +203,22 @@ func _strip_theory(wagner_heel: bool, wet_reference: bool) -> Dictionary[String,
 		m_per_m.append(rho * PI * width * width / 8.0)
 		full_widths.append(full_width)
 		fractions.append(wet.x)
+		wet_centres.append(wet.y)
 		sink.append(-v_rel.dot(water.normal_at(point_world.x, point_world.z, 0.0)))
 	out["wmax"] = wmax
 
 	# Step 2, along the hull: the strips' 2D forces before and after the transom relief.
+	# With the option on, the gains (the spray root across the bottom) join the root's push.
 	var strip_forces: PackedFloat64Array = PackedFloat64Array()
 	var strip0: float = 0.0
 	var strip1: float = 0.0
+	var oblique_root: float = 0.0
 	for k: int in STRIPS:
 		var k0: int = maxi(k - 1, 0)
 		var k1: int = mini(k + 1, STRIPS - 1)
 		var dv_dx: float = (v_into[k1] - v_into[k0]) / (float(k1 - k0) * strip_length)
 		var force: float = -u * m_per_m[k] * dv_dx * strip_length
+		var gained: float = 0.0
 		var advance: float = hull._root_advance_factor(sink[k], u, pitch + board.bottom_slope(x_k[k]))
 		for j: int in [k - 1, k]:
 			if j < 0 or j >= STRIPS - 1:
@@ -216,11 +227,15 @@ func _strip_theory(wagner_heel: bool, wet_reference: bool) -> Dictionary[String,
 			var wetting_gain_kg_m: float = rho * PI / 8.0 * full_widths[k] * full_widths[k] * (fractions[j] * fractions[j] - fractions[j + 1] * fractions[j + 1])
 			var gain: float = gain_kg_m + (advance - 1.0) * wetting_gain_kg_m
 			if gain > 0.0:
-				force += 0.5 * u * v_into[k] * gain
+				gained += 0.5 * u * v_into[k] * gain
 		var relief: float = clampf((x_k[k] - aft) / (HullModel.TRANSOM_RELIEF_BEAMS * beam), 0.0, 1.0)
-		strip0 += force
-		strip1 += force * relief
-		strip_forces.append(force * relief)
+		strip0 += force + gained
+		strip1 += (force + gained) * relief
+		if board.strip_suction_heads > 0.0:
+			oblique_root += gained * relief
+			strip_forces.append(force * relief)
+		else:
+			strip_forces.append((force + gained) * relief)
 	out["strip0"] = strip0
 	out["strip1"] = strip1
 
@@ -232,12 +247,25 @@ func _strip_theory(wagner_heel: bool, wet_reference: bool) -> Dictionary[String,
 	var root_factor: float = hull._root_advance_factor(root_down, u, pitch + board.bottom_slope(forward))
 	var root_force: float = maxf(u * root_factor * m_per_m[last] * v_root, 0.0)
 	out["root"] = root_force
+	root_force += oblique_root
 
 	# Step 4, the 3D anchor.
 	var tau_ref_deg: float = maxf(rad_to_deg(trim_geometric), 1.0)
 	out["tau_ref"] = tau_ref_deg
-	var cl_flat: float = 0.012 * pow(minf(tau_ref_deg, 15.0), 1.1) * sqrt(hull.lambda_ratio)
-	var cl_dynamic: float = maxf(cl_flat - 0.0065 * board.deadrise_deg * pow(cl_flat, 0.6), 0.0)
+	# The model's own path (no what-if) with the rolled plate option on
+	# (BoardConfig.heel_as_rolled_plate): Savitsky at the mean wetted length with the heel as
+	# deadrise, anchored on the widest wet strip. The what-ifs (wag, wet, tn) stay anchored on
+	# the plain Savitsky lift (the low rail's lambda, the board's vee), so that tn is the same
+	# target whether the option is on or off.
+	var model_path: bool = not wagner_heel and not wet_reference
+	var lift_lambda: float = hull.lambda_ratio
+	var lift_deadrise_deg: float = board.deadrise_deg
+	if model_path and board.heel_as_rolled_plate > 0.0:
+		lift_lambda = hull._rolled_plate_lambda(aft, forward, beam, heel)
+		lift_deadrise_deg = maxf(board.deadrise_deg, absf(rad_to_deg(heel)))
+		wet_reference = true
+	var cl_flat: float = 0.012 * pow(minf(tau_ref_deg, 15.0), 1.1) * sqrt(lift_lambda)
+	var cl_dynamic: float = maxf(cl_flat - 0.0065 * lift_deadrise_deg * pow(cl_flat, 0.6), 0.0)
 	var savitsky: float = cl_dynamic * 0.5 * rho * u * u * beam * beam
 	var reference_width: float = 0.0
 	for k: int in STRIPS:
@@ -248,29 +276,52 @@ func _strip_theory(wagner_heel: bool, wet_reference: bool) -> Dictionary[String,
 	out["slender"] = slender
 	out["three_d"] = three_d
 
-	# Steps 5 and 6: the root's force spread behind it, and no strip pulling.
-	var cv: float = u / sqrt(_sim.sim_config.gravity_ms2 * beam)
+	# Steps 5 to 7: the root's force spread behind it, each strip's pull bounded by the
+	# water's head above it (BoardConfig.strip_suction_heads; with the option off, 0: no
+	# strip may pull, the clip), and with the option on the spread solved so that the whole
+	# push sits at Savitsky's centre.
+	var g: float = _sim.sim_config.gravity_ms2
+	var cv: float = u / sqrt(g * beam)
 	var cop_fraction: float = 0.75 - 1.0 / (5.21 * cv * cv / (hull.lambda_ratio * hull.lambda_ratio) + 2.39)
 	var spread: float = maxf(3.0 * (1.0 - cop_fraction) * length, strip_length)
+	var pull_max: PackedFloat64Array = PackedFloat64Array()
+	for k: int in STRIPS:
+		var head_pa: float = 0.0
+		if board.strip_suction_heads > 0.0:
+			head_pa = rho * g * maxf(hull._bottom_depth_at(x_k[k], wet_centres[k]), 0.0)
+		pull_max.append(board.strip_suction_heads * head_pa * full_widths[k] * fractions[k] * strip_length)
+	if board.strip_suction_heads > 0.0 and root_force > 1e-6:
+		spread = hull._spread_for_centroid(x_k, strip_forces, pull_max, three_d, root_force, forward, aft + cop_fraction * length, strip_length, spread)
 	var weights: PackedFloat64Array = PackedFloat64Array()
 	var weight_sum: float = 0.0
 	for k: int in STRIPS:
 		weights.append(maxf(1.0 - (forward - x_k[k]) / spread, 0.0))
 		weight_sum += weights[k]
-	var unclipped: float = 0.0
-	var clipped: float = 0.0
+	var wanted_sum: float = 0.0  # the theory's 2D total, every pull allowed
+	var allowed_sum: float = 0.0  # the 2D total as applied
+	var normal_sum: float = 0.0
 	var vertical: float = 0.0
+	var pull: float = 0.0
+	var moment: float = 0.0
 	for k: int in STRIPS:
 		var share: float = root_force * weights[k] / weight_sum if weight_sum > 0.0 else 0.0
-		var two_d: float = strip_forces[k] + share
-		unclipped += two_d
-		clipped += maxf(two_d, 0.0)
-		vertical += three_d * maxf(two_d, 0.0) * normals[k].y
-	out["clip"] = clipped - unclipped
-	out["two_d_sum"] = clipped
-	out["normal_sum"] = three_d * clipped
+		var wanted: float = three_d * (strip_forces[k] + share)
+		var allowed: float = maxf(wanted, -pull_max[k])
+		wanted_sum += wanted / three_d
+		allowed_sum += allowed / three_d
+		normal_sum += allowed
+		vertical += allowed * normals[k].y
+		pull -= minf(allowed, 0.0)
+		moment += allowed * x_k[k]
+	out["clip"] = allowed_sum - wanted_sum
+	out["two_d_sum"] = allowed_sum
+	out["normal_sum"] = normal_sum
 	out["vertical_sum"] = vertical
-	out["sum_over_slender"] = clipped / maxf(slender, 1e-6)
+	out["pull"] = pull
+	out["sum_over_slender"] = allowed_sum / maxf(slender, 1e-6)
+	# The push's centre and Savitsky's, metres from the tail.
+	out["cop"] = moment / normal_sum if normal_sum > 0.0 else 0.0
+	out["cop_savitsky"] = aft + cop_fraction * length
 	return out
 
 
@@ -347,14 +398,15 @@ func _high_rail_dry_length() -> float:
 
 
 func _format(trim_deg: float, heel_deg: float, r: Dictionary[String, float]) -> String:
-	return "%4.2f %4.1f %4.2f | %4.0f %4.0f | %5.2f %5.2f %5.3f | %5.0f %5.0f %5.3f | %4.0f %6.1f %6.1f %5.1f | %5.3f %5.3f | %5.3f %5.3f %5.3f %5.2f | %4.0f %4.0f %4.0f" % [
+	return "%4.2f %4.1f %4.2f | %4.0f %4.0f | %5.2f %5.2f %5.3f | %5.0f %5.0f %5.3f | %4.0f %6.1f %6.1f %5.1f | %5.3f %5.3f | %5.3f %5.3f %5.3f %5.2f | %4.0f %4.0f %4.0f | %5.3f %5.3f %4.0f" % [
 		trim_deg, heel_deg, r["length"], r["lift"], r["buoyancy"],
 		r["lambda"], r["tau_ref"], r["beam"],
 		r["savitsky"], r["slender"], r["three_d"],
 		r["root"], r["strip0"], r["strip1"], r["clip"],
 		r["sum_over_slender"], r["chk"],
 		r["chine_dry"], r["wmax"], r["wmax_wag"], r["high_dry"],
-		r["lift_wag"], r["lift_wet"], r["lift_tn"]]
+		r["lift_wag"], r["lift_wet"], r["lift_tn"],
+		r["cop"], r["cop_savitsky"], r["pull"]]
 
 
 ## Per trim and heel: the wet length that carries the load, today and with the what-ifs.

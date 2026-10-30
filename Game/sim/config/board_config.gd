@@ -130,6 +130,35 @@ const ONE_FOOT_M: float = 0.3048
 ## meeting the water face-on: 0.8 to 1.0 for a box section; 0.8 as section 14 assumes).
 ## This is what stops a board that pearls, and what pitches it over the nose.
 @export var bow_drag_cd: float = 0.8
+## May a strip of the bottom behind the spray root pull, and how hard (PH28, the hull review's
+## finding 1, Documentation/reports/ph28/hull_suction.md). The strip theory of the planing lift
+## (Zarnick 1978) gives a pull wherever the bottom's angle to the flow shrinks going aft. On a
+## scoop rocker that is every strip behind the spray root: the root meets the water at the
+## rocker's own angle and pushes hard, the strips behind it take most of that back, and the
+## whole follows the flat tail's angle (a convex, rockered bottom lifts less than a flat one,
+## Savitsky 1964). 0 = no strip may pull (assumption A-05: the water has let go instead), as
+## the model has always had it; on the JP SL 72's rocker that keeps the root's push and drops
+## the pull, 2 to 3 times Savitsky's lift. Above 0 = a strip may pull, at most this many times
+## the still water's head above the bottom there (rho g depth, over the strip's wet area): at
+## 1 the pressure under the bottom may fall to the air's and no further, since air from the
+## rails and the transom would get in (the hull reviewer's bound: geometry, an estimate of
+## where the flow ventilates). A large number (1000) is the strip theory as written, no bound.
+## With it on, the spray root's push is also spread so that the whole push sits where Savitsky
+## measured it (HullModel step 5). Only 0, 1 and "no bound" have a source; anything in between
+## is a fit. Off until Michiel decides (PHYSICS_SPEC.md section 5, A-05).
+@export var strip_suction_heads: float = 0.0
+## The heeled bottom's lift as NACA TN 4187 measured it on a rolled flat plate (Savitsky,
+## Prowse and Lueders 1958; PH28, hull_suction.md). 0 = as before: Savitsky's lift at the low
+## rail's wet length, scaled by how much of the full width the strips wet, which at a short
+## wet part gives 0.3 to 0.6 of Savitsky's at 2 degrees of heel and, level, 0.8 to 0.9 at 0.6 m
+## because the vee's chine-dry front is counted in Savitsky's lambda and again in the strips'
+## wet width. 1 = Savitsky's lift at the mean wetted length of the two rails (the high rail dry
+## over 2 b tan(heel) / (pi tan(trim)) more than the low one, TN 4187 equation 2, Wagner's
+## climb), with the heel as an added deadrise ("the effective deadrise of the surface is
+## increased"), and the strips' total anchored on the widest wet strip, so the vee's front is
+## counted once. Level, that is Savitsky's lift exactly at every wet length. Off until Michiel
+## decides (PHYSICS_SPEC.md section 5, F23).
+@export var heel_as_rolled_plate: float = 0.0
 
 
 ## Height of the bottom above the flat planing section, at a distance forward of the transom.
