@@ -20,6 +20,16 @@ extends Resource
 @export var ce_height_fraction: float = 0.40
 ## Fraction of the boom behind the mast at which the centre of effort sits (section 2.13).
 @export var ce_boom_fraction: float = 0.35
+## The boom is fixed square to the mast (PH16 step 16; off = level in the board's frame
+## whatever the rake, as before). A sail turns with its mast: raked back, the boom points aft
+## and down, so the clew, the centre of effort and the harness line's point on the boom drop
+## by their distance along the boom times sin(rake): 0.24 m for the centre of effort (0.70 m
+## along the boom) at the 20 degrees of rake of a planing reach. Spec 3.2 left this out as
+## second order for the yaw (and wrote that it lifts the clew); it is not second order for the
+## pitch, where the centre of effort's height sets the drive's moment, nor for the hooked-in
+## sailor, who hangs within the harness line's length of the boom. Only the positions change:
+## the angle of attack and the force's direction still come from the level chord.
+@export var boom_square_to_mast: bool = false
 ## Camber: depth of the sail's curve divided by its chord. The full-scale iQFOiL sail in the
 ## wind tunnel (Zhang et al. 2025, Documentation/Science/2501.13254v1.pdf, Fig. 5d) has 6.3 to 6.6 %
 ## at its third batten with the outhaul on and 7.1 to 7.6 % with it eased (PH28).

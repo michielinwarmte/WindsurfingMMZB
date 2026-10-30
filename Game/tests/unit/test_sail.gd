@@ -207,6 +207,36 @@ func test_centre_of_effort_moves_with_rake_and_boom() -> void:
 	assert_lt(eased.z, neutral.z, "and forward")
 
 
+## SailConfig.boom_square_to_mast (PH16 step 16): the boom is fixed square to the mast, so a
+## rig raked back carries its clew, its centre of effort and the harness line lower; upright,
+## the level boom is square to the mast already and nothing changes. The force is the same.
+func test_a_boom_square_to_the_mast_drops_the_centre_of_effort_when_raked() -> void:
+	var level: SailConfig = _legacy_sail()
+	var square: SailConfig = _legacy_sail()
+	square.boom_square_to_mast = true
+	var wind: WindField = _constant_wind(10.0, 90.0)
+	var sail_level: SailModel = SailModel.new(level)
+	var sail_square: SailModel = SailModel.new(square)
+	sail_level.compute(RigFrame.rigid_on(_body(), level.mast_foot_local), wind, 1.0, 0.0, 1.225)
+	sail_square.compute(RigFrame.rigid_on(_body(), square.mast_foot_local), wind, 1.0, 0.0, 1.225)
+	assert_almost_eq(sail_square.ce_local.distance_to(sail_level.ce_local), 0.0, TOL, "upright: the same centre of effort")
+	sail_level.compute(RigFrame.rigid_on(_body(), level.mast_foot_local), wind, 1.0, 1.0, 1.225)
+	sail_square.compute(RigFrame.rigid_on(_body(), square.mast_foot_local), wind, 1.0, 1.0, 1.225)
+	var mast: Vector3 = sail_square.mast_direction()
+	var boom: Vector3 = sail_square.boom_direction_local
+	assert_almost_eq(boom.dot(mast), 0.0, TOL, "the boom is square to the raked mast")
+	assert_almost_eq(boom.length(), 1.0, TOL)
+	assert_lt(boom.y, 0.0, "raked back, the boom points aft and down")
+	# The drop of the centre of effort: its distance along the boom times the boom's slope,
+	# cos(sheet) sin(rake) cos(rake) over the length of the level chord made square.
+	var rake: float = level.max_rake_rad()
+	var sheet: float = deg_to_rad(level.sheet_angle_in_deg)
+	var along: float = level.ce_boom_fraction * level.boom_m
+	var slope: float = cos(sheet) * sin(rake) * cos(rake) / sqrt(sin(sheet) * sin(sheet) + cos(sheet) * cos(sheet) * cos(rake) * cos(rake))
+	assert_almost_eq(sail_level.ce_local.y - sail_square.ce_local.y, along * slope, 1e-6, "lower by the boom's slope")
+	assert_almost_eq(sail_square.force_world.distance_to(sail_level.force_world), 0.0, TOL, "the force does not change")
+
+
 func test_no_force_without_wind() -> void:
 	var sail: SailModel = SailModel.new(_legacy_sail())
 	var body: SimRigidBody = _body()

@@ -137,6 +137,12 @@ extends Resource
 ## Where the hands hold the boom: this far along the boom from the mast, at boom height
 ## (the harness lines sit about here, between the two hands). The pull of the sail reaches
 ## the sailor through this point; the rest of the sail force goes into the mast foot.
+## Max (29 October 2026, PH16 step 16): most riders set the lines a little behind the centre
+## of effort and the front arm carries more (55/45 to 60/40), so the boom's force, line and
+## hands together, acts about at the centre of effort's place on the boom: ce_boom_fraction
+## times boom_m, 0.70 m on the 8.0 (the default sets that; it was 0.6). Measured (reach check,
+## 90 s): 0 to 1 % faster than 0.6, with the rider trimming at the edge of the bounce on the
+## 24 kt beam reach (pitch SD 0.23 deg); further aft (0.75) the 18 kt beam reach bounces.
 @export var hand_grip_m: float = 0.6
 ## How far outboard the feet stand at full lean (the rail of a 60 cm wide board is 0.3 m
 ## out; the straps are a little inside it). The feet stay on the centreline while the
@@ -171,6 +177,17 @@ extends Resource
 ## with a rig that has mass of its own.
 @export var harness_line_stiffness_n_m: float = 0.0
 @export var harness_line_damping_ns_m: float = 800.0
+## Hooked in with a short line (PH16 step 16; 0 = off, the rig leans with the hike by
+## max_rig_lean_deg alone, as before): the sailor hangs from the boom by the hips, so the boom
+## stays within this distance of the body's centre of mass, and a body that hikes further out
+## pulls the rig over with it. The rig then leans as far to windward as it takes for the line's
+## point on the boom (hand_grip_m along it) to come within this of the centre of mass, never
+## beyond max_total_rig_lean_deg; while the sailor hooks in (the lean from feet_out_from_lean to
+## feet_out_full_lean) it blends in from the old lean. Max (29 October 2026): 30 inch lines, the
+## hook at the hips (a hybrid harness), so the hook hangs 0.30 to 0.35 m from the boom (spec
+## section 14, "U1: the harness": 0.30 to 0.40 m), and the centre of mass sits a few
+## centimetres above the hook (0.06 m in figure_skeleton.gd): about 0.40 m.
+@export var harness_line_m: float = 0.0
 ## The lean follows the pull averaged over this longer time: the hike answers the mean
 ## pull, the brace and the hips take the ripple of every wave and wobble (a hike that
 ## chased the ripple swung the body at 1 Hz and yawed the board with it).

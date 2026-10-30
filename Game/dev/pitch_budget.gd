@@ -109,7 +109,7 @@ func _step_taken_apart(sim: WindsurferSim, dt: float, controls: SimControls) -> 
 		marks.append(body.torque_sum())
 		if sailing:
 			sim._hold_the_rig()
-			sim.sail.compute(sim.rig, sim.wind, sim._controls_sheet, sim._controls_rake, sim.air_density_kg_m3, sim._rig_lean_rad(), sim._controls_boom_across, sim._controls_hold_side)
+			sim.sail.compute(sim.rig, sim.wind, sim._controls_sheet, sim._controls_rake, sim.air_density_kg_m3, sim._rig_lean_now_rad, sim._controls_boom_across, sim._controls_hold_side)
 			sim._apply_rig_forces()
 			marks.append(body.torque_sum())
 			sim._apply_windage()
@@ -177,6 +177,9 @@ func _sample_system(sim: WindsurferSim) -> void:
 	_add("line forward m", line.dot(forward))
 	_add("line up m", line.dot(up))
 	_add("line starboard m", line.dot(body.starboard_axis()))
+	_add("line length m", line.length())
+	_add("sailor above deck m", (sim.sailor.position - body.point_world(sim.feet_body)).dot(up))
+	_add("hands above deck m", (sim._hands_world - body.point_world(sim.feet_body)).dot(up))
 	_add("hands starboard N", sim.hand_force_world.dot(body.starboard_axis()))
 	_add("sailor starboard m", (sim.sailor.position - body.position).dot(body.starboard_axis()))
 	_add("ce starboard m", (sim.sail.ce_world - body.position).dot(body.starboard_axis()))

@@ -36,6 +36,7 @@ var _twist_pressure_pa: float = 0.0
 var _twist_min_factor: float = 0.0
 var _twist_peak_share: float = 0.0
 var _twist_ce_drop: float = 0.0
+var _boom_square_to_mast: bool = false
 
 ## +1 = boom and clew on the starboard side (port tack), -1 = boom on the port side
 ## (starboard tack). Starts on starboard tack.
@@ -96,6 +97,7 @@ func copy_config() -> void:
 	_twist_min_factor = config.twist_min_factor
 	_twist_peak_share = config.twist_peak_share
 	_twist_ce_drop = config.twist_ce_drop
+	_boom_square_to_mast = config.boom_square_to_mast
 
 
 ## Puts the sail on the leeward side of a given apparent wind angle, keeping the current
@@ -145,8 +147,8 @@ func compute(rig: RigFrame, wind: WindField, sheet: float, rake: float, rho_air:
 
 	# Boom direction and the centre of effort (section 2.2 and 2.13), in body axes.
 	var chord_local: Vector3 = Vector3(sail_side * sin(sheet_angle_rad), 0.0, cos(sheet_angle_rad))
-	boom_direction_local = chord_local
-	ce_local = mast_point_local + chord_local * (_ce_boom_fraction * _boom_m)
+	boom_direction_local = boom_direction(chord_local)
+	ce_local = mast_point_local + boom_direction_local * (_ce_boom_fraction * _boom_m)
 	ce_world = rig.point_world(ce_local)
 
 	apparent_wind_world = wind.velocity_at(ce_world) - rig.point_velocity(ce_world)
@@ -188,7 +190,7 @@ func compute(rig: RigFrame, wind: WindField, sheet: float, rake: float, rho_air:
 	# by next to nothing, and it keeps the wind's point independent of the wind itself.
 	if twist_share < 1.0:
 		var lowered: float = 1.0 - _twist_ce_drop * (1.0 - twist_share)
-		ce_local = _mast_foot_local + mast_direction() * (ce_height * lowered) + chord_local * (_ce_boom_fraction * _boom_m)
+		ce_local = _mast_foot_local + mast_direction() * (ce_height * lowered) + boom_direction_local * (_ce_boom_fraction * _boom_m)
 		ce_world = rig.point_world(ce_local)
 
 	# Lift: perpendicular to the apparent wind, on the suction side of the sail (section 2.11).
@@ -241,6 +243,16 @@ func sail_angle_rad() -> float:
 ## rig_lean_rad (positive toward starboard).
 func mast_direction() -> Vector3:
 	return Vector3(sin(rig_lean_rad), cos(rig_lean_rad) * cos(rake_rad), cos(rig_lean_rad) * sin(rake_rad))
+
+
+## The boom's direction in body axes for a level chord (the boom's angle in the board's frame):
+## the chord itself, or with SailConfig.boom_square_to_mast the chord turned square to the mast
+## (raked back, the boom points aft and down).
+func boom_direction(chord_level: Vector3) -> Vector3:
+	if not _boom_square_to_mast:
+		return chord_level
+	var mast: Vector3 = mast_direction()
+	return (chord_level - mast * chord_level.dot(mast)).normalized()
 
 
 ## The share of the rigid sail's lift the sail keeps at this dynamic pressure of the apparent

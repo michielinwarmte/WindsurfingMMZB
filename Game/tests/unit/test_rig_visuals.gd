@@ -13,7 +13,17 @@ const BOOM_PATH: String = "res://assets/models/boom.glb"
 var board_config: BoardConfig = preload("res://config/board_freeride_240.tres")
 var sail_config: SailConfig = preload("res://config/sail_6_5.tres")
 var fin_config: FinConfig = preload("res://config/fin_default.tres")
-var sailor_config: SailorConfig = preload("res://config/sailor_default.tres")
+## The sailor the boom model was built for: the default, with the harness lines at 0.6 m along
+## the boom. The default holds the boom at 0.70 m since PH16 step 16; tools/blender.sh
+## tools/blender/build_rig_models.py reads it from sailor_default.tres, so after that rebuild
+## (Blender is not installed on the PC where it changed) this goes back to the default.
+var sailor_config: SailorConfig = _sailor_the_models_were_built_for()
+
+
+static func _sailor_the_models_were_built_for() -> SailorConfig:
+	var config: SailorConfig = load("res://config/sailor_default.tres").duplicate()
+	config.hand_grip_m = 0.6
+	return config
 
 
 # --- The models --------------------------------------------------------------------------

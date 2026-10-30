@@ -223,6 +223,10 @@ var _hang_back_max_m: float = 0.0
 var _harness_hold_max_n: float = 0.0
 var _harness_line_damping_ns_m: float = 0.0
 var _harness_line_stiffness_n_m: float = 0.0
+var _harness_line_m: float = 0.0
+var _boom_square_to_mast: bool = false
+var _feet_out_from_lean: float = 0.0
+var _feet_out_full_lean: float = 0.0
 var _hip_force_max_n: float = 0.0
 var _hold_feel_time_s: float = 0.0
 var _hump_trim_deg: float = 0.0
@@ -421,7 +425,7 @@ func step(dt: float, controls: SimControls) -> void:
 		fin.compute(body, water, time_s, _water_density_kg_m3)
 		if sailing:
 			_hold_the_rig(sub_dt)
-			sail.compute(rig, wind, _controls_sheet, _controls_rake, air_density_kg_m3, _rig_lean_rad(), _controls_boom_across, _controls_hold_side)
+			sail.compute(rig, wind, _controls_sheet, _controls_rake, air_density_kg_m3, _rig_lean_now_rad, _controls_boom_across, _controls_hold_side)
 			_apply_rig_forces()
 			_apply_windage()
 			_apply_leg_forces(sub_dt)
@@ -487,6 +491,10 @@ func _copy_configs() -> void:
 	_harness_hold_max_n = sailor_config.harness_hold_max_n
 	_harness_line_damping_ns_m = sailor_config.harness_line_damping_ns_m
 	_harness_line_stiffness_n_m = sailor_config.harness_line_stiffness_n_m
+	_harness_line_m = sailor_config.harness_line_m
+	_boom_square_to_mast = sail_config.boom_square_to_mast
+	_feet_out_from_lean = sailor_config.feet_out_from_lean
+	_feet_out_full_lean = sailor_config.feet_out_full_lean
 	_hip_force_max_n = sailor_config.hip_force_max_n
 	_hold_feel_time_s = sailor_config.hold_feel_time_s
 	_hump_trim_deg = sailor_config.hump_trim_deg
@@ -946,9 +954,65 @@ func _set_posture() -> void:
 ## this tick).
 func _rig_lean_rad() -> float:
 	var hanging: float = lean * deg_to_rad(_max_rig_lean_deg)
+	# Hooked in on a short line (harness_line_m), the body holds the boom within the line's
+	# length: the rig leans out with the hike as far as that takes, blending in as the sailor
+	# hooks in.
+	if _harness_line_m > 0.0 and lean != 0.0:
+		var side: float = signf(lean)
+		var hooked: float = smoothstep(_feet_out_from_lean, _feet_out_full_lean, absf(lean))
+		var held: float = maxf(absf(hanging), _line_held_lean_rad(side))
+		hanging = side * lerpf(absf(hanging), held, hooked)
 	var tilted: float = clampf(_controls_rig_tilt, -1.0, 1.0) * deg_to_rad(_rig_tilt_range_deg)
 	var limit: float = deg_to_rad(_max_total_rig_lean_deg)
 	return clampf(hanging + tilted, -limit, limit)
+
+
+## The rig's lean toward the sailor's side (side: +1 starboard) at which the harness line's
+## point on the boom (hand_grip_m along it, boom_height_m up the mast) comes within
+## harness_line_m of the body's centre of mass: the smallest such lean, or the one that comes
+## closest if none up to max_total_rig_lean_deg does. In the rig's axes from the mast foot, at
+## the rake and the boom's angle of the last substep. As the rig leans over the line's point
+## moves out and down toward a hiked body and then past it, so the gap has one low point: found
+## by golden section, and the lean where the gap first closes to the line by bisection.
+func _line_held_lean_rad(side: float) -> float:
+	var com: Vector3 = rig.to_body(sailor.position - rig.foot_world)
+	var rake: float = sail.rake_rad
+	var chord: Vector3 = Vector3(sail.sail_side * sin(sail.sheet_angle_rad), 0.0, cos(sail.sheet_angle_rad))
+	if _line_gap_m(0.0, com, rake, chord) <= _harness_line_m:
+		return 0.0
+	var ratio: float = 0.618034
+	var lo: float = 0.0
+	var hi: float = deg_to_rad(_max_total_rig_lean_deg)
+	for i: int in 16:
+		var a: float = hi - ratio * (hi - lo)
+		var b: float = lo + ratio * (hi - lo)
+		if _line_gap_m(side * a, com, rake, chord) < _line_gap_m(side * b, com, rake, chord):
+			hi = b
+		else:
+			lo = a
+	var closest: float = 0.5 * (lo + hi)
+	if _line_gap_m(side * closest, com, rake, chord) > _harness_line_m:
+		return closest
+	lo = 0.0
+	hi = closest
+	for i: int in 12:
+		var mid: float = 0.5 * (lo + hi)
+		if _line_gap_m(side * mid, com, rake, chord) > _harness_line_m:
+			lo = mid
+		else:
+			hi = mid
+	return hi
+
+
+## The distance from the harness line's point on the boom to the centre of mass (rig axes,
+## from the mast foot) with the rig leaned by lean_rad: the mast as SailModel.mast_direction()
+## points it, the boom along the level chord, or square to that mast (SailModel.boom_direction).
+func _line_gap_m(lean_rad: float, com: Vector3, rake: float, chord: Vector3) -> float:
+	var mast: Vector3 = Vector3(sin(lean_rad), cos(lean_rad) * cos(rake), cos(lean_rad) * sin(rake))
+	var boom: Vector3 = chord
+	if _boom_square_to_mast:
+		boom = (chord - mast * chord.dot(mast)).normalized()
+	return (mast * _boom_height_m + boom * _hand_grip_m - com).length()
 
 
 ## The sailor's own movements: stepping back as the board accelerates, and leaning to

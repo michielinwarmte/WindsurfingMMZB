@@ -11,6 +11,7 @@ boom_height_m = 1.4
 mast_foot_local = Vector3(0, 0.06, -0.16)
 ce_height_fraction = 0.41
 ce_boom_fraction = 0.35
+boom_square_to_mast = true
 camber = 0.07
 rig_mass_kg = 9.5
 rig_com_height_m = 1.8
