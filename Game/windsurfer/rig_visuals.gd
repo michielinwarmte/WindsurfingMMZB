@@ -10,6 +10,7 @@ extends Node3D
 ## numbers in Game/config/ (run it again after changing a size there). One .glb per part in
 ## res://assets/models/, each with its origin where it is fixed:
 ## - board.glb: the board's centre at mid-thickness, which is the simulation's board origin.
+##   Its hull is painted with board_deck.png and board_bottom.png (_set_up_board).
 ## - fin.glb: the fin root, placed at FinConfig.root_local.
 ## - mast.glb and sail.glb: the mast foot (SailConfig.mast_foot_local), the mast up +y, the
 ##   boom along +x, so the clew is at (boom_m, boom_height_m, 0).
@@ -27,6 +28,8 @@ const MAST_MODEL: PackedScene = preload("res://assets/models/mast.glb")
 const SAIL_MODEL: PackedScene = preload("res://assets/models/sail.glb")
 const BOOM_MODEL: PackedScene = preload("res://assets/models/boom.glb")
 const SAIL_PANELS: Texture2D = preload("res://assets/models/sail_panels.png")
+const BOARD_DECK: Texture2D = preload("res://assets/models/board_deck.png")
+const BOARD_BOTTOM: Texture2D = preload("res://assets/models/board_bottom.png")
 const SAIL_CLOTH_SHADER: Shader = preload("res://windsurfer/sail_cloth.gdshader")
 const SAIL_WINDOW_SHADER: Shader = preload("res://windsurfer/sail_window.gdshader")
 const MAST_SHADER: Shader = preload("res://windsurfer/mast.gdshader")
@@ -61,9 +64,13 @@ const TWIST_LIGHT_DEG: float = 8.0
 const TWIST_LOADED_DEG: float = 16.0
 ## Sail lift at which the twist reaches TWIST_LOADED_DEG, N.
 const TWIST_FULL_LIFT_N: float = 1200.0
-## How far the masthead is bent back (the luff curve the downhaul pulls in), m, and how far
-## it bends to leeward with a strong pull, m.
-const MAST_BEND_AFT_M: float = 0.22
+## How far the masthead is bent back (the luff curve the downhaul pulls in), m, from the boom
+## up, and how far it bends to leeward with a strong pull, m. A race sail's mast bends a lot:
+## the Severne HGO 8.0 rigged in the wind tunnel (Zhang et al. 2025, figure 1) has its masthead
+## about 0.9 m behind the line of the mast under the boom. build_rig_models.py reads this number
+## and draws the flat sail that much forward, so the rigged sail has the real outline: rebuild
+## the models after changing it.
+const MAST_BEND_AFT_M: float = 0.85
 const MAST_BEND_LEEWARD_M: float = 0.12
 ## A time step long enough for the cloth to reach its shape in one go, s.
 const SNAP_STEP_S: float = 10.0
@@ -77,8 +84,9 @@ var _cloth: MeshInstance3D
 var _mast_tube: MeshInstance3D
 var _fin_mesh: MeshInstance3D
 var _fin_material: ShaderMaterial
-## The cloth's material, for a race's sail colours (tint_sail).
-var _sail_cloth_material: ShaderMaterial
+## The sail's materials (the cloth, the clear film, the sleeve), for a race's sail colours
+## (tint_sail).
+var _sail_materials: Array[ShaderMaterial] = []
 # The tip's sideways movement last given to the fin's shader, m (+ toward starboard).
 var _fin_tip_deflection_m: float = 0.0
 
@@ -99,6 +107,7 @@ var _cloth_values: Dictionary[String, float] = {}
 func build(_board_config: BoardConfig, sail_config: SailConfig, fin_config: FinConfig) -> void:
 	_sail_config = sail_config
 	_board = _add_model(BOARD_MODEL, "Board", self)
+	_set_up_board()
 	_fin = _add_model(FIN_MODEL, "Fin", self)
 	_fin.position = fin_config.root_local
 	_set_up_fin(fin_config)
@@ -282,28 +291,35 @@ func _add_model(model: PackedScene, node_name: String, parent: Node3D) -> Node3D
 	return instance
 
 
-## Gives the cloth's three surfaces (cloth, windows, sleeve) their shader materials.
+## Gives the cloth's three surfaces (cloth, clear film, sleeve) their shader materials, with the
+## panel picture and the colours the model was built with (the cloth's red is the reference for
+## a race's tint, the sleeve has its own red).
 func _set_up_cloth(sail_config: SailConfig) -> void:
 	var cloth_material: ShaderMaterial = _cloth_material(SAIL_CLOTH_SHADER, sail_config)
-	cloth_material.set_shader_parameter("panel_texture", SAIL_PANELS)
-	_sail_cloth_material = cloth_material
 	var sleeve_material: ShaderMaterial = _cloth_material(SAIL_CLOTH_SHADER, sail_config)
 	sleeve_material.set_shader_parameter("is_sleeve", true)
 	var window_material: ShaderMaterial = _cloth_material(SAIL_WINDOW_SHADER, sail_config)
 	var by_name: Dictionary[String, ShaderMaterial] = {
 		"sail_cloth": cloth_material, "sail_window": window_material, "sail_sleeve": sleeve_material,
 	}
+	_sail_materials = [cloth_material, window_material, sleeve_material]
 	var mesh: Mesh = _cloth.mesh
 	for surface: int in mesh.get_surface_count():
-		var imported: Material = mesh.surface_get_material(surface)
+		var imported: BaseMaterial3D = mesh.surface_get_material(surface) as BaseMaterial3D
 		var surface_name: String = imported.resource_name if imported != null else ""
 		if by_name.has(surface_name):
 			_cloth.set_surface_override_material(surface, by_name[surface_name])
 		else:
 			push_warning("sail.glb has an unexpected surface '%s'." % surface_name)
-	# The shader moves the cloth up to about 0.3 m off its flat shape: widen the box the
-	# engine uses to decide whether the sail is on screen.
-	_cloth.extra_cull_margin = 0.5
+		if surface_name == "sail_cloth":
+			for material: ShaderMaterial in _sail_materials:
+				material.set_shader_parameter("main_colour", imported.albedo_color)
+		elif surface_name == "sail_sleeve":
+			sleeve_material.set_shader_parameter("sleeve_color", imported.albedo_color)
+	# The shader moves the cloth up to about 0.3 m off its flat shape, and the mast's bend
+	# moves the head back by MAST_BEND_AFT_M: widen the box the engine uses to decide whether
+	# the sail is on screen.
+	_cloth.extra_cull_margin = 0.3 + MAST_BEND_AFT_M
 
 
 ## Gives the fin the shader that bends it (fin_bend.gdshader), with the model's own colour and
@@ -338,18 +354,21 @@ func _set_up_mast(sail_config: SailConfig) -> void:
 	var material: ShaderMaterial = ShaderMaterial.new()
 	material.shader = MAST_SHADER
 	material.set_shader_parameter("mast_length_m", sail_config.mast_m)
+	material.set_shader_parameter("mast_bend_start_m", sail_config.boom_height_m)
 	var mesh: Mesh = _mast_tube.mesh
 	for surface: int in mesh.get_surface_count():
 		var imported: Material = mesh.surface_get_material(surface)
 		if imported != null and imported.resource_name == "carbon":
 			_mast_tube.set_surface_override_material(surface, material)
-	_mast_tube.extra_cull_margin = 0.3
+	_mast_tube.extra_cull_margin = 0.1 + MAST_BEND_AFT_M
 
 
 func _cloth_material(shader: Shader, sail_config: SailConfig) -> ShaderMaterial:
 	var material: ShaderMaterial = ShaderMaterial.new()
 	material.shader = shader
+	material.set_shader_parameter("panel_texture", SAIL_PANELS)
 	material.set_shader_parameter("mast_length_m", sail_config.mast_m)
+	material.set_shader_parameter("mast_bend_start_m", sail_config.boom_height_m)
 	material.set_shader_parameter("boom_height_m", sail_config.boom_height_m)
 	material.set_shader_parameter("head_height_m", sail_config.mast_m - SAIL_HEAD_BELOW_MAST_TOP_M)
 	return material
@@ -380,7 +399,25 @@ func _cloth_time_step(time_s: float) -> float:
 	return dt
 
 
-## Tints the sail's panels, so the boards of a race tell apart (white keeps the panel picture).
+## Gives the sail a race colour, so the boards of a race tell apart: the colour takes the place
+## of the sail's own red; the prints (the flag, the number, the stripe) and the clear film stay
+## (white keeps the sail as it is; sail_colour in sail_cloth.gdshaderinc).
 func tint_sail(colour: Color) -> void:
-	if _sail_cloth_material != null:
-		_sail_cloth_material.set_shader_parameter("sail_tint", colour)
+	for material: ShaderMaterial in _sail_materials:
+		material.set_shader_parameter("sail_tint", colour)
+
+
+## Paints the hull with the deck's and the bottom's pictures (board_deck.png and
+## board_bottom.png, drawn by build_rig_models.py in the hull's UV: the board seen from above).
+func _set_up_board() -> void:
+	var hull: MeshInstance3D = _board.find_child("Hull", true, false) as MeshInstance3D
+	var pictures: Dictionary[String, Texture2D] = {"board_deck": BOARD_DECK, "board_bottom": BOARD_BOTTOM}
+	for surface: int in hull.mesh.get_surface_count():
+		var imported: BaseMaterial3D = hull.mesh.surface_get_material(surface) as BaseMaterial3D
+		if imported == null or not pictures.has(imported.resource_name):
+			continue
+		var material: BaseMaterial3D = imported.duplicate() as BaseMaterial3D
+		material.albedo_color = Color.WHITE
+		material.albedo_texture = pictures[imported.resource_name]
+		material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+		hull.set_surface_override_material(surface, material)

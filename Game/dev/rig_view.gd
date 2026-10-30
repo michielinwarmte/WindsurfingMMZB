@@ -12,7 +12,8 @@ extends Node3D
 ## --figure=0 (hide the sailor), --views=port,bow,... (only these views), --flutter=1 (show
 ## the cloth with no pressure in it, flapping all over, whatever the simulation says; a value
 ## below 1 shows less, 0.3 is the ripple behind the mast of a sail that is nearly luffing:
-## the pictures get "_luff" and the value in their name).
+## the pictures get "_luff" and the value in their name), --tint=r,g,b (the sail in a race's
+## colour, as RaceRunner gives it, 0 to 1 each; the pictures get "_tint").
 
 const WINDSURFER_SCENE: PackedScene = preload("res://windsurfer/windsurfer.tscn")
 const OCEAN_SCRIPT: Script = preload("res://world/ocean.gd")
@@ -55,16 +56,21 @@ func _ready() -> void:
 	_ocean.call("setup", _windsurfer.sim, _camera)
 	if options.get("figure", "1") == "0":
 		_windsurfer.get_node("SailorFigure").visible = false
+	var tinted: bool = options.has("tint")
+	if tinted:
+		var rgb: PackedFloat64Array = options["tint"].split_floats(",")
+		_windsurfer.set_sail_colour(Color(rgb[0], rgb[1], rgb[2]))
 	var views: PackedStringArray = PackedStringArray(VIEWS.keys())
 	if options.has("views"):
 		views = options["views"].split(",")
 	var screenshot: String = options.get("screenshot", "")
 	var out_dir: String = screenshot.get_base_dir() if screenshot != "" else "user://"
 	var flutter: float = options.get("flutter", "0").to_float()
-	_capture_views(options.get("settle", "6").to_float(), views, out_dir, tack, flutter)
+	_capture_views(options.get("settle", "6").to_float(), views, out_dir, tack, flutter, "_tint" if tinted else "")
 
 
-func _capture_views(settle_s: float, views: PackedStringArray, out_dir: String, tack: String, flutter: float) -> void:
+func _capture_views(settle_s: float, views: PackedStringArray, out_dir: String, tack: String, flutter: float,
+		tint_suffix: String) -> void:
 	RenderingServer.viewport_set_measure_render_time(get_viewport().get_viewport_rid(), true)
 	_place_camera(VIEWS["three_quarter"])
 	await get_tree().create_timer(settle_s, true, true).timeout
@@ -74,9 +80,9 @@ func _capture_views(settle_s: float, views: PackedStringArray, out_dir: String, 
 	var t: Telemetry = _windsurfer.telemetry()
 	print("rig_view: %s tack, %.1f kt, sail side %d, boom %.0f deg, alpha %.1f deg, heel %.1f deg" % [
 		tack, t.speed_kt, t.sail_side, t.sail_angle_deg, t.alpha_deg, t.heel_deg])
-	var suffix: String = ""
+	var suffix: String = tint_suffix
 	if flutter > 0.0:
-		suffix = "_luff" if flutter == 1.0 else "_luff%.1f" % flutter
+		suffix += "_luff" if flutter == 1.0 else "_luff%.1f" % flutter
 		# As RigVisuals.shape_sail does: a luffing sail loses most of its belly.
 		var cloth: MeshInstance3D = (_windsurfer.get_node("Rig") as RigVisuals).sail_cloth()
 		cloth.set_instance_shader_parameter("flutter", flutter)

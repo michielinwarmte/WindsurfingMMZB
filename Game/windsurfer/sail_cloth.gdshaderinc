@@ -33,6 +33,19 @@ instance uniform float flutter : instance_index(3) = 0.0;
 // The ripples' phase, rad: RigVisuals advances it with the simulation clock.
 instance uniform float flutter_phase_rad : instance_index(4) = 0.0;
 
+// The sail's colours, for sail_cloth.gdshader and sail_window.gdshader: the panel picture
+// (sail_panels.png) and a race's sail colour. The picture's alpha says what each part is:
+// 1 the sail's own red cloth (a race's colour replaces it), about 0.75 a printed graphic that
+// keeps its colours (the flag, the black and white stripe), about 0.55 a print on the front
+// only (the side the mesh faces, +z: the sail's port side; its sail number) and about 0.35 on
+// the back only (the starboard side's number, drawn mirrored), 0 clear film.
+uniform sampler2D panel_texture : source_color, filter_linear_mipmap_anisotropic, repeat_disable;
+// A race's sail colour (RigVisuals.tint_sail); white keeps the sail as it is.
+uniform vec3 sail_tint : source_color = vec3(1.0, 1.0, 1.0);
+// The cloth's own colour (the sail_cloth material in sail.glb): how light or dark a part of the
+// cloth is next to it, so a tinted batten pocket stays darker than the panel around it.
+uniform vec3 main_colour : source_color = vec3(0.769, 0.071, 0.094);
+
 // Where the draft is deepest, as a fraction of the chord from the luff.
 uniform float draft_position = 0.38;
 // Heights on the mast where the twist starts (the boom) and is full (the head), m.
@@ -123,4 +136,26 @@ void bend_sail(inout vec3 vertex, inout vec3 normal, vec2 uv, vec2 uv2, bool sha
 	}
 	// The whole sail moves with the bent mast.
 	vertex = bent + mast_bend(vertex.y);
+}
+
+
+// The colour of a part of the sail with the race's tint: where the picture shows the sail's own
+// cloth (alpha 1), the tint takes the place of the red, as light or dark as the red was there;
+// prints and clear film keep their colours. With a white tint nothing changes.
+vec3 sail_colour(vec3 picture, float alpha) {
+	if (sail_tint.r + sail_tint.g + sail_tint.b > 2.999) {
+		return picture;
+	}
+	float shade = picture.r / max(main_colour.r, 0.05);
+	return mix(picture, sail_tint * shade, smoothstep(0.85, 0.97, alpha));
+}
+
+
+// A print on one side of the sail only (the sail numbers) seen from the other side: it shows
+// through the cloth faintly, mirrored, as on a real sail.
+vec3 print_seen_through(vec3 colour, float alpha, bool front_facing) {
+	float front_only = smoothstep(0.45, 0.5, alpha) * (1.0 - smoothstep(0.62, 0.67, alpha));
+	float back_only = smoothstep(0.25, 0.3, alpha) * (1.0 - smoothstep(0.42, 0.47, alpha));
+	float other_side = front_facing ? back_only : front_only;
+	return mix(colour, sail_colour(main_colour, 1.0), 0.75 * other_side);
 }
