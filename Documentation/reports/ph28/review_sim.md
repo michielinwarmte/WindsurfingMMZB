@@ -1,0 +1,135 @@
+# Review: the sailor and the whole-windsurfer step on `ph28/sail-and-hull`
+
+Independent physics review, 30 October 2026, of branch `ph28/sail-and-hull` (HEAD d1e583d) against `origin/main` (4b9297f). Scope: `Game/sim/windsurfer_sim.gd`, `Game/sim/config/sailor_config.gd`, `Game/config/sailor_default.tres`, and the test suite as a whole. Read-only: nothing in the repo was changed except this file. The sail, the hull, the fin and the footstraps have their own reviewers.
+
+## 1. Verdict in short
+
+The geometry that was added (the boom square to the mast, the hands at the centre of effort, the rig's pitch lag) is written correctly: the signs check out by hand, the "head up on rake back" rule still holds on both tacks (a unit test pins it with the new boom), and the two options that are said to be off (`harness_line_m`, `rig_pitch_follow_s = 0`) are genuine no-ops when off. The NaN fix is the right fix in principle. The tests run as claimed: **564 of 564 unit tests pass**, and the validation run gives **37 pass, 7 fail, 2 pending, the same seven reds as Session 60's list, no new red, no NaN** (641 s). The reach check reproduces report section 14's table to the last digit.
+
+What the lead and Michiel should know before accepting it:
+
+1. **"Trimming by feel" is a controller, not a body model**, and its five numbers are fitted (the spec's own tuning log says "the rate and the band are what held steady"). It is bounded and cannot run away, but by the report's own account it hunts: the weight creeps aft, steps 8 cm forward, creeps aft again, about every 3 s. In waves its chatter detector is at or past its threshold all the time, so there the rider never trims aft at all. That needs Michiel's eye.
+2. **The rig's pitch lag is ON in the game (0.3 s), while the code comments, the sim's docstring and the spec section 7.5 all say it is off by default.** The spec's tuning log even has two rows that contradict each other. Whether it should be on is Michiel's call; the documents must say what the code does.
+3. **The dev tool `pitch_budget.gd` does not reproduce the game when the lag is on**: it calls `_hold_the_rig()` without a time step, which snaps the rig to the hull every substep. Section 14's "power by source" table (the bounce diagnosis) and section 12's geometry table were measured that way.
+4. **Two tests were loosened to pass new outputs**: the catapult test's heel limit went 45 to 75 to 90 degrees in two steps as the measured kick grew; `test_race_env.gd` had its 240 s episode and 10 m progress loosened "until the hull wins the speed back" and was not tightened again now the hull is in.
+5. **The 30 degree full hike is sourced (Gourlay & Martellotta 2011, an RS:X Olympic board) but chosen for its effect** ("the sailor is too weak"), it sits in the range (1.1 to 1.3 m) where GP0 measured NaN blow-ups and PH29 (not built) was opened, and Max's own photo (report section 13) reads 40 to 50 degrees with the hips 0.6 m up, not 30 degrees and 0.42 m.
+6. The spec is behind the code on the sailor's default values in several places (section 7).
+
+## 2. Test results (run on this PC, 30 October 2026)
+
+### `tools/test.sh` (fast unit tests)
+
+564 tests, 564 passing, 0 failing, 0 pending (log: `.logs/`, copy in the scratchpad `unit_run.log`). Matches the claim (564 of 564).
+
+### `tools/test.sh validation`
+
+46 tests in 9 files, **37 passing, 7 failing, 2 pending**, 287 of 306 asserts, 641 s, no hang and no NaN (every "no fall or blow-up" test passes). This matches the claim (37 / 7 / 2). The seven reds, each against the list in PROGRESS_LOG.md Session 60 and PROGRESS.md step 18:
+
+| Red test | What it says | Known? |
+|---|---|---|
+| `test_polar_sweep.gd` `test_speeds_are_in_the_real_world_range` | 60 to 120 degrees 15 to 28 % **faster** than the reference band (9.85 at 60, 13.02 at 90, 14.03 at 105 m/s against 7.72, 10.26, 11.03 +/- 15 %); 135 degrees slower (7.85 against 10.80 +/- 20 %) | Known: "the polar's old targets" (the band was drawn for a 120 l freeride board with a 6.5 at 75 kg; the gear is now a slalom board with an 8.0 at 80 kg). Not a new red, but note that the direction has flipped: on Session 57 the board was too slow, now it is too fast except on the broad reach. Nobody has drawn a reference band for the new gear. |
+| `test_top_speed` | 14.03 m/s (50.5 km/h) against 11.3 +/- 15 % | Known, same cause |
+| `test_planing_onset_and_fully_planing` | the onset at 15.0 kn against 8 to 10 | Known (red on purpose since before the branch; now 15.0 with the heavier sailor; Session 60 says 15.0) |
+| `test_stable_at_speed_on_the_broad_reach` | the trim at speed 0.15 degrees against 0.5 to 6 bow up | Known ("the top speed and its trim (0.15 deg)") |
+| `test_force_sanity_on_the_beam_reach` | the fin's side force 677 N against a 100 to 650 N band | Known, new in Session 60 ("no source for the band, kept as the evidence") |
+| `test_skipper.gd`, in time at 12 kt | 13:38.5 against 12:00 | Known ("the skipper's 12 kt time (13:38.5)") |
+| `test_waves.gd`, settled speed on waves at TWA 120 | 11.36 m/s against 13.69 +/- 15 % on flat water | Known ("the speed on waves at 120 deg") |
+| Pending: `test_planing_wet_area.gd` targets 3 and 4 | the wet front 1.19 to 1.28 m (target 0.6 to 1.0), the push 0.90 to 1.13 m and the trim 0.38 to 0.82 degrees (target 0.45 to 0.75 m and 1.5 to 4 degrees) | Known: U1's targets, "the second lock" of report section 14 |
+
+**No new red and no unexplained red.** The two step-16 reds that the straps took away (the recovery's bounce and the rake-first threshold) stay green. The wet-area target 2 (the 24 kt broad reach's steadiness), red in Sessions 57 and 58, is green.
+
+### Test expectations edited on this branch (`git diff origin/main...HEAD -- Game/tests`)
+
+| Test | What changed | Justified by a measurement? |
+|---|---|---|
+| `test_windsurfer_sim.gd:80-118` (the catapult) | wind 18 to 24 kt (8584330, PH28: the new sail can be held at 18 kt); the board's heel after the fall: `assert_lt(max_heel_after, 45.0)` to 75 (7be6cb9) to **90** (7b53d4d); a new check that it is back below 10 degrees 6 s later | **No measurement.** The comment lists the model's own outputs (42.7, 50, 57.5, 59.4, 63.7, 75.5 degrees as the hands, the boom and the sailor's weight changed) and the limit was moved above each one. A board heeling 75 degrees in the moment the sailor leaves is a model output nobody has compared with the water. The new "comes back upright" check is good. **Finding: test moved to pass.** |
+| `test_fin_bend.gd:28-43` (the stiff fin's pin) | slip 1.64 to 1.72 degrees, lift 475 to 652 N, up 16 to 22 N (re-pinned four times on the branch) | These are regression pins, re-pinned every time the sail or the sailor changed, each time with a note. They no longer check anything but "the same as last time". Acceptable as pins; not evidence. |
+| `test_race_env.gd:324, 385-404` | the dropped board's progress 10 to 5 m in 10 s; the hand-written policy's episode 240 to 270 s | Loosened in 8584330 (PH28) "until the hull (PH16) wins the speed back". PH16 is now in the branch and the targets were not restored. **Finding: untested whether the old targets would pass again.** |
+| `test_sailor_body.gd:34-58` | "the hands hold nothing" 2 to 5 N; the tenth-lean check from ±0.04 m to ±50 %; masses read from the configs | Small loosenings with a reason given (the rig stands at the rest attitude; the heeling board tilts the offset). Cosmetic. |
+| `test_personas.gd:117-138` | the all-rounder's sail is "the default" (8.0, was 6.5); the speed comparison switched from Lena-vs-all-rounder to Lena-vs-Sven because "the 8.0 is too near Lena's 7.8 to tell apart" | The test was rewritten to keep its point; fine. |
+| `test_environment_config.gd:57-63` | thin air: the lift ratio now includes the twist's change | PH28 (the sail reviewer's). |
+| `test_mass_model.gd:5-16`, `test_buoyancy.gd`, `test_hull.gd` | load the old board/sail files and set 75 kg explicitly | Keeps hand-worked numbers valid. Fine. |
+| `test_rig_visuals.gd` | the roach tolerance 0.06 to 0.1 m, the deck in the middle, the straps | Visuals. |
+| New tests | `test_trim_by_feel.gd` (6), `test_rig_pitch_follow.gd` (4), `test_hooked_in_rig_lean.gd` (4), `test_footstraps.gd`, `test_board_cutouts.gd`, `test_fall_watch.gd`, `test_push_warning.gd` (GP0's, came in with the `gp0/measure` base) | Present and passing. **Missing: no test reproduces the NaN of 782f3e5** (the rule "for a bug, first write a test that reproduces it"). |
+
+### `tools/reach_check.sh --seconds=90 --from=60` against report section 14
+
+Reproduced to the last digit, all nine cases (speed m/s, wet length m, pitch SD deg): 12 kt 60/100/135: 7.25 (1.35, 0.00), 11.62 (1.22, 0.00), 5.81 (1.78, 0.00); 18 kt: 10.39 (1.29, 0.00), 14.97 (1.28, 0.01), 13.30 (1.04, 0.17); 24 kt: 10.79 (1.28, 0.00), 16.77 (1.25, 0.00), 18.29 (1.27, 0.04). The report's section 14 "Now" column is what the branch does. Two things in the same print worth a look: the harness tension is 800 to 857 N on the planing reaches against the one measurement in the spec (Walls & Gale 2001: 368 to 415 N, PHYSICS_SPEC.md:6270), which the report lists as open; and the running trim on the 18 and 24 kt beam reaches is 0.36 to 0.42 degrees with 1.25 to 1.28 m wet (the "second lock" of section 14).
+
+## 3. Findings, ranked
+
+Severity labels: **bug** / **wrong physics** / **test moved to pass** / **mismatch with spec** / **untested** / **cosmetic**.
+
+### 3.1 `_trim_by_feel` and the bounce lock (`windsurfer_sim.gd:1138-1161`, config `sailor_config.gd:92-113`)
+
+**What it does, in plain words.** Every substep the rider's "feel" of the board is updated: an average of the pitch over 1.5 s (`felt_trim_deg`) and the root-mean-square of the pitch rate over the same time (`felt_bounce_dps`, the chatter). While planing, the weight walks aft at 0.03 m/s as long as the felt pitch is below the trim aimed for, comes forward fast (0.3 m/s) when the felt pitch is above it, and, when the chatter passes 1.7 degrees a second, comes forward slowly if the board is at or above its aim, or merely stops walking aft if it is a band (0.25 degrees) or more below it. The press is clamped to `trim_press_max_m` times the planing share, and then (another reviewer's part) to the footstraps.
+
+- **Model or controller?** It is a controller: an integral action on a filtered pitch error (`push * rate * dt` accumulates into `trim_press_m`), with a 10-to-1 asymmetry in its rates and an RMS chatter detector. Nothing in it is a measured property of a rider; the spec's tuning log (PHYSICS_SPEC.md:6599) says so honestly: "the rate and the band are what held steady, the tolerance follows the team's 0.3 deg". **All five numbers are fitted:** `trim_feel_time_s` 1.5, `trim_press_band_deg` 0.25, `trim_press_rate_ms` 0.03, `trim_press_release_ms` 0.3, `bounce_tolerance_dps` 1.7 (derived as half the team's own steadiness limit, 0.15 degrees at 1.8 Hz, not from a rider). Label them so in the spec.
+- **Stability.** It cannot wind up: the only state is `trim_press_m`, clamped to the reach every substep (`:1161`), and the felt values are exponential averages (bounded by their inputs). It cannot creep without bound. But it **limit-cycles by design**: with the rates 10 to 1 either side of the aim, the weight walks aft until the felt pitch (1.5 s late) crosses the aim or the chatter wakes, then jumps forward. The report describes exactly that on the 24 kt beam reach with the hands at 0.70 (hull_balance.md, section 12: "creeps aft at 0.03 m/s until the board starts to chatter at about 0.9 deg of trim, steps 8 cm forward, and creeps back, every 3 s or so", pitch SD 0.23 degrees). The author calls it "the rider at the edge of the bounce"; a reviewer calls it a sawtooth of an integral controller with a lag. It stays inside the team's 0.3 degree limit on flat water. **Wrong physics / question for Michiel:** is an 8 cm, 3 s sawtooth of the rider's weight what a rider does, or a controller artefact that the hull then answers?
+- **In waves the chatter detector is always on.** `felt_bounce_dps` is the pitch rate's RMS of the whole board, waves included. The report's own push checks give a pitch SD of 0.8 to 1.5 degrees in waves (section 4); at a wave period of 3 s that is a rate RMS of about 1.7 to 3 degrees a second, at or past the 1.7 threshold. With `chatter` saturated the rule gives `push = -clamp(1 - aim, 0, 1)`: at best zero (riding low), otherwise forward. **So in any sea the rider never trims aft by feel; only the press's reach and the straps hold the weight back.** The report never says this; the gust-and-wave numbers were measured with it so. **Wrong physics (medium): the bounce felt should be the board's own bounce, not the waves' motion**, or the threshold should scale with the sea. For Michiel.
+- **Rule 7 (player = AI):** yes. The rule lives inside `WindsurferSim`, every board is a `WindsurferSim` on the same `sailor_default.tres` (`create_for`), and nothing outside `Game/sim/` sets `trim_feel_time_s`, `bounce_tolerance_dps` or `trim_press_release_ms` (grep over `Game/`: only the `.tres`, the HUD's display line and `gear_check.gd` read them).
+- **Rule 2 (nothing visual feeds back):** yes. It reads `body.pitch_rad()`, `body.angular_velocity_body().x`, `hull.planing_ratio` and the time step only.
+- **Substep-safe:** yes, `dt` is the substep (`_update_sailor(sub_dt)` at `:409`), the averages use `dt / trim_feel_time_s` (a first-order filter, fine while `dt` is much smaller than 1.5 s), the walk is `rate * dt`.
+- **Minor, cosmetic:** (a) `felt_trim_deg` and `felt_bounce_dps` are cleared in `reset()` (`:375`) but not in `_fall()` (`:622`) or `waterstart()` (`:642`): after a catapult the rider climbs back on still "feeling" the bounce of the fall for a second or two. (b) `trim_press_release_ms` is not in `sailor_default.tres` (the code default 0.3 applies): rule 3 says tuning numbers live in the `.tres`. (c) The reach clamp at `:1161` is applied at once, where the old press was rate-limited (0.1 m/s) in both directions (`:1068`): when the planing share drops in a wave, the press (and so the body's weight target, `_set_posture` `:943`) jumps with it. The legs filter the jump, so it is a kick, not a teleport. Worth a look.
+
+### 3.2 The square boom and the hands at the centre of effort (`sail_model.gd:244-256`, `windsurfer_sim.gd:1210-1240`, `sailor_config.gd:141-154`)
+
+- **Geometry, checked by hand.** `mast_direction()` is (sin lean, cos lean cos rake, cos lean sin rake) in body axes with z aft, so rake back tips the mast aft. `boom_direction()` takes the level chord (clew to leeward, aft) and removes its part along the mast. With no lean and 20 degrees of rake the boom's unit vector gets y = -0.334: the clew, the centre of effort (0.70 m along the boom) and the grip (`hand_grip_m` 0.70) drop 0.234 m. The config comment says 0.24 m: correct. With the rig leaned to windward the dot product gets a term `side * sin(sheet) * sin(lean)` of the opposite sign, so the leeward boom lifts again: the report's "0.06 m net on the 18 kt beam reach" is consistent with that. The force's direction is unchanged (the angle of attack still comes from the level chord), so only the moment arms move. `test_sail.gd:213-239` pins the drop and the unchanged force.
+- **Both tacks.** `test_windsurfer_sim.gd:425` (`test_rake_back_heads_up_and_rake_forward_bears_away_on_both_tacks`) runs on the default gear, square boom included, and passes. The sign in the yaw is unchanged by the square boom: the centre of effort's aft move with rake comes mainly from the mast (2.0 m up times sin rake, 0.68 m at 20 degrees); the boom's aft part shrinks only by cos² rake before normalising (a few centimetres).
+- **Pitch moment arms.** The hull gets `sail_force + rig_weight - hand_force` at the mast foot (`:1237-1239`) and the hands' force reaches the hull through the sailor's feet. A lower centre of effort means a smaller moment about the foot, so a smaller hand force and more of the sail's force at the foot: correct, and it is why the report sees the nose-down moment fall. The harness line's direction uses the same lowered grip (`:1229`).
+- **The hands at 0.70.** `hand_grip_m` 0.70 equals `ce_boom_fraction * boom_m` (0.35 x 2.0), so the line's point sits exactly under the centre of effort along the mast. Max said "a bit back of the centre of pressure"; the model puts it exactly at. A fair reading, but the 0.70 is the model's own estimate of where the centre of effort is on the boom, not a measured line position. **Label: Max's statement for "about at the centre of effort"; the number itself is an estimate.** Note the sequence on the branch: 0.6 to 0.70 (7be6cb9), back to 0.6 (0cc4a2e: eight catapults in 400 s at 24 kt), then 0.70 again (7b53d4d) with 80 kg and the straps, where the same 400 s run had no falls. The spec's section 7.5 text still says 0.6 (section 7 below).
+
+### 3.3 The two options and "off is a no-op" (`windsurfer_sim.gd:885-918`, `:962-1022`)
+
+- **`harness_line_m = 0` (off, the default): a true no-op.** `_rig_lean_rad()` (`:962`) enters its new branch only when `_harness_line_m > 0`. The only other change is that `sail.compute` now takes `_rig_lean_now_rad` (`:431`) instead of calling `_rig_lean_rad()` again; on the baseline both were evaluated in the same substep from the same `lean` and `_controls_rig_tilt` (baseline `:410` and `:999`), so the value is bit-identical. The option itself (`_line_held_lean_rad`, golden section then bisection) is correct as written for a gap with one low point, as the test checks; it is off because it made the board spin out (report section 12), and the report's physical point (a rig's lean does not change the heeling moment the body holds) is right.
+- **`rig_pitch_follow_s = 0`: a true no-op.** The `else` branch at `:905-907` sets the held pitch to the hull's and leaves `forward` and `angular_velocity` untouched, which is the baseline's `_hold_the_rig`. `_place_sailor` resets the lag (`:673`), and the near-vertical guard (`:894`, `level.length() > 0.2`) falls back to the snap.
+- **But it is not off.** `sailor_default.tres:59` has `rig_pitch_follow_s = 0.3`, set in 818396d ("the realistic default gear"). The sim's docstring (`:882-884`, "PH16, off by default"), the config's own comment (`sailor_config.gd:282`, "so it is off until Michiel decides") and PHYSICS_SPEC.md:3504 ("An option, off ... default 0") all say off. The tuning log says both: row 6600 "0.3 s (on) ... kept on as the physics of the joint", row 6602 "0 (off), the same". **Mismatch with spec and with the code's comments (high, because Michiel reads those to decide).** The 0.3 s itself is an estimate: the argument (a mast foot is a joint; the rig's 25 kg m² inertia) gives a reason for a lag, not its length; the report says any lag from 0.2 s up gave the same answer. With the lag on, the rig turns in pitch at the held rate (`:903`), about the level across axis (`:902-904`, positive lifts the bow, consistent with `pitch_rad()` being bow-up positive): the sign is right.
+
+### 3.4 The NaN fix in `_apply_rig_in_water_drag` (`windsurfer_sim.gd:709-731`, commit 782f3e5)
+
+- **Right in principle.** The implicit drag step takes the speed at a point, the effective mass at that point and applies the force there. The baseline took the speed at the water surface below the foot but the mass and the force at the foot; for a board in the air and spinning the two points are far apart and the drag could add energy (a force at one point opposing the velocity of another). Now all three are at the foot: a drag force opposing its own point's velocity can only take energy out, so the step cannot run away by this route. On the water the foot and the surface are centimetres apart, as the report says.
+- **Not shown complete, and untested.** No test reproduces the blow-up (the commit touched the sim and four documents, no test), and the validation run was the only check. What I could verify by reading: the other places that divide or normalise are guarded for an airborne or vertical board: `effective_mass_at` floors its denominator (`sim_rigid_body.gd:258`); `_hold_the_rig` falls back to the deck's across when the heading is lost (`:912`) and to the snap when `level` is short (`:894`); `sail.compute` returns no force when the heading frame is lost (`sail_model.gd:165`); `_apply_rig_forces` floors the grip length (`:1222`) and skips the harness fit for a short line or one within 13 degrees of the grip (`:1228-1232`); `_posture_frame` caps the sideways push at 0.6 g (`:872`); `pitch_rad_of_bow` clamps before `asin`. The remaining risk is PH29's: GP0 measured 7 NaN runs of 36 with the body hung 1.1 to 1.3 m out (gp0_measure.md:267), and **the default is now 1.11 m** (3.5 below). The branch's own push checks (120 s and 400 s) saw none, but those are a handful of runs against GP0's 36 with the dial at the top. **Untested (medium): run GP0's sweep (`tools/push_check.sh` with the push at the top of the dial) on this branch before the lean is accepted, or build PH29.**
+
+### 3.5 The sailor's numbers: sourced, measured, estimated or fitted
+
+| Number | Value | Label | Where it comes from, and what to note |
+|---|---|---|---|
+| `mass_kg` | 80 | **Max's own** | 7b53d4d. The autopilot's capacity scales with it (`autopilot.gd:378, 389`), so the AI sheets in harder too: consistent with rule 7. |
+| `lean_max_m`, `lean_height_drop_m` | 1.11, 0.48 | **sourced, then derived; chosen for its effect** | Gourlay & Martellotta (2011) §6.1, an RS:X Olympic racing board: the body "at least 20 to 30 degrees above horizontal". The paper is not in `Documentation/Science/`; it is cited through U1's `reports/u1/sources.md:7`. The derivation uses 1.03 m from the feet to the centre of mass (0.57 of a 1.80 m body) while the configured sailor is 1.75 m (`height_m`), which would give 1.0 m, 1.08 and 0.50: a 3 cm inconsistency. More important: it was picked because "the sailor is too weak" (report section 10), it lies in the band PH29 flagged (above), and Max's own photo (section 13, estimates) shows 40 to 50 degrees from upright with the hips 0.6 m up, not 30 degrees and 0.42 m. The report calls this open; the default should be labelled "sourced for a racing hike, not yet checked against Max's stance". |
+| `hand_grip_m` | 0.70 | **Max (qualitative), estimate (the number)** | see 3.2 |
+| `trim_press_max_m` | 1.0 | **a setting, not a measurement** | Chosen so that the back strap (measured, 0.235 m from the tail) is the real limit: the reach times the planing share (0.55 to 0.75) reaches past the tail from the 0.60 m stance, and the strap clamp stops it. Honest as written in the config comment. |
+| `trim_feel_time_s`, `trim_press_band_deg`, `trim_press_rate_ms`, `trim_press_release_ms`, `bounce_tolerance_dps` | 1.5 s, 0.25, 0.03, 0.3, 1.7 | **fitted** | see 3.1 |
+| `rig_pitch_follow_s` | 0.3 | **estimate** | see 3.3 |
+| `stance_*_z_m` | 0.09, 0.54, -0.26 | **unchanged in the world** | moved by 0.06 m because the board is 0.12 m shorter and the origin is mid-length: the same distances from the tail. Fine. |
+| PH29 ("the body breaks beyond its numbers") | - | **not built** | Only the rig-drag NaN fix is on the branch; the roadmap row (ROADMAP.md:252) still points at `windsurfer_sim.gd` and `sailor_body.gd`. |
+
+### 3.6 The dev tool `Game/dev/pitch_budget.gd` (not game code; the report's measurements rest on it)
+
+`pitch_budget.gd:141` calls `sim._hold_the_rig()` with no time step, where `WindsurferSim.step` calls `_hold_the_rig(sub_dt)` (`:430`). With `dt = 0` the lag branch is skipped (`:894`) and the rig snaps to the hull's pitch every substep. So whenever `rig_pitch_follow_s` is on (the default), the tool's measuring window runs a different rig from the game, and its header's claim "the same calls as `WindsurferSim.step` ... the same to the last bit" is false. Section 14's "power by source" table (the bounce diagnosis: the hull's water +4.5 W, the legs -2.7 W) and section 12's geometry table were measured so. **Bug in a dev tool (medium): pass `sub_dt`, then re-run the two tables and see whether the numbers move.** Unit tests are unaffected.
+
+### 3.7 Mismatches between PHYSICS_SPEC.md and the code (my files)
+
+| Spec | Says | Code / .tres |
+|---|---|---|
+| 3504 (section 7.5) | the rig's pitch lag: "An option, off ... default 0" | `sailor_default.tres:59` = 0.3, on |
+| 6600 and 6602 (tuning log) | row 6600 "0.3 s (on)", row 6602 "0 (off), the same" | contradict each other; 6600 is the truth |
+| 3509 | `hand_grip_m` "0.6 m ... The centre of effort's place, 0.70 m, was measured and not kept" | `.tres:33` = 0.7 (row 6590 of the log has it right) |
+| 3620-3621 | the press "within `trim_press_max_m` 0.3 at `trim_press_rate_ms` 0.1" | 1.0 and 0.03, band 0.25 |
+| 3676-3681 ("Values (`sailor_default.tres`)") | 75 kg, lean 1.0 m, stance 0.15 / 0.60 / -0.2, grip 0.6, trim press 0.3 m at 0.1 m/s | 80 kg, 1.11 m, 0.09 / 0.54 / -0.26, 0.70, 1.0 m at 0.03 m/s |
+| 43 (the masses table) | sailor 75, rig 8, board 9 kg: 92 kg | 80 + 9.5 + 7.8 = 97.3 kg |
+| section 7.5 body text | trimming by feel has one sentence (3629-3631) and the tuning-log rows; `trim_feel_time_s`, `bounce_tolerance_dps`, `trim_press_release_ms` and the `push` formula are described only in the log (6589, 6599) | `_trim_by_feel` `:1138-1161` |
+| section 7.5 | `harness_line_m` and `_line_held_lean_rad` appear only in the tuning log (6595) | option in `:962-1022` (off) |
+| 1356 (section 3.2), 6592-6593 | the square boom and the NaN fix | correctly described |
+| `sailor_config.gd:282`, `windsurfer_sim.gd:882-884` (code comments) | the lag is "off until Michiel decides" / "off by default" | on |
+
+The rule is "the spec is updated with every physics change": the tuning log was, the body text was not.
+
+## 4. What to do, in order
+
+1. Decide with Michiel whether `rig_pitch_follow_s` is on (0.3) or off (0), then make the spec's section 7.5, the tuning log and the two code comments say the same thing.
+2. Fix `pitch_budget.gd:141` to pass the substep, re-run report section 14's power table and section 12's geometry table, and correct them if they move.
+3. For Michiel: 3.1's two questions (the 3 s sawtooth; the chatter detector saturated by waves, so no aft trim in a sea).
+4. Put the catapult test's limit back to a value with a reason (the old 45 degrees, or a measured roll of a board after a catapult), or keep 90 but say in the test that it is only "did not capsize" and not a check of the kick; and try `test_race_env.gd` at its old 240 s / 10 m now the hull is in.
+5. Write the test that reproduces the 782f3e5 blow-up (a board thrown clear, spinning, the sailor fallen) and run GP0's push sweep at the new lean before PH29 is closed or the 1.11 m is accepted.
+6. Label the fitted numbers of 3.1 as fitted in `sailor_config.gd` and the spec; update the spec's values paragraph and the masses table.
+7. Cosmetic: clear `felt_trim_deg` / `felt_bounce_dps` in `_fall()` and `waterstart()`; put `trim_press_release_ms` in the `.tres`.
