@@ -703,9 +703,11 @@ func _clear_sailor_forces() -> void:
 ## v / (1 + k v dt / m), never past zero, with m the effective mass of the mast foot.
 func _apply_rig_in_water_drag(dt: float) -> void:
 	var foot: Vector3 = body.point_world(_mast_foot_local)
-	var surface_height: float = water.height_at(foot.x, foot.z, time_s)
-	var at: Vector3 = Vector3(foot.x, surface_height, foot.z)
-	var v: Vector3 = SimMath.horizontal(body.point_velocity(at) - water.velocity_at(foot.x, foot.z, time_s))
+	# The speed at the mast foot itself, where the force acts and where m_eff below is taken:
+	# measured at the water below the foot, a board thrown up in the air and spinning had the
+	# spin times that drop in it, the drag answered it at the foot, spun the board faster, and
+	# the step ran away to infinity (a 24 kt catapult in waves, PH16 step 16).
+	var v: Vector3 = SimMath.horizontal(body.point_velocity(foot) - water.velocity_at(foot.x, foot.z, time_s))
 	var speed: float = v.length()
 	if speed < 0.01:
 		return
