@@ -185,12 +185,14 @@ func compute(rig: RigFrame, wind: WindField, sheet: float, rake: float, rho_air:
 	cd = drag_coefficient(cl, alpha_rad, q)
 	lift_n = q * _area_m2 * cl
 	drag_n = q * _area_m2 * cd
-	# The twisted top carries less, so the force acts lower on the mast (PH28). The wind was
-	# sampled at the untwisted centre of effort above; a few tens of centimetres change it
-	# by next to nothing, and it keeps the wind's point independent of the wind itself.
-	if twist_share < 1.0:
-		var lowered: float = 1.0 - _twist_ce_drop * (1.0 - twist_share)
-		ce_local = _mast_foot_local + mast_direction() * (ce_height * lowered) + boom_direction_local * (_ce_boom_fraction * _boom_m)
+	# Where the force acts on the mast (PH28): eased, the sail's force sits low (the tunnel's
+	# Fig. 8d, SailConfig.ce_height_share()), and the twisted top carries less, so the point
+	# comes down with both. The wind was sampled at the powered, untwisted centre of effort
+	# above; a few tens of centimetres change it by next to nothing, and it keeps the wind's
+	# point independent of the wind itself (the angle of attack comes from that wind).
+	var height_share: float = config.ce_height_share(rad_to_deg(alpha_rad)) * (1.0 - _twist_ce_drop * (1.0 - twist_share))
+	if height_share < 1.0:
+		ce_local = _mast_foot_local + mast_direction() * (ce_height * height_share) + boom_direction_local * (_ce_boom_fraction * _boom_m)
 		ce_world = rig.point_world(ce_local)
 
 	# Lift: perpendicular to the apparent wind, on the suction side of the sail (section 2.11).
@@ -257,7 +259,9 @@ func boom_direction(chord_level: Vector3) -> Vector3:
 
 ## The share of the rigid sail's lift the sail keeps at this dynamic pressure of the apparent
 ## wind (Pa), because its top twists open under load (PH28; SailConfig, "Twist under load"):
-## 1 / (1 + q / twist_pressure_pa), never below twist_min_factor. 1 with the twist off.
+## 1 / (1 + q / twist_pressure_pa) at every pressure, the fitted formula (Max, 30 October
+## 2026: no floor beyond the tunnel's data). twist_min_factor is a numerical guard far below
+## any sailing pressure. 1 with the twist off.
 func twist_factor(q_pa: float) -> float:
 	if _twist_pressure_pa <= 0.0:
 		return 1.0

@@ -1107,10 +1107,10 @@ def mast_bend(y):
 HEAD_Y = drawing_y(0.952)
 HEAD_X = 0.384 * CHORD_PER_DRAWING
 FOOT_AFT_X = 0.865 * CHORD_PER_DRAWING
-FOOT_AFT_Y = TACK_Y + 0.12          # estimate
+FOOT_AFT_Y = TACK_Y + 0.21          # estimate
 FOOT_SAG = 0.03                     # estimate: the foot bows down a little between its corners
 LOWER_LEECH_BULGE = 0.05            # estimate: the leech under the clew bows out a little
-ROACH_M = 0.10                      # estimate: the leech bows out this much behind the straight line, rigged
+ROACH_M = 0.03                      # estimate: the leech bows out this much behind the straight line, rigged
 # The full battens, #1 (top) to #7: their luff end and leech end heights. From the drawing, except
 # where the game's square boom binds them: #6 ends at the clew (it does on the drawing and in the
 # wind tunnel), #7 just over the foot's aft corner.

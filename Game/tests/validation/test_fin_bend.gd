@@ -34,13 +34,17 @@ const TWA_DEG: float = 100.0
 ## and again for the full hike (the stronger sailor holds more sail, and the fin carries it).
 ## Re-pinned in Session 60 (PH16 step 17, Max's own setup: 80 kg, the lines at the centre of
 ## effort's place, the fin at his fin box; the heavier sailor holds more sail and the fin carries
-## it: 1.72 degrees, 652 N, 22 N; it was 1.67, 575 and 20).
-const STIFF_SLIP_DEG: float = 1.72
+## it: 1.72 degrees, 652 N, 22 N; it was 1.67, 575 and 20). Re-pinned on ph28/real-eight (PH28,
+## 30 October 2026: the real HGO 8.0 and the twist following its formula, no floor; the twisted
+## sail's centre of effort sits lower, so the sailor holds more side force and the fin carries
+## it: 1.82 degrees, 692 N, 24 N; the reach check's 18 kt beam reach on the same code gives the
+## fin 714 N with the formula and 659 N with the old floor).
+const STIFF_SLIP_DEG: float = 1.82
 const SLIP_TOLERANCE_DEG: float = 0.25
-const STIFF_LIFT_N: float = 652.0
+const STIFF_LIFT_N: float = 692.0
 ## A share of the lift.
 const LIFT_TOLERANCE: float = 0.05
-const STIFF_UP_N: float = 22.0
+const STIFF_UP_N: float = 24.0
 const UP_TOLERANCE_N: float = 10.0
 ## A stiff fin's force has no part out of the board's plane, and its tip does not turn.
 const STIFF_TILT_MAX_DEG: float = 0.01

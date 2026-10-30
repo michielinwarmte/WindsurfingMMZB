@@ -151,6 +151,8 @@ func _step_taken_apart(sim: WindsurferSim, dt: float, controls: SimControls) -> 
 		marks.append(body.torque_sum())
 		force_marks.append(body._force_sum)
 		if sailing:
+			# The same substep as WindsurferSim.step hands it, so the rig's pitch lag (if on) runs
+			# as in the game; without it the lag is skipped and the tool measures a different rig.
 			sim._hold_the_rig(sub_dt)
 			sim.sail.compute(sim.rig, sim.wind, sim._controls_sheet, sim._controls_rake, sim.air_density_kg_m3, sim._rig_lean_now_rad, sim._controls_boom_across, sim._controls_hold_side)
 			sim._apply_rig_forces()

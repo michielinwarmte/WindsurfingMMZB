@@ -6,9 +6,14 @@ extends Resource
 @export_group("Geometry")
 ## Sail area.
 @export var area_m2: float = 6.5
-## Luff length (the mast edge of the sail).
+## Luff length (the mast edge of the sail). The default sail is Max's real one, the Severne
+## HGO 8.0 (PH28, 30 October 2026): a 5.22 m luff and a 2.20 m boom on an Apex 490 mast with a
+## 36 cm extension (Severne's HGO page, severnesails.com/sails/hgo-hyper-glide-iqfoil/, and
+## Starboard's iQFOiL equipment table, iqfoil.star-board.com/equipment/iqfoil-class/). The
+## luff sets the aspect ratio (luff squared over the area: 3.41 for the 8.0, the paper's 3.36)
+## and with it the lift slope, so it must be the sail's, not the mast's.
 @export var luff_m: float = 4.60
-## Boom length from the mast to the clew.
+## Boom length from the mast to the clew (the 8.0: 2.20 m, the sources above).
 @export var boom_m: float = 1.95
 ## Height of the boom above the mast foot, along the mast. The default 8.0 has 1.50 m, the
 ## middle of Max's 1.40 to 1.60 m (PH16 step 17).
@@ -39,11 +44,25 @@ extends Resource
 @export var camber: float = 0.07
 
 @export_group("Rig mass")
-## Mass of mast, boom, sail, extension and base together.
+## Mass of mast, boom, sail, extension and base together. The default 8.0 keeps 9.5 kg, an
+## estimate, although the published weights add up to more (PH28, 30 October 2026): the HGO
+## 8.0 sail 5.5 kg (Starboard's iQFOiL equipment table; windfoilen.nl's review weighed 5.89),
+## the Enigma Race 210-250 boom 3.52 kg (Severne's boom table) and the Apex 490 mast about
+## 2.07 kg (Severne's table lists the Apex Team 490 at 2.07; the iQFOiL Apex 490 itself has no
+## published weight), 11.1 kg together, plus about 1.3 kg for the race extension, the base and
+## the lines (an estimate): 12.4 kg. With 12.4 kg the beginner's board no longer gets out of
+## irons after a tack in 18 kt (the sail backs and the sailor falls off; test_windsurfer_sim.gd,
+## the tack test, and tools/matrix.sh --only=tack --winds=18): the rig's weight moment goes
+## through the hands (WindsurferSim._apply_rig_forces), and how the rider handles it in irons
+## is the rider's model, not the sail's. For Michiel: the real rig is 12.4 kg.
 @export var rig_mass_kg: float = 8.0
-## Height of the rig's centre of mass above the mast foot.
+## Height of the rig's centre of mass above the mast foot. For the 8.0 the parts above add up
+## to about 1.84 m (the sail's area centre 2.05 m up, the mast's middle 2.8 m, the boom 1.5 m,
+## the extension and base 0.3 m): 1.8 m is kept.
 @export var rig_com_height_m: float = 1.7
-## Length of the mast, used for the rig's own inertia (a thin rod).
+## Height of the masthead above the mast foot, used for the rig's own inertia (a thin rod) and
+## by the visuals for the mast's length. The 8.0 stands on an Apex 490 with its 36 cm race
+## extension (Starboard's table): 5.26 m.
 @export var mast_m: float = 4.60
 
 @export_group("Controls")
@@ -60,7 +79,9 @@ extends Resource
 @export_group("Lift coefficient curve")
 ## Share of the finite-wing lift slope 2 pi AR / (AR + 2) the sail keeps before it twists.
 ## The wind-tunnel sail at 4 m/s, where it barely twists, has the full slope (0.069 per
-## degree against the formula's 0.068 for its aspect ratio of 3.36; PH28).
+## degree against the formula's 0.068 for its aspect ratio of 3.36; PH28). 1.0 on every sail:
+## Session 58's 1.03 on the 8.0 only made up for a luff of 4.9 m (the mast's length) where
+## the real sail's is 5.22 m; with the real luff the formula gives the measured slope itself.
 @export var lift_slope_factor: float = 1.0
 ## Zero-lift angle in degrees per unit of camber (a cambered sail lifts at zero angle). The
 ## wind-tunnel sail, flexible at full scale and rigid at a quarter scale alike, still lifts
@@ -94,26 +115,55 @@ extends Resource
 ## A real sail's top twists open as the wind pushes harder: the leech is loose on purpose and
 ## the mast bends, so the upper sections meet the wind at a smaller angle and the sail carries
 ## less than a rigid one at the same boom angle. In the wind tunnel (Zhang et al. 2025, Fig. 6
-## and 8) the twist grows with the angle and the wind, and the lift at a fixed angle falls
-## by the same share at every angle below the stall: to 0.94, 0.85 and 0.75 of the untwisted
-## curve at 4, 6 and 8 m/s, which is 1 / (1 + q / q_twist) with q_twist about 125 Pa for that
-## 8 m2 sail. A smaller sail loads its mast less at the same pressure (about 154 Pa scaled by
-## area) on a softer mast (back toward 125): 140 here. The share is twist_factor() in the
-## sail model. 0 switches the twist off: a rigid sail, as before PH28.
-@export var twist_pressure_pa: float = 140.0
-## The twist's share is not allowed below this: the lowest share the tunnel measured (0.75 at
-## 8 m/s, 39 Pa; the share reaches it at about 17 kt of apparent wind). The twist is not
-## extrapolated past what was measured. A floor of 0.5 (half the rigid lift) left a pushed
-## sailor unable to catapult at 24 kt, and 0.8 brings the catapults back (Session 57's sweep).
-@export var twist_min_factor: float = 0.75
+## and 8) the twist grows with the angle and the wind, and the lift at a fixed angle falls by
+## about the same share at every angle below the stall between one wind and the next: the
+## measured lift at 6 and 8 m/s is 0.85 and 0.75 of the model's untwisted line (nothing was
+## measured without wind; the untwisted curve is the model's own). A one-parameter formula,
+## 1 / (1 + q / q_twist) with q the apparent wind's dynamic pressure, was fitted through the
+## three winds: 125 Pa for the 8.0 gives 0.93, 0.85 and 0.76 at 4, 6 and 8 m/s (the 4 m/s data
+## sit at about 0.97). It is a fit, not a measurement. The 6.5 (sail_6_5.tres) keeps 140 Pa,
+## an estimate: a smaller sail loads its mast less at the same pressure (about 154 Pa scaled by
+## area) on a softer mast (back toward 125). The share is twist_factor() in the sail model.
+## 0 switches the twist off: a rigid sail, as before PH28.
+@export var twist_pressure_pa: float = 125.0
+## A numerical guard only, not a physics floor: the share is never below this. The tunnel
+## stopped at 39 Pa (15.5 kt of apparent wind) and the game's planing reaches meet 70 to
+## 250 Pa (21 to 39 kt of apparent wind on the reach check, PH28 real-eight), where the formula
+## gives 0.70 at 18 kt, 0.57 at 24 kt and 0.34 at 39 kt of apparent wind. Session
+## 57 held the share at the tunnel's last measured 0.75 there instead, because at 0.5 a pushed
+## sailor could not catapult at 24 kt; both are extrapolations, and Max chose the formula
+## (30 October 2026). The formula only reaches 0.1 at about 83 kt of apparent wind (1120 Pa).
+@export var twist_min_factor: float = 0.1
 ## Near the stall the twisted top carries the load the bottom has lost, so less of the lift is
-## lost: at 8 m/s the peak fell to 0.89 of the light-wind peak where the linear part fell to
-## 0.75, so this share (0.45) of the linear part's loss remains at the peak and beyond.
+## lost: this share (0.45) of the linear part's loss remains at the peak and beyond. Read off
+## the eased sail's 20 degree points (its peak fell to 0.88 of the light-wind peak from 4 to
+## 8 m/s where the linear part fell to 0.75); the rest of the fit is the outhaul-on sail,
+## which has no points past 16.5 degrees. A mixed source.
 @export var twist_peak_share: float = 0.45
-## The twisted top carries less, so the centre of effort comes down: in the tunnel it sat
-## about 6 % lower at 8 m/s than at 4 m/s at the angles a sailor uses (Fig. 8d). The height
-## is ce_height_fraction times (1 - this times (1 - the twist's share)).
+## The twisted top carries less, so the centre of effort comes down. The height is
+## ce_height_fraction times (1 - this times (1 - the twist's share)): about 6 % lower at 8 m/s
+## than at 4 m/s. An average: in the tunnel (Fig. 8d) the drop from 4 to 8 m/s runs from 10 %
+## at 5 degrees through 8 % at 9 and 6 % at 12 to 2 % at 16.5 degrees.
 @export var twist_ce_drop: float = 0.32
+
+@export_group("Centre of effort by angle of attack (PH28)")
+## Eased, the sail's force sits low. In the wind tunnel (Zhang et al. 2025, Fig. 8d, the
+## outhaul-on sail, read off the figure to about 0.02 m) the centre of effort climbed with the
+## angle of attack at every wind speed, from 0.9 to 1.2 m above the board at 1.3 degrees
+## through 1.6 to 1.8 m at 5.3 and 1.8 to 2.0 m at 8.7 to 1.9 to 2.1 m at 12.2 degrees, and
+## stayed near 2.0 m beyond. The table holds each height over the same wind's height at 12.2
+## degrees, averaged over the three winds: 0.60, 0.54 and 0.47 at 1.3 degrees (4, 6 and 8 m/s;
+## mean 0.53), 0.88, 0.85 and 0.84 at 5.3 (0.855), 0.95, 0.94 and 0.93 at 8.7 (0.94). The
+## wind's own lowering is twist_ce_drop's, so it is taken out here by dividing within one wind.
+## ce_height_fraction is the powered height (12.2 degrees and more); at smaller angles it is
+## multiplied by the share from this table, straight between the angles and held at both ends
+## (ce_height_share()). So a sail that is eased, luffing or backed heels and pitches the board
+## less, as the real one does. Left out: at 1.3 degrees the wind lowers the point more than
+## twist_ce_drop's average (0.47 against 0.60 from 4 to 8 m/s), and from 12 to 16.5 degrees the
+## point still rises 1 to 5 % (held at 1 here). Measured on the 8.0; the 6.5 takes the same
+## table, an assumption. Empty: the height fixed, as before PH28.
+@export var ce_height_table_deg: Array[float] = [1.3, 5.3, 8.7, 12.2]
+@export var ce_height_table_share: Array[float] = [0.53, 0.855, 0.94, 1.0]
 
 @export_group("Drag coefficient")
 ## Drag with no lift: cloth friction, mast, boom and battens. Rig coefficient sets in the
@@ -157,3 +207,20 @@ func aspect_ratio() -> float:
 
 func max_rake_rad() -> float:
 	return deg_to_rad(max_rake_deg)
+
+
+## The share of the powered centre-of-effort height at this angle of attack (degrees, either
+## sign; see "Centre of effort by angle of attack"): straight between the table's angles, the
+## first share below the first angle, the last share beyond the last. 1 with an empty table.
+func ce_height_share(alpha_deg: float) -> float:
+	var count: int = mini(ce_height_table_deg.size(), ce_height_table_share.size())
+	if count == 0:
+		return 1.0
+	var a: float = absf(alpha_deg)
+	if a <= ce_height_table_deg[0]:
+		return ce_height_table_share[0]
+	for i: int in range(1, count):
+		if a <= ce_height_table_deg[i]:
+			var t: float = (a - ce_height_table_deg[i - 1]) / (ce_height_table_deg[i] - ce_height_table_deg[i - 1])
+			return lerpf(ce_height_table_share[i - 1], ce_height_table_share[i], t)
+	return ce_height_table_share[count - 1]
