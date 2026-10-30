@@ -231,8 +231,8 @@ func _strip_theory(wagner_heel: bool, wet_reference: bool) -> Dictionary[String,
 		var relief: float = clampf((x_k[k] - aft) / (HullModel.TRANSOM_RELIEF_BEAMS * beam), 0.0, 1.0)
 		strip0 += force + gained
 		strip1 += (force + gained) * relief
-		if board.strip_suction_heads > 0.0:
-			oblique_root += gained * relief
+		if board.push_at_savitsky_centre or board.strip_suction_heads > 0.0:
+			oblique_root += gained  # not relieved, as the front root's push is not (HullModel step 2)
 			strip_forces.append(force * relief)
 		else:
 			strip_forces.append((force + gained) * relief)
@@ -290,7 +290,7 @@ func _strip_theory(wagner_heel: bool, wet_reference: bool) -> Dictionary[String,
 		if board.strip_suction_heads > 0.0:
 			head_pa = rho * g * maxf(hull._bottom_depth_at(x_k[k], wet_centres[k]), 0.0)
 		pull_max.append(board.strip_suction_heads * head_pa * full_widths[k] * fractions[k] * strip_length)
-	if board.strip_suction_heads > 0.0 and root_force > 1e-6:
+	if (board.push_at_savitsky_centre or board.strip_suction_heads > 0.0) and root_force > 1e-6:
 		spread = hull._spread_for_centroid(x_k, strip_forces, pull_max, three_d, root_force, forward, aft + cop_fraction * length, strip_length, spread)
 	var weights: PackedFloat64Array = PackedFloat64Array()
 	var weight_sum: float = 0.0

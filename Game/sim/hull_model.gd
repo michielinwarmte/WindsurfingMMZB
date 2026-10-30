@@ -81,6 +81,7 @@ var _planing_lift_lag_s: float = 0.0
 var _planing_buoyancy_factor: float = 1.0
 var _bow_drag_cd: float = 0.0
 var _strip_suction_heads: float = 0.0
+var _push_at_savitsky_centre: bool = false
 var _heel_as_rolled_plate: float = 0.0
 var _density_kg_m3: float = 0.0
 var _kinematic_viscosity_m2_s: float = 0.0
@@ -114,6 +115,13 @@ var planing_pull_n: float = 0.0
 ## world axes, so a tool can say what the clip does to the pitch (Game/dev/pitch_budget.gd).
 var clipped_force_world: Vector3 = Vector3.ZERO
 var clipped_torque_world: Vector3 = Vector3.ZERO
+## The anchor of the planing lift (step 4), reported for tests and tools: Savitsky's (1964)
+## lift normal to the bottom at the reference trim, wetted length-to-beam ratio and beam the
+## model used; that reference trim (degrees); and Savitsky's centre of pressure, metres
+## forward of the aft wet end. 0 when the hull is not planing.
+var savitsky_lift_n: float = 0.0
+var reference_trim_deg: float = 0.0
+var savitsky_cop_from_aft_m: float = 0.0
 ## The planing lift as a share of the whole weight of board, rig and sailor: what the trim
 ## press, the onset check and the HUD read. The fin and the rig carry part of the weight
 ## too, so a planing hull can show well under 1 here.
@@ -223,6 +231,7 @@ func copy_config() -> void:
 	_planing_buoyancy_factor = board.planing_buoyancy_factor
 	_bow_drag_cd = board.bow_drag_cd
 	_strip_suction_heads = board.strip_suction_heads
+	_push_at_savitsky_centre = board.push_at_savitsky_centre or board.strip_suction_heads > 0.0
 	_heel_as_rolled_plate = board.heel_as_rolled_plate
 	_density_kg_m3 = water.density_kg_m3
 	_kinematic_viscosity_m2_s = water.kinematic_viscosity_m2_s
@@ -455,11 +464,16 @@ func _apply_planing_lift(aft: float, forward: float, time_s: float, gravity_ms2:
 	#    The added mass the water gains between two neighbouring strips is shared by the two
 	#    (the front strip's gain from nothing is the spray root's, step 3), so the gains add
 	#    up to the added mass under the widest wet section, as the theory has it.
-	#    With the strips allowed to pull (BoardConfig.strip_suction_heads), the push where the
+	#    With the push placed at Savitsky's centre (BoardConfig.push_at_savitsky_centre, which
+	#    the pull, strip_suction_heads, implies), the push where the
 	#    water reaches further across the bottom (the spray root running obliquely across a
 	#    vee or a heeled bottom) joins the front root's push and is spread with it (step 5),
 	#    for the same reason the front root's is: the pressure peaks at the root and decays
-	#    aft (A-03). The convective part (dV/dx) stays on its strip.
+	#    aft (A-03). Like the front root's push it is not relieved at the transom: the relief
+	#    (A-02) is the convective part's, which stays on its strip, and where the whole push
+	#    acts is Savitsky's measured centre (step 6), which has the transom's fall-off in it.
+	#    (Relieving the oblique root left a heeled bottom on a short wet part at 0.85 of the
+	#    anchor's lift while the front root's was never relieved: hull_suction.md section 4.)
 	var strip_forces: PackedFloat64Array = PackedFloat64Array()
 	var oblique_root_force: float = 0.0
 	for k: int in STRIPS:
@@ -480,8 +494,8 @@ func _apply_planing_lift(aft: float, forward: float, time_s: float, gravity_ms2:
 			if gain > 0.0:
 				gained += 0.5 * u * v_into[k] * gain
 		var relief: float = clampf((x_k[k] - aft) / (TRANSOM_RELIEF_BEAMS * beam), 0.0, 1.0)
-		if _strip_suction_heads > 0.0:
-			oblique_root_force += gained * relief
+		if _push_at_savitsky_centre:
+			oblique_root_force += gained
 			strip_forces.append(force * relief)
 		else:
 			strip_forces.append((force + gained) * relief)
@@ -523,6 +537,8 @@ func _apply_planing_lift(aft: float, forward: float, time_s: float, gravity_ms2:
 	var cl_flat: float = 0.012 * pow(minf(tau_ref_deg, 15.0), 1.1) * sqrt(lift_lambda)
 	var cl_dynamic: float = maxf(cl_flat - 0.0065 * lift_deadrise_deg * pow(cl_flat, 0.6), 0.0)
 	var savitsky_lift: float = cl_dynamic * 0.5 * rho * u * u * beam * beam
+	savitsky_lift_n = savitsky_lift
+	reference_trim_deg = tau_ref_deg
 	# The slender-body total for the plate is the momentum flux of the water set moving
 	# under its widest wet section: the root's push, plus the push where the hull widens
 	# going aft (a nose), with nothing taken back where it narrows (the water lets go). So
@@ -543,6 +559,7 @@ func _apply_planing_lift(aft: float, forward: float, time_s: float, gravity_ms2:
 	#    of pressure (0.75 of the wet length from the aft end at speed) spreads it.
 	var cv: float = u / sqrt(gravity_ms2 * beam)
 	var cop_fraction: float = 0.75 - 1.0 / (5.21 * cv * cv / (lambda_ratio * lambda_ratio) + 2.39)
+	savitsky_cop_from_aft_m = cop_fraction * length
 	var spread: float = maxf(3.0 * (1.0 - cop_fraction) * length, strip_length)
 
 	# 6. What each strip may pull (BoardConfig.strip_suction_heads). The theory has the water
@@ -559,10 +576,12 @@ func _apply_planing_lift(aft: float, forward: float, time_s: float, gravity_ms2:
 			head_pa = rho * gravity_ms2 * maxf(_bottom_depth_at(x_k[k], wet_centres[k]), 0.0)
 		pull_max.append(_strip_suction_heads * head_pa * full_widths[k] * wet_fractions[k] * strip_length)
 	# With the strips allowed to pull, the strips on a rocker take back part of the root's
-	# push just behind it, and the push of the whole would sit behind Savitsky's centre. So the
-	# root's triangle is then spread so that the whole (the strips and the root) has its centre
-	# where Savitsky measured it: the same anchor as before, on the whole instead of the root.
-	if _strip_suction_heads > 0.0 and root_force > 1e-6:
+	# push just behind it, and the push of the whole would sit behind Savitsky's centre; with
+	# the clip, the oblique root's push on its forward strips put it ahead of it. So the root's
+	# triangle is then spread so that the whole (the strips and the root) has its centre where
+	# Savitsky measured it (BoardConfig.push_at_savitsky_centre, always on with the pull): the
+	# same anchor as before, on the whole instead of the root.
+	if _push_at_savitsky_centre and root_force > 1e-6:
 		spread = _spread_for_centroid(x_k, strip_forces, pull_max, three_d_factor, root_force, forward, aft + cop_fraction * length, strip_length, spread)
 	var weights: PackedFloat64Array = PackedFloat64Array()
 	var weight_sum: float = 0.0
@@ -1079,6 +1098,9 @@ func _clear() -> void:
 	planing_pull_n = 0.0
 	clipped_force_world = Vector3.ZERO
 	clipped_torque_world = Vector3.ZERO
+	savitsky_lift_n = 0.0
+	reference_trim_deg = 0.0
+	savitsky_cop_from_aft_m = 0.0
 	planing_drag_n = 0.0
 	bow_drag_n = 0.0
 	rail_grip_n = 0.0

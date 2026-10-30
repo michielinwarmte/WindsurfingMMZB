@@ -147,6 +147,16 @@ const ONE_FOOT_M: float = 0.3048
 ## measured it (HullModel step 5). Only 0, 1 and "no bound" have a source; anything in between
 ## is a fit. Off until Michiel decides (PHYSICS_SPEC.md section 5, A-05).
 @export var strip_suction_heads: float = 0.0
+## Where the whole of the water's push sits (PH28, hull_suction.md section 3). The root's push
+## is spread behind the spray root as a triangle (HullModel step 5, A-03) so that its centre is
+## Savitsky's (1964) measured centre of pressure; the push where the water reaches further
+## across a vee or a heeled bottom (the oblique spray root) sat on its own strips, forward of
+## it, so the push of the whole was 0.1 to 0.25 m forward of Savitsky's centre on the old
+## board level and on the JP SL 72. true = that oblique push joins the root's, unrelieved, and
+## the triangle is solved so that the whole push (strips and root) has Savitsky's centre
+## (HullModel._spread_for_centroid). Always on with strip_suction_heads above 0. Off by
+## default: measured in the reach check, for Michiel.
+@export var push_at_savitsky_centre: bool = false
 ## The heeled bottom's lift as NACA TN 4187 measured it on a rolled flat plate (Savitsky,
 ## Prowse and Lueders 1958; PH28, hull_suction.md). 0 = as before: Savitsky's lift at the low
 ## rail's wet length, scaled by how much of the full width the strips wet, which at a short
