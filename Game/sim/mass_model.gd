@@ -152,6 +152,18 @@ func feet_position_body(stance: float, lean: float, rail_press: float = 0.0, tri
 	return Vector3(feet_x, 0.5 * _board_thickness_m, feet_z)
 
 
+## The centre of mass's distance from the feet for a lean and a hang-back, in the posture's own
+## geometry: across (the lean, less the feet where that lean puts them on the rail), up (the
+## standing height less the lean's drop, above the deck) and aft (the hang-back). The one-body
+## limit measures this (WindsurferSim._keep_within_one_body).
+func com_from_feet_m(lean: float, hang_back_m: float) -> float:
+	lean = clampf(lean, -1.0, 1.0)
+	var feet: Vector3 = feet_position_body(1.0, lean)
+	var across: float = lean * _lean_max_m - feet.x
+	var up: float = _com_height_m - absf(lean) * _lean_height_drop_m - feet.y
+	return Vector3(across, up, hang_back_m).length()
+
+
 ## Maximum righting moment the sailor can produce by leaning: weight times full lean.
 func max_righting_moment_nm(gravity_ms2: float) -> float:
 	return sailor.mass_kg * gravity_ms2 * sailor.lean_max_m

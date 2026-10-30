@@ -14,6 +14,11 @@ extends Resource
 ## Radius and height of the cylinder that stands in for the sailor's own inertia.
 @export var torso_radius_m: float = 0.2
 @export var height_m: float = 1.75
+## How far the centre of mass is from the feet along the body, as a share of the height: 0.57
+## (Gourlay & Martellotta 2011: 1.03 m on a 1.80 m sailor; Winter 2009: 0.55 to 0.57 of the
+## height). One body is as far as the hike and the hang-back together can put the centre of
+## mass from the feet (WindsurferSim._keep_within_one_body, PH28).
+@export var body_reach_share: float = 0.57
 
 @export_group("Stance (fore and aft)")
 ## Where the sailor's weight is at rest and at low speed, in the body frame (z aft): the
@@ -115,10 +120,14 @@ extends Resource
 ## Hanging back against the sail's pull: the boom pulls the sailor forward, and the sailor
 ## leans back until their weight's moment about the feet balances the pull's (the same
 ## balance as the sideways lean, fore and aft). The furthest the weight can hang back
-## behind the feet: a sailor hanging back hard against a strong pull is nearly horizontal
-## (at 0.5 m the drive of a powered sail at the hump could not be balanced, and the rest
-## went bow-down into the deck: the board planed late).
-@export var hang_back_max_m: float = 0.8
+## behind the feet: the hips 0.2 to 0.4 m behind the back foot in the photos of riders at
+## full power (Documentation/reports/ph28/sailor_controls_plan.md section 2, an estimate;
+## Max, 30 October 2026, answer 4: "estimate in photos"), and together with the hike never
+## further than one body from the feet (body_reach_share). PH28; 0.8 before: a sailor nearly
+## horizontal (at 0.5 m the drive of a powered sail at the hump could not be balanced, and the
+## rest went bow-down into the deck: the board planed late; measured again with 0.4 and the
+## one-body limit in Documentation/reports/ph28/rider_feet_body.md).
+@export var hang_back_max_m: float = 0.4
 
 @export_group("Legs")
 ## The legs are the sailor's suspension. A person standing still on a moving floor behaves
@@ -251,17 +260,23 @@ extends Resource
 @export_group("Lean (sideways)")
 ## Sideways distance of the sailor's centre of mass from the centreline at full lean:
 ## hooked in with the feet on the windward rail (feet_rail_m) and the body in a full hike,
-## the body 30 degrees above the water. Gourlay & Martellotta (2011, RS:X, section 6.1): a
-## sailor keeps the body "at least 20 to 30 degrees above horizontal", the centre of mass
-## 1.03 m from the feet (0.57 of a 1.80 m body), so 0.89 m outboard of the feet at 30
-## degrees: 1.11 m from the centreline. (PH16, Max: "the sailor is too weak". U1.2 had set a
-## 45 degree stance, 0.88 m, to keep a short harness line under the boom; with it the sailor
-## could not hold an 8.0 m2 sheeted in at 15 kt and eased it off in a bear-away. The short
-## line against this hike is the open question of the hooked-in posture.)
-@export var lean_max_m: float = 1.11
-## The centre of mass drops by this much at full lean: the same 30 degree hike puts it
-## 1.03 x sin 30 = 0.52 m above the feet, 0.48 m below standing.
-@export var lean_height_drop_m: float = 0.48
+## one body's reach from the feet (body_reach_share of the height: 0.9975 m on this 1.75 m
+## sailor) with the hips about 0.5 m above the deck, as the photos of Max and of slalom
+## riders at full power read (Documentation/reports/ph28/sailor_controls_plan.md section 2,
+## estimates: 0.45 to 0.6 m; Max, 30 October 2026, answer 4: "estimate in photos"). That is
+## the body 30 degrees above the water, Gourlay & Martellotta's full hike (2011, RS:X, section
+## 6.1: "at least 20 to 30 degrees above horizontal"; the photos: 30 to 45, 35 typical), and
+## the centre of mass 0.863 m outboard of the feet: 1.08 m from the centreline. (PH28; until
+## then 1.11 m, their 1.80 m body's 1.03 m on this 1.75 m sailor. PH16, Max: "the sailor is
+## too weak". U1.2 had set a 45 degree stance, 0.88 m, to keep a short harness line under the
+## boom; with it the sailor could not hold an 8.0 m2 sheeted in at 15 kt and eased it off in
+## a bear-away.)
+@export var lean_max_m: float = 1.08
+## The centre of mass drops by this much at full lean: the hips about 0.5 m above the deck
+## (the photos, an estimate), the deck 0.065 m above the board origin on the JP SL 72 (half
+## its thickness), the centre of mass com_height_m 1.0 m up standing: 1.0 - 0.5 - 0.065 =
+## 0.435 m. (PH28; until then 0.48 from the 1.80 m body, the hips 0.42 m above the deck.)
+@export var lean_height_drop_m: float = 0.435
 ## How fast the sailor means to change the lean (fraction of full lean per second): the
 ## hips move about a metre a second. The body follows as the legs, the ankles and the
 ## pull in the hands let it (it is an inverted pendulum on the feet).

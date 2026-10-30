@@ -220,6 +220,8 @@ var _fin_load_twa_fade_deg: float = 0.0
 var _fin_load_twa_max_deg: float = 0.0
 var _hand_grip_m: float = 0.0
 var _hang_back_max_m: float = 0.0
+var _body_reach_share: float = 0.0
+var _height_m: float = 0.0
 var _harness_hold_max_n: float = 0.0
 var _harness_line_damping_ns_m: float = 0.0
 var _harness_line_stiffness_n_m: float = 0.0
@@ -493,6 +495,8 @@ func _copy_configs() -> void:
 	_fin_load_twa_max_deg = sailor_config.fin_load_twa_max_deg
 	_hand_grip_m = sailor_config.hand_grip_m
 	_hang_back_max_m = sailor_config.hang_back_max_m
+	_body_reach_share = sailor_config.body_reach_share
+	_height_m = sailor_config.height_m
 	_harness_hold_max_n = sailor_config.harness_hold_max_n
 	_harness_line_damping_ns_m = sailor_config.harness_line_damping_ns_m
 	_harness_line_stiffness_n_m = sailor_config.harness_line_stiffness_n_m
@@ -1115,11 +1119,41 @@ func _update_sailor(dt: float) -> void:
 		hang_target = clampf(hang_target - _pitch_reflex_m_per_rad_s * pitch_rate, -0.3, _hang_back_max_m)
 	if not _controls_freeze_fore_aft:
 		hang_back_m = move_toward(hang_back_m, hang_target, _lean_rate_per_s * _hang_back_max_m * dt)
+	# One body: the hike and the hang-back together reach no further than the body is long.
+	_keep_within_one_body()
 
 	# The posture: where the body's centre is held and where the feet stand. The rig's own
 	# mass leans with the rig.
 	_rig_lean_now_rad = _rig_lean_rad()
 	_set_posture()
+
+
+## One body (PH28, P2.1): the centre of mass is one body's reach from the feet
+## (body_reach_share of the height: 0.57, Gourlay & Martellotta 2011) and no further. A body
+## hiked out and hanging back at the same time shares that reach between the two: when the
+## hike and the hang-back the balance asks for would put the centre of mass further from the
+## feet than the body is long, both are scaled down by the same share, so the body leans the
+## way the two pulls ask, as far as it reaches. (Until PH28 the hike and the hang-back were
+## added as if each had the body's whole reach: at 24 kt on the broad reach the centre of mass
+## sat 0.89 m out, 0.51 m back and 0.42 m up, 1.11 m from the feet and 0.24 m behind the
+## tail: Documentation/reports/ph28/hull_balance.md, section 12.)
+func _keep_within_one_body() -> void:
+	var reach: float = _body_reach_share * _height_m
+	if mass_model.com_from_feet_m(lean, hang_back_m) <= reach:
+		return
+	# The largest share of the hike and the hang-back that keeps the centre of mass within
+	# reach, by bisection (the distance is not simply monotonic in the share: the feet step out
+	# to the rail and the body drops as the hike grows); 12 steps place it within 0.03 %.
+	var lo: float = 0.0
+	var hi: float = 1.0
+	for i: int in 12:
+		var mid: float = 0.5 * (lo + hi)
+		if mass_model.com_from_feet_m(lean * mid, hang_back_m * mid) <= reach:
+			lo = mid
+		else:
+			hi = mid
+	lean *= lo
+	hang_back_m *= lo
 
 
 ## The feet's pressure stays between the footstraps (BoardConfig.back_strap_from_tail_m and

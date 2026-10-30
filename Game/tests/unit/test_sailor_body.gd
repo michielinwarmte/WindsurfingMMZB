@@ -222,3 +222,45 @@ func test_the_hull_is_kicked_but_the_body_is_not() -> void:
 	assert_lt(body_peak_ms, 0.6, "the body is not thrown by the hull's 0.5 m/s jolt")
 	assert_gt(body_peak_ms, 0.05, "but it does feel it")
 
+
+## PH28, P2.1: one body. The centre of mass is never further from the feet than the body reaches
+## (body_reach_share of the height), however far the hike and the hang-back ask; when both ask
+## for more than one body, both give by the same share.
+func test_the_centre_of_mass_is_never_further_from_the_feet_than_one_body() -> void:
+	var sim: WindsurferSim = _sim(0.0)
+	var reach: float = sim.sailor_config.body_reach_share * sim.sailor_config.height_m
+	assert_almost_eq(reach, 0.9975, 1e-3, "0.57 of 1.75 m (Gourlay & Martellotta: 1.03 m on 1.80 m)")
+	# In the straps, the body there too (body_stance follows stance at a walking pace in the sim).
+	sim.stance = 1.0
+	sim.body_stance = 1.0
+	for lean_asked: float in [0.0, 0.3, 0.6, 0.8, 1.0, -1.0]:
+		for hang_asked: float in [0.0, 0.2, 0.4, 0.8, -0.3]:
+			sim.lean = lean_asked
+			sim.hang_back_m = hang_asked
+			sim._keep_within_one_body()
+			var from_feet: float = sim.mass_model.com_from_feet_m(sim.lean, sim.hang_back_m)
+			assert_lte(from_feet, reach + 1e-6, "lean %.1f, hang-back %.1f m asked: %.3f m from the feet" % [lean_asked, hang_asked, from_feet])
+			assert_almost_eq(sim.hang_back_m * lean_asked, sim.lean * hang_asked, 1e-6, "both give by the same share")
+	# The full hike alone is one body at 30 degrees: the hips 0.5 m above the deck (the photos),
+	# 0.86 m out from the feet on the rail.
+	sim.lean = 1.0
+	sim.hang_back_m = 0.0
+	sim._keep_within_one_body()
+	assert_almost_eq(sim.lean, 1.0, 1e-6, "the full hike alone fits")
+	assert_almost_eq(sim.mass_model.com_from_feet_m(1.0, 0.0), reach, 0.01, "and is about one body")
+	# The posture itself, with the body placed where it says: the same distance from the feet.
+	sim._set_posture()
+	sim.sailor.place(sim.body.point_world(sim.posture_target_body), Vector3.ZERO)
+	sim._set_posture()
+	var posture_from_feet: float = (sim.mass_model.sailor_position_body - sim.feet_body).length()
+	assert_almost_eq(posture_from_feet, sim.mass_model.com_from_feet_m(1.0, 0.0), 1e-6, "the posture measures the same")
+	assert_almost_eq(sim.mass_model.sailor_position_body.y - sim.feet_body.y, 0.5, 0.01, "the hips 0.5 m above the deck at full power")
+	# Hanging back 0.4 m (the photos' most) at full hike asks for more than one body: both give.
+	sim.lean = 1.0
+	sim.hang_back_m = sim.sailor_config.hang_back_max_m
+	sim._keep_within_one_body()
+	assert_between(sim.lean, 0.85, 0.95, "the hike gives about a tenth")
+	assert_almost_eq(sim.hang_back_m / sim.sailor_config.hang_back_max_m, sim.lean, 1e-6, "and the hang-back the same share")
+	assert_almost_eq(sim.mass_model.com_from_feet_m(sim.lean, sim.hang_back_m), reach, 0.002, "to the body's reach")
+	gut.p("one body: full hike with %.2f m of hang-back asked -> lean %.3f (%.3f m out from the feet), hang-back %.3f m" % [
+		sim.sailor_config.hang_back_max_m, sim.lean, sim.lean * sim.sailor_config.lean_max_m - sim.sailor_config.feet_rail_m, sim.hang_back_m])
