@@ -231,6 +231,8 @@ var _feet_roll_stiffness_nm_per_rad: float = 0.0
 var _fin_load_bank_deg: float = 0.0
 var _fin_load_twa_fade_deg: float = 0.0
 var _fin_load_twa_max_deg: float = 0.0
+var _fin_load_bank_upwind_deg: float = 0.0
+var _fin_load_twa_upwind_deg: float = 0.0
 var _hand_grip_m: float = 0.0
 var _hang_back_max_m: float = 0.0
 var _body_reach_share: float = 0.0
@@ -514,6 +516,8 @@ func _copy_configs() -> void:
 	_fin_load_bank_deg = sailor_config.fin_load_bank_deg
 	_fin_load_twa_fade_deg = sailor_config.fin_load_twa_fade_deg
 	_fin_load_twa_max_deg = sailor_config.fin_load_twa_max_deg
+	_fin_load_bank_upwind_deg = sailor_config.fin_load_bank_upwind_deg
+	_fin_load_twa_upwind_deg = sailor_config.fin_load_twa_upwind_deg
 	_hand_grip_m = sailor_config.hand_grip_m
 	_hang_back_max_m = sailor_config.hang_back_max_m
 	_body_reach_share = sailor_config.body_reach_share
@@ -794,14 +798,14 @@ func _bank_for_turn(lean_asked: float, forward_speed: float) -> float:
 ## a target beyond which only winds up. _apply_leg_forces keeps what the feet pass within
 ## feet_moment_max_nm, so a board the feet cannot hold heels further and is not held. The
 ## lean is positive with the weight out to starboard, so the bank is to port: negative.
-## The bank wanted depends on the point of sail (U2, _rail_share_by_point_of_sail): the
-## full fin_load_bank_deg across and toward the wind, a flat board off it, which the feet
+## The bank wanted depends on the point of sail (U2 and PH28, _rail_bank_deg_by_point_of_sail):
+## more toward the wind, fin_load_bank_deg across it, a flat board off it, which the feet
 ## then hold flat against the fin's roll the same way.
 func _fin_load_bank_rad(asked: float) -> float:
 	var in_the_straps: float = clampf(stance, 0.0, 1.0)
 	var not_turning: float = 1.0 - clampf(absf(asked), 0.0, 1.0)
 	var planing_stance: float = absf(clampf(lean, -1.0, 1.0)) * in_the_straps * not_turning
-	var aim: float = deg_to_rad(_fin_load_bank_deg) * planing_stance * _rail_share_by_point_of_sail()
+	var aim: float = deg_to_rad(_rail_bank_deg_by_point_of_sail()) * planing_stance
 	var feet_reach: float = 2.0 * _feet_moment_max_nm / _feet_roll_stiffness_nm_per_rad * planing_stance
 	return -signf(lean) * clampf(aim - _felt_heel_beyond_rad, aim - feet_reach, aim)
 
@@ -819,6 +823,19 @@ func _rail_share_by_point_of_sail() -> float:
 	if fade <= 0.0:
 		return 1.0 if twa_deg < flat_from else 0.0
 	return clampf((flat_from - twa_deg) / fade, 0.0, 1.0)
+
+
+## The leeward rail's bank wanted on this course, in degrees (PH28, Max's answer 3): toward
+## the wind fin_load_bank_upwind_deg up to fin_load_twa_upwind_deg, falling linearly to
+## fin_load_bank_deg at a beam reach (90 degrees: the wind across the board); from there
+## fin_load_bank_deg faded off the wind by _rail_share_by_point_of_sail (flat downwind).
+func _rail_bank_deg_by_point_of_sail() -> float:
+	var across_deg: float = _fin_load_bank_deg * _rail_share_by_point_of_sail()
+	if _fin_load_bank_upwind_deg <= 0.0:
+		return across_deg
+	var twa_deg: float = absf(rad_to_deg(body.wind_angle_rad(_felt_true_wind_from())))
+	var toward_the_wind: float = clampf((90.0 - twa_deg) / maxf(90.0 - _fin_load_twa_upwind_deg, 1.0), 0.0, 1.0)
+	return lerpf(across_deg, _fin_load_bank_upwind_deg, toward_the_wind)
 
 
 ## Where the true wind comes from as the sailor feels it: the air at the sail on the last

@@ -357,7 +357,8 @@ extends Resource
 ## of the 18 and 24 kt beam reaches by about 0.3 m while they stay steady; flat (0) is
 ## shorter still on the beam reaches, but slow and long at 12 kt and on the close reaches,
 ## and the 24 kt broad reach bounces flat at every trim target from 1.5 to 2.5 degrees.
-## Max will say what he does on a beam reach.
+## Max will say what he does on a beam reach. Max (30 October 2026, answer 3): "crosswind a
+## little bit, 1 to 3 degrees"; 2 is the middle (PH28; the value U2 had measured stays).
 @export var fin_load_bank_deg: float = 2.0
 ## The bank by point of sail (U2): a sailor rails the board to load the fin across and
 ## toward the wind and keeps it flat off the wind (windsurfing instruction: railing
@@ -370,8 +371,17 @@ extends Resource
 ## 24 kt broad reach bounces (pitch SD 0.35 degrees) or falls, so the default keeps the
 ## bank to a run: full to 160 degrees, flat at 180 (an estimate; on a run the sailor
 ## stands over the centreline anyway). 120 is the setting to try the instruction's rule.
+## Max (30 October 2026): a 72 cm board sails flat downwind (PH28: sailor_default.tres
+## fades the bank from 100 degrees to none at 135, the reach check's broad reach).
 @export var fin_load_twa_max_deg: float = 180.0
 @export var fin_load_twa_fade_deg: float = 20.0
+## Toward the wind the leeward rail goes down further (PH28; Max, 30 October 2026, answer
+## 3: "crosswind a little bit, 1 to 3 degrees; upwind up to 10, I think", Max's estimate):
+## this many degrees up to fin_load_twa_upwind_deg, falling linearly to fin_load_bank_deg at
+## a beam reach (the wind across the board, 90 degrees), and fin_load_bank_deg from there
+## (WindsurferSim._rail_bank_deg_by_point_of_sail). 0 = no more than fin_load_bank_deg.
+@export var fin_load_bank_upwind_deg: float = 0.0
+@export var fin_load_twa_upwind_deg: float = 60.0
 ## The sailor leans against the pull in the hands: this many times the lean that balances
 ## the hands' moment about the feet with the body's weight (1 = exactly in balance). The
 ## posture is held in the apparent gravity (gravity less the body's own felt acceleration,
