@@ -36,9 +36,33 @@ func test_board_has_the_configured_size() -> void:
 func test_board_points_its_bow_to_minus_z() -> void:
 	var hull: PackedVector3Array = _points(BOARD_PATH, "Hull")
 	var half: float = 0.5 * board_config.length_m
-	# The nose rocker lifts the bottom near the bow; the tail is squared off and wide.
+	# The nose rocker lifts the bottom near the bow; the tail is squared off (a slalom tail is
+	# narrow, but it ends in a transom), the nose closes to a point.
 	assert_gt(_lowest_y(hull, -half, -half + 0.3), _lowest_y(hull, half - 0.3, half) + 0.03, "The nose (at -z) rises")
-	assert_gt(_widest_x(hull, half - 0.1, half), _widest_x(hull, -half, -half + 0.1) + 0.04, "The tail (at +z) is wider than the nose")
+	assert_gt(_widest_x(hull, half - 0.005, half), 0.05, "The tail (at +z) ends in a transom, at least 10 cm wide")
+	assert_lt(_widest_x(hull, -half, -half + 0.005), 0.04, "The nose (at -z) closes to a point, under 8 cm wide over its last 5 mm")
+
+
+func test_footstraps_stand_where_they_are_configured() -> void:
+	# Max's Patrik 115 (BoardConfig): the middle of each back strap over the fin box's front
+	# screw, the front straps 0.59 m ahead; 0.15 and 0.25 m out from the centreline.
+	assert_eq(board_config.back_strap_from_tail_m, board_config.fin_box_front_screw_from_tail_m, "The back straps' middle over the fin box's front screw")
+	var straps: PackedVector3Array = _points(BOARD_PATH, "Footstraps")
+	var half: float = 0.5 * board_config.length_m
+	var middle_z: float = half - 0.5 * (board_config.back_strap_from_tail_m + board_config.front_strap_from_tail_m)
+	for strap: Array in [[1.0, board_config.back_strap_from_tail_m, board_config.back_strap_out_m],
+			[-1.0, board_config.back_strap_from_tail_m, board_config.back_strap_out_m],
+			[1.0, board_config.front_strap_from_tail_m, board_config.front_strap_out_m],
+			[-1.0, board_config.front_strap_from_tail_m, board_config.front_strap_out_m]]:
+		var back: bool = strap[1] == board_config.back_strap_from_tail_m
+		var mine: PackedVector3Array = PackedVector3Array()
+		for p: Vector3 in straps:
+			if signf(p.x) == strap[0] and (p.z > middle_z) == back:
+				mine.append(p)
+		var box: AABB = _bounds(mine)
+		var centre: Vector3 = box.get_center()
+		assert_almost_eq(half - centre.z, strap[1], 0.01, "A strap's middle %.3f m from the tail" % strap[1])
+		assert_almost_eq(absf(centre.x), strap[2], 0.01, "and %.2f m out" % strap[2])
 
 
 func test_deck_is_at_the_mast_foot_height() -> void:

@@ -97,6 +97,18 @@ const ONE_FOOT_M: float = 0.3048
 ## (the press reaches as far as SailorConfig.trim_press_max_m, as before).
 @export var back_strap_from_tail_m: float = 0.0
 @export var front_strap_from_tail_m: float = 0.0
+## The rest of the board's layout, for its 3D model (tools/blender/build_rig_models.py; the
+## physics' feet across are SailorConfig.feet_rail_m, its mast foot SailConfig.mast_foot_local).
+## Max's Patrik 115 (30 October 2026): the middle of each back strap 0.15 m out from the
+## centreline (30 cm apart), of each front strap 0.25 m (50 cm apart); the fin box's two screws
+## on the deck 0.12 and 0.235 m from the tail (the back straps' middle over the front screw); the
+## mast track from 1.245 to 1.405 m from the tail.
+@export var back_strap_out_m: float = 0.0
+@export var front_strap_out_m: float = 0.0
+@export var fin_box_back_screw_from_tail_m: float = 0.0
+@export var fin_box_front_screw_from_tail_m: float = 0.0
+@export var mast_track_back_from_tail_m: float = 0.0
+@export var mast_track_front_from_tail_m: float = 0.0
 ## The unsteady lift factor of the spray root running forward along a sinking hull (the
 ## slamming part of planing, section 5) is held at most at this: a flat bottom meeting
 ## rising water at a small angle would otherwise see an unbounded root speed.

@@ -9,7 +9,7 @@ It writes into Game/assets/models/ (one .glb file per part, so each part can be 
 its own; RigVisuals in Game/windsurfer/rig_visuals.gd puts them together):
 
     board.glb   The board: "Hull" (with the deck, the deck pad, the bow accent and the
-                coloured bottom as materials), "Footstraps", "MastTrack". Origin: the centre
+                coloured bottom as materials), "Footstraps", "FinBox", "MastTrack". Origin: the centre
                 of the board at mid-thickness, where the simulation has it. The bow points to
                 Godot -Z, the deck up (+Y): the deck is at y = +thickness/2 at the mast foot.
     fin.glb     "Fin": a swept fin with a foil section. Origin: the fin root
@@ -82,6 +82,11 @@ BOARD = read_config("board_default.tres", {
     "hard_rail_to_m": 1.2, "soft_rail_from_m": 2.0,
     "nose_rocker_m": 0.08, "nose_rocker_length_m": 0.9,
     "tail_rocker_m": 0.01, "tail_rocker_length_m": 0.35,
+    # The layout (BoardConfig; Max's Patrik 115 for the default board).
+    "back_strap_from_tail_m": 0.0, "front_strap_from_tail_m": 0.0,
+    "back_strap_out_m": 0.0, "front_strap_out_m": 0.0,
+    "fin_box_back_screw_from_tail_m": 0.0, "fin_box_front_screw_from_tail_m": 0.0,
+    "mast_track_back_from_tail_m": 0.0, "mast_track_front_from_tail_m": 0.0,
 })
 ONE_FOOT_M = 0.3048  # where a shaper measures the nose and tail widths (BoardConfig.ONE_FOOT_M)
 SAIL = read_config("sail_default.tres", {
@@ -342,9 +347,55 @@ BOARD_HALF_W = 0.5 * BOARD["width_m"]
 BOARD_THICK = BOARD["thickness_m"]
 MAST_FOOT = np.array(SAIL["mast_foot_local"], dtype=float)
 
+
+def pchip(xs, ys, x: float) -> float:
+    """A smooth curve through the points that never overshoots them (monotone cubic
+    Hermite, Fritsch and Carlson): a traced outline stays inside its own measurements."""
+    xs, ys = np.asarray(xs, dtype=float), np.asarray(ys, dtype=float)
+    if x <= xs[0]:
+        return float(ys[0])
+    if x >= xs[-1]:
+        return float(ys[-1])
+    h = np.diff(xs)
+    delta = np.diff(ys) / h
+    slopes = np.zeros_like(ys)
+    for i in range(1, len(xs) - 1):
+        if delta[i - 1] * delta[i] > 0:
+            w1, w2 = 2 * h[i] + h[i - 1], h[i] + 2 * h[i - 1]
+            slopes[i] = (w1 + w2) / (w1 / delta[i - 1] + w2 / delta[i])
+    slopes[0], slopes[-1] = delta[0], delta[-1]
+    i = int(np.searchsorted(xs, x) - 1)
+    s = (x - xs[i]) / h[i]
+    h00, h10, h01, h11 = 2 * s ** 3 - 3 * s ** 2 + 1, s ** 3 - 2 * s ** 2 + s, -2 * s ** 3 + 3 * s ** 2, s ** 3 - s ** 2
+    return float(h00 * ys[i] + h10 * h[i] * slopes[i] + h01 * ys[i + 1] + h11 * h[i] * slopes[i + 1])
+
+
+# The JP SL 72 (JP Australia's Slalom, 228 x 72 cm), traced from JP's product photo (the bottom
+# view and the side view; Documentation/reports/ph28/hull_balance.md, sections 6 and 7) and
+# scaled to the configured length and width. Full width, metres from the tail. The transom's
+# width (0.20 m) is not in the trace (the photo shows the tail's rounded corners only); the
+# widest stretch is within 1 % of the widest from 0.48 to 0.60 of the length. The nose closes from
+# the traced width one foot off it (0.56 m) to a rounded point; its shape there is drawn, not traced.
+JP_OUTLINE = [(0.0, 0.20), (0.1, 0.29), (0.2, 0.41), (0.3, 0.49), (0.5, 0.59), (0.7, 0.66),
+              (1.094, 0.716), (1.14, 0.72), (1.368, 0.716), (1.975, 0.56),
+              (2.08, 0.50), (2.16, 0.42), (2.22, 0.31), (2.255, 0.20), (2.272, 0.11), (2.28, 0.0)]
+JP_LENGTH, JP_WIDTH = 2.28, 0.72
+# The nose rocker beyond 1.8 m from the tail, traced (the rise of the bottom above the flat
+# tail): the nose is higher than the physics' parabola, which was fitted from 1.0 to 1.9 m where
+# the board meets the water (the model keeps the parabola there).
+JP_NOSE_ROCKER = [(2.0, 0.093), (2.2, 0.156), (2.28, 0.208)]
+NOSE_TRACE_FROM = 1.8
+# JP's tail cut-outs ("the Cut-Out configuration reduces the outline width and the wetted
+# surface of the bottom"): the rail is stepped in under the deck's outline over the tail. JP
+# does not publish the size; an estimate (the physics' cut-outs, BoardConfig.cutout_*, are off).
+CUTOUT_LENGTH = 0.40
+CUTOUT_DEPTH = 0.02
+
 # Where the deck pad and the bow colour start and end, metres forward of the transom.
-PAD_START_T = 0.08
-PAD_END_T = BOARD_L / 2 - MAST_FOOT[2] - 0.20  # 0.20 m behind the mast foot
+MAST_TRACK_BACK = BOARD["mast_track_back_from_tail_m"] or (BOARD_L / 2 - MAST_FOOT[2] - 0.05)
+MAST_TRACK_FRONT = BOARD["mast_track_front_from_tail_m"] or (BOARD_L / 2 - MAST_FOOT[2] + 0.12)
+PAD_START_T = 0.05
+PAD_END_T = MAST_TRACK_BACK - 0.06  # the pad stops just behind the mast track
 ACCENT_START_T = 0.82 * BOARD_L
 RING_POINTS = 48
 
@@ -354,8 +405,8 @@ def board_z(t: float) -> float:
     return 0.5 * BOARD_L - t
 
 
-def bottom_rise(t: float) -> float:
-    """The rocker: the same formula as BoardConfig.bottom_rise_m."""
+def physics_bottom_rise(t: float) -> float:
+    """The physics' rocker, the same formula as BoardConfig.bottom_rise_m."""
     if t < BOARD["tail_rocker_length_m"]:
         a = (BOARD["tail_rocker_length_m"] - t) / BOARD["tail_rocker_length_m"]
         return BOARD["tail_rocker_m"] * a * a
@@ -366,35 +417,25 @@ def bottom_rise(t: float) -> float:
     return 0.0
 
 
+def bottom_rise(t: float) -> float:
+    """The rocker: the physics' where the board meets the water, JP's traced nose beyond."""
+    if t <= NOSE_TRACE_FROM:
+        return physics_bottom_rise(t)
+    scale = BOARD_L / JP_LENGTH
+    xs = [NOSE_TRACE_FROM] + [x * scale for x, _ in JP_NOSE_ROCKER]
+    ys = [physics_bottom_rise(NOSE_TRACE_FROM)] + [y for _, y in JP_NOSE_ROCKER]
+    return pchip(xs, ys, t)
+
+
 def outline_width(t: float) -> float:
-    """The physics' outline, the same formula as BoardConfig.width_at: a parabola from the
-    widest point to the widths one foot off the tail and the nose, straight on along its
-    tangent from there to the tips."""
-    widest = BOARD["widest_point_from_tail_m"]
-    if t <= widest:
-        reference_width, reference_distance, distance = BOARD["tail_width_m"], widest - ONE_FOOT_M, widest - t
-    else:
-        reference_width, reference_distance, distance = BOARD["nose_width_m"], BOARD_L - ONE_FOOT_M - widest, t - widest
-    reference_distance = max(reference_distance, 0.01)
-    narrowing = BOARD["width_m"] - reference_width
-    if distance <= reference_distance:
-        return BOARD["width_m"] - narrowing * (distance / reference_distance) ** 2
-    slope = 2.0 * narrowing / reference_distance
-    return max(reference_width - slope * (distance - reference_distance), 0.0)
+    """JP's traced outline, scaled to the configured length and width."""
+    sx, sw = BOARD_L / JP_LENGTH, BOARD["width_m"] / JP_WIDTH
+    return sw * pchip([x * sx for x, _ in JP_OUTLINE], [w for _, w in JP_OUTLINE], t)
 
 
 def half_width(t: float) -> float:
-    """The outline seen from above: the physics' outline (a square pin tail, widest at
-    widest_point_from_tail_m), with the tail's corners rounded and the nose closing to a
-    rounded point over its last foot. (The physics runs the outline straight on from the
-    one-foot point to a 0.285 m nose tip, its coarsest row; a real nose curves to a point
-    there, out of the water when planing. The cap times the physics' width is 1, with no
-    kink, at the one-foot point and 0 at the tip.)"""
+    """The outline seen from above, with the tail's corners rounded."""
     w = 0.5 * outline_width(t)
-    cap_start = BOARD_L - ONE_FOOT_M
-    if t > cap_start:
-        a = (t - cap_start) / ONE_FOOT_M
-        w *= max(0.0, 1.0 - a * a)
     corner = 0.04
     if t < corner:
         w = w - corner + math.sqrt(max(0.0, corner * corner - (corner - t) ** 2))
@@ -429,6 +470,13 @@ def bottom_exponent(t: float) -> float:
     return 6.0 - 3.0 * a
 
 
+def cutout_inset(t: float) -> float:
+    """How far the bottom's edge is stepped in under the deck's outline (the tail cut-outs)."""
+    if t >= CUTOUT_LENGTH:
+        return 0.0
+    return CUTOUT_DEPTH * (1.0 - t / CUTOUT_LENGTH) ** 0.5
+
+
 DECK_EXPONENT = 2.6
 RAIL_FRACTION = 0.35  # the rail line (the widest point of a cross-section), up from the bottom
 
@@ -452,27 +500,29 @@ def deck_y(x: float, t: float) -> float:
 def hull_ring_points(t: float) -> list:
     """The cross-section as RING_POINTS points: a superellipse, domed on the deck and flat
     with a tighter edge on the bottom. Point 0 is the starboard rail, a quarter round is the
-    deck centre, half round the port rail, three quarters the bottom centre."""
+    deck centre, half round the port rail, three quarters the bottom centre. Over the tail the
+    bottom half is narrower than the deck by the cut-out's step."""
     w, y_bottom, y_rail, y_deck = section(t)
+    w_low = max(w - cutout_inset(t), 0.01)
     low = bottom_exponent(t)
     pts = []
     for k in range(RING_POINTS):
         a = 2 * math.pi * k / RING_POINTS
         c, s = math.cos(a), math.sin(a)
-        n = DECK_EXPONENT if s >= 0 else low
-        x = w * math.copysign(abs(c) ** (2 / n), c)
         if s >= 0:
-            y = y_rail + (y_deck - y_rail) * abs(s) ** (2 / n)
+            x = w * math.copysign(abs(c) ** (2 / DECK_EXPONENT), c)
+            y = y_rail + (y_deck - y_rail) * abs(s) ** (2 / DECK_EXPONENT)
         else:
-            y = y_rail - (y_rail - y_bottom) * abs(s) ** (2 / n)
+            x = w_low * math.copysign(abs(c) ** (2 / low), c)
+            y = y_rail - (y_rail - y_bottom) * abs(s) ** (2 / low)
         pts.append(vec(x, y, board_z(t)))
     return pts
 
 
 def board_stations() -> list:
-    special = [PAD_START_T, PAD_END_T, ACCENT_START_T]
+    special = [PAD_START_T, PAD_END_T, ACCENT_START_T, CUTOUT_LENGTH]
     tip = [BOARD_L - d for d in (0.03, 0.02, 0.013, 0.008, 0.004, 0.0015)]
-    stations = list(np.linspace(0.0, BOARD_L - 0.04, 96)) + special + tip
+    stations = list(np.linspace(0.0, BOARD_L - 0.04, 120)) + special + tip
     stations.sort()
     kept = []
     for t in stations:
@@ -512,47 +562,83 @@ def build_hull() -> bpy.types.Object:
     return b.build()
 
 
-FRONT_STRAP_T = BOARD_L / 2 - MAST_FOOT[2] - 0.34
-BACK_STRAP_T = 0.22 * BOARD_L
-STRAPS = [  # (x, t): two front straps either side, two back straps further out
-    (-0.17, FRONT_STRAP_T), (0.17, FRONT_STRAP_T),
-    (-0.21, BACK_STRAP_T), (0.21, BACK_STRAP_T),
-]
+# The footstraps: (across, from the tail, the angle of the strap's line to the board's, degrees,
+# + its front end turned toward the rail). Max's Patrik 115: the middle of each back strap over
+# the fin box's front screw, 0.15 m out; the front straps 0.825 m from the tail, 0.25 m out. The
+# heel is at the rail and the toes point inboard and forward, so a strap, which crosses the foot,
+# turns its front end out: about along the rail, which narrows fast toward the tail.
+BACK_STRAP_T = BOARD["back_strap_from_tail_m"] or 0.22 * BOARD_L
+FRONT_STRAP_T = BOARD["front_strap_from_tail_m"] or (BOARD_L / 2 - MAST_FOOT[2] - 0.34)
+BACK_STRAP_OUT = BOARD["back_strap_out_m"] or 0.15
+FRONT_STRAP_OUT = BOARD["front_strap_out_m"] or 0.17
+STRAPS = [(side * FRONT_STRAP_OUT, FRONT_STRAP_T, 10.0) for side in (-1.0, 1.0)] + \
+         [(side * BACK_STRAP_OUT, BACK_STRAP_T, 18.0) for side in (-1.0, 1.0)]
+STRAP_HALF_SPAN = 0.085  # half the distance between a strap's two screws
+STRAP_HEIGHT = 0.065
 
 
 def build_footstraps() -> bpy.types.Object:
-    """Padded arches over the deck, screwed down in front of and behind the foot."""
+    """Padded arches over the deck, screwed down in front of and behind the foot, each centred
+    on its configured place and turned by its angle."""
     b = MeshBuilder("Footstraps")
     profile = [(math.copysign(abs(c) ** 0.4, c), math.copysign(abs(s) ** 0.4, s)) for c, s in circle(16)]
-    half_span = 0.085
-    height = 0.065
-    for x, t in STRAPS:
-        base_y = deck_y(x, t)
+    for x, t, angle in STRAPS:
+        a = math.radians(angle)
+        outboard = math.copysign(1.0, x)
+        # Along the strap, toward the bow, turned so its front end points toward the rail.
+        forward = vec(outboard * math.sin(a), 0.0, -math.cos(a))
+        across = vec(math.cos(a), 0.0, outboard * math.sin(a))
+        centre = vec(x, 0.0, board_z(t))
         path = []
         scales = []
         for i in range(25):
             phi = math.radians(-12.0 + 204.0 * i / 24)
-            path.append(vec(x, base_y + height * math.sin(phi), board_z(t) - half_span * math.cos(phi)))
+            p = centre + forward * (STRAP_HALF_SPAN * math.cos(phi))
+            ground = deck_y(float(p[0]), BOARD_L / 2 - float(p[2]))
+            path.append(vec(p[0], ground + STRAP_HEIGHT * math.sin(phi), p[2]))
             pad = 0.5 + 0.5 * math.sin(max(0.0, min(math.pi, phi)))  # thicker padding on top
             scales.append((0.028, 0.006 + 0.007 * pad))
-        sweep(b, path, profile, scales, "strap", up_hint=vec(1, 0, 0))
+        sweep(b, path, profile, scales, "strap", up_hint=across)
         # The screw plugs at both ends.
         for end in (-1, 1):
-            z = board_z(t) + end * half_span
-            plug = [vec(x, base_y - 0.002, z), vec(x, base_y + 0.004, z)]
-            tube(b, plug, 0.014, "hardware", sides=10)
+            p = centre + forward * (end * STRAP_HALF_SPAN)
+            ground = deck_y(float(p[0]), BOARD_L / 2 - float(p[2]))
+            tube(b, [vec(p[0], ground - 0.002, p[2]), vec(p[0], ground + 0.004, p[2])], 0.014, "hardware", sides=10)
+    return b.build()
+
+
+def build_fin_box() -> bpy.types.Object:
+    """The fin box: its two screws on the deck (a Tuttle box is screwed from the deck), and the
+    box's slot in the bottom the fin's head sits in."""
+    b = MeshBuilder("FinBox")
+    back = BOARD["fin_box_back_screw_from_tail_m"] or 0.12
+    front = BOARD["fin_box_front_screw_from_tail_m"] or 0.235
+    for t in (back, front):
+        ground = deck_y(0.0, t)
+        tube(b, [vec(0, ground - 0.002, board_z(t)), vec(0, ground + 0.003, board_z(t))], 0.009, "metal", sides=12)
+    # The slot: from just behind the back screw to just ahead of the front one, flush with the
+    # bottom (2 mm proud, so it shows).
+    t0, t1 = back - 0.035, front + 0.03
+    half = 0.018
+    bottom_back, bottom_front = section(t0)[1], section(t1)[1]
+    corners = [vec(-half, 0, board_z(t0)), vec(half, 0, board_z(t0)), vec(half, 0, board_z(t1)), vec(-half, 0, board_z(t1))]
+    low = [b.vertex(c + vec(0, (bottom_back if i < 2 else bottom_front) + 0.001, 0)) for i, c in enumerate(corners)]
+    high = [b.vertex(c + vec(0, (bottom_back if i < 2 else bottom_front) - 0.002, 0)) for i, c in enumerate(corners)]
+    loft(b, [low, high], "hardware", smooth=False)
+    cap(b, high, vec(0, -1, 0), "hardware")
     return b.build()
 
 
 def build_mast_track() -> bpy.types.Object:
-    """The mast track (a slot in the deck the mast base slides in) and the base plate."""
+    """The mast track (a slot in the deck the mast base slides in) between its configured ends,
+    and the base plate at the mast foot."""
     b = MeshBuilder("MastTrack")
     foot_z = MAST_FOOT[2]
-    half_length = 0.17
+    back_z, front_z = board_z(MAST_TRACK_BACK), board_z(MAST_TRACK_FRONT)
     half_width_track = 0.024
     # A stadium shape seen from above: two half circles joined by straight sides.
-    front_centre = foot_z - half_length + half_width_track
-    back_centre = foot_z + half_length - half_width_track
+    front_centre = front_z + half_width_track
+    back_centre = back_z - half_width_track
     outline = []
     for i in range(10):
         a = math.pi + math.pi * i / 9   # the front half circle, from port round to starboard
@@ -560,12 +646,12 @@ def build_mast_track() -> bpy.types.Object:
     for i in range(10):
         a = math.pi * i / 9             # the back half circle, from starboard round to port
         outline.append((half_width_track * math.cos(a), back_centre + half_width_track * math.sin(a)))
-    deck = 0.5 * BOARD_THICK
-    bottom = [b.vertex(vec(x, deck - 0.004, z)) for x, z in outline]
-    top = [b.vertex(vec(x, deck + 0.0025, z)) for x, z in outline]
+    bottom = [b.vertex(vec(x, deck_y(x, BOARD_L / 2 - z) - 0.004, z)) for x, z in outline]
+    top = [b.vertex(vec(x, deck_y(x, BOARD_L / 2 - z) + 0.0025, z)) for x, z in outline]
     loft(b, [bottom, top], "hardware", smooth=False)
     cap(b, top, vec(0, 1, 0), "hardware")
     # The base plate in the track, which the mast's rubber joint stands on.
+    deck = deck_y(0.0, BOARD_L / 2 - foot_z)
     plate = [vec(0, deck - 0.002, foot_z), vec(0, MAST_FOOT[1] + 0.012, foot_z)]
     tube(b, plate, 0.04, "rubber", sides=20)
     return b.build()
@@ -627,6 +713,7 @@ def build_fin() -> bpy.types.Object:
 MAST_M = SAIL["mast_m"]
 MAST_BOTTOM_RADIUS = 0.0245
 MAST_TOP_RADIUS = 0.0135
+MAST_START_Y = 0.165  # the mast's foot, on the extension's pulley block
 
 
 def mast_radius(y: float) -> float:
@@ -641,11 +728,12 @@ def build_mast() -> bpy.types.Object:
     joint_y = [0.0, 0.012, 0.03, 0.048, 0.07]
     joint_r = [0.024, 0.024, 0.0185, 0.0185, 0.023]
     tube(b, [vec(0, y, 0) for y in joint_y], joint_r, "rubber", sides=16)
-    # The extension: an aluminium tube with the downhaul pulley block on top.
-    tube(b, [vec(0, 0.065, 0), vec(0, 0.25, 0)], 0.0185, "metal", sides=16)
-    superellipsoid(b, (0.0, 0.275, 0.0), (0.032, 0.035, 0.03), "hardware", roundness=0.5)
+    # A short extension with the downhaul pulley block on top: a race sail's luff is as long
+    # as its mast, so the tack sits low, close to the deck.
+    tube(b, [vec(0, 0.065, 0), vec(0, 0.13, 0)], 0.0185, "metal", sides=16)
+    superellipsoid(b, (0.0, 0.15, 0.0), (0.032, 0.025, 0.03), "hardware", roundness=0.5)
     # The mast itself, with a rounded top.
-    ys = list(np.linspace(0.29, MAST_M - 0.015, 40))
+    ys = list(np.linspace(MAST_START_Y, MAST_M - 0.015, 40))
     radii = [mast_radius(y) for y in ys]
     for i in range(1, 5):
         a = i / 5 * math.pi / 2
@@ -659,20 +747,34 @@ def build_mast() -> bpy.types.Object:
 # --------------------------------------------------------------------------------------------
 # The sail: outline, grid, luff sleeve, and the panel picture.
 # --------------------------------------------------------------------------------------------
+# The default sail is the Severne HGO iQFOiL 8.0 on an Apex 490 (the wind-tunnel study's sail,
+# Zhang et al. 2025, Documentation/Science/2501.13254v1.pdf, and Max's own, IMG_4743 in
+# Documentation/images/Real life photos/). The paper: the largest chord 2 m, seven full battens
+# and five short ones in the leech between the upper six, a 2.3 m wishbone. The photo: a wide,
+# nearly square head, a nearly straight leech from the head to the clew, and a foot that comes
+# down from the clew to the deck and runs along it to the tack. The head's width is not
+# measured: it is what gives the configured area (about 1 m on the 8.0; the photo's chord at
+# 85 % of the height is about two thirds of the largest).
 
 BOOM_M = SAIL["boom_m"]
 BOOM_H = SAIL["boom_height_m"]
-TACK_Y = 0.30       # the bottom of the luff (the extension's pulley block is below it)
+TACK_Y = 0.19       # the bottom of the luff, just above the pulley block
 TOP_Y = MAST_M - 0.02
-HEAD_WIDTH = 0.14
-FOOT_ROWS = 10      # grid rows from the tack up to the boom
+HEAD_DROP = 0.12    # the head's aft corner sits this far below the masthead
+FOOT_LOW = 0.06     # the foot along the deck, above the mast foot's base plate
+FOOT_LOW_TO = 0.80  # the foot runs low to this share of the boom, then rises to the clew
+ROACH_M = 0.15      # how far the leech bows out beyond the straight line from clew to head
+FOOT_ROWS = 16      # grid rows from the tack up to the boom
 UPPER_ROWS = 30     # grid rows from the boom to the head
 COLUMNS = 24        # grid columns from the luff to the leech
 BOOM_V = (BOOM_H - TACK_Y) / (TOP_Y - TACK_Y)
-BATTEN_ROWS = [8, 15, 21, 27, 32, 37]
+# The battens, metres up the mast from the mast foot where they meet the luff: seven full ones
+# (the first two under the boom) and five short ones in the leech between the upper six.
+FULL_BATTENS = [0.50, 1.15, 1.85, 2.45, 3.05, 3.65, 4.25]
+SHORT_BATTENS = [0.5 * (a + b) for a, b in zip(FULL_BATTENS[1:], FULL_BATTENS[2:])]
+SHORT_BATTEN_M = 0.45
 WINDOWS = [  # (first row, last row + 1, first column, last column + 1)
-    (11, 15, 2, 11),   # the main window just above the boom
-    (3, 8, 3, 12),     # the lower window, to see under the boom
+    (FOOT_ROWS, FOOT_ROWS + 6, 2, 7),   # the vision window by the luff, just above the boom
 ]
 
 
@@ -683,46 +785,40 @@ def bezier(ctrl: np.ndarray, t: np.ndarray) -> np.ndarray:
 
 
 class Curve:
-    """A cubic Bezier curve walked at an even speed: at(f) is the point a fraction f of the
-    way along it."""
+    """Cubic Bezier segments joined end to end, walked at an even speed: at(f) is the point a
+    fraction f of the way along them."""
 
-    def __init__(self, ctrl):
-        self.ctrl = np.array(ctrl, dtype=float)
-        ts = np.linspace(0.0, 1.0, 4001)
-        pts = bezier(self.ctrl, ts)
+    def __init__(self, *segments):
+        ts = np.linspace(0.0, 1.0, 2001)
+        pts = np.concatenate([bezier(np.array(c, dtype=float), ts)[(1 if i else 0):] for i, c in enumerate(segments)])
         cumulative = np.concatenate([[0.0], np.cumsum(np.linalg.norm(np.diff(pts, axis=0), axis=1))])
         self.length = cumulative[-1]
-        self.ts = ts
+        self.points = pts
         self.fractions = cumulative / cumulative[-1]
 
     def at(self, f):
-        return bezier(self.ctrl, np.interp(f, self.fractions, self.ts))
+        f = np.asarray(f, dtype=float)
+        return np.stack([np.interp(f, self.fractions, self.points[:, 0]),
+                         np.interp(f, self.fractions, self.points[:, 1])], axis=-1)
 
 
-# The foot drops from the tack to close to the deck, then rises to the clew (cut away under
-# the clew). The leech is convex (the roach the battens hold out) up to a narrow head.
+# The foot: from the tack along the deck, then up to the clew, coming at it from below as the
+# cut-away under a race sail's clew does.
+FOOT = Curve([(0.0, TACK_Y), (0.10 * BOOM_M, FOOT_LOW - 0.01), (0.45 * BOOM_M, FOOT_LOW), (FOOT_LOW_TO * BOOM_M, FOOT_LOW)],
+             [(FOOT_LOW_TO * BOOM_M, FOOT_LOW), (0.93 * BOOM_M, FOOT_LOW + 0.02), (BOOM_M, 0.40 * BOOM_H), (BOOM_M, BOOM_H)])
 
 
-def foot_curve(depth: float) -> Curve:
-    """The foot. At depth 0 it rises from near the deck to the clew along the sail's diagonal
-    (a 6.5's cut); at 1 it runs low along the deck to 90 % of the boom and rises to the clew
-    there, as a race sail's foot closes the gap to the deck."""
-    return Curve([(0.0, TACK_Y), (0.18 * BOOM_M, TACK_Y - 0.42),
-                  ((0.74 + 0.16 * depth) * BOOM_M, 0.42 * (1.0 - depth) * BOOM_H), (BOOM_M, BOOM_H)])
+def leech_curve(head_width: float) -> Curve:
+    """The leech: nearly straight from the clew to the head's aft corner, bowed out by ROACH_M
+    (the roach the battens hold out)."""
+    clew, head = np.array([BOOM_M, BOOM_H]), np.array([head_width, TOP_Y - HEAD_DROP])
+    d = head - clew
+    n = np.array([d[1], -d[0]]) / np.linalg.norm(d)
+    n = n if n[0] > 0 else -n  # outward, aft
+    return Curve([clew, clew + d / 3 + n * ROACH_M, clew + 2 * d / 3 + n * 0.8 * ROACH_M, head])
 
 
-FOOT = foot_curve(0.0)
-
-
-def leech_curve(roach: float) -> Curve:
-    """The leech, its two middle control points held out by `roach` times their place for a
-    6.5 (1.0): the roach the battens hold out, which is what gives a slalom sail its area for
-    its luff and boom."""
-    return Curve([(BOOM_M, BOOM_H), (1.01 * roach * BOOM_M, BOOM_H + 0.36 * (TOP_Y - BOOM_H)),
-                  (0.62 * roach * BOOM_M, TOP_Y - 0.10), (HEAD_WIDTH, TOP_Y - 0.03)])
-
-
-LEECH = leech_curve(1.0)
+LEECH = leech_curve(0.5)
 
 
 def row_v(r: int) -> float:
@@ -737,7 +833,7 @@ def luff_point(v) -> np.ndarray:
 
 
 def outer_point(v) -> np.ndarray:
-    """The end of the batten line at v: on the foot below the boom, on the leech above it."""
+    """The end of the grid line at v: on the foot below the boom, on the leech above it."""
     v = np.asarray(v, dtype=float)
     on_foot = FOOT.at(np.clip(v / BOOM_V, 0.0, 1.0))
     on_leech = LEECH.at(np.clip((v - BOOM_V) / (1.0 - BOOM_V), 0.0, 1.0))
@@ -750,11 +846,10 @@ def sail_point(u, v) -> np.ndarray:
     return luff_point(v) + u * (outer_point(v) - luff_point(v))
 
 
-def sail_outline() -> np.ndarray:
+def sail_outline(samples: int = 400) -> np.ndarray:
     """The flat sail's outline: down the luff, then along the foot and up the leech."""
-    outline = [luff_point(row_v(r)) for r in range(FOOT_ROWS + UPPER_ROWS, -1, -1)]
-    outline += [outer_point(row_v(r)) for r in range(0, FOOT_ROWS + UPPER_ROWS + 1)]
-    return np.array(outline)
+    v = np.linspace(0.0, 1.0, samples)
+    return np.concatenate([luff_point(v[::-1]), outer_point(v)])
 
 
 def sail_area() -> float:
@@ -762,43 +857,27 @@ def sail_area() -> float:
     return 0.5 * abs(np.dot(x, np.roll(y, -1)) - np.dot(y, np.roll(x, -1)))
 
 
-# The configured area (PH16 step 17: the 8.0's 4.9 m luff and 2.0 m boom with a 6.5's cut drew
-# 7.0 m2). A race sail gets its area from a foot close to the deck, so the foot is filled
-# first, then the roach grows (a roach alone made the leech a D, Max: "this is not the 8.0?").
-# Bisections: the area grows with each.
-def _solve(make, low: float, high: float) -> float:
-    for _ in range(40):
-        middle = 0.5 * (low + high)
-        make(middle)
-        if sail_area() < SAIL["area_m2"]:
-            low = middle
-        else:
-            high = middle
-    make(high)
-    return high
+def leech_x(y) -> np.ndarray:
+    """Where the sail's aft edge is at a height y: on the foot's rise below the boom, on the leech
+    above it (both climb steadily, so the height orders them)."""
+    rise = FOOT.points[FOOT.points[:, 0] >= FOOT_LOW_TO * BOOM_M - 1e-9]
+    edge = np.concatenate([rise, LEECH.points[1:]])
+    return np.interp(y, edge[:, 1], edge[:, 0])
 
 
-def _set_foot(depth: float) -> None:
-    global FOOT
-    FOOT = foot_curve(depth)
-
-
-def _set_roach(roach: float) -> None:
-    global LEECH
-    LEECH = leech_curve(roach)
-
-
-FOOT_DEPTH, ROACH = 0.0, 1.0
-_set_foot(FOOT_DEPTH)
-_set_roach(ROACH)
-if sail_area() < SAIL["area_m2"]:
-    _set_foot(1.0)
-    if sail_area() >= SAIL["area_m2"]:
-        FOOT_DEPTH = _solve(_set_foot, 0.0, 1.0)
+# The head's width that gives the configured area (bisection: the area grows with it).
+_low, _high = 0.1, 1.6
+for _ in range(50):
+    HEAD_WIDTH = 0.5 * (_low + _high)
+    LEECH = leech_curve(HEAD_WIDTH)
+    if sail_area() < SAIL["area_m2"]:
+        _low = HEAD_WIDTH
     else:
-        FOOT_DEPTH = 1.0
-        ROACH = _solve(_set_roach, 1.0, 1.8)
-print(f"Sail: foot depth {FOOT_DEPTH:.2f}, roach {ROACH:.3f} times a 6.5's")
+        _high = HEAD_WIDTH
+HEAD_WIDTH = _high
+LEECH = leech_curve(HEAD_WIDTH)
+print(f"Sail: head {HEAD_WIDTH:.2f} m wide, roach {ROACH_M:.2f} m, foot {FOOT_LOW:.2f} m above the base to "
+      f"{FOOT_LOW_TO:.0%} of the boom")
 
 
 def sail_centroid() -> tuple:
@@ -860,7 +939,7 @@ def build_sleeve(b: MeshBuilder) -> None:
         v = row_v(r)
         chord = float(np.linalg.norm(outer_point(v) - luff_point(v)))
         y = float(luff_point(v)[1])
-        tail_x = max(0.05, min(0.11, 0.7 * chord))
+        tail_x = max(0.05, min(0.15, 0.7 * chord))
         tangent_angle = math.acos(radius / tail_x)
         pts = [(tail_x, 0.0)]
         for i in range(13):
@@ -976,12 +1055,15 @@ def draw_sail_panels(path: Path, width: int = 1024, height: int = 2048) -> None:
         paint(grown & ~inside, CHARCOAL)
         paint(inside, (200, 205, 212))
 
-    # Batten pockets along the batten lines, with the tensioner caps at the leech.
-    for r in BATTEN_ROWS:
-        distance = np.abs(v[:, None] - row_v(r)) * metres_per_v
-        pocket = (distance < 0.022) & (from_luff > 0.10)
-        paint(pocket, POCKET)
-        paint((distance < 0.028) & (from_edge < 0.08), CHARCOAL)
+    # Batten pockets, straight across the sail at their heights (the full ones from the luff
+    # sleeve to the leech, the short ones in from the leech), with the tensioner caps at the leech.
+    for y_batten in FULL_BATTENS + SHORT_BATTENS:
+        x_end = float(leech_x(y_batten))
+        x_start = 0.10 if y_batten in FULL_BATTENS else x_end - SHORT_BATTEN_M
+        along = (X >= x_start) & (X <= x_end + 0.01)
+        distance = np.abs(Y - y_batten)
+        paint(along & (distance < 0.022), POCKET)
+        paint((distance < 0.028) & (X > x_end - 0.08) & (X <= x_end + 0.01), CHARCOAL)
 
     # Tape along the leech and the foot, the head, and the luff sleeve (hidden by the sleeve).
     paint(from_edge < 0.014, CHARCOAL)
@@ -1098,7 +1180,7 @@ def export_glb(objects: list, path: Path) -> None:
 def main() -> None:
     bpy.ops.wm.read_factory_settings(use_empty=True)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    export_glb([build_hull(), build_footstraps(), build_mast_track()], OUT_DIR / "board.glb")
+    export_glb([build_hull(), build_footstraps(), build_fin_box(), build_mast_track()], OUT_DIR / "board.glb")
     export_glb([build_fin()], OUT_DIR / "fin.glb")
     export_glb([build_mast()], OUT_DIR / "mast.glb")
     export_glb([build_sail_cloth(), build_clew_ring()], OUT_DIR / "sail.glb")
