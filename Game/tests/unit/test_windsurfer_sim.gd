@@ -83,9 +83,12 @@ func test_overpowered_sailor_is_catapulted_and_the_board_stays_upright() -> void
 	var pilot: Autopilot = _pilot(90.0, sim)
 	_run(sim, 20.0, controls, pilot)
 	assert_eq(sim.sailor_state, WindsurferSim.SailorState.SAILING)
-	# Head up with the sail pulled fully in and held there: more than a 75 kg sailor holds
-	# in 24 kt. (In 18 kt the sail measured in the wind tunnel can be held sheeted in, as a
-	# real 6.5 can at 75 kg; the legacy sail catapulted there. PH28.)
+	# Head up with the sail pulled fully in and held there: more than the default 80 kg sailor
+	# holds in 24 kt. (In 18 kt the sail measured in the wind tunnel can be held sheeted in, as a
+	# real 6.5 can at 75 kg; the legacy sail catapulted there. PH28.) Still 24 kt with the twist
+	# following its formula past the tunnel's data (no floor; Max, 30 October 2026): the sail
+	# keeps less of its pull per degree, but sheeted fully in at 60 degrees it is still more than
+	# the sailor holds (ph28/real-eight: over at 20.4 s, half a second after heading up).
 	pilot.target_twa_deg = 60.0
 	pilot.trim_sheet = false
 	var fell_at: float = -1.0

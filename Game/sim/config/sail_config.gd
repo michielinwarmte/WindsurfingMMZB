@@ -127,8 +127,9 @@ extends Resource
 ## 0 switches the twist off: a rigid sail, as before PH28.
 @export var twist_pressure_pa: float = 125.0
 ## A numerical guard only, not a physics floor: the share is never below this. The tunnel
-## stopped at 39 Pa (15.5 kt of apparent wind) and the game's planing reaches meet 50 to
-## 160 Pa, where the formula gives 0.70 at 18 kt and 0.57 at 24 kt of apparent wind. Session
+## stopped at 39 Pa (15.5 kt of apparent wind) and the game's planing reaches meet 70 to
+## 250 Pa (21 to 39 kt of apparent wind on the reach check, PH28 real-eight), where the formula
+## gives 0.70 at 18 kt, 0.57 at 24 kt and 0.34 at 39 kt of apparent wind. Session
 ## 57 held the share at the tunnel's last measured 0.75 there instead, because at 0.5 a pushed
 ## sailor could not catapult at 24 kt; both are extrapolations, and Max chose the formula
 ## (30 October 2026). The formula only reaches 0.1 at about 83 kt of apparent wind (1120 Pa).
@@ -146,16 +147,23 @@ extends Resource
 @export var twist_ce_drop: float = 0.32
 
 @export_group("Centre of effort by angle of attack (PH28)")
-## Eased, the sail's force sits low. In the wind tunnel (Zhang et al. 2025, Fig. 8d) the
-## centre of effort climbed from about 1.0 m above the board at 1 degree of attack through
-## 1.7 m at 5 and 1.95 m at 9 to 2.0 m from 12 degrees up, at every wind speed, on the 8.0
-## whose masthead stands 5.26 m up. ce_height_fraction is the powered height (12 degrees and
-## more); at smaller angles it is multiplied by the share from this table (those heights over
-## 2.0 m), straight between the angles and held at both ends (ce_height_share()). So a sail
-## that is eased, luffing or backed heels and pitches the board less, as the real one does.
-## Measured on the 8.0; the 6.5 takes the same table, an assumption. Empty: the height fixed.
-@export var ce_height_table_deg: Array[float] = [1.0, 5.0, 9.0, 12.0]
-@export var ce_height_table_share: Array[float] = [0.5, 0.85, 0.975, 1.0]
+## Eased, the sail's force sits low. In the wind tunnel (Zhang et al. 2025, Fig. 8d, the
+## outhaul-on sail, read off the figure to about 0.02 m) the centre of effort climbed with the
+## angle of attack at every wind speed, from 0.9 to 1.2 m above the board at 1.3 degrees
+## through 1.6 to 1.8 m at 5.3 and 1.8 to 2.0 m at 8.7 to 1.9 to 2.1 m at 12.2 degrees, and
+## stayed near 2.0 m beyond. The table holds each height over the same wind's height at 12.2
+## degrees, averaged over the three winds: 0.60, 0.54 and 0.47 at 1.3 degrees (4, 6 and 8 m/s;
+## mean 0.53), 0.88, 0.85 and 0.84 at 5.3 (0.855), 0.95, 0.94 and 0.93 at 8.7 (0.94). The
+## wind's own lowering is twist_ce_drop's, so it is taken out here by dividing within one wind.
+## ce_height_fraction is the powered height (12.2 degrees and more); at smaller angles it is
+## multiplied by the share from this table, straight between the angles and held at both ends
+## (ce_height_share()). So a sail that is eased, luffing or backed heels and pitches the board
+## less, as the real one does. Left out: at 1.3 degrees the wind lowers the point more than
+## twist_ce_drop's average (0.47 against 0.60 from 4 to 8 m/s), and from 12 to 16.5 degrees the
+## point still rises 1 to 5 % (held at 1 here). Measured on the 8.0; the 6.5 takes the same
+## table, an assumption. Empty: the height fixed, as before PH28.
+@export var ce_height_table_deg: Array[float] = [1.3, 5.3, 8.7, 12.2]
+@export var ce_height_table_share: Array[float] = [0.53, 0.855, 0.94, 1.0]
 
 @export_group("Drag coefficient")
 ## Drag with no lift: cloth friction, mast, boom and battens. Rig coefficient sets in the

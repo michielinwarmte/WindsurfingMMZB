@@ -328,28 +328,31 @@ func test_the_sail_keeps_twisting_at_the_games_winds() -> void:
 
 
 # The centre of effort's height by angle of attack (PH28; Fig. 8d of Zhang et al. 2025): eased,
-# the force sits low on the sail. The tunnel's heights on the 8.0: about 1.0 m above the board
-# at 1 degree, 1.7 m at 5, 1.95 m at 9, 2.0 m from 12 degrees up, at every wind speed.
+# the force sits low on the sail. The tunnel's heights on the 8.0 (outhaul on), as a share of the
+# same wind's height at 12.2 degrees and averaged over 4, 6 and 8 m/s: 0.53 at 1.3 degrees, 0.855
+# at 5.3, 0.94 at 8.7 (SailConfig, "Centre of effort by angle of attack").
 func test_the_centre_of_effort_sits_lower_when_the_sail_is_eased() -> void:
 	var config: SailConfig = load("res://config/sail_default.tres")
-	assert_almost_eq(config.ce_height_share(12.0), 1.0, 1e-6, "powered: the full height")
+	assert_almost_eq(config.ce_height_share(12.2), 1.0, 1e-6, "powered: the full height")
 	assert_almost_eq(config.ce_height_share(20.0), 1.0, 1e-6, "held beyond the table")
-	assert_almost_eq(config.ce_height_share(5.0), 0.85, 1e-6, "1.7 m of 2.0 m at 5 degrees")
-	assert_almost_eq(config.ce_height_share(1.0), 0.5, 1e-6, "1.0 m of 2.0 m at 1 degree")
-	assert_almost_eq(config.ce_height_share(0.3), 0.5, 1e-6, "held below the table")
-	assert_almost_eq(config.ce_height_share(7.0), 0.5 * (0.85 + 0.975), 1e-6, "between the table's angles")
-	assert_almost_eq(config.ce_height_share(-5.0), 0.85, 1e-6, "a backwinded sail: the same height")
+	assert_almost_eq(config.ce_height_share(8.7), 0.94, 1e-6, "Fig. 8d: 1.8 to 2.0 m at 8.7 degrees, 0.94 of 12.2's")
+	assert_almost_eq(config.ce_height_share(5.3), 0.855, 1e-6, "Fig. 8d: 1.6 to 1.8 m at 5.3 degrees, 0.855 of 12.2's")
+	assert_almost_eq(config.ce_height_share(1.3), 0.53, 1e-6, "Fig. 8d: 0.9 to 1.2 m at 1.3 degrees, 0.53 of 12.2's")
+	assert_almost_eq(config.ce_height_share(0.3), 0.53, 1e-6, "held below the table")
+	assert_almost_eq(config.ce_height_share(7.0), 0.5 * (0.855 + 0.94), 1e-6, "straight between the table's angles")
+	assert_almost_eq(config.ce_height_share(-5.3), 0.855, 1e-6, "a backwinded sail: the same height")
 	# In a compute(): the wind from abeam, the boom at 85 degrees gives 5 degrees of attack, at
-	# 78 degrees 12. The same wind, so the twist lowers both alike; the ratio is the table's.
+	# 77 degrees 13. The same wind, so the twist lowers both alike; the ratio is the table's.
 	var sail: SailModel = SailModel.new(config)
 	var foot_y: float = config.mast_foot_local.y
-	sail.compute(RigFrame.rigid_on(_body(), config.mast_foot_local), _constant_wind(8.0, 90.0), 1.0 - (78.0 - 12.0) / 73.0, 0.0, 1.225)
-	assert_almost_eq(rad_to_deg(sail.alpha_rad), 12.0, 1e-3)
+	sail.compute(RigFrame.rigid_on(_body(), config.mast_foot_local), _constant_wind(8.0, 90.0), 1.0 - (77.0 - 12.0) / 73.0, 0.0, 1.225)
+	assert_almost_eq(rad_to_deg(sail.alpha_rad), 13.0, 1e-3)
 	var powered_height: float = sail.ce_local.y - foot_y
 	sail.compute(RigFrame.rigid_on(_body(), config.mast_foot_local), _constant_wind(8.0, 90.0), 0.0, 0.0, 1.225)
 	assert_almost_eq(rad_to_deg(sail.alpha_rad), 5.0, 1e-3)
 	var eased_height: float = sail.ce_local.y - foot_y
-	assert_almost_eq(eased_height / powered_height, 0.85, 1e-3, "at 5 degrees the force sits at 0.85 of its powered height")
+	var share_at_5: float = 0.53 + (0.855 - 0.53) * (5.0 - 1.3) / (5.3 - 1.3)
+	assert_almost_eq(eased_height / powered_height, share_at_5, 1e-3, "at 5 degrees the force sits at 0.83 of its powered height")
 	assert_almost_eq(powered_height, config.ce_height_fraction * config.luff_m * (1.0 - config.twist_ce_drop * (1.0 - sail.twist_share)), 1e-6, "powered: the twist's drop only")
 	# An empty table keeps the height fixed, as before PH28.
 	var fixed: SailConfig = config.duplicate()
