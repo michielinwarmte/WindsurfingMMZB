@@ -701,7 +701,17 @@ class Curve:
 
 # The foot drops from the tack to close to the deck, then rises to the clew (cut away under
 # the clew). The leech is convex (the roach the battens hold out) up to a narrow head.
-FOOT = Curve([(0.0, TACK_Y), (0.18 * BOOM_M, TACK_Y - 0.42), (0.74 * BOOM_M, 0.42 * BOOM_H), (BOOM_M, BOOM_H)])
+
+
+def foot_curve(depth: float) -> Curve:
+    """The foot. At depth 0 it rises from near the deck to the clew along the sail's diagonal
+    (a 6.5's cut); at 1 it runs low along the deck to 90 % of the boom and rises to the clew
+    there, as a race sail's foot closes the gap to the deck."""
+    return Curve([(0.0, TACK_Y), (0.18 * BOOM_M, TACK_Y - 0.42),
+                  ((0.74 + 0.16 * depth) * BOOM_M, 0.42 * (1.0 - depth) * BOOM_H), (BOOM_M, BOOM_H)])
+
+
+FOOT = foot_curve(0.0)
 
 
 def leech_curve(roach: float) -> Curve:
@@ -752,22 +762,43 @@ def sail_area() -> float:
     return 0.5 * abs(np.dot(x, np.roll(y, -1)) - np.dot(y, np.roll(x, -1)))
 
 
-# The roach that gives the configured area (PH16 step 17: the 8.0's 4.9 m luff and 2.0 m boom
-# with a 6.5's roach drew 7.0 m2). Never less than a 6.5's; bisection, the area grows with it.
-ROACH = 1.0
-LEECH = leech_curve(ROACH)
-if sail_area() < SAIL["area_m2"]:
-    low, high = 1.0, 1.8
+# The configured area (PH16 step 17: the 8.0's 4.9 m luff and 2.0 m boom with a 6.5's cut drew
+# 7.0 m2). A race sail gets its area from a foot close to the deck, so the foot is filled
+# first, then the roach grows (a roach alone made the leech a D, Max: "this is not the 8.0?").
+# Bisections: the area grows with each.
+def _solve(make, low: float, high: float) -> float:
     for _ in range(40):
-        ROACH = 0.5 * (low + high)
-        LEECH = leech_curve(ROACH)
+        middle = 0.5 * (low + high)
+        make(middle)
         if sail_area() < SAIL["area_m2"]:
-            low = ROACH
+            low = middle
         else:
-            high = ROACH
-    ROACH = high
-    LEECH = leech_curve(ROACH)
-print(f"Sail: roach {ROACH:.3f} times a 6.5's")
+            high = middle
+    make(high)
+    return high
+
+
+def _set_foot(depth: float) -> None:
+    global FOOT
+    FOOT = foot_curve(depth)
+
+
+def _set_roach(roach: float) -> None:
+    global LEECH
+    LEECH = leech_curve(roach)
+
+
+FOOT_DEPTH, ROACH = 0.0, 1.0
+_set_foot(FOOT_DEPTH)
+_set_roach(ROACH)
+if sail_area() < SAIL["area_m2"]:
+    _set_foot(1.0)
+    if sail_area() >= SAIL["area_m2"]:
+        FOOT_DEPTH = _solve(_set_foot, 0.0, 1.0)
+    else:
+        FOOT_DEPTH = 1.0
+        ROACH = _solve(_set_roach, 1.0, 1.8)
+print(f"Sail: foot depth {FOOT_DEPTH:.2f}, roach {ROACH:.3f} times a 6.5's")
 
 
 def sail_centroid() -> tuple:

@@ -75,9 +75,9 @@ func test_sail_spans_the_luff_and_reaches_the_clew_at_the_boom() -> void:
 	assert_almost_eq(box.size.z, 0.0, 0.001, "Flat: the shader bends it")
 	var clew: Vector3 = Vector3(sail_config.boom_m, sail_config.boom_height_m, 0.0)
 	assert_lt(_nearest_distance(cloth, clew), 0.01, "A corner of the cloth at the clew")
-	# The roach the battens hold out reaches a little behind the clew on a race sail: the 8.0's
-	# 0.22 m gives it its area on a 4.9 m luff and a 2.0 m boom (build_rig_models.py, ROACH).
-	assert_between(box.end.x, sail_config.boom_m - 0.06, 1.15 * sail_config.boom_m, "Not much behind the clew")
+	# The roach the battens hold out may reach a little behind the clew (the 8.0's, after its
+	# foot is down to the deck: about 0.08 m; build_rig_models.py, FOOT_DEPTH and ROACH).
+	assert_almost_eq(box.end.x, sail_config.boom_m, 0.1, "Nothing much behind the clew")
 
 
 func test_sail_has_about_the_configured_area() -> void:
