@@ -1,58 +1,45 @@
-# Every open question for Max, in one list
+# Every open question for Max, in one list, with his answers
 
-30 October 2026, by the lead (Fable 5.1). Collected from `sailor_controls_plan.md`, `flying_the_board.md`, the three reviews, `hull_balance.md` sections 12 to 14, GP0's report and the roadmap's "Who is waiting on whom". Answer by number; the number in brackets is what the model uses today, and your answer replaces it. Where a question is Michiel's, it says so.
+30 October 2026, by the lead (Fable 5.1). Collected from `sailor_controls_plan.md`, `flying_the_board.md`, the three reviews, `hull_balance.md` sections 12 to 14, GP0's report and the roadmap's "Who is waiting on whom". The number in brackets is what the model used when the question was asked. **Max answered the same evening (30 October 2026); his answers are in bold.** Three builds followed on the branches `ph28/real-eight` (the sail), `ph28/rider-feet-body` (the rider) and `ph28/hull-suction` (the hull), from `ph28/sail-and-hull`.
 
 ## A. Your body and feet when flying the board
 
-1. **The front foot's pull.** How hard do you pull up on the front strap when the board flies: a share of your weight is enough (half? all?). [Not in the model; the estimate is 150 to 250 N held, about 400 N briefly.]
-2. **The back foot against the fin.** How much do you push the tail sideways against the fin, and what do you feel just before a spin-out? [Not in the model.]
-3. **The rail on the 72.** You said: flat downwind, the windward rail up crosswind and upwind, more on a wider board. How many degrees on the 72, and from which wind angle does it go flat? Does it change with the wind's strength? [2 degrees of leeward rail, faded off the wind; a placeholder.]
-4. **The hips.** How high above the deck are your hips when fully powered on a reach, and how far behind the back foot? [0.42 m; the photos read 0.45 to 0.6 m and 0.2 to 0.4 m behind.]
-5. **The body's angle** above the water when fully powered. [30 degrees; the photos read 30 to 45.]
-6. **The harness lines.** Their length (you said 30 inch) and where the two ends sit on the boom, in centimetres from the mast. [The two ends together at 0.70 m from the mast; the hook about 1 m from the boom in the model, 0.45 m in your photo.]
-7. **The nose.** Does the nose come up as the fin loads at the same pull (the same sail and lean, on a smooth stretch at speed), or only with more pull, in a gust? [Section 12 of the hull report: in the model the fin's lift at the tail pushes the nose down; the hang-back against more pull lifts it.]
-8. **The boom's height** above the deck at the mast, one number for your slalom setting. [1.50 m, from your 1.40 to 1.60.]
-9. **The mast foot** for slalom: the centre of the pin from the tail. [1.265 m, read from "around 1.2" as the back of your track, 1.245 to 1.405 m.]
-10. **Your weight** with wetsuit and harness. [80 kg.]
+1. **The front foot's pull.** How hard do you pull up on the front strap when the board flies? [Not in the model; the estimate is 150 to 250 N held, about 400 N briefly.] **Max: "correct."**
+2. **The back foot against the fin.** How much do you push the tail sideways against the fin, and what do you feel just before a spin-out? [Not in the model.] **Max: "when going faster than 35 to 40 km/h, all the strength I have."** (Not built yet: the plan's P1.2, the next step after the feet's couple.)
+3. **The rail on the 72.** How many degrees, and from which wind angle does it go flat? [2 degrees of leeward rail, faded off the wind; a placeholder.] **Max: "crosswind a little bit, 1 to 3 degrees; upwind up to 10, I think."** Downwind flat (his earlier note: the windward rail up crosswind and upwind, the wider the board the more).
+4. **The hips.** How high above the deck when fully powered, and how far behind the back foot? [0.42 m.] **Max: "cannot give you this; estimate in photos."** So the plan's photo readings stand: about 0.5 m up, 0.2 to 0.4 m behind the back foot (estimates).
+5. **The body's angle** above the water when fully powered. [30 degrees.] **Max: "photos."** So 30 to 45 degrees, 35 typical (estimate).
+6. **The harness lines.** Their length and where the two ends sit on the boom. [Both ends at 0.70 m from the mast; the hook about 1 m from the boom in the model.] **Max: "30 to 35 inches, around 0.6 to 0.8 m from the mast depending on sail and conditions."** So the hook 0.38 to 0.44 m from the boom, the ends about 0.7 m from the mast.
+7. **The nose.** Does it come up as the fin loads at the same pull, or only with more pull? **Max: "if I push too hard and rail too hard the nose can lift up to 20 to 30 degrees, but I can lower it with my weight on the mast and load on the fin."**
+8. **The boom's height** above the deck at the mast. [1.50 m.] **Max: "yes, around that; shoulder height."**
+9. **The mast foot** for slalom. [1.265 m, the back of the track.] **Max: "mostly more to the back; it is a tuning setting."**
+10. **Your weight** with wetsuit and harness. [80 kg.] **Max: "85 with all."**
 
 ## B. Your gear
 
-11. **Your fin:** maker, model, depth (you said 39 cm), area if known, and whether its flex is published. [A 38 cm freeride fin with a soft flex from a 2017 test.]
-12. **The sail in IMG_4743:** which Severne and which size, and the mast and boom you rig it on. [The HGO 8.0 on a 4.9 m luff and 2.0 m boom in the config; the real 8.0 is 5.22 m and 2.20 m.]
+11. **Your fin.** [A 38 cm freeride fin with a soft flex.] **Max: "a slalom fin; don't know the rest."**
+12. **The sail in IMG_4743.** [An 8.0 on a 4.9 m luff and 2.0 m boom in the config.] **Max: "the real" (the Severne HGO 8.0: luff 5.22 m, boom 2.20 m, an Apex 490 mast with a 36 cm extension).**
 
 ## C. Photos
 
-13. Can you take **one photo from behind** at full speed (the rig's lean and the rail) and **one from the side on flat water** (how much of the board is wet, how high the nose rides)? The side one is the measurement nobody has.
-14. **Git:** the five GSYPHOTO proofs and 121.JPG carry a photographer's mark. Keep them out of git, as 121.JPG is now? Your own photos go in.
+13. One photo from behind at full speed, and one from the side on flat water. **Open.**
+14. Git: keep the five GSYPHOTO proofs and 121.JPG out of git? **No answer; they stay out until Max says otherwise.** Max also said the GSYPHOTO pictures are from a speed event on 40 cm wide boards.
 
 ## D. The push dial and the gameplay (GP0's open items)
 
-15. **The dial's three settings** as the starting point for GP1: eased `hike_share` 0.8, neutral 1.0, pushed 1.6 with the late ease (GP0's table). OK, or change?
-16. **GP10, the smooth ease by hand:** build it with GP1 now, or later?
-17. **A key in the playtest** to switch the push on and off?
-18. **GD1 to GD7:** the roadmap proposes an answer to each. Confirm or change:
-    - GD1 the dial: W pushes, S eases; gamepad right trigger pushes, left eases.
-    - GD2 it springs back to neutral when you let go.
-    - GD3 neutral is a little slower than 0.1's autopilot (1 to 3 %), so a good player clearly beats it.
-    - GD4 the beginner mode becomes the push mode; advanced stays raw.
-    - GD5 both races against the AI and a time trial.
-    - GD6 the race's information stays on screen; speed, wind angles and trim readouts off by default.
-    - GD7 package B: the mouse stays where you put it; try both ways for the sideways direction.
+15. The dial's three settings as GP1's start (eased 0.8, neutral 1.0, pushed 1.6 with the late ease). **Max: "okay."**
+16. GP10, the smooth ease by hand: now or later? **Max: "later."**
+17. A key in the playtest to switch the push on and off? **Max: "later; first make the physics better."**
+18. GD1 to GD7, the roadmap's proposals. **Max: confirmed, with the time trial "later".**
 
 ## E. For Michiel, through you
 
-19. **The hull's strip rule (A-05):** may a strip of a rockered bottom pull, not pull, or pull up to a bound? The JP SL 72's speeds and wet lengths rest on it (`review_hull.md` finding 1, `flying_the_board.md` section 4).
-20. **The rig's pitch lag:** on at 0.3 s (as shipped) or off (as every document says)?
-21. **The fin at the fin box** with the mast foot 2 cm from a bounce, built in Session 60 against "for Michiel".
-22. **The sail's twist floor** at 0.75 beyond the tunnel's data: keep it (a gameplay choice worth 25 % of the sail force at 24 kt) or follow the formula?
-23. **The three reviews** and the two plans: his OK, or his changes, before anything on `ph28/sail-and-hull` is merged.
+19. The hull's strip rule (A-05). **Max: "you said it is wrong, but if it can't get helped it's okay for now."** Built as a measured, switchable option on `ph28/hull-suction`; Michiel decides.
+20. The rig's pitch lag: on at 0.3 s or off? **Max: "off."** Built on `ph28/rider-feet-body`.
+21. The fin at the fin box with the mast foot 2 cm from a bounce. **Max: "wtf??"** In plain words: Session 60 moved the fin's force to where your fin box is (0.18 m from the tail) and the mast foot to 1.265 m; with the mast foot 2 cm further forward (1.245 m) the 24 kt beam reach bounces, with it at 1.265 m it does not. So the shipped setup sits on an edge. Nothing for you to decide; Michiel should look at the balance with the fin at the box.
+22. The sail's twist floor at 0.75 beyond the tunnel's data: keep it or follow the formula? **Max: "follow the formula."** Built on `ph28/real-eight`, with the catapult risk at 24 kt re-measured.
+23. Michiel's OK or changes on the three reviews and the two plans before anything is merged. **Open.**
 
 ## F. Older items still waiting on you (from the roadmap)
 
-24. RA1: the play-test stops left from 0.1's fleet.
-25. MA1: the lake play-test.
-26. RA5: which machine runs the training nights.
-27. RA4: the catch-up cap for the big fleet.
-28. TE2: your PC's tools.
-29. PR1: the license.
-30. PR2: a check of 0.1.0's GitHub release page.
+24 to 30. RA1, MA1, RA5, RA4, TE2, PR1, PR2. **Max: all "later."**
