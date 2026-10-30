@@ -226,7 +226,7 @@ The harness now carries 770 to 850 N, against about 415 N measured (the hooked-i
 | 24 kt 100° | 120 N, 0.80°, 1.20 m, 16.16 | 20 N, 1.37°, 1.01 m, 16.55 |
 | 24 kt 135° | 123 N, 0.20°, 1.27 m, 18.10 | 22 N, 0.70°, 1.19 m, 18.44 |
 
-In the sim the push at the tail lifts the tail and the nose goes down, 0.6° less trim and 2 % slower, and in a gust it is a likely trigger of a nose dive. An upward push at the tail lifts the nose only if the riders weight is behind the fin. In the sim the sailors weight is right above it (the whole windsurfers centre of mass 0.31 m from the tail, the fin 0.30 m). A real hooked-in rider hangs behind the boom, so further aft. That is the same open point as the harness: **the hooked-in posture is now the one physics item behind three findings**: the trim (section 2), the harness load, and the fin's effect. The fin's own stiffness (the Nascimento 2017 flex test of a 37 cm fin, 20 mm under 100 N) is also a soft fin for a slalom board, but no slalom fin's flex was found.
+In the sim the push at the tail lifts the tail and the nose goes down, 0.6° less trim and 2 % slower, and in a gust it is a likely trigger of a nose dive. An upward push at the tail lifts the nose only if the riders weight is behind the fin. (Corrected in section 12: what decides it is whether the fin is ahead of the hull's own push, and on today's reaches it never is.) In the sim the sailors weight is right above it (the whole windsurfers centre of mass 0.31 m from the tail, the fin 0.30 m). A real hooked-in rider hangs behind the boom, so further aft. That is the same open point as the harness: **the hooked-in posture is now the one physics item behind three findings**: the trim (section 2), the harness load, and the fin's effect. The fin's own stiffness (the Nascimento 2017 flex test of a 37 cm fin, 20 mm under 100 N) is also a soft fin for a slalom board, but no slalom fin's flex was found.
 
 **Fagg (1997), read for the fin** (`Documentation/Science/Simon_Fagg.pdf`, Max). The fin's loads on a planing board are 300 to 600 N of lift and 20 to 50 N of drag, about one sixth of the total drag. These come from Sutherland (1993) and Broers et al. (1992), the sources the spec already uses, and the sim is inside them (500 to 630 N, the fin about an eighth of the drag). Fins are "typically sailed at an incidence angle of 6 degrees", with no source; on this fin that is the same lift at about 7.5 m/s, and at planing speed the sim's fin runs at 1.5 to 2 degrees. Fins with tailored flex were tested and found inconclusive. There is nothing on the fin's vertical force or on the board's pitch, so the question of the nose stays with the hooked-in posture. The original fin sources are Sutherland (1993, MSc, Southampton) and Broers, Chiu and Walker (1993, AIAA 93-3000, fins with deformable tips).
 
@@ -243,3 +243,101 @@ Max on 29 October 2026, as the team's experienced windsurfer. His on-water feedb
 
 **What to build (for the next session).** A hooked-in rider whose hips hang from the boom on the short line, behind and below it. The line is at or just behind the centre of effort, and the arms take part of the pull, the front arm more. The lean, the height and the line's length follow the sail's pull (upright when underpowered, low when overpowered). The weight sits further aft than the fin, so the fin's lift raises the nose. Check it against sections 2 and 10 (the trim, the harness about 415 N measured, the fin's effect on the nose) and with Max on the water. The tools are `Game/dev/pitch_budget.gd`, `Game/dev/slingshot.gd`, `tools/reach_check.sh` (90 s runs) and `tools/push_check.sh`.
 
+## 12. Step 16: the hooked-in rider (30 October 2026)
+
+Max: "build step 16, the hooked-in rider", and "start with things you can do": he will measure his own slalom board (a Patrik 115, 115 l, 70 cm wide) for the mast foot and the straps. Session 59, Opus 5.5 alone.
+
+**In short.** One correction is now the default, one change is measured and left for a decision, and one option is built but off. The default first: the sail's boom now stays at right angles to the mast. Before, it stayed level whatever the rake, which put the centre of effort up to 0.25 m too high on a raked rig and made the drive's nose-down moment too large. It is 0 to 3 % faster on the reaches on flat water, with no new bounce; in gusts and waves it is within −3.4 to +2 % and falls no more often. Measured and not made the default: the hands and the harness line at the centre of effort's place on the boom, 0.70 m from the mast instead of 0.6, from Max's answer 1. On flat water it adds up to 1 %, but in 24 kt gusts the autopilot then holds the 8.0 so close to the edge that the beam reach catapulted 8 times in 400 s instead of 2. The option that stays off is a rig that leans out with the hooked-in body, to keep the boom within a short line of the hips. It leans the rig so far to windward that the board bears away beyond what the rake can steer against, and the board spun out. Two findings matter more than the speed. **The short line cannot be had with a full hike and a 1.4 m boom.** And **the fin's upward push can lift the nose only on a board that rides on its last 0.4 m**, which corrects section 10. The rest of the posture needs Max's measurements (the end of this section).
+
+### What the hooked-in geometry is today
+
+`pitch_budget.gd` on the new default, the square boom with the hands at 0.6 m (flat water, steady wind, 60 s). Distances in metres. "From the tail" is forward of the tail, so minus means behind it.
+
+| | 12 kt 100° | 18 kt 100° | 24 kt 135° |
+|---|---|---|---|
+| Speed, m/s | 11.70 | 14.52 | 18.61 |
+| Centre of mass: outboard / above the deck | 1.13 / 0.42 | 1.13 / 0.42 | 1.13 / 0.42 |
+| The hands (the line's point on the boom) above the deck | 1.08 | 1.12 | 1.05 |
+| The line, centre of mass to the boom | 0.95 | 1.10 | 1.14 |
+| Harness tension, N | 745 | 804 | 907 |
+| The feet's pressure, from the tail | 0.26 | 0.27 | 0.27 |
+| Hang-back behind the feet | 0.05 | 0.27 | 0.51 |
+| Centre of mass, from the tail | 0.22 | 0.00 | **−0.24** |
+| The whole windsurfer's centre of mass, from the tail | 0.36 | 0.17 | −0.04 |
+| The water's push, from the tail; wet length | 1.05; 1.24 | 1.04; 1.22 | 1.07; 1.23 |
+
+Three things in this table are not what a hooked-in rider does:
+1. **The line is 1 m long.** A real hook hangs 0.30 to 0.40 m from the boom (Max: 30 inch lines, the hook at the hips; spec section 14). To hang a full-hike body (0.42 m above the deck, 1.13 m out) within 0.4 m of the boom, the line's point would have to come down to about 0.8 m above the deck and 0.85 m out. With a 1.4 m boom that is the rig leaned about 50° to windward. The model's rig leans 25° at full hike and stops at 45° (`max_total_rig_lean_deg`).
+2. **One body, two reaches.** At 24 kt on the broad reach the centre of mass is 0.89 m outboard of the feet and 0.51 m behind them: 1.03 m across the deck and 0.42 m up, 1.11 m from the feet. A 1.75 m sailor's centre of mass is about 1.0 m along the body (Gourlay & Martellotta: 1.03 m at 1.80 m). The model adds the hike and the hang-back as if each had the body's whole reach. A real body leaning back that far cannot also hike that far out, and the centre of mass would not be 0.24 m behind the tail.
+3. **The feet's pressure at 0.26 to 0.27 m from the tail.** The trim press reaches 0.6 m aft of the stance (1.0 m: 0.33 m used on these reaches). Whether 0.27 m is on the back foot or behind it depends on where the back straps are: Max's measurement.
+
+(Since Session 58 the grip is no longer behind the hips at 12 kt. The full hike and the trim press moved the body aft of it, so the harness no longer pulls the sailor backwards.)
+
+### Tried, off: the rig leaning out with the body (`SailorConfig.harness_line_m`)
+
+The option holds the boom within `harness_line_m` of the centre of mass. As the body hikes out, the rig leans as far to windward as it takes, up to its 45° limit, and blends in while the sailor hooks in (`WindsurferSim._line_held_lean_rad`; test `test_hooked_in_rig_lean.gd`). On the 18 kt beam reach with a 0.40 m line, the rig's hanging lean went to its limit. The centre of effort moved to windward, and the drive acting there turned the board downwind. The autopilot's rake reached its stop (1.0), and its tilt stood the rig back up by 21° (−0.7), so the rig ended at 22 to 27° anyway. With no steering left, the board spun out at about 12 s (yaw rate 81°/s) and the sailor fell at 12.7 s.
+
+There is a physical point in this. Leaning the rig further to windward does not lower the heeling moment the body has to hold. The sail's force acts nearly at right angles to the mast, so its moment about the mast foot is the force times the centre of effort's height along the mast, however far the mast leans. What the lean changes is the yaw (the drive acting further to windward) and the lift (the force tilted up). So the rider's strength comes from where the body is, not from the rig's lean, and a short line has to come from the posture: a body that hangs closer to the boom, or a boom that sits lower.
+
+### Built, on: the boom square to the mast (`SailConfig.boom_square_to_mast`)
+
+A sail turns with its mast. Raked back, the boom points aft and down, so the clew, the centre of effort and the harness line drop by their distance along the boom times the sine of the rake. Spec 3.2 left this out as second order for the yaw (and wrote that it lifts the clew). It is not second order for the pitch, where the centre of effort's height sets the drive's nose-down moment, nor for a sailor hanging within a line of the boom. A rig leaned to windward lifts the leeward boom again, so the net drop is smaller than the rake alone gives: 0.06 m on the 18 kt beam reach (1.68 to 1.62 m above the bottom), where the rake alone would give 0.24 m. Only the positions change: the angle of attack and the force's direction still come from the level chord. Test: `test_sail.gd`.
+
+### Measured, not the default: the hands at the centre of effort (`hand_grip_m` 0.70)
+
+Max's answer 1: the lines a little behind the centre of effort, and the front arm carrying more (55/45 to 60/40). The boom's force, the line and both hands together, then acts about at the centre of effort's place on the boom: `ce_boom_fraction` × `boom_m` = 0.70 m. The model holds the boom at 0.6 m. The 3D boom has its lines at 0.6 m too (`build_rig_models.py` reads the value from the config).
+
+The reach check, 90 s, means from 60 s (m/s; pitch SD in degrees where above 0.05):
+
+| Case | Before (level boom, 0.6) | Square boom, 0.6 (**now the default**) | Square, 0.70 | Square, 0.75 |
+|---|---|---|---|---|
+| 12 kt 60° | 7.57 | 7.56 | 7.55 | 7.53 |
+| 12 kt 100° | 11.50 | **11.70** (+1.7 %) | 11.78 | 11.81 |
+| 12 kt 135° | 5.97 | 5.97 | 5.97 | 5.97 |
+| 18 kt 60° | 9.75 | **9.93** (+1.8 %) | 10.00 | 10.07 |
+| 18 kt 100° | 14.26 | **14.52** (+1.8 %) | 14.66 | 14.75, bouncing (0.42) |
+| 18 kt 135° | 14.28 (0.12) | **14.59** (+2.2 %, 0.17) | 14.47 (0.11) | 14.36 (0.08) |
+| 24 kt 60° | 10.27 | 10.26 | 10.34 | 10.42 |
+| 24 kt 100° | 16.16 | **16.22** (+0.4 %) | 16.37 (0.23) | 16.44 (0.22) |
+| 24 kt 135° | 18.10 | **18.64** (+3.0 %) | 18.71 | 18.71 |
+
+At 0.70 the 24 kt beam reach's pitch SD of 0.23° is the rider's trim by feel, not a porpoise. The weight creeps aft at 0.03 m/s until the board starts to chatter at about 0.9° of trim, steps 8 cm forward, and creeps back, every 3 s or so. That is the rider at the edge of the bounce, as it was built to be, inside the team's 0.3°. At 0.75 the 18 kt beam reach bounces for real. The line at 0.75 alone (with the level boom) moved the speeds by −1.4 to +1.8 % and bounced at 24 kt across (0.25).
+
+The catapult test (`test_windsurfer_sim.gd`, 24 kt, sheeted in and held) had its limit on the board's heel just after the fall loosened from 45° to 75°. The kick as the sailor leaves is sensitive: 42.7° with the old code, 50° with the hands at 0.62, 57.5° at 0.70, 59.4° with the square boom (the default), 63.7° with both. The board comes back and the sailor waterstarts. Rolled over would be past 90°.
+
+### In gusts and waves
+
+`tools/push_check.sh --sweep=sail.boom_square_to_mast=0,1 --sweep2=sailor.hand_grip_m=0.6,0.7` (the game's open water: waves, the height gradient, gusts of 0.2 every 8 s; the beginner's controller; speed made good in m/s). In 120 s per case, the square boom on its own changes the speed made good by −3.4 to +2 %, with no falls: 18 kt beam reach 11.92 → 12.12, 24 kt upwind 7.40 → 7.55, 24 kt beam reach 13.32 → 12.87, 24 kt broad reach 12.78 → 12.64. At 24 kt it brings the fin closer to its limit in the gusts (the fin's peak load 0.44 → 0.86 of its stall across, 0.28 → 0.84 on the broad reach). The autopilot sheets to the heeling lever it feels, and the sail's force now acts a little lower, so it holds more of the 8.0 at the same lean. With the hands at 0.70 as well, the 24 kt beam reach catapulted 4 times in 120 s. Run for 400 s at 24 kt:
+
+| 24 kt, 400 s | Beam reach (100°): made, falls | Broad reach (135°): made, falls |
+|---|---|---|
+| Before (level boom, hands at 0.6) | 12.80, 2 | 12.69, 0 |
+| Hands at 0.70 | 12.55, 3 | 12.61, 0 |
+| Square boom (**now the default**) | 12.75, 2 | 12.66, 0 |
+| Square boom and hands at 0.70 | **11.03, 8** | 12.64, 0 |
+
+So the square boom is the default, and the hands stay at 0.6. An 8.0 in 24 kt gusts is past its range for a 75 kg rider, and the old default catapults there too (twice in 400 s). With both changes the autopilot sails so close to the edge that it falls every 50 s. How close to the edge the sailor sails is the autopilot's margin (`hike_share` 1.1, the margin 0.1 shipped with), which GP3 re-measures, so 0.70 is for Max to decide with it.
+
+### The fin and the nose: a correction of section 10
+
+Section 10 said an upward push at the tail lifts the nose if the rider's weight is behind the fin. That is not the condition. The fin's upward force does not come on top of the hull's lift: it replaces part of it, because the weight to carry is the same. The fin sits 0.30 m from the tail, behind the centre of the hull's push (1.0 to 1.3 m from the tail on today's reaches). So lift moved from the push to the fin is lift moved aft, and the balance then needs the push further forward: a longer wet part and the nose down. In numbers: about the windsurfer's centre of mass, the push P at d_p and the fin's F at d_f carry the sail's nose-down moment M, P (d_p − d_c) + F (d_f − d_c) = M with P + F = W. Each newton the fin takes over moves the push by (d_p − d_f)/(W − F): forward as long as the fin is behind the push. The weight's place does not decide it. Only a board riding on its last 0.4 m or so, with the push behind the fin, would lift its nose on the fin.
+
+So the nose that Max feels come up when the fin is loaded hard is likely not the fin's push itself. A fin loaded hard means a sail pulling hard, and a rider hanging back harder against it: the hang-back answers the pull in the hands, and that lifts the nose. This fits his answer 5 ("overpowered, the nose comes up by itself"). Air under a raised nose would add to it, and the board's own aerodynamics are not modelled. **A question for Max:** does the nose come up as the fin loads at the same pull (the same sail, the same lean, say on a smooth stretch at speed), or does it come with more pull (a gust)?
+
+### What is open, and what decides it
+
+1. **The short line** (the table's point 1). Either a real full hike is not as low and as far out as Gourlay & Martellotta's 30° on a slalom board with 30 inch lines, or real booms sit lower, or real riders lean the rig much further and steer with the rail. Max's numbers decide it: the boom's height above the deck, how high his hips are when fully powered, and the rig's windward lean (a photo from behind or the side).
+2. **One body, one reach** (point 2). A limit on the centre of mass's distance from the feet would bring the weight forward or in when the rider hangs back hard. That costs either trim or righting moment, so it is measured before it is built.
+3. **The trim press's reach** (point 3), from the back straps' place.
+4. **The weight split, harness against arms** (Max's answer 3). It changes nothing for the board: the line and the hands both act through the boom, so the moments about the feet are the same. It changes the reported harness tension (730 to 880 N against Walls & Gale's 368 to 415 N). A split that grows the arms' share with the power would match the measurement, but it needs a rule.
+5. **The body by power** (Max's answer 4). The lean already follows the pull (it balances the moment of the hands about the feet), and the drop follows the lean. "Longer lines when overpowered" is a setting per day, `harness_line_m` once the posture uses it.
+
+### What Max measures on his Patrik 115
+
+Distances along the centreline from the tail, unless said otherwise:
+- **The mast track:** the front and back ends of the slot, and where he sets the mast foot for slalom (the centre of the pin).
+- **The footstraps:** the centre of each back strap and each front strap that he uses, from the tail and in from the rail.
+- **The fin box:** the front of the box (the fin's leading edge at the root), and the fin he sails it with (its depth, its brand and model).
+- **The board:** length, width, the width 30 cm from the tail, weight with straps and fin.
+- **His rig on it:** the sail's size, the boom's height above the deck at the mast, the harness lines' length (inches) and where their two ends sit on the boom (from the mast), and his weight with the wetsuit and harness.
+- **If he can:** a photo of himself fully powered on a reach, from the side or from behind. It shows the rig's lean, the body's angle and the hips' height, which decide point 1.

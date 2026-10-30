@@ -140,9 +140,12 @@ extends Resource
 ## Max (29 October 2026, PH16 step 16): most riders set the lines a little behind the centre
 ## of effort and the front arm carries more (55/45 to 60/40), so the boom's force, line and
 ## hands together, acts about at the centre of effort's place on the boom: ce_boom_fraction
-## times boom_m, 0.70 m on the 8.0 (the default sets that; it was 0.6). Measured (reach check,
-## 90 s): 0 to 1 % faster than 0.6, with the rider trimming at the edge of the bounce on the
-## 24 kt beam reach (pitch SD 0.23 deg); further aft (0.75) the 18 kt beam reach bounces.
+## times boom_m, 0.70 m on the 8.0. Measured with the boom square to the mast, not made the
+## default: on flat water 0 to 1 % faster than 0.6 (the rider trimming at the edge of the
+## bounce on the 24 kt beam reach, pitch SD 0.23 deg; at 0.75 the 18 kt beam reach bounces),
+## but in 24 kt gusts and waves the autopilot then holds the 8.0 so close to the edge that the
+## beam reach catapulted 8 times in 400 s against 2 at 0.6. With the autopilot's margin (GP3)
+## and Max (Documentation/reports/ph28/hull_balance.md, section 12).
 @export var hand_grip_m: float = 0.6
 ## How far outboard the feet stand at full lean (the rail of a 60 cm wide board is 0.3 m
 ## out; the straps are a little inside it). The feet stay on the centreline while the

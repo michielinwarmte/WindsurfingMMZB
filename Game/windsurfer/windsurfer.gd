@@ -214,8 +214,9 @@ func _copy_state_to_visuals() -> void:
 	# the board's axes here.
 	var rig_to_board: Basis = body.basis.transposed() * sim.rig.basis
 	var mast_dir: Vector3 = rig_to_board * sim.sail.mast_direction()
-	var boom_angle: float = sim.sail.sail_angle_rad()
-	var boom_dir: Vector3 = rig_to_board * Vector3(sin(boom_angle), 0.0, cos(boom_angle))
+	# The boom as the simulation has it: level at the sail's angle, or square to the raked mast
+	# (SailConfig.boom_square_to_mast), so the hands stay on it.
+	var boom_dir: Vector3 = rig_to_board * sim.sail.boom_direction_local
 	_rig.pose_sailing(mast_dir, boom_dir)
 	_rig.shape_sail(sim.sail, sim.time_s)
 	# The sailor holds the windward arm of the wishbone boom, not the boom's centre line.

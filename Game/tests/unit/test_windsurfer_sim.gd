@@ -106,9 +106,9 @@ func test_overpowered_sailor_is_catapulted_and_the_board_stays_upright() -> void
 	assert_true(sim.fall_kind == "catapult" or sim.fall_kind == "tipped over", "to leeward, over the sail (%s)" % sim.fall_kind)
 	assert_lt(heel_at_fall, 30.0, "the board had heeled only a little when the sailor let go")
 	# The kick as the sailor leaves (0.3 s after) is sensitive: 42.7 degrees with the boom held
-	# at 0.6 m and level, 50 at 0.62, 57.5 at 0.70, 63.7 at 0.70 with the boom square to the
-	# raked mast (the default since PH16 step 16, which loosened this from 45). Rolled over is
-	# past 90; the board comes back and the sailor waterstarts.
+	# at 0.6 m and level, 50 at 0.62, 57.5 at 0.70, 59.4 at 0.6 with the boom square to the
+	# raked mast (the default since PH16 step 16, which loosened this from 45), 63.7 at 0.70 and
+	# square. Rolled over is past 90; the board comes back and the sailor waterstarts.
 	assert_lt(max_heel_after, 75.0, "and did not roll over afterwards")
 	assert_eq(sim.sailor_state, WindsurferSim.SailorState.SAILING, "back on the board after the waterstart")
 	var t: Telemetry = sim.telemetry
