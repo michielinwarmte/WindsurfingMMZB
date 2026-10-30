@@ -345,3 +345,81 @@ Distances along the centreline from the tail, unless said otherwise:
 - **The board:** length, width, the width 30 cm from the tail, weight with straps and fin.
 - **His rig on it:** the sail's size, the boom's height above the deck at the mast, the harness lines' length (inches) and where their two ends sit on the boom (from the mast), and his weight with the wetsuit and harness.
 - **If he can:** a photo of himself fully powered on a reach, from the side or from behind. It shows the rig's lean, the body's angle and the hips' height, which decide point 1.
+
+## 13. Step 17: Max's board measured, and the footstraps (30 October 2026)
+
+Max measured his own slalom board, a Patrik (PD) Slalom 115 (115 l, 70 cm wide), and put six photos of himself sailing in `Documentation/images/Real life photos/`. IMG_4743 is the gear closest to the game's: the sail in it with a 39 cm fin on a 107 l, 69 cm wide board. Session 60, Opus 5.5, on Max's other PC (the reach check gives Session 59's numbers here to the last digit).
+
+**In short.** The back straps sit right over the fin box's front screw, 0.235 m from the tail, and the front straps 0.59 m ahead of them. The model let the feet's pressure creep all the way to the tail. Now it stops at the straps, on by default. That changes one reach-check case (the 18 kt broad reach: 2 % slower, steadier), and gusts and waves stay within 0.7 % except one case at −2.3 % (no new falls). The fin box puts the fin's force about 0.12 m further aft than the model has it (the fin's sweep is an estimate). Moved there alone, the rake runs out of steering on the 24 kt beam reach and the board catapults. With the mast foot also at the back of Max's track it sails again, but the 24 kt beam reach bounces. Measured and not built: for Michiel. One photo puts Max's hips about 0.6 m above the deck on a harness line of about 0.5 m. The model's full hike has them at 0.42 m on a 1 m line. Those are estimates from a single photo.
+
+### The measurements
+
+Max's notes (in Dutch, translated), converted to distances from the tail along the centreline:
+
+| What | Max's numbers | From the tail |
+|---|---|---|
+| The fin box's back screw | 12 cm from the tail | 0.12 m |
+| The fin box's front screw | 11.5 cm ahead of the back screw | 0.235 m |
+| The back straps (the middle of each) | in line with the front screw; 30 cm apart, port to starboard | 0.235 m; 0.15 m either side of the centreline |
+| The board's width at the back straps | 47 cm | the rail 0.235 m out: the straps 8.5 cm in from it |
+| The front straps (the middle of each) | 59 cm ahead of the front screw; 50 cm apart | 0.825 m; 0.25 m either side |
+| The board's width at the front straps | 65 cm | the rail 0.325 m out: the straps 7.5 cm in from it |
+| The mast track | from 101 to 117 cm ahead of the front screw | 1.245 to 1.405 m |
+
+Against the model (the JP SL 72, 2.28 m, with its origin at mid-length):
+
+| | Max's board | The model |
+|---|---|---|
+| Mast foot | track 1.245 to 1.405 m (his slalom setting not given yet) | 1.30 m (`mast_foot_local` z −0.16): inside the track, 5.5 cm from its back end |
+| The weight when planing | between the back strap (0.235) and the front strap (0.825) | the stance 0.60 m (`stance_planing_z_m` 0.54), and the trim press up to 0.6 m times the planing ratio aft of it: 0.27 m on the steady reaches, and in principle the tail itself |
+| The feet across | 0.15 m out at the back strap, 0.25 m at the front | `feet_rail_m` 0.22 |
+| The fin's force | the box from 0.12 to about 0.26 m (below) | 0.30 m (`root_local` z 0.84) |
+
+Not given yet: where he sets the mast foot for slalom, the boom's height above the deck, the harness lines (length, and where their ends sit on the boom), his weight, the board's length and weight, the fin's model, and the sail's size in IMG_4743.
+
+### Built, on: the feet's pressure stays between the straps
+
+`BoardConfig.back_strap_from_tail_m` 0.235 and `front_strap_from_tail_m` 0.825 (`board_default.tres`; 0 is no limit, as before). After each tick's trimming, `WindsurferSim._press_within_straps` clamps the trim press: no further aft than all the weight on the back strap, and, once the stance is in the straps, no further forward than all of it on the front strap. The body moves with the press (section 7.5 of the spec), so it stops there too. The hang-back is not clamped: it is the body leaning back from the feet. Test: `test_footstraps.gd`.
+
+The reach check (90 s, means from 60 s) is identical in 8 of 9 cases: the steady press sits at 0.27 m, inside the strap. On the 18 kt broad reach it goes from 14.59 to 14.29 m/s (−2.1 %), and the pitch SD from 0.17 to 0.09°. Trimming by feel had been creeping onto the tail behind the back foot, where a rider cannot stand.
+
+In gusts and waves (`tools/push_check.sh --seconds=120 --jobs=3`, with `--board.back_strap_from_tail_m=0 --board.front_strap_from_tail_m=0` for the old case; push check now takes `--board.` for the numbers the sim copies every tick):
+
+| Speed made good, m/s | 48° | 100° | 135° |
+|---|---|---|---|
+| 12 kt, no straps → straps | 4.16 → 4.16 | 7.76 → 7.75 | 5.54 → 5.54 |
+| 18 kt | 6.78 → 6.83 | 12.12 → 12.11 | 8.13 → 8.17 |
+| 24 kt | 7.55 → 7.54 | 11.46 → 11.20, 1 catapult in each | 12.64 → 12.65; the largest heel 12.7 → 5.8°, the fin's peak load 0.84 → 0.39 |
+
+The 24 kt beam reach catapulted once in both. Session 59's run on the other PC had no fall there in 120 s (12.87). The two runs were split over processes differently, and whether that changes the gusts was not checked. The two runs here are a fair pair: same settings, same split.
+
+Tried and not kept: the same thing as settings only (the stance at the straps' midpoint 0.53 m, the reach 0.295 m, `feet_rail_m` 0.20). It was 0 to 5 % slower, because the reach is also scaled by the planing ratio (0.56 at full plane), so the weight could no longer get onto the back foot.
+
+Not built: the feet across. With the weight on the back foot, the feet's pressure sits 0.15 to 0.16 m out, not 0.22. The two straps' line gives it at each fore-and-aft place, but it costs righting moment, so it is to be measured first.
+
+### Measured, not built: the fin at Max's fin box
+
+Where the fin's force acts, estimated: a (Deep) Tuttle fin's base runs from about 2 cm ahead of the front screw (0.26 m) back about 0.16 m. A 39 cm slalom fin is swept back, so at 40 % of the span (`cop_span_fraction`) its quarter chord is about 0.15 to 0.22 m from the tail. The model has 0.30 m. The fin's chord and sweep are not measured; Max's fin model would settle them. Reach check with the fin at 0.18 m (`--fin.root_local=0,-0.06,0.96`; straps off):
+
+| | 12 kt 60° | 12 kt 100° | 12 kt 135° | 18 kt 60° | 18 kt 100° | 18 kt 135° | 24 kt 60° | 24 kt 100° | 24 kt 135° |
+|---|---|---|---|---|---|---|---|---|---|
+| Fin at 0.30 (default) | 7.56 | 11.70 | 5.97 | 9.93 | 14.52 | 14.59 (0.17) | 10.26 | 16.22 | 18.64 |
+| Fin at 0.18 | 7.55 | 11.76 | 5.96 | 10.21 | 14.37, bouncing (1.36) | 14.58 (0.17) | 10.59 | **fell** | 18.46 |
+| Fin at 0.18, mast foot at the back of Max's track (1.245 m), straps on | 7.55 | 11.73 | 5.96 | 10.06 | 14.68 | 14.22 (0.09) | 10.49 | 16.25, bouncing (0.83) | 18.52 |
+
+On the 24 kt beam reach with the fin at 0.18, the board drifted off downwind (the true wind angle 100 to 115°), the rake sat at its stop (0.85 to 1.0), the yaw swung to 60°/s, the fin slipped, and the sailor was catapulted at 15.8 s. A fin further aft leaves the centre of effort further ahead of the fin, so the sail's side force bears the board away, and the rake has to rake the rig back to hold the course. The model's balance (the centre of effort at 0.35 of the boom, the rake's range, the mast foot) is tuned around a fin 0.12 m too far forward. Moving the mast foot 5.5 cm aft, to the back of Max's track, gives that steering back: the close reaches are 1 to 2 % faster than the default and nothing falls. But the 24 kt beam reach bounces (pitch SD 0.83°, the team's limit is 0.3). For Michiel: with the fin where the box puts it, what holds the course and the trim? The candidates are the rake's range, the centre of effort's place on the boom, the mast foot (Max's setting) and the hull's side force at speed.
+
+### The photos
+
+Rough reads by eye from photos taken at an angle (no scale in the picture): estimates, not measurements.
+
+- **IMG_4743** (Max, the gear closest to the game's, powered up on a reach): hooked in, the harness line (the teal one) running from the boom down to the hook at the hips. The line is about 0.5 m long. The hips are about 0.6 m above the deck, the legs nearly straight, and the body 40 to 50° from upright. The rig is close to upright, and the boom at the mast is above his head. Against the model's full hike (the centre of mass 0.42 m above the deck and 1.13 m out, a line of 0.95 to 1.14 m), Max hangs higher and less far out, on half the line. That speaks for the first option of section 12's open point 1: a real full hike on a slalom board is not as low and as far out as Gourlay & Martellotta's 30°. Changing it costs righting moment, though, and the 8.0 then needs a stronger sailor somewhere else. To be measured before it is built.
+- **121, 2015-08-18, SPST4453, 141 (the rider on the right)**: overpowered. The rig is leaned well to windward and raked back, and the rider sits low with the bum down, close to the boom, arms long (Max's answer 4). In 121 and 2015-08-18 the rider is tucked behind the sail.
+- **005**: on an older board at speed, the nose well out of the water. That is the nose lift Max feels (section 12's question: same pull, or more pull?).
+
+### Still open after step 17
+
+1. The posture from the photo, for Max: a full hike that is higher and less far out, with the line about 0.5 m long, measured against the righting moment the 8.0 needs at 24 kt.
+2. The fin at the box and the mast foot, for Michiel (above), with Max's slalom mast foot setting.
+3. The feet across, along the straps' line (above).
+4. From Max: the mast foot setting, the boom's height, the harness lines, his weight, the fin's model and the sail in IMG_4743. The question from section 12 on the nose is still open.

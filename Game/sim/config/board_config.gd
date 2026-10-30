@@ -89,6 +89,14 @@ const ONE_FOOT_M: float = 0.3048
 ## Makers do not publish the sizes; 0 = no cut-outs (a freeride or wave tail).
 @export var cutout_from_tail_m: float = 0.0
 @export var cutout_depth_m: float = 0.0
+## The footstraps the sailor stands in when planing, from the tail along the centreline, to
+## the middle of each strap. While the feet are in them the feet's pressure stays between the
+## two: at most all on the back foot, at most all on the front foot (the trim press is
+## clamped there; PH16 step 17). Max's Patrik 115 slalom board (30 October 2026): the back
+## straps over the fin box's front screw, 0.235 m; the front straps 0.825 m. 0 = no limit
+## (the press reaches as far as SailorConfig.trim_press_max_m, as before).
+@export var back_strap_from_tail_m: float = 0.0
+@export var front_strap_from_tail_m: float = 0.0
 ## The unsteady lift factor of the spray root running forward along a sinking hull (the
 ## slamming part of planing, section 5) is held at most at this: a flat bottom meeting
 ## rising water at a small angle would otherwise see an unbounded root speed.

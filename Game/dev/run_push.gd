@@ -16,7 +16,8 @@ extends SceneTree
 ##   [--winds=12,18,24] [--twas=48,100,135] [--seconds=150] [--from=40]
 ##   [--waves=1] [--gusts=1] [--gust_intensity=0.2] [--gust_period=8] [--gradient=1]
 ##   [--sweep=<group>.<field>[+<group>.<field>]=<v1>,<v2>,...] [--sweep2=...]  (crossed)
-##   [--pilot.<field>=<n>] [--sailor.<field>=<n>]                 (fixed for every case)
+##   [--pilot.<field>=<n>] [--sailor.<field>=<n>] [--board.<field>=<n>]   (fixed for every case;
+##   board: only the numbers the sim copies every tick, such as the footstraps)
 ##   [--timing=1 --timing_lead_s=1 --timing_threshold=0.3 --timing_ease=<group.field>:<n>;...]
 ##      the sailor who knows the gusts: while the gust factor now or timing_lead_s ahead is above
 ##      1 + threshold x intensity, the timing_ease settings replace the case's own
@@ -118,7 +119,7 @@ func _initialize() -> void:
 func _build_cases() -> Array[PushCase]:
 	var fixed: Dictionary[String, float] = {}
 	for key: String in _options:
-		if key.begins_with("pilot.") or key.begins_with("sailor.") or key.begins_with("sail."):
+		if key.begins_with("pilot.") or key.begins_with("sailor.") or key.begins_with("sail.") or key.begins_with("board."):
 			fixed[key] = _options[key].to_float()
 	var sweeps: Array[Array] = [_parse_sweep(_options.get("sweep", "")), _parse_sweep(_options.get("sweep2", ""))]
 	var cases: Array[PushCase] = []
@@ -165,6 +166,10 @@ func _run_case(case: PushCase, falls: Array[String]) -> PushResult:
 	var sim: WindsurferSim = _make_sim(case.wind_kt)
 	_apply_settings(case.settings, "sailor.", sim.sailor_config)
 	_apply_settings(case.settings, "sail.", sim.sail_config)
+	# The board's numbers the sim copies every tick (the footstraps), on a copy of the shared
+	# default; fields that build the hull or the buoyancy grid are not for this.
+	sim.board_config = sim.board_config.duplicate()
+	_apply_settings(case.settings, "board.", sim.board_config)
 	var controller: PlayerController = PlayerController.new()
 	var hands: AiHands = AiHands.new()
 	controller.hands = hands

@@ -107,7 +107,7 @@ func update(stance: float, lean: float, hang_back_m: float = 0.0, knee_bend_m: f
 	sailor_position_body = Vector3(
 		lean * _lean_max_m,
 		_com_height_m - absf(lean) * _lean_height_drop_m - knee_bend_m,
-		(lerpf(_stance_rest_z_m, _stance_planing_z_m, stance) if stance >= 0.0 else lerpf(_stance_rest_z_m, _stance_tack_z_m, -stance)) + hang_back_m)
+		stance_z_m(stance) + hang_back_m)
 	rig_position_body = _mast_foot_local + Vector3(sin(rig_lean_rad) * _rig_com_height_m, cos(rig_lean_rad) * _rig_com_height_m, 0.0)
 	var board_position_body: Vector3 = Vector3.ZERO
 
@@ -130,6 +130,13 @@ func update(stance: float, lean: float, hang_back_m: float = 0.0, knee_bend_m: f
 	inertia_body = _add_part(inertia_body, _rig_mass_kg, rig_own, rig_position_body - com_offset_body)
 
 
+## Where the weight stands fore and aft for a stance (body z, aft positive), before the trim
+## press and the hang-back.
+func stance_z_m(stance: float) -> float:
+	stance = clampf(stance, -1.0, 1.0)
+	return lerpf(_stance_rest_z_m, _stance_planing_z_m, stance) if stance >= 0.0 else lerpf(_stance_rest_z_m, _stance_tack_z_m, -stance)
+
+
 ## Where the feet press the deck for a stance, a lean and a rail press, body axes: on the
 ## centreline up to feet_out_from_lean, out on the windward rail (feet_rail_m) from
 ## feet_out_full_lean on, shifted toward the pressed rail by the rail press (rail_step_m,
@@ -137,7 +144,7 @@ func update(stance: float, lean: float, hang_back_m: float = 0.0, knee_bend_m: f
 ## the body, not the feet).
 func feet_position_body(stance: float, lean: float, rail_press: float = 0.0, trim_press_m: float = 0.0) -> Vector3:
 	stance = clampf(stance, -1.0, 1.0)
-	var feet_z: float = (lerpf(_stance_rest_z_m, _stance_planing_z_m, stance) if stance >= 0.0 else lerpf(_stance_rest_z_m, _stance_tack_z_m, -stance)) + trim_press_m
+	var feet_z: float = stance_z_m(stance) + trim_press_m
 	var out: float = smoothstep(_feet_out_from_lean, _feet_out_full_lean, absf(lean))
 	var standing_x: float = _feet_rail_m * out * signf(lean)
 	var press: float = clampf(rail_press, -1.0, 1.0)

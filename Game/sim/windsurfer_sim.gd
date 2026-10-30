@@ -257,6 +257,9 @@ var _step_rate_per_s: float = 0.0
 var _tip_time_s: float = 0.0
 var _trim_press_band_deg: float = 0.0
 var _trim_press_max_m: float = 0.0
+# The footstraps in body z (aft positive); INF and -INF when the board has none.
+var _back_strap_z_m: float = INF
+var _front_strap_z_m: float = -INF
 var _trim_press_rate_ms: float = 0.0
 var _trim_feel_time_s: float = 0.0
 var _bounce_tolerance_dps: float = 0.0
@@ -461,6 +464,8 @@ func _copy_configs() -> void:
 	_board_length_m = board_config.length_m
 	_board_thickness_m = board_config.thickness_m
 	_board_residuary_peak_froude = board_config.residuary_peak_froude
+	_back_strap_z_m = 0.5 * board_config.length_m - board_config.back_strap_from_tail_m if board_config.back_strap_from_tail_m > 0.0 else INF
+	_front_strap_z_m = 0.5 * board_config.length_m - board_config.front_strap_from_tail_m if board_config.front_strap_from_tail_m > 0.0 else -INF
 	_mast_foot_local = sail_config.mast_foot_local
 	_boom_height_m = sail_config.boom_height_m
 	_rig_mass_kg = sail_config.rig_mass_kg
@@ -1061,6 +1066,7 @@ func _update_sailor(dt: float) -> void:
 			press_target = clampf((trim_target_deg - rad_to_deg(body.pitch_rad())) / _trim_press_band_deg, -1.0, 1.0) * _trim_press_max_m * clampf(hull.planing_ratio, 0.0, 1.0)
 		if not _controls_freeze_fore_aft:
 			trim_press_m = move_toward(trim_press_m, press_target, _trim_press_rate_ms * dt)
+	trim_press_m = _press_within_straps(trim_press_m)
 
 	var asked: float = clampf(_controls_lean, -1.0, 1.0)
 	_asked_lean = asked
@@ -1108,6 +1114,17 @@ func _update_sailor(dt: float) -> void:
 	# mass leans with the rig.
 	_rig_lean_now_rad = _rig_lean_rad()
 	_set_posture()
+
+
+## The feet's pressure stays between the footstraps (BoardConfig.back_strap_from_tail_m and
+## front_strap_from_tail_m): the press goes no further aft than all the weight on the back
+## strap, and, once the stance is in the straps, no further forward than all of it on the
+## front strap. A stance still forward of the front straps (by the mast) is not held back.
+func _press_within_straps(press_m: float) -> float:
+	var stance_z: float = mass_model.stance_z_m(stance)
+	var aft_limit: float = maxf(_back_strap_z_m - stance_z, 0.0)
+	var forward_limit: float = minf(_front_strap_z_m - stance_z, 0.0) if stance_z > _front_strap_z_m else -INF
+	return clampf(press_m, forward_limit, aft_limit)
 
 
 ## Trimming by feel (SailorConfig.trim_feel_time_s): the rider feels the board's attitude and
