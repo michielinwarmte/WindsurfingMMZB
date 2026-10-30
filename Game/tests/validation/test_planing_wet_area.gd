@@ -10,7 +10,12 @@ extends GutTest
 ## Target 3: at 18 and 24 kt on the beam and broad reach, the front of the wet part 0.6 to
 ##           1.0 m from the tail (real boards are wet from the front footstraps back).
 ## Target 4: in the same four cases, the centre of the water's push 0.45 to 0.75 m from the
-##           tail (Savitsky 1964; Gourlay & Martellotta 2011) and the trim 1.5 to 4 degrees.
+##           tail (Savitsky 1964; Gourlay & Martellotta 2011) and the trim 1.0 to 2.5 degrees
+##           (PH28: Savitsky's equations for this board's load and width, 0.6 to 1.0 m wet at
+##           15 m/s going with 0.95 to 2.5 degrees, and Gourlay & Martellotta's curve, 3 degrees
+##           at 12 kn falling with the speed squared to about 1 at 20 kn: Documentation/reports/
+##           ph28/flying_the_board.md section 8. U1's 1.5 to 4 degrees came from their 12 kn
+##           upwind case, too high for the game's reaches.)
 ##
 ## A target that is not yet a check calls pending() with the measured numbers when it is
 ## unmet: the suite stays green and the numbers stay in the output. Target 2 is met since
@@ -35,8 +40,8 @@ const WET_FRONT_MIN_M: float = 0.6
 const WET_FRONT_MAX_M: float = 1.0
 const PUSH_CENTRE_MIN_M: float = 0.45
 const PUSH_CENTRE_MAX_M: float = 0.75
-const TRIM_MIN_DEG: float = 1.5
-const TRIM_MAX_DEG: float = 4.0
+const TRIM_MIN_DEG: float = 1.0
+const TRIM_MAX_DEG: float = 2.5
 
 ## "<wind>_<twa>" -> the run.
 var _runs: Dictionary[String, ValidationRun] = {}

@@ -5,7 +5,8 @@ extends Resource
 
 @export_group("Body")
 ## Mass of the sailor with wetsuit and harness. The default (sailor_default.tres) is Max's
-## own 80 kg (PH16 step 17), the rider whose on-water feedback checks the physics.
+## own: 85 kg "with all" (Max, 30 October 2026; 80 kg in PH16 step 17), the rider whose
+## on-water feedback checks the physics.
 @export var mass_kg: float = 75.0
 ## Height of the sailor's centre of mass above the board origin when standing upright
 ## (about 0.55 times body height above the feet, plus the deck height).
@@ -13,6 +14,11 @@ extends Resource
 ## Radius and height of the cylinder that stands in for the sailor's own inertia.
 @export var torso_radius_m: float = 0.2
 @export var height_m: float = 1.75
+## How far the centre of mass is from the feet along the body, as a share of the height: 0.57
+## (Gourlay & Martellotta 2011: 1.03 m on a 1.80 m sailor; Winter 2009: 0.55 to 0.57 of the
+## height). One body is as far as the hike and the hang-back together can put the centre of
+## mass from the feet (WindsurferSim._keep_within_one_body, PH28).
+@export var body_reach_share: float = 0.57
 
 @export_group("Stance (fore and aft)")
 ## Where the sailor's weight is at rest and at low speed, in the body frame (z aft): the
@@ -116,7 +122,14 @@ extends Resource
 ## balance as the sideways lean, fore and aft). The furthest the weight can hang back
 ## behind the feet: a sailor hanging back hard against a strong pull is nearly horizontal
 ## (at 0.5 m the drive of a powered sail at the hump could not be balanced, and the rest
-## went bow-down into the deck: the board planed late).
+## went bow-down into the deck: the board planed late). Since PH28 one body binds first
+## (body_reach_share): the hike and the hang-back share one body's reach, so at a full hike
+## with 0.4 m of hang-back asked the body gives a tenth of each, and the 0.5 to 0.56 m an 8.0
+## needs at the 18 kt start, the feet still by the mast and the body hiked little, still fits.
+## (The PH28 rider build first set this to 0.4 m from the photos, the hips 0.2 to 0.4 m behind
+## the back foot at full power: Documentation/reports/ph28/sailor_controls_plan.md section 2.
+## The model measures the hang-back from the feet's pressure point, not the back foot, and at
+## 0.4 m the 18 kt start nose-dived and the sailor fell off: rider_feet_body.md, step B.)
 @export var hang_back_max_m: float = 0.8
 
 @export_group("Legs")
@@ -230,6 +243,25 @@ extends Resource
 ## jolt shorter than this is ridden out).
 @export var tip_time_s: float = 0.3
 
+@export_group("The front foot (PH28)")
+## The front foot pulling up in its strap, against the back foot pressing: the most it pulls
+## held, 150 to 250 N (the U1 sources' estimate from hip-flexor and dinghy hiking-strap
+## forces, Documentation/reports/ph28/flying_the_board.md section 2; Max, 30 October 2026,
+## answer 1: "correct"); 200 N is the middle of that range. Times the straps' spread
+## (BoardConfig: the front strap less the back strap from the tail, 0.59 m on Max's board)
+## it is the nose-up moment the feet can pass beyond all the weight on the back foot:
+## 118 N m held. Two uses (WindsurferSim): the rider hangs the body behind the back foot
+## further than the pull in the hands alone holds it and lets the front foot hold it there
+## (_front_foot_couple_nm: a couple between the feet is internal to the windsurfer, so with
+## the weight standing still it cannot change the board's trim), and the pitch part of the
+## feet's moment is capped by it (_feet_pitch_within_straps). The back foot's pull in its
+## strap, for a nose-down moment, is taken as the same (an estimate). 0 = no pull.
+@export var front_foot_pull_held_n: float = 200.0
+## The most the front foot pulls briefly: about 400 N (the same sources; Max: "correct"), for
+## at most tip_time_s at a time, as the hips hold a body tipped harder than hip_force_max_n
+## only that long.
+@export var front_foot_pull_brief_n: float = 400.0
+
 @export_group("Falling and getting back up")
 ## The board heels toward the sail only when the sailor can no longer balance the sail's
 ## pull. Past this leeward heel a standing person is pulled over the sail: a catapult.
@@ -250,17 +282,23 @@ extends Resource
 @export_group("Lean (sideways)")
 ## Sideways distance of the sailor's centre of mass from the centreline at full lean:
 ## hooked in with the feet on the windward rail (feet_rail_m) and the body in a full hike,
-## the body 30 degrees above the water. Gourlay & Martellotta (2011, RS:X, section 6.1): a
-## sailor keeps the body "at least 20 to 30 degrees above horizontal", the centre of mass
-## 1.03 m from the feet (0.57 of a 1.80 m body), so 0.89 m outboard of the feet at 30
-## degrees: 1.11 m from the centreline. (PH16, Max: "the sailor is too weak". U1.2 had set a
-## 45 degree stance, 0.88 m, to keep a short harness line under the boom; with it the sailor
-## could not hold an 8.0 m2 sheeted in at 15 kt and eased it off in a bear-away. The short
-## line against this hike is the open question of the hooked-in posture.)
-@export var lean_max_m: float = 1.11
-## The centre of mass drops by this much at full lean: the same 30 degree hike puts it
-## 1.03 x sin 30 = 0.52 m above the feet, 0.48 m below standing.
-@export var lean_height_drop_m: float = 0.48
+## one body's reach from the feet (body_reach_share of the height: 0.9975 m on this 1.75 m
+## sailor) with the hips about 0.5 m above the deck, as the photos of Max and of slalom
+## riders at full power read (Documentation/reports/ph28/sailor_controls_plan.md section 2,
+## estimates: 0.45 to 0.6 m; Max, 30 October 2026, answer 4: "estimate in photos"). That is
+## the body 30 degrees above the water, Gourlay & Martellotta's full hike (2011, RS:X, section
+## 6.1: "at least 20 to 30 degrees above horizontal"; the photos: 30 to 45, 35 typical), and
+## the centre of mass 0.863 m outboard of the feet: 1.08 m from the centreline. (PH28; until
+## then 1.11 m, their 1.80 m body's 1.03 m on this 1.75 m sailor. PH16, Max: "the sailor is
+## too weak". U1.2 had set a 45 degree stance, 0.88 m, to keep a short harness line under the
+## boom; with it the sailor could not hold an 8.0 m2 sheeted in at 15 kt and eased it off in
+## a bear-away.)
+@export var lean_max_m: float = 1.08
+## The centre of mass drops by this much at full lean: the hips about 0.5 m above the deck
+## (the photos, an estimate), the deck 0.065 m above the board origin on the JP SL 72 (half
+## its thickness), the centre of mass com_height_m 1.0 m up standing: 1.0 - 0.5 - 0.065 =
+## 0.435 m. (PH28; until then 0.48 from the 1.80 m body, the hips 0.42 m above the deck.)
+@export var lean_height_drop_m: float = 0.435
 ## How fast the sailor means to change the lean (fraction of full lean per second): the
 ## hips move about a metre a second. The body follows as the legs, the ankles and the
 ## pull in the hands let it (it is an inverted pendulum on the feet).
@@ -279,7 +317,9 @@ extends Resource
 ## 24 kt broad reach on flat water stayed steady for 40 s instead of bouncing (pitch SD 0.10
 ## against 0.93 deg) but bounced the same after a minute (0.74 against 0.77), and gusts, waves
 ## and the other reaches were unchanged within 1 %: physically the better rig, with no
-## measured gain, so it is off until Michiel decides (Documentation/reports/ph28/hull_balance.md).
+## measured gain (Documentation/reports/ph28/hull_balance.md). Max (30 October 2026): "the rig's
+## pitch lag: off", so the default is 0. (sailor_default.tres had it on at 0.3 s from Session 58 to
+## the PH28 rider build while this comment, the sim's and the spec said off: review_sim 3.3.)
 @export var rig_pitch_follow_s: float = 0.0
 ## How far the sailor can tilt the rig sideways with the arms and shoulders on top of that
 ## (the mast foot is a free joint; what limits the tilt is the reach of the arms and, at
@@ -317,7 +357,8 @@ extends Resource
 ## of the 18 and 24 kt beam reaches by about 0.3 m while they stay steady; flat (0) is
 ## shorter still on the beam reaches, but slow and long at 12 kt and on the close reaches,
 ## and the 24 kt broad reach bounces flat at every trim target from 1.5 to 2.5 degrees.
-## Max will say what he does on a beam reach.
+## Max will say what he does on a beam reach. Max (30 October 2026, answer 3): "crosswind a
+## little bit, 1 to 3 degrees"; 2 is the middle (PH28; the value U2 had measured stays).
 @export var fin_load_bank_deg: float = 2.0
 ## The bank by point of sail (U2): a sailor rails the board to load the fin across and
 ## toward the wind and keeps it flat off the wind (windsurfing instruction: railing
@@ -330,8 +371,17 @@ extends Resource
 ## 24 kt broad reach bounces (pitch SD 0.35 degrees) or falls, so the default keeps the
 ## bank to a run: full to 160 degrees, flat at 180 (an estimate; on a run the sailor
 ## stands over the centreline anyway). 120 is the setting to try the instruction's rule.
+## Max (30 October 2026): a 72 cm board sails flat downwind (PH28: sailor_default.tres
+## fades the bank from 100 degrees to none at 135, the reach check's broad reach).
 @export var fin_load_twa_max_deg: float = 180.0
 @export var fin_load_twa_fade_deg: float = 20.0
+## Toward the wind the leeward rail goes down further (PH28; Max, 30 October 2026, answer
+## 3: "crosswind a little bit, 1 to 3 degrees; upwind up to 10, I think", Max's estimate):
+## this many degrees up to fin_load_twa_upwind_deg, falling linearly to fin_load_bank_deg at
+## a beam reach (the wind across the board, 90 degrees), and fin_load_bank_deg from there
+## (WindsurferSim._rail_bank_deg_by_point_of_sail). 0 = no more than fin_load_bank_deg.
+@export var fin_load_bank_upwind_deg: float = 0.0
+@export var fin_load_twa_upwind_deg: float = 60.0
 ## The sailor leans against the pull in the hands: this many times the lean that balances
 ## the hands' moment about the feet with the body's weight (1 = exactly in balance). The
 ## posture is held in the apparent gravity (gravity less the body's own felt acceleration,

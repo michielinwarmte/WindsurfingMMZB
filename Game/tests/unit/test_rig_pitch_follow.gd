@@ -62,6 +62,13 @@ func test_with_no_lag_the_rig_pitches_with_the_board_at_once() -> void:
 	assert_almost_eq(_rig_pitch_deg(sim), _bow_rise_deg(sim), 0.001, "as before PH16")
 
 
+func test_the_shipped_sailor_has_the_lag_off() -> void:
+	# Max (30 October 2026): "the rig's pitch lag: off". The .tres had it on at 0.3 s from Session 58
+	# while the code's comments and the spec said off (review_sim 3.3); the option stays, off.
+	var shipped: SailorConfig = load("res://config/sailor_default.tres") as SailorConfig
+	assert_eq(shipped.rig_pitch_follow_s, 0.0, "the rig pitches with the hull at once")
+
+
 func test_a_board_put_back_on_the_water_takes_the_rig_with_it_at_once() -> void:
 	# After a fall the sailor climbs back on and holds the rig at the board's attitude: no
 	# lag left over from before.
