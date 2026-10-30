@@ -122,6 +122,9 @@ var body_stance: float = 0.0
 var lean: float = 0.0
 ## How far the sailor's weight hangs back behind the feet, metres.
 var hang_back_m: float = 0.0
+## How far the body has dropped below its posture's height to stay within one body's reach of
+## the feet as it hangs back (_keep_within_one_body), metres.
+var one_body_drop_m: float = 0.0
 ## Weight on a rail: -1 = the feet press the port rail, +1 the starboard rail (the lean the
 ## controls ask for, taken up at the sailor's pace). This is what banks the board.
 var rail_press: float = 0.0
@@ -372,6 +375,7 @@ func reset(origin_xz: Vector3, heading_rad: float) -> void:
 	body_stance = 0.0
 	lean = 0.0
 	hang_back_m = 0.0
+	one_body_drop_m = 0.0
 	rail_press = 0.0
 	trim_press_m = 0.0
 	felt_trim_deg = 0.0
@@ -633,6 +637,7 @@ func _fall(side: int, kind: String, tack: float) -> void:
 	body_stance = 0.0
 	lean = 0.0
 	hang_back_m = 0.0
+	one_body_drop_m = 0.0
 	rail_press = 0.0
 	trim_press_m = 0.0
 	# In the water the rider feels nothing of the board: what was felt of its attitude and its
@@ -655,6 +660,7 @@ func waterstart() -> void:
 	body_stance = 0.0
 	lean = 0.0
 	hang_back_m = 0.0
+	one_body_drop_m = 0.0
 	rail_press = 0.0
 	trim_press_m = 0.0
 	felt_trim_deg = 0.0
@@ -950,7 +956,7 @@ func _set_posture() -> void:
 	# the point where the legs push: the body stayed ahead of it, the feet had to hold it
 	# from tipping forward, and that came out as a bow-down moment at the feet, -117 N·m on
 	# the 18 kt beam reach: the front foot pressing, the very opposite of the technique.)
-	mass_model.update(body_stance, lean, hang_back_m + trim_press_m, 0.0, _rig_lean_now_rad)
+	mass_model.update(body_stance, lean, hang_back_m + trim_press_m, one_body_drop_m, _rig_lean_now_rad)
 	# The mass model's answer, read once (see the note at the top).
 	var sailor_position_body: Vector3 = mass_model.sailor_position_body
 	var body_lean: float = body.to_body(sailor.position - body.origin_world()).x / _lean_max_m
@@ -1130,30 +1136,42 @@ func _update_sailor(dt: float) -> void:
 
 ## One body (PH28, P2.1): the centre of mass is one body's reach from the feet
 ## (body_reach_share of the height: 0.57, Gourlay & Martellotta 2011) and no further. A body
-## hiked out and hanging back at the same time shares that reach between the two: when the
-## hike and the hang-back the balance asks for would put the centre of mass further from the
-## feet than the body is long, both are scaled down by the same share, so the body leans the
-## way the two pulls ask, as far as it reaches. (Until PH28 the hike and the hang-back were
-## added as if each had the body's whole reach: at 24 kt on the broad reach the centre of mass
-## sat 0.89 m out, 0.51 m back and 0.42 m up, 1.11 m from the feet and 0.24 m behind the
-## tail: Documentation/reports/ph28/hull_balance.md, section 12.)
+## hanging back from its feet pivots about them, so it drops as it hangs back: the posture's
+## height comes down (one_body_drop_m) as far as it must to keep the centre of mass within
+## reach, but no lower than the full hike's height (the hips about 0.5 m above the deck, the
+## photos of riders at full power). So the level distance from the feet, across and aft
+## together, reaches at most what one body reaches at that lowest height (0.86 m on the
+## default sailor: the full hike's own outboard reach). A body hiked out and hanging back at
+## the same time shares that between the two: when they ask for more, both are scaled down by
+## the same share, so the body leans the way the two pulls ask, as far as it reaches. (Until
+## PH28 the hike and the hang-back were added as if each had the body's whole reach: at 24 kt
+## on the broad reach the centre of mass sat 0.89 m out, 0.51 m back and 0.42 m up, 1.11 m
+## from the feet and 0.24 m behind the tail: Documentation/reports/ph28/hull_balance.md,
+## section 12. A first version kept the standing height while hanging back, which left a body
+## not hiked out only 0.35 m of hang-back: the 24 kt broad reach then ploughed nose-down at
+## 4.5 m/s from the start: Documentation/reports/ph28/rider_feet_body.md, step B.)
 func _keep_within_one_body() -> void:
 	var reach: float = _body_reach_share * _height_m
-	if mass_model.com_from_feet_m(lean, hang_back_m) <= reach:
-		return
-	# The largest share of the hike and the hang-back that keeps the centre of mass within
-	# reach, by bisection (the distance is not simply monotonic in the share: the feet step out
-	# to the rail and the body drops as the hike grows); 12 steps place it within 0.03 %.
-	var lo: float = 0.0
-	var hi: float = 1.0
-	for i: int in 12:
-		var mid: float = 0.5 * (lo + hi)
-		if mass_model.com_from_feet_m(lean * mid, hang_back_m * mid) <= reach:
-			lo = mid
-		else:
-			hi = mid
-	lean *= lo
-	hang_back_m *= lo
+	var lowest_m: float = mass_model.com_above_feet_m(1.0)
+	var out_max: float = sqrt(maxf(reach * reach - lowest_m * lowest_m, 0.0))
+	if mass_model.com_out_from_feet_m(lean, hang_back_m) > out_max:
+		# The largest share of the hike and the hang-back that keeps the level distance within
+		# reach, by bisection (the distance is not simply monotonic in the share: the feet step
+		# out to the rail as the hike grows); 12 steps place it within 0.03 %.
+		var lo: float = 0.0
+		var hi: float = 1.0
+		for i: int in 12:
+			var mid: float = 0.5 * (lo + hi)
+			if mass_model.com_out_from_feet_m(lean * mid, hang_back_m * mid) <= out_max:
+				lo = mid
+			else:
+				hi = mid
+		lean *= lo
+		hang_back_m *= lo
+	# The body drops as far as one body needs at this level distance.
+	var out: float = mass_model.com_out_from_feet_m(lean, hang_back_m)
+	var height_within_reach: float = sqrt(maxf(reach * reach - out * out, 0.0))
+	one_body_drop_m = maxf(mass_model.com_above_feet_m(lean) - height_within_reach, 0.0)
 
 
 ## The feet's pressure stays between the footstraps (BoardConfig.back_strap_from_tail_m and

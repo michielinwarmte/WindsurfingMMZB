@@ -120,14 +120,17 @@ extends Resource
 ## Hanging back against the sail's pull: the boom pulls the sailor forward, and the sailor
 ## leans back until their weight's moment about the feet balances the pull's (the same
 ## balance as the sideways lean, fore and aft). The furthest the weight can hang back
-## behind the feet: the hips 0.2 to 0.4 m behind the back foot in the photos of riders at
-## full power (Documentation/reports/ph28/sailor_controls_plan.md section 2, an estimate;
-## Max, 30 October 2026, answer 4: "estimate in photos"), and together with the hike never
-## further than one body from the feet (body_reach_share). PH28; 0.8 before: a sailor nearly
-## horizontal (at 0.5 m the drive of a powered sail at the hump could not be balanced, and the
-## rest went bow-down into the deck: the board planed late; measured again with 0.4 and the
-## one-body limit in Documentation/reports/ph28/rider_feet_body.md).
-@export var hang_back_max_m: float = 0.4
+## behind the feet: a sailor hanging back hard against a strong pull is nearly horizontal
+## (at 0.5 m the drive of a powered sail at the hump could not be balanced, and the rest
+## went bow-down into the deck: the board planed late). Since PH28 one body binds first
+## (body_reach_share): the hike and the hang-back share one body's reach, so at a full hike
+## with 0.4 m of hang-back asked the body gives a tenth of each, and the 0.5 to 0.56 m an 8.0
+## needs at the 18 kt start, the feet still by the mast and the body hiked little, still fits.
+## (The PH28 rider build first set this to 0.4 m from the photos, the hips 0.2 to 0.4 m behind
+## the back foot at full power: Documentation/reports/ph28/sailor_controls_plan.md section 2.
+## The model measures the hang-back from the feet's pressure point, not the back foot, and at
+## 0.4 m the 18 kt start nose-dived and the sailor fell off: rider_feet_body.md, step B.)
+@export var hang_back_max_m: float = 0.8
 
 @export_group("Legs")
 ## The legs are the sailor's suspension. A person standing still on a moving floor behaves
