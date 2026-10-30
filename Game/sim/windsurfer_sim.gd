@@ -631,6 +631,10 @@ func _fall(side: int, kind: String, tack: float) -> void:
 	hang_back_m = 0.0
 	rail_press = 0.0
 	trim_press_m = 0.0
+	# In the water the rider feels nothing of the board: what was felt of its attitude and its
+	# bounce goes with the fall (else the rider climbed back on still feeling the fall's bounce).
+	felt_trim_deg = 0.0
+	felt_bounce_dps = 0.0
 	knee_bend_m = 0.0
 	leg_sway_m = 0.0
 	sail.clear()
@@ -649,6 +653,8 @@ func waterstart() -> void:
 	hang_back_m = 0.0
 	rail_press = 0.0
 	trim_press_m = 0.0
+	felt_trim_deg = 0.0
+	felt_bounce_dps = 0.0
 	_felt_push_ms2 = 0.0
 	_felt_lift_ms2 = 0.0
 	_fall_push_ms2 = 0.0
@@ -880,7 +886,7 @@ func _posture_frame() -> Basis:
 ## its roll rate. (Held in the apparent gravity like the posture, every sideways jolt of the hull
 ## leaned the rig, the sail's force swung with it and pushed the hull again, and the board
 ## wobbled in yaw at about 1 Hz on flat water.) The pitch can follow the hull's with a lag
-## of rig_pitch_follow_s (PH16, off by default): a mast foot is a joint, and a board
+## of rig_pitch_follow_s (PH16; off: Max, 30 October 2026): a mast foot is a joint, and a board
 ## bouncing under the rig does not pitch it.
 func _hold_the_rig(dt: float = 0.0) -> void:
 	# The hull's state, read once (see the note at the top).

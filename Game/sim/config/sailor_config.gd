@@ -5,7 +5,8 @@ extends Resource
 
 @export_group("Body")
 ## Mass of the sailor with wetsuit and harness. The default (sailor_default.tres) is Max's
-## own 80 kg (PH16 step 17), the rider whose on-water feedback checks the physics.
+## own: 85 kg "with all" (Max, 30 October 2026; 80 kg in PH16 step 17), the rider whose
+## on-water feedback checks the physics.
 @export var mass_kg: float = 75.0
 ## Height of the sailor's centre of mass above the board origin when standing upright
 ## (about 0.55 times body height above the feet, plus the deck height).
@@ -279,7 +280,9 @@ extends Resource
 ## 24 kt broad reach on flat water stayed steady for 40 s instead of bouncing (pitch SD 0.10
 ## against 0.93 deg) but bounced the same after a minute (0.74 against 0.77), and gusts, waves
 ## and the other reaches were unchanged within 1 %: physically the better rig, with no
-## measured gain, so it is off until Michiel decides (Documentation/reports/ph28/hull_balance.md).
+## measured gain (Documentation/reports/ph28/hull_balance.md). Max (30 October 2026): "the rig's
+## pitch lag: off", so the default is 0. (sailor_default.tres had it on at 0.3 s from Session 58 to
+## the PH28 rider build while this comment, the sim's and the spec said off: review_sim 3.3.)
 @export var rig_pitch_follow_s: float = 0.0
 ## How far the sailor can tilt the rig sideways with the arms and shoulders on top of that
 ## (the mast foot is a free joint; what limits the tilt is the reach of the arms and, at

@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1")
-mass_kg = 80.0
+mass_kg = 85.0
 com_height_m = 1.0
 torso_radius_m = 0.2
 height_m = 1.75
@@ -26,6 +26,7 @@ trim_press_band_deg = 0.25
 trim_press_rate_ms = 0.03
 trim_feel_time_s = 1.5
 bounce_tolerance_dps = 1.7
+trim_press_release_ms = 0.3
 hang_back_max_m = 0.8
 leg_natural_frequency_hz = 1.2
 leg_damping_ratio = 0.9
@@ -56,7 +57,7 @@ lean_max_m = 1.11
 lean_height_drop_m = 0.48
 lean_rate_per_s = 1.0
 max_rig_lean_deg = 25.0
-rig_pitch_follow_s = 0.3
+rig_pitch_follow_s = 0.0
 rig_tilt_range_deg = 30.0
 max_total_rig_lean_deg = 45.0
 windage_area_cd_m2 = 0.5

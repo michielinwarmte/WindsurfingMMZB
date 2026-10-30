@@ -74,6 +74,28 @@ func test_a_nose_riding_high_gets_the_weight_off_the_tail_quickly() -> void:
 	assert_lt(sim.trim_press_m, 0.0, "off the tail within a few seconds, not at the trimming rate")
 
 
+func test_a_fall_clears_what_the_rider_felt_of_the_board() -> void:
+	# review_sim 3.1: after a catapult the rider climbed back on still "feeling" the bounce of the
+	# fall for a second or two. In the water the rider feels nothing of the board.
+	var sim: WindsurferSim = _sim()
+	_hold(sim, 1.8, 10.0)
+	_feel(sim, 2.0)
+	assert_gt(sim.felt_bounce_dps, 5.0, "bouncing hard before the fall")
+	sim.force_fall("catapult")
+	assert_eq(sim.felt_bounce_dps, 0.0, "in the water the rider feels nothing of the board")
+	assert_eq(sim.felt_trim_deg, 0.0)
+	sim.felt_bounce_dps = 3.0
+	sim.waterstart()
+	assert_eq(sim.felt_bounce_dps, 0.0, "and climbs back on with a clean feel")
+	assert_eq(sim.felt_trim_deg, 0.0)
+
+
+func test_the_shipped_sailor_lists_the_release_rate() -> void:
+	# Rule 3: tuning numbers live in the .tres, not in the code's defaults (review_sim 3.1).
+	var text: String = FileAccess.get_file_as_string("res://config/sailor_default.tres")
+	assert_true(text.contains("trim_press_release_ms = "), "trim_press_release_ms is listed in sailor_default.tres")
+
+
 func test_off_the_plane_the_press_lets_go() -> void:
 	var sim: WindsurferSim = _sim()
 	sim.trim_press_m = 0.1
