@@ -4,7 +4,8 @@ extends Resource
 ## of beginner mode behaves (PHYSICS_SPEC.md sections 7 and 15). Change values in the .tres.
 
 @export_group("Body")
-## Mass of the sailor with wetsuit and harness.
+## Mass of the sailor with wetsuit and harness. The default (sailor_default.tres) is Max's
+## own 80 kg (PH16 step 17), the rider whose on-water feedback checks the physics.
 @export var mass_kg: float = 75.0
 ## Height of the sailor's centre of mass above the board origin when standing upright
 ## (about 0.55 times body height above the feet, plus the deck height).
@@ -49,7 +50,10 @@ extends Resource
 ## half a metre apart), and the body's weight with it (U1.3: pressing the back foot is
 ## the weight going over the back foot). The weight that goes into the board at the feet
 ## is what sets a planing board's trim; without this the board ran nose-down at a degree
-## of trim and, with next to no induced drag, far too fast off the wind.
+## of trim and, with next to no induced drag, far too fast off the wind. The reach is scaled
+## by the planing ratio, and on a board with footstraps (BoardConfig.back_strap_from_tail_m)
+## the straps stop it: the default 1.0 (PH16 step 17; 0.6 before) leaves the back strap as
+## the limit once the board planes (the ratio is 0.55 to 0.75 there).
 @export var trim_press_max_m: float = 0.3
 ## The running trim the feet hold while planing, degrees of pitch bow up, up to
 ## running_trim_fast_speed_ms. A planing bottom porpoises above a critical trim that falls
@@ -140,12 +144,13 @@ extends Resource
 ## Max (29 October 2026, PH16 step 16): most riders set the lines a little behind the centre
 ## of effort and the front arm carries more (55/45 to 60/40), so the boom's force, line and
 ## hands together, acts about at the centre of effort's place on the boom: ce_boom_fraction
-## times boom_m, 0.70 m on the 8.0. Measured with the boom square to the mast, not made the
-## default: on flat water 0 to 1 % faster than 0.6 (the rider trimming at the edge of the
-## bounce on the 24 kt beam reach, pitch SD 0.23 deg; at 0.75 the 18 kt beam reach bounces),
-## but in 24 kt gusts and waves the autopilot then holds the 8.0 so close to the edge that the
-## beam reach catapulted 8 times in 400 s against 2 at 0.6. With the autopilot's margin (GP3)
-## and Max (Documentation/reports/ph28/hull_balance.md, section 12).
+## times boom_m, 0.70 m on the 8.0. Measured with the boom square to the mast in step 16 and
+## not made the default then: in 24 kt gusts and waves the autopilot held the 8.0 so close to
+## the edge that the beam reach catapulted 8 times in 400 s against 2 at 0.6 (75 kg). Made the
+## default in step 17 with Max's own setup (his weight 80 kg, his boom height, his fin box and
+## mast foot; Max again: "a bit back of the centre of pressure", the two ends close together),
+## and the trim by feel no longer walking forward on a nose-low chatter
+## (Documentation/reports/ph28/hull_balance.md, sections 12 and 14).
 @export var hand_grip_m: float = 0.6
 ## How far outboard the feet stand at full lean (the rail of a 60 cm wide board is 0.3 m
 ## out; the straps are a little inside it). The feet stay on the centreline while the

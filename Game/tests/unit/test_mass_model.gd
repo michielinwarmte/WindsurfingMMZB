@@ -5,10 +5,11 @@ extends GutTest
 func _defaults() -> MassModel:
 	# The numbers below were worked out for the 2.40 m freeride board and the 6.5 m2 rig (kept as
 	# their own files since PH16 made the JP SL 72 and the 8.0 the defaults), with the stances
-	# that went with that board.
+	# and the 75 kg sailor that went with that board (the default is Max's 80 kg since step 17).
 	var board: BoardConfig = load("res://config/board_freeride_240.tres")
 	var sail: SailConfig = load("res://config/sail_6_5.tres")
 	var sailor: SailorConfig = (load("res://config/sailor_default.tres") as SailorConfig).duplicate()
+	sailor.mass_kg = 75.0
 	sailor.stance_rest_z_m = 0.15
 	sailor.stance_planing_z_m = 0.6
 	sailor.stance_tack_z_m = -0.2

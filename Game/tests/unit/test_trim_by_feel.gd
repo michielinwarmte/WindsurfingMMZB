@@ -43,15 +43,26 @@ func test_the_press_stops_at_its_reach() -> void:
 	var sim: WindsurferSim = _sim()
 	_hold(sim, 0.5, 0.0)
 	_feel(sim, 40.0)
-	assert_almost_eq(sim.trim_press_m, 0.6 * 0.6, 0.001, "trim_press_max_m times the planing share")
+	assert_almost_eq(sim.trim_press_m, sim.sailor_config.trim_press_max_m * 0.6, 0.001, "trim_press_max_m times the planing share")
 
 
-func test_a_chattering_board_gets_the_weight_moved_forward() -> void:
+func test_a_board_chattering_at_its_aim_gets_the_weight_moved_forward() -> void:
 	var sim: WindsurferSim = _sim()
 	sim.trim_press_m = 0.2
-	_hold(sim, 0.5, 10.0)  # riding low, but bouncing hard (10 deg/s against 1.7 tolerated)
+	_hold(sim, 1.8, 10.0)  # at the aim of about 1.7 degrees, bouncing hard (10 deg/s against 1.7)
 	_feel(sim, 5.0)
-	assert_lt(sim.trim_press_m, 0.2, "the rider eases off although the board rides low")
+	assert_lt(sim.trim_press_m, 0.2, "the rider eases off the porpoise")
+	assert_gt(sim.felt_bounce_dps, 5.0, "and feels the chatter")
+
+
+func test_a_board_chattering_with_its_nose_low_is_not_walked_forward() -> void:
+	# PH16 step 17: riding well below the aim, a chattering board is spearing with its nose low;
+	# walking forward drives the nose in. The chatter only stops the creep aft.
+	var sim: WindsurferSim = _sim()
+	sim.trim_press_m = 0.2
+	_hold(sim, 0.5, 10.0)  # riding low and bouncing hard
+	_feel(sim, 5.0)
+	assert_between(sim.trim_press_m, 0.2, 0.21, "neither forward nor further onto the tail (a few millimetres before the chatter is felt)")
 	assert_gt(sim.felt_bounce_dps, 5.0, "and feels the chatter")
 
 

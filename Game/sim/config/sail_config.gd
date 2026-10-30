@@ -10,11 +10,14 @@ extends Resource
 @export var luff_m: float = 4.60
 ## Boom length from the mast to the clew.
 @export var boom_m: float = 1.95
-## Height of the boom above the mast foot, along the mast.
+## Height of the boom above the mast foot, along the mast. The default 8.0 has 1.50 m, the
+## middle of Max's 1.40 to 1.60 m (PH16 step 17).
 @export var boom_height_m: float = 1.40
 ## Where the mast foot sits on the board, in the body frame (x starboard, y up, z aft).
 ## Real mast tracks are centred about 1.30 to 1.35 m from the tail of a 2.40 m board,
-## that is 0.10 to 0.15 m forward of the centre.
+## that is 0.10 to 0.15 m forward of the centre. Max's Patrik 115 has its track from 1.245 to
+## 1.405 m from the tail, and he sets the foot near the back of it for slalom ("around 1.2"):
+## the default 8.0 has its pin at 1.265 m (z -0.125 on the 2.28 m board; PH16 step 17).
 @export var mast_foot_local: Vector3 = Vector3(0.0, 0.06, -0.10)
 ## Fraction of the luff above the mast foot at which the centre of effort sits (section 2.13).
 @export var ce_height_fraction: float = 0.40

@@ -10,8 +10,10 @@ const MAST_PATH: String = "res://assets/models/mast.glb"
 const SAIL_PATH: String = "res://assets/models/sail.glb"
 const BOOM_PATH: String = "res://assets/models/boom.glb"
 
-var board_config: BoardConfig = preload("res://config/board_freeride_240.tres")
-var sail_config: SailConfig = preload("res://config/sail_6_5.tres")
+# The configs the models are built from (build_rig_models.py reads the defaults). The models
+# were rebuilt for the JP SL 72 and the 8.0 in PH16 step 17, on Max's PC with Blender.
+var board_config: BoardConfig = preload("res://config/board_default.tres")
+var sail_config: SailConfig = preload("res://config/sail_default.tres")
 var fin_config: FinConfig = preload("res://config/fin_default.tres")
 var sailor_config: SailorConfig = preload("res://config/sailor_default.tres")
 
@@ -23,7 +25,11 @@ func test_board_has_the_configured_size() -> void:
 	assert_almost_eq(box.size.z, board_config.length_m, 0.03, "Length along z")
 	assert_almost_eq(box.size.x, board_config.width_m, 0.02, "Width along x")
 	assert_almost_eq(box.position.y, -0.5 * board_config.thickness_m, 0.005, "The bottom")
-	assert_almost_eq(box.end.y, 0.5 * board_config.thickness_m, 0.005, "The deck in the middle")
+	# In the middle, not the highest point: a scoop rocker lifts the nose's deck above it, and
+	# already lifts the bottom under the middle (1 cm on the JP SL 72).
+	var middle: float = 0.5 * board_config.length_m
+	var deck_middle: float = -0.5 * board_config.thickness_m + board_config.bottom_rise_m(middle) + board_config.thickness_at(middle)
+	assert_almost_eq(_highest_y(_points(BOARD_PATH, "Hull"), -0.02, 0.02), deck_middle, 0.005, "The deck in the middle")
 	assert_almost_eq(box.get_center().z, 0.0, 0.01, "Centred on the board's origin")
 
 
@@ -69,7 +75,9 @@ func test_sail_spans_the_luff_and_reaches_the_clew_at_the_boom() -> void:
 	assert_almost_eq(box.size.z, 0.0, 0.001, "Flat: the shader bends it")
 	var clew: Vector3 = Vector3(sail_config.boom_m, sail_config.boom_height_m, 0.0)
 	assert_lt(_nearest_distance(cloth, clew), 0.01, "A corner of the cloth at the clew")
-	assert_almost_eq(box.end.x, sail_config.boom_m, 0.06, "Nothing much behind the clew")
+	# The roach the battens hold out reaches a little behind the clew on a race sail: the 8.0's
+	# 0.22 m gives it its area on a 4.9 m luff and a 2.0 m boom (build_rig_models.py, ROACH).
+	assert_between(box.end.x, sail_config.boom_m - 0.06, 1.15 * sail_config.boom_m, "Not much behind the clew")
 
 
 func test_sail_has_about_the_configured_area() -> void:

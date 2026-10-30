@@ -9,6 +9,11 @@ extends Resource
 ## Depth of the fin from the hull bottom to the tip.
 @export var span_m: float = 0.38
 ## Where the fin root sits on the hull bottom, in the body frame (x starboard, y up, z aft).
+## Its z is where the fin's force acts fore and aft (there is no sweep in the model). The
+## default (fin_default.tres) puts it 0.18 m from the tail of the 2.28 m board (z 0.96): Max's
+## Patrik 115 has its fin box screws at 0.12 and 0.235 m from the tail, and a swept 39 cm
+## slalom fin's quarter chord at 40 % of the span is about 0.15 to 0.22 m from the tail (an
+## estimate: the chord and the sweep are not measured; PH16 step 17).
 @export var root_local: Vector3 = Vector3(0.0, -0.06, 0.90)
 ## The fin's force acts this fraction of the span below the root.
 @export var cop_span_fraction: float = 0.4

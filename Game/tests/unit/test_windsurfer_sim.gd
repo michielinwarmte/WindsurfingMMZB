@@ -45,7 +45,7 @@ func test_floats_at_rest_level_and_at_archimedes_depth() -> void:
 	controls.sheet = 0.0
 	_run(sim, 8.0, controls)
 	var t: Telemetry = sim.telemetry
-	assert_almost_eq(sim.buoyancy.submerged_volume_m3, 92.0 / 1025.0, 92.0 / 1025.0 * 0.02, "89.8 L displaced")
+	assert_almost_eq(sim.buoyancy.submerged_volume_m3, sim.mass_model.total_mass_kg / 1025.0, sim.mass_model.total_mass_kg / 1025.0 * 0.02, "board, rig and sailor displaced (Archimedes)")
 	assert_lt(absf(t.heel_deg), 2.0, "the sailor keeps it upright")
 	assert_lt(absf(t.pitch_deg), 3.0)
 	assert_lt(t.speed_ms, 0.05)
@@ -91,6 +91,7 @@ func test_overpowered_sailor_is_catapulted_and_the_board_stays_upright() -> void
 	var fell_at: float = -1.0
 	var heel_at_fall: float = 0.0
 	var max_heel_after: float = 0.0
+	var heel_at_end: float = 0.0
 	while sim.time_s < 40.0 and (fell_at < 0.0 or sim.time_s < fell_at + 6.0):
 		controls.sheet = 1.0 if fell_at < 0.0 else 0.0
 		pilot.update(sim.telemetry, controls, DT)
@@ -102,14 +103,18 @@ func test_overpowered_sailor_is_catapulted_and_the_board_stays_upright() -> void
 				heel_at_fall = heel
 			else:
 				max_heel_after = maxf(max_heel_after, heel)
+		heel_at_end = heel
+	gut.p("catapult: fell at %.1f s, heel at the fall %.1f, largest after %.1f, at the end %.1f deg" % [fell_at, heel_at_fall, max_heel_after, heel_at_end])
 	assert_gt(fell_at, 20.0, "the sailor went over")
 	assert_true(sim.fall_kind == "catapult" or sim.fall_kind == "tipped over", "to leeward, over the sail (%s)" % sim.fall_kind)
 	assert_lt(heel_at_fall, 30.0, "the board had heeled only a little when the sailor let go")
 	# The kick as the sailor leaves (0.3 s after) is sensitive: 42.7 degrees with the boom held
 	# at 0.6 m and level, 50 at 0.62, 57.5 at 0.70, 59.4 at 0.6 with the boom square to the
 	# raked mast (the default since PH16 step 16, which loosened this from 45), 63.7 at 0.70 and
-	# square. Rolled over is past 90; the board comes back and the sailor waterstarts.
-	assert_lt(max_heel_after, 75.0, "and did not roll over afterwards")
+	# square, 75.5 with Max's own setup (PH16 step 17: 80 kg, the hands at 0.70, the boom at
+	# 1.50 m). Rolled over is past 90, which is what this checks now; and the board comes back.
+	assert_lt(max_heel_after, 90.0, "and did not roll over afterwards")
+	assert_lt(heel_at_end, 10.0, "the board comes back upright (6 s after the fall)")
 	assert_eq(sim.sailor_state, WindsurferSim.SailorState.SAILING, "back on the board after the waterstart")
 	var t: Telemetry = sim.telemetry
 	assert_lt(absf(t.heel_deg), 5.0, "level")

@@ -1148,8 +1148,13 @@ func _trim_by_feel(trimming: bool, forward_speed: float, dt: float) -> void:
 	var reach_m: float = _trim_press_max_m * clampf(hull.planing_ratio, 0.0, 1.0)
 	var aim: float = clampf((_running_trim_target_deg(forward_speed) - felt_trim_deg) / _trim_press_band_deg, -1.0, 1.0)
 	var chatter: float = clampf((felt_bounce_dps - _bounce_tolerance_dps) / _bounce_tolerance_dps, 0.0, 1.0)
-	# Easing off on a chatter wins over the aim: a board that bounces goes forward.
-	var push: float = aim * (1.0 - chatter) - chatter
+	# Easing off on a chatter wins over the aim while the board rides at or above the trim aimed
+	# for: a board that porpoises with its nose up goes forward. Riding well below the aim (a band
+	# or more), a chattering board is spearing with its nose low, the wet front swinging into the
+	# nose rocker, and a rider who walks forward then drives the nose in (PH16 step 17: Max's own
+	# setup bounced at 1.8 Hz between -4 and +2.7 degrees of pitch with the rider walking forward,
+	# and sailed steady once the rider stopped). There the chatter only stops the creep aft.
+	var push: float = aim * (1.0 - chatter) - chatter * clampf(1.0 - aim, 0.0, 1.0)
 	# Onto the tail slowly, searching; off it quickly when the nose rides above the aim (a board
 	# heading up into a tack slows with its nose rising, and a rider still on the tail rears it).
 	var rate: float = _trim_press_release_ms if aim < 0.0 else _trim_press_rate_ms

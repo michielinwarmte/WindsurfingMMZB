@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1")
-mass_kg = 75.0
+mass_kg = 80.0
 com_height_m = 1.0
 torso_radius_m = 0.2
 height_m = 1.75
@@ -17,7 +17,7 @@ stance_speed_start_ms = 3.5
 stance_speed_full_ms = 7.0
 hump_trim_deg = 3.0
 stance_rate_per_s = 1.0
-trim_press_max_m = 0.6
+trim_press_max_m = 1.0
 running_trim_deg = 2.0
 running_trim_fast_speed_ms = 12.3
 running_trim_fastest_speed_ms = 13.5
@@ -30,7 +30,7 @@ hang_back_max_m = 0.8
 leg_natural_frequency_hz = 1.2
 leg_damping_ratio = 0.9
 leg_travel_m = 0.25
-hand_grip_m = 0.6
+hand_grip_m = 0.7
 feet_rail_m = 0.22
 feet_out_from_lean = 0.3
 feet_out_full_lean = 0.7

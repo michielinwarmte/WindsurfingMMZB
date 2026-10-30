@@ -423,3 +423,91 @@ Rough reads by eye from photos taken at an angle (no scale in the picture): esti
 2. The fin at the box and the mast foot, for Michiel (above), with Max's slalom mast foot setting.
 3. The feet across, along the straps' line (above).
 4. From Max: the mast foot setting, the boom's height, the harness lines, his weight, the fin's model and the sail in IMG_4743. The question from section 12 on the nose is still open.
+
+## 14. The bounce lock, and Max's own setup as the default (30 October 2026)
+
+Max gave the rest of his numbers: the mast foot "around 1.2" (read as the back of his track; his track runs from 1.245 to 1.405 m from the tail), the boom 1.40 to 1.60 m above the deck, the harness lines "a bit back of the centre of pressure", their two ends close together, his weight 80 kg, a 39 cm fin and the 8.0. Then: "unlock the bounce lock and it needs to work". Session 60, Opus 5.5.
+
+**In short.** On the default gear the trim is not held by a bounce: the trim press stands at its reach, and the moment balance sets the trim. Put Max's own setup in (80 kg, the boom at 1.50 m, the mast foot at the back of his track, the fin at his fin box, the lines at the centre of effort's place), and the board bounced: on the 18 kt beam reach a nose-low bounce at 1.8 Hz, the pitch swinging from −4 to +2.7°, the wet front between 0.8 and 2.0 m. The bounce came from the sailor. Trimming by feel walked the weight forward on any chatter, which is right for a board porpoising with its nose up and wrong for one spearing with its nose down. Now the chatter only stops the creep aft while the board rides well below its aim. With that, Max's setup sails steady on all nine reaches. In gusts and waves it does not fall once, 400 s at 24 kt included, where the old default catapulted. It is the default now. The wet length is still 1.2 to 1.3 m. That is the second lock, the moment balance, and it is not solved here.
+
+### What feeds a bounce: the power by source (`pitch_budget.gd`, section 4 of its print)
+
+The tool now prints each force model's power into the hull's oscillation over its window: the mean of M′q′ (its pitch moment's swing times the pitch rate's) and of F′w′ (the vertical force's swing times the vertical speed's). Plus pumps the bounce, minus damps it. Max's setup, 18 kt beam reach, 60 to 90 s (pitch rate RMS 5.5°/s, vertical speed RMS 0.055 m/s):
+
+| Stage | Pitch, W | Heave, W |
+|---|---|---|
+| The hull's water (planing) | **+4.51** | −3.30 |
+| The feet (the legs' force and moment) | −2.71 | −1.06 |
+| The mast foot | −0.72 | −0.30 |
+| Buoyancy | −0.52 | −0.36 |
+| The fin | +0.13 | +0.26 |
+
+The water takes energy out of the heave and puts it into the pitch. That is the textbook picture of porpoising, and the sailor's legs are the main damper. The sums do not close: the surge, the added mass's exchange and the sailor's own body are not in this account.
+
+### The cause: the sailor walked forward on a nose-low bounce
+
+The time series (the reach check's CSV) showed the sailor's feet at 0.73 m from the tail on average during the bounce, well forward of the back strap. Trimming by feel had `push = aim (1 − chatter) − chatter`: the chatter won over the aim, and a board that bounced always got the weight moved forward. Session 58 built it for a board porpoising with its nose up, where forward is right. On this bounce the mean pitch was −0.9°. Moving forward drove the nose in further, and the next bounce was bigger.
+
+What did not stop it, each alone on Max's setup at 18 and 24 kt across: the knees' damping 0.9 → 2.0 (worse, 1.98°), stiffer legs 2.5 Hz (1.19°, and the 24 kt reach began to bounce), the pitch reflex 0.5 → 1.0 (1.36°), the rig's pitch lag off (1.01°, the 24 kt reach bouncing), the spray root's cap 2 → 1 (the 24 kt reach fell), the sailor easing sooner (tolerance 1.0°/s: the 24 kt reach fell), a planing lift lag of 0.05 s (both fell). With the chatter easing off altogether (`bounce_tolerance_dps` 1000) the setup was steady on all nine reaches, and the old default too.
+
+The rule now (`WindsurferSim._trim_by_feel`): `push = aim (1 − chatter) − chatter · clamp(1 − aim, 0, 1)`. Here `aim` is the trim error in bands (`trim_press_band_deg`), plus when the board rides below the trim aimed for. At or above the aim the chatter moves the weight forward as before. A band or more below it, the chatter only stops the creep aft. In between it blends. The default gear's reach check is unchanged by it (the 18 kt broad reach 14.29 → 14.30 m/s). Tests: `test_trim_by_feel.gd` (a board chattering at its aim goes forward; one chattering with its nose low is not walked forward).
+
+### Max's setup, now the default
+
+| | Before | Now | Source |
+|---|---|---|---|
+| Sailor | 75 kg | **80 kg** | Max |
+| Boom height above the mast foot | 1.40 m | **1.50 m** | Max: 1.40 to 1.60 |
+| Mast foot (pin) | 1.30 m from the tail, 0.06 m up | **1.265 m, 0.081 m up** (on the deck: the bottom's rocker there plus the board's thickness) | Max: "around 1.2", at the back of his track |
+| The fin's force | 0.30 m from the tail | **0.18 m** | his fin box; the sweep estimated (section 13) |
+| Hands and lines on the boom | 0.6 m | **0.70 m** (the centre of effort's place) | Max: "a bit back of the centre of pressure" |
+| The trim press's reach | 0.6 m × the planing ratio | **1.0 m × the planing ratio**, stopped at the back strap | the straps of section 13 are the limit |
+| Fin depth | 0.38 m | 0.38 m (not changed) | Max: 39 cm; its area is not known, and a centimetre is within the model's other estimates |
+
+Reach check (90 s, means from 60 s; m/s, with the wet length and the pitch SD):
+
+| | Before (step 17's straps, 75 kg) | Now | |
+|---|---|---|---|
+| 12 kt 60° | 7.56 (1.25 m, 0.00) | 7.25 (1.35, 0.00) | −4.1 % |
+| 12 kt 100° | 11.70 (1.24, 0.00) | 11.62 (1.22, 0.00) | −0.7 % |
+| 12 kt 135° | 5.97 (1.73, 0.00) | 5.81 (1.78, 0.00) | −2.7 % |
+| 18 kt 60° | 9.93 (1.28, 0.00) | 10.39 (1.29, 0.00) | +4.6 % |
+| 18 kt 100° | 14.52 (1.22, 0.00) | 14.97 (1.28, 0.01) | +3.1 % |
+| 18 kt 135° | 14.29 (1.03, 0.09) | 13.30 (1.04, 0.17) | −6.9 % |
+| 24 kt 60° | 10.26 (1.23, 0.00) | 10.79 (1.28, 0.00) | +5.2 % |
+| 24 kt 100° | 16.22 (1.19, 0.01) | 16.77 (1.25, 0.00) | +3.4 % |
+| 24 kt 135° | 18.64 (1.23, 0.00) | 18.29 (1.27, 0.04) | −1.9 % |
+
+Gusts and waves (`tools/push_check.sh --seconds=120 --jobs=3`; speed made good, m/s, and falls):
+
+| | 48° | 100° | 135° |
+|---|---|---|---|
+| 12 kt, before → now | 4.16 → 3.98 | 7.75 → 7.54 | 5.54 → 5.50 |
+| 18 kt | 6.83 → 6.83 | 12.11 → 12.36 | 8.17 → 7.99 |
+| 24 kt | 7.54 → 7.73 | **11.20, 1 catapult → 14.02, none** | 12.65 → 13.28 |
+
+400 s at 24 kt: the beam reach 14.01 m/s and the broad reach 13.18, no falls. Step 16 had 12.75 with 2 falls on the beam reach, and 11.03 with 8 falls with the hands at 0.70.
+
+So the heavier sailor holding the lines at the centre of effort's place is faster from 18 kt up and in gusts, and does not fall. Light wind and the broad reaches are slower, as an 80 kg rider is on the same 8.0.
+
+### What the board still does not do: a shorter wet part
+
+The wet length stays at 1.2 to 1.3 m on the planing reaches (U1's band is 0.6 to 1.0 m). On flat water, with 80 kg, none of these shortened it below about 1.1 m (reach check, 90 s):
+
+| Tried | What it did |
+|---|---|
+| The rig leaned less (`max_rig_lean_deg` 15 and 5, from 25) | slower (the sailor holds less sail); the wet length about the same |
+| No bank for the fin (`fin_load_bank_deg` 0) | the beam reaches longer (1.6 to 1.9 m); the 24 kt broad reach 1.05 m and faster |
+| A lower centre of effort (`ce_height_fraction` 0.36) | faster on the close reaches; the beam reaches bounce or fall |
+| A higher trim aimed for | no change: the press is at its reach |
+| The press to the back strap (`trim_press_max_m` 1.0) | 5 to 10 cm shorter, 0.5 to 1.5 % faster, steady (kept) |
+
+The pitch budget says why (measured on step 17's gear with 80 kg, before the rest of Max's setup). On the 24 kt broad reach the sail's moment about the water's push is −905 N·m. The drive at 1.52 m gives about −620 of it. The sail's upward force (258 N, from the rig leaned 24° to windward and raked back) gives about −280, because it acts at the centre of effort 2 cm behind the tail, well behind the push. The rake is at its stop (1.0), so the course needs all of it. Only the sailor's weight lifts the nose (+958), and the sailor's centre of mass is already 0.17 m behind the tail. With the hike and the hang-back, the body is further from the feet than one body reaches (section 12). For a wet part of 0.8 m the push would have to sit about 0.4 m further aft, which takes about 230 N·m more nose-up moment. Also: the JP SL 72's nose rocker starts 0.68 m from the tail, and the wet front settles where the rocker lifts the bottom out (sections 7 and 8, the clip). This is the hull and the sail's balance, Michiel's. The questions for him: does the rig's upward force really act that far aft at full rake; does the course really need the rake at its stop on a broad reach; and the rocker's lift (section 8).
+
+### Also in this step
+
+- **The 3D models,** built again with Blender on Max's PC (`tools/blender.sh tools/blender/build_rig_models.py`): the JP SL 72, the 8.0 and the lines at 0.70. The game showed the freeride board and the 6.5 until now (Blender was not on the other PC). The builder's sail outline drew 7.0 m² on the 8.0's luff and boom, so its roach now grows until the outline has the configured area (1.34 times a 6.5's; the leech reaches 0.22 m behind the clew). `test_rig_visuals.gd` now compares the models with the default configs. It finds the deck's middle with the rocker under it, and lets the roach reach a little behind the clew.
+- **The catapult test** (`test_windsurfer_sim.gd`): the board's heel just after the fall is 75.5° with Max's setup. The test checked it against 75, a margin under the 90° it names. It now checks what it says: below 90° (not rolled over), and back below 10° 6 s after the fall (0.8° here).
+- **Tests of the old 75 kg numbers:** `test_mass_model.gd` keeps its hand-worked 75 kg sailor (with the freeride board and the 6.5 it already loads). The rest tests take the configured mass. The stiff fin's pin (`test_fin_bend.gd`) is re-pinned: 1.72°, 652 N, 22 N.
+
+Checks: `tools/test.sh` 563 of 563, `tools/check.sh` 289 files 0 failed, `tools/test.sh validation` 37 pass, 7 fail, 2 pending. Against step 17's straps: the recovery test (no flying off at speed) now passes. New red: the polar's force sanity, the fin's side force 677 N against a 650 N plausibility band (the heavier sailor holds more sail; no source for the band, kept as the evidence). Still red, with the same causes: the polar's targets for the old gear, the top speed and its trim (0.15°), the planing onset (15.0 kn, the heavier sailor), the skipper's 12 kt time (13:38.5), and the speed on waves at 120°.

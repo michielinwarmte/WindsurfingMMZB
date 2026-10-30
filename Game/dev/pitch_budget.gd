@@ -17,6 +17,9 @@ extends SceneTree
 ##
 ## Run from the repo root (Git Bash):
 ##   tools/godot.sh --path Game --headless -s res://dev/pitch_budget.gd -- --wind=18 --twa=100
+## Section 4 of the print is the power each force model puts into the hull's oscillation over the
+## window (the mean of its pitch moment's swing times the pitch rate's, and of its vertical force's
+## swing times the vertical speed's): + pumps a bounce, - damps it (PH16 step 18).
 ## Options: --seconds=40 --window=5 and any --pilot.<field>= --sailor.<field>= --sail.<field>=
 ## --board.<field>= --fin.<field>= override, as in the reach check.
 
@@ -29,6 +32,19 @@ var _stage_pitch: PackedFloat64Array = PackedFloat64Array()
 var _stage_yaw: PackedFloat64Array = PackedFloat64Array()
 var _samples: int = 0
 var _means: Dictionary[String, float] = {}
+## What feeds a bounce: per stage, the sums for the covariance of its pitch moment with the
+## hull's pitch rate and of its vertical force with the hull's vertical speed. The mean of
+## M' q' is the power the stage puts into the pitch oscillation (positive: it pumps the bounce,
+## negative: it damps it); F' w' the same for the heave.
+var _stage_m: PackedFloat64Array = PackedFloat64Array()
+var _stage_mq: PackedFloat64Array = PackedFloat64Array()
+var _stage_f: PackedFloat64Array = PackedFloat64Array()
+var _stage_fw: PackedFloat64Array = PackedFloat64Array()
+var _sum_q: float = 0.0
+var _sum_qq: float = 0.0
+var _sum_w: float = 0.0
+var _sum_ww: float = 0.0
+var _power_samples: int = 0
 
 
 func _initialize() -> void:
@@ -41,6 +57,15 @@ func _initialize() -> void:
 	_stage_pitch.fill(0.0)
 	_stage_yaw.resize(_stages.size())
 	_stage_yaw.fill(0.0)
+	# Each on its own: a packed array in an array literal is a copy.
+	_stage_m.resize(_stages.size())
+	_stage_m.fill(0.0)
+	_stage_mq.resize(_stages.size())
+	_stage_mq.fill(0.0)
+	_stage_f.resize(_stages.size())
+	_stage_f.fill(0.0)
+	_stage_fw.resize(_stages.size())
+	_stage_fw.fill(0.0)
 
 	var scenario: SimScenario = (load("res://dev/scenarios/beam_reach.gd") as GDScript).new()
 	scenario.seconds = seconds
@@ -89,14 +114,18 @@ func _step_taken_apart(sim: WindsurferSim, dt: float, controls: SimControls) -> 
 			sim._update_sailor(sub_dt)
 		sim.wind.step(sub_dt)
 		var marks: Array[Vector3] = [body.torque_sum()]
+		var force_marks: Array[Vector3] = [body._force_sum]
 		body.add_force(Vector3(0.0, -sim._gravity_ms2 * body.mass_kg, 0.0))
 		if sailing:
 			sim.sailor.add_force(Vector3(0.0, -sim._gravity_ms2 * sim.sailor.mass_kg, 0.0))
 		marks.append(body.torque_sum())
+		force_marks.append(body._force_sum)
 		sim.buoyancy.apply(body, sim.water, sim.time_s, sim._gravity_ms2, sub_dt)
 		marks.append(body.torque_sum())
+		force_marks.append(body._force_sum)
 		sim.hull.compute(body, sim.buoyancy, sim.water, sim.time_s, sim._gravity_ms2, sim.mass_model.total_mass_kg, sub_dt)
 		marks.append(body.torque_sum())
+		force_marks.append(body._force_sum)
 		var heave_added_mass_kg: float = sim.hull.heave_added_mass_kg
 		var inertia_with_water: Basis = sim._inertia_with_added_water(sim._hull_inertia_body)
 		body.take_water_along(heave_added_mass_kg, inertia_with_water)
@@ -107,25 +136,43 @@ func _step_taken_apart(sim: WindsurferSim, dt: float, controls: SimControls) -> 
 		body.set_mass_properties(sim._hull_mass_kg, inertia_with_water, Vector3.ZERO)
 		sim.fin.compute(body, sim.water, sim.time_s, sim._water_density_kg_m3)
 		marks.append(body.torque_sum())
+		force_marks.append(body._force_sum)
 		if sailing:
 			sim._hold_the_rig()
 			sim.sail.compute(sim.rig, sim.wind, sim._controls_sheet, sim._controls_rake, sim.air_density_kg_m3, sim._rig_lean_now_rad, sim._controls_boom_across, sim._controls_hold_side)
 			sim._apply_rig_forces()
 			marks.append(body.torque_sum())
+			force_marks.append(body._force_sum)
 			sim._apply_windage()
 			sim._apply_leg_forces(sub_dt)
 			marks.append(body.torque_sum())
+			force_marks.append(body._force_sum)
 			sim._attach_sailor_across_the_deck()
 			marks.append(body.torque_sum())
+			force_marks.append(body._force_sum)
 			_sample_system(sim)
 			sim._feel_the_turn(sub_dt)
 			sim.sailor.integrate(sub_dt)
 		else:
 			sim._apply_rig_in_water_drag(sub_dt)
 		var pitch_axis: Vector3 = body.starboard_axis()
+		var q: float = body.angular_velocity.dot(pitch_axis)
+		var w: float = body.velocity.y
 		for s: int in mini(marks.size() - 1, _stages.size()):
 			_stage_pitch[s] += (marks[s + 1] - marks[s]).dot(pitch_axis)
 			_stage_yaw[s] += (marks[s + 1] - marks[s]).dot(body.up_axis())
+			var m: float = (marks[s + 1] - marks[s]).dot(pitch_axis)
+			var f: float = (force_marks[s + 1] - force_marks[s]).y
+			_stage_m[s] += m
+			_stage_mq[s] += m * q
+			_stage_f[s] += f
+			_stage_fw[s] += f * w
+		if sailing:
+			_sum_q += q
+			_sum_qq += q * q
+			_sum_w += w
+			_sum_ww += w * w
+			_power_samples += 1
 		sim._net_torque_world = body.torque_sum()
 		body.integrate(sub_dt)
 		if sailing:
@@ -268,6 +315,24 @@ func _print_budget(sim: WindsurferSim, wind_kt: float, twa_deg: float) -> void:
 	for key: String in _means:
 		if not key.begins_with("sys: "):
 			print("   %-24s %8.2f" % [key, _means[key] / n])
+	print("")
+	var np: float = float(maxi(_power_samples, 1))
+	var q_mean: float = _sum_q / np
+	var w_mean: float = _sum_w / np
+	var q_rms: float = sqrt(maxf(_sum_qq / np - q_mean * q_mean, 0.0))
+	var w_rms: float = sqrt(maxf(_sum_ww / np - w_mean * w_mean, 0.0))
+	print("4. What feeds the bounce: each stage's power into the hull's oscillation, the mean of")
+	print("   M' q' (pitch) and F' w' (heave) over the window, in W. + pumps it, - damps it.")
+	print("   The pitch rate's RMS %.2f deg/s, the vertical speed's RMS %.3f m/s." % [rad_to_deg(q_rms), w_rms])
+	var pitch_total: float = 0.0
+	var heave_total: float = 0.0
+	for s: int in _stages.size():
+		var pitch_power: float = _stage_mq[s] / np - (_stage_m[s] / np) * q_mean
+		var heave_power: float = _stage_fw[s] / np - (_stage_f[s] / np) * w_mean
+		pitch_total += pitch_power
+		heave_total += heave_power
+		print("   %-24s pitch %8.2f   heave %8.2f" % [_stages[s], pitch_power, heave_power])
+	print("   %-24s pitch %8.2f   heave %8.2f" % ["sum", pitch_total, heave_total])
 
 
 ## The default open-water simulation, built again on copies with any --board. or --fin.

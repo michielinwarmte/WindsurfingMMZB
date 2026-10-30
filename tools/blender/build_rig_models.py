@@ -702,8 +702,17 @@ class Curve:
 # The foot drops from the tack to close to the deck, then rises to the clew (cut away under
 # the clew). The leech is convex (the roach the battens hold out) up to a narrow head.
 FOOT = Curve([(0.0, TACK_Y), (0.18 * BOOM_M, TACK_Y - 0.42), (0.74 * BOOM_M, 0.42 * BOOM_H), (BOOM_M, BOOM_H)])
-LEECH = Curve([(BOOM_M, BOOM_H), (1.01 * BOOM_M, BOOM_H + 0.36 * (TOP_Y - BOOM_H)),
-               (0.62 * BOOM_M, TOP_Y - 0.10), (HEAD_WIDTH, TOP_Y - 0.03)])
+
+
+def leech_curve(roach: float) -> Curve:
+    """The leech, its two middle control points held out by `roach` times their place for a
+    6.5 (1.0): the roach the battens hold out, which is what gives a slalom sail its area for
+    its luff and boom."""
+    return Curve([(BOOM_M, BOOM_H), (1.01 * roach * BOOM_M, BOOM_H + 0.36 * (TOP_Y - BOOM_H)),
+                  (0.62 * roach * BOOM_M, TOP_Y - 0.10), (HEAD_WIDTH, TOP_Y - 0.03)])
+
+
+LEECH = leech_curve(1.0)
 
 
 def row_v(r: int) -> float:
@@ -741,6 +750,24 @@ def sail_outline() -> np.ndarray:
 def sail_area() -> float:
     x, y = sail_outline()[:, 0], sail_outline()[:, 1]
     return 0.5 * abs(np.dot(x, np.roll(y, -1)) - np.dot(y, np.roll(x, -1)))
+
+
+# The roach that gives the configured area (PH16 step 17: the 8.0's 4.9 m luff and 2.0 m boom
+# with a 6.5's roach drew 7.0 m2). Never less than a 6.5's; bisection, the area grows with it.
+ROACH = 1.0
+LEECH = leech_curve(ROACH)
+if sail_area() < SAIL["area_m2"]:
+    low, high = 1.0, 1.8
+    for _ in range(40):
+        ROACH = 0.5 * (low + high)
+        LEECH = leech_curve(ROACH)
+        if sail_area() < SAIL["area_m2"]:
+            low = ROACH
+        else:
+            high = ROACH
+    ROACH = high
+    LEECH = leech_curve(ROACH)
+print(f"Sail: roach {ROACH:.3f} times a 6.5's")
 
 
 def sail_centroid() -> tuple:

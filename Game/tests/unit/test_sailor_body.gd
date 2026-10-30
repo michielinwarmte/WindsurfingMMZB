@@ -31,7 +31,7 @@ func test_at_rest_the_legs_carry_the_weight_into_the_hull_and_nothing_else() -> 
 	var sim: WindsurferSim = _sim(0.0)
 	var controls: SimControls = SimControls.new()
 	_run(sim, 6.0, controls)
-	assert_almost_eq(sim.leg_force_world.y, 75.0 * 9.81, 5.0, "the legs hold the sailor's weight")
+	assert_almost_eq(sim.leg_force_world.y, sim.sailor_config.mass_kg * 9.81, 5.0, "the legs hold the sailor's weight")
 	assert_lt(SimMath.horizontal(sim.leg_force_world).length(), 5.0, "and push nowhere else")
 	assert_almost_eq(sim.mast_foot_force_world.y, -sim.sail_config.rig_mass_kg * 9.81, 2.0, "the rig's weight stands on the mast foot")
 	# Nearly nothing: the rig stands with the board's rest attitude, a little off upright.
@@ -39,7 +39,7 @@ func test_at_rest_the_legs_carry_the_weight_into_the_hull_and_nothing_else() -> 
 	assert_lt(absf(sim.knee_bend_m), 0.003, "the legs are at their posture")
 	assert_lt(sim.leg_sway_m, 0.003)
 	assert_lt(absf(sim.telemetry.heel_deg), 1.0, "level")
-	assert_almost_eq(sim.buoyancy.submerged_volume_m3, 92.0 / 1025.0, 0.02 * 92.0 / 1025.0, "the hull displaces all three")
+	assert_almost_eq(sim.buoyancy.submerged_volume_m3, sim.mass_model.total_mass_kg / 1025.0, 0.02 * sim.mass_model.total_mass_kg / 1025.0, "the hull displaces all three")
 
 
 func test_a_sailor_leaning_to_starboard_at_rest_heels_the_board_to_starboard() -> void:
