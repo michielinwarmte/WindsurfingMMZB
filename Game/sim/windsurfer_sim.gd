@@ -125,6 +125,10 @@ var hang_back_m: float = 0.0
 ## How far the body has dropped below its posture's height to stay within one body's reach of
 ## the feet as it hangs back (_keep_within_one_body), metres.
 var one_body_drop_m: float = 0.0
+## The front foot's couple (PH28, _front_foot_couple_nm): the nose-up moment the rider means
+## the feet to pass to the deck by hanging the body further back than the pull in the hands
+## holds, the front foot holding it from tipping back in its strap (N m).
+var front_foot_couple_nm: float = 0.0
 ## Weight on a rail: -1 = the feet press the port rail, +1 the starboard rail (the lean the
 ## controls ask for, taken up at the sailor's pace). This is what banks the board.
 var rail_press: float = 0.0
@@ -165,6 +169,12 @@ var harness_jolt_n: float = 0.0
 ## (feet_moment_max_nm), the force with which it would tip the body, and for how long
 ## that has been more than the hips can hold.
 var feet_moment_excess_nm: float = 0.0
+## The same in pitch (PH28, positive nose-up): what the two feet in their straps could not pass
+## (_feet_pitch_within_straps).
+var feet_pitch_excess_nm: float = 0.0
+## How long the feet have passed more pitch moment than the held pull allows (the brief pull's
+## time, tip_time_s).
+var _front_foot_hard_s: float = 0.0
 var _tipping_force_world: Vector3 = Vector3.ZERO
 var _tipping_for_s: float = 0.0
 ## The hull's acceleration under the feet at the last substep (world): what the body's
@@ -264,6 +274,11 @@ var _trim_press_band_deg: float = 0.0
 var _trim_press_max_m: float = 0.0
 # The footstraps in body z (aft positive); INF and -INF when the board has none.
 var _back_strap_z_m: float = INF
+## The straps' spread along the board (the front strap less the back strap from the tail), 0
+## without straps.
+var _strap_spread_m: float = 0.0
+var _front_foot_pull_held_n: float = 0.0
+var _front_foot_pull_brief_n: float = 0.0
 var _front_strap_z_m: float = -INF
 var _trim_press_rate_ms: float = 0.0
 var _trim_feel_time_s: float = 0.0
@@ -472,6 +487,8 @@ func _copy_configs() -> void:
 	_board_residuary_peak_froude = board_config.residuary_peak_froude
 	_back_strap_z_m = 0.5 * board_config.length_m - board_config.back_strap_from_tail_m if board_config.back_strap_from_tail_m > 0.0 else INF
 	_front_strap_z_m = 0.5 * board_config.length_m - board_config.front_strap_from_tail_m if board_config.front_strap_from_tail_m > 0.0 else -INF
+	var both_straps: bool = board_config.back_strap_from_tail_m > 0.0 and board_config.front_strap_from_tail_m > 0.0
+	_strap_spread_m = board_config.front_strap_from_tail_m - board_config.back_strap_from_tail_m if both_straps else 0.0
 	_mast_foot_local = sail_config.mast_foot_local
 	_boom_height_m = sail_config.boom_height_m
 	_rig_mass_kg = sail_config.rig_mass_kg
@@ -536,6 +553,8 @@ func _copy_configs() -> void:
 	_standing_fall_heel_deg = sailor_config.standing_fall_heel_deg
 	_step_rate_per_s = sailor_config.step_rate_per_s
 	_tip_time_s = sailor_config.tip_time_s
+	_front_foot_pull_held_n = sailor_config.front_foot_pull_held_n
+	_front_foot_pull_brief_n = sailor_config.front_foot_pull_brief_n
 	_trim_press_band_deg = sailor_config.trim_press_band_deg
 	_trim_press_max_m = sailor_config.trim_press_max_m
 	_trim_press_rate_ms = sailor_config.trim_press_rate_ms
@@ -601,6 +620,9 @@ func _check_balance() -> void:
 	if _tipping_for_s > _tip_time_s:
 		# The excess is positive when the body is tipped to port.
 		var to_leeward: bool = feet_moment_excess_nm * tack > 0.0
+		# Tipped in pitch more than in roll (PH28): forward, over the boom, or back.
+		if absf(feet_pitch_excess_nm) > absf(feet_moment_excess_nm):
+			to_leeward = feet_pitch_excess_nm < 0.0
 		if to_leeward:
 			_fall(int(-tack), "tipped over", tack)
 		else:
@@ -706,6 +728,9 @@ func _clear_sailor_forces() -> void:
 	feet_moment_world = Vector3.ZERO
 	hand_moment_body = Vector3.ZERO
 	feet_moment_excess_nm = 0.0
+	feet_pitch_excess_nm = 0.0
+	front_foot_couple_nm = 0.0
+	_front_foot_hard_s = 0.0
 	_tipping_for_s = 0.0
 	_tipping_force_world = Vector3.ZERO
 	_hull_acceleration_at_feet = Vector3.ZERO
@@ -1083,6 +1108,7 @@ func _update_sailor(dt: float) -> void:
 		if not _controls_freeze_fore_aft:
 			trim_press_m = move_toward(trim_press_m, press_target, _trim_press_rate_ms * dt)
 	trim_press_m = _press_within_straps(trim_press_m)
+	front_foot_couple_nm = _front_foot_couple_nm(trimming, forward_speed)
 
 	var asked: float = clampf(_controls_lean, -1.0, 1.0)
 	_asked_lean = asked
@@ -1114,7 +1140,9 @@ func _update_sailor(dt: float) -> void:
 	# positive moment about the starboard axis tips the body's top aft, so a forward pull
 	# at the hands is a negative one, answered by the weight that far behind the feet.
 	var weight_n: float = _sailor_mass_kg * _gravity_ms2
-	var hang_target: float = clampf(-_balance_moment_gain * _felt_hand_pitch_moment_nm / weight_n, 0.0, _hang_back_max_m)
+	# Beyond that, the front foot's couple: the body hangs further back and the front foot, pulling
+	# up in its strap, holds it there (_front_foot_couple_nm).
+	var hang_target: float = clampf((-_balance_moment_gain * _felt_hand_pitch_moment_nm + front_foot_couple_nm) / weight_n, 0.0, _hang_back_max_m)
 	# Pitch reflex: when the nose rises fast the sailor moves their weight forward, and back
 	# when it drops. This is how a sailor stops a planing board from porpoising. (On a
 	# pitched deck the body stands square to gravity by itself: the posture is held in the
@@ -1172,6 +1200,49 @@ func _keep_within_one_body() -> void:
 	var out: float = mass_model.com_out_from_feet_m(lean, hang_back_m)
 	var height_within_reach: float = sqrt(maxf(reach * reach - out * out, 0.0))
 	one_body_drop_m = maxf(mass_model.com_above_feet_m(lean) - height_within_reach, 0.0)
+
+
+## The front foot's couple (PH28, P1.1): the rider pulls up with the front foot in its strap and
+## presses the back foot, a nose-up moment through the feet. A couple between the feet is
+## internal to the windsurfer: with the weight standing still, what the front foot lifts the
+## rider's body gets back, and the board's trim cannot change. What the pull does is hold the
+## body from tipping back when it hangs behind the back foot further than the pull in the hands
+## alone holds it, so that is how it is built: the body hangs this moment over its weight
+## further back (_update_sailor), and the feet pass the moment to the deck (_apply_leg_forces,
+## within _feet_pitch_within_straps). The rider uses it in the straps and over the hump (the
+## trim press's "trimming"), while the board rides below the trim aimed for, in proportion to
+## how far below in the trim press's bands (the same aim and band as _trim_by_feel), up to the
+## held pull times the straps' spread. No number of its own but the pull (Max's).
+func _front_foot_couple_nm(trimming: bool, forward_speed: float) -> float:
+	if not trimming or stance < 1.0 or _strap_spread_m <= 0.0:
+		return 0.0
+	var felt_deg: float = felt_trim_deg if _trim_feel_time_s > 0.0 else rad_to_deg(body.pitch_rad())
+	var below_aim: float = clampf((_running_trim_target_deg(forward_speed) - felt_deg) / _trim_press_band_deg, 0.0, 1.0)
+	return below_aim * _front_foot_pull_held_n * _strap_spread_m
+
+
+## The pitch part of the feet's moment (PH28): two feet in their straps pass a nose-up moment as
+## far as all the weight on the back foot (the legs' force times the back strap's distance behind
+## the feet's pressure point) and the front foot's pull in its strap (times the straps' spread)
+## reach; nose-down as far as all the weight on the front foot and the back foot's pull. Beyond
+## the held pull the straps hold up to the brief pull for tip_time_s at a time, as the hips do;
+## what is left is the feet_pitch_excess_nm, which tips the body. Out of the straps the feet
+## stand where they like and pass it all, as before PH28.
+func _feet_pitch_within_straps(pitch_nm: float, legs_force: Vector3, dt: float) -> float:
+	if stance < 1.0 or _strap_spread_m <= 0.0:
+		_front_foot_hard_s = 0.0
+		return pitch_nm
+	var weight_on_feet: float = maxf(legs_force.dot(body.up_axis()), 0.0)
+	var held_nm: float = _front_foot_pull_held_n * _strap_spread_m
+	var brief_nm: float = maxf(_front_foot_pull_brief_n, _front_foot_pull_held_n) * _strap_spread_m
+	var nose_up_held: float = weight_on_feet * maxf(_back_strap_z_m - feet_body.z, 0.0) + held_nm
+	var nose_down_held: float = weight_on_feet * maxf(feet_body.z - _front_strap_z_m, 0.0) + held_nm
+	if pitch_nm > nose_up_held or -pitch_nm > nose_down_held:
+		_front_foot_hard_s += dt
+	else:
+		_front_foot_hard_s = 0.0
+	var brief_extra: float = brief_nm - held_nm if _front_foot_hard_s <= _tip_time_s else 0.0
+	return clampf(pitch_nm, -(nose_down_held + brief_extra), nose_up_held + brief_extra)
 
 
 ## The feet's pressure stays between the footstraps (BoardConfig.back_strap_from_tail_m and
@@ -1388,6 +1459,11 @@ func _apply_leg_forces(dt: float) -> void:
 	var residual_passed: float = clampf(residual, -feet_max, feet_max)
 	feet_moment_excess_nm = residual - residual_passed
 	var roll_passed: float = residual_passed + clampf(reflex, -feet_max - residual_passed, feet_max - residual_passed)
+	# In pitch the feet pass what the straps hold (PH28; until then all of it).
+	var across_axis: Vector3 = body.starboard_axis()
+	var pitch_residual: float = moment_to_deck.dot(across_axis)
+	var pitch_passed: float = _feet_pitch_within_straps(pitch_residual, legs_force, dt)
+	feet_pitch_excess_nm = pitch_residual - pitch_passed
 	# What the feet cannot pass would tip the body about them: a force across the leg
 	# line at the centre of mass, excess / leg length. The hips hold it up to hip_max;
 	# more than that for longer than a jolt and the body goes.
@@ -1395,6 +1471,8 @@ func _apply_leg_forces(dt: float) -> void:
 	var leg_dir: Vector3 = com_from_feet / leg_length
 	var lever: float = maxf(1.0 - leg_dir.dot(roll_axis) * leg_dir.dot(roll_axis), 0.3)
 	_tipping_force_world = roll_axis.cross(leg_dir) * (feet_moment_excess_nm / (leg_length * lever))
+	var pitch_lever: float = maxf(1.0 - leg_dir.dot(across_axis) * leg_dir.dot(across_axis), 0.3)
+	_tipping_force_world += across_axis.cross(leg_dir) * (feet_pitch_excess_nm / (leg_length * pitch_lever))
 	var hip_max: float = _hip_force_max_n + _harness_hold_max_n * clampf(absf(lean), 0.0, 1.0)
 	if _tipping_force_world.length() > hip_max:
 		_tipping_for_s += dt
@@ -1402,7 +1480,7 @@ func _apply_leg_forces(dt: float) -> void:
 		_tipping_for_s = 0.0
 
 	leg_force_world = hold + knees
-	feet_moment_world = moment_to_deck + roll_axis * (roll_passed - residual)
+	feet_moment_world = moment_to_deck + roll_axis * (roll_passed - residual) + across_axis * (pitch_passed - pitch_residual)
 	sailor.add_force(leg_force_world)
 	body.add_force_at(feet_world, -leg_force_world)
 	body.add_torque(feet_moment_world)

@@ -243,6 +243,25 @@ extends Resource
 ## jolt shorter than this is ridden out).
 @export var tip_time_s: float = 0.3
 
+@export_group("The front foot (PH28)")
+## The front foot pulling up in its strap, against the back foot pressing: the most it pulls
+## held, 150 to 250 N (the U1 sources' estimate from hip-flexor and dinghy hiking-strap
+## forces, Documentation/reports/ph28/flying_the_board.md section 2; Max, 30 October 2026,
+## answer 1: "correct"); 200 N is the middle of that range. Times the straps' spread
+## (BoardConfig: the front strap less the back strap from the tail, 0.59 m on Max's board)
+## it is the nose-up moment the feet can pass beyond all the weight on the back foot:
+## 118 N m held. Two uses (WindsurferSim): the rider hangs the body behind the back foot
+## further than the pull in the hands alone holds it and lets the front foot hold it there
+## (_front_foot_couple_nm: a couple between the feet is internal to the windsurfer, so with
+## the weight standing still it cannot change the board's trim), and the pitch part of the
+## feet's moment is capped by it (_feet_pitch_within_straps). The back foot's pull in its
+## strap, for a nose-down moment, is taken as the same (an estimate). 0 = no pull.
+@export var front_foot_pull_held_n: float = 200.0
+## The most the front foot pulls briefly: about 400 N (the same sources; Max: "correct"), for
+## at most tip_time_s at a time, as the hips hold a body tipped harder than hip_force_max_n
+## only that long.
+@export var front_foot_pull_brief_n: float = 400.0
+
 @export_group("Falling and getting back up")
 ## The board heels toward the sail only when the sailor can no longer balance the sail's
 ## pull. Past this leeward heel a standing person is pulled over the sail: a catapult.

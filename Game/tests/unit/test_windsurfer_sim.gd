@@ -418,7 +418,16 @@ func _twa_change_with_rake(start_heading_deg: float, rake: float) -> float:
 	# about the rake. The direction the board sets off in does. Heading up is the slower of
 	# the two (into a stronger apparent wind, with the fin loaded), bearing away the faster.
 	controls.rake = clampf(controls.rake + rake, -1.0, 1.0)
-	_run(sim, 2.0, controls, pilot)
+	# Up to a fall: since the front foot's couple (PH28) the board rides on its last metre and
+	# turns more readily, and at 15 kt a half rake back on top of the pilot's (full rake) heads it
+	# up at 40 degrees a second and catapults the sailor within half a second. Where a board with
+	# nobody on it points after that says nothing about the rake; the way it set off does.
+	for i: int in int(2.0 / DT):
+		pilot.update(sim.telemetry, controls, DT)
+		sim.step(DT, controls)
+		if sim.sailor_state != WindsurferSim.SailorState.SAILING:
+			gut.p("fell (%s) %.2f s after the rake, the wind angle %.1f -> %.1f deg" % [sim.fall_kind, sim.time_s - 20.0, twa_before, sim.telemetry.twa_deg])
+			break
 	return absf(sim.telemetry.twa_deg) - absf(twa_before)
 
 
@@ -429,6 +438,7 @@ func test_rake_back_heads_up_and_rake_forward_bears_away_on_both_tacks() -> void
 	var starboard_away: float = _twa_change_with_rake(180.0, -0.5)
 	var port_up: float = _twa_change_with_rake(0.0, 0.5)
 	var port_away: float = _twa_change_with_rake(0.0, -0.5)
+	gut.p("the wind angle's change in 2 s or up to a fall: starboard up %.2f, away %.2f; port up %.2f, away %.2f deg" % [starboard_up, starboard_away, port_up, port_away])
 	assert_lt(starboard_up, -4.0, "starboard tack, rake back: the wind angle gets smaller (heading up)")
 	assert_gt(starboard_away, 8.0, "starboard tack, rake forward: bearing away")
 	assert_lt(port_up, -4.0, "port tack, rake back heads up")
