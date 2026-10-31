@@ -9,7 +9,8 @@ Part 4 of [the fleet's training and the gear](PLAN.md), by the shaper agent on t
 - **Shapes and liveries per brand**: each brand has its own outline, cut-outs, bottom vee, deck pads and print layout on the boards, and its own outline, batten layout, sleeve, windows and print layout on the sails (section 2's "what makes the shapes recognisable" and section 4's notes). Every sail's outline has its configured area within 1 %.
 - **The folder `Game/assets/models/gear/` is 17.0 MB** (the budget was 25 MB).
 - **The default rig is untouched**: `build_rig_models.py` is not changed (it already had its `__main__` guard); rebuilt after this work it gives the same eight files bit for bit as before.
-- **Checks**: a new unit test (`test_gear_models.gd`, 8 tests, 5,727 asserts) and `tools/check.sh` are green; the full `tools/test.sh` is green (630 of 630). Contact sheets of every brand are in `.screenshots/gear/`.
+- **The catalogue** (the gear page's items) is generated from the same table: `python -I tools/gear/make_catalogue.py` writes the 63 items' files in `Game/gear/` (the page's twelve stand-ins are gone; the default fin stays), with the models, the pictures and the numbers. The fins' brand is **Montag** (the lead's decision), with a logo drawn by `tools/brands/make_logos.py`.
+- **Checks**: a new unit test (`test_gear_models.gd`, 8 tests, 5,727 asserts) and `tools/check.sh` are green; the full `tools/test.sh` is green (661 of 661 after the catalogue). Contact sheets of every brand are in `.screenshots/gear/`.
 
 ## What was built, and how it fits the game
 
@@ -30,7 +31,7 @@ The item ids are `<brand slug>_<line>_<size>`: a board's litres (`moonboard_slal
 
 **What the models fix for the catalogue.** Two numbers belong to the board but live in other configs in the game: the mast foot (`SailConfig.mast_foot_local`: on the deck, 2 cm ahead of the mast track's back end, section 3.1 rule 12) and the fin's root (`FinConfig.root_local`: 0.18 m from the tail, 5 mm up in the bottom, rule 11). The builder works their heights out from the hull and writes both into `gear_set.json` (`mast_foot_local`, `fin_root_local`). For the PJ 117 (the default board) they come out exactly as `sail_default.tres` and `fin_default.tres` have them (0, 0.081, -0.125 and 0, -0.06, 0.96).
 
-**Masts and booms.** The gear page's `RigVisuals` (branch `gear/page`) stretches the default mast to the sail's `mast_m` and the default boom to its `boom_m`; the sails here are built for exactly their own numbers, so it needs no mast or boom per sail, and none were built (the gear view does the same stretch).
+**Masts and booms.** The gear page's `RigVisuals` stretches the default mast to the sail's `mast_m` and the default boom to its `boom_m`; the sails here are built for exactly their own numbers, so it needs no mast or boom per sail, and none were built (the gear view does the same stretch).
 
 ## The set
 
@@ -112,11 +113,49 @@ Every sail carries the two race-number boxes of the default sail (port and starb
 ## Choices made here, and why
 
 - **Pictures per item, not per brand.** The brief asked for one deck, bottom and panels picture per brand to keep the folder small, and also for each board's model name and each sail's size to be printed. A sail's picture is read with the cloth's own UV, which also drives its shape in the shader, so one picture cannot show a different size on each sail. Since the pictures pack small (a board's deck about 60 KB, its bottom 25 KB, a sail's panels 150 KB, thanks to storing each row as its difference to the row above), each item has its own: the model name, the size and the board's dimensions are printed where the brand prints them, and every print sits exactly on its own outline. The whole folder is 17.0 MB. If the team prefers one set per brand, the builder can draw each brand's once on a middle size (without the sizes and names).
-- **A gear view of its own instead of options in `rig_view.gd`.** The gear page's branch already gave the rig view `--gear_board=`, `--gear_sail=`, `--gear_fin=` (sailing the catalogue's items), which shows these models sailing once their catalogue entries exist. The contact sheets need something else: the gear still, through straight-on cameras, from above, below and both sides, and from below the water. So `Game/dev/gear_view.tscn` does that, and `rig_view.gd` is left as it is (no clash with the page's changes).
+- **A gear view of its own instead of options in `rig_view.gd`.** The gear page's branch already gave the rig view `--gear_board=`, `--gear_sail=`, `--gear_fin=` (sailing the catalogue's items), which shows these models sailing now that their catalogue entries exist (`tools/screenshot.sh res://dev/rig_view.tscn .screenshots/rig/view.png 600 --gear_sail=point9_slalom_7_8`). The contact sheets need something else: the gear still, through straight-on cameras, from above, below and both sides, and from below the water. So `Game/dev/gear_view.tscn` does that, and `rig_view.gd` is left as it is (no clash with the page's changes).
 - **Prints low in the sail sit just above the lowest batten.** Under it the cloth's rows fan out from the tack (the default sail's layout, which the shader expects), so the picture has few pixels across the foot and a print there blurs. Model names and sizes go just above it, where the picture is sharp.
 - **Each sail's outline is fitted to its configured area.** The brand's shape (how wide the head is, how long the foot) is scaled as a whole until the outline has the config's area, within 1 %. The foot's corner is kept 12 cm ahead of the clew and the roach small enough that the clew is the sail's aftmost point (a short-boom sail with a wide head would otherwise bulge behind it).
 - **Text** is drawn with Inter, the open-licence font Blender ships for its own interface (found in Blender's data folder on any computer), so nobody needs a font installed to rebuild. The logos are the designer's PNGs, stamped in.
 - **The models are lighter than the default ones**: 50 cross-sections of 40 points on the hull (the default has 120 of 48), lighter footstraps, 26 columns on the sail (40): a board is about 217 KB (the default's 440 KB), a sail 125 KB.
+
+## The catalogue (the gear page's items)
+
+After the gear page was merged (its format: `Game/gear/gear_item.gd`, `catalogue.gd`, `gear_choice.gd`, and `gear_page.md`'s "How to add an item"), `tools/gear/make_catalogue.py` writes the catalogue from the gear table:
+
+```
+python -I tools/gear/make_catalogue.py        # after building the models; then tools/check.sh
+```
+
+- **One file per item** in `Game/gear/boards/` (22), `Game/gear/sails/` (36) and `Game/gear/fins/` (5 Montag fins and the default fin), named after its id. Each has the brand, the model name, the line, the size, a line for its card, a wind range, its model and pictures, and its numbers written in the file: the default config's numbers (`board_default.tres`, `sail_default.tres`, `fin_default.tres`: "everything else as the default", section 3.1) with the table's in their place. A sail's `cloth` is white: its picture already has the brand's colours, and white keeps them.
+- **The defaults stay the game's gear number for number**: the default board (`pj_new_sealand_slalom_117`) and sail (`savanna_slalom_8_0`) point at their `Game/config/` files, with the shaper's model and livery (the PJ board in white and teal, the 8.0 in Savanna's terracotta: the game's default look changes from the purple board and the red sail to these; clearing the items' `model`, `deck`, `bottom` and `panels` gives the old look back). The default fin (`pj_new_sealand_slalom_38`, the game's 365 cm² fin) is not in the table and keeps its file and the default fin model.
+- **The page's twelve stand-in items are deleted.** Its tests named some of them; they now name real items (`southsails_slalom_6_8`, `forbidden_freerace_113`), count Forbidden's four boards and the Fin tab's two brands, and check that the catalogue's sails keep their pictures' colours. The page's note at the bottom no longer says the models are stand-ins.
+- **Montag**, the fins' brand: `Game/gear/brands/montag.tres`, its logos in `Game/assets/brands/montag/` (a swept fin on a silver disc, the wordmark "MONTAG"; drawn by `tools/brands/make_logos.py montag`), `Brand.makes_fins` (true for Montag only), the brands' test extended to twelve, a section in [brands.md](brands.md).
+- **The cards' wind ranges** are a rule of thumb by size (smaller gear for more wind; an 8.0 at 12 to 22 kt as Point-7's chart has it); the gear sails in any wind.
+
+| Brand | Boards | Sails | Fins |
+|---|---|---|---|
+| Tripletone | 4 | 5 | |
+| Savanna | 2 | 6 (with the default 8.0) | |
+| Point.9 | | 5 | |
+| Moonboard | 4 | | |
+| NielsTrots | | 5 | |
+| PJ New Sealand | 4 (with the default board) | | 1 (the default fin) |
+| BMX Boards | 4 | | |
+| SouthSails | | 5 | |
+| s3kauai | | 5 | |
+| Forbidden | 4 | | |
+| GG Sails | | 5 | |
+| Montag | | | 5 |
+
+The page's screenshots (drawn in a headless gamescope session, the screens being off):
+
+| What | File | Command |
+|---|---|---|
+| The Board tab | `.screenshots/gear_page_boards.png` | `tools/screenshot.sh res://ui/start_menu.tscn .screenshots/gear_page_boards.png 120 --page=gear` |
+| The Sail tab | `.screenshots/gear_page_sail.png` | the same with `--page=gear/sail` |
+| The Fin tab | `.screenshots/gear_page_fin.png` | the same with `--page=gear/fin` |
+| Sailing a Tripletone 111, an s3kauai 7.6 and a Montag 34 (F1 panel open) | `.screenshots/gear_sailing.png` | `tools/screenshot.sh res://main.tscn .screenshots/gear_sailing.png 300 --autopilot=1 --camera=2 --settings=<file>` with `[gear]` `board="tripletone_slalom_111"`, `sail="s3kauai_slalom_7_6"`, `fin="montag_slalom_34"` |
 
 ## How to rebuild
 
@@ -131,7 +170,7 @@ tools/check.sh                                                           # Godot
 tools/gear/contact_sheets.sh [--brand=<slug>] [--gamescope]              # the contact sheets
 ```
 
-A new picture gets Godot import settings with mipmaps and graphics-card compression (a print shimmers at a distance without mipmaps); the builder writes them the first time and Godot fills in the rest. After changing a number or a name in `gear_set.py`, rebuild and run `tools/test.sh unit -gselect=gear_models`.
+Then `python -I tools/gear/make_catalogue.py` if the table changed (new items, names, numbers). A new picture gets Godot import settings with mipmaps and graphics-card compression (a print shimmers at a distance without mipmaps); the builder writes them the first time and Godot fills in the rest. After changing a number or a name in `gear_set.py`, rebuild and run `tools/test.sh unit -gselect=gear_models`.
 
 ## The contact sheets
 
@@ -149,13 +188,15 @@ On this machine the screens were off during the work: a game window then gets no
 
 - **How the gear looks in the game, sailing, at a distance and on the team's screens**: the sheets are still, straight-on, under one light. Whether each brand is recognisable at ten metres in the game's light and water, and how the colours come out on other screens, needs the team's eyes once the catalogue shows them in the game.
 - **The prints from up close**: the pictures are 512 × 2048 (boards) and 1024 × 2048 (sails); small letters (the dimensions on PJ's tail, the model names on the sails) are sharp in the sheets but soft at the gear page's closest zoom, if it zooms in that far.
-- **A race's sail colours on these sails.** The game's tint (`sail_colour` in `sail_cloth.gdshaderinc`) shades the race colour by the red channel of the cloth's own colour. That works for the default red sail, but darkens sails whose cloth has little red: s3kauai's lagoon and SouthSails' navy would turn almost black under a race colour, and the dark sails (Point.9, NielsTrots, Tripletone) stay dark whatever the colour. See the open questions.
+- **A race's sail colours on these sails.** The game's tint (`sail_colour` in `sail_cloth.gdshaderinc`) shades the race colour by the red channel of the cloth's own colour. That works for the default red sail, but darkens sails whose cloth has little red: s3kauai's lagoon and SouthSails' navy would turn almost black under a race colour, and the dark sails (Point.9, NielsTrots, Tripletone) stay dark whatever the colour. The gear page is not affected (the catalogue's sails have `cloth` white, which leaves their own colours); a race that tints the fleet's sails would be, once the AI fleet sails the gear (RA8). See the open questions.
 
 ## Open choices for the team
 
 1. **A second colourway per brand** (brands.md lists one per brand, e.g. Tripletone's white cloth with a carbon print, BMX's black deck): the livery functions take the brand's colours, so a second colourway is a second palette and a line in the table.
 2. **Sizes to add**: section 3 has more (24 slalom and 17 free race boards, 32 and 26 sails); each is one line in `gear_set.py`, about 0.4 MB per board and 0.3 MB per sail.
-3. **The race tint on dark and blue sails** (above): shading by the cloth's brightest channel instead of its red one would leave the default sail exactly as it is and let every brand's sail take a race colour. A one-line change in `sail_cloth.gdshaderinc`, not made here (it is the race's look, not the gear's).
+3. **The race tint on dark and blue sails** (above): shading by the cloth's brightest channel instead of its red one would leave the default sail exactly as it is and let every brand's sail take a race colour. A one-line change in `sail_cloth.gdshaderinc`, not made here (it is the race's look, not the gear's; it matters once the AI fleet sails the gear, RA8).
 4. **One picture set per brand** instead of per item, if the folder must shrink further (about 4 MB less, without the sizes and model names printed).
 5. **The model names** (section 3.7's, four changed) and Montag's fin name "Swift" are suggestions.
 6. **Masts and booms of their own** per sail size, if the stretched default ones look wrong on the small sails (the stretch also stretches the extension and the rubber joint by up to 20 %).
+7. **The mast foot and the fin's root belong to the board** (section 3.1 rules 11 and 12), but the game keeps them in the sail's and the fin's configs, so the catalogue's sails and fins carry the default board's places (0, 0.081, -0.125 and 0, -0.06, 0.96). On a board of another length the fin then hangs up to 8 cm ahead of the board's fin box (the Savanna 125, 2.44 m long: its root belongs at z 1.04) and the mast foot sits up to 1.3 cm off the track. `gear_set.json` has each board's own places (`mast_foot_local`, `fin_root_local`); `GearChoice.sim_with()` could put them into the sail's and the fin's copies (for the default board they are the same numbers, so the default gear would not change). That changes how the boards balance, so it is the lead's and Michiel's call; not done here.
+8. **The sails' twist pressure** (`twist_pressure_pa`, a physics question, PH14) is set by size on a straight line through the game's two sails (125 Pa for the 8.0, 140 Pa for the 6.5), from 115 Pa (9.0) to 150 Pa (5.5). The rig's mass is section 3's at the default's ratio (`rig_mass_kg`); the real rig's is in the table too.
