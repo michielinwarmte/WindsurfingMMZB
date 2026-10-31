@@ -38,6 +38,11 @@ const FAR_DETAIL_M: float = 300.0
 var race: RaceSim = null
 var course: Course = null
 var setup: RaceSetup = null
+## The time trial (GP4): the records, this run's key (the water, the course and the wind) and
+## whether this run's finish has been checked against the best.
+var records: TimeTrialRecords = null
+var record_key: String = ""
+var _record_checked: bool = false
 var player: WindsurferNode = null
 var opponents: Array[WindsurferNode] = []
 var hud: RaceHud = null
@@ -123,6 +128,12 @@ func setup_race(race_course: Course, player_node: WindsurferNode, race_setup: Ra
 		opponents.append(node)
 		_boards.append(node)
 		_skippers.append(skipper)
+	# A race of one is a time trial: the player's time against the best kept for this course.
+	if setup.time_trial or (opponents.is_empty() and not spectating):
+		setup.time_trial = true
+		records = TimeTrialRecords.new()
+		records.load_from(setup.records_path)
+		record_key = _record_key()
 	restart()
 
 
@@ -162,6 +173,9 @@ func restart() -> void:
 	_tell_the_race()
 	race.start_in(setup.free_sail_s)
 	hud.reset()
+	if records != null:
+		hud.set_time_trial(true, records.best_s(record_key), records.best_splits(record_key))
+	_record_checked = false
 	choice = SpectateChoice.new()
 	_running = true
 
@@ -379,6 +393,7 @@ func _process(delta: float) -> void:
 	var node: WindsurferNode = followed_node()
 	hud.set_watching(node.skipper.board_name() if spectating and node.skipper != null else "", choice.follows_leader)
 	hud.update_from(race, index, node.telemetry(), shadow_deficit(node), rules)
+	_check_record()
 	_hud_layer.set_next_mark_bearing(Course.bearing_deg(_where(node), race.next_target(index)))
 
 
@@ -430,3 +445,24 @@ func other_positions() -> PackedVector3Array:
 static func _where(node: WindsurferNode) -> Vector2:
 	var position: Vector3 = node.sim.telemetry.position
 	return Vector2(position.x, position.z)
+
+
+## The time trial's key (TimeTrialRecords): the water, the course and the wind the player's board
+## sails in: the hour on the lake (its wind is the hour's), the settings' knots on the open water.
+func _record_key() -> String:
+	var field: MapWindField = player.sim.wind as MapWindField
+	if field != null:
+		return TimeTrialRecords.make_key("lake", course.name, field.time_of_day_text().left(5))
+	return TimeTrialRecords.make_key("open", course.name, "%d kt" % roundi(player.sim.wind_config.speed_kt))
+
+
+## The time trial's finish, once: the time with any penalty against the best, kept if faster,
+## and the HUD told what it was.
+func _check_record() -> void:
+	if records == null or _record_checked or spectating or not race.is_finished(0):
+		return
+	_record_checked = true
+	var best_before_s: float = records.best_s(record_key)
+	var time_s: float = race.finish_time_s(0) + race.time_penalty_s(0)
+	var is_best: bool = records.remember(record_key, time_s, race.splits_s(0))
+	hud.set_record(is_best, best_before_s)

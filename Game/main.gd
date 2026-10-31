@@ -438,6 +438,12 @@ func _course_from_options(usual_start: Vector2) -> Course:
 		_race_setup.opponent_effects = _user_option("opponent_effects") == "1"
 		_race_setup.threads = RaceSetup.threads_from_option(_user_option("threads"))
 		_race_setup.read_options()
+	if _race_setup == null and _user_option("time_trial") == "1":
+		# A time trial from the command line (GP4): the course alone, against the best kept for it.
+		var trial_prestart: String = _user_option("prestart")
+		_race_setup = RaceSetup.race(course_name, PackedStringArray(), 1,
+			trial_prestart.to_float() if not trial_prestart.is_empty() else RaceSetup.DEFAULT_PRESTART_S)
+		_race_setup.time_trial = true
 	var found: Course = _course_named(course_name, usual_start)
 	if found == null:
 		push_warning("No course called \"%s\" in this scene. The open water has %s; Lake Silvaplana has %s and the courses saved in %s." % [

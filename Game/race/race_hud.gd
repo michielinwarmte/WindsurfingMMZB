@@ -41,6 +41,13 @@ var _follows_leader: bool = true
 var _splits_seen: int = 0
 var _split_until_s: float = -1.0
 var _fleet_refresh_at_s: float = -INF
+## The time trial (GP4): the best kept for this course and wind (-1 without one) and its splits,
+## and at the finish whether this run beat it and what the best was before.
+var _time_trial: bool = false
+var _best_s: float = -1.0
+var _best_splits: PackedFloat32Array = PackedFloat32Array()
+var _record_is_best: bool = false
+var _record_best_before_s: float = -1.0
 
 
 func _ready() -> void:
@@ -169,14 +176,20 @@ func update_from(race: RaceSim, index: int, t: Telemetry, shadow_deficit: float 
 		_countdown.text = "GO!"
 		_countdown.visible = time_s < GO_SHOWN_S
 		if race.is_finished(index):
-			lines.append("finished %s in %s" % [ordinal(race.place(index)), clock(race.finish_time_s(index))])
+			if _time_trial:
+				lines.append(time_trial_finish_text(race.finish_time_s(index) + race.time_penalty_s(index), _record_is_best, _record_best_before_s))
+			else:
+				lines.append("finished %s in %s" % [ordinal(race.place(index)), clock(race.finish_time_s(index))])
 		else:
 			lines.append("next: %s   %d m %s" % [next_name, roundi(distance_m), turn])
-			lines.append("%s of %d   race %s" % [ordinal(race.place(index)), race.board_count(), clock(time_s)])
+			if _time_trial:
+				lines.append(time_trial_race_text(time_s, _best_s))
+			else:
+				lines.append("%s of %d   race %s" % [ordinal(race.place(index)), race.board_count(), clock(time_s)])
 	_info.text = "\n".join(lines)
 	var refresh: bool = race.clock_s() >= _fleet_refresh_at_s
 	if refresh:
-		_fleet.text = fleet_text(race, index, "you" if _watching.is_empty() else "<< camera")
+		_fleet.text = "" if _time_trial else fleet_text(race, index, "you" if _watching.is_empty() else "<< camera")
 		_fleet_refresh_at_s = race.clock_s() + FLEET_REFRESH_S
 	_show_split(race, index)
 	var penalised_s: float = race.race_time_s() - rules.last_breach_s(index) if rules != null else INF
@@ -196,7 +209,7 @@ func update_from(race: RaceSim, index: int, t: Telemetry, shadow_deficit: float 
 		_warning.hide()
 	if race.phase() == RaceSim.Phase.FINISHED or race.is_finished(index):
 		if refresh or not _results.visible:
-			_results_text.text = results_table(race)
+			_results_text.text = time_trial_table(race, index) if _time_trial else results_table(race)
 		_results.show()
 	else:
 		_results.hide()
@@ -211,7 +224,8 @@ func _show_split(race: RaceSim, index: int) -> void:
 	if splits.size() > _splits_seen:
 		_splits_seen = splits.size()
 		var step: RaceStep = race.steps()[_splits_seen - 1]
-		_split.text = "%s  %s" % [step.name, clock(splits[_splits_seen - 1])]
+		var gap: String = TimeTrialRecords.gap_text(splits, _best_splits) if _time_trial else ""
+		_split.text = "%s  %s%s" % [step.name, clock(splits[_splits_seen - 1]), ("   best %s" % gap) if gap != "" else ""]
 		_split.show()
 		_split_until_s = race.clock_s() + SPLIT_SHOWN_S
 	if _split_until_s >= 0.0 and race.clock_s() > _split_until_s:
@@ -254,6 +268,55 @@ static func turn_text(relative_deg: float) -> String:
 
 
 ## Place, name, time and gap for every board; the boards still sailing with their progress.
+## The time trial (GP4): the best to beat and its splits, from the runner's records; set after
+## reset() at every start.
+func set_time_trial(on: bool, best_s: float, best_splits: PackedFloat32Array) -> void:
+	_time_trial = on
+	_best_s = best_s
+	_best_splits = best_splits
+	_record_is_best = false
+	_record_best_before_s = -1.0
+	_fleet.visible = not on
+
+
+## The time trial's finish: whether this run is the new best, and the best before it.
+func set_record(is_best: bool, best_before_s: float) -> void:
+	_record_is_best = is_best
+	_record_best_before_s = best_before_s
+
+
+## The time trial's line while racing: the clock and the best to beat.
+static func time_trial_race_text(time_s: float, best_s: float) -> String:
+	return "time trial   %s   %s" % [clock(time_s), ("best %s" % clock(best_s)) if best_s >= 0.0 else "no best yet"]
+
+
+## The time trial's line at the finish: the time, and how it stands against the best.
+static func time_trial_finish_text(time_s: float, is_best: bool, best_before_s: float) -> String:
+	if is_best:
+		if best_before_s < 0.0:
+			return "finished in %s   your first time here: the one to beat" % clock(time_s)
+		return "finished in %s   a new best! (was %s)" % [clock(time_s), clock(best_before_s)]
+	return "finished in %s   %+.1f s on your best %s" % [clock(time_s), time_s - best_before_s, clock(best_before_s)]
+
+
+## The time trial's results: the finish against the best, then every step's split with its gap to
+## the best run's.
+func time_trial_table(race: RaceSim, index: int) -> String:
+	var lines: PackedStringArray = PackedStringArray(["  Time trial", ""])
+	lines.append("  " + time_trial_finish_text(race.finish_time_s(index) + race.time_penalty_s(index), _record_is_best, _record_best_before_s))
+	if race.time_penalty_s(index) > 0.0:
+		lines.append("  (%.0f s of penalty included)" % race.time_penalty_s(index))
+	lines.append("")
+	var splits: PackedFloat32Array = race.splits_s(index)
+	var steps: Array[RaceStep] = race.steps()
+	for i: int in splits.size():
+		var gap: String = TimeTrialRecords.gap_text(splits.slice(0, i + 1), _best_splits)
+		lines.append("  %-16s %s%s" % [steps[i].name if i < steps.size() else "", clock(splits[i]), ("   best %s" % gap) if gap != "" else ""])
+	lines.append("")
+	lines.append("  R: again     Esc: menu")
+	return "\n".join(lines)
+
+
 static func results_table(race: RaceSim) -> String:
 	var lines: PackedStringArray = PackedStringArray(["  Results", ""])
 	for result: RaceResult in race.results():

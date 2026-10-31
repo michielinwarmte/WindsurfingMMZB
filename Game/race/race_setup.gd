@@ -7,7 +7,8 @@ extends RefCounted
 ## [--laps=<n>] [--prestart=<s>] (tools/play.sh res://main.tscn --course=t1_loop --skippers=rookie),
 ## and [--spawn=random|line] [--spawn_seed=<n>] [--free_sail=<s>] for where the AI boards appear
 ## (read_spawn_options()). For watching a night's generations race (tools/gens.sh, F5):
-## [--behind=<m>] [--wind=<kt>] [--blind=1] [--spectate=1] (read_options()).
+## [--behind=<m>] [--wind=<kt>] [--blind=1] [--spectate=1] (read_options()). A time trial, the player
+## alone against the best kept for the course and the wind (GP4): --course=<name> --time_trial=1.
 
 ## The opponents of a race from the menu: three characters of different skill and style.
 const DEFAULT_SKIPPERS: PackedStringArray = ["allrounder", "gambler", "rookie"]
@@ -59,6 +60,11 @@ var rules: bool = true
 ## sail in light wind, a smaller one in a breeze. Off until the sail sizes are tuned (Michiel): in
 ## this physics a 7.8 is slower off the line than the 6.5 even in 12 kt (Session 53). --gear=1.
 var gear: bool = false
+## A time trial (GP4, GD5): the player alone on the course, timed against the best kept in
+## TimeTrialRecords for this water, course and wind. The Race page's "You alone" fleet sets it.
+var time_trial: bool = false
+## Where the time trial's records are kept (the tests use a file of their own).
+var records_path: String = TimeTrialRecords.PATH
 
 
 ## The spawn option's value from its name ("random" or "line"; anything else is RANDOM).

@@ -10,8 +10,9 @@ signal start_race(setup: RaceSetup, on_lake: bool)
 
 const NAME_WIDTH: float = 200.0
 const VALUE_WIDTH: float = 380.0
-## How many AI boards the fleet row offers (the player's board comes on top).
-const FLEET_SIZES: PackedInt32Array = [3, 7, 11, 15, 19, 23, 31]
+## How many AI boards the fleet row offers (the player's board comes on top); 0 is you alone, a
+## time trial against your own best (GP4).
+const FLEET_SIZES: PackedInt32Array = [0, 3, 7, 11, 15, 19, 23, 31]
 const COUNTDOWNS_S: PackedFloat32Array = [30.0, 60.0, 180.0]
 const COUNTDOWN_NAMES: PackedStringArray = ["30 s", "60 s", "3 min"]
 ## The templates on the open water are raced at this size (the class's full courses take 7 to 11
@@ -25,7 +26,7 @@ const WHO_NAMES: PackedStringArray = ["The twelve personas", "The four character
 ## The choices, kept for the session.
 static var chosen_lake: bool = false
 static var chosen_course: int = 0
-static var chosen_fleet: int = 1
+static var chosen_fleet: int = 2
 static var chosen_who: Who = Who.PERSONAS
 static var chosen_countdown: int = 1
 static var chosen_shadows: bool = true
@@ -70,8 +71,8 @@ func _build_rows() -> void:
 	_fill_courses()
 	var sizes: PackedStringArray = PackedStringArray()
 	for size: int in FLEET_SIZES:
-		sizes.append("%d boards and you" % size)
-	_add_list("Fleet", sizes, chosen_fleet, "20 or fewer hold 60 fps on a laptop (tools/release.sh for a big fleet).",
+		sizes.append(("%d boards and you" % size) if size > 0 else "You alone: a time trial")
+	_add_list("Fleet", sizes, chosen_fleet, "Alone, the clock runs against your best on this course and wind. 20 or fewer hold 60 fps on a laptop.",
 		func(index: int) -> void: chosen_fleet = index)
 	_who_list = _add_list("Who", WHO_NAMES, chosen_who, "", _on_who_chosen)
 	_add_list("Countdown", COUNTDOWN_NAMES, chosen_countdown, "The boards gather from where they sail free.", func(index: int) -> void: chosen_countdown = index)
@@ -181,6 +182,7 @@ func _on_start_pressed() -> void:
 	var count: int = FLEET_SIZES[clampi(chosen_fleet, 0, FLEET_SIZES.size() - 1)]
 	var course: String = _course_names[clampi(chosen_course, 0, _course_names.size() - 1)]
 	var setup: RaceSetup = RaceSetup.race(course, fleet_names(chosen_who, count), 1, COUNTDOWNS_S[chosen_countdown])
+	setup.time_trial = count == 0
 	setup.shadows = chosen_shadows
 	setup.rules = chosen_rules
 	hide()
