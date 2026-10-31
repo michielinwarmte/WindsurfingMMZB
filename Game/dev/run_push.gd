@@ -236,11 +236,15 @@ func _run_case(case: PushCase, falls: Array[String]) -> PushResult:
 			var ahead: float = probe.current_speed_ms / maxf(sim.wind_config.speed_ms(), 0.01)
 			var now: float = sim.wind.current_speed_ms / maxf(sim.wind_config.speed_ms(), 0.01)
 			easing = maxf(ahead, now) > gust_line
-		# The case's own pilot numbers, every tick (the pilot is a new one after a waterstart,
-		# PlayerController.reset_controls); the controller applies the slider before these.
-		_apply_settings(case.settings, "pilot.", controller.auto_sheet_pilot)
+		# The case's own pilot numbers go through the controller's overrides, as the game's
+		# --pilot. options do: the controller applies them after the slider every update (and
+		# the pilot is a new one after a waterstart). Written straight onto the pilot here they
+		# were overwritten by the slider (round 1 of the slider plan ran half its variants for
+		# nothing that way).
+		controller.pilot_overrides.clear()
+		_add_pilot_overrides(controller, case.settings)
 		if easing:
-			_apply_settings(ease_settings, "pilot.", controller.auto_sheet_pilot)
+			_add_pilot_overrides(controller, ease_settings)
 		if t.speed_ms > POINTING_SPEED_MS:
 			pointing = true
 		elif t.speed_ms < POINTING_SPEED_MS - 1.5:
@@ -381,6 +385,18 @@ func _apply_settings(settings: Dictionary[String, float], prefix: String, target
 		var current: Variant = target.get(field)
 		var value: float = settings[key]
 		target.set(field, (value != 0.0) if current is bool else (int(value) if current is int else value))
+
+
+## The "pilot.<field>" settings into the controller's overrides (the case's own, and the
+## timing's ease on top of them).
+func _add_pilot_overrides(controller: PlayerController, settings: Dictionary[String, float]) -> void:
+	for key: String in settings:
+		if key.begins_with("pilot."):
+			var field: String = key.trim_prefix("pilot.")
+			if field in controller.auto_sheet_pilot:
+				controller.pilot_overrides[field] = settings[key]
+			else:
+				push_error("No field '%s' to set." % key)
 
 
 ## "pilot.hike_share:1.0;pilot.ankle_share:0.8" -> {pilot.hike_share: 1.0, ...}.

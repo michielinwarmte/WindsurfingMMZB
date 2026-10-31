@@ -79,9 +79,13 @@ func _run_case(wind_kt: float, direction: float) -> SteerResult:
 	var heading0: float = 0.0
 	var t_over: float = 0.0
 	var steps: int = int((from_s + hold_s) / DT)
+	# The pilot's numbers through the controller's overrides, applied after the slider every
+	# update (written straight onto the pilot they would be overwritten by --push).
+	for key: String in fixed:
+		if key.begins_with("pilot."):
+			controller.pilot_overrides[key.trim_prefix("pilot.")] = fixed[key]
 	for i: int in steps:
 		var t: Telemetry = sim.telemetry
-		_apply_settings(fixed, "pilot.", controller.auto_sheet_pilot)
 		var over: bool = t.time_s >= from_s
 		if not over:
 			hands.steer = LearnedSkipper.steer_toward_twa(t.twa_deg, 1.0, twa_deg)
