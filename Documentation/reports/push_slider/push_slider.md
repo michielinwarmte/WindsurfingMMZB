@@ -38,6 +38,17 @@ The default sea: 24 / 100: 2.22, 10.79, 11.71, 13.88, 14.31, 14.58, 14.58; 24 / 
 
 What round 0 said: the lower half is a ladder at every wind; the 25 % rung still planed at 24 kt with half the drive, so the drive share went to 0.3 there (round 1: 1.7 / 6.1 / 8.1 m/s at 12 / 18 / 24 kt on the beam reach) and to 0.85 at 50 % (6.8 / 9.7 / 11.7); above 75 % the first guess gave nothing across the wind on flat water, so round 1 separated the levers.
 
+**The final ladder on flat water with the autopilot's own course hold** (`tools/reach_check.sh --push=`, 90 s, the means from 60 s, on the merged code, `.sim_output/push_reach/`): the speed (m/s), the wet front (m), the trim (degrees) and the pitch SD:
+
+| kt / TWA | 50 % | 75 % | 85 % | 95 % | 100 % |
+|---|---|---|---|---|---|
+| 18 / 100 | 11.72, 1.03, 2.33, 0.01 | 15.20, 0.93, 1.46, 0.01 | 15.74, 0.97, 1.34, 0.01 | 15.98, 1.03, 1.37, 0.16 | 16.17, 1.01, 1.33, 0.11 |
+| 18 / 135 | 9.72, 1.45, 3.14, 0.01 | 12.58, 1.05, 2.09, 0.17 | 12.60, 1.04, 2.07, 0.18 | 13.56, 1.01, 1.80, 0.44 | 14.45, 0.96, 1.63, 0.43 |
+| 24 / 100 | 13.34, 1.00, 1.86, 0.01 | 16.82, 0.94, 1.29, 0.08 | 17.51, 0.97, 1.13, 0.15 | 17.79, 0.99, 1.27, 0.10 | 17.99, 0.98, 1.23, 0.06 |
+| 24 / 135 | 16.19, 0.87, 1.58, 0.03 | 19.12, 0.93, 1.12, 0.04 | 19.76, 0.96, 0.95, 0.08 | 19.44, 1.00, 1.21, 0.09 | 19.40, 1.01, 1.20, 0.10 |
+
+The ladder rises rung by rung on the beam reaches (+6 to 7 % from 75 to 100 %) and on the 18 kt broad reach (+15 %, the trim at the top); the 24 kt broad reach is fastest at 85 %. The wet front stays at 0.93 to 1.01 m (the goal's 0.6 to 1.0), the trim at 0.95 to 1.63°, the pitch steady except the 18 kt broad reach at the top (SD 0.43: the extra trim makes it bounce a little). The rig leans 25° at 75 % and 35° at 100 %; the fin carries 600 N at 75 % and 720 N at the top, its upward part 110 to 165 N (the heel, 1.5 to 2.7° to leeward). The push's centre stays at 0.75 to 0.86 m (the goal's 0.45 to 0.75: the hull's clip, PH30).
+
 ## 4. The levers one by one (round 1, `r1_*`)
 
 Each lever alone on top of 75 %, 150 s per case, at 18 and 24 kt. The speed made good on the beam and broad reaches, the falls in the 12 cases of each sea, and the fin's lift and upward part (the means over the six planing courses):
