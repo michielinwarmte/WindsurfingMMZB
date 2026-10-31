@@ -26,9 +26,11 @@ func test_the_straps_spread_and_the_pulls_come_from_the_configs() -> void:
 	var sim: WindsurferSim = _sim()
 	var spread_m: float = sim.board_config.front_strap_from_tail_m - sim.board_config.back_strap_from_tail_m
 	assert_almost_eq(spread_m, 0.59, 1e-6, "Max's Patrik 115: the front straps 0.59 m ahead of the back straps")
-	assert_eq(sim.sailor_config.front_foot_pull_held_n, 200.0, "the middle of Max's 150 to 250 N held")
+	# 150 N: the low end of Max's 150 to 250 N held (the autopilot suite, rounds 4 and 5: with 200
+	# the 24 kt broad reach in gusts and waves fell at both dials, with 150 not at all).
+	assert_eq(sim.sailor_config.front_foot_pull_held_n, 150.0, "the low end of Max's 150 to 250 N held")
 	assert_eq(sim.sailor_config.front_foot_pull_brief_n, 400.0, "about 400 N briefly")
-	assert_almost_eq(_held_nm(sim), 118.0, 1e-3, "118 N m held")
+	assert_almost_eq(_held_nm(sim), 88.5, 1e-3, "88.5 N m held: 150 N times the straps' 0.59 m")
 
 
 func test_the_rider_pulls_only_in_the_straps_planing_and_with_the_nose_below_the_aim() -> void:

@@ -255,7 +255,13 @@ extends Resource
 ## The front foot pulling up in its strap, against the back foot pressing: the most it pulls
 ## held, 150 to 250 N (the U1 sources' estimate from hip-flexor and dinghy hiking-strap
 ## forces, Documentation/reports/ph28/flying_the_board.md section 2; Max, 30 October 2026,
-## answer 1: "correct"); 200 N is the middle of that range. Times the straps' spread
+## answer 1: "correct"). The default (sailor_default.tres) is 150 N, the low end of that
+## range: the PH28 rider build took the middle, 200, and the autopilot suite (Documentation/
+## reports/autopilot/PROGRESS.md, rounds 4 and 5) found that with 200 the 24 kt broad reach in
+## gusts and waves fell once at the neutral dial and once pushed, with 150 not at all, while
+## the flat-water beam reaches keep their 0.95 m at 1.3 to 1.4 degrees and are steadier (pitch
+## SD 0.10 and 0.06 against 0.24 and 0.25); the push's centre sits 5 to 8 cm further forward
+## (0.82 m). Times the straps' spread
 ## (BoardConfig: the front strap less the back strap from the tail, 0.59 m on Max's board)
 ## it is the nose-up moment the feet can pass beyond all the weight on the back foot:
 ## 118 N m held. Two uses (WindsurferSim): the rider hangs the body behind the back foot
