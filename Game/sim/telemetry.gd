@@ -14,6 +14,8 @@ var speed_kt: float = 0.0
 var vmg_ms: float = 0.0
 var heading_deg: float = 0.0
 var pitch_deg: float = 0.0
+## The pitch rate, degrees a second, positive nose rising: what a rider feels as the bounce.
+var pitch_rate_dps: float = 0.0
 var heel_deg: float = 0.0
 var yaw_rate_dps: float = 0.0
 var leeway_deg: float = 0.0

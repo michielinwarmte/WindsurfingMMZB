@@ -294,3 +294,20 @@ func test_the_slider_survives_a_waterstart_and_the_legs_follow_the_helm() -> voi
 	controller.reset_controls(controls)
 	assert_almost_eq(controller.push_level, 0.85, 1e-9, "the level is kept through a waterstart")
 	assert_eq(controls.back_foot_push, 0.0, "the controls start clean")
+
+
+func test_the_controller_adds_the_seas_rail_to_the_sliders() -> void:
+	var controller: PlayerController = PlayerController.new()
+	var controls: SimControls = SimControls.new()
+	controller.push_level = 1.0  # a degree of rail from the ladder
+	var t: Telemetry = _telemetry(90.0)
+	for i: int in 600:
+		t.time_s = i / 60.0
+		t.pitch_rate_dps = 14.0 if i % 2 == 0 else -14.0  # wild
+		controller.update(t, controls, DT)
+	assert_almost_eq(controls.rail_bank_extra_deg, 4.0, 0.05, "the ladder's degree and the sea's three")
+	for i: int in 900:
+		t.time_s = 10.0 + i / 60.0
+		t.pitch_rate_dps = 0.0  # flat
+		controller.update(t, controls, DT)
+	assert_almost_eq(controls.rail_bank_extra_deg, 1.0, 0.05, "the ladder's degree alone again")

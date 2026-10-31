@@ -33,8 +33,13 @@ extends Resource
 ## SimControls.rail_bank_extra_deg. The rail is what loads the fin (at 5°: its lift +12 %, its
 ## upward part +44 %) and steadies the board in waves (twice the height: no falls against two),
 ## and it speeds the 24 kt broad reach (+18 %) but slows the beam reach (-5 %) because this hull
-## rides longer railed, not shorter (ROADMAP PH27, PH31): a little at the top only (round 1).
-@export var rail_bank_extra_deg: PackedFloat64Array = [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 2.0]
+## rides longer railed, not shorter (ROADMAP PH27, PH31): a degree at the top only (round 1; +2 at
+## 100 % made it slower than 95 % on flat water, round 2). The sea's rail is below.
+@export var rail_bank_extra_deg: PackedFloat64Array = [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0]
+## The rail for the sea the sailor may add when the board bounces, degrees (Autopilot.wave_rail_max_deg;
+## none in flat water, all of it at twice the default sea's height): the reflex that keeps 75 %
+## from falling in waves without the 5 % that a rail held always costs on flat water (round 2).
+@export var wave_rail_deg: PackedFloat64Array = [0.0, 0.0, 3.0, 3.0, 3.0, 3.0, 3.0]
 ## More trim (the nose up) on top of the technique's aim, degrees: SimControls.trim_aim_extra_deg.
 ## +1° gives the 24 kt broad reach +10 % on flat water and two falls on the sea; +0.5 at the top
 ## (round 1).

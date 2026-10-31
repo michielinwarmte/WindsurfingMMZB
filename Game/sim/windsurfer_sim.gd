@@ -1773,6 +1773,7 @@ func _fill_telemetry(controls: SimControls) -> void:
 	t.felt_heel_deg = rad_to_deg(_felt_heel_rad())
 	t.lean = lean
 	t.rail_press = rail_press
+	t.pitch_rate_dps = rad_to_deg(body.angular_velocity_body().x)
 	t.back_foot_push = _controls_back_foot_push
 	t.back_foot_yaw_nm = back_foot_yaw_nm
 	t.trim_aim_deg = _trim_aim_deg(-body.to_body(body.velocity).z)

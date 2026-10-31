@@ -100,6 +100,8 @@ class PushResult:
 	var rig_lean_mean_deg: float = 0.0
 	var back_foot_mean: float = 0.0
 	var trim_aim_mean_deg: float = 0.0
+	## The bounce: the root mean square of the pitch rate while sailing, degrees a second.
+	var pitch_rate_rms_dps: float = 0.0
 
 
 func _initialize() -> void:
@@ -315,6 +317,7 @@ func _run_case(case: PushCase, falls: Array[String]) -> PushResult:
 		result.rig_lean_mean_deg += absf(t.rig_lean_deg)
 		result.back_foot_mean += t.back_foot_push
 		result.trim_aim_mean_deg += t.trim_aim_deg
+		result.pitch_rate_rms_dps += t.pitch_rate_dps * t.pitch_rate_dps
 	var elapsed_s: float = maxf(result.samples * DT, DT)
 	var moved: Vector3 = sim.telemetry.position - start_position
 	result.made_good_ms = moved.dot(course) / elapsed_s
@@ -331,6 +334,7 @@ func _run_case(case: PushCase, falls: Array[String]) -> PushResult:
 	result.rig_lean_mean_deg /= n
 	result.back_foot_mean /= n
 	result.trim_aim_mean_deg /= n
+	result.pitch_rate_rms_dps = sqrt(result.pitch_rate_rms_dps / n)
 	return result
 
 
@@ -486,7 +490,7 @@ func _format(c: PushCase, r: PushResult) -> String:
 
 
 func _csv_header() -> String:
-	return "label,wind_kt,twa_deg,sweep,made_good_ms,vmg_ms,sailing_share,falls,fall_kinds,speed_sailing_ms,heel_leeward_max_deg,fin_share_max,fin_share_p95,fin_stalled_share,slip_max_deg,slip_p95_deg,pitch_sd_deg,trim_mean_deg,heel_mean_deg,alpha_mean_deg,lean_mean,planing_share,wet_front_m,eased_share,nan,sheet_mean,sheet_rate_rms,alpha_sd_deg,push_level,fin_lift_mean_n,fin_up_mean_n,slip_mean_deg,rig_lean_mean_deg,back_foot_mean,trim_aim_mean_deg,wave_scale,legs"
+	return "label,wind_kt,twa_deg,sweep,made_good_ms,vmg_ms,sailing_share,falls,fall_kinds,speed_sailing_ms,heel_leeward_max_deg,fin_share_max,fin_share_p95,fin_stalled_share,slip_max_deg,slip_p95_deg,pitch_sd_deg,trim_mean_deg,heel_mean_deg,alpha_mean_deg,lean_mean,planing_share,wet_front_m,eased_share,nan,sheet_mean,sheet_rate_rms,alpha_sd_deg,push_level,fin_lift_mean_n,fin_up_mean_n,slip_mean_deg,rig_lean_mean_deg,back_foot_mean,trim_aim_mean_deg,wave_scale,legs,pitch_rate_rms_dps"
 
 
 func _csv_row(c: PushCase, r: PushResult) -> String:
@@ -497,7 +501,7 @@ func _csv_row(c: PushCase, r: PushResult) -> String:
 		"%.2f" % r.trim_mean_deg, "%.2f" % r.heel_mean_deg, "%.2f" % r.alpha_mean_deg, "%.3f" % r.lean_mean,
 		"%.3f" % r.planing_share, "%.3f" % r.wet_front_m, "%.3f" % r.eased_share, "1" if r.nan else "0", "%.3f" % r.sheet_mean, "%.3f" % r.sheet_rate_rms, "%.2f" % r.alpha_sd_deg,
 		("%.3f" % r.push_level) if not is_nan(r.push_level) else "-1", "%.1f" % r.fin_lift_mean_n, "%.1f" % r.fin_up_mean_n, "%.2f" % r.slip_mean_deg, "%.2f" % r.rig_lean_mean_deg,
-		"%.3f" % r.back_foot_mean, "%.2f" % r.trim_aim_mean_deg, _options.get("wave_scale", "1"), _options.get("legs", "0")]))
+		"%.3f" % r.back_foot_mean, "%.2f" % r.trim_aim_mean_deg, _options.get("wave_scale", "1"), _options.get("legs", "0"), "%.2f" % r.pitch_rate_rms_dps]))
 
 
 ## Appends a line, writing the header first when the file is new (several processes may share

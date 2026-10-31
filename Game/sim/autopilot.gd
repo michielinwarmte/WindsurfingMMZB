@@ -57,6 +57,22 @@ var back_foot_bias: float = 0.0
 ## The sail trimmed between luffing (0) and the most drive (1), for the push slider's lower half
 ## (0 %: the sail let fly, the board stops; 50 %: the full drive). 1 = as before, bit for bit.
 var drive_share: float = 1.0
+## The rail for the sea (the push slider plan, round 2): a sailor rails the board more when it
+## gets wild ("as flat as you dare, more rail when it gets wild": GP0's map; round 1: the rail at
+## 5° took the falls at twice the wave height from 2 to 0 and cost 5 % on flat water when held
+## always). The bounce the rider feels is the pitch rate's root mean square over
+## wave_rail_feel_s; the extra rail (the leeward rail down, degrees on top of the technique's and
+## the slider's) is none up to wave_rail_bounce_from_dps, wave_rail_max_deg from
+## wave_rail_bounce_full_dps on, straight between. The levels come from the push check at 75 %
+## (the pitch rate's RMS on the planing reaches): 1 to 3°/s on flat water, 6 to 8 on the default
+## sea, 12 to 14 at twice its height. wave_rail_max_deg is 0 unless the push slider sets it
+## (PushCurveConfig.wave_rail_deg): without the slider nothing changes, bit for bit.
+var wave_rail_max_deg: float = 0.0
+var wave_rail_bounce_from_dps: float = 4.0
+var wave_rail_bounce_full_dps: float = 12.0
+var wave_rail_feel_s: float = 3.0
+var _felt_bounce_square: float = 0.0
+var _felt_bounce_time_s: float = -1.0
 ## How the steady part of the course hold is carried (U1.6). Off: the helm moves the rake
 ## and the rig's sideways tilt together (Helm.steer), so the heading-up helm a planing reach
 ## needs also tilts the rig to leeward: on the 18 kt beam reach it leans 10 degrees to
@@ -190,6 +206,11 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 	if luff_from_sail and sail != null and sail != _luff_sail:
 		_luff_sail = sail
 		alpha_luff_deg = sail.config.alpha_luff_deg
+	feel_the_sea(telemetry, dt)
+	# The pilot's own course hold adds the rail for the sea to the controls it steers (the
+	# player's controller adds it itself, after the slider: PlayerController._move_the_slider).
+	if hold_course and wave_rail_max_deg > 0.0:
+		controls.rail_bank_extra_deg += wave_rail_deg()
 	update_tack(telemetry)
 	if telemetry.sail_side != _last_sail_side:
 		if _last_sail_side != 0:
@@ -346,6 +367,29 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		var wanted_sheet: float = 1.0 - (boom_angle_deg - sheet_angle_in_deg) / (sheet_angle_out_deg - sheet_angle_in_deg)
 		controls.sheet = move_toward(controls.sheet, wanted_sheet, sheet_rate_per_s * dt)
 		controls.boom_across = move_toward(controls.boom_across, across, sheet_rate_per_s * dt)
+
+
+## Feels the bounce: the pitch rate's mean square over wave_rail_feel_s (a first-order average).
+## Once per telemetry time: the controller and the pilot's own update may both call it.
+func feel_the_sea(telemetry: Telemetry, dt: float) -> void:
+	if telemetry.time_s == _felt_bounce_time_s:
+		return
+	_felt_bounce_time_s = telemetry.time_s
+	var blend: float = clampf(dt / maxf(wave_rail_feel_s, dt), 0.0, 1.0)
+	_felt_bounce_square = lerpf(_felt_bounce_square, telemetry.pitch_rate_dps * telemetry.pitch_rate_dps, blend)
+
+
+## The bounce felt, degrees a second (the pitch rate's RMS).
+func felt_bounce_dps() -> float:
+	return sqrt(maxf(_felt_bounce_square, 0.0))
+
+
+## The extra rail for the sea, degrees: none in flat water, wave_rail_max_deg when it is wild.
+func wave_rail_deg() -> float:
+	if wave_rail_max_deg <= 0.0:
+		return 0.0
+	var span: float = maxf(wave_rail_bounce_full_dps - wave_rail_bounce_from_dps, 0.1)
+	return wave_rail_max_deg * clampf((felt_bounce_dps() - wave_rail_bounce_from_dps) / span, 0.0, 1.0)
 
 
 ## How much of lean_share applies on this course: all of it up to lean_share_twa_max_deg of true

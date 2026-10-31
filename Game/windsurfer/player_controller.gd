@@ -197,7 +197,7 @@ func set_sail(sail: SailModel, sailor: SailorConfig = null, air_density_kg_m3: f
 
 ## Reads the keys and writes the controls: sheet, boom across, rake, rig tilt and lean.
 func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
-	_move_the_slider(controls, dt)
+	_move_the_slider(telemetry, controls, dt)
 	for field: String in pilot_overrides:
 		auto_sheet_pilot.set(field, pilot_overrides[field])
 	auto_sheet_pilot.update_tack(telemetry)
@@ -306,7 +306,7 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 ## The push slider: the keys or the hands move the level, and the level sets the pilot and the
 ## controls (before pilot_overrides, which then win field by field). Without a level nothing is
 ## touched.
-func _move_the_slider(controls: SimControls, dt: float) -> void:
+func _move_the_slider(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 	if hands != null:
 		if not is_nan(hands.push):
 			push_level = clampf(hands.push, 0.0, 1.0)
@@ -319,6 +319,9 @@ func _move_the_slider(controls: SimControls, dt: float) -> void:
 	if push_curve == null:
 		push_curve = PushDial.default_curve()
 	PushDial.apply_level(push_level, push_curve, auto_sheet_pilot, controls)
+	# The rail for the sea (Autopilot.wave_rail_deg): the sailor rails more when the board bounces.
+	auto_sheet_pilot.feel_the_sea(telemetry, dt)
+	controls.rail_bank_extra_deg += auto_sheet_pilot.wave_rail_deg()
 
 
 ## The slider's line for the HUD ("" without a slider).

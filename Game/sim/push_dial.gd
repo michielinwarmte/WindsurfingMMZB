@@ -34,6 +34,7 @@ static func apply_level(level: float, curve: PushCurveConfig, pilot: Autopilot, 
 		pilot.drive_share = curve.at(curve.drive_share, t)
 		pilot.hike_share = curve.at(curve.hike_share, t)
 		pilot.back_foot_bias = curve.at(curve.back_foot_push, t)
+		pilot.wave_rail_max_deg = curve.at(curve.wave_rail_deg, t)
 	if controls != null:
 		controls.rig_lean_extra_deg = curve.at(curve.rig_lean_extra_deg, t)
 		controls.rail_bank_extra_deg = curve.at(curve.rail_bank_extra_deg, t)
@@ -59,6 +60,6 @@ static func level_of(name: String) -> float:
 ## One line for the HUD and the logs: the level and what it sets.
 static func describe(level: float, curve: PushCurveConfig) -> String:
 	var t: float = clampf(level, 0.0, 1.0)
-	return "push %3.0f %%: drive %.2f, pull held %.2f, rig lean +%.0f deg, back foot %.2f, rail +%.1f deg, trim +%.1f deg" % [
+	return "push %3.0f %%: drive %.2f, pull held %.2f, rig lean +%.0f deg, back foot %.2f, rail +%.1f deg (up to +%.0f more for the sea), trim +%.1f deg" % [
 		t * 100.0, curve.at(curve.drive_share, t), curve.at(curve.hike_share, t), curve.at(curve.rig_lean_extra_deg, t),
-		curve.at(curve.back_foot_push, t), curve.at(curve.rail_bank_extra_deg, t), curve.at(curve.trim_aim_extra_deg, t)]
+		curve.at(curve.back_foot_push, t), curve.at(curve.rail_bank_extra_deg, t), curve.at(curve.wave_rail_deg, t), curve.at(curve.trim_aim_extra_deg, t)]
