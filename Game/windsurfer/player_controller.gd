@@ -227,8 +227,6 @@ func set_sail(sail: SailModel, sailor: SailorConfig = null, air_density_kg_m3: f
 ## Reads the keys and writes the controls: sheet, boom across, rake, rig tilt and lean.
 func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 	_move_the_slider(telemetry, controls, dt)
-	for field: String in pilot_overrides:
-		auto_sheet_pilot.set(field, pilot_overrides[field])
 	auto_sheet_pilot.update_tack(telemetry)
 	if telemetry.sail_side != _last_sail_side:
 		if _last_sail_side != 0:
@@ -333,8 +331,8 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 
 
 ## The push slider: the keys or the hands move the level, and the level sets the pilot and the
-## controls (before pilot_overrides, which then win field by field). Without a level nothing is
-## touched.
+## controls; pilot_overrides then win field by field (before the sea's rail is read from the
+## pilot, so an override of it counts). Without a level only the overrides are applied.
 func _move_the_slider(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 	if hands != null:
 		if not is_nan(hands.push):
@@ -343,11 +341,16 @@ func _move_the_slider(telemetry: Telemetry, controls: SimControls, dt: float) ->
 		var key: float = _axis("push_more", "push_less")
 		if key != 0.0:
 			push_level = clampf(push_level + key * push_rate_per_s * dt, 0.0, 1.0)
+	if not is_nan(push_level):
+		if push_curve == null:
+			push_curve = PushDial.default_curve()
+		PushDial.apply_level(push_level, push_curve, auto_sheet_pilot, controls)
+	# The pilot's numbers set from outside win over the slider's, field by field (the game's
+	# --pilot. options, the harnesses).
+	for field: String in pilot_overrides:
+		auto_sheet_pilot.set(field, pilot_overrides[field])
 	if is_nan(push_level):
 		return
-	if push_curve == null:
-		push_curve = PushDial.default_curve()
-	PushDial.apply_level(push_level, push_curve, auto_sheet_pilot, controls)
 	# The rail for the sea (Autopilot.wave_rail_deg): the sailor rails more when the board bounces.
 	auto_sheet_pilot.feel_the_sea(telemetry, dt)
 	controls.rail_bank_extra_deg += auto_sheet_pilot.wave_rail_deg()

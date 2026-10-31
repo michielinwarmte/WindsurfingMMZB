@@ -38,8 +38,12 @@ extends Resource
 @export var rail_bank_extra_deg: PackedFloat64Array = [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0]
 ## The rail for the sea the sailor may add when the board bounces, degrees (Autopilot.wave_rail_max_deg;
 ## none in flat water, all of it at twice the default sea's height): the reflex that keeps 75 %
-## from falling in waves without the 5 % that a rail held always costs on flat water (round 2).
-@export var wave_rail_deg: PackedFloat64Array = [0.0, 0.0, 3.0, 3.0, 3.0, 3.0, 3.0]
+## from falling in waves without the 5 % that a rail held always costs on flat water (round 2:
+## the falls in six hours of sailing 11 to 5 at 75 %, 20 to 13 at 85 %). Not at the top: stacked
+## on the ladder's rail with the pull at 1.5 it tipped the 24 kt upwind board over in waves (five
+## to eight falls in 300 s, none without it; round 3), and at 100 % the sailor does not ease for
+## the sea: the most speed, a crash likely (Michiel's ladder).
+@export var wave_rail_deg: PackedFloat64Array = [0.0, 0.0, 3.0, 3.0, 3.0, 1.0, 0.0]
 ## More trim (the nose up) on top of the technique's aim, degrees: SimControls.trim_aim_extra_deg.
 ## +1° gives the 24 kt broad reach +10 % on flat water and two falls on the sea; +0.5 at the top
 ## (round 1).

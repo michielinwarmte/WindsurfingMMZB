@@ -28,6 +28,8 @@ extends SceneTree
 ##      (--sweep=push.level=0,0.25,0.5,0.75,0.85,0.95,1) sweeps it. The case's own --pilot.
 ##      settings override the slider's field by field
 ##   [--legs=<share>] the legs in the beginner's turn loop (PlayerController.legs_share)
+##   [--controller.<field>=<n>] any other number of the beginner's controller (PlayerController),
+##      set once per case (e.g. --controller.legs_rate_gain=0: the planing technique off)
 ##   [--wave_scale=<f>] every wave's height (and steepness) times f: the sea at twice its height
 ##   [--hold_sheet=1] the player holds W (sheet in) all the time, over the auto-sheet
 ##   [--reaction_s=<s>] the sailor feels the apparent wind's strength this late: the controller
@@ -135,7 +137,7 @@ func _initialize() -> void:
 func _build_cases() -> Array[PushCase]:
 	var fixed: Dictionary[String, float] = {}
 	for key: String in _options:
-		if key.begins_with("pilot.") or key.begins_with("sailor.") or key.begins_with("sail.") or key.begins_with("board.") or key.begins_with("push."):
+		if key.begins_with("pilot.") or key.begins_with("sailor.") or key.begins_with("sail.") or key.begins_with("board.") or key.begins_with("push.") or key.begins_with("controller."):
 			fixed[key] = _options[key].to_float()
 	var sweeps: Array[Array] = [_parse_sweep(_options.get("sweep", "")), _parse_sweep(_options.get("sweep2", ""))]
 	var cases: Array[PushCase] = []
@@ -198,6 +200,7 @@ func _run_case(case: PushCase, falls: Array[String]) -> PushResult:
 	elif push_text != "":
 		controller.push_level = PushDial.level_of(push_text)
 	controller.legs_share = _options.get("legs", "0").to_float()
+	_apply_settings(case.settings, "controller.", controller)
 	var controls: SimControls = SimControls.new()
 	controller.reset_controls(controls)
 	sim.reset(Vector3.ZERO, deg_to_rad(_heading_for_twa(clampf(case.twa_deg, START_TWA_DEG, START_TWA_MAX_DEG))))
