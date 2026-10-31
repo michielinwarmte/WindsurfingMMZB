@@ -1,0 +1,4 @@
+# Round 5: the couple at the low end of Max's range (150 N held) against the default 200: round 4
+# found 150 never falls on the 24 kt broad reach in waves where 200 falls at both dials.
+base:
+couple150: --sailor.front_foot_pull_held_n=150

@@ -23,6 +23,9 @@ extends SceneTree
 ##      1 + threshold x intensity, the timing_ease settings replace the case's own
 ##   [--slice=<i>/<n>] (run every n-th case from the i-th) [--out=<csv>] [--falls_out=<csv>]
 ##   [--label=<text>] (a column in the CSV, to tell runs apart)
+##   [--dial=eased|neutral|pushed] the push dial's setting (PushDial: hike_share 0.8 / 1.0 / 1.6 and
+##      the rig's lean 25 / 25 / 35), applied before the case's own --pilot. and --sailor. settings,
+##      which then override it field by field
 ##   [--hold_sheet=1] the player holds W (sheet in) all the time, over the auto-sheet
 ##   [--reaction_s=<s>] the sailor feels the apparent wind's strength this late: the controller
 ##      is handed the apparent wind speed of that long ago (only the controller; the physics sails
@@ -164,6 +167,8 @@ func _parse_sweep(text: String) -> Array[Dictionary]:
 ## One case, sailed from rest on starboard tack.
 func _run_case(case: PushCase, falls: Array[String]) -> PushResult:
 	var sim: WindsurferSim = _make_sim(case.wind_kt)
+	if _options.has("dial"):
+		PushDial.apply(PushDial.level_of(_options["dial"]), null, sim.sailor_config)
 	_apply_settings(case.settings, "sailor.", sim.sailor_config)
 	_apply_settings(case.settings, "sail.", sim.sail_config)
 	# The board's numbers the sim copies every tick (the footstraps), on a copy of the shared
@@ -216,6 +221,8 @@ func _run_case(case: PushCase, falls: Array[String]) -> PushResult:
 			easing = maxf(ahead, now) > gust_line
 		# The dial: the margin set every tick, as GP1 will (the pilot is a new one after a
 		# waterstart, PlayerController.reset_controls).
+		if _options.has("dial"):
+			PushDial.apply(PushDial.level_of(_options["dial"]), controller.auto_sheet_pilot, null)
 		_apply_settings(case.settings, "pilot.", controller.auto_sheet_pilot)
 		if easing:
 			_apply_settings(ease_settings, "pilot.", controller.auto_sheet_pilot)
