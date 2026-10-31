@@ -193,7 +193,7 @@ func update_from(t: Telemetry, controller: PlayerController, camera_name: String
 		+ "rig   harness %4.0f N   mast foot pushing down %4.0f N\n" % [t.harness_tension_n, -t.mast_foot_force_up_n]
 		+ "auto-sheet %s%s" % ["on" if controller.auto_sheet else "off", "   pilot set from the command line (--pilot.)" if not controller.pilot_overrides.is_empty() else ""]
 		# The push slider and what it asks of the sailor (PushDial.describe), with the legs' push.
-		+ ("\n%s   now: sea rail +%.1f deg (bounce %.0f deg/s), back foot %+.2f" % [controller.push_text(), controller.auto_sheet_pilot.wave_rail_deg(), controller.auto_sheet_pilot.felt_bounce_dps(), t.back_foot_push] if controller.push_text() != "" else "")
+		+ ("\n%s\nnow: sea rail +%.1f deg (bounce %.0f deg/s)   back foot %+.2f" % [controller.push_text(), controller.auto_sheet_pilot.wave_rail_deg(), controller.auto_sheet_pilot.felt_bounce_dps(), t.back_foot_push] if controller.push_text() != "" else "")
 		+ ("\n" + _fall_watch.last_fall_text if _fall_watch.last_fall_text != "" else ""))
 
 
