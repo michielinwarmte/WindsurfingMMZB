@@ -662,10 +662,9 @@ def logo_shapes(mark, wordmark, plate_colour):
     """The square lockup: the plate, the mark in the upper part, the wordmark below it."""
     plate = Shape(rounded_rect(0, 0, PLATE, PLATE, PLATE_RADIUS), plate_colour)
     mark_box = (190, 80, 810, 630)
+    # A long name fills the width; a short one (POINT.9) is limited by the box's height.
     word_box = (90, 680, 910, 900)
-    placed_word = fitted(wordmark, word_box)
-    # A short wordmark is limited by its height; centre it in what is left below the mark.
-    return [plate] + fitted(mark, mark_box) + placed_word
+    return [plate] + fitted(mark, mark_box) + fitted(wordmark, word_box)
 
 
 def write_brand(slug):
