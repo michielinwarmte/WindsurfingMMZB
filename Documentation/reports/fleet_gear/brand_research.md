@@ -433,7 +433,193 @@ Source: [jp-australia.com](https://jp-australia.com/p/windsurfing/boards/super-s
 **What makes the shapes recognisable.** The deck's recess around the mast track (visible in the top view as a lighter, sunken area around the track), the wide deck over the narrow stepped bottom at the tail, the pad wedge between the back straps.
 
 **Livery** (JP's 2026 pictures: [top](https://jp-australia.com/wp-content/uploads/2025/11/JP_SLALOM-S-TEC_261224_1-320x1024.webp), [bottom](https://jp-australia.com/wp-content/uploads/2025/11/JP_SLALOM-S-TEC_261224_2-330x1024.webp), [Super Sport](https://jp-australia.com/wp-content/uploads/2025/11/JP_SUPER-SPORT-WOOD-PRO_261214_1-330x1024.webp)):
-- *Slalom S-TEC deck*: a mottled purple carbon (#5F4685 measured; the builder script's medians (119, 93, 159) = #775D9F and darker (85, 62, 123) = #553E7B) with a white-outlined "JP" logo on the nose, a lighter purple around the recessed mast track; white and grey pads; the tail a navy band (about #32 2A 47, the builder's (50, 42, 71)) turning orange-red at the very tail (#C04A46 measured), where "SLALOM S-TEC" sits in white with the dimensions ("V119 L229 W72") beside it.
+- *Slalom S-TEC deck*: a mottled purple carbon (#5F4685 measured; the builder script's medians (119, 93, 159) = #775D9F and darker (85, 62, 123) = #553E7B) with a white-outlined "JP" logo on the nose, a lighter purple around the recessed mast track; white and grey pads; the tail a navy band (about #322A47, the builder's (50, 42, 71)) turning orange-red at the very tail (#C04A46 measured), where "SLALOM S-TEC" sits in white with the dimensions ("V119 L229 W72") beside it.
 - *Bottom*: purple at the nose fading to navy (#24274B measured) and dark navy toward the tail, with "JP-AUSTRALIA" in orange letters along the centreline near the nose; an orange-red tail tip.
 - *Super Sport*: a navy deck (about #2A3050, est.) fading through purple to orange-red at the tail, an orange "JP" on the nose, "SUPER SPORT" with the size by the back straps, grey pads.
 - JP's published Pantone colours for the Slalom: 805 C (fluorescent red, about #FF7276), 021 C (orange, #FE5000), 433 C (near-black, #1D252D), 260 C (plum purple, about #5F2167), a mix of 811 C (fluorescent orange, #FF7F41) and 021 C, and 1495 C (orange, #FF8F1C). For the Super Sport: 432 C (dark grey, #333F48), 8480 C (a metallic), 805 C, 433 C, 021 C, 430 C (grey, #7C878E) and 1495 C.
+
+### 2.7 FMX Racing (game: BMX Boards): boards
+
+**Who they are.** The brand of Finian Maynard, a former world champion and speed sailing record holder (FMX counts 25 world titles and records, 14 of them as a rider and 11 as designer and shaper), who built boards on Maui from 1991. He decided on his own label in 2018 and showed the first boards, all black, at boot Düsseldorf in 2019; he shapes them himself, the factory is Kinetic ([surf-magazin.de](https://www.surf-magazin.de/en/windsurfing/windsurf-boards/freerace-and-race/fmx-racing-maynard-with-his-own-brand/), [fmxracing.com](https://www.fmxracing.com/)). Small and race-only: the Invictus (fin slalom and speed), the Hyperion (foil slalom), the Veloce (fast freeride; the LTD "for the expert free racer") and the Diablo (wave). Character: PWA-focused and proud of it ("PWA Slalom-X Constructors Vice-World Champion 2024/2025", the 2024 men's slalom world champion's board), with removable cut-out plates as its signature.
+
+**Slalom boards: Invictus (Pro).** No fin; two rows of strap plugs; "Pro Elite Carbon"; two sets of removable cut-out plates ("RTS, Range Trim System": carbon and high-density PVC) to tune the release; "V5 Vector Cuts"; an inverted-vee bottom (vee and double concave in the nose, an inverted vee in the tail; "double concave reverse vee" on the 74 to 98); a deep deck concave with a recess around the mast box; a "scoop-rocker line"; an "America's Cup grade" bottom finish; a short Tuttle "Strong Box" with double the carbon.
+
+| Size | Length cm | Width cm | 2025 kg | 2026 kg | Fin box | Fin cm | Sail m² |
+|---|---|---|---|---|---|---|---|
+| 74 (speed) | 229 | 52 | 5.0 | - | short Tuttle | 20-25 | 4.7-7.0 |
+| 78 | 233 | 59 | 5.6 | 5.6 | short Tuttle | 28-32 | 4.5-6.5 |
+| 88 | 233 | 61 | 5.8 | 5.8 | short Tuttle | 29-33 | 4.7-7.0 |
+| 98 | 233 | 63 | 5.95 | 6.0 | short Tuttle | 30-34 | 5.0-7.0 |
+| 104 | 233 | 67 | 6.4 | 6.3 | short Tuttle | 32-36 | 5.8-7.8 |
+| 108 | 233 | 70 | 6.6 | 6.6 | short Tuttle | 34-38 | 6.3-8.6 |
+| 118 | 233 | 72 | 6.8 | 6.85 | short Tuttle | 35-39 | 7.0-8.6 |
+| 124 | 228 | 77 | 6.95 | 6.95 | deep Tuttle | 37-41 | 7.0-8.6 |
+| 128 | 228 | 81 | 7.3 | 7.2 | deep Tuttle | 39-44 | 7.8-9.2 |
+| 138 | 228 | 85 | 7.7 | 7.6 | deep Tuttle | 42-48 | 7.8-9.6 |
+
+The size is the volume. Sources: [fmxracing.com, Invictus Pro 118 (2026)](https://www.fmxracing.com/invictus-pro-118/), [ssi-windsurf.com, Invictus 2025](https://ssi-windsurf.com/en/inicio/72-fmx-racing-invictus-2025.html) (€2,399). The weights leave out the cut-out plates and include 12 extra strap plugs (about 100 g); the foil-Tuttle option adds 200 g. The 2025 boards differ from 2024's only by a "25" on the deck; 2024 brought new noses and cut-outs and new moulds for the 78, 88 and 98. The 118, in FMX's words: "a compact feel with a wide nose, parallel mid-section and curved tail section". For 2026 FMX adds the Invictus Speed F44, F54 and 74.
+
+**Free race boards: Invictus GTR (new 2026).** "Performance freerace slalom": the Invictus outlines in a heavier, more forgiving PVC sandwich of carbon and glass, legal for any slalom race, with the same two sets of cut-out plates.
+
+| Size | Length cm | Width cm | kg | Sail m² |
+|---|---|---|---|---|
+| 98 | 233 | 63 | 6.5 | 5.0-7.0 |
+| 118 | 233 | 72 | 7.4 | 7.0-8.6 |
+| 138 | 228 | 85 | 8.2 | 7.8-9.6 |
+
+Sources: [fmxracing.eu](https://www.fmxracing.eu/products/fmx-racing-invictus-2026-gtr), [nicosurf.it](https://nicosurf.it/shop/windsurf/nuovo/tavole/fmx-racing-invictus-gtr-2026/).
+
+**What makes the shapes recognisable.** The longest slalom boards of the field (233 cm up to 118 L), a wide nose, and separate cut-out plates screwed into the tail (visible as panels of a different finish).
+
+**Livery 2026** (FMX's pictures: [Invictus Pro 118](https://www.fmxracing.com/wp-content/uploads/2025/10/2026_invictus_pro_118.png), [GTR 118](https://www.fmxracing.com/wp-content/uploads/2025/11/2026_invictus_gtr_118-263x600.png)): the Pro is bright red all over, deck and bottom (#E51B26 to #DF0E0E measured). On the deck, a forward-pointing chevron of thin white lines runs from both rails to meet on the centreline ahead of the mast track; behind the track a black arrow-shaped panel holds the black pads; FMX's white "vortex" logo (a spinning disc of curved blades, like a sun) sits on the nose's port side; "FMXRACING" runs vertically beside the mast track, "COMMITMENT TO EXCELLENCE" beside it; "INVICTUS PRO" and the dimensions ("233 - 72 - 118") in black on the tail, the tail tip white. The bottom: red with a big white vortex at the nose and "FMXRACING" in big white letters along the centreline. The GTR is the same design in neon green (#0FDE2A measured) with black lines and logo. (The first boards, in 2019, were black.)
+
+### 2.8 North Sails (game: SouthSails): sails
+
+**Who they are.** North Sails is the American sailmaker founded by Lowell North in 1957; today part of the North Technology Group (owned by Oakley Capital). Its windsurf sails were made under licence by Boards & More from 1981 to 2018 (they became Duotone, section 2.1). The North Actionsports Group, based in the Netherlands, relaunched **North Windsurfing** in April 2022 with sails moulded in North's "3Di" technology (a tape laminate first made for yachts): the Wave first, then the X-Over, the Race and the Foil; the team included Chris Williams, Pieter Bijl and the sail designer Niek Huisman ([windsurfjournal.com](https://www.windsurfjournal.com/article,news,the-return-of-north-windsurfing,9324,en), [windsurf.co.uk](https://www.windsurf.co.uk/north-windsurfing-brand-relaunched/), [North Sails on Wikipedia](https://en.wikipedia.org/wiki/North_Sails)). For late 2026 North is bringing back the name **Prisma** for a new race sail in conventional laminate with cams, by the world champion Pierre Mortefon and the designer Alex Udin ([surf-magazin.de](https://www.surf-magazin.de/en/windsurfing/windsurfing-sails/freerace-and-race/new-racing-sail-north-sails-brings-back-the-prisma/)). Character: technical, grey and white, the yacht-sail look; the compass-like "NS" circle logo.
+
+**Slalom sails: Slalom Race (2025), Slalom Race GEN3 3Di (2026), Prisma Fin (late 2026).** An "air cam" (an inflatable sleeve that holds the profile instead of hard cams), split batten pockets and battens, "EZ Clew" (two boom lengths), 3Di "Dyneema aramid tape" with a "Carbon Helix SL" load path, a 3Di composite sleeve.
+
+| Size | 2025 luff cm | 2025 boom cm | 2025 mast | | 2026 GEN3 mast | 2026 extension cm | 2026 luff cm | 2026 boom cm | 2026 kg |
+|---|---|---|---|---|---|---|---|---|---|
+| 5.2 | 412 | 180 | 400 MDM | | 400 | 6 | 406 | 166 / 169 | 4.10 |
+| 6.0 | 443 | 179 (as listed) | 430 MDM | | 430 | 8 | 438 | 180 / 183 | 4.30 |
+| 6.8 | 460 | 191 | 430 MDM | | 430 | 26 | 456 | 192 / 196 | 4.50 |
+| 7.7 | 489 | 207 | 460 SDM | | 460 or 490 | 32 or 2 | 492 | 210 / 215 | 4.70 |
+| 8.6 | 518 | 217 | 490 SDM | | - | - | - | - | - |
+
+Sources: [telstarsurf.com, 2025](https://www.telstarsurf.com/north-sails-slalom-race-117981.html), [surfpirates.de, 2026](https://www.surfpirates.de/NORTH-SAILS-Slalom-Race-Gen3-2026-77m_1) (€2,199 to €2,299), [northactionsports.com](https://northactionsports.com/products/north-slalom-race-2026). The 2025 table lists 7 battens, the 2026 shop 6: one may be a typo. The 2026 8.6 is sold, but its row was not found. The *Prisma Fin* comes in 4.9, 5.4, 6.0, 6.7, 7.7 and 8.4 (€1,099; a sleeve of "MECZ 30", a carbon scrim in the foot, a zip that closes the boom opening; [northactionsports.com](https://northactionsports.com/products/north-prisma-fin-sail)); no luff or boom lengths were published yet.
+
+**Free race sails: Free Speed (no cams, 6 battens) and Freerace (air cam).** Only single sizes were found: the Free Speed 6.0 (2025): luff 432, boom 189, mast 430 or 400 ([telstarsurf.com](https://www.telstarsurf.com/north-sails-free-speed-2025-117979.html)); the Free Speed 7.7 (2024 test): luff 490, boom 204 to 209, mast 460 or 490 ([windsurf.co.uk](https://www.windsurf.co.uk/north-free-speed-7-7m-test-review-2024/)); the Freerace 7.7 (2024 test): luff 492, boom 203 to 206, 6 battens, 3 air cams, mast 460 or 490 MDM ([windsurf.co.uk](https://www.windsurf.co.uk/north-freerace-7-7m-test-review-2024/)).
+
+**What makes the shapes recognisable.** The moulded 3Di membrane: one smooth grey skin with the fibre lines showing through, no panel seams, blue lines along the battens; cut-out window boxes in the lower sail.
+
+**Livery** ([North's picture of the GEN3](https://northactionsports.com/cdn/shop/files/product_image_55000260001_100_01_61037db9-ffd3-4872-a4af-e9d099a9575d_grande.png)): a slate-grey membrane (#5D6F7D to #7F8A97 measured) with a fine pattern of fibre lines; thin royal-blue lines along the battens (about #2E5FB0, est.); North's round "NS" compass logo in a white circle high up near the luff; "RACE" and "NORTH" in small white letters in the middle of the sail; the lower panel cut into white-framed clear windows; the size printed near the head. The 2025 Slalom Race is listed as white ([telstarsurf.com](https://www.telstarsurf.com/north-sails-slalom-race-117981.html)).
+
+### 2.9 S2Maui (game: s3kauai): sails
+
+**Who they are.** "S2" stands for Szpunar and Spanier: the designers Artur Szpunar and Barry Spanier, whose collaboration goes back more than twenty years, founded the brand in 2015 on Maui; Spanier is now "designer emeritus" ([S2Maui 2026 catalogue](https://www.windsurfing44.com/matos/S2Maui/2026/S2Maui_2026_en.pdf), p. 2). The Venom race sail has won two PWA slalom world titles (S2Maui's world champions include Delphine Cousin and Justine Lemeteyer); the team includes Lohan Jules (Défi Wind champion), Brendan Lorho, Bruno Martini, Lina Erzen and Micah Buzianis. Character: many sizes, light materials ("Light-Film" bi-ply instead of monofilm, Technora "Spacelight" in the leech, Dyneema), bright horizontal colour bands. **S2Maui publishes no sail weights.** (The brief's "Kaneda" does not exist at S2Maui; its race sail is the Venom.)
+
+**Slalom sails: Venom-X (2025), Venom-XI (2026).** Four cams ("wide-footprint multi-roller cams"), seven battens of carbon and fibreglass tubes, a fixed head; "multiple, full-length vertical luff panels"; two stainless clew eyelets. The 2026 profile is flatter above the boom (battens 4 and 5) and locked below it (6 and 7), with a "turbo leech" that opens progressively.
+
+| Size (2025 / 2026) | Mast | IMCS | Luff cm | Boom cm | Extension cm |
+|---|---|---|---|---|---|
+| 4.7 | 370 | 17 | 393 | 171 / 169 | 23 |
+| 5.0 / 5.1 | 400 | 19 | 405 | 174 / 171 | 5 |
+| 5.6 | 400 | 19 | 413 | 185 / 182 | 13 |
+| 6.1 | 430 | 21 | 434 | 191 / 187 | 4 |
+| 6.7 | 430 | 21 | 460 | 202 / 199 | 30 |
+| 7.5 / 7.6 | 460 | 25 | 481 | 217 / 214 | 21 |
+| 8.2 | 460 | 25 | 491 | 229 / 226 | 31 |
+| 9.0 | 490 | 29 | 516 | 240 | 26 |
+
+Sources: the S2Maui catalogues for [2025](https://www.windsurfing44.com/matos/S2Maui/2025/S2Maui_2025_en.pdf) and [2026](https://www.windsurfing44.com/matos/S2Maui/2026/S2Maui_2026_en.pdf) (the column "downhaul" is the extension: mast plus downhaul equals the luff), [windforce.ca](https://windforce.ca/products/s2-maui-venom-2025). The two boom lengths are the two clew eyelets.
+
+**Free race sails: Wicked (2 cams), Banshee (no cams, "RAF").**
+
+| Wicked (2025 and 2026) | 4.6 | 5.2 | 5.8 | 6.3 | 6.7 | 7.0 | 7.6 | 8.2 |
+|---|---|---|---|---|---|---|---|---|
+| Mast | 370 | 400 | 430 | 430 | 430 | 430 | 460 | 460 |
+| Luff cm | 389 | 413 | 433 | 435 | 456 | 458 | 476 | 489 |
+| Boom cm | 163 | 171 | 182 | 192 | 198 | 204 | 212 | 224 |
+| Extension cm | 19 | 13 | 3 | 5 | 26 | 28 | 16 | 29 |
+
+"Venom-derived performance in a more forgiving package", seven battens, "one of the lightest production free race sails"; it won the 2024 IFCA youth and junior slalom worlds. Sources: [2026 catalogue](https://www.windsurfing44.com/matos/S2Maui/2026/S2Maui_2026_en.pdf), [windforce.ca](https://windforce.ca/products/s2-maui-wicked-2025).
+
+| Banshee (2026, 6 battens, no cams) | 5.8 | 6.4 | 7.0 | 7.6 | 8.2 |
+|---|---|---|---|---|---|
+| Mast | 430 | 430 | 460 | 460 | 460 |
+| Luff cm | 436 | 443 | 464 | 478 | 487 |
+| Boom cm | 177 | 188 | 198 | 209 | 219 |
+
+**What makes the shapes recognisable.** Wide horizontal bands of colour across the whole sail, and two clew eyelets.
+
+**Livery** (the catalogue's pictures, pp. 46 to 50): the Venom-XI in horizontal bands: sky blue (#00B5FF measured) across the upper panels, two orange bands (#FC6501 measured) around and just above the boom, a white and clear lower body outlined in black; red-orange battens; a black luff panel strip; the "S2MAUI" logo (a red "S2" with an orange swoosh and "MAUI") on the lower sail under the orange band; "VENOM-XI" in black with an orange "XI" across the foot. New for 2026: a "Hot Yellow" Dyneema foot panel on some models.
+
+### 2.10 Tabou (game: Forbidden): boards
+
+**Who they are.** Founded by the French shaper Fabien Vollenweider, who flew from Marseille to Maui in 1990 and made the first Tabou there in 1991; he still shapes, now near Marseille, and is a shareholder ([tabou-boards.com](https://tabou-boards.com/boards/), [easy-surfshop.com](https://easy-surfshop.com/tabou)). Tabou shares its distribution with GA Sails (section 2.11), so the brands' teams sail each other's gear. Character: colourful, cartoon-like graphics with hexagons and a line-drawn figure as logo; the colours change every year.
+
+**Slalom boards: Manta** ("Team" construction; the size is the width).
+
+| Size | Length cm | Width cm | Volume L | kg (± 10 %) | Fin box |
+|---|---|---|---|---|---|
+| 48 Speed Custom | 228 | 48 | 64 | 4.7 | short Tuttle |
+| 54 Speed Custom | 228 | 54 | 75 | 5.4 | short Tuttle |
+| 61 | 233 | 61 | 96 | 6.1 | short Tuttle |
+| 64 | 233 | 64 | 102 | not given | short Tuttle |
+| 66 | 233 | 66 | 106 | 6.2 | short Tuttle |
+| 71 | 233 | 71 | 116 | 6.8 | short Tuttle |
+| 77 | 232 | 77 | 122 | 7.4 | deep Tuttle foil box |
+| 85 | 232 | 85 | 135 | 7.8 | deep Tuttle foil box |
+
+The same table for 2025 and 2026. Sources: [tabou-boards.com, 2026](https://tabou-boards.com/boards/manta/), [2025](https://tabou-boards.com/archive/windsurf-boards-2025/manta-2025/). Tabou publishes no tail widths, fin ranges or sail ranges. Large cut-outs, designed per size; an extra tail vee; a deep front vee on the 61 to 71 for chop; a lowered mast track; "more tucked-in rails in the tail" on the 64; an EPS core, PVC, glass and carbon shells.
+
+**Free race boards: Rocket+** ("the best freerace performance"; listed under freeride; a fin included).
+
+| Size | Length cm | Width cm | kg MTE / LTD / Team | Fin box | Fin included |
+|---|---|---|---|---|---|
+| 103 | 232 | 69 | - / 7.2 / 6.7 | Tuttle | MFC 36 HF Ride |
+| 113 | 232 | 73 | - / 7.6 / 6.9 | foil box (deep Tuttle) | MFC 38 |
+| 123 | 232 | 77 | 9.0 / 7.9 / 7.5 | foil box | MFC 40 |
+| 133 | 232 | 81 | 9.3 / 8.1 / 7.9 | foil box | MFC 44 |
+| 143 | 232 | 85 | 9.6 / 8.7 / 8.3 | foil box | MFC 46 |
+
+Source: [tabou-boards.com](https://tabou-boards.com/boards/rocket-plus/) (2026). A low entry rocker, a deeper vee in the nose, a slight vee in the tail, extra tail volume, tail cut-outs, a rounder deck at the back straps, several strap positions. In surf-magazin's 2024 test it was the widest of five 110 L boards; in 2026 its "Fifty" was the free race board best suited to foiling. (Also: the Rocket, freeride; the Bullitt, a 258 cm long freeride board.)
+
+**What makes the shapes recognisable.** Big cut-outs shown in a contrasting colour (magenta in 2026); hexagonal pads and graphics.
+
+**Livery.**
+- *Manta 2026* ([Tabou's picture](https://tabou-boards.com/wp-content/uploads/2025/10/2026-Tabou-Manta-Duo.png); published main colour Pantone 313 C, about #0092BC, second colour Pantone Rubine Red C, about #CE0058): the deck cyan-blue at the nose and the rails (#1879B4 measured) fading to violet across the middle (#7966A3 measured); dark navy pads (#132238 measured) cut as hexagons with white outlines; hexagon outlines and the logo on the nose; a yellow line-drawn figure in the middle of the deck; "MANTA" in navy and white by the tail rail; the cut-out steps and the tail edge magenta (#E34978 measured). The bottom sky blue (#5CCAFD measured) with "TABOU" in big navy outline letters near the nose.
+- *Manta 2025*: Pantone 185 C (red, about #E4002B) and white.
+- *Rocket+ 2026* ([picture](https://tabou-boards.com/wp-content/uploads/2025/10/TABOU_2026-Tabou-Rocket-Plus-113-LTD_242.png); Pantone 032 C, about #EF3340, and 309 C, about #003B49): a red deck fading to deep plum and dark teal across the middle; light sky-blue pads (about #9AD7EE, est.); hexagon outlines and the logo on the nose; "ROCKET+ 113 LTD" in light blue by the mast track.
+
+### 2.11 GA Sails (game: GG Sails): sails
+
+**Who they are.** Gaastra is a Dutch sailmaker founded in 1897 by Douwe Gaastra in Sneek, Friesland; it made windsurf sails from 1980, for riders such as Robby Naish and Pete Cabrinha. In 2014 the sails took the "GA" logo (first on the Vapor, then the whole 2015 range), partly to keep them apart from the Gaastra clothing brand; they are now "GA Sails" ([windsurfjournal.com](https://www.windsurfjournal.com/article,news,gaastra-devient-presque-ga-sails,2948), [isthmussailboards.com](https://isthmussailboards.com/windsurfing-sail/gaastra-sails.html)). It shares its distribution and team with Tabou. Character: bright cyan, magenta and lime, with the big "GA" logo whose "A" is a triangle with a shark.
+
+**Slalom sails: Vapor.** Four cams, seven battens, a fixed head.
+
+| Size | Luff cm | Boom cm | Mast | IMCS | Extension cm | kg | 2025 luff cm | 2025 extension cm |
+|---|---|---|---|---|---|---|---|---|
+| 5.3 | 405 | 177 | 400 RDM | 19 | 6 | 5.07 | 406 | 6 |
+| 5.7 | 425 | 187 | 400 RDM | 19 | 26 | 5.27 | 424 | 24 |
+| 6.7 | 461 | 196 | 430 SDM | 21 | 32 | 5.80 | 464 | 34 |
+| 7.7 | 494 | 209 | 460 SDM | 25 | 34 | 6.15 | 496 | 36 |
+| 8.4 (2026) / 8.7 (2025) | 515 | 217 | 490 SDM | 29 | 26 | 6.39 | 528 | 38 |
+
+Sources: [ga-windsurfing.com](https://ga-windsurfing.com/sails/vapor/) (2026), [easy-surfshop.com 2026](https://easy-surfshop.com/do/item/N-GA-020126NA-SL/Windsurf-sail-GA-Sails-Vapor-2026), [2025](https://easy-surfshop.com/do/item/N-GA-25-VAPOR/Windsurf-sail-GA-Sails-Vapor-2025) (RRP from €1,399). New for 2026: "Project 85" aramid in the whole sleeve and the batten pockets, a coloured monofilm foot panel, a reworked twist and more mid-sleeve tension for close reaching, a bigger clew cut-out, a "continuous radial panel layout" (panels radiating from the sail's centre, no cross seams) and a cross batten. Colourway C1 Blue.
+
+**Free race sails: Cosmic** (2 mini cams, 7 battens, a "race-inspired outline with a wide undercut", the continuous radial panels new for 2026, a moderate tension).
+
+| Size | Luff cm | Boom cm | Extension cm | Mast | 2022-23 kg |
+|---|---|---|---|---|---|
+| 5.7 | 424 | 182 | 24 | 400 RDM | - |
+| 6.2 | 448 | 187 | 18 | 430 SDM | 4.6 |
+| 6.7 | 465 | 195 | 36 | 430 SDM | 4.8 |
+| 7.2 | 481 | 202 | 22 | 460 SDM | 4.9 |
+| 7.7 | 492 | 212 | 32 | 460 SDM | 5.1 |
+| 8.3 | 503 | 220 | 14 | 490 SDM | 5.3 |
+| 9.0 | 518 | 235 | 28 | 490 SDM | 5.6 |
+
+Sources: [ga-windsurfing.com](https://ga-windsurfing.com/sails/cosmic/), [windlounge.de](https://en.windlounge.de/products/ga-sails-cosmic-2026) (2026 weights "to be announced"), [ga-windsurfing.com, Cosmic 2022](https://ga-windsurfing.com/media/archive/products-2022/cosmic-2022/) (the older weights, with 1 to 3 cm shorter luffs and booms). GA also makes the Matrix (no cams).
+
+**What makes the shapes recognisable.** The giant "GA" on the upper luff, the lime battens and the radial panels.
+
+**Livery** ([Vapor 2026](https://tabou-boards.com/wp-content/uploads/2025/10/2026GA_VAPOR-800x800.png), [Cosmic 2026](https://tabou-boards.com/wp-content/uploads/2025/09/2026GA_COSMIC_C1-1-800x800.png)): the Vapor's body cyan blue (#009CCD measured) with a darker teal-blue luff panel (#357A98 measured); the huge "GA" logo high on the luff panel (a black "G" with diagonal stripes beside a magenta triangle (#CA4CA2 measured, a vivid magenta in the drawing) holding a black shark); the leech side lighter and clear, with "GA-SAILS" in lime-yellow outline letters running down it; lime-yellow battens (about #D7E83A, est.); magenta tape along the leech and the foot; a white foot panel with the "VAPOR" logo and magenta, yellow and cyan bars; a navy sleeve bottom.
+
+### 2.12 Other slalom and free race brands worth knowing
+
+- **Patrik** (Austria-based, boards and sails): the brand of Patrik Diethelm, a former PWA slalom racer turned shaper; Max sails a Patrik 115 (its layout is the game's default). Slalom boards: the new Slalom-X (92, 97 and 115 L, 232 cm, 60 to 70.5 cm; "a refined rocker with a slight tail kick", a slight vee under the back foot and a double concave between the front straps), the premium Slalom AirInside V2 (95 to 140 L, 5.12 to 6.46 kg, made in Ukraine, €3,399 to €3,699) and the standard Slalom (85 to 150 L, on close-out; graphics by Fabio Canella); free race: the F-Race ("racer with comfort" in surf-magazin's 2026 test) ([patrikinternational.com](https://www.patrikinternational.com/en/shop/windsurfing/windsurf-boards/patrik-slalom-x.html), [Slalom AirInside](https://www.patrikinternational.com/en/shop/windsurfing/windsurf-boards/slalom-airinside-v2.html)).
+- **Goya** (Maui, Francisco Goya's brand): the Bolt free race board (Bolt 4 Carbon 2024-25: 99 to 139 L, full carbon deck, racing tail cut-outs; the Bolt "offers the purest racing feel with the fewest compromises" in the 2026 test) and the Mark (no cams, 6 battens) and Mark 2 (2 cams) free race sails ([hydrostationwatersports.com](https://hydrostationwatersports.com/shop/goya-bolt-4-carbon-2024-2025/), [goyawindsurfing.com](https://goyawindsurfing.com/sails/y2022/mark-2/)).
+- **Loft Sails** (designer Monty Spindler): the Racingblade, a "purpose-built fin slalom sail" in 5.2, 5.8, 6.6, 7.4 and 8.2 for 2026 (a higher aspect ratio, "TekCam III" cams 35 % lighter, Kevlar radials from the clew to the sleeve; €1,199 to €1,359), the Skyblade (foil) and the Formulablade ([loftsails.com](https://www.loftsails.com/products/racingblade-7-4-white-2026), [easy-surfshop blog](https://blog.easy-surfshop.com/racingblade-2026-just-landed/)).
+- **Challenger Sails (CHS)** (Italy; hand-built by Claudio Badiali): won the PWA slalom title in 2022 with Maciek Rutkowski; the SLX fin slalom sail (€1,399 to €1,649) and the Fluido T3 (3 cams, 7 battens, freeride to free race, registered for the 2025 PWA) ([chswindsolutions.com](https://chswindsolutions.com/shop/vele-sails/fluido-t3/), [challengersails.co.uk](https://challengersails.co.uk/)).
+- **Avanti Sails** (USA): the Machine race sail ("the first membrane sail to win a PWA World Cup event"), carbon booms from 2019; no 2025 race sail table found ([avantisails.com](https://avantisails.com/22-sails/machine-m-9/)).
+- **Simmer Style** (Sweden-founded, designer Tomas Persson): the S-Max 2025 slalom sail (5.5, 6.0, 6.5, 7.1, 7.8, 8.5; TekCam, for SDM or RDM by swapping the bottom cam) and the Evoq ([simmerstyle.com](https://simmerstyle.com/product/2025-s-max/)).
+- **Exocet** (France): the RS V6 Carbon fin slalom board, new for 2026 (80, 95, 110 and 140 L, all 232 cm, 58 to 85 cm, 6.11 to 8.65 kg), the RF V4 foil slalom and the Scross V3 free race (115, 125, 145 L) ([exocet-original.com](https://www.exocet-original.com/products/rs-v6-carbon-71), [windsurf.co.uk](https://www.windsurf.co.uk/exocet-2024/)).
+- **Sonntag** (Germany): not sails but **custom carbon fins**, handmade by Jörg Sonntag for slalom, Formula and speed (the SL-P slalom fin from 30 to 53 cm, rake 7.5 to 12 degrees; the SL-S slalom-speed fin) ([sonntag-fins.com](https://sonntag-fins.com/)).
+- **Carbon Art** (New Zealand): custom hand-built boards since 1995, slalom shapes developed with Phil McGain on Maui and registered for the PWA (SL 78 to SL 99; "RTS cut-outs with a turbo tab"; 5.1 to 6.2 kg) ([carbonartwindsurf.com](https://www.carbonartwindsurf.com/boards/slalom/)).
+- **AV Boards** (France): custom speed and slalom boards; a 2027 collection with two new speed and three new slalom shapes ([avboards.com](https://www.avboards.com/)).
+- **I-99** (Italy, "NoveNove", Cesare Cantagalli): the AM·PRO slalom series shaped by Patrizio Pelizzaro with Thomas Fauster at Lake Garda (SL 61: 89 L 235 × 61 cm; SL 63: 97 L; SL 73: 125 L; SL 85: 145 L) and the Grand Tour free race board ([i-99.it](https://www.i-99.it/am-pro-slalom/)).
+- **Future Fly** (Czech Republic): the White Tiger, a "true freerace" board in surf-magazin's 2026 test ([surf-magazin.de](https://www.surf-magazin.de/en/windsurfing/windsurf-boards/freerace-and-race/test-2026-ten-freerace-boards-put-to-the-test-highway-to-heaven/)).
+
+---
