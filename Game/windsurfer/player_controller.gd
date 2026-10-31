@@ -18,6 +18,9 @@ extends RefCounted
 ## in beginner mode (W/S then override it for a few seconds). In beginner mode the sailor
 ## also eases the sheet by themselves when the pull is more than they can hold, which is
 ## what every sailor does before a catapult. Tab switches modes.
+## Up/Down move the push slider (push_level): how hard the sailor commits, from standing still
+## with the sail let fly to the most speed with a crash likely (PushDial, the ladder in
+## PushCurveConfig; Documentation/reports/push_slider/PLAN.md).
 
 enum Mode { BEGINNER, ADVANCED }
 enum Manoeuvre { NONE, TACK_HEADING_UP, TACK_BEARING_AWAY, GYBE_BEARING_AWAY, GYBE_HEADING_UP }
@@ -110,6 +113,21 @@ var ease_recovery_rate_per_s: float = 0.8
 ## because reset_controls() makes a new pilot after a waterstart. Empty: the pilot's own numbers.
 var pilot_overrides: Dictionary[String, float] = {}
 
+## The push slider (ROADMAP GP1; Documentation/reports/push_slider/PLAN.md): the level from 0
+## (standing still, the sail let fly) to 1 (the most speed, a crash likely), turned into the
+## pilot's margin and the sailor's technique every update through PushDial and the ladder in
+## push_curve (the default curve when null). NaN = no slider: the pilot's own numbers, as before
+## (the AI boards and the tests until the fleet adopts it). Up and Down move it at
+## push_rate_per_s (a full range in 2.5 s); an AI skipper's hands set it (AiHands.push). It keeps
+## its level through resets and waterstarts.
+var push_level: float = NAN
+var push_curve: PushCurveConfig = null
+var push_rate_per_s: float = 0.4
+## The legs in the beginner's turn loop (PH35, the push slider plan, round 3): how much of the
+## helm the back foot carries by pushing the sideways hold against its strap (Helm), beside the
+## rake, the tilt and the rail; the sim applies it only in the straps. 0 = as before.
+var legs_share: float = 0.0
+
 ## Beginner mode holds the heading when no steering key is pressed.
 var hold_heading: bool = true
 ## The trim, kept as "heading up" so that it stays right when the tack changes.
@@ -179,6 +197,7 @@ func set_sail(sail: SailModel, sailor: SailorConfig = null, air_density_kg_m3: f
 
 ## Reads the keys and writes the controls: sheet, boom across, rake, rig tilt and lean.
 func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
+	_move_the_slider(controls, dt)
 	for field: String in pilot_overrides:
 		auto_sheet_pilot.set(field, pilot_overrides[field])
 	auto_sheet_pilot.update_tack(telemetry)
@@ -233,6 +252,7 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		controls.rake = move_toward(controls.rake, rake_key, rake_rate_per_s * dt)
 		controls.rig_tilt = move_toward(controls.rig_tilt, tilt_key, helm_rate_per_s * dt)
 		controls.lean = move_toward(controls.lean, steer_key, lean_rate_per_s * dt)
+		controls.back_foot_push = move_toward(controls.back_foot_push, auto_sheet_pilot.back_foot_bias, helm_rate_per_s * dt)
 		helm_right = 0.0
 		_heading_held = false
 	# Sheet: W pulls the boom in, S lets it out. With the auto-sheet on, the keys take over
@@ -283,6 +303,33 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 	controls.balance_reflex = true
 
 
+## The push slider: the keys or the hands move the level, and the level sets the pilot and the
+## controls (before pilot_overrides, which then win field by field). Without a level nothing is
+## touched.
+func _move_the_slider(controls: SimControls, dt: float) -> void:
+	if hands != null:
+		if not is_nan(hands.push):
+			push_level = clampf(hands.push, 0.0, 1.0)
+	elif not is_nan(push_level):
+		var key: float = _axis("push_more", "push_less")
+		if key != 0.0:
+			push_level = clampf(push_level + key * push_rate_per_s * dt, 0.0, 1.0)
+	if is_nan(push_level):
+		return
+	if push_curve == null:
+		push_curve = PushDial.default_curve()
+	PushDial.apply_level(push_level, push_curve, auto_sheet_pilot, controls)
+
+
+## The slider's line for the HUD ("" without a slider).
+func push_text() -> String:
+	if is_nan(push_level):
+		return ""
+	if push_curve == null:
+		push_curve = PushDial.default_curve()
+	return PushDial.describe(push_level, push_curve)
+
+
 ## The beginner's turn-rate loop. turn_key asks for a rate; without a key the heading hold
 ## asks for the rate that brings the heading back. The error against the measured yaw rate
 ## moves the helm now (proportional) and slowly shifts the trim (integral), so the loop
@@ -296,6 +343,7 @@ func _steer_beginner(telemetry: Telemetry, controls: SimControls, turn_key: floa
 			controls.rake = move_toward(controls.rake, 0.0, helm_rate_per_s * dt)
 			controls.rig_tilt = move_toward(controls.rig_tilt, 0.0, helm_rate_per_s * dt)
 			controls.lean = move_toward(controls.lean, 0.0, helm_rate_per_s * dt)
+			controls.back_foot_push = move_toward(controls.back_foot_push, 0.0, helm_rate_per_s * dt)
 			return
 		_settling = false
 		_heading_held = false
@@ -316,6 +364,7 @@ func _steer_beginner(telemetry: Telemetry, controls: SimControls, turn_key: floa
 		controls.rake = move_toward(controls.rake, 1.0, helm_rate_per_s * dt)
 		controls.rig_tilt = move_toward(controls.rig_tilt, 0.0, helm_rate_per_s * dt)
 		controls.lean = move_toward(controls.lean, 0.0, helm_rate_per_s * dt)
+		controls.back_foot_push = move_toward(controls.back_foot_push, 0.0, helm_rate_per_s * dt)
 		return
 	var rate: float = 0.0
 	if turn_key != 0.0:
@@ -393,6 +442,7 @@ func _steer_tack(telemetry: Telemetry, controls: SimControls, turn: float, dt: f
 		controls.rake = move_toward(controls.rake, 1.0, helm_rate_per_s * dt)
 		controls.rig_tilt = move_toward(controls.rig_tilt, 0.0, helm_rate_per_s * dt)
 		controls.lean = move_toward(controls.lean, 0.0, helm_rate_per_s * dt)
+		controls.back_foot_push = move_toward(controls.back_foot_push, 0.0, helm_rate_per_s * dt)
 		return
 	_steer_at_rate(telemetry, controls, turn * tack_rate_dps, true, dt)
 
@@ -413,7 +463,10 @@ func _steer_at_rate(telemetry: Telemetry, controls: SimControls, rate_dps: float
 	# that rate), and none while pivoting through the wind, where a board on its rail skids.
 	var rail: float = 0.0 if (pivot or not rail_on) else clampf(wanted_rate_dps / carve_rate_dps, -1.0, 1.0)
 	var lean_before: float = controls.lean
-	Helm.steer(controls, helm_right, tack, 0.0, dt, helm_rate_per_s, 0.0 if pivot else 1.0)
+	# The legs (PH35): the back foot carries legs_share of the helm, and the slider's push on top;
+	# none while pivoting, where the feet are out of the straps.
+	Helm.steer(controls, helm_right, tack, 0.0, dt, helm_rate_per_s, 0.0 if pivot else 1.0,
+		0.0 if pivot else legs_share, 0.0 if pivot else auto_sheet_pilot.back_foot_bias)
 	controls.lean = move_toward(lean_before, rail, helm_rate_per_s * dt)
 
 
@@ -454,6 +507,10 @@ func reset_controls(controls: SimControls) -> void:
 	controls.rake = 0.0
 	controls.rig_tilt = 0.0
 	controls.lean = 0.0
+	controls.back_foot_push = 0.0
+	controls.rail_bank_extra_deg = 0.0
+	controls.trim_aim_extra_deg = 0.0
+	controls.rig_lean_extra_deg = 0.0
 
 
 func mode_name() -> String:

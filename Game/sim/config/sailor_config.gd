@@ -275,6 +275,14 @@ extends Resource
 ## at most tip_time_s at a time, as the hips hold a body tipped harder than hip_force_max_n
 ## only that long.
 @export var front_foot_pull_brief_n: float = 400.0
+## The back foot against the fin (PH35, the push slider; SimControls.back_foot_push): the two
+## feet pushing against each other sideways in their straps, the back foot to leeward and the
+## front foot to windward, a yaw couple of this force times the straps' spread (88.5 N m on
+## Max's board) at a full push. The bound is what a strap holds a foot pulling sideways: taken as
+## the same as the front foot's upward pull, 150 N held (an estimate; Max: "faster than 35 to
+## 40 km/h, all the strength I have"). 0 = no push. Measured in the slider rounds
+## (Documentation/reports/push_slider/push_slider.md).
+@export var back_foot_push_n: float = 150.0
 
 @export_group("Falling and getting back up")
 ## The board heels toward the sail only when the sailor can no longer balance the sail's

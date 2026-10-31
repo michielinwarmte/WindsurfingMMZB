@@ -23,15 +23,18 @@ extends SceneTree
 ##      1 + threshold x intensity, the timing_ease settings replace the case's own
 ##   [--slice=<i>/<n>] (run every n-th case from the i-th) [--out=<csv>] [--falls_out=<csv>]
 ##   [--label=<text>] (a column in the CSV, to tell runs apart)
-##   [--dial=eased|neutral|pushed] the push dial's setting (PushDial: hike_share 0.8 / 1.0 / 1.6 and
-##      the rig's lean 25 / 25 / 35), applied before the case's own --pilot. and --sailor. settings,
-##      which then override it field by field
+##   [--push=<level>] the push slider's level (0 to 1, a percentage, or eased / neutral / pushed:
+##      PushDial.level_of), set on the controller as the game does; the sweep group push.level
+##      (--sweep=push.level=0,0.25,0.5,0.75,0.85,0.95,1) sweeps it. The case's own --pilot.
+##      settings override the slider's field by field
+##   [--legs=<share>] the legs in the beginner's turn loop (PlayerController.legs_share)
+##   [--wave_scale=<f>] every wave's height (and steepness) times f: the sea at twice its height
 ##   [--hold_sheet=1] the player holds W (sheet in) all the time, over the auto-sheet
 ##   [--reaction_s=<s>] the sailor feels the apparent wind's strength this late: the controller
 ##      is handed the apparent wind speed of that long ago (only the controller; the physics sails
 ##      in the real wind). The autopilot otherwise answers a gust in the same tick
-## The groups are pilot (the auto-sheet's Autopilot), sailor (SailorConfig), sail (SailConfig) and timing
-## (timing.lead_s, timing.threshold: to sweep the timing itself).
+## The groups are pilot (the auto-sheet's Autopilot), sailor (SailorConfig), sail (SailConfig), push
+## (push.level) and timing (timing.lead_s, timing.threshold: to sweep the timing itself).
 
 const DT: float = 1.0 / 60.0
 ## The wind comes from the West; the board sails on starboard tack (wind from its right side).
@@ -89,6 +92,14 @@ class PushResult:
 	var alpha_sd_deg: float = 0.0
 	var eased_share: float = 0.0
 	var nan: bool = false
+	## The push slider (NaN without one) and what the fin and the feet did: means while sailing.
+	var push_level: float = NAN
+	var fin_lift_mean_n: float = 0.0
+	var fin_up_mean_n: float = 0.0
+	var slip_mean_deg: float = 0.0
+	var rig_lean_mean_deg: float = 0.0
+	var back_foot_mean: float = 0.0
+	var trim_aim_mean_deg: float = 0.0
 
 
 func _initialize() -> void:
@@ -102,7 +113,7 @@ func _initialize() -> void:
 	print("GP0 push check: %d cases (this slice %d/%d), %s s per case, means over t >= %s s; waves %s, gusts %s (%.2f, %.0f s), gradient %s" % [
 		cases.size(), slice_index, slice_count, _options.get("seconds", "150"), _options.get("from", "40"),
 		_options.get("waves", "1"), _options.get("gusts", "1"), _gust_intensity(), _gust_period_s(), _options.get("gradient", "1")])
-	print("wind TWA  sweep                         made  vmg   sail%  falls  speed  heelMax finMax finP95 stall%  slipMax slipP95  pitchSD trim  heel  alpha lean  plan% front eased%")
+	print("wind TWA  sweep                         made  vmg   sail%  falls  speed  heelMax finMax finP95 stall%  slipMax slipP95  pitchSD trim  heel  alpha lean  plan% front eased%  push  finN  finUp slip  back  sheet")
 	for i: int in cases.size():
 		if i % slice_count != slice_index:
 			continue
@@ -122,7 +133,7 @@ func _initialize() -> void:
 func _build_cases() -> Array[PushCase]:
 	var fixed: Dictionary[String, float] = {}
 	for key: String in _options:
-		if key.begins_with("pilot.") or key.begins_with("sailor.") or key.begins_with("sail.") or key.begins_with("board."):
+		if key.begins_with("pilot.") or key.begins_with("sailor.") or key.begins_with("sail.") or key.begins_with("board.") or key.begins_with("push."):
 			fixed[key] = _options[key].to_float()
 	var sweeps: Array[Array] = [_parse_sweep(_options.get("sweep", "")), _parse_sweep(_options.get("sweep2", ""))]
 	var cases: Array[PushCase] = []
@@ -167,8 +178,6 @@ func _parse_sweep(text: String) -> Array[Dictionary]:
 ## One case, sailed from rest on starboard tack.
 func _run_case(case: PushCase, falls: Array[String]) -> PushResult:
 	var sim: WindsurferSim = _make_sim(case.wind_kt)
-	if _options.has("dial"):
-		PushDial.apply(PushDial.level_of(_options["dial"]), null, sim.sailor_config)
 	_apply_settings(case.settings, "sailor.", sim.sailor_config)
 	_apply_settings(case.settings, "sail.", sim.sail_config)
 	# The board's numbers the sim copies every tick (the footstraps), on a copy of the shared
@@ -179,6 +188,14 @@ func _run_case(case: PushCase, falls: Array[String]) -> PushResult:
 	var hands: AiHands = AiHands.new()
 	controller.hands = hands
 	controller.set_sail(sim.sail, sim.sailor_config, sim.air_density_kg_m3)
+	# The push slider, as the game sets it on the controller (it applies it every tick itself and
+	# keeps it through waterstarts); the case's sweep value first, else --push / --dial.
+	var push_text: String = _options.get("push", _options.get("dial", ""))
+	if case.settings.has("push.level"):
+		controller.push_level = case.settings["push.level"]
+	elif push_text != "":
+		controller.push_level = PushDial.level_of(push_text)
+	controller.legs_share = _options.get("legs", "0").to_float()
 	var controls: SimControls = SimControls.new()
 	controller.reset_controls(controls)
 	sim.reset(Vector3.ZERO, deg_to_rad(_heading_for_twa(clampf(case.twa_deg, START_TWA_DEG, START_TWA_MAX_DEG))))
@@ -219,10 +236,8 @@ func _run_case(case: PushCase, falls: Array[String]) -> PushResult:
 			var ahead: float = probe.current_speed_ms / maxf(sim.wind_config.speed_ms(), 0.01)
 			var now: float = sim.wind.current_speed_ms / maxf(sim.wind_config.speed_ms(), 0.01)
 			easing = maxf(ahead, now) > gust_line
-		# The dial: the margin set every tick, as GP1 will (the pilot is a new one after a
-		# waterstart, PlayerController.reset_controls).
-		if _options.has("dial"):
-			PushDial.apply(PushDial.level_of(_options["dial"]), controller.auto_sheet_pilot, null)
+		# The case's own pilot numbers, every tick (the pilot is a new one after a waterstart,
+		# PlayerController.reset_controls); the controller applies the slider before these.
 		_apply_settings(case.settings, "pilot.", controller.auto_sheet_pilot)
 		if easing:
 			_apply_settings(ease_settings, "pilot.", controller.auto_sheet_pilot)
@@ -290,6 +305,12 @@ func _run_case(case: PushCase, falls: Array[String]) -> PushResult:
 		var sheet_rate: float = (controls.sheet - sheet_before) / DT
 		sheet_rate_square_sum += sheet_rate * sheet_rate
 		alpha_square_sum += t.alpha_deg * t.alpha_deg
+		result.fin_lift_mean_n += t.fin_lift_n
+		result.fin_up_mean_n += t.fin_up_n
+		result.slip_mean_deg += absf(t.fin_slip_deg)
+		result.rig_lean_mean_deg += absf(t.rig_lean_deg)
+		result.back_foot_mean += t.back_foot_push
+		result.trim_aim_mean_deg += t.trim_aim_deg
 	var elapsed_s: float = maxf(result.samples * DT, DT)
 	var moved: Vector3 = sim.telemetry.position - start_position
 	result.made_good_ms = moved.dot(course) / elapsed_s
@@ -299,6 +320,13 @@ func _run_case(case: PushCase, falls: Array[String]) -> PushResult:
 	result.sheet_mean /= n
 	result.sheet_rate_rms = sqrt(sheet_rate_square_sum / n)
 	result.alpha_sd_deg = sqrt(maxf(alpha_square_sum / n - result.alpha_mean_deg * result.alpha_mean_deg, 0.0))
+	result.push_level = controller.push_level
+	result.fin_lift_mean_n /= n
+	result.fin_up_mean_n /= n
+	result.slip_mean_deg /= n
+	result.rig_lean_mean_deg /= n
+	result.back_foot_mean /= n
+	result.trim_aim_mean_deg /= n
 	return result
 
 
@@ -316,6 +344,14 @@ func _make_sim(wind_kt: float) -> WindsurferSim:
 	wind.gust_period_s = _gust_period_s()
 	wind.shifts_enabled = false
 	sim.wind = WindField.new(wind)
+	# The sea at another height (--wave_scale): every wave's amplitude and steepness scaled on the
+	# sim's own copy of the wave set, then the water built again (as the settings menu does).
+	var wave_scale: float = _options.get("wave_scale", "1").to_float()
+	if waves and wave_scale != 1.0 and sim.wave_set_config != null:
+		for wave: GerstnerWaveConfig in sim.wave_set_config.waves:
+			wave.amplitude_m *= wave_scale
+			wave.steepness = minf(wave.steepness * wave_scale, 1.0)
+		sim.set_waves(true)
 	return sim
 
 
@@ -424,15 +460,17 @@ func _kinds_text(r: PushResult) -> String:
 
 
 func _format(c: PushCase, r: PushResult) -> String:
-	return "%3.0f  %3.0f  %-28s  %5.2f %5.2f  %4.0f   %3d   %5.2f   %5.1f   %4.2f   %4.2f   %4.1f    %5.1f   %5.1f     %4.2f   %4.2f %5.1f %5.1f %4.2f  %4.0f  %4.2f  %4.0f  %s%s" % [
+	return "%3.0f  %3.0f  %-28s  %5.2f %5.2f  %4.0f   %3d   %5.2f   %5.1f   %4.2f   %4.2f   %4.1f    %5.1f   %5.1f     %4.2f   %4.2f %5.1f %5.1f %4.2f  %4.0f  %4.2f  %4.0f  %5s %5.0f %5.0f %4.1f %5.2f  %4.2f %s%s" % [
 		c.wind_kt, c.twa_deg, c.sweep_text, r.made_good_ms, r.vmg_ms, r.sailing_share * 100.0, r.falls,
 		r.speed_sailing_ms, r.heel_leeward_max_deg, r.fin_share_max, r.fin_share_p95, r.fin_stalled_share * 100.0,
 		r.slip_max_deg, r.slip_p95_deg, r.pitch_sd_deg, r.trim_mean_deg, r.heel_mean_deg, r.alpha_mean_deg,
-		r.lean_mean, r.planing_share * 100.0, r.wet_front_m, r.eased_share * 100.0, _kinds_text(r), " NaN" if r.nan else ""]
+		r.lean_mean, r.planing_share * 100.0, r.wet_front_m, r.eased_share * 100.0,
+		("%.2f" % r.push_level) if not is_nan(r.push_level) else "-", r.fin_lift_mean_n, r.fin_up_mean_n, r.slip_mean_deg, r.back_foot_mean, r.sheet_mean,
+		_kinds_text(r), " NaN" if r.nan else ""]
 
 
 func _csv_header() -> String:
-	return "label,wind_kt,twa_deg,sweep,made_good_ms,vmg_ms,sailing_share,falls,fall_kinds,speed_sailing_ms,heel_leeward_max_deg,fin_share_max,fin_share_p95,fin_stalled_share,slip_max_deg,slip_p95_deg,pitch_sd_deg,trim_mean_deg,heel_mean_deg,alpha_mean_deg,lean_mean,planing_share,wet_front_m,eased_share,nan,sheet_mean,sheet_rate_rms,alpha_sd_deg"
+	return "label,wind_kt,twa_deg,sweep,made_good_ms,vmg_ms,sailing_share,falls,fall_kinds,speed_sailing_ms,heel_leeward_max_deg,fin_share_max,fin_share_p95,fin_stalled_share,slip_max_deg,slip_p95_deg,pitch_sd_deg,trim_mean_deg,heel_mean_deg,alpha_mean_deg,lean_mean,planing_share,wet_front_m,eased_share,nan,sheet_mean,sheet_rate_rms,alpha_sd_deg,push_level,fin_lift_mean_n,fin_up_mean_n,slip_mean_deg,rig_lean_mean_deg,back_foot_mean,trim_aim_mean_deg,wave_scale,legs"
 
 
 func _csv_row(c: PushCase, r: PushResult) -> String:
@@ -441,7 +479,9 @@ func _csv_row(c: PushCase, r: PushResult) -> String:
 		"%.3f" % r.speed_sailing_ms, "%.2f" % r.heel_leeward_max_deg, "%.3f" % r.fin_share_max, "%.3f" % r.fin_share_p95,
 		"%.3f" % r.fin_stalled_share, "%.2f" % r.slip_max_deg, "%.2f" % r.slip_p95_deg, "%.3f" % r.pitch_sd_deg,
 		"%.2f" % r.trim_mean_deg, "%.2f" % r.heel_mean_deg, "%.2f" % r.alpha_mean_deg, "%.3f" % r.lean_mean,
-		"%.3f" % r.planing_share, "%.3f" % r.wet_front_m, "%.3f" % r.eased_share, "1" if r.nan else "0", "%.3f" % r.sheet_mean, "%.3f" % r.sheet_rate_rms, "%.2f" % r.alpha_sd_deg]))
+		"%.3f" % r.planing_share, "%.3f" % r.wet_front_m, "%.3f" % r.eased_share, "1" if r.nan else "0", "%.3f" % r.sheet_mean, "%.3f" % r.sheet_rate_rms, "%.2f" % r.alpha_sd_deg,
+		("%.3f" % r.push_level) if not is_nan(r.push_level) else "-1", "%.1f" % r.fin_lift_mean_n, "%.1f" % r.fin_up_mean_n, "%.2f" % r.slip_mean_deg, "%.2f" % r.rig_lean_mean_deg,
+		"%.3f" % r.back_foot_mean, "%.2f" % r.trim_aim_mean_deg, _options.get("wave_scale", "1"), _options.get("legs", "0")]))
 
 
 ## Appends a line, writing the header first when the file is new (several processes may share

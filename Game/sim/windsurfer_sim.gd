@@ -280,6 +280,7 @@ var _back_strap_z_m: float = INF
 ## without straps.
 var _strap_spread_m: float = 0.0
 var _front_foot_pull_held_n: float = 0.0
+var _back_foot_push_n: float = 0.0
 var _front_foot_pull_brief_n: float = 0.0
 var _front_strap_z_m: float = -INF
 var _trim_press_rate_ms: float = 0.0
@@ -565,6 +566,7 @@ func _copy_configs() -> void:
 	_step_rate_per_s = sailor_config.step_rate_per_s
 	_tip_time_s = sailor_config.tip_time_s
 	_front_foot_pull_held_n = sailor_config.front_foot_pull_held_n
+	_back_foot_push_n = sailor_config.back_foot_push_n
 	_front_foot_pull_brief_n = sailor_config.front_foot_pull_brief_n
 	_trim_press_band_deg = sailor_config.trim_press_band_deg
 	_trim_press_max_m = sailor_config.trim_press_max_m
@@ -1543,30 +1545,33 @@ func _apply_leg_forces(dt: float) -> void:
 
 
 ## The back foot against the fin (PH35, the push slider; sailor_controls_plan.md P1.2 and P4.1).
-## The sailor's sideways hold against the sail's pull goes into the hull through the feet, at
-## the feet's pressure point between the straps (feet_body). A rider in the straps chooses which
-## foot carries it: pushing the back foot to leeward against its strap while the front foot
-## pulls to windward moves the sideways force's entry aft, to the back strap; the other way
-## round, forward to the front strap. The force is the same, so the body's balance and the
-## board's heel and trim are untouched; what changes is the yaw couple on the hull: the tail is
-## pushed to leeward and the bow to windward (with the back foot), and the fin, under the back
-## foot, carries more of the side force and the rails less, so its angle of attack rises and
-## with it its lift and the upward part of its lift. Too far and the fin stalls (the soft
-## spin-out of today; PH6 is the sudden one). The bound is the straps: the whole sideways hold on
-## one foot and no more (SimControls.back_foot_push, -1 the front foot to +1 the back foot), and
-## only as far as the feet are in the straps (the stance). The moment about body y of the hull's
-## share of the hold (-hold, the pull passed on) moved from the feet's point to the strap: the
-## entry's distance aft times the force to starboard. Positive turns the bow to port. 0 = as
-## before, bit for bit.
+## The sailor's sideways hold against the sail's pull goes into the hull through the feet at the
+## feet's pressure point, which the trim press puts at the back strap once the board planes: all
+## of it is on the back foot there already. What a rider in the straps can add is the two feet
+## pushing against each other sideways: the back foot pressing to leeward against its strap
+## harder than the hold asks and the front foot pulling to windward in its strap by the same
+## amount (or the reverse). That is a pure yaw couple on the hull and nothing else: the force
+## balance, the body's posture, the heel and the trim are untouched. With the back foot the tail
+## goes to leeward and the bow to windward, and to keep the course the rig goes forward, so the
+## sail's side force acts further ahead, the rails carry less of it and the fin, under the back
+## foot, carries more: its angle of attack rises and with it its lift and the upward part of its
+## lift (the bend, the heel). Too far and the fin stalls (the soft spin-out of today; PH6 is the
+## sudden one). The bound is what a strap holds a foot pulling sideways: back_foot_push_n
+## (SailorConfig, 150 N held, the same estimate as the front foot's upward pull), times the
+## straps' spread: 88.5 N m on Max's board at a full push (SimControls.back_foot_push, -1 the
+## front foot to +1 the back foot), and only as far as the feet are in the straps (the stance).
+## The couple's sense follows the pull: the back foot pushes the way the sail pulls, to
+## leeward, so on either tack a positive push turns the bow to windward. Positive turns the bow
+## to port. With nothing to push against (no pull) or the control at 0: nothing, bit for bit.
 func _back_foot_yaw_nm(hold_world: Vector3) -> float:
 	var push: float = clampf(_controls_back_foot_push, -1.0, 1.0)
 	if push == 0.0 or _strap_spread_m <= 0.0:
 		return 0.0
+	var pull_x: float = -body.to_body(hold_world).x  # the hull's share of the hold, to leeward
+	if absf(pull_x) < 1.0:
+		return 0.0
 	var in_the_straps: float = clampf(stance, 0.0, 1.0)
-	var entry_z: float = _back_strap_z_m if push > 0.0 else _front_strap_z_m
-	var shift_m: float = (entry_z - feet_body.z) * absf(push) * in_the_straps
-	var side_n: float = -body.to_body(hold_world).x
-	return shift_m * side_n
+	return signf(pull_x) * push * _back_foot_push_n * _strap_spread_m * in_the_straps
 
 
 ## The harness line as a rope between the hips and the boom. Its length is what the

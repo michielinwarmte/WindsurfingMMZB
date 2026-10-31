@@ -1,28 +1,24 @@
 #!/usr/bin/env bash
-# The push dial's playtest: sail with the dial pushed and feel where it pays and where it
-# catapults (Documentation/reports/autopilot/autopilot_rework.md, section 3 and 7; the dial's
-# numbers are Game/sim/push_dial.gd). Until GP1 puts the dial on a key, this is how to sail it.
+# The push slider's playtest: sail with the slider high and feel where it pays and where it
+# catapults (Documentation/reports/push_slider/PLAN.md; the ladder's numbers are in
+# Game/config/push_curve_default.tres). Up and Down move the slider while sailing.
 #
 # The open water, 24 kt from the West with gusts (0.2 every 8 s) and the waves, beginner mode with
-# the auto-sheet, starting on starboard tack heading 150 (a 120 degree reach). The dial:
-#   pushed   the sailor holds 1.6 of the hike's pull and leans the rig 35 degrees to windward:
-#            faster across the wind, a catapult waiting on the broad reach (heading 210 to 225);
-#   neutral  1.0 and 25 degrees, the autopilot's own numbers (the comparison);
-#   eased    0.8 and 25 degrees.
-# Keep the reach with A/D and wait for the gusts. The detail panel (F1) shows live:
-#   - its second line: which dial setting is sailed;
+# the auto-sheet, starting on starboard tack heading 150 (a 120 degree reach), the slider at
+# --push (100 % here: the most speed, a crash likely; 75 % is the game's start, planing with
+# little risk; 0 % stands still with the sail let fly). Keep the reach with A/D and wait for the
+# gusts. The strip shows the slider's level; the detail panel (F1) shows live:
+#   - a line with what the slider asks of the sailor (the drive, the pull held, the rig's lean,
+#     the back foot against the fin, the rail and the trim);
 #   - "feet overload ... toward the sail": the pull the feet cannot hold, which tips you over;
 #   - "fin ... load .. % of stall": the fin's load;
 #   - "yaw rate", "pitch" and "heel" (the bow turning, the nose, the rail);
 # and after a fall, at its bottom, the table "LAST FALL": the same numbers 1 s and 0.5 s before it
 # and just before it, frozen until the next fall. Esc pauses, R waterstarts at once.
 #
-#   tools/play_push.sh                         24 kt, gusts 0.2, the dial pushed
-#   tools/play_push.sh --dial=neutral          the same wind at the dial's middle (compare)
+#   tools/play_push.sh                         24 kt, gusts 0.2, the slider at 100 %
+#   tools/play_push.sh --push=75               the same wind at 75 % (the game's start; compare)
 #   tools/play_push.sh --wind=18 --gusts=0.3   another wind; --heading=<deg> another course
-#   tools/play_push.sh --push=1                GP0's older "pushed" margin instead of the dial: the
-#                                              same pull plus the late ease, which the suite found
-#                                              catapults the close reach (gp0_measure.md)
 #
 # The settings are written to .sim_output/playtest/push.cfg each time (the game also saves to it
 # if you change a setting in the menu); your own settings file is not touched.
@@ -31,15 +27,14 @@ source "$(dirname "$0")/common.sh"
 
 wind=24
 gusts=0.2
-dial=pushed
-push=0
+push=100
 heading=150
 for arg in "$@"; do
 	case "$arg" in
 		--wind=*) wind="${arg#--wind=}" ;;
 		--gusts=*) gusts="${arg#--gusts=}" ;;
-		--dial=*) dial="${arg#--dial=}" ;;
-		--push=*) push="${arg#--push=}"; dial="" ;;
+		--push=*) push="${arg#--push=}" ;;
+		--dial=*) push="${arg#--dial=}" ;;
 		--heading=*) heading="${arg#--heading=}" ;;
 		*) echo "Unknown option $arg (see the header of $0)" >&2; exit 1 ;;
 	esac
@@ -69,7 +64,4 @@ CFG
 if command -v cygpath >/dev/null 2>&1; then
 	cfg="$(cygpath -m "$cfg")"
 fi
-options=("--settings=$cfg")
-if [[ -n "$dial" ]]; then options+=("--dial=$dial"); fi
-if [[ "$push" == "1" ]]; then options+=("--push=1"); fi
-exec "$REPO_ROOT/tools/play.sh" res://main.tscn "${options[@]}"
+exec "$REPO_ROOT/tools/play.sh" res://main.tscn "--settings=$cfg" "--push=$push"

@@ -22,6 +22,9 @@ var tack: bool = false
 ## at the same time: it owns the heading). 0 lets the auto-sheet trim for the most drive again,
 ## which is how the board accelerates for the gun.
 var hold_speed_ms: float = 0.0
+## The push slider (PlayerController.push_level, 0 to 1): NaN leaves the controller's level alone,
+## so a skipper that says nothing sails the pilot's own margin, as before the slider.
+var push: float = NAN
 
 
 ## What the controller reads for a key pair: the stick value for the pairs a skipper has, 0

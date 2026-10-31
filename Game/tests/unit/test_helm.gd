@@ -37,3 +37,19 @@ func test_the_rail_steers_only_toward_and_across_the_wind() -> void:
 	for twa_deg: float in shares:
 		telemetry.twa_deg = twa_deg
 		assert_almost_eq(pilot._rail_share_by_point_of_sail(telemetry), shares[twa_deg], 1e-6, "the rail's share of the helm at a true wind angle of %.1f deg" % twa_deg)
+
+
+func test_the_legs_head_up_on_both_tacks_and_the_bias_loads_the_fin() -> void:
+	# The back foot against the fin (PH35): the sideways hold moved to the back strap pushes
+	# the tail to leeward and the bow to windward on either tack.
+	var controls: SimControls = SimControls.new()
+	Helm.steer(controls, 0.5, 1.0, 0.0, 1.0, 100.0, 1.0, 0.6)
+	assert_almost_eq(controls.back_foot_push, 0.3, 1e-6, "a right turn on starboard tack heads up: the back foot, legs_share 0.6 of a half helm")
+	Helm.steer(controls, 0.5, -1.0, 0.0, 1.0, 100.0, 1.0, 0.6)
+	assert_almost_eq(controls.back_foot_push, -0.3, 1e-6, "on port tack a right turn bears away: the front foot")
+	Helm.steer(controls, 0.5, 1.0, 0.0, 1.0, 100.0, 1.0, 0.6, 0.9)
+	assert_almost_eq(controls.back_foot_push, 1.0, 1e-6, "with the slider's push on top, clamped to the straps' bound")
+	Helm.hold_rake_first(controls, 0.5, 0.0, -1.0, 0.0, 1.0, 100.0, 0.4)
+	assert_almost_eq(controls.back_foot_push, 0.2, 1e-6, "the course hold's legs head up on either tack: no tack sign")
+	Helm.hold_rake_first(controls, 0.5, 0.0, 1.0, 0.0, 1.0, 100.0)
+	assert_almost_eq(controls.back_foot_push, 0.0, 1e-6, "nothing asked: nothing, as before")

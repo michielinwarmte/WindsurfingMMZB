@@ -1,33 +1,56 @@
 extends GutTest
-## The push dial onto the sailor's technique (PushDial; the autopilot suite, round 4): the three
-## settings' numbers, straight between them, applied to a pilot and a sailor config.
+## The push slider's ladder (PushDial, PushCurveConfig; Documentation/reports/push_slider/PLAN.md):
+## the points of the default curve, straight between them, applied to a pilot and a board's
+## controls, never to a shared config.
 
 
-func test_the_three_settings_are_the_measured_numbers() -> void:
-	assert_almost_eq(PushDial.at_level(PushDial.HIKE_SHARE, PushDial.EASED), 0.8, 1e-9, "eased holds 0.8 of the hike")
-	assert_almost_eq(PushDial.at_level(PushDial.HIKE_SHARE, PushDial.NEUTRAL), 1.0, 1e-9, "neutral 1.0")
-	assert_almost_eq(PushDial.at_level(PushDial.HIKE_SHARE, PushDial.PUSHED), 1.6, 1e-9, "pushed 1.6")
-	assert_almost_eq(PushDial.at_level(PushDial.RIG_LEAN_DEG, PushDial.EASED), 25.0, 1e-9, "the rig's lean 25 eased")
-	assert_almost_eq(PushDial.at_level(PushDial.RIG_LEAN_DEG, PushDial.PUSHED), 35.0, 1e-9, "and 35 pushed")
+func _curve() -> PushCurveConfig:
+	return PushDial.default_curve()
 
 
-func test_between_the_settings_the_dial_is_straight_and_clamped() -> void:
-	assert_almost_eq(PushDial.at_level(PushDial.HIKE_SHARE, 0.5), 1.3, 1e-9, "half pushed")
-	assert_almost_eq(PushDial.at_level(PushDial.HIKE_SHARE, -0.5), 0.9, 1e-9, "half eased")
-	assert_almost_eq(PushDial.at_level(PushDial.HIKE_SHARE, 3.0), 1.6, 1e-9, "no further than pushed")
-	assert_almost_eq(PushDial.at_level(PushDial.RIG_LEAN_DEG, -2.0), 25.0, 1e-9, "no further than eased")
+func test_the_ladders_ends_and_the_old_dials_three_settings() -> void:
+	var c: PushCurveConfig = _curve()
+	assert_almost_eq(c.at(c.drive_share, 0.0), 0.0, 1e-9, "0 %: the sail let fly")
+	assert_almost_eq(c.at(c.drive_share, 0.5), 1.0, 1e-9, "50 %: the full drive")
+	assert_almost_eq(c.at(c.hike_share, PushDial.EASED), 0.8, 1e-9, "eased holds 0.8 of the hike")
+	assert_almost_eq(c.at(c.hike_share, PushDial.NEUTRAL), 1.0, 1e-9, "neutral 1.0")
+	assert_almost_eq(c.at(c.hike_share, PushDial.PUSHED), 1.6, 1e-9, "pushed 1.6")
+	assert_almost_eq(c.at(c.rig_lean_extra_deg, PushDial.NEUTRAL), 0.0, 1e-9, "the rig's lean is the sailor's at neutral")
+	assert_almost_eq(c.at(c.rig_lean_extra_deg, PushDial.PUSHED), 10.0, 1e-9, "and 10 degrees more pushed (35)")
+	assert_almost_eq(c.at(c.back_foot_push, PushDial.NEUTRAL), 0.0, 1e-9, "no fin push at neutral")
+	assert_almost_eq(c.at(c.back_foot_push, PushDial.PUSHED), 1.0, 1e-9, "all of it pushed")
 
 
-func test_apply_sets_the_pilot_and_the_sailors_own_copy() -> void:
+func test_between_the_points_the_ladder_is_straight_and_held_at_the_ends() -> void:
+	var c: PushCurveConfig = _curve()
+	assert_almost_eq(c.at(c.drive_share, 0.125), 0.25, 1e-9, "halfway from 0 to 25 %")
+	assert_almost_eq(c.at(c.hike_share, 0.8), 1.1, 1e-9, "halfway from 75 to 85 %: 1.0 to 1.2")
+	assert_almost_eq(c.at(c.hike_share, 1.5), 1.6, 1e-9, "no further than the top")
+	assert_almost_eq(c.at(c.hike_share, -1.0), 0.8, 1e-9, "no further than the bottom")
+
+
+func test_apply_level_sets_the_pilot_and_the_controls_only() -> void:
 	var pilot: Autopilot = Autopilot.new()
-	var sailor: SailorConfig = (load("res://config/sailor_default.tres") as SailorConfig).duplicate()
-	PushDial.apply(PushDial.PUSHED, pilot, sailor)
+	var controls: SimControls = SimControls.new()
+	PushDial.apply_level(PushDial.PUSHED, _curve(), pilot, controls)
 	assert_almost_eq(pilot.hike_share, 1.6, 1e-9)
-	assert_almost_eq(sailor.max_rig_lean_deg, 35.0, 1e-9)
-	PushDial.apply(PushDial.level_of("eased"), pilot, sailor)
+	assert_almost_eq(pilot.drive_share, 1.0, 1e-9)
+	assert_almost_eq(pilot.back_foot_bias, 1.0, 1e-9)
+	assert_almost_eq(controls.rig_lean_extra_deg, 10.0, 1e-9)
+	assert_almost_eq(controls.rail_bank_extra_deg, 3.0, 1e-9)
+	assert_almost_eq(controls.trim_aim_extra_deg, 1.0, 1e-9)
+	PushDial.apply_level(0.0, _curve(), pilot, controls)
+	assert_almost_eq(pilot.drive_share, 0.0, 1e-9, "0 %: the sail let fly")
 	assert_almost_eq(pilot.hike_share, 0.8, 1e-9)
-	assert_almost_eq(sailor.max_rig_lean_deg, 25.0, 1e-9)
-	assert_almost_eq(PushDial.level_of("neutral"), 0.0, 1e-9)
-	assert_almost_eq(PushDial.level_of("anything else"), 0.0, 1e-9)
-	# The shared resource is untouched: the dial works on a copy.
+	assert_almost_eq(controls.rig_lean_extra_deg, 0.0, 1e-9)
+	# The shared sailor config is never written: the slider works through the controls.
 	assert_almost_eq((load("res://config/sailor_default.tres") as SailorConfig).max_rig_lean_deg, 25.0, 1e-9, "the .tres keeps its number")
+
+
+func test_level_of_names_and_numbers() -> void:
+	assert_almost_eq(PushDial.level_of("eased"), 0.5, 1e-9)
+	assert_almost_eq(PushDial.level_of("neutral"), 0.75, 1e-9)
+	assert_almost_eq(PushDial.level_of("Pushed"), 1.0, 1e-9)
+	assert_almost_eq(PushDial.level_of("0.85"), 0.85, 1e-9, "a share")
+	assert_almost_eq(PushDial.level_of("85"), 0.85, 1e-9, "a percentage")
+	assert_almost_eq(PushDial.level_of("anything else"), 0.75, 1e-9, "neutral")

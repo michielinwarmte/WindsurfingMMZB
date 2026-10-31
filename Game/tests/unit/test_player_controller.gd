@@ -6,7 +6,7 @@ const DT: float = 1.0 / 60.0
 
 
 func after_each() -> void:
-	for action: String in ["sheet_in", "sheet_out", "steer_left", "steer_right", "tilt_left", "tilt_right", "rake_back", "rake_forward", "tack", "toggle_mode"]:
+	for action: String in ["sheet_in", "sheet_out", "steer_left", "steer_right", "tilt_left", "tilt_right", "rake_back", "rake_forward", "tack", "toggle_mode", "push_more", "push_less"]:
 		Input.action_release(action)
 
 
@@ -231,3 +231,66 @@ func test_ai_hands_drive_the_beginner_controller_like_the_keys() -> void:
 	var gentle_controls: SimControls = SimControls.new()
 	_run(gentle, _telemetry(90.0), gentle_controls, 0.5)
 	assert_almost_eq(gentle.wanted_rate_dps, 0.5 * gentle.turn_rate_dps, 1.0, "half the stick, half the rate")
+
+
+func test_the_push_keys_move_the_slider_at_a_human_pace_and_set_the_pilot() -> void:
+	var controller: PlayerController = PlayerController.new()
+	var controls: SimControls = SimControls.new()
+	controller.push_level = 0.75
+	Input.action_press("push_more")
+	_run(controller, _telemetry(90.0), controls, 0.5)
+	Input.action_release("push_more")
+	assert_almost_eq(controller.push_level, 0.95, 0.02, "0.4 per second: a full range in 2.5 s")
+	var curve: PushCurveConfig = PushDial.default_curve()
+	assert_almost_eq(controller.auto_sheet_pilot.hike_share, curve.at(curve.hike_share, controller.push_level), 1e-6, "the pilot holds the ladder's pull")
+	assert_almost_eq(controller.auto_sheet_pilot.back_foot_bias, curve.at(curve.back_foot_push, controller.push_level), 1e-6, "and the fin's push")
+	assert_gt(controls.rig_lean_extra_deg, 0.0, "the controls carry the rig's extra lean")
+	Input.action_press("push_less")
+	_run(controller, _telemetry(90.0), controls, 5.0)
+	Input.action_release("push_less")
+	assert_eq(controller.push_level, 0.0, "never below 0")
+	assert_almost_eq(controller.auto_sheet_pilot.drive_share, 0.0, 1e-9, "at 0 % the sail is let fly")
+	assert_eq(controls.rig_lean_extra_deg, 0.0, "and the technique is its own again")
+
+
+func test_without_a_slider_the_pilot_keeps_its_own_numbers() -> void:
+	var controller: PlayerController = PlayerController.new()
+	var controls: SimControls = SimControls.new()
+	var hike_before: float = controller.auto_sheet_pilot.hike_share
+	Input.action_press("push_more")
+	_run(controller, _telemetry(90.0), controls, 0.5)
+	Input.action_release("push_more")
+	assert_true(is_nan(controller.push_level), "NaN: no slider, the keys do nothing")
+	assert_eq(controller.auto_sheet_pilot.hike_share, hike_before, "the pilot's own margin")
+	assert_eq(controls.rig_lean_extra_deg, 0.0)
+	assert_eq(controls.back_foot_push, 0.0)
+
+
+func test_ai_hands_set_the_slider_or_leave_it_alone() -> void:
+	var controller: PlayerController = PlayerController.new()
+	var hands: AiHands = AiHands.new()
+	controller.hands = hands
+	var controls: SimControls = SimControls.new()
+	_run(controller, _telemetry(90.0), controls, 0.1)
+	assert_true(is_nan(controller.push_level), "hands that say nothing leave the controller as before")
+	hands.push = 0.85
+	_run(controller, _telemetry(90.0), controls, 0.1)
+	assert_almost_eq(controller.push_level, 0.85, 1e-9)
+	assert_almost_eq(controller.auto_sheet_pilot.hike_share, 1.2, 1e-6, "85 %: the pull held 1.2")
+	assert_almost_eq(controls.rail_bank_extra_deg, 1.0, 1e-6, "and a degree more rail")
+
+
+func test_the_slider_survives_a_waterstart_and_the_legs_follow_the_helm() -> void:
+	var controller: PlayerController = PlayerController.new()
+	var controls: SimControls = SimControls.new()
+	controller.push_level = 0.85
+	controller.legs_share = 0.5
+	var t: Telemetry = _telemetry(90.0)
+	t.stance = 1.0
+	Input.action_press("steer_right")  # heading up on starboard tack
+	_run(controller, t, controls, 1.0)
+	Input.action_release("steer_right")
+	assert_gt(controls.back_foot_push, 0.3, "the back foot pushes the tail to leeward to head up, with the slider's push on top")
+	controller.reset_controls(controls)
+	assert_almost_eq(controller.push_level, 0.85, 1e-9, "the level is kept through a waterstart")
+	assert_eq(controls.back_foot_push, 0.0, "the controls start clean")

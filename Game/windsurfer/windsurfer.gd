@@ -29,6 +29,11 @@ var sim: WindsurferSim
 var controls: SimControls = SimControls.new()
 var controller: PlayerController = PlayerController.new()
 var autopilot: Autopilot = Autopilot.new()
+## The push slider on this board's own autopilot (use_autopilot; main.gd's --push with
+## --autopilot=1): NaN = the autopilot's own numbers. The player's controller keeps its own level
+## (controller.push_level).
+var autopilot_push_level: float = NAN
+var _push_curve: PushCurveConfig = null
 ## An AI skipper on this board (RACING_PLAN.md, 9B): every tick it sets `hands`, which the
 ## controller then reads in place of the keyboard. Null on the player's board.
 var skipper: RaceSkipper = null
@@ -133,6 +138,10 @@ func sail(delta: float) -> void:
 		skipper.update(sim.telemetry, delta)
 	if sim.sailor_state == WindsurferSim.SailorState.SAILING:
 		if use_autopilot:
+			if not is_nan(autopilot_push_level):
+				if _push_curve == null:
+					_push_curve = PushDial.default_curve()
+				PushDial.apply_level(autopilot_push_level, _push_curve, autopilot, controls)
 			autopilot.update(sim.telemetry, controls, delta)
 		else:
 			controller.update(sim.telemetry, controls, delta)

@@ -45,7 +45,7 @@ func _ready() -> void:
 	# The key help sits at the bottom and the wind rose at the top right of any window size
 	# (anchored to those corners), not only at the default 1280 x 720.
 	_help = _label(font, 12, Vector2.ZERO)
-	_help.text = "W/S sheet  A/D turn (beginner) / weight (advanced)  Q/E rake  Left/Right rig tilt (adv.)  Space tack/gybe  T auto-sheet  Tab mode  1-4 camera  R reset  Esc menu  F1 panel"
+	_help.text = "Up/Down push  W/S sheet  A/D turn (beginner) / weight (advanced)  Q/E rake  Left/Right rig tilt (adv.)  Space tack/gybe  T auto-sheet  Tab mode  1-4 camera  R reset  Esc menu  F1 panel"
 	add_child(_help)
 	_help.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 12)
 	_help.offset_left = 16.0
@@ -155,8 +155,10 @@ func update_from(t: Telemetry, controller: PlayerController, camera_name: String
 		state = "%s!  waterstart in %d s (R: now)" % [t.fall_kind.to_upper(), ceili(t.waterstart_in_s)]
 	var who: String = "autopilot" if use_autopilot else controller.mode_name()
 	var manoeuvre: String = controller.manoeuvre_name()
-	_strip.text = ("%s   " % clock_text if clock_text != "" else "") + "%5.1f km/h  %4.1f kt    wind %4.1f kt at 10 m, %4.1f kt at the sail, from %03.0f    %s, %s%s    %s    camera: %s" % [
-		t.speed_kmh, t.speed_kt, t.tws_10m_kt, t.tws_at_sail_kt, t.wind_from_bearing_deg,
+	# The push slider's level (Up/Down), when the controller has one.
+	var push: String = "push %3.0f %%    " % (controller.push_level * 100.0) if not (use_autopilot or is_nan(controller.push_level)) else ""
+	_strip.text = ("%s   " % clock_text if clock_text != "" else "") + "%5.1f km/h  %4.1f kt    %swind %4.1f kt at 10 m, %4.1f kt at the sail, from %03.0f    %s, %s%s    %s    camera: %s" % [
+		t.speed_kmh, t.speed_kt, push, t.tws_10m_kt, t.tws_at_sail_kt, t.wind_from_bearing_deg,
 		tack, state, ("  " + manoeuvre) if manoeuvre != "" else "", who, camera_name]
 	_rose.heading_deg = t.heading_deg
 	_rose.wind_from_deg = t.wind_from_bearing_deg
@@ -189,7 +191,9 @@ func update_from(t: Telemetry, controller: PlayerController, camera_name: String
 		# far forward of the tail the wet part reaches.
 		+ "hull  planing %3.0f %% (%4.0f N)  buoyancy %4.0f N  submersion %3.0f %%  wetted %4.2f m2 (front %4.2f m)  resistance %4.0f N  trim %4.1f deg\n" % [t.planing_ratio * 100.0, t.planing_lift_n, t.buoyancy_n, t.submersion_ratio * 100.0, t.friction_area_m2, t.wet_front_m, t.hull_resistance_n, t.trim_deg]
 		+ "rig   harness %4.0f N   mast foot pushing down %4.0f N\n" % [t.harness_tension_n, -t.mast_foot_force_up_n]
-		+ "auto-sheet %s%s" % ["on" if controller.auto_sheet else "off", "   pilot set from the command line (--dial, --push or --pilot.)" if not controller.pilot_overrides.is_empty() else ""]
+		+ "auto-sheet %s%s" % ["on" if controller.auto_sheet else "off", "   pilot set from the command line (--pilot.)" if not controller.pilot_overrides.is_empty() else ""]
+		# The push slider and what it asks of the sailor (PushDial.describe), with the legs' push.
+		+ ("\n%s   back foot now %+.2f" % [controller.push_text(), t.back_foot_push] if controller.push_text() != "" else "")
 		+ ("\n" + _fall_watch.last_fall_text if _fall_watch.last_fall_text != "" else ""))
 
 
