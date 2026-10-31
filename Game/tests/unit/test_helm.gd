@@ -53,3 +53,73 @@ func test_the_legs_head_up_on_both_tacks_and_the_bias_loads_the_fin() -> void:
 	assert_almost_eq(controls.back_foot_push, 0.2, 1e-6, "the course hold's legs head up on either tack: no tack sign")
 	Helm.hold_rake_first(controls, 0.5, 0.0, 1.0, 0.0, 1.0, 100.0)
 	assert_almost_eq(controls.back_foot_push, 0.0, 1e-6, "nothing asked: nothing, as before")
+
+
+func test_the_pilot_does_not_let_go_for_the_push_of_a_head_up_it_was_asked_for() -> void:
+	# Carving up (steering.md): weight on the windward rail asks for a bank to windward, and until
+	# the board has it the turn's push is felt as heel to leeward. Read as being pulled over, it
+	# eased the sail nearly to luffing at every head-up at planing speed. Now the bank still to
+	# come is expected: the sailor still eases a little (the slow part), not urgently.
+	var carving: Autopilot = _sheeting_pilot()
+	var flung: Autopilot = _sheeting_pilot()
+	var t: Telemetry = _starboard_reach()
+	t.felt_heel_deg = -14.0  # 14 degrees to leeward (port) on starboard tack
+	var bank: Telemetry = _starboard_reach()
+	bank.felt_heel_deg = -14.0
+	bank.wanted_bank_deg = 16.0  # the board to be banked 16 degrees to windward (starboard)
+	bank.heel_deg = 2.0  # and banked 2 so far: 14 still to come
+	bank.yaw_rate_dps = -12.0  # heading up (a right turn) at 12 degrees per second: a push of 15.5
+	var controls: SimControls = SimControls.new()
+	for i: int in 30:
+		flung.update(t, controls, 1.0 / 60.0)
+		carving.update(bank, controls, 1.0 / 60.0)
+	# Half a second at 14 degrees of felt heel: 0.25 x 0.9 per second slowly, plus 2.0 x 0.4 urgently.
+	assert_almost_eq(flung._depower, 0.5 * (0.25 * 0.9 + 2.0 * 0.4), 0.01, "flung to leeward on a flat board: the sailor lets go")
+	assert_almost_eq(carving._depower, 0.5 * 0.25 * 0.9, 0.01, "carving up into a bank still coming: only the slow ease")
+	assert_almost_eq(Autopilot.windward_bank_to_come_deg(bank, 1.0), 14.0, 1e-6)
+	bank.wanted_bank_deg = -4.0  # a leeward bank (the fin's load) is deliberate already, not to come
+	assert_eq(Autopilot.windward_bank_to_come_deg(bank, 1.0), 0.0)
+	bank.twa_deg = -100.0  # on port tack the windward bank is negative
+	bank.wanted_bank_deg = -16.0
+	bank.heel_deg = -2.0
+	assert_almost_eq(Autopilot.windward_bank_to_come_deg(bank, -1.0), 14.0, 1e-6, "the same on port tack")
+
+
+func test_the_pilot_expects_only_the_push_of_the_turn_made_and_lets_go_near_the_catapult() -> void:
+	# The push expected from a head-up is the push of the turn the board really makes, no more than
+	# the windward bank still to come, and it fades out over the last depower_heel_span_deg (10)
+	# before the catapult (SailorConfig.catapult_heel_deg, 20): a gust's pull on a broad reach is
+	# not hidden by a small head-up asked at the same time (steering.md, the 24 kt race).
+	var pilot: Autopilot = _sheeting_pilot()
+	pilot.sailor = SailorConfig.new()
+	var t: Telemetry = _starboard_reach()
+	t.wanted_bank_deg = 16.0
+	t.heel_deg = 2.0  # 14 degrees of windward bank still to come
+	t.yaw_rate_dps = -12.0  # turning up at 12 degrees per second at 13 m/s: a push of 15.5 degrees
+	assert_almost_eq(pilot._expected_turn_heel_deg(t, 1.0, 10.0), 14.0, 1e-6, "10 degrees short of the catapult: all of it expected")
+	assert_almost_eq(pilot._expected_turn_heel_deg(t, 1.0, 15.0), 7.0, 1e-6, "halfway: half of it")
+	assert_almost_eq(pilot._expected_turn_heel_deg(t, 1.0, 20.0), 0.0, 1e-6, "at the catapult: none, the urgent ease as before")
+	pilot.sailor = null
+	assert_almost_eq(pilot._expected_turn_heel_deg(t, 1.0, 20.0), 14.0, 1e-6, "no sailor, no catapult to know: all of it")
+	t.yaw_rate_dps = -3.0  # hardly turning: a push of 4 degrees, so no more than that is expected
+	assert_almost_eq(pilot._expected_turn_heel_deg(t, 1.0, 10.0), rad_to_deg(atan2(13.0 * deg_to_rad(3.0), 9.81)), 1e-6, "only the push of the turn the board makes")
+	t.yaw_rate_dps = 12.0  # bearing away: no push to expect from a head-up
+	assert_eq(pilot._expected_turn_heel_deg(t, 1.0, 10.0), 0.0)
+
+
+## A pilot that only trims the sheet, as the player controller's auto-sheet does.
+func _sheeting_pilot() -> Autopilot:
+	var pilot: Autopilot = Autopilot.new()
+	pilot.hold_course = false
+	pilot.trim_sheet = true
+	return pilot
+
+
+func _starboard_reach() -> Telemetry:
+	var t: Telemetry = Telemetry.new()
+	t.twa_deg = 100.0
+	t.awa_deg = 35.0
+	t.aws_kt = 25.0
+	t.sail_side = -1
+	t.speed_ms = 13.0
+	return t

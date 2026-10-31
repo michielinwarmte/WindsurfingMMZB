@@ -49,7 +49,16 @@ var lean_rate_per_s: float = 2.0
 var turn_rate_dps: float = 30.0
 ## Heading up is slower at speed: the board turning toward the wind must be banked to
 ## windward against the centripetal force, with the hike that the sail already uses, so the
-## rate is held to head_up_rate_budget over the speed (at least head_up_rate_min).
+## rate is held to head_up_rate_budget over the speed (at least head_up_rate_min). At planing
+## speed the floor rules (from 8.3 m/s), and it is not what made heading up there sluggish (the
+## auto-sheet's easing was: Autopilot.windward_bank_to_come_deg). Measured (the steering check,
+## Documentation/reports/push_slider/steering.md): a powered board in this sim hardly banks to
+## windward (0 to 2 degrees where a carved head-up asked for 20 to 30), so the push of the turn is
+## taken by the hike, and the sailor is pulled over the sail at a felt heel of 20 degrees
+## (SailorConfig.catapult_heel_deg) once the turn is faster than g tan(20) / v: 15 degrees per
+## second at 13.8 m/s, 13 at 15.7. Raised to the rate a 30 degree bank would carry (23 and 21),
+## the sailor fell at 18 and 24 kt; the floor of 12 sits just under that limit, and at 12 the
+## head-up at 18 and 24 kt is now as quick as at 12 kt.
 var head_up_rate_budget_dps_ms: float = 100.0
 var head_up_rate_min_dps: float = 12.0
 var hold_rate_per_deg: float = 0.8
@@ -127,6 +136,26 @@ var push_rate_per_s: float = 0.4
 ## helm the back foot carries by pushing the sideways hold against its strap (Helm), beside the
 ## rake, the tilt and the rail; the sim applies it only in the straps. 0 = as before.
 var legs_share: float = 0.0
+## The planing technique (Michiel, 31 October 2026: "when planing and standing in the footstraps
+## the steering comes more from pushing and pulling of the two legs and less from moving around
+## the sail"; Documentation/reports/push_slider/steering.md). The legs carry the turn first: the
+## back foot (heading up) or the front foot (bearing away) pushes at once on the loop's rate error,
+## legs_rate_gain of a full push per degree per second of it, as the quick part of the helm; the
+## rig's trim follows only as the error lasts and carries a long turn, so the rig moves less and
+## later. Pushed alone at planing speed, with the rig held, a full push turned the board at 8 to 30
+## degrees per second within half a second (the steering check's probe, 18 and 24 kt), so a full
+## push answers about the 12 degrees per second a head-up asks (head_up_rate_min_dps): 1 / 12. Twice
+## that gain turned no faster and moved the rig more (the same check). On a steady course the
+## error is nil and the back foot is the push slider's (back_foot_bias), not the steering's.
+## The technique comes in between planing_steer_from_ms and planing_steer_full_ms, times how far
+## the feet are in the straps (Telemetry.stance): 35 to 40 km/h, the speed from which Max pushes
+## the back foot against the fin "with all the strength I have"
+## (Documentation/reports/ph28/questions_for_max.md, question 2). The steering check's 12 kt reach
+## sails at 8.0 m/s (29 km/h), below it, and steers exactly as before; its 18 and 24 kt reaches
+## at 13.8 and 15.7 m/s. legs_rate_gain 0 turns it off.
+var planing_steer_from_ms: float = 9.7
+var planing_steer_full_ms: float = 11.1
+var legs_rate_gain: float = 1.0 / 12.0
 
 ## Beginner mode holds the heading when no steering key is pressed.
 var hold_heading: bool = true
@@ -392,6 +421,13 @@ func _steer_beginner(telemetry: Telemetry, controls: SimControls, turn_key: floa
 	_steer_at_rate(telemetry, controls, rate, turn_key != 0.0, dt)
 
 
+## How far the planing technique is in use, 0 to 1: the speed between planing_steer_from_ms and
+## planing_steer_full_ms, times how far the feet are in the straps.
+func _planing_technique(telemetry: Telemetry) -> float:
+	var fast: float = smoothstep(planing_steer_from_ms, planing_steer_full_ms, telemetry.speed_ms)
+	return fast * clampf(telemetry.stance, 0.0, 1.0)
+
+
 ## The hold-back skill: the most angle of attack the auto-sheet may trim to, degrees (90, no
 ## limit, unless the hands ask for a wanted speed; never during a manoeuvre, which needs the
 ## sail). See hold_back_gain_deg_per_ms.
@@ -467,10 +503,20 @@ func _steer_at_rate(telemetry: Telemetry, controls: SimControls, rate_dps: float
 	var rail: float = 0.0 if (pivot or not rail_on) else clampf(wanted_rate_dps / carve_rate_dps, -1.0, 1.0)
 	var lean_before: float = controls.lean
 	# The legs (PH35): the back foot carries legs_share of the helm, and the slider's push on top;
-	# none while pivoting, where the feet are out of the straps.
+	# none while pivoting, where the feet are out of the straps. Planing in the straps they also
+	# push on the rate error (legs_rate_gain), heading up with the back foot on either tack.
+	var legs_bias: float = 0.0
+	if not pivot:
+		legs_bias = auto_sheet_pilot.back_foot_bias + _legs_for_rate(telemetry, error_dps * tack)
 	Helm.steer(controls, helm_right, tack, 0.0, dt, helm_rate_per_s, 0.0 if pivot else 1.0,
-		0.0 if pivot else legs_share, 0.0 if pivot else auto_sheet_pilot.back_foot_bias)
+		0.0 if pivot else legs_share, legs_bias)
 	controls.lean = move_toward(lean_before, rail, helm_rate_per_s * dt)
+
+
+## The legs' push for a turn (planing technique): head_up_error_dps is how much faster the board
+## should turn toward the wind than it does (negative: away from it); none below the plane.
+func _legs_for_rate(telemetry: Telemetry, head_up_error_dps: float) -> float:
+	return clampf(head_up_error_dps * legs_rate_gain, -1.0, 1.0) * _planing_technique(telemetry)
 
 
 ## +1 when the wind comes from starboard (starboard tack), -1 from port, with hysteresis
