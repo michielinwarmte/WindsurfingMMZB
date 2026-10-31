@@ -17,8 +17,9 @@ extends SceneTree
 ##   [--seed=1] [--track=<file.csv>]
 ## With --reference the same drops are sailed by that scripted character too, for comparison (the
 ## all-rounder's speed made good is S1's yardstick). --track writes the first episode's track.
+## --evaluate=none with --reference sails only the character: a stage's yardstick on its own.
 ##
-## Messages from the trainer: {"cmd": "reset", "seed": n}, {"cmd": "step", "actions": [[a, b, c],
+## Messages from the trainer: {"cmd": "reset", "seed": n}, {"cmd": "step", "actions": [[a, b, c, d],
 ## ...], "seed": n}, {"cmd": "close"}. The worker answers each with one line (TrainBridge.reset(),
 ## step()); first it sends {"hello": {...}}.
 
@@ -121,12 +122,15 @@ func _read_line() -> String:
 ## --reference, a scripted character sails the same drops after it.
 func _evaluate() -> void:
 	var path: String = _options["evaluate"]
-	if not path.is_absolute_path() and not path.begins_with("res://"):
-		path = _repository_path(path)
-	var brain: NeuralNet = NeuralNet.load_file(path)
-	if brain == null:
-		quit(2)
-		return
+	var reference: String = _options.get("reference", "")
+	var brain: NeuralNet = null
+	if path != "none" or reference.is_empty():
+		if not path.is_absolute_path() and not path.begins_with("res://"):
+			path = _repository_path(path)
+		brain = NeuralNet.load_file(path)
+		if brain == null:
+			quit(2)
+			return
 	var stage_name: String = _options.get("stage", "S1")
 	var stage: TrainingDrops.Stage = TrainingDrops.stage_named(stage_name)
 	if stage == null:
@@ -136,11 +140,10 @@ func _evaluate() -> void:
 	var episodes: int = maxi(_options.get("episodes", "20").to_int(), 1)
 	var boards: int = maxi(_options.get("boards", "1").to_int(), 1)
 	var seed: int = _options.get("seed", "1").to_int()
-	var reference: String = _options.get("reference", "")
 	var track_path: String = _options.get("track", "")
 	print("%s on %s: %d episode%s of %d board%s%s" % [path.get_file(), stage.describe(), episodes, "" if episodes == 1 else "s",
 		boards, "" if boards == 1 else "s", (", against the %s on the same drops" % reference) if not reference.is_empty() else ""])
-	var who: Array[String] = ["brain"]
+	var who: Array[String] = ["brain"] if brain != null else []
 	if not reference.is_empty():
 		who.append(reference)
 	var summaries: Array[Dictionary] = []
@@ -155,7 +158,7 @@ func _evaluate() -> void:
 			if episode == 0 and sailor == "brain" and not track_path.is_empty():
 				track = FileAccess.open(track_path, FileAccess.WRITE)
 				if track != null:
-					track.store_line("time_s,x_m,z_m,heading_deg,speed_ms,twa_deg,next_step,twa_out,sheet_out,hold_out,remaining_m")
+					track.store_line("time_s,x_m,z_m,heading_deg,speed_ms,twa_deg,next_step,twa_out,sheet_out,hold_out,push_out,remaining_m")
 			_sail_first_episodes(env, brain, track)
 			if track != null:
 				track.close()
@@ -166,8 +169,8 @@ func _evaluate() -> void:
 				row["course"] = env.course.name
 				row["wind_kt"] = env.wind_kt
 				rows.append(row)
-				print("  %-10s ep %3d board %d  %-34s %4.0f kt  reward %7.2f  progress %6.0f m in %5.1f s (%.2f m/s)  %s  falls %d  manoeuvres %d" % [
-					sailor, episode, i, env.course.name.left(34), env.wind_kt, row["total"], row["progress_m"], row["episode_s"],
+				print("  %-10s ep %3d board %d  %-34s %4.0f kt %s  reward %7.2f  progress %6.0f m in %5.1f s (%.2f m/s)  %s  falls %d  manoeuvres %d" % [
+					sailor, episode, i, env.course.name.left(34), env.wind_kt, _conditions_text(env), row["total"], row["progress_m"], row["episode_s"],
 					row["progress_m"] / maxf(row["episode_s"], 0.1), _outcome(row), row["falls"], row["manoeuvres"]])
 		summaries.append(_summary(sailor, rows))
 	for summary: Dictionary in summaries:
@@ -192,12 +195,21 @@ func _sail_first_episodes(env: RaceEnv, brain: NeuralNet, track: FileAccess) -> 
 			env.act(i, action)
 			if track != null and i == 0:
 				var t: Telemetry = env.board(0).sim.telemetry
-				track.store_line("%.1f,%.2f,%.2f,%.1f,%.2f,%.1f,%d,%.3f,%.3f,%.3f,%.0f" % [env.time_s, t.position.x, t.position.z, t.heading_deg,
-					t.speed_ms, t.twa_deg, env.race.next_step_index(0), action[0], action[1], action[2] if action.size() > 2 else 0.0, env.board(0).remaining_m])
+				track.store_line("%.1f,%.2f,%.2f,%.1f,%.2f,%.1f,%d,%.3f,%.3f,%.3f,%.3f,%.0f" % [env.time_s, t.position.x, t.position.z, t.heading_deg,
+					t.speed_ms, t.twa_deg, env.race.next_step_index(0), action[0], action[1], action[2] if action.size() > 2 else 0.0,
+					action[3] if action.size() > 3 else NAN, env.board(0).remaining_m])
 		for t: int in env.decision_ticks:
 			env.tick()
 			if env.all_done():
 				break
+
+
+## The race's water and wind in a few characters: the lake or the sea's height, the gusts, the shifts.
+static func _conditions_text(env: RaceEnv) -> String:
+	var water: String = "%ssea %.2f m" % ["lake, " if env.options.environment != null else "", env.board(0).sea_height_m]
+	var gusts: float = env.options.wind.gust_intensity if env.options.gusts and env.options.wind != null else 0.0
+	var shift_deg: float = env.options.wind.max_shift_deg if env.options.shifts and env.options.wind != null else 0.0
+	return "%-17s gusts %.2f shifts %2.0f" % [water, gusts, shift_deg]
 
 
 static func _outcome(row: Dictionary) -> String:

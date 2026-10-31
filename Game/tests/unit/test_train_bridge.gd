@@ -13,8 +13,12 @@ func test_the_hello_says_what_goes_over_the_bridge() -> void:
 	var hello: Dictionary = bridge.hello()
 	assert_eq(hello["obs_size"], RaceObservation.size())
 	assert_eq(hello["obs_names"].size(), RaceObservation.size())
-	assert_eq(hello["action_size"], 3)
+	assert_eq(hello["action_size"], 4, "the wind angle, the sheet, the hold-back and the push")
 	assert_eq(hello["action_names"], Array(LearnedSkipper.TWA_ACTION_NAMES))
+	assert_eq(hello["action_names"][3], "push")
+	# A fresh policy's push starts at the pilot's own margin (the slider at about 78 %).
+	assert_almost_eq(LearnedSkipper.push_from_output(hello["push_start_output"]), LearnedSkipper.pilot_margin_level(), 1e-6)
+	assert_almost_eq(float(hello["push_start_output"]), 0.5667, 1e-3)
 	assert_eq(hello["boards"], 3)
 	assert_eq(hello["stage"], "S2")
 	assert_eq(hello["decision_ticks"], 30)

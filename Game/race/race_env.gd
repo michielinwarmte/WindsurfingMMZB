@@ -11,11 +11,13 @@ extends RefCounted
 ##       total += env.reward(0)
 ##
 ## (run_episode() does exactly that.) Every board is the open water's simulation, driven through
-## the player's beginner controller with the auto-sheet on (RD1); the network's three numbers go
-## onto the controller's hands through a LearnedSkipper.Driver, as in the game, so a brain sails here
+## the player's beginner controller with the auto-sheet on (RD1); the network's numbers go onto
+## the controller's hands through a LearnedSkipper.Driver, as in the game, so a brain sails here
 ## as it will there (in the wind-angle mode by default: the first number is the wind angle to hold,
-## the third the hold-back speed; see LearnedSkipper). Nothing here is random except through the
-## seed, so the same seed and the same actions give the same race, tick for tick.
+## the third the hold-back speed, the fourth the push slider; see LearnedSkipper). Nothing here is
+## random except through the seed, so the same seed and the same actions give the same race, tick
+## for tick. Every board has its own wind field, and the race hands all of them one clock every
+## tick (RaceWindClock), so they all see the same gusts.
 ##
 ## The reward (D6b: "the candy follows the course"), per board, in metres of sailing distance times
 ## progress_per_m:
@@ -57,9 +59,20 @@ class Options:
 	var actions: LearnedSkipper.ActionMode = LearnedSkipper.ActionMode.TWA
 	## Whether the third number is the hold-back speed (the hands' hold-back skill; wind-angle mode).
 	var hold: bool = true
+	## Whether a fourth number, when the network gives one, is the push slider (AiHands.push;
+	## wind-angle mode). Three numbers leave the hands' push at NaN: the pilot's own margin.
+	var push: bool = true
 	var waves: bool = false
 	var gusts: bool = false
 	var shifts: bool = false
+	## The open water's wind settings to start from (the gusts' strength, the shifts' size and
+	## period; TrainingDrops draws them); null: the default wind file's. The speed, the direction,
+	## and gusts and shifts on or off are always this environment's (wind_kt, the course's axis and
+	## the bias, the two switches above).
+	var wind: WindConfig = null
+	## The sea with waves on (a WaveSetConfig as the settings menu builds one; TrainingDrops draws
+	## it), on the open water and on a place's water; null: the place's or the default wave set.
+	var sea: WaveSetConfig = null
 	## The wind comes from the course's axis turned by this much (degrees): the start line's bias.
 	var wind_bias_deg: float = 0.0
 	## A place's environment (EnvironmentConfig: Lake Silvaplana's thin air, fresh water and the
@@ -134,6 +147,8 @@ class Board:
 	## The other sails' wind shadows on this board's wind (options.shadows), or null.
 	var shadows: WindShadows = null
 	var controls: SimControls
+	## The sea's height where it sails (RaceObservation.sea_height_m()), taken when it is made.
+	var sea_height_m: float = 0.0
 	## The reward earned since the last reward() call.
 	var pending: float = 0.0
 	## The whole episode's reward so far, and what it is made of.
@@ -193,6 +208,8 @@ var _boards: Array[Board] = []
 var _bounds: Rect2 = Rect2()
 ## Where the wind comes from, degrees: the course's axis and the options' bias.
 var _wind_from_deg: float = 0.0
+## The race's one wind clock, handed to every board's wind field every tick (ROADMAP RA13).
+var _wind_clock: RaceWindClock = null
 
 
 func _init(race_course: Course, boards: int = 1, wind_speed_kt: float = 15.0, env_options: Options = null) -> void:
@@ -252,6 +269,8 @@ func reset_dropped(seed: int, drops: Array[Drop]) -> void:
 		race.place_board(i, drop.position, drop.next_step)
 	race.start()
 	rules = RaceRules.new(_boards.size(), _wind_from_deg) if options.rules else null
+	# Every field was made just now: the first board's clock is the race's.
+	_wind_clock = RaceWindClock.of(_boards[0].sim.wind)
 	for i: int in _boards.size():
 		_begin_episode(_boards[i], i)
 
@@ -263,6 +282,9 @@ func respawn(index: int, drop: Drop, seed: int) -> void:
 	var board: Board = _make_board(drop.position, drop.heading_deg, seed)
 	board.goal_step = drop.goal_step
 	_boards[index] = board
+	# Its new wind field starts at the race's clock, not at nought: the same gusts as the others.
+	if _wind_clock != null:
+		_wind_clock.hand_to(board.sim.wind)
 	race.place_board(index, drop.position, drop.next_step)
 	_begin_episode(board, index)
 
@@ -305,12 +327,13 @@ func observe(index: int) -> PackedFloat32Array:
 			positions.append(Vector2(t.position.x, t.position.z))
 			velocities.append(Course.direction_of(t.heading_deg) * t.speed_ms)
 	return RaceObservation.build(b.sim.telemetry, race, index, b.sim.wind, positions, velocities,
-			_in_manoeuvre(b), b.since_manoeuvre_s, b.driver.wanted_twa_deg, b.hands.hold_speed_ms)
+			_in_manoeuvre(b), b.since_manoeuvre_s, b.driver.wanted_twa_deg, b.hands.hold_speed_ms,
+			b.hands.push, b.sea_height_m)
 
 
-## A decision for board `index`: the network's three numbers (each -1 to 1) for its hands, held until
-## the next decision: the wind angle to hold or the steer, the sheet, and the hold-back speed (or,
-## stick mode, the tack).
+## A decision for board `index`: the network's numbers (each -1 to 1) for its hands, held until the
+## next decision: the wind angle to hold or the steer, the sheet, the hold-back speed (or, stick
+## mode, the tack), and, when there is a fourth, the push slider.
 func act(index: int, action: PackedFloat32Array) -> void:
 	var b: Board = _boards[index]
 	if b.done or b.scripted != null:
@@ -327,10 +350,16 @@ func act(index: int, action: PackedFloat32Array) -> void:
 func tick() -> void:
 	if options.shadows:
 		_cast_shadows()
+	var stepped: WindField = null
 	for i: int in _boards.size():
 		var b: Board = _boards[i]
 		if b.done:
 			continue  # parked: it no longer moves, and earns nothing
+		# One clock for every board's wind (RA13): all step the same time from the same clock.
+		if _wind_clock != null:
+			_wind_clock.hand_to(b.sim.wind)
+		if stepped == null:
+			stepped = b.sim.wind
 		b.since_manoeuvre_s = RaceObservation.advance_since_manoeuvre(b.since_manoeuvre_s, _in_manoeuvre(b), DT)
 		if b.scripted != null:
 			# A scripted skipper sets the hands itself, every tick, in the water or not.
@@ -356,6 +385,8 @@ func tick() -> void:
 			b.hands.tack = false
 		b.was_fallen = fallen
 		race.update_board(i, _where(b))
+	if stepped != null:
+		_wind_clock = RaceWindClock.of(stepped)  # one tick on, as every field that stepped
 	var before_gun: bool = race.clock_s() < 0.0
 	race.step(DT)
 	if rules != null:
@@ -466,14 +497,18 @@ func _make_board(at: Vector2, heading_deg: float, _seed: int) -> Board:
 			map_field.set_time_of_day(options.time_of_day_s)
 	else:
 		b.sim = WindsurferSim.create_default(options.waves)
-		var wind_config: WindConfig = b.sim.wind_config.duplicate()
+		var wind_config: WindConfig = (options.wind if options.wind != null else b.sim.wind_config).duplicate()
 		wind_config.speed_kt = wind_kt
 		wind_config.from_bearing_deg = _wind_from_deg
 		wind_config.gusts_enabled = options.gusts
 		wind_config.shifts_enabled = options.shifts
 		b.sim.wind_config = wind_config
 		b.sim.wind = WindField.new(wind_config)
+	if options.sea != null:
+		# Each board its own copy of the sea, as of every config it sails with.
+		b.sim.wave_set_config = options.sea.duplicate(true)
 	b.sim.set_waves(options.waves)  # again, so the waves line up with this wind
+	b.sea_height_m = RaceObservation.sea_height_m(b.sim)
 	b.sim.reset(Vector3(at.x, 0.0, at.y), deg_to_rad(fposmod(heading_deg, 360.0)))
 	b.controller = PlayerController.new()
 	b.controller.set_sail(b.sim.sail, b.sim.sailor_config, b.sim.air_density_kg_m3)
@@ -481,6 +516,7 @@ func _make_board(at: Vector2, heading_deg: float, _seed: int) -> Board:
 	b.controller.hands = b.hands
 	b.driver = LearnedSkipper.Driver.new(b.hands, options.actions)
 	b.driver.uses_hold = options.hold and options.actions == LearnedSkipper.ActionMode.TWA
+	b.driver.push_index = LearnedSkipper.PUSH if options.push and options.actions == LearnedSkipper.ActionMode.TWA else -1
 	b.controls = SimControls.new()
 	b.controller.reset_controls(b.controls)
 	if options.shadows:

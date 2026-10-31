@@ -257,7 +257,7 @@ if __name__ == "__main__":
     obs = workers.reset()
     print("obs", obs.shape)
     for k in range(10):
-        workers.step_async(np.random.uniform(-1, 1, size=(workers.num_envs, 3)))
+        workers.step_async(np.random.uniform(-1, 1, size=(workers.num_envs, workers.action_space.shape[0])))
         obs, rew, done, infos = workers.step_wait()
         print(k, rew.round(3), done)
     workers.close()

@@ -3,8 +3,9 @@ extends GutTest
 ## a finish and a sailable order and makes a race; the templates at random sizes do too; each stage's
 ## drops are where the stage says (below a windward mark for the beat, near a mark for the rounding,
 ## near a downwind mark or a gate for the run, just past the line for the laps, in the sailing area
-## with the countdown for the start); the same seed gives the same race; and a scripted skipper can
-## sail a stage's drop.
+## with the countdown for the start); every stage draws its conditions from the settings menu's
+## whole range (the wind, the five seas at every height, the gusts, the shifts) and the race sails
+## in them; the same seed gives the same race; and a scripted skipper can sail a stage's drop.
 
 
 func test_every_kind_of_random_course_makes_a_race() -> void:
@@ -53,7 +54,7 @@ func test_the_beats_drops_are_below_a_windward_mark_and_end_at_its_rounding() ->
 			assert_between(absf(offset.dot(across)), 0.0, 200.0, "up to 200 m to either side")
 			assert_eq(env.board(i).goal_step, k + 1, "the episode ends at the rounding")
 		assert_eq(env.options.episode_s, 90.0)
-		assert_between(env.wind_kt, 10.0, 24.0)
+		assert_between(env.wind_kt, SettingsValues.WIND_SPEED_MIN_KT, SettingsValues.WIND_SPEED_MAX_KT)
 
 
 func test_the_roundings_and_the_runs_drops_are_near_their_marks() -> void:
@@ -81,7 +82,6 @@ func test_the_laps_drops_are_just_past_the_start_line_with_the_whole_course_to_g
 	var stage: TrainingDrops.Stage = TrainingDrops.stage_named("S4")
 	for seed: int in range(1, 6):
 		var env: RaceEnv = TrainingDrops.make_env(stage, seed)
-		assert_true(env.options.waves and env.options.gusts and env.options.shifts, "the real water and wind")
 		for i: int in env.board_count():
 			assert_eq(env.race.next_step_index(i), 1, "started")
 			var start: RaceStep = env.race.steps()[0]
@@ -113,6 +113,78 @@ func test_the_starts_drops_are_in_the_sailing_area_with_a_countdown_and_the_line
 	assert_true(biased > 0, "the line is skewed in some races")
 
 
+## Every stage draws the conditions of its races evenly across the settings menu's ranges: over
+## many seeds the smallest and the largest seen are near the ends of each range and never past them,
+## every one of the five seas comes up (flat water about a fifth of the time), and the roughest sea
+## is the menu's roughest. The lake from S4 on only.
+func test_every_stage_draws_the_settings_whole_range_of_conditions() -> void:
+	const DRAWS: int = 400
+	for name: String in TrainingDrops.NAMES:
+		var stage: TrainingDrops.Stage = TrainingDrops.stage_named(name)
+		assert_eq(stage.wind_min_kt, SettingsValues.WIND_SPEED_MIN_KT, "%s: the menu's lightest wind" % name)
+		assert_eq(stage.wind_max_kt, SettingsValues.WIND_SPEED_MAX_KT, "%s: the menu's strongest wind" % name)
+		assert_true(stage.waves and stage.gusts and stage.shifts, "%s draws the sea, the gusts and the shifts" % name)
+		assert_eq(stage.lake_share, 0.3 if name in ["S4", "S5", "S6"] else 0.0, "%s: the lake from S4 on" % name)
+		var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+		rng.seed = 7
+		var lowest: Dictionary[String, float] = {}
+		var highest: Dictionary[String, float] = {}
+		var presets: Dictionary[int, int] = {}
+		for k: int in DRAWS:
+			var wind_kt: float = rng.randf_range(stage.wind_min_kt, stage.wind_max_kt)
+			var c: TrainingDrops.Conditions = TrainingDrops.draw_conditions(stage, rng, wind_kt)
+			presets[c.sea_preset] = presets.get(c.sea_preset, 0) + 1
+			var seen: Dictionary[String, float] = {"wind_kt": c.wind_kt, "height": c.wave_height_scale, "swell": c.swell_height_scale,
+				"fetch_km": c.fetch_km, "depth_m": c.water_depth_m, "gusts": c.gust_intensity, "shift_deg": c.max_shift_deg,
+				"shift_period_s": c.shift_period_s, "sea_m": c.wave_set().total_amplitude_m() if c.waves() else 0.0}
+			for key: String in seen:
+				lowest[key] = minf(lowest.get(key, INF), seen[key])
+				highest[key] = maxf(highest.get(key, -INF), seen[key])
+		_assert_spans(name, "wind_kt", lowest, highest, SettingsValues.WIND_SPEED_MIN_KT, SettingsValues.WIND_SPEED_MAX_KT)
+		_assert_spans(name, "height", lowest, highest, SettingsValues.WAVE_SCALE_MIN, SettingsValues.WAVE_SCALE_MAX)
+		_assert_spans(name, "swell", lowest, highest, SettingsValues.SWELL_SCALE_MIN, SettingsValues.SWELL_SCALE_MAX)
+		_assert_spans(name, "fetch_km", lowest, highest, SettingsValues.FETCH_MIN_KM, SettingsValues.FETCH_MAX_KM)
+		_assert_spans(name, "depth_m", lowest, highest, SettingsValues.DEPTH_MIN_M, SettingsValues.DEPTH_DEEP_M)
+		_assert_spans(name, "gusts", lowest, highest, 0.0, SettingsValues.GUST_INTENSITY_MAX)
+		_assert_spans(name, "shift_deg", lowest, highest, 0.0, SettingsValues.SHIFT_MAX_DEG)
+		_assert_spans(name, "shift_period_s", lowest, highest, SettingsValues.SHIFT_PERIOD_MIN_S, SettingsValues.SHIFT_PERIOD_MAX_S)
+		assert_eq(presets.size(), SettingsValues.WavePreset.size(), "%s: all five seas: %s" % [name, str(presets)])
+		assert_between(float(presets.get(SettingsValues.WavePreset.FLAT, 0)) / DRAWS, 0.12, 0.28, "%s: flat water about a fifth of the time" % name)
+		assert_eq(lowest["sea_m"], 0.0, "%s: flat water" % name)
+		assert_true(highest["sea_m"] > 0.5, "%s: the roughest sea seen is %.2f m high" % [name, highest["sea_m"]])
+		gut.p("%s: the sea from %.2f to %.2f m, the wind %.1f to %.1f kt, gusts %.3f to %.3f, shifts %.1f to %.1f deg; seas %s" % [name,
+			lowest["sea_m"], highest["sea_m"], lowest["wind_kt"], highest["wind_kt"], lowest["gusts"], highest["gusts"],
+			lowest["shift_deg"], highest["shift_deg"], str(presets)])
+
+
+## The smallest and the largest seen are within a range and within 4 % of its ends.
+func _assert_spans(stage: String, key: String, lowest: Dictionary[String, float], highest: Dictionary[String, float], low: float, high: float) -> void:
+	var margin: float = 0.04 * (high - low)
+	assert_between(lowest[key], low, low + margin, "%s: the smallest %s seen, %.3f, near the range's %.3f" % [stage, key, lowest[key], low])
+	assert_between(highest[key], high - margin, high, "%s: the largest %s seen, %.3f, near the range's %.3f" % [stage, key, highest[key], high])
+
+
+func test_a_race_sails_in_the_conditions_it_drew() -> void:
+	var stage: TrainingDrops.Stage = TrainingDrops.stage_named("S1")
+	var wavy: int = 0
+	for seed: int in range(1, 13):
+		var env: RaceEnv = TrainingDrops.make_env(stage, seed, 2)
+		var sim: WindsurferSim = env.board(0).sim
+		assert_eq(sim.has_waves(), env.options.waves, "seed %d: waves as drawn" % seed)
+		if env.options.waves:
+			wavy += 1
+			assert_almost_eq(sim.wave_set_config.total_amplitude_m(), env.options.sea.total_amplitude_m(), 1e-6, "the drawn sea on the water")
+			assert_ne(sim.wave_set_config, env.board(1).sim.wave_set_config, "each board its own copy of the sea")
+		assert_eq(sim.wind_config.speed_kt, env.wind_kt)
+		assert_eq(sim.wind_config.gusts_enabled, env.options.gusts)
+		assert_true(sim.wind_config.gust_patches, "the gusts as patches")
+		assert_almost_eq(sim.wind_config.gust_intensity, env.options.wind.gust_intensity, 1e-6, "the drawn gusts")
+		assert_eq(sim.wind_config.shifts_enabled, env.options.shifts)
+		assert_almost_eq(sim.wind_config.max_shift_deg, env.options.wind.max_shift_deg, 1e-6, "the drawn shifts")
+		assert_eq(sim.wind.uses_patches(), env.options.gusts)
+	assert_true(wavy > 0 and wavy < 12, "some races on waves, some on flat water: %d of 12" % wavy)
+
+
 func test_the_same_seed_gives_the_same_race_and_another_seed_another() -> void:
 	var stage: TrainingDrops.Stage = TrainingDrops.stage_named("S2")
 	var a: RaceEnv = TrainingDrops.make_env(stage, 21)
@@ -120,6 +192,9 @@ func test_the_same_seed_gives_the_same_race_and_another_seed_another() -> void:
 	var c: RaceEnv = TrainingDrops.make_env(stage, 22)
 	assert_eq(a.course.name, b.course.name)
 	assert_eq(a.wind_kt, b.wind_kt)
+	assert_eq(a.options.waves, b.options.waves, "the same sea")
+	assert_eq(a.options.wind.gust_intensity, b.options.wind.gust_intensity, "the same gusts")
+	assert_eq(a.options.wind.max_shift_deg, b.options.wind.max_shift_deg, "the same shifts")
 	assert_eq(a.board(0).sim.telemetry.position, b.board(0).sim.telemetry.position)
 	assert_ne(a.board(0).sim.telemetry.position, c.board(0).sim.telemetry.position)
 

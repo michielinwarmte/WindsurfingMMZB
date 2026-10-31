@@ -15,16 +15,19 @@ Each `<name>.json` holds:
   neuron adds up its inputs times its weights, adds its bias and squashes the sum with
   tanh into -1 to 1 (`linear` leaves the sum as it is: the trainer's brains end with a
   linear layer, and the game clips each output to -1 to 1 as it uses it). The first
-  layer takes the observation, the last gives the three actions.
+  layer takes the observation, the last gives the actions (three, or four since the
+  push of Session 64).
 - `obs_names`: what each input is, in order (`Game/race/race_observation.gd`). The
   game picks the brain's inputs out of the observation **by these names**, so a brain
   made before a number was added to the observation still sails (the night brains of
   October 2026 take 58 of today's 68 numbers).
 - `obs_scale`: a number per input that multiplies it before the first layer (all
   ones for the brains made here; the observation is already scaled).
-- `action_names`: what the three outputs (each -1 to 1) mean, which depends on the
-  brain's action mode, `meta.actions`:
-  - `twa` (the trainers' default): `twa`, `sheet`, `hold`. The first is the wind
+- `action_names`: what the outputs (each -1 to 1) mean, which depends on the
+  brain's action mode, `meta.actions`. The game finds the outputs by these names, as
+  it finds the inputs:
+  - `twa` (the trainers' default): `twa`, `sheet`, `hold` and, in the brains made
+    since Session 64 (31 October 2026), `push`. The first is the wind
     angle the board should sail at: 180 degrees times the output, positive with the
     wind from starboard (0.25 is close-hauled on starboard, -0.83 a broad reach on
     port). The hands steer for that angle every tick and let the controller's heading
@@ -33,7 +36,11 @@ Each `<name>.json` holds:
     the hold-back skill (AI_FLEET_PLAN.md, D1): above 0 the sheet is eased until the
     board sails no faster than 8 m/s (just above 0) down to 1.5 m/s (at 1), so a
     board can wait for the gun without stopping. A brain whose third output is called
-    `unused` (the night brains) never holds back.
+    `unused` (the night brains) never holds back. The fourth, `push`, is the push
+    slider (`AiHands.push`, the player's Up and Down keys): -1 is the slider at 0 %,
+    1 at 100 %, set at every decision, so a brain can push on flat water and ease in
+    waves and gusts. A brain without it sails the autopilot's own margin (the slider
+    left alone, `AiHands.push` NaN); a fresh one starts at that margin (about 78 %).
   - `stick`: `steer`, `sheet`, `tack`. Steer is the stick of the beginner controller
     itself; a tack or gybe is asked for when tack rises above 0.5.
   In both, the sheet only takes over from the auto-sheet beyond 0.5 either way.
@@ -57,7 +64,11 @@ curriculum stage at a time on random courses in random winds
 gates, S4 full laps, S5 the start, S6 company). The reward is the fall of the
 sailing distance still to go round the course (`Game/race/sailing_distance.gd`), so
 going out to a layline pays like pointing at the mark, a detour pays nothing and the
-rounding itself pays. Needs once: `pip install torch stable-baselines3`.
+rounding itself pays. Every race is drawn from the settings menu's whole range of
+conditions: the wind from 4 to 35 kt, the five seas at every height, the gust patches
+and the shifts from none to the strongest. Needs once a Python with torch,
+Stable-Baselines3 and gymnasium (the header of `tools/train.sh` says how; it finds the
+shared venv `~/.local/venvs/windsurf` on its own).
 
     tools/train.sh --stage=S1 --hours=3                      the first stage, run "s1"
     tools/train.sh --stage=S2 --hours=3 --resume=Game/race/brains/s1_best.json

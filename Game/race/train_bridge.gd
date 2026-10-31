@@ -10,7 +10,7 @@ extends RefCounted
 ##   hello()               what the trainer needs to know first: the observation's size and names,
 ##                         the actions', how many boards, the stage
 ##   reset(seed)           a new race for the stage; every board's first observation
-##   step(actions, seed)   one decision for every board (the network's three numbers each), held
+##   step(actions, seed)   one decision for every board (the network's four numbers each), held
 ##                         for the stage's half second; then each board's observation, reward,
 ##                         whether its episode is over (and whether it was only cut short by the
 ##                         time limit), its stats at the end of an episode, and, for a board whose
@@ -57,6 +57,9 @@ func hello() -> Dictionary:
 		"obs_names": Array(RaceObservation.names()),
 		"action_size": LearnedSkipper.TWA_ACTION_NAMES.size(),
 		"action_names": Array(LearnedSkipper.TWA_ACTION_NAMES),
+		# A fresh policy's push output starts here: the slider level of the pilot's own margin,
+		# where the fleet sails today (RA12).
+		"push_start_output": LearnedSkipper.output_for_push(LearnedSkipper.pilot_margin_level()),
 		"boards": boards,
 		"stage": stage.name,
 		"stage_description": stage.describe(),
@@ -162,4 +165,8 @@ func _race_facts() -> Dictionary:
 		"length_m": snappedf(SailingDistance.course_length_m(env.race, env.course.axis_deg), 1.0),
 		"prestart_s": snappedf(env.options.prestart_s, 0.1),
 		"episode_s": snappedf(env.options.episode_s, 0.1),
+		"lake": env.options.environment != null,
+		"sea_m": snappedf(env.board(0).sea_height_m, 0.01),
+		"gusts": snappedf(env.options.wind.gust_intensity, 0.01) if env.options.gusts and env.options.wind != null else 0.0,
+		"shift_deg": snappedf(env.options.wind.max_shift_deg, 0.1) if env.options.shifts and env.options.wind != null else 0.0,
 	}
