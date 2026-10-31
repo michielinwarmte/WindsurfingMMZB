@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="GearItem" format=3]
+
+[ext_resource type="Script" path="res://gear/gear_item.gd" id="1"]
+[ext_resource type="Resource" path="res://gear/brands/gg_sails.tres" id="2"]
+[ext_resource type="Resource" path="res://config/sail_6_5.tres" id="3"]
+
+[resource]
+script = ExtResource("1")
+kind = 1
+brand = ExtResource("2")
+model_name = "Rematch"
+line = 1
+size = 6.5
+description = "Easy sail for stronger wind. For now it sails on the game's old 6.5's numbers."
+wind_from_kt = 16.0
+wind_to_kt = 28.0
+config = ExtResource("3")
