@@ -12,6 +12,7 @@ slug = "gg_sails"
 tagline = "Good game."
 makes_boards = false
 makes_sails = true
+makes_fins = false
 primary = Color(0.3569, 0.1686, 0.8196, 1)
 secondary = Color(0.1137, 0.1059, 0.149, 1)
 accent = Color(0.9608, 0.7216, 0, 1)

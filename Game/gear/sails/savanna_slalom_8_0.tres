@@ -3,6 +3,8 @@
 [ext_resource type="Script" path="res://gear/gear_item.gd" id="1"]
 [ext_resource type="Resource" path="res://gear/brands/savanna.tres" id="2"]
 [ext_resource type="Resource" path="res://config/sail_default.tres" id="3"]
+[ext_resource type="PackedScene" path="res://assets/models/gear/savanna/savanna_slalom_8_0.glb" id="4"]
+[ext_resource type="Texture2D" path="res://assets/models/gear/savanna/savanna_slalom_8_0_panels.png" id="5"]
 
 [resource]
 script = ExtResource("1")
@@ -11,8 +13,10 @@ brand = ExtResource("2")
 model_name = "Cheetah"
 line = 0
 size = 8.0
-description = "The default sail: a powerful 8.0 race sail for the default board."
+description = "Race sail, 7 battens and 4 cams: luff 5.22 m, boom 2.20 m."
 wind_from_kt = 12.0
 wind_to_kt = 22.0
 config = ExtResource("3")
+model = ExtResource("4")
+panels = ExtResource("5")
 cloth = Color(1, 1, 1, 1)

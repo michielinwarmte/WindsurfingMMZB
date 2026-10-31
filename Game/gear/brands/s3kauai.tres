@@ -12,6 +12,7 @@ slug = "s3kauai"
 tagline = "One island further."
 makes_boards = false
 makes_sails = true
+makes_fins = false
 primary = Color(0.0431, 0.5608, 0.6275, 1)
 secondary = Color(0.0902, 0.502, 0.2902, 1)
 accent = Color(1, 0.3569, 0.3569, 1)

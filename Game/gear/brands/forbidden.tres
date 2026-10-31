@@ -12,6 +12,7 @@ slug = "forbidden"
 tagline = "Ride what you shouldn't."
 makes_boards = true
 makes_sails = false
+makes_fins = false
 primary = Color(0.8431, 0.0784, 0.102, 1)
 secondary = Color(0.0706, 0.0706, 0.0706, 1)
 accent = Color(0.9608, 0.9451, 0.9098, 1)

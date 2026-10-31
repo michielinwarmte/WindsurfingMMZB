@@ -13,7 +13,7 @@
 #   tools/push_check.sh --timing=1 --pilot.hike_share=1.4 --timing_lead_s=1 \
 #       --timing_ease='pilot.hike_share:1.0'                            easing before each gust
 #   tools/push_check.sh --jobs=4 --run=<name> ...                       four Godot processes at once
-#   tools/push_check.sh --winds=12,18,24 --twas=90 --gear_sail=southsails_freerace_6_5
+#   tools/push_check.sh --winds=12,18,24 --twas=90 --gear_sail=southsails_slalom_6_8
 #                                                                        a gear page item (Game/gear/) in place of the default
 #   tools/push_check.sh --sweep=push.level=0,0.25,0.5,0.75,0.85,0.95,1 --wave_scale=2 --jobs=12
 #                                                                        the push slider's ladder on a higher sea

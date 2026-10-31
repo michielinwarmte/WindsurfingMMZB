@@ -12,6 +12,7 @@ slug = "moonboard"
 tagline = "Shaped by the tides."
 makes_boards = true
 makes_sails = false
+makes_fins = false
 primary = Color(0.0784, 0.1333, 0.3098, 1)
 secondary = Color(0.949, 0.9176, 0.8275, 1)
 accent = Color(1, 0.7882, 0.2392, 1)

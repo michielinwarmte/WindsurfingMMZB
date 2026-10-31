@@ -1,6 +1,6 @@
 extends GutTest
-## The game's gear brands (gear/brand.gd; Documentation/reports/fleet_gear/brands.md): the eleven
-## load with their three logos, each makes boards or sails or both, and no real maker's name
+## The game's gear brands (gear/brand.gd; Documentation/reports/fleet_gear/brands.md): the twelve
+## load with their three logos, each makes boards, sails or fins, and no real maker's name
 ## appears in a brand's name, its tagline or its drawings (the game may not use them: copyright).
 
 ## The sport's real makers, lower case: none may appear in the game's brand files.
@@ -10,14 +10,14 @@ const REAL_BRANDS: PackedStringArray = [
 ]
 const SLUGS: PackedStringArray = [
 	"tripletone", "savanna", "point9", "moonboard", "nielstrots", "pj_new_sealand", "bmx_boards",
-	"southsails", "s3kauai", "forbidden", "gg_sails",
+	"southsails", "s3kauai", "forbidden", "gg_sails", "montag",
 ]
 const DRAWINGS: PackedStringArray = ["logo.svg", "wordmark.svg", "mark.svg"]
 
 
-func test_the_eleven_brands_load() -> void:
+func test_the_twelve_brands_load() -> void:
 	var brands: Array[Brand] = Brand.all()
-	assert_eq(brands.size(), SLUGS.size(), "eleven brands")
+	assert_eq(brands.size(), SLUGS.size(), "twelve brands")
 	var names: Dictionary[String, bool] = {}
 	for i: int in brands.size():
 		var brand: Brand = brands[i]
@@ -49,15 +49,18 @@ func test_every_brand_has_its_three_logos() -> void:
 			assert_gt(brand.wordmark.get_width(), brand.wordmark.get_height(), brand.name + "'s wordmark is wide, for the print")
 
 
-func test_every_brand_makes_boards_or_sails() -> void:
+func test_every_brand_makes_boards_sails_or_fins() -> void:
 	var board_makers: int = 0
 	var sail_makers: int = 0
+	var fin_makers: int = 0
 	for brand: Brand in Brand.all():
-		assert_true(brand.makes_boards or brand.makes_sails, brand.name + " makes boards or sails or both")
+		assert_true(brand.makes_boards or brand.makes_sails or brand.makes_fins, brand.name + " makes boards, sails or fins")
 		board_makers += 1 if brand.makes_boards else 0
 		sail_makers += 1 if brand.makes_sails else 0
+		fin_makers += 1 if brand.makes_fins else 0
 	assert_eq(board_makers, 6, "six brands make boards (Michiel's table)")
 	assert_eq(sail_makers, 7, "seven brands make sails")
+	assert_eq(fin_makers, 1, "one brand makes fins (Montag, the lead's decision)")
 
 
 func test_no_real_brand_in_a_name_or_a_tagline() -> void:

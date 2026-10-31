@@ -12,6 +12,7 @@ slug = "savanna"
 tagline = "Wide open water."
 makes_boards = true
 makes_sails = true
+makes_fins = false
 primary = Color(0.7608, 0.3451, 0.1216, 1)
 secondary = Color(0.2275, 0.1412, 0.0863, 1)
 accent = Color(1, 0.7725, 0.2824, 1)

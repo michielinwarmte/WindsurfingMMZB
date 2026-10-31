@@ -3,15 +3,21 @@
 [ext_resource type="Script" path="res://gear/gear_item.gd" id="1"]
 [ext_resource type="Resource" path="res://gear/brands/pj_new_sealand.tres" id="2"]
 [ext_resource type="Resource" path="res://config/board_default.tres" id="3"]
+[ext_resource type="PackedScene" path="res://assets/models/gear/pj_new_sealand/pj_new_sealand_slalom_117.glb" id="4"]
+[ext_resource type="Texture2D" path="res://assets/models/gear/pj_new_sealand/pj_new_sealand_slalom_117_deck.png" id="5"]
+[ext_resource type="Texture2D" path="res://assets/models/gear/pj_new_sealand/pj_new_sealand_slalom_117_bottom.png" id="6"]
 
 [resource]
 script = ExtResource("1")
 kind = 0
 brand = ExtResource("2")
-model_name = "Selkie"
+model_name = "Slalom T-SEC"
 line = 0
 size = 117.0
-description = "The default board: 72 cm wide, quick onto the plane and fast on a reach."
-wind_from_kt = 12.0
-wind_to_kt = 25.0
+description = "The all-round slalom size, 228 x 72 cm: fast from medium wind up."
+wind_from_kt = 14.0
+wind_to_kt = 26.0
 config = ExtResource("3")
+model = ExtResource("4")
+deck = ExtResource("5")
+bottom = ExtResource("6")

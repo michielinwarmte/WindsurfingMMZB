@@ -45,7 +45,7 @@ func ids_text() -> String:
 
 
 ## The gear's names in one line, for the F1 panel and the gear page:
-## "PJ New Sealand Selkie 117 L · Savanna Cheetah 8.0 m² · PJ New Sealand Whisker 38 cm".
+## "PJ New Sealand Slalom T-SEC 117 L · Savanna Cheetah 8.0 m² · PJ New Sealand Whisker 38 cm".
 func names_line() -> String:
 	return "%s  ·  %s  ·  %s" % [board.full_name(), sail.full_name(), fin.full_name()]
 

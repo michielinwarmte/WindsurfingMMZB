@@ -22,7 +22,7 @@ enum Line { SLALOM, FREERACE }
 
 @export var kind: Kind = Kind.BOARD
 @export var brand: Brand
-## The model's name as the page shows it, without the size: "Selkie". A made-up name, never a
+## The model's name as the page shows it, without the size: "Slalom T-SEC". A made-up name, never a
 ## real product's (tests/unit/test_gear.gd checks for the real makers' names).
 @export var model_name: String = ""
 @export var line: Line = Line.SLALOM
@@ -72,12 +72,12 @@ func size_text() -> String:
 	return "%d L" % roundi(size)
 
 
-## "Selkie 117 L": the model's name and its size.
+## "Slalom T-SEC 117 L": the model's name and its size.
 func title() -> String:
 	return "%s %s" % [model_name, size_text()]
 
 
-## "PJ New Sealand Selkie 117 L": with the brand's name.
+## "PJ New Sealand Slalom T-SEC 117 L": with the brand's name.
 func full_name() -> String:
 	var brand_name: String = brand.name if brand != null else ""
 	return ("%s %s" % [brand_name, title()]).strip_edges()

@@ -245,6 +245,20 @@ Choices for the team:
 2. The inner G in white (as now) or in gold, with the outer one in white.
 3. The tagline "Good game." or something about sails.
 
+### Montag (after Sonntag): fins
+
+<img src="../../../Game/assets/brands/montag/logo.png" width="140" alt="Montag logo">
+
+Added by the shaper (part 4) on the lead's decision of 1 November 2026: none of the eleven brands makes fins, and the gear page's Fin tab needs a brand for the game's five fins. **Idea:** a swept race fin hanging from its base on a silver disc. *Montag* is Monday, the day after *Sonntag* (the custom fin maker's name means Sunday), in the spirit of Michiel's names; he may rename it. **Nod:** hand-made carbon race fins: dark carbon, silver, one cool blue.
+
+| Colour | Hex | Where |
+|---|---|---|
+| primary: carbon | `#1E2329` | the plate, the fin in the mark |
+| secondary: silver | `#C9D0D8` | the disc |
+| accent: blue | `#2F80ED` | the disc's rim, "TAG" in the print |
+
+Print ink: light grey "MON" and blue "TAG" on carbon. Font: Fira Sans Heavy, capitals. The fins themselves are plain black carbon (no print). `Brand.makes_fins` is true for Montag only.
+
 ## Choices for every brand
 
 1. **The plate.** The logo sits on a rounded plate in the brand's colour. Moonboard's and SouthSails' navy plates almost disappear on the menu's dark blue. The gear page can give each card a thin light border, or show the mark there (all eleven marks read on the menu's blue).
@@ -282,4 +296,4 @@ sail_cloth_material.albedo_color = savanna.primary
 | The script that draws them | `tools/brands/make_logos.py` |
 | The contact sheet (not committed) | `.screenshots/brands.png` |
 
-The slugs: `tripletone`, `savanna`, `point9`, `moonboard`, `nielstrots`, `pj_new_sealand`, `bmx_boards`, `southsails`, `s3kauai`, `forbidden`, `gg_sails`.
+The slugs: `tripletone`, `savanna`, `point9`, `moonboard`, `nielstrots`, `pj_new_sealand`, `bmx_boards`, `southsails`, `s3kauai`, `forbidden`, `gg_sails`, and `montag` for the fins.
