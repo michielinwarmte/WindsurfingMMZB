@@ -1,0 +1,10 @@
+# Round 2: the rail the hull can carry (2 degrees to 160, U2's), crossed with the rail steering the
+# steady helm (lean_share) and the rig's lean. Round 1 found Max's 10 degrees upwind bounces the
+# close reaches and the rail faded flat by 135 bounces the 24 kt broad reach; 5 upwind is affordable.
+rail160_up0: --sailor.fin_load_bank_upwind_deg=0 --sailor.fin_load_twa_max_deg=160 --sailor.fin_load_twa_fade_deg=20
+rail160_up5: --sailor.fin_load_bank_upwind_deg=5 --sailor.fin_load_twa_max_deg=160 --sailor.fin_load_twa_fade_deg=20
+rail160_up0_ls02: --sailor.fin_load_bank_upwind_deg=0 --sailor.fin_load_twa_max_deg=160 --sailor.fin_load_twa_fade_deg=20 --pilot.lean_share=0.2
+rail160_up0_ls03: --sailor.fin_load_bank_upwind_deg=0 --sailor.fin_load_twa_max_deg=160 --sailor.fin_load_twa_fade_deg=20 --pilot.lean_share=0.3
+rail160_up5_ls02: --sailor.fin_load_bank_upwind_deg=5 --sailor.fin_load_twa_max_deg=160 --sailor.fin_load_twa_fade_deg=20 --pilot.lean_share=0.2
+rail160_up0_lean35: --sailor.fin_load_bank_upwind_deg=0 --sailor.fin_load_twa_max_deg=160 --sailor.fin_load_twa_fade_deg=20 --sailor.max_rig_lean_deg=35
+rail160_up0_ls02_lean35: --sailor.fin_load_bank_upwind_deg=0 --sailor.fin_load_twa_max_deg=160 --sailor.fin_load_twa_fade_deg=20 --pilot.lean_share=0.2 --sailor.max_rig_lean_deg=35
