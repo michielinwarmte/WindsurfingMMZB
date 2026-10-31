@@ -66,7 +66,20 @@ So the ladder above 75 % is the pull with the lean, a little rail and trim at th
 
 ## 6. The steering when planing
 
-(The agent's report: [steering.md](steering.md).)
+Measured and changed by the steering agent on `gp1/steering`, merged here; the whole story is [steering.md](steering.md). `tools/steer_check.sh`: the beginner's controller holds a 100° reach until it planes, then the stick goes hard over; the time to turn 30° and the speed at 30°:
+
+| | 18 kt, head up | 24 kt, head up | 18 kt, bear away | 24 kt, bear away |
+|---|---|---|---|---|
+| Before, flat water | 4.35 s, 7.1 m/s left of 13.8 | 5.38 s, 7.5 of 15.7 | 1.17 s | 0.98 s |
+| After, flat water | 2.53 s, 11.3 m/s | 2.28 s, 12.1 m/s | 1.15 s | 1.00 s |
+| After, waves and gusts | 2.77 s, 10.8 m/s | 2.53 s, 10.9 m/s | 1.28 s | 1.30 s |
+
+At 12 kt nothing changed (2.92 s). What was wrong, lever by lever: not the physics (the same board bears away in a second), not the loop's gains, not the head-up rate cap (`head_up_rate_min_dps` 12: lifted to what a 30° bank would carry, the sailor was catapulted at 18 and 24 kt, because a powered, hiked board in this sim banks to windward only 0 to 2° where 20 to 30 are asked), but **the auto-sheet**: a head-up at speed pushes the sailor to leeward (the speed times the turn rate, 2.9 m/s² at 12°/s), the felt heel reached 10 to 16°, and the pilot's urgent easing read that as being pulled over and dumped the sail within a second (the angle of attack from 15° to 3°, the drive from 261 to 50 N), so the board fell to 7 m/s and the rig, which steers through the sail, lost its grip. Two changes:
+
+- **The pilot expects the push of a head-up it was asked for** (`Autopilot._expected_turn_heel_deg`): the urgent easing counts only the felt heel beyond the push of the turn the board really makes (atan(v w / g)), no more than the windward bank still to come, faded out over the last 10° before the catapult heel. No new numbers; nothing changes without a windward bank asked for (straight sailing, bearing away, the course hold).
+- **The planing technique, the legs first** (`PlayerController.legs_rate_gain` 1/12 per degree per second of rate error, between `planing_steer_from_ms` 9.7 and `planing_steer_full_ms` 11.1 m/s, Max's 35 to 40 km/h, times the stance): in the straps the back foot pushes at once to head up and the front foot to bear away, as the quick part of the helm; the rig's trim follows only as the error lasts. The rig moves less (0.15 and 0.30 of its range on average, from 0.33 and 0.44). Below 9.7 m/s the steering is as before.
+
+The manoeuvre matrix with it: 24 of 24 without a fall; the 18 and 24 kt tacks reach the new course 0.4 to 0.5 s sooner and leave 0.2 to 0.9 m/s faster, the 24 kt gybes come out 1.5 to 2.4 m/s faster. Two things the agent found for Michiel: the powered board does not bank to windward because the feet hold the body first (`_apply_leg_forces`), which is what limits the head-up rate; and a 30 Hz yaw flutter on the steady 18 kt reach (±0.4°/s every tick, the fin's yaw moment alternating 602 / 716 N m), there before this work.
 
 ## 7. Regression
 
