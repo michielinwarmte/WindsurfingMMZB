@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="GearItem" format=3]
+
+[ext_resource type="Script" path="res://gear/gear_item.gd" id="1"]
+[ext_resource type="Resource" path="res://gear/brands/forbidden.tres" id="2"]
+[ext_resource type="Resource" path="res://config/board_freeride_240.tres" id="3"]
+
+[resource]
+script = ExtResource("1")
+kind = 0
+brand = ExtResource("2")
+model_name = "Curfew"
+line = 1
+size = 120.0
+description = "Roomy 240 x 72 cm free race board, the game's old default: easy to get going."
+wind_from_kt = 10.0
+wind_to_kt = 22.0
+config = ExtResource("3")

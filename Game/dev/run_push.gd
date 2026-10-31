@@ -23,6 +23,9 @@ extends SceneTree
 ##      1 + threshold x intensity, the timing_ease settings replace the case's own
 ##   [--slice=<i>/<n>] (run every n-th case from the i-th) [--out=<csv>] [--falls_out=<csv>]
 ##   [--label=<text>] (a column in the CSV, to tell runs apart)
+##   [--gear_board=<id>] [--gear_sail=<id>] [--gear_fin=<id>] a gear page item (Game/gear/; the ids
+##      are the files' names) in place of the default board, sail or fin, built as the game builds
+##      the player's board (GearChoice.sim_with()); an unknown id sails the default
 ##   [--push=<level>] the push slider's level (0 to 1, a percentage, or eased / neutral / pushed:
 ##      PushDial.level_of), set on the controller as the game does; the sweep group push.level
 ##      (--sweep=push.level=0,0.25,0.5,0.75,0.85,0.95,1) sweeps it. The case's own --pilot.
@@ -117,6 +120,9 @@ func _initialize() -> void:
 	print("GP0 push check: %d cases (this slice %d/%d), %s s per case, means over t >= %s s; waves %s, gusts %s (%.2f, %.0f s), gradient %s" % [
 		cases.size(), slice_index, slice_count, _options.get("seconds", "150"), _options.get("from", "40"),
 		_options.get("waves", "1"), _options.get("gusts", "1"), _gust_intensity(), _gust_period_s(), _options.get("gradient", "1")])
+	var gear: GearChoice = _gear()
+	if gear != null:
+		print("gear: " + gear.names_line())
 	print("wind TWA  sweep                         made  vmg   sail%  falls  speed  heelMax finMax finP95 stall%  slipMax slipP95  pitchSD trim  heel  alpha lean  plan% front eased%  push  finN  finUp slip  back  sheet")
 	for i: int in cases.size():
 		if i % slice_count != slice_index:
@@ -378,7 +384,18 @@ func _make_sim(wind_kt: float) -> WindsurferSim:
 			wave.amplitude_m *= wave_scale
 			wave.steepness = minf(wave.steepness * wave_scale, 1.0)
 		sim.set_waves(true)
+	# The gear page's gear (--gear_board, --gear_sail, --gear_fin): the same sea and wind on it.
+	var gear: GearChoice = _gear()
+	if gear != null:
+		sim = gear.sim_with(sim)
 	return sim
+
+
+## The gear asked for on the command line, or null for the default board, sail and fin.
+func _gear() -> GearChoice:
+	if not (_options.has("gear_board") or _options.has("gear_sail") or _options.has("gear_fin")):
+		return null
+	return GearChoice.from_ids(_options.get("gear_board", ""), _options.get("gear_sail", ""), _options.get("gear_fin", ""))
 
 
 func _gust_intensity() -> float:

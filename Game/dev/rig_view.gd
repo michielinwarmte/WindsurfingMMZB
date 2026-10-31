@@ -13,7 +13,9 @@ extends Node3D
 ## the cloth with no pressure in it, flapping all over, whatever the simulation says; a value
 ## below 1 shows less, 0.3 is the ripple behind the mast of a sail that is nearly luffing:
 ## the pictures get "_luff" and the value in their name), --tint=r,g,b (the sail in a race's
-## colour, as RaceRunner gives it, 0 to 1 each; the pictures get "_tint").
+## colour, as RaceRunner gives it, 0 to 1 each; the pictures get "_tint"), --gear_board=<id>,
+## --gear_sail=<id>, --gear_fin=<id> (a gear page item, Game/gear/: sailed and shown as the game
+## does; the pictures get "_gear").
 
 const WINDSURFER_SCENE: PackedScene = preload("res://windsurfer/windsurfer.tscn")
 const OCEAN_SCRIPT: Script = preload("res://world/ocean.gd")
@@ -52,6 +54,10 @@ func _ready() -> void:
 	# sailing North on the left (port tack). The autopilot holds a beam reach.
 	_windsurfer.start_heading_deg = 0.0 if tack == "port" else 180.0
 	_windsurfer.use_autopilot = true
+	var gear_wanted: bool = options.has("gear_board") or options.has("gear_sail") or options.has("gear_fin")
+	if gear_wanted:
+		_windsurfer.gear = GearChoice.from_ids(options.get("gear_board", ""), options.get("gear_sail", ""), options.get("gear_fin", ""))
+		print(_windsurfer.gear.names_line())
 	add_child(_windsurfer)
 	_ocean.call("setup", _windsurfer.sim, _camera)
 	if options.get("figure", "1") == "0":
@@ -66,7 +72,8 @@ func _ready() -> void:
 	var screenshot: String = options.get("screenshot", "")
 	var out_dir: String = screenshot.get_base_dir() if screenshot != "" else "user://"
 	var flutter: float = options.get("flutter", "0").to_float()
-	_capture_views(options.get("settle", "6").to_float(), views, out_dir, tack, flutter, "_tint" if tinted else "")
+	var suffix: String = ("_tint" if tinted else "") + ("_gear" if gear_wanted else "")
+	_capture_views(options.get("settle", "6").to_float(), views, out_dir, tack, flutter, suffix)
 
 
 func _capture_views(settle_s: float, views: PackedStringArray, out_dir: String, tack: String, flutter: float,
