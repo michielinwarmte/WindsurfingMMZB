@@ -65,7 +65,8 @@ gates, S4 full laps, S5 the start, S6 company). The reward is the fall of the
 sailing distance still to go round the course (`Game/race/sailing_distance.gd`), so
 going out to a layline pays like pointing at the mark, a detour pays nothing and the
 rounding itself pays. Every race is drawn from the settings menu's whole range of
-conditions: the wind from 4 to 35 kt, the five seas at every height, the gust patches
+conditions: the wind from 4 to 35 kt, the five seas at every height up to a 0.6 m crest
+(the hands cannot sail rougher today: `TrainingDrops.SEA_HEIGHT_MAX_M`), the gust patches
 and the shifts from none to the strongest. Needs once a Python with torch,
 Stable-Baselines3 and gymnasium (the header of `tools/train.sh` says how; it finds the
 shared venv `~/.local/venvs/windsurf` on its own).

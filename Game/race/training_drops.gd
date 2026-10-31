@@ -23,16 +23,26 @@ extends RefCounted
 ## range the settings menu offers (SettingsValues), so the head learns every wind and sea a player
 ## can set (draw_conditions()): the wind from 4 to 35 kt; the sea one of the menu's five (flat, the
 ## swell, the medium and the strong chop, the sea made by the wind over a fetch) at a random height,
-## from flat water to the roughest the menu makes at that wind; the gust patches from none to the
-## menu's strongest; the shifts from none to the menu's largest, at a random period. On the lake the
-## wind, its gusts and its shifts are the map's (below); the sea is drawn there too, as the game
-## puts the player's sea on the lake.
+## from flat water up to a 0.6 m crest (SEA_HEIGHT_MAX_M: the menu goes rougher, the hands cannot
+## yet); the gust patches from none to the menu's strongest; the shifts from none to the menu's
+## largest, at a random period. On the lake the wind, its gusts and its shifts are the map's
+## (below); the sea is drawn there too, as the game puts the player's sea on the lake.
 ##
 ## From S4 on, a share of the races (lake_share, 30 %) are sailed on Lake Silvaplana: the course
 ## (the saved T2, a template or a random shape) fitted to the water by CourseFitter, in the map's
 ## wind at a random hour of the Maloja's day, thin air and fresh water (D6), the sailing area kept
 ## off the shore; the rest on the open water in a random wind.
 ##
+## The highest sea a training race is drawn in: its highest crest above the still water (the sum of
+## the waves' amplitudes, WaveSetConfig.total_amplitude_m(): the sea_height the brain sees), metres.
+## The menu goes up to about 1.8 m, but the hands cannot sail the rough end today: the all-rounder on
+## the autopilot's margin fell 25 times in 4 minutes in a 0.55 m sea on the lake and stalled in 0.45
+## to 0.83 m seas at 17 kt (Documentation/reports/fleet_gear/training.md), so a race in such a sea
+## teaches the brain only falling (the lead's decision, 31 October 2026). The seas from 0.45 to 0.6 m
+## stay: there the brain must learn to ease the push. Making the board sail rougher water is a
+## physics and controller item for Michiel, who may raise this number once the hands can.
+const SEA_HEIGHT_MAX_M: float = 0.6
+
 ## The stages' names are S1 to S6; make_env() builds a race for a stage from a seed, drop() sets a
 ## board down again for its next episode in the same race.
 
@@ -98,7 +108,7 @@ class Stage:
 	func describe() -> String:
 		return "%s (%s): %d boards%s%s%s, %.0f s episodes, %.0f to %.0f kt, %s, %s%s%s" % [name, Kind.keys()[kind].to_lower(),
 			boards, " blind" if blind else "", " with wind shadows" if shadows else "", " and the rules" if rules else "", episode_s, wind_min_kt, wind_max_kt,
-			"the sea from flat to the roughest" if waves else "flat water",
+			("the sea from flat to %.2f m" % SEA_HEIGHT_MAX_M) if waves else "flat water",
 			"gusts and shifts drawn" if gusts and shifts else ("gusts drawn" if gusts else ("shifts drawn" if shifts else "a steady wind")),
 			(", a countdown of %.0f to %.0f s" % [prestart_min_s, prestart_max_s]) if prestart_max_s > 0.0 else "",
 			(", %.0f %% on Lake Silvaplana" % (100.0 * lake_share)) if lake_share > 0.0 else ""]
@@ -277,23 +287,41 @@ static func make_env(stage: Stage, seed: int, boards: int = 0) -> RaceEnv:
 
 ## The conditions of a race of a stage, from the race's random numbers (the same seed, the same
 ## conditions): each number drawn evenly across the settings menu's range (SettingsValues), the
-## sea's preset evenly among the menu's five. The same count of numbers is drawn whatever the
-## stage switches off, so the rest of a race's draws do not move.
+## sea's preset evenly among the menu's five (so flat water a fifth of the time), the sea's height
+## kept at or under SEA_HEIGHT_MAX_M. The same count of numbers is drawn whatever the stage switches
+## off, so the rest of a race's draws do not move.
 static func draw_conditions(stage: Stage, rng: RandomNumberGenerator, wind_kt: float) -> Conditions:
 	var c: Conditions = Conditions.new()
 	c.wind_kt = wind_kt
 	var preset: int = rng.randi_range(0, SettingsValues.WavePreset.size() - 1)
 	c.sea_preset = (preset if stage.waves else SettingsValues.WavePreset.FLAT) as SettingsValues.WavePreset
-	c.wave_height_scale = rng.randf_range(SettingsValues.WAVE_SCALE_MIN, SettingsValues.WAVE_SCALE_MAX)
+	var height_share: float = rng.randf()
 	c.swell_height_scale = rng.randf_range(SettingsValues.SWELL_SCALE_MIN, SettingsValues.SWELL_SCALE_MAX)
 	c.fetch_km = rng.randf_range(SettingsValues.FETCH_MIN_KM, SettingsValues.FETCH_MAX_KM)
 	c.water_depth_m = rng.randf_range(SettingsValues.DEPTH_MIN_M, SettingsValues.DEPTH_DEEP_M)
+	var highest_scale: float = _highest_height_scale(c)
+	c.wave_height_scale = lerpf(minf(SettingsValues.WAVE_SCALE_MIN, highest_scale), highest_scale, height_share)
 	var gust_intensity: float = rng.randf_range(0.0, SettingsValues.GUST_INTENSITY_MAX)
 	c.gust_intensity = gust_intensity if stage.gusts else 0.0
 	var shift_deg: float = rng.randf_range(0.0, SettingsValues.SHIFT_MAX_DEG)
 	c.max_shift_deg = shift_deg if stage.shifts else 0.0
 	c.shift_period_s = rng.randf_range(SettingsValues.SHIFT_PERIOD_MIN_S, SettingsValues.SHIFT_PERIOD_MAX_S)
 	return c
+
+
+## The most the menu's height (wave_height_scale) may be for this sea and stay at or under
+## SEA_HEIGHT_MAX_M: the menu's most (2 times) for a sea that stays low anyway, less for a rough one.
+## Every wave's amplitude is the scale times its own, so the sea's height is the scale times its
+## height at 1. In the one case where even the menu's least height (half) is too high, the scale goes
+## below it: never with the menu's seas today (the roughest is about 0.9 m at 1, 0.45 m at half).
+static func _highest_height_scale(c: Conditions) -> float:
+	if not c.waves():
+		return SettingsValues.WAVE_SCALE_MAX
+	c.wave_height_scale = 1.0
+	var height_at_one_m: float = c.wave_set().total_amplitude_m()
+	if height_at_one_m * SettingsValues.WAVE_SCALE_MAX <= SEA_HEIGHT_MAX_M:
+		return SettingsValues.WAVE_SCALE_MAX
+	return SEA_HEIGHT_MAX_M / height_at_one_m
 
 
 ## A new drop for a board in a race of a stage (its next episode, in the same race).

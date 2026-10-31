@@ -2,7 +2,7 @@
 
 Part 1 of [PLAN.md](PLAN.md), by the trainer agent (Claude Opus 5.5, for Fable's lead), 31 October 2026, on `race/train-all` in `../WindsurfingMMZB-train`. Michiel's brief: "new training for the AI to improve at doing the different courses in different conditions; first train them to become as fast as possible around all the courses with different wind and wave conditions; you can use all the power of the PC."
 
-**In short:** the trainer runs on this PC (a Python venv shared by every worktree, torch with CUDA). Every training race is now drawn from the settings menu's whole range of wind and sea, and a worker gets a new race every two episodes (before, it sailed **one course in one wind for the whole night**). The brain has a fourth output, the push slider (RA12). It starts at the slider level where the fleet sails today. The fleet's gusts run on one clock (RA13), in the game and in training. Nothing in `Game/sim/` changed. The long run is **not** launched: the command is at the end, for the lead.
+**In short:** the trainer runs on this PC (a Python venv shared by every worktree, torch with CUDA). Every training race is now drawn from the settings menu's whole range of wind and sea, the sea capped at a 0.6 m crest (the hands cannot sail rougher today), and a worker gets a new race every two episodes (before, it sailed **one course in one wind for the whole night**). The brain has a fourth output, the push slider (RA12). It starts at the slider level where the fleet sails today. The fleet's gusts run on one clock (RA13), in the game and in training. Nothing in `Game/sim/` changed. The long run is **not** launched: the command is at the end, for the lead.
 
 ## 1. The set-up
 
@@ -19,18 +19,22 @@ Part 1 of [PLAN.md](PLAN.md), by the trainer agent (Claude Opus 5.5, for Fable's
 
 ## 2. What was changed, and why
 
-### The conditions: the whole range the game offers (`training_drops.gd`)
+### The conditions: the range the game offers, the sea capped at 0.6 m (`training_drops.gd`)
 
 **What a race now draws.** Every race of every stage, S1 to S6, draws its conditions from the settings menu's ranges (`SettingsValues`). The menu's own code builds the sea, so a training race is one a player could set up:
 - **The wind:** 4 to 35 kt (before: 10 to 24).
-- **The sea:** one of the menu's five, at a random height.
+- **The sea:** one of the menu's five, at a random height, **capped at a 0.6 m crest**.
   - The five are flat water, the swell, the medium and the strong chop, and the sea made by the wind over a fetch of 0.2 to 20 km at a depth of 0.5 to 20 m.
   - The height is 0.5 to 2 times the preset's, and the swell alone 0 to 3 times.
-  - Over 2,000 draws, the highest crest above still water came out as:
+  - **The cap** is `TrainingDrops.SEA_HEIGHT_MAX_M = 0.6`. It applies to the sea's height as the brain sees it (`sea_height`): the highest crest above still water, the sum of the waves' amplitudes.
+    - **Why (the lead's decision, 31 October):** the hands cannot sail the rough end today (point 5 of section 3), so a race in such a sea teaches the brain only falling. Making the board sail rougher water is a physics and controller item for Michiel, who may raise the number once the hands can.
+    - **How:** the menu's height factor for a rough sea is drawn only up to the value that keeps it at or under the cap. Each wave's amplitude is the factor times its own, so the sea's height is the factor times its height at 1. The kind of sea is drawn as before, so flat water keeps its fifth, and the seas from 0.45 to 0.6 m stay: there the brain must learn to ease the push.
+  - Over 2,000 draws (the same seed both times), the highest crest above still water came out as:
 
-| Flat | Below 0.15 m | 0.15 to 0.3 m | 0.3 to 0.45 m | 0.45 to 0.7 m | Above 0.7 m (up to 1.8 m) |
-|---|---|---|---|---|---|
-| 20 % | 21 % | 28 % | 17 % | 9 % | 6 % |
+| | Flat | 0 to 0.45 m | 0.45 to 0.6 m | Above 0.6 m |
+|---|---|---|---|---|
+| **With the cap** | **19.6 %** | **68.8 %** | **11.7 %** | **0 %** (the highest seen 0.598 m) |
+| Without it (the first version) | 20 % | 66 % | 9 % to 0.7 m | 6 % above 0.7 m (up to 1.8 m) |
 
   Before, S1 to S3 sailed only on flat water.
 - **The gust patches:** on, at a strength from 0 to 0.5 (the menu's strongest).
@@ -113,9 +117,11 @@ Then each try's brain sailed **the same 20 new S1 drops** (every condition, no n
    - on the S1 drops falls 8 times in 90 s at 35 kt in a 0.70 m sea, and 5 times at 20 kt in a 0.61 m sea;
    - on S4 falls 25 times in 4 minutes on the lake in a 0.55 m sea at 16 kt, and stalls in 0.45 to 0.83 m seas at 17 kt.
 
-   About 15 % of the races draw a sea above 0.45 m. The brain can only learn there what the push and the course can do: ease, choose the angle, stay up. **A question for the lead and Michiel:** keep the menu's whole range (the brief), or cap the sea for the first nights (one number in `draw_conditions()`)? I kept the whole range.
+   About 15 % of the races drew a sea above 0.45 m. The brain can only learn there what the push and the course can do: ease, choose the angle, stay up. **Decided by the lead (31 October):** the sea is capped at a 0.6 m crest (section 2); the seas from 0.45 to 0.6 m stay. Sailing the rougher seas is an item for Michiel's physics and controller.
 
 ## 4. The all-rounder's yardstick (the scripted character, the pilot's own margin)
+
+*Sections 3 and 4 were measured before the sea cap, on drops with seas up to 1.8 m. The same seeds now give lower seas in their rough races, so the numbers on the capped drops will be somewhat higher (fewer falls and stalls). The nights' first S1 check gives the new figure, or `tools/train.sh --evaluate=none --reference=allrounder --stage=S1 --episodes=20 --seed=1` in 4 minutes.*
 
 - **S1** (20 drops, seed 1; `tools/train.sh --evaluate=Game/race/brains/s1_best.json --stage=S1 --episodes=20 --seed=1 --reference=allrounder`):
   - speed made good **3.70 m/s**; 25 % of the drops rounded the mark within 90 s (in 63 s on average);

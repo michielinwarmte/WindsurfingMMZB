@@ -115,8 +115,10 @@ func test_the_starts_drops_are_in_the_sailing_area_with_a_countdown_and_the_line
 
 ## Every stage draws the conditions of its races evenly across the settings menu's ranges: over
 ## many seeds the smallest and the largest seen are near the ends of each range and never past them,
-## every one of the five seas comes up (flat water about a fifth of the time), and the roughest sea
-## is the menu's roughest. The lake from S4 on only.
+## every one of the five seas comes up (flat water about a fifth of the time), and the sea is never
+## higher than the cap (SEA_HEIGHT_MAX_M, 0.6 m: the hands cannot sail rougher today) while seas
+## between 0.45 m and the cap still come up (there the brain must learn to ease). The lake from S4
+## on only.
 func test_every_stage_draws_the_settings_whole_range_of_conditions() -> void:
 	const DRAWS: int = 400
 	for name: String in TrainingDrops.NAMES:
@@ -130,6 +132,7 @@ func test_every_stage_draws_the_settings_whole_range_of_conditions() -> void:
 		var lowest: Dictionary[String, float] = {}
 		var highest: Dictionary[String, float] = {}
 		var presets: Dictionary[int, int] = {}
+		var rough: int = 0
 		for k: int in DRAWS:
 			var wind_kt: float = rng.randf_range(stage.wind_min_kt, stage.wind_max_kt)
 			var c: TrainingDrops.Conditions = TrainingDrops.draw_conditions(stage, rng, wind_kt)
@@ -140,7 +143,10 @@ func test_every_stage_draws_the_settings_whole_range_of_conditions() -> void:
 			for key: String in seen:
 				lowest[key] = minf(lowest.get(key, INF), seen[key])
 				highest[key] = maxf(highest.get(key, -INF), seen[key])
+			if seen["sea_m"] > 0.45:
+				rough += 1
 		_assert_spans(name, "wind_kt", lowest, highest, SettingsValues.WIND_SPEED_MIN_KT, SettingsValues.WIND_SPEED_MAX_KT)
+		# The menu's height: its whole range for the seas that stay low, less for the rough ones.
 		_assert_spans(name, "height", lowest, highest, SettingsValues.WAVE_SCALE_MIN, SettingsValues.WAVE_SCALE_MAX)
 		_assert_spans(name, "swell", lowest, highest, SettingsValues.SWELL_SCALE_MIN, SettingsValues.SWELL_SCALE_MAX)
 		_assert_spans(name, "fetch_km", lowest, highest, SettingsValues.FETCH_MIN_KM, SettingsValues.FETCH_MAX_KM)
@@ -151,9 +157,12 @@ func test_every_stage_draws_the_settings_whole_range_of_conditions() -> void:
 		assert_eq(presets.size(), SettingsValues.WavePreset.size(), "%s: all five seas: %s" % [name, str(presets)])
 		assert_between(float(presets.get(SettingsValues.WavePreset.FLAT, 0)) / DRAWS, 0.12, 0.28, "%s: flat water about a fifth of the time" % name)
 		assert_eq(lowest["sea_m"], 0.0, "%s: flat water" % name)
-		assert_true(highest["sea_m"] > 0.5, "%s: the roughest sea seen is %.2f m high" % [name, highest["sea_m"]])
-		gut.p("%s: the sea from %.2f to %.2f m, the wind %.1f to %.1f kt, gusts %.3f to %.3f, shifts %.1f to %.1f deg; seas %s" % [name,
-			lowest["sea_m"], highest["sea_m"], lowest["wind_kt"], highest["wind_kt"], lowest["gusts"], highest["gusts"],
+		assert_eq(TrainingDrops.SEA_HEIGHT_MAX_M, 0.6, "the cap: a 0.6 m crest")
+		assert_true(highest["sea_m"] <= TrainingDrops.SEA_HEIGHT_MAX_M + 1e-9, "%s: never above the cap: the highest seen %.4f m" % [name, highest["sea_m"]])
+		assert_true(highest["sea_m"] > TrainingDrops.SEA_HEIGHT_MAX_M - 0.01, "%s: up to the cap: %.3f m" % [name, highest["sea_m"]])
+		assert_true(float(rough) / DRAWS > 0.05, "%s: seas above 0.45 m still drawn: %d of %d" % [name, rough, DRAWS])
+		gut.p("%s: the sea from %.2f to %.3f m (%d of %d above 0.45 m), the wind %.1f to %.1f kt, gusts %.3f to %.3f, shifts %.1f to %.1f deg; seas %s" % [name,
+			lowest["sea_m"], highest["sea_m"], rough, DRAWS, lowest["wind_kt"], highest["wind_kt"], lowest["gusts"], highest["gusts"],
 			lowest["shift_deg"], highest["shift_deg"], str(presets)])
 
 
