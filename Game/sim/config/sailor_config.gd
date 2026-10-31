@@ -379,8 +379,13 @@ extends Resource
 ## 24 kt broad reach bounces (pitch SD 0.35 degrees) or falls, so the default keeps the
 ## bank to a run: full to 160 degrees, flat at 180 (an estimate; on a run the sailor
 ## stands over the centreline anyway). 120 is the setting to try the instruction's rule.
-## Max (30 October 2026): a 72 cm board sails flat downwind (PH28: sailor_default.tres
-## fades the bank from 100 degrees to none at 135, the reach check's broad reach).
+## Max (30 October 2026): a 72 cm board sails flat downwind. The PH28 rider build set
+## sailor_default.tres to fade the bank from 100 degrees to none at 135, and on this hull the
+## 24 kt broad reach then bounced (pitch SD 1.1 degrees) and fell, as U2 had found flat; the
+## autopilot suite (Documentation/reports/autopilot/PROGRESS.md, rounds 1 and 2) measured it
+## steady with the bank kept to 160 (19.4 m/s on 0.91 m at 1.2 degrees), so the default is
+## U2's 160 / 20 again. Max's flat board downwind waits for the hull that rewards a rail
+## (ROADMAP PH27, PH31).
 @export var fin_load_twa_max_deg: float = 180.0
 @export var fin_load_twa_fade_deg: float = 20.0
 ## Toward the wind the leeward rail goes down further (PH28; Max, 30 October 2026, answer
@@ -388,6 +393,10 @@ extends Resource
 ## this many degrees up to fin_load_twa_upwind_deg, falling linearly to fin_load_bank_deg at
 ## a beam reach (the wind across the board, 90 degrees), and fin_load_bank_deg from there
 ## (WindsurferSim._rail_bank_deg_by_point_of_sail). 0 = no more than fin_load_bank_deg.
+## The default is 5 (sailor_default.tres): at Max's 10 the close reaches bounce on this hull
+## (pitch SD 0.9 to 1.6 degrees, 10 % slower); at 5 they are steady, 2 % slower than flat
+## and 0.2 m longer (the autopilot suite, rounds 1 and 2). Half his number, the hull's cost
+## stated (ROADMAP PH27).
 @export var fin_load_bank_upwind_deg: float = 0.0
 @export var fin_load_twa_upwind_deg: float = 60.0
 ## The sailor leans against the pull in the hands: this many times the lean that balances

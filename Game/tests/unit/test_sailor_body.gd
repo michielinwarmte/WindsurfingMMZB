@@ -173,11 +173,14 @@ func test_the_sailor_rails_the_board_across_the_wind_and_keeps_it_flat_off_it() 
 	sim.stance = 1.0
 	sim.lean = 1.0
 	assert_almost_eq(sim._fin_load_bank_rad(0.0), -0.5 * deg_to_rad(sim.sailor_config.fin_load_bank_deg), 1e-4, "half the bank at the border")
-	# The default (PH28, Max's answer 3 of 30 October 2026): up to 10 degrees of leeward rail
-	# upwind to 60 degrees, falling to 2 crosswind at 90, 2 to 100, flat by the 135 degree broad
-	# reach.
+	# The default: Max's rail (answer 3 of 30 October 2026: up to 10 degrees of leeward rail
+	# upwind, 1 to 3 crosswind, flat downwind) at the amount this hull carries, measured one
+	# lever at a time by the autopilot suite (Documentation/reports/autopilot/PROGRESS.md, rounds
+	# 1 and 2): 5 degrees upwind to 60 (at 10 the close reaches bounce), falling to 2 crosswind at
+	# 90, 2 kept to 140 and gone by 160 (faded flat by 135 the 24 kt broad reach bounced and fell,
+	# as U2 had found). Max's full numbers wait for the hull's heeled lift (ROADMAP PH27, PH31).
 	var shipped: WindsurferSim = _sim(15.0)
-	var banks: Dictionary[float, float] = {45.0: 10.0, 60.0: 10.0, 75.0: 6.0, 90.0: 2.0, 100.0: 2.0, 117.5: 1.0, 135.0: 0.0, 160.0: 0.0, -60.0: 10.0, -100.0: 2.0}
+	var banks: Dictionary[float, float] = {45.0: 5.0, 60.0: 5.0, 75.0: 3.5, 90.0: 2.0, 100.0: 2.0, 117.5: 2.0, 135.0: 2.0, 150.0: 1.0, 160.0: 0.0, -60.0: 5.0, -100.0: 2.0}
 	for twa_deg: float in banks:
 		shipped.reset(Vector3.ZERO, deg_to_rad(from_deg - twa_deg))
 		assert_almost_eq(shipped._rail_bank_deg_by_point_of_sail(), banks[twa_deg], 1e-3, "the default's rail at a true wind angle of %.0f deg" % twa_deg)

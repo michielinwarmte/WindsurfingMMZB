@@ -40,6 +40,15 @@ var _rake_trim: float = 0.0
 ## default: holding a course is done with the rig and a flat board; a planing board carves
 ## hard on a few degrees of bank, so a rail used for every small correction rocks it.
 var lean_share: float = 0.0
+## The rail steers only toward and across the wind: the full lean_share up to this true wind
+## angle, fading to none over lean_share_fade_deg beyond it. Off the wind the weight on the
+## inside rail fights the flat board the broad reach needs on this hull: with lean_share 0.2 on
+## every course the 18 kt broad reach bounced (pitch SD 1.2 degrees) and the 24 kt one fell,
+## while upwind and across the same share shortened the wet part to 0.9 to 1.0 m and held the
+## course steadier (the autopilot plan, round 2). The border is the instruction's beam-to-broad
+## reach, about 110 degrees.
+var lean_share_twa_max_deg: float = 110.0
+var lean_share_fade_deg: float = 25.0
 ## How the steady part of the course hold is carried (U1.6). Off: the helm moves the rake
 ## and the rig's sideways tilt together (Helm.steer), so the heading-up helm a planing reach
 ## needs also tilts the rig to leeward: on the 18 kt beam reach it leans 10 degrees to
@@ -198,10 +207,11 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		_hold_turn_right = signf(head_up) * tack if absf(head_up) > 0.1 else 0.0
 		# Heading up is a right turn on starboard tack and a left turn on port tack.
 		var pivot: bool = Helm.pivoting(telemetry, controls, 30.0)
+		var rail_share: float = lean_share * _rail_share_by_point_of_sail(telemetry)
 		if trim_with_rake_first and not pivot:
-			Helm.hold_rake_first(controls, head_up, correction, tack, lean_share, dt, rake_rate_per_s)
+			Helm.hold_rake_first(controls, head_up, correction, tack, rail_share, dt, rake_rate_per_s)
 		else:
-			Helm.steer(controls, clampf(head_up, -1.0, 1.0) * tack, tack, 0.0 if pivot else lean_share, dt, rake_rate_per_s, 0.0 if pivot else 1.0)
+			Helm.steer(controls, clampf(head_up, -1.0, 1.0) * tack, tack, 0.0 if pivot else rail_share, dt, rake_rate_per_s, 0.0 if pivot else 1.0)
 	if trim_sheet:
 		_feel_the_pull(telemetry, dt)
 		var alpha_deg: float = minf(best_alpha_deg(deg_to_rad(telemetry.awa_deg), _sail_pressure_pa(telemetry)), max_alpha_deg)
@@ -323,6 +333,13 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		var wanted_sheet: float = 1.0 - (boom_angle_deg - sheet_angle_in_deg) / (sheet_angle_out_deg - sheet_angle_in_deg)
 		controls.sheet = move_toward(controls.sheet, wanted_sheet, sheet_rate_per_s * dt)
 		controls.boom_across = move_toward(controls.boom_across, across, sheet_rate_per_s * dt)
+
+
+## How much of lean_share applies on this course: all of it up to lean_share_twa_max_deg of true
+## wind angle, none from lean_share_fade_deg beyond that, straight between.
+func _rail_share_by_point_of_sail(telemetry: Telemetry) -> float:
+	var beyond: float = absf(telemetry.twa_deg) - lean_share_twa_max_deg
+	return 1.0 - clampf(beyond / maxf(lean_share_fade_deg, 1.0), 0.0, 1.0)
 
 
 ## The apparent wind's dynamic pressure on the sail (Pa): the sail twists open with it, so its
