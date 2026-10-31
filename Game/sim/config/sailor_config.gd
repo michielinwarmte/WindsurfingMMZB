@@ -22,7 +22,15 @@ extends Resource
 
 @export_group("Stance (fore and aft)")
 ## Where the sailor's weight is at rest and at low speed, in the body frame (z aft): the
-## front foot by the mast foot, the back foot half a metre behind it.
+## front foot by the mast foot, the back foot half a metre behind it. The default
+## (sailor_default.tres) is 0.05, 1.09 m from the tail (Session 61, 31 October 2026): 4 cm
+## ahead of the 1.05 m it had, the smallest move at which the beginner's 18 kt tack gets going
+## again on the merged PH28 physics (85 kg, the front foot's couple, the sail's formula): at
+## 1.05 m the stopped board after the flip pitched its nose up 25 to 70 degrees, pivoted into
+## irons faster than the sail could fill, and the sailor fell off. Game/dev/rest_pitch.gd: the
+## board floats level with the sailor at about 1.03 m (z 0.11), -1.4 degrees at 1.05 and -2.1
+## at 1.09, so this is a stand-in for the technique of keeping the weight forward until the
+## board has way on, which the autopilot's tack exit does not have yet (the autopilot plan).
 @export var stance_rest_z_m: float = 0.15
 ## Where the weight is when planing: in the back footstraps, about 0.6 m from the tail.
 @export var stance_planing_z_m: float = 0.60
