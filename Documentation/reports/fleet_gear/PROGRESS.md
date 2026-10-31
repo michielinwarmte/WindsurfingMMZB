@@ -7,8 +7,10 @@ The plan is [PLAN.md](PLAN.md). One line per launch, report and merge, newest at
 | Who | Part | Tokens | State |
 |---|---|---|---|
 | the lead (Fable) | the plan, the briefs | ~0.1 M so far | running |
+| the designer (Opus) | 3, the logos | 0.20 M | done, merged |
 
 ## Log
 
 - 31 October 2026, evening: the plan written; `gear/lead` made from `gp4/time-trial` (d49d0c5); the worktrees `../WindsurfingMMZB-train` (`race/train-all`), `../WindsurfingMMZB-research` (`gear/research`), `../WindsurfingMMZB-logos` (`gear/logos`) made from it.
 - 31 October 2026, evening: three Opus agents (effort xhigh) launched at once: the trainer (part 1, stops before the long run for the lead's read of the diff), the researcher (part 2, the document only) and the designer (part 3, the logos, the `Brand` resource, the test). The lead waits; no own building meanwhile.
+- 31 October 2026, late evening: the designer done in 22 minutes (0.20 M tokens): the eleven logos as SVG and PNG (`Game/assets/brands/<slug>/`, drawn by `tools/brands/make_logos.py`, letters as outlines from open fonts), `Game/gear/brand.gd` with the eleven `.tres`, `test_brands.gd` (5 tests; it bites: a planted real name fails it), `brands.md`; 622 of 622 and the check green on its branch. The lead looked at the contact sheet (`.screenshots/brands.png` in its worktree): every mark reads on white and on the menu's blue. Merged into `gear/lead`. For the shaper: mipmaps on the printed textures; the colours live in the script and the `.tres` both.
