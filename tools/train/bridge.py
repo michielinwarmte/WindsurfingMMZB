@@ -106,6 +106,12 @@ class GodotWorkers(VecEnv):
         self._episode_rewards: np.ndarray | None = None
         self._episode_lengths: np.ndarray | None = None
         self.episodes_done = 0
+        # The workers' busy time (their own count of each step) against the steps' wall time, for
+        # the share of the workers' time spent sailing rather than waiting for the slowest.
+        self.busy_s = 0.0
+        self.wall_s = 0.0
+        # Observations or rewards that were not numbers (NaN or infinite), set to 0.
+        self.bad_numbers = 0
         self._launch()
         obs_size = int(self.hello["obs_size"])
         action_size = int(self.hello["action_size"])
@@ -179,6 +185,7 @@ class GodotWorkers(VecEnv):
 
     def step_wait(self):
         assert self._actions is not None
+        started = time.time()
         self._step_counter += 1
         offset = 0
         for k, worker in enumerate(self.workers):
@@ -196,6 +203,7 @@ class GodotWorkers(VecEnv):
                 raise RuntimeError(f"worker {worker.index}: {reply['error']}")
             if "race" in reply:
                 worker.race = reply["race"]
+            self.busy_s += float(reply.get("busy_ms", 0.0)) / 1000.0
             for i in range(worker.boards):
                 env_index = offset + i
                 reward = float(reply["rew"][i])
@@ -220,8 +228,28 @@ class GodotWorkers(VecEnv):
                 dones.append(done)
                 infos.append(info)
             offset += worker.boards
-        return (np.asarray(rows, dtype=np.float32), np.asarray(rewards, dtype=np.float32),
-                np.asarray(dones, dtype=bool), infos)
+        self.wall_s += time.time() - started
+        observations = self._clean(np.asarray(rows, dtype=np.float32))
+        for info in infos:
+            if "terminal_observation" in info:
+                info["terminal_observation"] = self._clean(info["terminal_observation"])
+        return (observations, self._clean(np.asarray(rewards, dtype=np.float32)), np.asarray(dones, dtype=bool), infos)
+
+    def _clean(self, values: np.ndarray) -> np.ndarray:
+        """The numbers as they are, or with any NaN or infinity set to 0 (counted): one board whose
+        physics went wrong must not stop a night of training."""
+        if np.all(np.isfinite(values)):
+            return values
+        self.bad_numbers += int(np.size(values) - np.count_nonzero(np.isfinite(values)))
+        return np.nan_to_num(values, nan=0.0, posinf=0.0, neginf=0.0)
+
+    def busy_share(self) -> float:
+        """The share of the workers' time spent sailing since the last call (the rest they waited
+        for the slowest worker and for the trainer), and starts counting again."""
+        share = self.busy_s / max(self.wall_s * self.worker_count, 1e-6)
+        self.busy_s = 0.0
+        self.wall_s = 0.0
+        return share
 
     def close(self) -> None:
         for worker in self.workers:

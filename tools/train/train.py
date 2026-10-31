@@ -7,14 +7,18 @@ every so often for the game and for tools/gens.sh. Use tools/train.sh; it finds 
 Options (the defaults in brackets):
   --stage=S1            the curriculum stage (Game/race/training_drops.gd: S1 to S6)
   --stages=S1,S2,S3     the nights unattended: the stages one after another, each run named after
-                        its stage (s1, s2, ...), each starting from the one before's best brain (or
-                        continuing its own model if it has one), each ended when its "done when"
-                        number holds at a check (--check_every_min, --check_episodes: the brain
+                        its stage (s1, s2, ...; with --run_prefix=all: all_s1, all_s2, ...); each
+                        continues its own model if it has one, else starts from the best brain of
+                        the stage before it in the curriculum (S1 from --resume=<brain> if given,
+                        else afresh); each ended when its "done when" number holds at a check (--check_every_min, --check_episodes: the brain
                         evaluated on fresh drops, against the all-rounder where the number needs it)
                         or after --hours_each. AI_FLEET_PLAN.md D6b's table: S1 the speed made good
                         80 % of the all-rounder's; S2 and S3 80 % of the drops round within 40 s; S4
                         finishes 90 % within 1.3 times the all-rounder's time; S5 starts 90 % within
                         10 s of the gun with OCS under 10 %; S6 only ends by the hours.
+  --run_prefix=<name>   with --stages: the runs are <name>_s1, <name>_s2, ... (the brains
+                        <name>_s1_best.json, ...), so a new curriculum does not write over the
+                        brains of an earlier one (Game/race/brains/s1_*.json are 21 October's)
   --run=<name>          [the stage, lower case] the run's name: the brains are <run>_gen<N>.json and
                         <run>_best.json in Game/race/brains, the logs and the model .sim_output/train/<run>/
   --hours=<h>           [6] stop after this long (also --minutes=<m> for a short try)
@@ -45,10 +49,17 @@ Options (the defaults in brackets):
                         torch has it). Measured in Session 64 (training.md): the physics in Godot is
                         the cost; the network is tiny.
 
+To stop a run cleanly (the model and a brain saved, the workers closed, the nights not going on to
+the next stage): create the file .sim_output/train/STOP (touch .sim_output/train/STOP), or press
+Ctrl-C once. The next start removes the file.
+
 Every rollout prints one line: the wall time, the timesteps and episodes done, the speed (decisions
 a second), the mean reward and length of the last episodes, how many reached their goal, their
-speed made good, falls and manoeuvres per episode, the policy's noise, and the mean push slider
-level the policy asked for in the rollout. The same goes to .sim_output/train/<run>/curve.csv.
+speed made good, falls and manoeuvres per episode, the policy's noise, the mean push slider level
+the policy asked for in the rollout, how long the network's update took ("learn") and the share
+of the workers' time spent sailing ("busy": the rest they waited for the slowest worker, whose
+race may be in a rough sea while another's is flat). The same goes to .sim_output/train/<run>/
+curve.csv (without learn and busy).
 """
 
 from __future__ import annotations
@@ -81,6 +92,10 @@ OUTPUT_DIR = REPO_ROOT / ".sim_output/train"
 # decision is half a second).
 GAMMA_BY_STAGE = {"S1": 0.995, "S2": 0.99, "S3": 0.99, "S4": 0.998, "S5": 0.997, "S6": 0.998}
 RECENT_EPISODES = 300
+# The file that stops a run cleanly at the next decision (see the top).
+STOP_FILE = OUTPUT_DIR / "STOP"
+# Set when a run was stopped by hand (the file or Ctrl-C): the nights do not go on.
+stopped_by_hand = False
 
 
 def parse_args() -> argparse.Namespace:
@@ -90,6 +105,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--hours", type=float, default=6.0)
     parser.add_argument("--minutes", type=float, default=0.0)
     parser.add_argument("--stages", default="")
+    parser.add_argument("--run_prefix", default="")
     parser.add_argument("--hours_each", type=float, default=4.0)
     parser.add_argument("--minutes_each", type=float, default=0.0)
     parser.add_argument("--check_every_min", type=float, default=60.0)
@@ -129,6 +145,11 @@ def parse_args() -> argparse.Namespace:
         print("torch has no CUDA here: learning on the CPU", flush=True)
         args.device = "cpu"
     return args
+
+
+def stage_run(prefix: str, stage: str) -> str:
+    """The run of a stage in the nights: s1, or with a prefix all_s1."""
+    return f"{prefix}_{stage.lower()}" if prefix else stage.lower()
 
 
 def push_start_output(choice: str, hello: dict) -> float:
@@ -263,6 +284,11 @@ class Progress(BaseCallback):
                     "falls": info.get("falls", 0),
                     "manoeuvres": info.get("manoeuvres", 0),
                 })
+        global stopped_by_hand
+        if STOP_FILE.exists():
+            print(f"stopped by hand ({STOP_FILE} is there)", flush=True)
+            stopped_by_hand = True
+            return False
         return time.time() - self.started < self.args.hours * 3600.0 and not self.stage_is_done
 
     def _on_rollout_start(self) -> None:
@@ -324,10 +350,12 @@ class Progress(BaseCallback):
         s = self.stats()
         std = self.policy_std()
         push = self.push_mean()
+        busy = self.workers.busy_share()
         print(f"{hours:6.2f} h  {steps:9d} steps  {self.workers.episodes_done:6d} episodes  {speed:5.0f}/s  "
               f"reward {s['reward_mean']:7.2f}  length {s['length_mean_s']:5.1f} s  goal {100 * s['goal_share']:3.0f} %  "
               f"vmg {s['vmg_ms']:4.2f} m/s  falls {s['falls_per_episode']:4.2f}  manoeuvres {s['manoeuvres_per_episode']:4.1f}  "
-              f"std {std:.2f}" + (f"  push {100 * push:3.0f} %" if push >= 0.0 else "") + f"  learn {self.learn_s:.2f} s", flush=True)
+              f"std {std:.2f}" + (f"  push {100 * push:3.0f} %" if push >= 0.0 else "") + f"  learn {self.learn_s:.2f} s  busy {100 * busy:3.0f} %"
+              + (f"  ({self.workers.bad_numbers} numbers were not numbers)" if self.workers.bad_numbers else ""), flush=True)
         self.writer.writerow([f"{hours:.3f}", steps, self.workers.episodes_done, f"{speed:.0f}", f"{s['reward_mean']:.4f}",
                               f"{s['length_mean_s']:.1f}", f"{s['goal_share']:.3f}", f"{s['vmg_ms']:.3f}",
                               f"{s['falls_per_episode']:.3f}", f"{s['manoeuvres_per_episode']:.2f}", f"{std:.3f}", self.generation,
@@ -365,27 +393,68 @@ class Progress(BaseCallback):
 
 def main() -> None:
     args = parse_args()
+    if STOP_FILE.exists():
+        STOP_FILE.unlink()
+        print(f"removed {STOP_FILE} (left from the last stop)", flush=True)
     if args.stages:
         stages = [part.strip().upper() for part in args.stages.split(",") if part.strip()]
-        previous = ""
+        # A brain given with --resume starts the first stage listed (when it has no model of its
+        # own and the stage before it no best brain).
+        first_brain = args.resume if args.resume.endswith(".json") else ""
         for stage in stages:
             args.stage = stage
-            args.run = stage.lower()
+            args.run = stage_run(args.run_prefix, stage)
             args.hours = args.hours_each
             args.gamma = GAMMA_BY_STAGE.get(stage, 0.995)
             own_model = OUTPUT_DIR / args.run / "model.zip"
+            # The stage before in the curriculum (S1 to S6), whichever stages were listed: a
+            # stage always goes on from the one before's best brain.
+            order = list(GAMMA_BY_STAGE.keys())
+            before = order[order.index(stage) - 1] if stage in order and order.index(stage) > 0 else ""
+            before_best = BRAINS_DIR / f"{stage_run(args.run_prefix, before)}_best.json" if before else None
             if own_model.exists():
                 args.resume = "auto"
-            elif previous and (BRAINS_DIR / f"{previous}_best.json").exists():
-                args.resume = str(BRAINS_DIR / f"{previous}_best.json")
+            elif before_best is not None and before_best.exists():
+                args.resume = str(before_best)
+            elif stage == stages[0] and first_brain:
+                args.resume = first_brain
             else:
                 args.resume = "none"
             print(f"\n=== stage {stage} (run {args.run}, up to {args.hours:.1f} h, from {args.resume}) ===", flush=True)
-            note = train_one(args)
+            note = train_stage_with_retries(args)
             print(f"=== stage {stage} over: {note} ===", flush=True)
-            previous = args.run
+            if stopped_by_hand:
+                print(f"=== the nights stop here (stopped by hand); to go on, run the command again with --stages= from "
+                      f"{stage} on: each stage continues its own model, or starts from the best brain of the one before ===", flush=True)
+                return
         return
     train_one(args)
+
+
+# How often a stage of the unattended nights is started again after its training stopped on an
+# error (a Godot worker that crashed or stopped answering), each time from the model it saved.
+STAGE_ATTEMPTS = 4
+
+
+def train_stage_with_retries(args: argparse.Namespace) -> str:
+    """One stage of the nights: if the training stops on an error, the stage goes on from the
+    model it saved on the way out (train_one saves it whatever happens), for the hours it has left,
+    up to STAGE_ATTEMPTS times; then the error stops the nights."""
+    started = time.time()
+    hours = args.hours
+    for attempt in range(1, STAGE_ATTEMPTS + 1):
+        try:
+            return train_one(args)
+        except Exception as error:  # noqa: BLE001 - any error of a worker or the bridge
+            left_h = hours - (time.time() - started) / 3600.0
+            print(f"=== stage {args.stage}: the training stopped on an error (attempt {attempt} of {STAGE_ATTEMPTS}): "
+                  f"{type(error).__name__}: {error} ===", flush=True)
+            if attempt == STAGE_ATTEMPTS or left_h < 0.05:
+                raise
+            args.resume = "auto"
+            args.hours = left_h
+            print(f"=== stage {args.stage}: going on from its saved model for {left_h:.2f} h ===", flush=True)
+    return ""
 
 
 def train_one(args: argparse.Namespace) -> str:
@@ -450,6 +519,8 @@ def train_one(args: argparse.Namespace) -> str:
     try:
         model.learn(total_timesteps=10**12, callback=progress, reset_num_timesteps=not resumed)
     except KeyboardInterrupt:
+        global stopped_by_hand
+        stopped_by_hand = True
         print("stopped by hand", flush=True)
     finally:
         progress.save_generation(final=True)

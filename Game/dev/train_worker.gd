@@ -143,7 +143,9 @@ func _evaluate() -> void:
 	var track_path: String = _options.get("track", "")
 	print("%s on %s: %d episode%s of %d board%s%s" % [path.get_file(), stage.describe(), episodes, "" if episodes == 1 else "s",
 		boards, "" if boards == 1 else "s", (", against the %s on the same drops" % reference) if not reference.is_empty() else ""])
-	var who: Array[String] = ["brain"] if brain != null else []
+	var who: Array[String] = []
+	if brain != null:
+		who.append("brain")
 	if not reference.is_empty():
 		who.append(reference)
 	var summaries: Array[Dictionary] = []
@@ -204,12 +206,14 @@ func _sail_first_episodes(env: RaceEnv, brain: NeuralNet, track: FileAccess) -> 
 				break
 
 
-## The race's water and wind in a few characters: the lake or the sea's height, the gusts, the shifts.
+## The race's water and wind in a few characters: the sea's height, the gusts' strength, the shifts'
+## swing (on the lake: the map's own gusts and shifts).
 static func _conditions_text(env: RaceEnv) -> String:
-	var water: String = "%ssea %.2f m" % ["lake, " if env.options.environment != null else "", env.board(0).sea_height_m]
+	if env.options.environment != null:
+		return "%-30s" % ("lake, sea %.2f m, map's wind" % env.board(0).sea_height_m)
 	var gusts: float = env.options.wind.gust_intensity if env.options.gusts and env.options.wind != null else 0.0
 	var shift_deg: float = env.options.wind.max_shift_deg if env.options.shifts and env.options.wind != null else 0.0
-	return "%-17s gusts %.2f shifts %2.0f" % [water, gusts, shift_deg]
+	return "sea %.2f m gusts %.2f shifts %2.0f" % [env.board(0).sea_height_m, gusts, shift_deg]
 
 
 static func _outcome(row: Dictionary) -> String:

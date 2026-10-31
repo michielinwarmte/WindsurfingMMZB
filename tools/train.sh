@@ -15,7 +15,10 @@
 #   tools/train.sh --stages=S1,S2,S3,S4,S5,S6 --hours_each=4  the nights unattended: every stage in turn,
 #                                                             each from the one before's best brain, each
 #                                                             ended when its "done when" number holds at an
-#                                                             hourly check or after 4 hours (up to a day)
+#                                                             hourly check or after 4 hours (up to a day);
+#                                                             the runs s1 to s6, or with --run_prefix=all
+#                                                             all_s1 to all_s6 (the brains all_s1_best.json,
+#                                                             ...), so earlier brains are not written over
 #   tools/train.sh --stage=S1 --hours=3                       stage 1 (the beat), 3 hours, run "s1"
 #   tools/train.sh --stage=S2 --hours=3 --resume=Game/race/brains/s1_best.json
 #                                                             the next stage from the last one's best brain

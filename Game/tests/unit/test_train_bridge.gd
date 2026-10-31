@@ -75,6 +75,39 @@ func test_an_ended_episode_reports_its_end_and_the_board_is_set_down_again_at_on
 	assert_eq(bridge.episodes, 2)
 
 
+## A race of a stage that sets boards down at once lasts two episodes' time; then every board's
+## episode is cut short (reported as cut by the time limit, with its stats and its last
+## observation) and a new race begins: a new course in new conditions, so a worker does not sail one
+## course in one wind all night.
+func test_a_race_that_sets_boards_down_at_once_is_new_after_two_episodes_time() -> void:
+	var bridge: TrainBridge = TrainBridge.new("S1", 2)
+	bridge.stage.episode_s = 3.0  # short episodes, so the race's life is 6 s
+	bridge.reset(7)
+	var first: RaceEnv = bridge.env
+	# Board 1 ends its episode early and is set down again, so it is mid-episode when the race ends.
+	bridge.env.board(1).episode_until_s = 1.0
+	var life_s: float = bridge.stage.episode_s * TrainBridge.RACE_EPISODES
+	var steps_to_end: int = roundi(life_s / (bridge.env.decision_ticks * RaceEnv.DT))
+	var reply: Dictionary = {}
+	for k: int in steps_to_end - 1:
+		reply = bridge.step([[0.25, 0.0, 0.0, 0.5], [0.25, 0.0, 0.0, 0.5]], 100 + k)
+		assert_false(reply.has("race"), "the same race until its time is up (step %d)" % k)
+	assert_eq(bridge.env, first)
+	reply = bridge.step([[0.25, 0.0, 0.0, 0.5], [0.25, 0.0, 0.0, 0.5]], 999)
+	assert_true(reply.has("race"), "a new race after %.0f s" % life_s)
+	assert_ne(bridge.env, first)
+	for i: int in 2:
+		assert_true(reply["done"][i], "board %d's episode ends with the race" % i)
+		assert_true(reply["trunc"][i], "cut short, not ended")
+		assert_eq(reply["info"][i]["truncated"], true)
+		assert_eq(reply["terminal_obs"][i].size(), RaceObservation.size())
+		assert_false(bridge.env.done(i), "sailing in the new race")
+		assert_eq(reply["obs"][i].size(), RaceObservation.size())
+	# The new race is another course or another wind (from the trainer's new seed).
+	var same: bool = bridge.env.course.name == first.course.name and bridge.env.wind_kt == first.wind_kt
+	assert_false(same, "a new course or a new wind")
+
+
 func test_in_a_stage_with_a_countdown_a_done_board_waits_for_the_race_to_end() -> void:
 	var bridge: TrainBridge = TrainBridge.new("S5", 2)
 	var first: Dictionary = bridge.reset(8)
