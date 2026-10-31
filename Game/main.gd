@@ -381,10 +381,14 @@ func _apply_command_line_options() -> void:
 	_apply_pilot_options(options)
 
 
-## GP0's playtest (tools/play_push.sh): --push=1 has the player's sailor hold the margin of the push
-## dial's top, as measured in Documentation/reports/gameplay/gp0_measure.md ("Pushed"); any
-## --pilot.<field>=<n> sets one of the auto-sheet pilot's numbers (Autopilot) on top. Until GP1
-## builds the dial, this is the way to sail it.
+## The push dial's playtest (tools/play_push.sh), until GP1 puts the dial on a key:
+##   --dial=eased|neutral|pushed  the dial as the autopilot suite measured it (PushDial: the
+##     pilot's hike_share 0.8 / 1.0 / 1.6 and the rig's lean to windward 25 / 25 / 35 degrees;
+##     Documentation/reports/autopilot/autopilot_rework.md);
+##   --push=1  GP0's older "pushed" margin (Documentation/reports/gameplay/gp0_measure.md): the
+##     same pull held, plus the "late ease" (the depower and the catch net weakened) that the
+##     suite found catapults the 24 kt close reach. Kept to compare; not part of the dial;
+##   --pilot.<field>=<n>  one of the auto-sheet pilot's numbers (Autopilot), on top of either.
 const PUSHED_MARGIN: Dictionary[String, float] = {
 	"hike_share": 1.6, "depower_alpha_per_deg": 0.3, "depower_rate_per_s": 0.05,
 	"depower_urgent_rate_per_s": 0.5, "catch_alpha_max_deg": 0.0}
@@ -394,6 +398,8 @@ func _apply_pilot_options(options: Dictionary[String, String]) -> void:
 	var overrides: Dictionary[String, float] = _windsurfer.controller.pilot_overrides
 	if options.get("push", "0") == "1":
 		overrides.merge(PUSHED_MARGIN, true)
+	if options.has("dial"):
+		_apply_dial(options["dial"])
 	for key: String in options:
 		if not key.begins_with("pilot."):
 			continue
@@ -402,6 +408,29 @@ func _apply_pilot_options(options: Dictionary[String, String]) -> void:
 			overrides[field] = options[key].to_float()
 		else:
 			push_error("The autopilot has no number '%s'." % field)
+
+
+## The push dial from the command line (--dial=). The pilot's half goes into the controller's
+## overrides (they hold through a waterstart, which makes a new pilot) and onto the node's own
+## autopilot (--autopilot=1). The sailor's half, the rig's lean, goes onto the simulation's own
+## copy of the sailor config: the player's board has own_config_copies on in its scene, so the
+## shared sailor_default.tres is never written. The F1 panel's gear lines say what is sailed.
+func _apply_dial(name: String) -> void:
+	var setting: String = name.to_lower()
+	if not setting in ["eased", "neutral", "pushed"]:
+		push_error("The push dial has no setting '%s' (eased, neutral or pushed); sailing neutral." % name)
+		setting = "neutral"
+	var level: float = PushDial.level_of(setting)
+	_windsurfer.controller.pilot_overrides["hike_share"] = PushDial.at_level(PushDial.HIKE_SHARE, level)
+	if _windsurfer.own_config_copies:
+		PushDial.apply(level, _windsurfer.autopilot, _windsurfer.sim.sailor_config)
+	else:
+		PushDial.apply(level, _windsurfer.autopilot, null)
+		push_error("The dial's rig lean needs the windsurfer's own config copies (own_config_copies in its scene); only the pull was set.")
+	var line: String = "push dial %s: hike_share %.1f, rig lean %.0f deg" % [
+		setting, PushDial.at_level(PushDial.HIKE_SHARE, level), PushDial.at_level(PushDial.RIG_LEAN_DEG, level)]
+	_hud.gear_text += "\n" + line
+	print(line)
 
 
 # ---------------------------------------------------------------- the race course (RACING_PLAN.md, 9A)

@@ -26,6 +26,7 @@ look = ExtResource("8_lake_water")
 render_layers = 2
 
 [node name="Windsurfer" parent="." instance=ExtResource("3_windsurfer")]
+own_config_copies = true
 
 [node name="CameraRig" type="Node3D" parent="."]
 script = ExtResource("4_camera")

@@ -43,8 +43,10 @@ var effects_wanted: bool = true
 ## node's own _physics_process does nothing then. Set before the node is added.
 var stepped_by_runner: bool = false
 ## Whether the simulation gets its own copies of the config resources (a board stepped on a
-## thread beside others must share nothing with them). Set before the node is added.
-var own_config_copies: bool = false
+## thread beside others must share nothing with them). Set before the node is added. The
+## player's board has it on in its scenes (main.tscn, sail_silvaplana.tscn), so the push dial
+## (main.gd, --dial=) can set the sailor's numbers without writing the shared .tres files.
+@export var own_config_copies: bool = false
 var _name_label: Label3D = null
 ## Far from the camera in a race (set_far_away).
 var _far_away: bool = false

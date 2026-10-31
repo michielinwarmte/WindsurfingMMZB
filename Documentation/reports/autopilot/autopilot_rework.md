@@ -75,7 +75,7 @@ The dial's effect at the rig's lean 25 (round 4, the couple 200): neutral to pus
 ## 7. For Michiel's play-test
 
 - `tools/play.sh res://main.tscn --autopilot=1 --camera=2`: the autopilot on open water at the game's wind; watch the beam reach ride on its tail with the nose up and the rig leaned, and the broad reach at 24 kt not bounce.
-- `tools/play_push.sh`: the dial's playtest (24 kt, gusts, the sailor pushed; the F1 panel freezes what came before each fall). The pushed setting should catapult on the broad reach and pay across the wind.
+- `tools/play_push.sh`: the dial's playtest: 24 kt from the West with gusts and waves, beginner mode with the auto-sheet, the dial pushed (`--dial=neutral` or `--dial=eased` to compare; the F1 panel's second line says which, and its bottom freezes what came before each fall). Pushed should pay across the wind (heading 150 to 180 on starboard) and catapult on the broad reach (heading 210 to 225, or `--heading=220`).
 - `tools/play.sh lake`: Silvaplana in the map's wind.
 - What to judge by feel, which no run can: whether 5 degrees of rail upwind looks like your sailing, whether the pushed board's falls come where you would expect them, and whether the 12 kt sailing is too tame (PH26).
 

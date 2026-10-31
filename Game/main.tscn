@@ -52,6 +52,7 @@ shadow_enabled = true
 script = ExtResource("5_ocean")
 
 [node name="Windsurfer" parent="." instance=ExtResource("2_windsurfer")]
+own_config_copies = true
 
 [node name="CameraRig" type="Node3D" parent="."]
 script = ExtResource("3_camera")

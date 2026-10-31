@@ -189,7 +189,7 @@ func update_from(t: Telemetry, controller: PlayerController, camera_name: String
 		# far forward of the tail the wet part reaches.
 		+ "hull  planing %3.0f %% (%4.0f N)  buoyancy %4.0f N  submersion %3.0f %%  wetted %4.2f m2 (front %4.2f m)  resistance %4.0f N  trim %4.1f deg\n" % [t.planing_ratio * 100.0, t.planing_lift_n, t.buoyancy_n, t.submersion_ratio * 100.0, t.friction_area_m2, t.wet_front_m, t.hull_resistance_n, t.trim_deg]
 		+ "rig   harness %4.0f N   mast foot pushing down %4.0f N\n" % [t.harness_tension_n, -t.mast_foot_force_up_n]
-		+ "auto-sheet %s%s" % ["on" if controller.auto_sheet else "off", "   pushed (GP0's playtest)" if not controller.pilot_overrides.is_empty() else ""]
+		+ "auto-sheet %s%s" % ["on" if controller.auto_sheet else "off", "   pilot set from the command line (--dial, --push or --pilot.)" if not controller.pilot_overrides.is_empty() else ""]
 		+ ("\n" + _fall_watch.last_fall_text if _fall_watch.last_fall_text != "" else ""))
 
 
