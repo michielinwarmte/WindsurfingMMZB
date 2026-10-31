@@ -37,7 +37,7 @@ const BOARD_TAB: int = 0
 ## The tab whose preview shows the whole rig; the others show the board alone.
 const RIG_TAB: int = 1
 ## The line at the bottom of the page; on the Sail tab with PH14's warning.
-const NOTE: String = "Kept at once and sailed from the next start. Most models are stand-ins that sail the default gear's numbers."
+const NOTE: String = "Kept at once and sailed from the next start. Each model sails its own real-world size."
 const PH14_NOTE: String = " The sail sizes are not tuned yet (PH14): how each size sails may still change."
 
 @onready var _tabs: TabContainer = %Tabs

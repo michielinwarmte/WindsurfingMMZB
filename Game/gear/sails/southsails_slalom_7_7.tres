@@ -1,0 +1,68 @@
+[gd_resource type="Resource" script_class="GearItem" format=3]
+
+[ext_resource type="Script" path="res://gear/gear_item.gd" id="1"]
+[ext_resource type="Resource" path="res://gear/brands/southsails.tres" id="2"]
+[ext_resource type="Script" path="res://sim/config/sail_config.gd" id="3"]
+[ext_resource type="PackedScene" path="res://assets/models/gear/southsails/southsails_slalom_7_7.glb" id="4"]
+[ext_resource type="Texture2D" path="res://assets/models/gear/southsails/southsails_slalom_7_7_panels.png" id="5"]
+
+[sub_resource type="Resource" id="Resource_config"]
+script = ExtResource("3")
+area_m2 = 7.7
+luff_m = 4.92
+boom_m = 2.15
+boom_height_m = 1.5
+mast_foot_local = Vector3(0, 0.081, -0.125)
+ce_height_fraction = 0.41
+ce_boom_fraction = 0.35
+boom_square_to_mast = true
+camber = 0.072
+rig_mass_kg = 8.0
+rig_com_height_m = 1.7
+mast_m = 4.92
+sheet_angle_in_deg = 12.0
+sheet_angle_out_deg = 85.0
+max_rake_deg = 25.0
+side_hysteresis_deg = 15.0
+lift_slope_factor = 1.0
+zero_lift_deg_per_camber = 28.0
+cl_linear_end_deg = 12.0
+cl_peak_deg = 18.0
+cl_transition_gain = 0.15
+cl_stall_end_deg = 25.0
+stall_retention = 0.85
+cl_deep_stall_deg = 45.0
+deep_stall_cl = 0.5
+alpha_luff_deg = 2.0
+backwind_efficiency = 0.7
+boom_across_max_deg = 47.0
+twist_pressure_pa = 128.0
+twist_min_factor = 0.1
+twist_peak_share = 0.45
+twist_ce_drop = 0.32
+ce_height_table_deg = Array[float]([1.3, 5.3, 8.7, 12.2])
+ce_height_table_share = Array[float]([0.53, 0.855, 0.94, 1.0])
+cd_parasitic = 0.04
+oswald_e = 0.75
+end_plate_factor = 1.4
+cd_separation_start_deg = 15.0
+cd_separation_span_deg = 30.0
+cd_separation_gain = 0.5
+cd_form_gain = 1.2
+cd_max = 1.3
+min_apparent_wind_ms = 0.5
+
+[resource]
+script = ExtResource("1")
+kind = 1
+brand = ExtResource("2")
+model_name = "Slalom Sprint"
+line = 0
+size = 7.7
+description = "Race sail, 7 battens and an air sleeve: luff 4.92 m, boom 2.15 m."
+wind_from_kt = 13.0
+wind_to_kt = 23.0
+config = SubResource("Resource_config")
+model = ExtResource("4")
+panels = ExtResource("5")
+cloth = Color(1, 1, 1, 1)

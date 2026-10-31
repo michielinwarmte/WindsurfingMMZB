@@ -1,0 +1,61 @@
+[gd_resource type="Resource" script_class="GearItem" format=3]
+
+[ext_resource type="Script" path="res://gear/gear_item.gd" id="1"]
+[ext_resource type="Resource" path="res://gear/brands/pj_new_sealand.tres" id="2"]
+[ext_resource type="Script" path="res://sim/config/board_config.gd" id="3"]
+[ext_resource type="PackedScene" path="res://assets/models/gear/pj_new_sealand/pj_new_sealand_slalom_97.glb" id="4"]
+[ext_resource type="Texture2D" path="res://assets/models/gear/pj_new_sealand/pj_new_sealand_slalom_97_deck.png" id="5"]
+[ext_resource type="Texture2D" path="res://assets/models/gear/pj_new_sealand/pj_new_sealand_slalom_97_bottom.png" id="6"]
+
+[sub_resource type="Resource" id="Resource_config"]
+script = ExtResource("3")
+length_m = 2.3
+width_m = 0.625
+widest_point_from_tail_m = 1.15
+tail_width_m = 0.413
+nose_width_m = 0.488
+thickness_m = 0.12
+tail_thickness_m = 0.045
+nose_thickness_m = 0.04
+volume_m3 = 0.097
+mass_kg = 6.89
+nose_rocker_m = 0.128
+nose_rocker_length_m = 1.61
+tail_rocker_m = 0.0
+tail_rocker_length_m = 0.35
+hard_rail_to_m = 1.21
+soft_rail_from_m = 2.02
+rail_edge_height_m = 0.03
+length_samples = 7
+width_samples = 3
+lateral_drag_cd = 1.0
+residuary_peak_fraction = 0.09
+residuary_peak_froude = 0.55
+residuary_froude_width = 0.25
+deadrise_deg = 1.0
+back_strap_from_tail_m = 0.235
+front_strap_from_tail_m = 0.825
+back_strap_out_m = 0.112
+front_strap_out_m = 0.203
+fin_box_back_screw_from_tail_m = 0.12
+fin_box_front_screw_from_tail_m = 0.235
+mast_track_back_from_tail_m = 1.256
+mast_track_front_from_tail_m = 1.416
+bow_drag_cd = 0.8
+spray_root_factor_max = 2.0
+planing_lift_lag_s = 0.0
+
+[resource]
+script = ExtResource("1")
+kind = 0
+brand = ExtResource("2")
+model_name = "Slalom T-SEC"
+line = 0
+size = 97.0
+description = "Small slalom board for strong wind, 230 x 62 cm: quick and in control."
+wind_from_kt = 18.0
+wind_to_kt = 30.0
+config = SubResource("Resource_config")
+model = ExtResource("4")
+deck = ExtResource("5")
+bottom = ExtResource("6")

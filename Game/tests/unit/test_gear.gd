@@ -6,8 +6,9 @@ extends GutTest
 
 ## The real makers' names, the same list the brands' test checks.
 const BrandsTest: GDScript = preload("res://tests/unit/test_brands.gd")
-const SAIL_6_5_ID: String = "southsails_freerace_6_5"
-const FREERACE_BOARD_ID: String = "forbidden_freerace_120"
+## A sail and a board of the catalogue other than the defaults (tools/blender/gear_set.py).
+const SAIL_6_8_ID: String = "southsails_slalom_6_8"
+const FREERACE_BOARD_ID: String = "forbidden_freerace_113"
 const LAKE_SCENE: String = "res://maps/silvaplana/sail_silvaplana.tscn"
 
 var _saved_values: SettingsValues
@@ -73,20 +74,20 @@ func test_the_sizes_are_the_configs_sizes() -> void:
 
 
 func test_size_text_and_ids() -> void:
-	var sail: GearItem = GearCatalogue.find(SAIL_6_5_ID)
-	assert_eq(sail.size_text(), "6.5 m²")
-	assert_eq(sail.size_slug(), "6_5")
+	var sail: GearItem = GearCatalogue.find(SAIL_6_8_ID)
+	assert_eq(sail.size_text(), "6.8 m²")
+	assert_eq(sail.size_slug(), "6_8")
 	var board: GearItem = GearCatalogue.default_board()
 	assert_eq(board.size_text(), "117 L")
 	assert_eq(board.id(), "pj_new_sealand_slalom_117")
 	assert_eq(GearCatalogue.default_fin().size_text(), "38 cm")
-	assert_eq(board.full_name(), "PJ New Sealand Selkie 117 L")
+	assert_eq(board.full_name(), "PJ New Sealand Slalom T-SEC 117 L")
 
 
 func test_items_by_brand_and_the_brands_of_a_kind() -> void:
 	var forbidden: Brand = Brand.find("forbidden")
 	var boards: Array[GearItem] = GearCatalogue.by_brand(forbidden, GearItem.Kind.BOARD)
-	assert_eq(boards.size(), 2, "Forbidden's two boards")
+	assert_eq(boards.size(), 4, "Forbidden's four boards")
 	assert_eq(boards[0].line, GearItem.Line.SLALOM, "the slalom line first")
 	assert_eq(GearCatalogue.by_brand(forbidden, GearItem.Kind.SAIL).size(), 0, "Forbidden makes no sails")
 	var board_brands: Array[Brand] = GearCatalogue.brands_of(GearItem.Kind.BOARD)
@@ -141,15 +142,15 @@ func test_the_settings_keep_the_three_ids() -> void:
 	assert_eq(saved.gear_sail, GearCatalogue.DEFAULT_SAIL_ID)
 	assert_eq(saved.gear_fin, GearCatalogue.DEFAULT_FIN_ID)
 	saved.gear_board = FREERACE_BOARD_ID
-	saved.gear_sail = SAIL_6_5_ID
+	saved.gear_sail = SAIL_6_8_ID
 	saved.gear_fin = "pj_new_sealand_slalom_38"
 	var file: ConfigFile = ConfigFile.new()
 	saved.write_to(file)
-	assert_eq(file.get_value("gear", "sail"), SAIL_6_5_ID, "in the section gear")
+	assert_eq(file.get_value("gear", "sail"), SAIL_6_8_ID, "in the section gear")
 	var loaded: SettingsValues = SettingsValues.new()
 	loaded.read_from(file)
 	assert_eq(loaded.gear_board, FREERACE_BOARD_ID)
-	assert_eq(loaded.gear_sail, SAIL_6_5_ID)
+	assert_eq(loaded.gear_sail, SAIL_6_8_ID)
 	assert_eq(loaded.gear_fin, "pj_new_sealand_slalom_38")
 	loaded.reset_to_defaults()
 	assert_eq(loaded.gear_sail, GearCatalogue.DEFAULT_SAIL_ID, "reset to the default")
@@ -164,10 +165,10 @@ func test_an_unknown_id_sails_the_default() -> void:
 
 func test_the_chosen_gear_is_what_the_simulation_sails() -> void:
 	var base: WindsurferSim = WindsurferSim.create_for(EnvironmentConfig.new(), false, true)
-	var choice: GearChoice = GearChoice.from_ids(FREERACE_BOARD_ID, SAIL_6_5_ID, "")
+	var choice: GearChoice = GearChoice.from_ids(FREERACE_BOARD_ID, SAIL_6_8_ID, "")
 	var sim: WindsurferSim = choice.sim_with(base)
-	assert_almost_eq(sim.sail_config.area_m2, 6.5, 1e-6, "the 6.5")
-	assert_almost_eq(sim.board_config.length_m, 2.4, 1e-6, "the 240 board")
+	assert_almost_eq(sim.sail_config.area_m2, 6.8, 1e-6, "the 6.8")
+	assert_almost_eq(sim.board_config.length_m, 2.32, 1e-6, "the free race board")
 	assert_ne(sim.sail_config, choice.sail.config, "a copy, not the catalogue's own")
 	assert_ne(sim.board_config, choice.board.config, "a copy, not the catalogue's own")
 	assert_eq(sim.sail.config, sim.sail_config, "the sail model sails it")
@@ -179,25 +180,25 @@ func test_the_chosen_gear_is_what_the_simulation_sails() -> void:
 
 
 func test_the_sailing_scene_sails_the_settings_gear() -> void:
-	GameSettings.values.gear_sail = SAIL_6_5_ID
+	GameSettings.values.gear_sail = SAIL_6_8_ID
 	GameSettings.values.gear_board = FREERACE_BOARD_ID
 	var scene: SailingScene = (load("res://main.tscn") as PackedScene).instantiate()
 	add_child_autofree(scene)
 	var windsurfer: WindsurferNode = scene.get_node("Windsurfer")
-	assert_almost_eq(windsurfer.sim.sail_config.area_m2, 6.5, 1e-6, "the chosen sail")
-	assert_almost_eq(windsurfer.sim.board_config.volume_m3, 0.12, 1e-6, "the chosen board")
-	assert_ne(windsurfer.sim.sail_config, GearCatalogue.find(SAIL_6_5_ID).config, "on its own copy")
+	assert_almost_eq(windsurfer.sim.sail_config.area_m2, 6.8, 1e-6, "the chosen sail")
+	assert_almost_eq(windsurfer.sim.board_config.volume_m3, 0.113, 1e-6, "the chosen board")
+	assert_ne(windsurfer.sim.sail_config, GearCatalogue.find(SAIL_6_8_ID).config, "on its own copy")
 	assert_true(windsurfer.sim.has_waves(), "on the settings' sea")
 	var hud: Hud = scene.get_node("HUD")
-	assert_true(hud.gear_text.begins_with("Forbidden Curfew 120 L  ·  SouthSails Due South 6.5 m²"), "the names on the F1 panel: " + hud.gear_text)
+	assert_true(hud.gear_text.begins_with("Forbidden Missile+ 113 L  ·  SouthSails Slalom Sprint 6.8 m²"), "the names on the F1 panel: " + hud.gear_text)
 
 
 func test_the_lake_sails_the_settings_gear() -> void:
-	GameSettings.values.gear_sail = SAIL_6_5_ID
+	GameSettings.values.gear_sail = SAIL_6_8_ID
 	var scene: SailingScene = (load(LAKE_SCENE) as PackedScene).instantiate()
 	add_child_autofree(scene)
 	var windsurfer: WindsurferNode = scene.get_node("Windsurfer")
-	assert_almost_eq(windsurfer.sim.sail_config.area_m2, 6.5, 1e-6, "the chosen sail on the lake")
+	assert_almost_eq(windsurfer.sim.sail_config.area_m2, 6.8, 1e-6, "the chosen sail on the lake")
 	assert_true(windsurfer.sim.wind is MapWindField, "in the map's own wind")
 	assert_almost_eq(windsurfer.sim.air_density_kg_m3, 0.98, 1e-9, "in the thin air")
 
@@ -234,9 +235,13 @@ func test_the_rig_shows_the_items_pictures_and_cloth() -> void:
 
 
 func test_a_sail_without_its_own_colour_takes_the_brands() -> void:
-	var sail: GearItem = GearCatalogue.find(SAIL_6_5_ID)
+	var sail: GearItem = GearCatalogue.find(SAIL_6_8_ID).duplicate() as GearItem
+	sail.cloth = Color(0.0, 0.0, 0.0, 0.0)
 	assert_eq(sail.cloth_colour(), sail.brand.primary)
 	assert_eq(GearCatalogue.default_sail().cloth_colour(), Color.WHITE, "the default sail keeps its own colours")
+	# The catalogue's sails have their own pictures in the brand's colours (the shaper's models).
+	for item: GearItem in GearCatalogue.sails():
+		assert_eq(item.cloth_colour(), Color.WHITE, item.id() + " keeps its picture's own colours")
 
 
 func test_the_default_models_are_stretched_to_a_smaller_sail() -> void:
@@ -282,21 +287,21 @@ func test_the_page_shows_the_brands_and_keeps_a_choice_at_once() -> void:
 	add_child_autofree(page)
 	page.open()
 	page.show_tab("sail")
-	assert_eq(page.find_children("Brand_*", "Button", true, false).size(), 6 + 7 + 1, "the brands of every tab")
+	assert_eq(page.find_children("Brand_*", "Button", true, false).size(), 6 + 7 + 2, "the brands of every tab")
 	var chosen_card: Button = page.find_child("Item_" + GearCatalogue.DEFAULT_SAIL_ID, true, false) as Button
 	assert_not_null(chosen_card, "the chosen sail's brand is shown")
 	assert_true(chosen_card.button_pressed, "the chosen sail is lit")
 	# Another brand, then its sail.
 	(page.find_child("Brand_southsails", true, false) as Button).pressed.emit()
 	await wait_process_frames(1)
-	var card: Button = page.find_child("Item_" + SAIL_6_5_ID, true, false) as Button
+	var card: Button = page.find_child("Item_" + SAIL_6_8_ID, true, false) as Button
 	assert_not_null(card, "the brand's models are shown")
 	card.pressed.emit()
-	assert_eq(GameSettings.values.gear_sail, SAIL_6_5_ID, "kept in the settings at once")
+	assert_eq(GameSettings.values.gear_sail, SAIL_6_8_ID, "kept in the settings at once")
 	var rig: RigVisuals = page.preview_rig()
 	assert_not_null(rig, "a preview")
 	var cloth: ShaderMaterial = rig.sail_cloth().get_surface_override_material(0) as ShaderMaterial
-	assert_eq(cloth.get_shader_parameter("sail_tint"), Brand.find("southsails").primary, "the preview in the brand's cloth")
+	assert_eq(cloth.get_shader_parameter("sail_tint"), GearCatalogue.find(SAIL_6_8_ID).cloth_colour(), "the preview in the item's cloth")
 	page.close()
 
 
@@ -326,11 +331,11 @@ func test_the_start_menu_sails_the_gear_chosen_on_its_page() -> void:
 	var page: GearPage = menu.get_node("%Gear")
 	assert_true(page.visible, "the Gear button opens the page")
 	(page.find_child("Brand_southsails", true, false) as Button).pressed.emit()
-	(page.find_child("Item_" + SAIL_6_5_ID, true, false) as Button).pressed.emit()
+	(page.find_child("Item_" + SAIL_6_8_ID, true, false) as Button).pressed.emit()
 	page.close()
 	await wait_process_frames(1)
 	var windsurfer: WindsurferNode = menu.get_node("Sailing/Windsurfer")
-	assert_almost_eq(windsurfer.sim.sail_config.area_m2, 6.5, 1e-6, "the scene behind the menu sails the new sail")
+	assert_almost_eq(windsurfer.sim.sail_config.area_m2, 6.8, 1e-6, "the scene behind the menu sails the new sail")
 	assert_true(windsurfer.use_autopilot, "still behind the menu")
 	assert_eq(menu.get_node("Sailing").get_index(), 0, "in the old one's place, under the menu")
 	(menu.get_node("%OpenWaterButton") as Button).pressed.emit()
@@ -338,10 +343,10 @@ func test_the_start_menu_sails_the_gear_chosen_on_its_page() -> void:
 
 
 func test_a_reset_of_the_settings_puts_the_default_gear_behind_the_menu() -> void:
-	GameSettings.values.gear_sail = SAIL_6_5_ID
+	GameSettings.values.gear_sail = SAIL_6_8_ID
 	var menu: Node = (load("res://ui/start_menu.tscn") as PackedScene).instantiate()
 	add_child_autofree(menu)
-	assert_almost_eq((menu.get_node("Sailing/Windsurfer") as WindsurferNode).sim.sail_config.area_m2, 6.5, 1e-6)
+	assert_almost_eq((menu.get_node("Sailing/Windsurfer") as WindsurferNode).sim.sail_config.area_m2, 6.8, 1e-6)
 	(menu.get_node("%SettingsButton") as Button).pressed.emit()
 	var settings: SettingsMenu = menu.get_node("%Settings")
 	(settings.get_node("%ResetButton") as Button).pressed.emit()
