@@ -10,10 +10,10 @@
 
 ## In short
 
-- **Covered:** all eleven brands Michiel named, in depth (their 2025 and 2026 slalom and free race lines), and twelve other brands in a paragraph each. In total about 70 models and some 330 published sizes (boards and sails), from 41 board sizes in the brands' slalom lines to 9 sails a line.
+- **Covered:** all eleven brands Michiel named, in depth: about 45 models of their 2025 and 2026 slalom and free race lines, with some 280 published sizes (boards and sails), their shapes, liveries and histories. Twelve other brands get a paragraph each (about 20 more models).
 - **The game's gear set (section 3):** 24 slalom boards and 17 free race boards for the six board brands, 32 slalom sails and 26 free race sails for the seven sail brands, each with the full set of numbers for `BoardConfig`, `SailConfig` and `FinConfig`, and a fin per board.
 - **The three findings that matter most for the game:**
-  1. **Every brand's sails sit on one geometric curve.** Across seven brands, slalom and free race sails from 5.5 to 9.0 m² all have an aspect ratio (luff² / area) of 2.9 to 3.4, the same as the default 8.0 (3.41), and the game's two sails already match the real ones of their size: the 6.5 (luff 4.60 m, boom 1.95 m) sits between the real 6.5s (luff 4.56 to 4.64 m, boom 1.92 to 1.98 m). What really changes from one size to the next is the area, the boom length and the rig's weight: a complete real rig weighs about 10.0 kg as a 5.6 and 13.7 kg as a 9.0. So the problem of PH14 (a 7.8 slower than a 6.5 in 12 kt) is not in the sails' sizes: the numbers to build the sizes are now all here, and the brands sell them in steps of 0.8 to 1.0 m² (the PWA's "Slalom X" steps are 5.7, 6.7 and 7.7; from 2026 the largest fin-race sail allowed is 8.5 m²).
+  1. **Every brand's sails sit on one geometric curve.** Across seven brands, slalom and free race sails from 5.5 to 9.0 m² all have an aspect ratio (luff² / area) of 2.9 to 3.4, the same as the default 8.0 (3.41), and the game's two sails already match the real ones of their size: the 6.5 (luff 4.60 m, boom 1.95 m) sits between the real 6.5s (luff 4.56 to 4.64 m, boom 1.92 to 1.98 m). What really changes from one size to the next is the area, the boom length and the rig's weight: a complete real rig weighs about 10.0 kg as a 5.6 and 13.7 kg as a 9.0. Nothing in the real sails explains PH14 (a 7.8 slower than a 6.5 in 12 kt): every brand's chart has the bigger sail faster in light wind. The numbers for every real size are now here; the brands sell them in steps of 0.8 to 1.0 m² (the PWA's "Slalom X" steps are 5.7, 6.7 and 7.7; from 2026 the largest fin-race sail allowed is 8.5 m²).
   2. **Each board needs its own fin, and the real fins are smaller than the game's.** The fin the brands recommend grows almost in a straight line with the board's width: about 30 cm on a 60 cm wide board, 38 cm on a 72 and 46 cm on an 85 (rule: span ≈ 0.30 + 0.64 × (width − 0.60) m, fitted on Starboard's and FMX's tables). And a real slalom fin of 38 cm has about 311 cm² (Select's Rhino Pro catalogue), where the game's 38 cm fin has 365 cm², the area of a real 42 to 43 cm fin.
   3. **The shapes the brands do not publish can be derived reliably from length, width and volume.** Starboard is the only brand that publishes tail widths and thicknesses (sixteen boards). From them: the tail width one foot from the tail is 0.848 × width − 0.117 m for a slalom board (all six iSonics within 1 cm, and JP's traced 72 too), and the thickness is volume / (0.56 × length × width) (0.61 for slalom boards of 77 cm and wider, 0.59 for free race boards). The 2026 slalom boards of five brands are so close in size at the same volume that what makes them recognisable is the cut-outs, the deck and above all the livery, not the outline.
 
@@ -36,7 +36,7 @@
 
 | | Slalom (race) | Free race |
 |---|---|---|
-| **Length** | 224 to 233 cm. The brands' boards of up to about 118 L are 226 to 233 cm; the wide ones a little shorter (Duotone's 2026 Falcons are 224 to 226 cm, "shorter in every size") | 225 to 249 cm. Most are 229 to 238 cm; Severne's Fox is the longest at 236 to 249 cm |
+| **Length** | 224 to 233 cm. The brands' boards of up to about 118 L are 225 to 233 cm; the wide ones a little shorter (Duotone's 2026 Falcons are 224 to 226 cm, "shorter in every size") | 225 to 249 cm. Most are 229 to 238 cm; Severne's Fox is the longest at 236 to 249 cm |
 | **Width and volume** | 52 to 85 cm (52 to 54 cm are speed boards), 74 to 147 L. Brands name their sizes by width (iSonic 73, Slalom 72, Manta 71) or by volume (Falcon 118, Invictus 118) | 59 to 90 cm, 95 to 185 L |
 | **Tail width (one foot from the tail)** | Wide: 0.65 to 0.71 of the board's width (iSonic: 39.2 cm on the 60 to 60.4 cm on the 85). A wide tail gives leverage on a big fin | Narrower for the width: 0.63 to 0.69 (Futura: 38.8 cm on the 95 to 52.5 cm on the 135) |
 | **Cut-outs** | On every 2026 slalom board: the bottom steps in near the tail, often in two steps of different heights, so less of the bottom is wet at speed while the deck above stays wide for the back straps. FMX's are removable plates | Smaller cut-outs (Futura's "refined cutaways with a triangle stabilizer", the Jag's two-step, the Rocket+'s tail cut-outs, the Fox's "medium cut-outs") |
@@ -46,7 +46,7 @@
 | **Deck** | Concave decks and a recess around the mast track so the rig sits lower (JP, FMX "deep deck concave", Duotone D/LAB). Small, minimal EVA pads; a pad wedge between the back straps (JP) | Bigger, softer pads; concave around the mast base (JP Super Sport, Futura) |
 | **Fin box** | Short or medium Tuttle up to about 118 L, deep Tuttle (often foil-approved) on the bigger sizes. No fin included | Deep Tuttle, foil-approved on most; Powerbox on the Fox. A fin included (G10, 36 to 50 cm) |
 | **Footstraps** | Far out on the rails; two rows of plugs (FMX), double plugs with four screws per strap (JP) | Inboard and outboard positions, the outer ones "for advanced riders" (Rocket+) |
-| **Weight (bare)** | 5.6 to 7.7 kg | 6.1 to 8.8 kg |
+| **Weight (bare)** | 5.6 to 8.0 kg | 5.8 to 8.8 kg |
 | **Construction and price** | Carbon sandwich (iSonic Carbon Reflex, Falcon D/LAB full custom); about €2,400 to €3,700 | Wood or glass-carbon sandwich; about €1,900 to €2,800 |
 
 ### 1.3 How the sails differ
@@ -55,13 +55,13 @@
 |---|---|---|
 | **Cams** (plastic forks at the batten ends that hold the sail's curve against the mast) | 3 or 4: Point-7 has 3, Severne, NeilPryde, Duotone, GA and S2Maui have 4. North uses an "air cam" (an inflatable sleeve, no hard cams) | 2 or 3 (S_Pace and Overdrive 3, V8, Wicked, Cosmic and AC-2 2), or none (NCX, X_Pace, Free Speed, Banshee) |
 | **Battens** | 7 (6 on a few of the smallest sizes) | 6 or 7 |
-| **Luff and boom** | At 7.7 to 7.8 m²: luff 4.88 to 4.98 m, boom 2.09 to 2.17 m | At 7.7 to 7.8 m²: luff 4.86 to 4.97 m, boom 2.00 to 2.14 m. Shorter booms are a free race selling point (Overdrive: "10 cm shorter boom") |
+| **Luff and boom** | At 7.6 to 7.8 m²: luff 4.81 to 4.98 m, boom 2.09 to 2.17 m | At 7.6 to 7.8 m²: luff 4.76 to 4.97 m, boom 2.00 to 2.14 m. Shorter booms are a free race selling point (Overdrive: "10 cm shorter boom") |
 | **Mast** | SDM (standard diameter), 100 % carbon, for 6.5 m² and up; RDM (reduced diameter) for 5.9 m² and down. The race sails' size steps follow the mast lengths: about 5.5 to 5.9 on 400, 6.5 to 6.8 on 430, 7.3 to 7.8 on 460, 8.2 to 8.8 on 490 | The same lengths; more of them take RDM masts |
 | **Sleeve** | Wide (Point-7 "XXL"), layered (NeilPryde "quadruple luff"): it gives the cams room and makes the front of the sail a stiff wing | About 20 to 33 % narrower (Point-7 AC-3, Severne Overdrive) |
 | **Foot** | Long and low, cut to close the gap to the deck (Point-7 "base outline closes the gap to the board"; Severne "single seamless foot panel"). The 2026 trend is a bigger cutaway at the clew (Duotone Warp_Fin, GA Vapor) | A little higher and shorter |
 | **Profile** | Deep and locked in the lower sail, flatter and twisting above (S2Maui Venom-XI: "flatter above the boom at battens 4 and 5, locked below at 6 and 7") | Shallower, more twist: easier but with a smaller wind range |
 | **Panels and windows** | Vertical luff panels, radial or horizontal body panels; clear or grey film windows in the lower sail | The same layouts, fewer special materials |
-| **Weight (sail only)** | 7.5 to 7.8 m²: 5.5 to 6.6 kg | 7.7 to 7.8 m²: 4.7 to 5.5 kg with cams, 4.4 to 4.7 kg without |
+| **Weight (sail only)** | 7.4 to 7.8 m²: 5.5 to 6.6 kg (North's moulded 3Di 7.7: 4.7 kg) | 7.7 to 7.8 m²: 4.7 to 5.5 kg with cams, about 4.6 kg without |
 
 **Wind range per size.** Only Point-7 publishes one. Its chart for the AC-1 LTD, for a rider of 75 to 90 kg ([point-7.com](https://point-7.com/zero-26/ac1-ltd-racing-026/)):
 
@@ -85,7 +85,7 @@ A slalom fin is a thin, swept carbon wing of 28 to 48 cm. Most race fins come fr
 | FMX Invictus Pro 78 / 88 / 98 / 104 / 108 / 118 / 124 / 128 / 138 | 59 / 61 / 63 / 67 / 70 / 72 / 77 / 81 / 85 cm | 28-32 / 29-33 / 30-34 / 32-36 / 34-38 / 35-39 / 37-41 / 39-44 / 42-48 cm |
 | Duotone Falcon_Fin SLS 98 / 111 / 118 / 129 / 139 | 63 / 68 / 72 / 80 / 85 cm | 34-36 / 36-40 / 38-42 / 42-46 / 46-50 cm |
 
-The middle of these ranges follows the width almost in a straight line: **span ≈ 0.30 + 0.64 × (width − 0.60) m**, which gives 0.38 m for a 72 cm board (the game's default fin is 0.38 m). Duotone recommends 2 to 4 cm more than Starboard and FMX for the same width.
+The middle of these ranges follows the width almost in a straight line: **span ≈ 0.30 + 0.64 × (width − 0.60) m**, which gives 0.38 m for a 72 cm board (the game's default fin is 0.38 m). Duotone recommends 2 to 3 cm more than Starboard and FMX for the same width.
 
 **Fin area.** Select, one of the biggest slalom fin makers, publishes the area of every size ([Select 2023 catalogue](https://www.select-hydrofoils.com/assets/select_fins_2023_catalog.pdf)). Its race fin, the Rhino Pro ("performance slalom boards, slalom racing"):
 
@@ -106,7 +106,7 @@ Its S.MAX ("slalom, free race and freeride boards from 90 to 165 L") is about th
 | **Rocker, scoop, tail kick** | The bottom's curve along the length; the scoop is its rise toward the nose, the tail kick a small rise at the tail |
 | **Vee, double concave, inverse vee** | The bottom's shape across: a vee is a ridge down the middle (smooth in chop), a double concave two hollows either side of the middle (lift), an inverse vee the opposite of a vee |
 | **Rail: hard, soft, tucked, apex** | The board's edge. Hard: a sharp edge where the bottom meets the side. Soft or tucked: rounded under the board. The apex is the rail's widest, highest point |
-| **Tuttle, deep Tuttle, short Tuttle, Powerbox** | The fin box standards. A Tuttle fin has a block held by two screws through the deck; a deep Tuttle is taller (and takes foils); a Powerbox is a different, lighter standard |
+| **Tuttle, deep Tuttle, short Tuttle, Powerbox** | The fin box standards. A Tuttle fin has a block held by two screws through the deck; a deep Tuttle is taller (and takes foils); a Powerbox fin is held by a single screw from below, a standard used more on freeride boards |
 | **Cam (camber inducer)** | A plastic fork at the front end of a batten that pushes against the mast, so the sail keeps its curve when the wind drops. Race sails have 3 or 4 |
 | **Batten** | A stiff rod across the sail that holds its shape. Race sails have 7 |
 | **Luff, leech, foot, head, tack, clew** | The sail's front edge (along the mast), back edge, bottom edge, top, bottom-front corner and bottom-back corner (where the boom ends) |
@@ -229,11 +229,11 @@ Source: [fluid-lines.co.uk](https://www.fluid-lines.co.uk/product/duotone-x-pace
 
 ### 2.2 Severne (game: Savanna): sails and boards
 
-**Who they are.** Founded in 2003 in Australia (2002 in one source) by the sail designer Ben Severne, who still designs; based in Perth ([isthmussailboards.com](https://isthmussailboards.com/windsurfing-sail/severne-sails.html), [windsurfing-mag.jp](https://windsurfing-mag.jp/brands/2017/01/5239/)). Antoine Albeau, many times world champion and a speed record holder, is the face of the race sail (he is on every picture of Severne's Mach 9 page). Character: understated and engineered; red race sails; the logo is a "boomerang" mark with "SV". Severne's "Xtended Range" idea is to sell fewer race sizes, each with a wider range ("skip a size up or down"): its race sail comes in only five sizes. **Severne makes no slalom board**; its fast board is the Fox, a performance freeride and free race board.
+**Who they are.** Founded in 2003 in Australia (2002 in one source) by the sail designer Ben Severne (its CEO and designer in a 2017 profile); based in Perth ([isthmussailboards.com](https://isthmussailboards.com/windsurfing-sail/severne-sails.html), [windsurfing-mag.jp](https://windsurfing-mag.jp/brands/2017/01/5239/)). Antoine Albeau, many times world champion and a speed record holder, is the face of the race sail (he is on every picture of Severne's Mach 9 page). Character: understated and engineered; red race sails; the logo is a "boomerang" mark with "SV". Severne's "Xtended Range" idea is to sell fewer race sizes, each with a wider range ("skip a size up or down"): its race sail comes in only five sizes. **Severne makes no slalom board**; its fast board is the Fox, a performance freeride and free race board.
 
 **Free race board: Fox (version 4).**
 
-| Size | Length cm | Width cm | Fox kg (Powerbox, fin incl.) | Fox Pro kg (Tuttle, 2026) | Sail m² | Fin cm (Fox) | Fin cm (Fox Pro) |
+| Size | Length cm | Width cm | Fox kg (Powerbox) | Fox Pro kg (Tuttle, 2026) | Sail m² | Fin cm (Fox) | Fin cm (Fox Pro) |
 |---|---|---|---|---|---|---|---|
 | 95 | 236 | 61 | 6.19 | 5.82 | 4.7-6.7 | 32 | 30-34 |
 | 105 | 239 | 65 | 6.59 | 6.07 | 5.5-7.8 | 36 | - |
@@ -1020,3 +1020,214 @@ For each game brand: the look to aim for, the palette, the details that make the
 11. **Speed and storm sizes** (below 5.5 m² and 85 L) are left out: wanted for the 24 kt races?
 
 ---
+
+## 6. Sources
+
+Every web page and document used, grouped by brand (a page about two brands is listed under the first). Product pictures used for the colours are included. All were read on 31 October 2026; shop pages change with the seasons. The S2Maui catalogues and the Select fin catalogue were downloaded and read as text; Duotone's own spec tables do not render outside a browser, so its numbers come from shops' copies.
+
+**Duotone (Tripletone)**
+
+- <https://cdn.boards-and-more.com/system/product_picture_gallery_pictures/files/66e0/4834/b16a/4001/2d25/85df/original/DTW25_Warp_Fin_Rendering_C31_Web72.png>
+- <https://duotonequipment.com/product/falcon_fin-d-lab-2025/>
+- <https://easy-surfshop.com/do/blog/post/north-sails-and-nkb-have-changed-name-for-duotone>
+- <https://easy-surfshop.com/do/item/N-DTW-14260-1015/Windsurf-board-Duotone-FALCON_FIN-SLS-2026>
+- <https://en.windlounge.de/products/duotone-blitz-board-2026>
+- <https://surf-center.com/en/duotone-blitz-2026>
+- <https://surf-center.com/en/duotone-warp-fin-2026>
+- <https://worthingwatersports.com/en-us/products/dtw-warp_fin-mto-2026>
+- <https://worthingwatersports.com/en-us/products/duotone-warp_fin-2025>
+- <https://worthingwatersports.com/en-us/products/duotone-windsurfing-falcon-fin-d-lab-2027>
+- <https://worthingwatersports.com/en-us/products/used-duotone-falcon_fin-d-lab-2025-116>
+- <https://www.boardwise.co.uk/products/2024-duotone-falcon-fin-d-lab>
+- <https://www.continentseven.com/fanatic-becomes-duotone-an-interview/>
+- <https://www.duotonesports.com/en/us/products/duotone-falcon_fin-d-lab-mto-no-fin-2026-14260-1066>
+- <https://www.duotonesports.com/en/us/products/duotone-falcon_fin-sls-2026-14260-1015>
+- <https://www.fluid-lines.co.uk/product/duotone-x-pace-windsurfing-sail-2026-4/>
+- <https://www.ozu-tarifa.com/en/products/duotone-s_pace-2026>
+- <https://www.roho.co.uk/2026-duotone-s-pace-windsurf-sail>
+- <https://www.roho.co.uk/duotone-jag-sls-freerace-windsurf-board-14240-1003>
+- <https://www.surf-magazin.de/en/windsurfing/scene-and-events/goodbye-northsails-hello-duotone/>
+- <https://www.surf-magazin.de/en/windsurfing/scene-and-events/traditional-brand-disappears-fanatic-becomes-duotone/>
+- <https://www.surf-magazin.de/en/windsurfing/windsurf-boards/freerace-and-race/freeraceboard-2025-duotone-jag-128-on-test-sporty-but-easy/>
+- <https://www.surf-magazin.de/en/windsurfing/windsurf-boards/freerace-and-race/freeraceboards-2024-duotone-jag-110-on-test-sporty-fast-and-controllable/>
+- <https://www.surf-magazin.de/en/windsurfing/windsurf-boards/freerace-and-race/freeraceboards-2026-review-of-the-duotone-blitz-136-sls/>
+- <https://www.telstarsurf.com/duotone-falcon-fin-sls-2026-121912.html>
+- <https://www.telstarsurf.com/duotone-jag-sls-117845.html>
+- <https://www.telstarsurf.com/duotone-warp-fin-118920.html>
+- <https://www.windsurf.co.uk/duotone-s-pace-7-8m-test-review-2024/>
+- <https://www.windsurf.co.uk/new-duotone-warp_fin-falcon_fin-d-lab/>
+
+**Severne (Savanna)**
+
+- <https://andybiggs.co.uk/shop/brands/severne-shop/2025-severne-mach-8-pro-slalom-windsurfing-sail/>
+- <https://isthmussailboards.com/severne-fox-4-windsurf-board.html>
+- <https://isthmussailboards.com/windsurfing-sail/severne-sails.html>
+- <https://surf-center.com/en/severne-fox-pro-2026>
+- <https://www.pooleharbour.co.uk/products/severne-mach-8-sail-2025>
+- <https://www.severnesails.com/boards/fox/>
+- <https://www.severnesails.com/sails/mach-9/>
+- <https://www.severnesails.com/sails/ncx/>
+- <https://www.severnesails.com/sails/overdrive/>
+- <https://www.severnesails.com/wp-content/uploads/2024/11/025-fox-render-final-square-800.jpg>
+- <https://www.severnesails.com/wp-content/uploads/2026/03/026-Mach-9-render-final-square-800.jpg>
+- <https://www.severneshop.com/shop/product/2025-severne-fox/>
+- <https://www.surf-magazin.de/en/windsurfing/windsurf-boards/freerace-and-race/freeraceboards-2026-review-of-the-severne-fox-135/>
+- <https://www.surf-magazin.de/en/windsurfing/windsurf-boards/freeride/freerideboards-2025-severne-fox-135-in-test/>
+- <https://www.telstarsurf.com/severne-mach-8-118891.html>
+- <https://windsurfing-mag.jp/brands/2017/01/5239/>
+
+**Point-7 (Point.9)**
+
+- <https://point-7.com/our-story/>
+- <https://point-7.com/wp-content/uploads/2025/09/AC1-ltd_Q-Bond_026.png>
+- <https://point-7.com/wp-content/uploads/2025/09/AC1-ltd_White_026.png>
+- <https://point-7.com/zero-25-overview/ac-2-2cam-race-025/>
+- <https://point-7.com/zero-25-overview/ac1-ltd-pro-racing-025/>
+- <https://point-7.com/zero-26/ac1-ltd-racing-026/>
+- <https://point-7.com/zero-26/ac3-racing-026/>
+- <https://www.pwaworldtour.com/athletes/cucchi-andrea-i-1/>
+- <https://www.telstarsurf.com/point-7-ac-1-pro-race-2025-118965.html>
+
+**Starboard (Moonboard)**
+
+- <https://boardsportscalifornia.com/product/2026-starboard-isonic-copy/>
+- <https://en.wikipedia.org/wiki/Svein_Rasmussen>
+- <https://star-board.com/cdn/shop/files/2026-Starboard-Windsurf-iSonic-Carbon-Reflex-Sandwich-new.jpg?v=1768814785>
+- <https://star-board.com/pages/windsurfing>
+- <https://star-board.com/products/2025-futura-windsurf-board>
+- <https://star-board.com/products/2025-isonic-windsurf-board>
+- <https://star-board.com/products/2026-futura-windsurf-board>
+- <https://star-board.com/products/2026-isonic-windsurf-board>
+- <https://star-board.com/products/2027-isonic-windsurf-board>
+- <https://www.surf-magazin.de/en/windsurfing/windsurf-boards/freerace-and-race/freeraceboards-2026-review-of-the-starboard-futura-120/>
+- <https://www.surfdoctor.com/products/starboard-futura-2026-wood-sandwich>
+- <https://www.watersportsbase.com/product/starboard-isonic-2025/>
+
+**NeilPryde (NielsTrots)**
+
+- <https://easy-surfshop.com/do/item/N-NP-161032-9596/Windsurf-sail-NeilPryde-RSRacing-EVO-XVII-2026>
+- <https://en.wikipedia.org/wiki/Neil_Pryde_Ltd.>
+- <https://en.windlounge.de/products/neilpryde-v8-2026>
+- <https://industrialhistoryhk.org/neil-pryde-founded-fanling-1970/>
+- <https://surf-center.com/en/neilpryde-rs-racing-evo-xvii-2026>
+- <https://surf-center.com/en/neilpryde-v8-2026>
+- <https://www.nauticexpo.com/prod/neilpryde-windsurfing/product-21433-567701.html>
+- <https://www.neilpryde.com/cdn/shop/files/NP_RS-Racing-Evo-XVII_161032_C5_1_3a298735-4e3c-440a-80e0-76d7bb150f37.jpg?v=1764372585&width=2048>
+- <https://www.neilpryde.com/products/rs-racing-evoxvi>
+- <https://www.neilpryde.com/products/rs-racing-evoxvii>
+- <https://www.neilpryde.com/products/speedster>
+- <https://www.neilpryde.com/products/v8>
+- <https://www.shq.com.au/collections/sails/neilpryde>
+- <https://www.surf-magazin.de/en/windsurfing/windsurfing-sails/freerace-and-race/no-cam-2026-freeride-sail-testing-the-neilpryde-speedster-evo/>
+
+**JP Australia (PJ New Sealand)**
+
+- <https://24-7boardsports.com/jp-slalom-2025-windsurfing-board/>
+- <https://en.wikipedia.org/wiki/Jason_Polakow>
+- <https://jp-australia.com/p/windsurfing/boards/slalom-s-tec/>
+- <https://jp-australia.com/p/windsurfing/boards/speed/>
+- <https://jp-australia.com/p/windsurfing/boards/super-sport/>
+- <https://jp-australia.com/who-we-are/>
+- <https://jp-australia.com/wp-content/uploads/2025/11/JP_SLALOM-S-TEC_261224_1-320x1024.webp>
+- <https://jp-australia.com/wp-content/uploads/2025/11/JP_SLALOM-S-TEC_261224_2-330x1024.webp>
+- <https://jp-australia.com/wp-content/uploads/2025/11/JP_SUPER-SPORT-WOOD-PRO_261214_1-330x1024.webp>
+- <https://windsurfing-mag.jp/jp-australia/>
+- <https://www.pooleharbour.co.uk/products/jp-slalom-windsurf-board-2025>
+
+**FMX Racing (BMX Boards)**
+
+- <https://nicosurf.it/shop/windsurf/nuovo/tavole/fmx-racing-invictus-gtr-2026/>
+- <https://ssi-windsurf.com/en/inicio/72-fmx-racing-invictus-2025.html>
+- <https://www.fmxracing.com/>
+- <https://www.fmxracing.com/invictus-pro-118/>
+- <https://www.fmxracing.com/wp-content/uploads/2025/10/2026_invictus_pro_118.png>
+- <https://www.fmxracing.com/wp-content/uploads/2025/11/2026_invictus_gtr_118-263x600.png>
+- <https://www.fmxracing.eu/products/fmx-racing-invictus-2026-gtr>
+- <https://www.surf-magazin.de/en/windsurfing/windsurf-boards/freerace-and-race/fmx-racing-maynard-with-his-own-brand/>
+
+**North Sails (SouthSails)**
+
+- <https://en.wikipedia.org/wiki/North_Sails>
+- <https://northactionsports.com/cdn/shop/files/product_image_55000260001_100_01_61037db9-ffd3-4872-a4af-e9d099a9575d_grande.png>
+- <https://northactionsports.com/products/north-prisma-fin-sail>
+- <https://northactionsports.com/products/north-slalom-race-2026>
+- <https://www.surf-magazin.de/en/windsurfing/windsurfing-sails/freerace-and-race/new-racing-sail-north-sails-brings-back-the-prisma/>
+- <https://www.surfpirates.de/NORTH-SAILS-Slalom-Race-Gen3-2026-77m_1>
+- <https://www.telstarsurf.com/north-sails-free-speed-2025-117979.html>
+- <https://www.telstarsurf.com/north-sails-slalom-race-117981.html>
+- <https://www.windsurf.co.uk/north-free-speed-7-7m-test-review-2024/>
+- <https://www.windsurf.co.uk/north-freerace-7-7m-test-review-2024/>
+- <https://www.windsurf.co.uk/north-windsurfing-brand-relaunched/>
+- <https://www.windsurfjournal.com/article,news,the-return-of-north-windsurfing,9324,en>
+
+**S2Maui (s3kauai)**
+
+- <https://windforce.ca/products/s2-maui-venom-2025>
+- <https://windforce.ca/products/s2-maui-wicked-2025>
+- <https://www.windsurfing44.com/matos/S2Maui/2025/S2Maui_2025_en.pdf>
+- <https://www.windsurfing44.com/matos/S2Maui/2026/S2Maui_2026_en.pdf>
+
+**Tabou (Forbidden)**
+
+- <https://easy-surfshop.com/tabou>
+- <https://tabou-boards.com/archive/windsurf-boards-2025/manta-2025/>
+- <https://tabou-boards.com/boards/>
+- <https://tabou-boards.com/boards/manta/>
+- <https://tabou-boards.com/boards/rocket-plus/>
+- <https://tabou-boards.com/wp-content/uploads/2025/10/2026-Tabou-Manta-Duo.png>
+- <https://tabou-boards.com/wp-content/uploads/2025/10/TABOU_2026-Tabou-Rocket-Plus-113-LTD_242.png>
+
+**GA Sails (GG Sails)**
+
+- <https://easy-surfshop.com/do/item/N-GA-020126NA-SL/Windsurf-sail-GA-Sails-Vapor-2026>
+- <https://easy-surfshop.com/do/item/N-GA-25-VAPOR/Windsurf-sail-GA-Sails-Vapor-2025>
+- <https://en.windlounge.de/products/ga-sails-cosmic-2026>
+- <https://ga-windsurfing.com/media/archive/products-2022/cosmic-2022/>
+- <https://ga-windsurfing.com/sails/cosmic/>
+- <https://ga-windsurfing.com/sails/vapor/>
+- <https://isthmussailboards.com/windsurfing-sail/gaastra-sails.html>
+- <https://tabou-boards.com/wp-content/uploads/2025/09/2026GA_COSMIC_C1-1-800x800.png>
+- <https://tabou-boards.com/wp-content/uploads/2025/10/2026GA_VAPOR-800x800.png>
+- <https://www.windsurfjournal.com/article,news,gaastra-devient-presque-ga-sails,2948>
+
+**Other brands**
+
+- <https://avantisails.com/22-sails/machine-m-9/>
+- <https://blog.easy-surfshop.com/racingblade-2026-just-landed/>
+- <https://challengersails.co.uk/>
+- <https://chswindsolutions.com/shop/vele-sails/fluido-t3/>
+- <https://goyawindsurfing.com/sails/y2022/mark-2/>
+- <https://hydrostationwatersports.com/shop/goya-bolt-4-carbon-2024-2025/>
+- <https://simmerstyle.com/product/2025-s-max/>
+- <https://sonntag-fins.com/>
+- <https://www.avboards.com/>
+- <https://www.carbonartwindsurf.com/boards/slalom/>
+- <https://www.exocet-original.com/products/rs-v6-carbon-71>
+- <https://www.i-99.it/am-pro-slalom/>
+- <https://www.loftsails.com/products/racingblade-7-4-white-2026>
+- <https://www.patrikinternational.com/en/shop/windsurfing/windsurf-boards/patrik-slalom-x.html>
+- <https://www.patrikinternational.com/en/shop/windsurfing/windsurf-boards/slalom-airinside-v2.html>
+- <https://www.windsurf.co.uk/exocet-2024/>
+
+**Fins and rig parts**
+
+- <https://www.select-hydrofoils.com/assets/select_fins_2023_catalog.pdf>
+- <https://www.severneshop.com/shop/product/severne-enigma-booms/>
+- <https://www.severneshop.com/shop/product/severne-apex-sdm-masts/>
+- <https://www.severnesails.com/masts/apex-team/>
+
+**The disciplines, the rules and the magazine tests**
+
+- <https://surf-forum.com/forum/thread/30041-pwa-2026/>
+- <https://www.pwaworldtour.com/fileadmin/user_upload/Rule_changes.htm>
+- <https://www.pwaworldtour.com/index.php?id=1373>
+- <https://www.surf-magazin.de/en/windsurfing/scene-and-events/world-cup-pwa-presents-slalom-x-as-a-new-racing-discipline/>
+- <https://www.surf-magazin.de/en/windsurfing/windsurf-boards/freerace-and-race/freeraceboards-2024-test-five-fast-boards-for-hobby-racers-compared/>
+- <https://www.surf-magazin.de/en/windsurfing/windsurf-boards/freerace-and-race/test-2026-ten-freerace-boards-put-to-the-test-highway-to-heaven/>
+
+**In the repository**
+
+- `Game/sim/config/board_config.gd`, `sail_config.gd`, `fin_config.gd`: the numbers each entry needs.
+- `Game/config/board_default.tres`, `board_freeride_240.tres`, `sail_default.tres`, `sail_6_5.tres`, `fin_default.tres`: the defaults the rules are anchored on.
+- `tools/blender/build_rig_models.py`: the traced JP outline and nose rocker, the builder's colour medians, the parts the shaper can draw.
+- `Game/race/persona.gd` (the gear group) and `ROADMAP.md` (PH14, RA8).
