@@ -111,7 +111,15 @@ var max_alpha_deg: float = 90.0
 ## no drive to be had, only the push. Once the apparent wind is flip_awa_deg across on the
 ## new side, the sailor flips the rig and sheets in for the new tack.
 var boom_across_max_deg: float = 47.0
+## The angle of attack below which the sail luffs and carries next to nothing: read from the
+## sail the pilot knows (SailConfig.alpha_luff_deg, 2 degrees since PH28; this stood at 5 from
+## the legacy sail, so the pilot's no-go band and the angle it sheets to after a flip were
+## 3 degrees wider than the sail's own: review_sail.md 7b). Set luff_from_sail false to keep a
+## value of your own. On the reach check the sail's value changes nothing (the autopilot plan,
+## round 1).
 var alpha_luff_deg: float = 5.0
+var luff_from_sail: bool = true
+var _luff_sail: SailModel = null
 var backing_alpha_deg: float = 25.0
 ## A sailor standing at the mast can push a backed sail with the arms, bracing with the
 ## body, about this hard (half their weight); a faster board or stronger wind means a
@@ -162,6 +170,9 @@ var _last_sail_side: int = 0
 
 ## Updates the helm (rake, rig tilt, weight) and the sheet from the last telemetry.
 func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
+	if luff_from_sail and sail != null and sail != _luff_sail:
+		_luff_sail = sail
+		alpha_luff_deg = sail.config.alpha_luff_deg
 	update_tack(telemetry)
 	if telemetry.sail_side != _last_sail_side:
 		if _last_sail_side != 0:
