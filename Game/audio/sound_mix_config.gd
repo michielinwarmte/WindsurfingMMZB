@@ -113,6 +113,30 @@ extends Resource
 @export var swoosh_max_db: float = -5.0
 @export var swoosh_full_kt: float = 15.0
 
+@export_group("The fin's voice and the rig's strain (SO1)")
+## The fin's hum comes in from hum_start_speed_ms and is fully there at hum_full_speed_ms.
+@export var hum_start_speed_ms: float = 6.0
+@export var hum_full_speed_ms: float = 10.0
+## Its pitch follows the speed: 1 (the loop's own 420 Hz) at hum_ref_speed_ms, within the limits.
+@export var hum_ref_speed_ms: float = 11.0
+@export var hum_pitch_min: float = 0.5
+@export var hum_pitch_max: float = 1.8
+## The hum is hum_quiet_db while the fin works easily and rises to hum_max_db as the fin's
+## lift goes from hum_start_load of its peak to the peak (the stall).
+@export var hum_quiet_db: float = -30.0
+@export var hum_max_db: float = -9.0
+@export var hum_start_load: float = 0.5
+## Over the top (a spin-out) the hum stutters at this rate, down to this share between beats.
+@export var hum_stutter_hz: float = 9.0
+@export var hum_stall_share: float = 0.15
+@export var hum_smoothing_s: float = 0.03
+## The rig's creak starts as the sailor hikes out beyond this share of the full lean, or as
+## the feet's overload toward the sail grows (full at strain_overload_nm), up to strain_max_db.
+@export var strain_lean_from: float = 0.75
+@export var strain_overload_nm: float = 120.0
+@export var strain_max_db: float = -10.0
+@export var strain_smoothing_s: float = 0.12
+
 @export_group("Splashes")
 ## A slam: the hull was falling onto the water faster than slam_speed_ms (relative to the
 ## surface) and the water stopped it (its vertical speed rose by slam_stop_ms in one step).

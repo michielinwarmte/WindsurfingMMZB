@@ -10,6 +10,9 @@ extends CanvasLayer
 ## behind the start menu.
 
 var detail_visible: bool = true
+## The sailor's view (UI1, GD6): the strip without the speed and the wind at the sail, so the
+## player reads the water, the board and the sail instead; F1's panel keeps every number.
+var sailor_view: bool = true
 var _strip: Label
 var _panel: PanelContainer
 var _detail: Label
@@ -157,9 +160,14 @@ func update_from(t: Telemetry, controller: PlayerController, camera_name: String
 	var manoeuvre: String = controller.manoeuvre_name()
 	# The push slider's level (Up/Down), when the controller has one.
 	var push: String = "push %3.0f %%    " % (controller.push_level * 100.0) if not (use_autopilot or is_nan(controller.push_level)) else ""
-	_strip.text = ("%s   " % clock_text if clock_text != "" else "") + "%5.1f km/h  %4.1f kt    %swind %4.1f kt at 10 m, %4.1f kt at the sail, from %03.0f    %s, %s%s    %s    camera: %s" % [
-		t.speed_kmh, t.speed_kt, push, t.tws_10m_kt, t.tws_at_sail_kt, t.wind_from_bearing_deg,
-		tack, state, ("  " + manoeuvre) if manoeuvre != "" else "", who, camera_name]
+	var prefix: String = "%s   " % clock_text if clock_text != "" else ""
+	var rest: String = "%s, %s%s    %s    camera: %s" % [tack, state, ("  " + manoeuvre) if manoeuvre != "" else "", who, camera_name]
+	if sailor_view:
+		# No speed and no wind at the sail: the forecast wind and the push only (GD6).
+		_strip.text = prefix + "%swind %.0f kt from %03.0f    %s" % [push, t.tws_10m_kt, t.wind_from_bearing_deg, rest]
+	else:
+		_strip.text = prefix + "%5.1f km/h  %4.1f kt    %swind %4.1f kt at 10 m, %4.1f kt at the sail, from %03.0f    %s" % [
+			t.speed_kmh, t.speed_kt, push, t.tws_10m_kt, t.tws_at_sail_kt, t.wind_from_bearing_deg, rest]
 	_rose.heading_deg = t.heading_deg
 	_rose.wind_from_deg = t.wind_from_bearing_deg
 	_rose.queue_redraw()

@@ -58,6 +58,8 @@ func test_round_trip_through_a_file() -> void:
 	saved.swell_follows_wind = false
 	saved.swell_from_deg = 0.0
 	saved.swell_height_scale = 2.5
+	saved.sailor_view = false
+	saved.camera_close = false
 	saved.chop_offset_deg = -30.0
 	saved.fetch_km = 1.5
 	saved.water_depth_m = 2.0
@@ -89,6 +91,8 @@ func test_round_trip_through_a_file() -> void:
 	assert_true(loaded.shifts_enabled)
 	assert_almost_eq(loaded.max_shift_deg, 20.0, TOL)
 	assert_almost_eq(loaded.shift_period_s, 90.0, TOL)
+	assert_false(loaded.sailor_view, "the sailor's view switch is saved")
+	assert_false(loaded.camera_close, "the close camera switch is saved")
 	assert_eq(loaded.wave_preset, SettingsValues.WavePreset.STRONG_CHOP)
 	assert_almost_eq(loaded.wave_height_scale, 1.5, TOL)
 	assert_false(loaded.swell_follows_wind)

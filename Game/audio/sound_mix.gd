@@ -12,6 +12,10 @@ extends RefCounted
 ##   hiss     the spray off a planing hull. Lapping and rumble fade out as the hiss comes in,
 ##            following the planing ratio (an equal-power crossfade, so the total stays even).
 ##   flutter  the sail flapping while it luffs (and during a tack or a gybe).
+##   hum      the fin's voice (SO1): a hum at speed that rises in pitch with the speed and
+##            grows as the fin's lift nears its peak, and stutters once the fin has let go.
+##   strain   the rig's creak (SO1) as the pull nears what the sailor can hold: hiked almost
+##            all the way out, or the feet overloaded toward the sail (GP0's sign of a catapult).
 ## The one-shot sounds, as events of this frame in one_shots:
 ##   splash   the hull slamming onto the water, the nose digging into a wave, a fall, a
 ##            water start.
@@ -80,11 +84,18 @@ var lapping: Voice = Voice.new()
 var rumble: Voice = Voice.new()
 var hiss: Voice = Voice.new()
 var flutter: Voice = Voice.new()
+## The fin's hum and the rig's strain (SO1).
+var hum: Voice = Voice.new()
+var strain: Voice = Voice.new()
 ## The one-shot sounds to start this frame (cleared at every update).
 var one_shots: Array[OneShot] = []
 
 ## How much the sail flaps right now (0 to 1, before smoothing), for the HUD or a printout.
 var luff_amount: float = 0.0
+## How near the fin is to its limit (0 below hum_start_load of its peak lift, 1 at the stall)
+## and how near the sailor is to the edge (0 to 1), before smoothing.
+var fin_edge: float = 0.0
+var strain_amount: float = 0.0
 ## The planing ratio after smoothing, and how far the water sounds have crossed over to the
 ## hiss (0 = all lapping, 1 = all hiss).
 var planing_smoothed: float = 0.0
@@ -135,10 +146,12 @@ func update(t: Telemetry, dt: float, manoeuvre: String = "", in_menu: bool = fal
 	_update_wind(aws_kt, dt)
 	_update_water(speed_ms, planing_share, _finite(t.bow_immersion_m), dt)
 	_update_flutter(t, aws_kt, sailing, manoeuvre, dt)
+	_update_fin(t, speed_ms, sailing, dt)
+	_update_strain(t, sailing, dt)
 	var board_gain: float = menu_gain * camera_gain
 	wind.set_output(menu_gain)
 	whistle.set_output(menu_gain)
-	for voice: Voice in [lapping, rumble, hiss, flutter]:
+	for voice: Voice in [lapping, rumble, hiss, flutter, hum, strain]:
 		voice.set_output(board_gain)
 	for shot: OneShot in one_shots:
 		shot.volume_db = amplitude_to_db(db_to_linear(shot.volume_db) * board_gain)
@@ -147,7 +160,7 @@ func update(t: Telemetry, dt: float, manoeuvre: String = "", in_menu: bool = fal
 
 ## Every looping voice, for the player node and the tests.
 func voices() -> Array[Voice]:
-	return [wind, whistle, lapping, rumble, hiss, flutter]
+	return [wind, whistle, lapping, rumble, hiss, flutter, hum, strain]
 
 
 # --- The looping voices -------------------------------------------------------------
@@ -234,6 +247,42 @@ func _luff_share(t: Telemetry) -> float:
 	var share: float = 1.0 - _ramp(alpha_deg, config.flutter_full_below_alpha_deg, config.flutter_none_above_alpha_deg)
 	return share * share
 
+
+
+## The fin's voice (SO1): the hum of the fin at speed. Its pitch follows the speed (the
+## vortices off the trailing edge come faster), its level grows as the fin's lift nears its
+## peak (fin_load_share: 1 is the stall), and over the top (fin_stalled: the flow has let go,
+## the spin-out) it stutters. Silent below hum_start_speed_ms and with the sailor in the water.
+func _update_fin(t: Telemetry, speed_ms: float, sailing: bool, dt: float) -> void:
+	var c: SoundMixConfig = config
+	var load: float = clampf(_finite(t.fin_load_share), 0.0, 1.0)
+	var at_speed: float = _ramp(speed_ms, c.hum_start_speed_ms, c.hum_full_speed_ms)
+	fin_edge = _ramp(load, c.hum_start_load, 1.0) if sailing else 0.0
+	var amplitude: float = 0.0
+	if sailing and at_speed > 0.0:
+		amplitude = db_to_linear(lerpf(c.hum_quiet_db, c.hum_max_db, fin_edge)) * at_speed
+		if t.fin_stalled:
+			# The flow lets go and grips again: the hum comes and goes.
+			var beat: float = 0.5 + 0.5 * signf(sin(TAU * c.hum_stutter_hz * _finite(t.time_s)))
+			amplitude *= lerpf(c.hum_stall_share, 1.0, beat)
+	var pitch: float = clampf(speed_ms / c.hum_ref_speed_ms, c.hum_pitch_min, c.hum_pitch_max)
+	hum.follow(amplitude, pitch, 1000.0, dt, c.hum_smoothing_s, c.tone_smoothing_s)
+
+
+## The rig's strain (SO1): the creak of the mast foot, the boom and the lines as the pull
+## nears what the sailor can hold. "At the edge" is the larger of: how far the sailor is
+## hiked out beyond strain_lean_from (lean 1 is all the way out), and the feet's overload
+## toward the sail (GP0: it comes before a catapult; strain_overload_nm is full). Silent in
+## the water.
+func _update_strain(t: Telemetry, sailing: bool, dt: float) -> void:
+	var c: SoundMixConfig = config
+	strain_amount = 0.0
+	if sailing:
+		var windward: float = 1.0 if _finite(t.twa_deg) >= 0.0 else -1.0
+		var hiked: float = _ramp(absf(_finite(t.lean)), c.strain_lean_from, 1.0)
+		var overloaded: float = clampf(maxf(_finite(t.feet_moment_excess_nm) * windward, 0.0) / c.strain_overload_nm, 0.0, 1.0)
+		strain_amount = maxf(hiked * hiked, overloaded)
+	strain.follow(db_to_linear(c.strain_max_db) * strain_amount, 1.0, 1000.0, dt, c.strain_smoothing_s, c.tone_smoothing_s)
 
 # --- The one-shots --------------------------------------------------------------------
 

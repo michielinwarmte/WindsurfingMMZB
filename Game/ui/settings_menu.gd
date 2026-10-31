@@ -298,6 +298,10 @@ func _build_sailing_rows(s: SettingsValues) -> void:
 		func(index: int) -> void: s.start_camera = index as CameraRig.Mode)
 	_add_switch(grid, "Detail panel", s.show_hud_panel, "The forces and the key help (F1)",
 		func(on: bool) -> void: s.show_hud_panel = on)
+	_add_switch(grid, "Sailor's view", s.sailor_view, "No speed on the strip: read the water, the board and the sail (F1 shows everything)",
+		func(on: bool) -> void: s.sailor_view = on)
+	_add_switch(grid, "Close camera", s.camera_close, "The follow camera low behind the board: the rail, the spray and the water ahead",
+		func(on: bool) -> void: s.camera_close = on)
 
 
 func _build_graphics_rows(s: SettingsValues) -> void:

@@ -15,6 +15,18 @@ extends Node3D
 ## Spray starts at this speed and is full at this speed (m/s; 12 m/s is about 23 knots).
 const SPRAY_START_MS: float = 1.5
 const SPRAY_FULL_MS: float = 12.0
+## The board at the limit, seen (GR1): a fin near its peak lift throws this much more spray
+## (the sheet off the leeward rail of a loaded board), and a board on its rail this much more
+## at RAIL_SPRAY_HEEL_DEG of heel.
+const FIN_LOAD_SPRAY: float = 0.6
+const RAIL_SPRAY: float = 0.4
+const RAIL_SPRAY_HEEL_DEG: float = 10.0
+## The chatter of the board and the rig as the fin nears its limit (GR1): nothing until the
+## fin's lift passes CHATTER_FROM_LOAD of its peak, up to CHATTER_MAX_DEG of roll (and half of
+## it in pitch) at the peak, at CHATTER_HZ; a fin that has let go shakes fully.
+const CHATTER_FROM_LOAD: float = 0.8
+const CHATTER_MAX_DEG: float = 0.6
+const CHATTER_HZ: float = 14.0
 ## The flag buoy is placed this far to port and this far ahead of the start.
 const FLAG_TO_PORT_M: float = 10.0
 const FLAG_AHEAD_M: float = 6.0
@@ -46,11 +58,16 @@ var _last_time_s: float = -1.0
 ## aside) up to SPRAY_FULL_MS. A board that is not yet planing pushes a bow wave rather than
 ## a sheet, so it throws only a quarter as much. When the spray root runs forward along the
 ## hull (the nose meeting chop: the hull model's spray_root_factor above 1) there is more.
-static func spray_intensity(speed_ms: float, planing_ratio: float, spray_root_factor: float = 1.0) -> float:
+## A fin near its peak lift (fin_load_share toward 1) and a board on its rail (heel_deg)
+## throw more (GR1): the board at the limit is seen in its spray.
+static func spray_intensity(speed_ms: float, planing_ratio: float, spray_root_factor: float = 1.0,
+		fin_load_share: float = 0.0, heel_deg: float = 0.0) -> float:
 	var speed_share: float = clampf((speed_ms - SPRAY_START_MS) / (SPRAY_FULL_MS - SPRAY_START_MS), 0.0, 1.0)
 	var sheet: float = speed_share * speed_share * lerpf(0.25, 1.0, clampf(planing_ratio, 0.0, 1.0))
 	var chop: float = clampf(spray_root_factor - 1.0, 0.0, 1.0) * speed_share
-	return clampf(sheet + 0.5 * chop, 0.0, 1.0)
+	var loaded: float = 1.0 + FIN_LOAD_SPRAY * clampf(fin_load_share, 0.0, 1.0)
+	var railed: float = 1.0 + RAIL_SPRAY * clampf(absf(heel_deg) / RAIL_SPRAY_HEEL_DEG, 0.0, 1.0)
+	return clampf((sheet + 0.5 * chop) * loaded * railed, 0.0, 1.0)
 
 
 ## How the spray divides between the rails, (port, starboard), adding up to 1. Most comes off
@@ -71,6 +88,21 @@ static func spray_root_local(board: BoardConfig, wetted_aft_m: float, wetted_len
 	var from_transom: float = clampf(wetted_aft_m + wetted_length_m, 0.3, board.length_m * 0.85)
 	var half_width: float = 0.5 * board.width_at(from_transom)
 	return Vector3(side * half_width, -0.5 * board.thickness_m, 0.5 * board.length_m - from_transom)
+
+
+## The chatter of the board and the rig as the fin nears its limit (GR1): a small, fast
+## shiver, for the eye only, as Vector2(pitch, roll) in degrees. Nothing until the fin's lift
+## passes CHATTER_FROM_LOAD of its peak, then growing with the square up to CHATTER_MAX_DEG at
+## the peak; a fin that has let go (fin_stalled) shakes fully whatever its load.
+static func chatter_deg(fin_load_share: float, fin_stalled: bool, time_s: float) -> Vector2:
+	var edge: float = clampf((fin_load_share - CHATTER_FROM_LOAD) / (1.0 - CHATTER_FROM_LOAD), 0.0, 1.0)
+	if fin_stalled:
+		edge = 1.0
+	if edge <= 0.0:
+		return Vector2.ZERO
+	var amount: float = CHATTER_MAX_DEG * edge * edge
+	var phase: float = TAU * CHATTER_HZ * time_s
+	return Vector2(0.5 * amount * sin(phase * 1.37), amount * sin(phase))
 
 
 ## Builds the effects for this simulation. Called once, by the windsurfer.
@@ -168,7 +200,7 @@ func _process(_delta: float) -> void:
 
 
 func _update_spray(t: Telemetry, sailing: bool) -> void:
-	var intensity: float = spray_intensity(t.speed_ms, t.planing_ratio, t.spray_root_factor) if sailing else 0.0
+	var intensity: float = spray_intensity(t.speed_ms, t.planing_ratio, t.spray_root_factor, t.fin_load_share, t.heel_deg) if sailing else 0.0
 	var shares: Vector2 = spray_side_shares(t.awa_deg, t.heel_deg)
 	_set_spray(_spray_port, intensity * shares.x, -1.0, t)
 	_set_spray(_spray_starboard, intensity * shares.y, 1.0, t)

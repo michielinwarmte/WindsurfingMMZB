@@ -234,3 +234,30 @@ func test_lake_far_water_stays_in_its_area() -> void:
 	for plane: MeshInstance3D in [near, far]:
 		var material: ShaderMaterial = plane.material_override as ShaderMaterial
 		assert_eq(material.get_shader_parameter("wind_ripple_map_area"), Vector4(-2000.0, -1500.0, 4000.0, 3000.0))
+
+
+# --- The board at the limit (GR1) -----------------------------------------------------------
+
+func test_a_loaded_fin_and_a_railed_board_throw_more_spray() -> void:
+	var plain: float = WindsurferEffects.spray_intensity(10.0, 0.8)
+	var loaded: float = WindsurferEffects.spray_intensity(10.0, 0.8, 1.0, 0.9)
+	var railed: float = WindsurferEffects.spray_intensity(10.0, 0.8, 1.0, 0.0, 10.0)
+	assert_gt(loaded, plain * 1.3, "a fin near its limit throws a bigger sheet")
+	assert_gt(railed, plain * 1.2, "a board on its rail throws more")
+	assert_lte(WindsurferEffects.spray_intensity(12.0, 1.0, 2.0, 1.0, 20.0), 1.0, "never more than full")
+
+
+func test_the_board_chatters_only_near_the_fins_limit() -> void:
+	assert_eq(WindsurferEffects.chatter_deg(0.5, false, 1.0), Vector2.ZERO, "quiet with the fin working easily")
+	assert_eq(WindsurferEffects.chatter_deg(0.8, false, 1.0), Vector2.ZERO, "quiet up to the edge")
+	var largest: float = 0.0
+	for i: int in 120:
+		largest = maxf(largest, absf(WindsurferEffects.chatter_deg(1.0, false, i / 60.0).y))
+	assert_almost_eq(largest, WindsurferEffects.CHATTER_MAX_DEG, 0.05, "the full shiver at the stall")
+	var before: float = absf(WindsurferEffects.chatter_deg(0.9, false, 0.25 / WindsurferEffects.CHATTER_HZ).y)
+	assert_lt(before, WindsurferEffects.CHATTER_MAX_DEG * 0.5, "a quarter of it halfway there (the square)")
+	assert_gt(before, 0.0)
+	var let_go: float = 0.0
+	for i: int in 120:
+		let_go = maxf(let_go, absf(WindsurferEffects.chatter_deg(0.3, true, i / 60.0).y))
+	assert_almost_eq(let_go, WindsurferEffects.CHATTER_MAX_DEG, 0.05, "a fin that has let go shakes fully whatever its load")

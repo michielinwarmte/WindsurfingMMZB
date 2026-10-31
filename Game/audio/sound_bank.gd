@@ -49,6 +49,12 @@ const LOOP_RMS: float = 0.16
 const LOOP_PEAK: float = 0.98
 ## The flutter loop's flaps per second at pitch 1 (SoundMix plays it faster in more wind).
 const FLUTTER_RATE_HZ: float = 9.0
+## The fin's hum: its loop's length and the tone it is made around (SoundMix plays it faster
+## or slower with the speed), and the rig's creak: its loop's length and its crackles per second.
+const HUM_LOOP_S: float = 3.0
+const HUM_HZ: float = 420.0
+const CREAK_LOOP_S: float = 3.0
+const CREAK_RATE_HZ: float = 5.0
 
 ## The sounds of one game run are made once and shared (see shared()).
 static var _shared: SoundBank = null
@@ -59,6 +65,9 @@ var whistle: AudioStreamWAV
 var lapping: AudioStreamWAV
 var rumble: AudioStreamWAV
 var flutter: AudioStreamWAV
+## The fin's hum and the rig's creak (SO1, the warning signs of the push).
+var hum: AudioStreamWAV
+var creak: AudioStreamWAV
 var splashes: Array[AudioStreamWAV] = []
 var cracks: Array[AudioStreamWAV] = []
 var swoosh: AudioStreamWAV
@@ -76,6 +85,8 @@ func _init(seed_value: int = 1) -> void:
 	lapping = _make_lapping_loop()
 	rumble = _make_rumble_loop()
 	flutter = _make_flutter_loop()
+	hum = _make_hum_loop()
+	creak = _make_creak_loop()
 	for i: int in SoundMix.SPLASH_VARIANTS:
 		splashes.append(_make_splash(i))
 	for i: int in SoundMix.CRACK_VARIANTS:
@@ -175,6 +186,41 @@ func _make_flutter_loop() -> AudioStreamWAV:
 	_multiply(samples, envelope)
 	return _to_loop(samples)
 
+
+
+## The fin's hum (SO1): the singing of a fin at speed, from the vortices shed by its trailing
+## edge (a Kármán street: a tone at the speed over the edge's thickness times a Strouhal
+## number of about 0.2, so it rises with the speed; SoundMix plays this loop faster or slower
+## for that). A narrow band of noise around HUM_HZ with a little life in it (a slow wobble),
+## so it is a hum and not an organ note.
+func _make_hum_loop() -> AudioStreamWAV:
+	_start(7)
+	var count: int = _loop_count(HUM_LOOP_S)
+	var samples: PackedFloat32Array = _white_noise(count)
+	# A narrow band: several passes of a gentle band-pass around the hum's tone.
+	for i: int in 3:
+		_high_pass(samples, HUM_HZ * 0.85)
+		_low_pass(samples, HUM_HZ * 1.15)
+	_multiply(samples, _slow_wobble(count, 3.0, 0.7, 1.0))
+	return _to_loop(samples)
+
+
+## The rig's strain (SO1): what a sailor hears when the pull nears what the body can hold,
+## the creak of the mast foot, the boom and the lines: a train of short crackles, lower and
+## sparser than the sail's flapping, with a groan under them.
+func _make_creak_loop() -> AudioStreamWAV:
+	_start(8)
+	var count: int = _loop_count(CREAK_LOOP_S)
+	var samples: PackedFloat32Array = _pink_noise(count)
+	_high_pass(samples, 120.0)
+	_low_pass(samples, 900.0)
+	var envelope: PackedFloat32Array = _constant(count, 0.08)
+	var time_s: float = 0.0
+	while time_s < float(count) / MIX_RATE_HZ:
+		_add_pulse(envelope, time_s, 0.004, 25.0, _rng.randf_range(0.5, 1.0))
+		time_s += (1.0 / CREAK_RATE_HZ) * _rng.randf_range(0.5, 1.5)
+	_multiply(samples, envelope)
+	return _to_loop(samples)
 
 # --- The one-shots --------------------------------------------------------------------
 

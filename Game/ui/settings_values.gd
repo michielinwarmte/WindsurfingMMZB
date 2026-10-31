@@ -101,6 +101,10 @@ var start_heading_deg: float
 var start_camera: CameraRig.Mode
 ## The HUD's detail panel (F1) is shown when a run starts.
 var show_hud_panel: bool
+## The strip without the speed and the wind at the sail (UI1, GD6): read the water instead.
+var sailor_view: bool
+## The follow camera low and close behind the board, the water ahead in view (GR4).
+var camera_close: bool
 
 # --- Graphics (section "graphics") ---
 var fullscreen: bool
@@ -162,6 +166,8 @@ func reset_to_defaults() -> void:
 	start_heading_deg = 180.0
 	start_camera = CameraRig.Mode.FOLLOW
 	show_hud_panel = true
+	sailor_view = true
+	camera_close = true
 
 	fullscreen = false
 	vsync = true
@@ -307,6 +313,8 @@ func write_to(config: ConfigFile) -> void:
 	config.set_value("sailing", "start_heading_deg", start_heading_deg)
 	config.set_value("sailing", "start_camera", int(start_camera))
 	config.set_value("sailing", "show_hud_panel", show_hud_panel)
+	config.set_value("sailing", "sailor_view", sailor_view)
+	config.set_value("sailing", "camera_close", camera_close)
 
 	config.set_value("graphics", "fullscreen", fullscreen)
 	config.set_value("graphics", "vsync", vsync)
@@ -349,6 +357,8 @@ func read_from(config: ConfigFile) -> void:
 	start_heading_deg = fposmod(_float(config, "sailing", "start_heading_deg", start_heading_deg), 360.0)
 	start_camera = clampi(_int(config, "sailing", "start_camera", start_camera), 0, CameraRig.Mode.size() - 1) as CameraRig.Mode
 	show_hud_panel = _bool(config, "sailing", "show_hud_panel", show_hud_panel)
+	sailor_view = _bool(config, "sailing", "sailor_view", sailor_view)
+	camera_close = _bool(config, "sailing", "camera_close", camera_close)
 
 	fullscreen = _bool(config, "graphics", "fullscreen", fullscreen)
 	vsync = _bool(config, "graphics", "vsync", vsync)

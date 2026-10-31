@@ -71,7 +71,8 @@ func test_the_loops_have_the_right_length_and_loop() -> void:
 	var loops: Dictionary[String, float] = {
 		"wind": SoundBank.WIND_LOOP_S, "hiss": SoundBank.HISS_LOOP_S, "whistle": SoundBank.WHISTLE_LOOP_S,
 		"lapping": SoundBank.LAPPING_LOOP_S,
-		"rumble": SoundBank.RUMBLE_LOOP_S, "flutter": SoundBank.FLUTTER_LOOP_S}
+		"rumble": SoundBank.RUMBLE_LOOP_S, "flutter": SoundBank.FLUTTER_LOOP_S,
+		"hum": SoundBank.HUM_LOOP_S, "creak": SoundBank.CREAK_LOOP_S}
 	for loop_name: String in loops:
 		var stream: AudioStreamWAV = bank.get(loop_name)
 		var count: int = SoundBank.sample_count(stream)
@@ -452,7 +453,7 @@ func test_the_sailing_scene_plays_the_mix() -> void:
 		if player != null and player.playing:
 			playing += 1
 			assert_ne(player.bus, &"Master", "every loop goes through its own bus")
-	assert_eq(playing, 6, "the six loops play from the start")
+	assert_eq(playing, 8, "the eight loops play from the start")
 	audio._process(FRAME_S)
 	get_tree().paused = true
 	assert_false(audio.can_process(), "the sound stops while paused")
@@ -469,3 +470,61 @@ func test_the_sound_is_quieter_behind_the_start_menu() -> void:
 	for i: int in 240:
 		audio._process(FRAME_S)
 	assert_almost_eq(audio.mix.menu_gain, 1.0, 0.05, "full sound when sailing")
+
+
+# --- The fin's voice and the rig's strain (SO1) -------------------------------------------
+
+func test_the_fin_hums_at_speed_louder_near_the_stall_and_higher_with_speed() -> void:
+	var slow: Telemetry = _telemetry(15.0, 4.0, 0.3)
+	slow.fin_load_share = 0.9
+	assert_eq(_settled(slow).hum.volume_db, SoundMix.SILENT_DB, "no hum below planing speed")
+	var easy: Telemetry = _telemetry(20.0, 12.0, 0.8)
+	easy.fin_load_share = 0.3
+	var loaded: Telemetry = _telemetry(20.0, 12.0, 0.8)
+	loaded.fin_load_share = 0.95
+	var easy_mix: SoundMix = _settled(easy)
+	var loaded_mix: SoundMix = _settled(loaded)
+	assert_gt(easy_mix.hum.volume_db, -40.0, "a quiet hum while the fin works easily")
+	assert_gt(loaded_mix.hum.volume_db, easy_mix.hum.volume_db + 10.0, "much louder near the stall")
+	assert_almost_eq(loaded_mix.fin_edge, 0.9, 0.01, "nine tenths of the way from half load to the stall")
+	var faster: Telemetry = _telemetry(20.0, 16.0, 0.9)
+	faster.fin_load_share = 0.95
+	assert_gt(_settled(faster).hum.pitch, loaded_mix.hum.pitch, "higher at 16 m/s than at 12")
+
+
+func test_a_stalled_fin_stutters_and_a_fallen_sailor_hears_none() -> void:
+	var stalled: Telemetry = _telemetry(20.0, 12.0, 0.8)
+	stalled.fin_load_share = 1.0
+	stalled.fin_stalled = true
+	var mix: SoundMix = SoundMix.new()
+	_run(mix, stalled, 1.0)
+	var lowest: float = 0.0
+	var highest: float = SoundMix.SILENT_DB
+	for i: int in 60:
+		stalled.time_s += FRAME_S
+		mix.update(stalled, FRAME_S)
+		lowest = minf(lowest, mix.hum.volume_db)
+		highest = maxf(highest, mix.hum.volume_db)
+	assert_gt(highest - lowest, 6.0, "the hum comes and goes over the top (%.1f dB)" % (highest - lowest))
+	stalled.sailor_state = 1
+	_run(mix, stalled, 2.0)
+	assert_eq(mix.hum.volume_db, SoundMix.SILENT_DB, "silent in the water")
+
+
+func test_the_rig_creaks_as_the_sailor_nears_the_edge() -> void:
+	var easy: Telemetry = _telemetry(20.0, 12.0, 0.8)
+	easy.lean = 0.6
+	assert_eq(_settled(easy).strain.volume_db, SoundMix.SILENT_DB, "no creak with the hike in hand")
+	var hiked: Telemetry = _telemetry(20.0, 12.0, 0.8)
+	hiked.lean = 0.95
+	var hiked_mix: SoundMix = _settled(hiked)
+	assert_gt(hiked_mix.strain.volume_db, -25.0, "a creak when hiked almost all the way out")
+	var overloaded: Telemetry = _telemetry(20.0, 12.0, 0.8)
+	overloaded.lean = 0.5
+	overloaded.twa_deg = 60.0
+	overloaded.feet_moment_excess_nm = 150.0
+	var over_mix: SoundMix = _settled(overloaded)
+	assert_almost_eq(over_mix.strain_amount, 1.0, 1e-6, "the feet's overload toward the sail is the edge")
+	assert_gt(over_mix.strain.volume_db, hiked_mix.strain.volume_db, "louder than the hike alone")
+	overloaded.feet_moment_excess_nm = -150.0
+	assert_almost_eq(_settled(overloaded).strain_amount, 0.0, 1e-6, "an overload away from the sail is not it")

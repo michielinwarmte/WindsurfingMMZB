@@ -12,7 +12,14 @@ var mode: Mode = Mode.FOLLOW
 var camera: Camera3D
 
 ## Follow camera: where it sits relative to the board (board axes, yaw only) and how
-## quickly it catches up (seconds).
+## quickly it catches up (seconds). Two framings (follow_close, a setting): the sailing one,
+## low and close behind the board and looking ahead of it, so the rail, the spray and the
+## water ahead (the gusts, the wave faces) fill the view (GR4); and the classic one, higher
+## and further back, looking at the board.
+const FOLLOW_CLOSE_OFFSET: Vector3 = Vector3(0.0, 1.6, 4.4)
+const FOLLOW_CLOSE_LOOK_AHEAD_M: float = 7.0
+const FOLLOW_CLOSE_LOOK_UP_M: float = 0.9
+var follow_close: bool = true
 var follow_offset: Vector3 = Vector3(0.0, 2.2, 6.0)
 var follow_smoothing_s: float = 0.35
 var _follow_position: Vector3 = Vector3.ZERO
@@ -115,13 +122,15 @@ func _process(delta: float) -> void:
 
 	match mode:
 		Mode.FOLLOW:
-			var wanted: Vector3 = origin + yaw_basis * follow_offset
+			var wanted: Vector3 = origin + yaw_basis * (FOLLOW_CLOSE_OFFSET if follow_close else follow_offset)
 			if not _follow_initialised:
 				_follow_position = wanted
 				_follow_initialised = true
 			var blend: float = 1.0 - exp(-delta / follow_smoothing_s)
 			_follow_position = _follow_position.lerp(wanted, blend)
 			camera.global_position = _follow_position
+			if follow_close:
+				look_point = origin + forward_h * FOLLOW_CLOSE_LOOK_AHEAD_M + Vector3(0.0, FOLLOW_CLOSE_LOOK_UP_M, 0.0)
 			camera.look_at(look_point, Vector3.UP)
 		Mode.ORBIT:
 			var offset: Vector3 = Vector3(

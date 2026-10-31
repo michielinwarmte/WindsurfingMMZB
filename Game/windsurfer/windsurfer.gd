@@ -217,6 +217,7 @@ func _copy_state_to_visuals() -> void:
 		var progress: float = clampf(sim.fallen_for_s / FALL_DURATION_S, 0.0, 1.0)
 		var eased: float = progress * progress
 		_rig.pose_fallen(eased, float(sim.fall_side))
+		_rig.rotation_degrees = Vector3.ZERO
 		_figure.pose_fallen(sim, eased)
 		return
 
@@ -230,6 +231,10 @@ func _copy_state_to_visuals() -> void:
 	var boom_dir: Vector3 = rig_to_board * sim.sail.boom_direction_local
 	_rig.pose_sailing(mast_dir, boom_dir)
 	_rig.shape_sail(sim.sail, sim.time_s)
+	# The chatter at the fin's limit (GR1): a shiver of the board and the rig, for the eye only;
+	# the node the cameras follow does not move with it.
+	var chatter: Vector2 = WindsurferEffects.chatter_deg(sim.telemetry.fin_load_share, sim.telemetry.fin_stalled, sim.time_s)
+	_rig.rotation_degrees = Vector3(chatter.x, 0.0, chatter.y)
 	# The sailor holds the windward arm of the wishbone boom, not the boom's centre line.
 	_figure.pose_sailing(sim, boom_dir, _rig.windward_arm_offset())
 

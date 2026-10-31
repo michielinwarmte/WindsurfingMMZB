@@ -79,6 +79,8 @@ func _ready() -> void:
 	_add_loop(mix.rumble, _bank.rumble, WATER_BUS)
 	_add_loop(mix.hiss, _bank.hiss, WATER_HISS_BUS)
 	_add_loop(mix.flutter, _bank.flutter, SAIL_FLUTTER_BUS)
+	_add_loop(mix.hum, _bank.hum, WATER_BUS)
+	_add_loop(mix.strain, _bank.creak, SAIL_BUS)
 	_splash_players = _add_one_shot_players(SPLASH_PLAYERS, WATER_BUS)
 	_crack_players = _add_one_shot_players(CRACK_PLAYERS, SAIL_BUS)
 	_swoosh_players = _add_one_shot_players(SWOOSH_PLAYERS, SAIL_BUS)
