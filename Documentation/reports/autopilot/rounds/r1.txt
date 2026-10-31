@@ -1,0 +1,17 @@
+# Round 1 (PLAN.md section 3): the existing levers, one at a time, against round 0's baseline.
+# The rail's shape first: round 0 bounces on the close reaches (Max's 10 degrees upwind) and on the
+# 24 kt broad reach (flat by 135 degrees; U2 kept 2 degrees to 160 because flat it bounced there).
+rail_u2: --sailor.fin_load_bank_upwind_deg=0 --sailor.fin_load_twa_max_deg=160 --sailor.fin_load_twa_fade_deg=20
+rail_no_upwind: --sailor.fin_load_bank_upwind_deg=0
+rail_upwind5: --sailor.fin_load_bank_upwind_deg=5
+rail_to160: --sailor.fin_load_twa_max_deg=160 --sailor.fin_load_twa_fade_deg=20
+# The helm: the rail carries part of the steady course hold (the feet steer first).
+lean_share03: --pilot.lean_share=0.3
+# The rake's stop at the tunnel's rig-back (a measured variant; Michiel's number).
+rake18: --sail.max_rake_deg=18
+# The technique the pilot asks of the sailor.
+trim3: --sailor.running_trim_deg=3
+couple250: --sailor.front_foot_pull_held_n=250
+lean35: --sailor.max_rig_lean_deg=35
+# The pilot's luff band from the sail's own value.
+luff2: --pilot.alpha_luff_deg=2
