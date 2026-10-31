@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="Brand" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://gear/brand.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/brands/s3kauai/logo.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/brands/s3kauai/wordmark.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/brands/s3kauai/mark.png" id="4"]
+
+[resource]
+script = ExtResource("1")
+name = "s3kauai"
+slug = "s3kauai"
+tagline = "One island further."
+makes_boards = false
+makes_sails = true
+primary = Color(0.0431, 0.5608, 0.6275, 1)
+secondary = Color(0.0902, 0.502, 0.2902, 1)
+accent = Color(1, 0.3569, 0.3569, 1)
+logo = ExtResource("2")
+wordmark = ExtResource("3")
+mark = ExtResource("4")

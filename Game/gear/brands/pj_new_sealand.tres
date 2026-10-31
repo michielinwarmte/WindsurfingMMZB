@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="Brand" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://gear/brand.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/brands/pj_new_sealand/logo.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/brands/pj_new_sealand/wordmark.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/brands/pj_new_sealand/mark.png" id="4"]
+
+[resource]
+script = ExtResource("1")
+name = "PJ New Sealand"
+slug = "pj_new_sealand"
+tagline = "Born where the seals surf."
+makes_boards = true
+makes_sails = false
+primary = Color(0.9569, 0.9686, 0.9608, 1)
+secondary = Color(0.0392, 0.4, 0.4392, 1)
+accent = Color(0.5529, 0.7765, 0.2471, 1)
+logo = ExtResource("2")
+wordmark = ExtResource("3")
+mark = ExtResource("4")
