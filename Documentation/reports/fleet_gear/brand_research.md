@@ -229,7 +229,7 @@ Source: [fluid-lines.co.uk](https://www.fluid-lines.co.uk/product/duotone-x-pace
 
 ### 2.2 Severne (game: Savanna): sails and boards
 
-**Who they are.** Founded in 2003 in Australia (2002 in one source) by the sail designer Ben Severne, who still designs; based in Perth ([isthmussailboards.com](https://isthmussailboards.com/windsurfing-sail/severne-sails.html), [windsurfing-mag.jp](https://windsurfing-mag.jp/brands/2017/01/5239/)). Antoine Albeau, the most decorated slalom racer of all and a speed record holder, rides the race sails. Character: understated and engineered; red race sails; the logo is a "boomerang" mark with "SV". Severne's "Xtended Range" idea is to sell fewer race sizes, each with a wider range ("skip a size up or down"): its race sail comes in only five sizes. **Severne makes no slalom board**; its fast board is the Fox, a performance freeride and free race board.
+**Who they are.** Founded in 2003 in Australia (2002 in one source) by the sail designer Ben Severne, who still designs; based in Perth ([isthmussailboards.com](https://isthmussailboards.com/windsurfing-sail/severne-sails.html), [windsurfing-mag.jp](https://windsurfing-mag.jp/brands/2017/01/5239/)). Antoine Albeau, many times world champion and a speed record holder, is the face of the race sail (he is on every picture of Severne's Mach 9 page). Character: understated and engineered; red race sails; the logo is a "boomerang" mark with "SV". Severne's "Xtended Range" idea is to sell fewer race sizes, each with a wider range ("skip a size up or down"): its race sail comes in only five sizes. **Severne makes no slalom board**; its fast board is the Fox, a performance freeride and free race board.
 
 **Free race board: Fox (version 4).**
 
@@ -609,17 +609,302 @@ Sources: [ga-windsurfing.com](https://ga-windsurfing.com/sails/cosmic/), [windlo
 
 ### 2.12 Other slalom and free race brands worth knowing
 
-- **Patrik** (Austria-based, boards and sails): the brand of Patrik Diethelm, a former PWA slalom racer turned shaper; Max sails a Patrik 115 (its layout is the game's default). Slalom boards: the new Slalom-X (92, 97 and 115 L, 232 cm, 60 to 70.5 cm; "a refined rocker with a slight tail kick", a slight vee under the back foot and a double concave between the front straps), the premium Slalom AirInside V2 (95 to 140 L, 5.12 to 6.46 kg, made in Ukraine, €3,399 to €3,699) and the standard Slalom (85 to 150 L, on close-out; graphics by Fabio Canella); free race: the F-Race ("racer with comfort" in surf-magazin's 2026 test) ([patrikinternational.com](https://www.patrikinternational.com/en/shop/windsurfing/windsurf-boards/patrik-slalom-x.html), [Slalom AirInside](https://www.patrikinternational.com/en/shop/windsurfing/windsurf-boards/slalom-airinside-v2.html)).
-- **Goya** (Maui, Francisco Goya's brand): the Bolt free race board (Bolt 4 Carbon 2024-25: 99 to 139 L, full carbon deck, racing tail cut-outs; the Bolt "offers the purest racing feel with the fewest compromises" in the 2026 test) and the Mark (no cams, 6 battens) and Mark 2 (2 cams) free race sails ([hydrostationwatersports.com](https://hydrostationwatersports.com/shop/goya-bolt-4-carbon-2024-2025/), [goyawindsurfing.com](https://goyawindsurfing.com/sails/y2022/mark-2/)).
+- **Patrik** (boards and sails): the brand of Patrik Diethelm, a former PWA slalom racer turned shaper; Max sails a Patrik 115 (its layout is the game's default). Slalom boards: the new Slalom-X (92, 97 and 115 L, 232 cm, 60 to 70.5 cm; "a refined rocker with a slight tail kick", a slight vee under the back foot and a double concave between the front straps), the premium Slalom AirInside V2 (95 to 140 L, 5.12 to 6.46 kg, made in Ukraine, €3,399 to €3,699) and the standard Slalom (85 to 150 L, on close-out; graphics by Fabio Canella); free race: the F-Race ("racer with comfort" in surf-magazin's 2026 test) ([patrikinternational.com](https://www.patrikinternational.com/en/shop/windsurfing/windsurf-boards/patrik-slalom-x.html), [Slalom AirInside](https://www.patrikinternational.com/en/shop/windsurfing/windsurf-boards/slalom-airinside-v2.html)).
+- **Goya Windsurfing**: the Bolt free race board (Bolt 4 Carbon 2024-25: 99 to 139 L, full carbon deck, racing tail cut-outs; the Bolt "offers the purest racing feel with the fewest compromises" in the 2026 test) and the Mark (no cams, 6 battens) and Mark 2 (2 cams) free race sails ([hydrostationwatersports.com](https://hydrostationwatersports.com/shop/goya-bolt-4-carbon-2024-2025/), [goyawindsurfing.com](https://goyawindsurfing.com/sails/y2022/mark-2/)).
 - **Loft Sails** (designer Monty Spindler): the Racingblade, a "purpose-built fin slalom sail" in 5.2, 5.8, 6.6, 7.4 and 8.2 for 2026 (a higher aspect ratio, "TekCam III" cams 35 % lighter, Kevlar radials from the clew to the sleeve; €1,199 to €1,359), the Skyblade (foil) and the Formulablade ([loftsails.com](https://www.loftsails.com/products/racingblade-7-4-white-2026), [easy-surfshop blog](https://blog.easy-surfshop.com/racingblade-2026-just-landed/)).
 - **Challenger Sails (CHS)** (Italy; hand-built by Claudio Badiali): won the PWA slalom title in 2022 with Maciek Rutkowski; the SLX fin slalom sail (€1,399 to €1,649) and the Fluido T3 (3 cams, 7 battens, freeride to free race, registered for the 2025 PWA) ([chswindsolutions.com](https://chswindsolutions.com/shop/vele-sails/fluido-t3/), [challengersails.co.uk](https://challengersails.co.uk/)).
-- **Avanti Sails** (USA): the Machine race sail ("the first membrane sail to win a PWA World Cup event"), carbon booms from 2019; no 2025 race sail table found ([avantisails.com](https://avantisails.com/22-sails/machine-m-9/)).
-- **Simmer Style** (Sweden-founded, designer Tomas Persson): the S-Max 2025 slalom sail (5.5, 6.0, 6.5, 7.1, 7.8, 8.5; TekCam, for SDM or RDM by swapping the bottom cam) and the Evoq ([simmerstyle.com](https://simmerstyle.com/product/2025-s-max/)).
-- **Exocet** (France): the RS V6 Carbon fin slalom board, new for 2026 (80, 95, 110 and 140 L, all 232 cm, 58 to 85 cm, 6.11 to 8.65 kg), the RF V4 foil slalom and the Scross V3 free race (115, 125, 145 L) ([exocet-original.com](https://www.exocet-original.com/products/rs-v6-carbon-71), [windsurf.co.uk](https://www.windsurf.co.uk/exocet-2024/)).
+- **Avanti Sails**: the Machine race sail ("the first membrane sail to win a PWA World Cup event"), carbon booms from 2019; no 2025 race sail table found ([avantisails.com](https://avantisails.com/22-sails/machine-m-9/)).
+- **Simmer Style** (sail designer Tomas Persson): the S-Max 2025 slalom sail (5.5, 6.0, 6.5, 7.1, 7.8, 8.5; TekCam, for SDM or RDM by swapping the bottom cam) and the Evoq ([simmerstyle.com](https://simmerstyle.com/product/2025-s-max/)).
+- **Exocet**: the RS V6 Carbon fin slalom board, new for 2026 (80, 95, 110 and 140 L, all 232 cm, 58 to 85 cm, 6.11 to 8.65 kg), the RF V4 foil slalom and the Scross V3 free race (115, 125, 145 L) ([exocet-original.com](https://www.exocet-original.com/products/rs-v6-carbon-71), [windsurf.co.uk](https://www.windsurf.co.uk/exocet-2024/)).
 - **Sonntag** (Germany): not sails but **custom carbon fins**, handmade by Jörg Sonntag for slalom, Formula and speed (the SL-P slalom fin from 30 to 53 cm, rake 7.5 to 12 degrees; the SL-S slalom-speed fin) ([sonntag-fins.com](https://sonntag-fins.com/)).
 - **Carbon Art** (New Zealand): custom hand-built boards since 1995, slalom shapes developed with Phil McGain on Maui and registered for the PWA (SL 78 to SL 99; "RTS cut-outs with a turbo tab"; 5.1 to 6.2 kg) ([carbonartwindsurf.com](https://www.carbonartwindsurf.com/boards/slalom/)).
-- **AV Boards** (France): custom speed and slalom boards; a 2027 collection with two new speed and three new slalom shapes ([avboards.com](https://www.avboards.com/)).
+- **AV Boards**: custom speed and slalom boards; a 2027 collection with two new speed and three new slalom shapes ([avboards.com](https://www.avboards.com/)).
 - **I-99** (Italy, "NoveNove", Cesare Cantagalli): the AM·PRO slalom series shaped by Patrizio Pelizzaro with Thomas Fauster at Lake Garda (SL 61: 89 L 235 × 61 cm; SL 63: 97 L; SL 73: 125 L; SL 85: 145 L) and the Grand Tour free race board ([i-99.it](https://www.i-99.it/am-pro-slalom/)).
-- **Future Fly** (Czech Republic): the White Tiger, a "true freerace" board in surf-magazin's 2026 test ([surf-magazin.de](https://www.surf-magazin.de/en/windsurfing/windsurf-boards/freerace-and-race/test-2026-ten-freerace-boards-put-to-the-test-highway-to-heaven/)).
+- **Future Fly**: the White Tiger, a "true freerace" board in surf-magazin's 2026 test ([surf-magazin.de](https://www.surf-magazin.de/en/windsurfing/windsurf-boards/freerace-and-race/test-2026-ten-freerace-boards-put-to-the-test-highway-to-heaven/)).
+
+---
+
+## 3. The game's gear set
+
+This is a proposal for the gear page (part 5 of the plan) and the shaper (part 4): per game brand the sizes to build, each with the numbers its `.tres` file needs, in the units of `Game/sim/config/board_config.gd`, `sail_config.gd` and `fin_config.gd`. Each entry names the real board or sail it is modelled on. Published numbers come first; every other number comes from one of the rules below, and the last column of the board tables says which of a board's numbers were derived.
+
+What it holds: **24 slalom boards** (five brands, 88 to 135 L), **17 free race boards** (six brands, 98 to 136 L), **32 slalom sails** (seven brands, 5.5 to 9.0 m²) and **26 free race sails** (seven brands, 5.8 to 8.6 m²), and a fin for every board. Savanna (Severne) has no slalom board, because Severne makes none; see the open questions.
+
+### 3.1 The rules for the numbers the brands do not publish
+
+**Boards.**
+
+1. **Length, width, volume, mass** are the brands' (2026 where there is one; the PJ 72 stays the 2025 board of `board_default.tres`).
+2. **Tail width one foot from the tail** (`tail_width_m`): Starboard's where published. Otherwise, for a slalom board, **0.848 × width − 0.117 m**, a straight line through Starboard's six iSonics (every one within 0.9 cm); it gives 0.494 m for a 72 cm board, where JP's traced 72 has 0.50 m. For a free race board, **0.571 × width + 0.051 m**, fitted on Starboard's Futura (within 1 cm, except the 105 whose two published tails disagree).
+3. **Thickness** (`thickness_m`): Starboard's where published. Otherwise **volume / (k × length × width)**, with k = 0.56 for slalom boards up to 73 cm wide, 0.61 from 77 cm (straight between), 0.59 for free race boards. Starboard's ten published thicknesses give k = 0.559 to 0.564 (iSonic 60 to 73), 0.610 and 0.619 (iSonic 77 and 85) and 0.584 to 0.595 (Futura). For the JP 72 it gives 0.127 m (the default has 0.13). (A first try, solving the thickness from the shape functions of `BoardConfig` calibrated on the default board, came out 3 to 15 mm too thick against Starboard's numbers, so the simpler rule is used.)
+4. **Widest point from the tail**: 0.50 × length for slalom (the default: 1.14 of 2.28 m); 0.48 × length for free race (est.: their volume sits further back).
+5. **Nose width one foot from the nose**: 0.78 × width for slalom (JP's traced 72: 0.55 to 0.56 m); 0.70 × width for free race (est.: a tapered nose, between JP and the old freeride default's 0.625).
+6. **Tail and nose thickness**: 0.045 and 0.040 m for slalom (the default); 0.050 and 0.040 for free race (est.: "thicker, boxier rails").
+7. **Mass** (`mass_kg`, "the bare board with straps and fin"): the brand's bare weight + 0.45 kg for four straps and their screws (est.) + the fin: 0.017 kg per cm of a carbon slalom fin, 0.024 kg per cm of the G10 fin a free race board comes with (est.). For the JP 72 this gives 6.6 + 0.45 + 0.65 = 7.70 kg; keep the default's 7.8 for it.
+8. **Rocker**: the default's nose rocker (0.128 m) over 0.70 × length; no tail rocker (the brands' "flat tails"; the Fox 0.001 m, measured by surf-magazin); `tail_rocker_length_m` 0.35.
+9. **Rails**: hard to 0.526 × length, soft from 0.877 × length (the default's 1.2 and 2.0 m of 2.28 m); `rail_edge_height_m` 0.03 and `deadrise_deg` 1.0 as the default.
+10. **Straps**: back straps 0.235 m and front straps 0.825 m from the tail on every board (Max's Patrik 115; est. for the others: the straps sit where the fin and the stance put them, which hardly changes with the length). Out from the centreline: back = 0.5 × tail width − 0.095 m, front = 0.5 × width − 0.11 m (both give Max's 0.15 and 0.25 m on the default). Free race boards also have inboard positions; the outboard ones are given.
+11. **Fin box**: screws 0.12 and 0.235 m from the tail on every board (Max's; est. for the others). Keep the fin's root 0.18 m from the tail (`FinConfig.root_local.z` = length / 2 − 0.18).
+12. **Mast track**: centred at 0.581 × length from the tail (the default: 1.325 of 2.28 m), 0.16 m long. Put the sail's mast foot 0.02 m ahead of the track's back end, as the default does (`SailConfig.mast_foot_local.z` = length / 2 − (track back + 0.02)).
+13. **Fin**: the middle of the brand's recommended range, or the fin it comes with; where the brand gives none, **0.30 + 0.64 × (width − 0.60) m** (section 1.4). The area from Select's tables: the Rhino Pro for slalom boards, the S.MAX for free race boards (its even sizes as the mean of the odd ones around them).
+14. **Cut-outs**: the physics' `cutout_from_tail_m` and `cutout_depth_m` stay 0 (off, PH16, Michiel's). For the 3D models, section 4 describes each brand's.
+
+**Sails.**
+
+1. **Area, luff, boom** are the brands' (the boom at its longest setting).
+2. **`mast_m` (the masthead above the mast foot)** = the mast's length + the extension, where the brand gives the extension; otherwise **luff + 0.02 m** (the published pairs give mast + extension = the luff to the luff + 2 cm; the default 8.0: 5.22 + 0.04).
+3. **`boom_height_m`**: 1.40 m for a luff under 4.40 m, 1.45 m up to 4.80 m, 1.50 m above (est.; the default 8.0 has 1.50, Max's range 1.40 to 1.60).
+4. **`camber`** (the profile's depth as a share of the chord): **no brand publishes it**, and the only windsurf sail ever measured is the iQFOiL 8.0 in the wind tunnel (6.3 to 7.6 %; `sail_config.gd`). Proposed: 0.075 for four cams, 0.072 for three cams or North's air cam, 0.070 for two cams, 0.068 for none (est.: cams hold a deeper, locked lower profile; testers describe no-cam sails as flatter in the lulls). Keeping 0.07 on every sail is equally defensible: Michiel's call (PH14).
+5. **`rig_mass_kg`**: the real rig is the sail + the mast + the boom + 1.3 kg for the extension, base and lines (the default's own estimate). Masts by length: 370 cm 1.30 kg (est.), 400 cm 1.42 kg (Severne Apex Pro), 430 cm 1.55, 460 cm 1.77, 490 cm 2.07 kg (Apex Team), 520 cm 2.10 kg (Apex Team 530). Booms by the sail's boom: up to 1.80 m 2.23 kg, to 2.00 m 2.61, to 2.15 m 2.68, to 2.30 m 3.49, above 3.52 kg (Severne's Enigma 160-210 to 210-250). Where a brand gives no sail weight, it is estimated from sails of the same type and size (marked). The tables give the real total and, beside it, the same times 9.5 / 12.4: the default 8.0 deliberately keeps 9.5 kg of its real 12.4 kg (`sail_config.gd`, for the tack in 18 kt); which to use is Michiel's call.
+6. **`rig_com_height_m`**: 0.345 × luff (the default: 1.8 m for 5.22 m; est.).
+7. **`ce_height_fraction`**: 0.41 for race sails (the default 8.0), 0.42 for free race and no-cam sails (est.: a foot cut a little higher and shorter). `ce_boom_fraction` stays 0.35.
+8. **Everything else** (the lift and drag curves, the twist, the controls) as the default 8.0; `twist_pressure_pa` per size is a physics question (section 5).
+
+### 3.2 Slalom boards
+
+The shape:
+
+| Modelled on | length_m | width_m | widest_point_from_tail_m | tail_width_m | nose_width_m | thickness_m | tail_thickness_m | nose_thickness_m | volume_m3 | mass_kg (published) | derived |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| **Moonboard** | | | | | | | | | | | |
+| iSonic 60 (2026, Carbon Reflex) | 2.25 | 0.600 | 1.12 | 0.392 | 0.468 | 0.120 | 0.045 | 0.040 | 0.091 | 6.66 (5.70) | - |
+| iSonic 63 (2026, CR) | 2.26 | 0.630 | 1.13 | 0.414 | 0.491 | 0.122 | 0.045 | 0.040 | 0.098 | 7.04 (6.05) | - |
+| iSonic 67 (2026, CR) | 2.28 | 0.670 | 1.14 | 0.457 | 0.523 | 0.130 | 0.045 | 0.040 | 0.111 | 7.40 (6.34) | - |
+| iSonic 73 (2026, CR) | 2.28 | 0.730 | 1.14 | 0.502 | 0.569 | 0.132 | 0.045 | 0.040 | 0.123 | 7.76 (6.66) | - |
+| iSonic 77 (2026, CR) | 2.29 | 0.770 | 1.15 | 0.545 | 0.601 | 0.120 | 0.045 | 0.040 | 0.129 | 7.96 (6.81) | - |
+| **PJ New Sealand** | | | | | | | | | | | |
+| JP Slalom S-TEC 62.5 (2026) | 2.30 | 0.625 | 1.15 | 0.413 | 0.488 | 0.120 | 0.045 | 0.040 | 0.097 | 6.89 (5.90) | tail,thick,fin |
+| JP Slalom S-TEC 66 (2026) | 2.30 | 0.660 | 1.15 | 0.443 | 0.515 | 0.124 | 0.045 | 0.040 | 0.105 | 7.03 (6.00) | tail,thick,fin |
+| JP Slalom S-TEC 72 (2025 SL 72 = board_default.tres) | 2.28 | 0.720 | 1.14 | 0.490 | 0.562 | 0.130 | 0.045 | 0.040 | 0.117 | 7.70 (6.60) | - |
+| JP Slalom S-TEC 76 (2026) | 2.28 | 0.760 | 1.14 | 0.527 | 0.593 | 0.121 | 0.045 | 0.040 | 0.125 | 8.03 (6.90) | tail,thick,fin |
+| **Tripletone** | | | | | | | | | | | |
+| Duotone Falcon_Fin D/LAB 89 (2026) | 2.26 | 0.600 | 1.13 | 0.392 | 0.468 | 0.117 | 0.045 | 0.040 | 0.089 | 6.96 (6.00) | tail,thick,fin |
+| Duotone Falcon_Fin SLS 98 (2026) | 2.26 | 0.630 | 1.13 | 0.417 | 0.491 | 0.123 | 0.045 | 0.040 | 0.098 | 7.45 (6.40) | tail,thick |
+| Duotone Falcon_Fin SLS 111 (2026) | 2.25 | 0.680 | 1.12 | 0.460 | 0.530 | 0.130 | 0.045 | 0.040 | 0.111 | 8.05 (6.95) | tail,thick |
+| Duotone Falcon_Fin SLS 118 (2026) | 2.25 | 0.720 | 1.12 | 0.494 | 0.562 | 0.130 | 0.045 | 0.040 | 0.118 | 8.33 (7.20) | tail,thick |
+| Duotone Falcon_Fin SLS 129 (2026) | 2.24 | 0.800 | 1.12 | 0.561 | 0.624 | 0.118 | 0.045 | 0.040 | 0.129 | 8.80 (7.60) | tail,thick |
+| **BMX Boards** | | | | | | | | | | | |
+| FMX Invictus Pro 88 (2026) | 2.33 | 0.610 | 1.17 | 0.400 | 0.476 | 0.111 | 0.045 | 0.040 | 0.088 | 6.78 (5.80) | tail,thick |
+| FMX Invictus Pro 98 (2026) | 2.33 | 0.630 | 1.17 | 0.417 | 0.491 | 0.119 | 0.045 | 0.040 | 0.098 | 6.99 (6.00) | tail,thick |
+| FMX Invictus Pro 108 (2026) | 2.33 | 0.700 | 1.17 | 0.477 | 0.546 | 0.118 | 0.045 | 0.040 | 0.108 | 7.66 (6.60) | tail,thick |
+| FMX Invictus Pro 118 (2026) | 2.33 | 0.720 | 1.17 | 0.494 | 0.562 | 0.126 | 0.045 | 0.040 | 0.118 | 7.93 (6.85) | tail,thick |
+| FMX Invictus Pro 128 (2026) | 2.28 | 0.810 | 1.14 | 0.570 | 0.632 | 0.114 | 0.045 | 0.040 | 0.128 | 8.35 (7.20) | tail,thick |
+| **Forbidden** | | | | | | | | | | | |
+| Tabou Manta 61 (2026, Team) | 2.33 | 0.610 | 1.17 | 0.400 | 0.476 | 0.121 | 0.045 | 0.040 | 0.096 | 7.08 (6.10) | tail,thick,fin |
+| Tabou Manta 66 (2026, Team) | 2.33 | 0.660 | 1.17 | 0.443 | 0.515 | 0.123 | 0.045 | 0.040 | 0.106 | 7.23 (6.20) | tail,thick,fin |
+| Tabou Manta 71 (2026, Team) | 2.33 | 0.710 | 1.17 | 0.485 | 0.554 | 0.125 | 0.045 | 0.040 | 0.116 | 7.88 (6.80) | tail,thick,fin |
+| Tabou Manta 77 (2026, Team) | 2.32 | 0.770 | 1.16 | 0.536 | 0.601 | 0.112 | 0.045 | 0.040 | 0.122 | 8.55 (7.40) | tail,thick,fin |
+| Tabou Manta 85 (2026, Team) | 2.32 | 0.850 | 1.16 | 0.604 | 0.663 | 0.112 | 0.045 | 0.040 | 0.135 | 9.03 (7.80) | tail,thick,fin |
+
+The layout and the fin (all in metres; the strap and box positions from the tail along the centreline, "out" from the centreline):
+
+| Modelled on | nose_rocker_m / _length_m | tail_rocker_m / _length_m | hard_rail_to_m / soft_rail_from_m | back / front strap from tail | back / front strap out | fin box screws from tail | mast track back / front | fin span_m | fin area_m2 | fin (brand's range) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **Moonboard** | | | | | | | | | | |
+| iSonic 60 (2026, Carbon Reflex) | 0.128 / 1.57 | 0.000 / 0.35 | 1.18 / 1.97 | 0.235 / 0.825 | 0.101 / 0.190 | 0.120 / 0.235 | 1.227 / 1.387 | 0.30 | 0.0226 | 28-32 |
+| iSonic 63 (2026, CR) | 0.128 / 1.58 | 0.000 / 0.35 | 1.19 / 1.98 | 0.235 / 0.825 | 0.112 / 0.205 | 0.120 / 0.235 | 1.233 / 1.393 | 0.32 | 0.0247 | 30-34 |
+| iSonic 67 (2026, CR) | 0.128 / 1.60 | 0.000 / 0.35 | 1.20 / 2.00 | 0.235 / 0.825 | 0.134 / 0.225 | 0.120 / 0.235 | 1.245 / 1.405 | 0.36 | 0.0286 | 34-38 |
+| iSonic 73 (2026, CR) | 0.128 / 1.60 | 0.000 / 0.35 | 1.20 / 2.00 | 0.235 / 0.825 | 0.156 / 0.255 | 0.120 / 0.235 | 1.245 / 1.405 | 0.38 | 0.0311 | 36-40 |
+| iSonic 77 (2026, CR) | 0.128 / 1.60 | 0.000 / 0.35 | 1.20 / 2.01 | 0.235 / 0.825 | 0.178 / 0.275 | 0.120 / 0.235 | 1.250 / 1.410 | 0.41 | 0.0344 | 38-44 |
+| **PJ New Sealand** | | | | | | | | | | |
+| JP Slalom S-TEC 62.5 (2026) | 0.128 / 1.61 | 0.000 / 0.35 | 1.21 / 2.02 | 0.235 / 0.825 | 0.112 / 0.203 | 0.120 / 0.235 | 1.256 / 1.416 | 0.32 | 0.0247 | - |
+| JP Slalom S-TEC 66 (2026) | 0.128 / 1.61 | 0.000 / 0.35 | 1.21 / 2.02 | 0.235 / 0.825 | 0.126 / 0.220 | 0.120 / 0.235 | 1.256 / 1.416 | 0.34 | 0.0267 | - |
+| JP Slalom S-TEC 72 (2025 SL 72 = board_default.tres) | 0.128 / 1.60 | 0.000 / 0.35 | 1.20 / 2.00 | 0.235 / 0.825 | 0.150 / 0.250 | 0.120 / 0.235 | 1.245 / 1.405 | 0.38 | 0.0311 | - |
+| JP Slalom S-TEC 76 (2026) | 0.128 / 1.60 | 0.000 / 0.35 | 1.20 / 2.00 | 0.235 / 0.825 | 0.169 / 0.270 | 0.120 / 0.235 | 1.245 / 1.405 | 0.40 | 0.0333 | - |
+| **Tripletone** | | | | | | | | | | |
+| Duotone Falcon_Fin D/LAB 89 (2026) | 0.128 / 1.58 | 0.000 / 0.35 | 1.19 / 1.98 | 0.235 / 0.825 | 0.101 / 0.190 | 0.120 / 0.235 | 1.233 / 1.393 | 0.30 | 0.0226 | est. |
+| Duotone Falcon_Fin SLS 98 (2026) | 0.128 / 1.58 | 0.000 / 0.35 | 1.19 / 1.98 | 0.235 / 0.825 | 0.114 / 0.205 | 0.120 / 0.235 | 1.233 / 1.393 | 0.35 | 0.0278 | 34-36 |
+| Duotone Falcon_Fin SLS 111 (2026) | 0.128 / 1.57 | 0.000 / 0.35 | 1.18 / 1.97 | 0.235 / 0.825 | 0.135 / 0.230 | 0.120 / 0.235 | 1.227 / 1.387 | 0.38 | 0.0311 | 36-40 |
+| Duotone Falcon_Fin SLS 118 (2026) | 0.128 / 1.57 | 0.000 / 0.35 | 1.18 / 1.97 | 0.235 / 0.825 | 0.152 / 0.250 | 0.120 / 0.235 | 1.227 / 1.387 | 0.40 | 0.0333 | 38-42 |
+| Duotone Falcon_Fin SLS 129 (2026) | 0.128 / 1.57 | 0.000 / 0.35 | 1.18 / 1.96 | 0.235 / 0.825 | 0.186 / 0.290 | 0.120 / 0.235 | 1.221 / 1.381 | 0.44 | 0.0378 | 42-46 |
+| **BMX Boards** | | | | | | | | | | |
+| FMX Invictus Pro 88 (2026) | 0.128 / 1.63 | 0.000 / 0.35 | 1.23 / 2.04 | 0.235 / 0.825 | 0.105 / 0.195 | 0.120 / 0.235 | 1.274 / 1.434 | 0.31 | 0.0236 | 29-33 |
+| FMX Invictus Pro 98 (2026) | 0.128 / 1.63 | 0.000 / 0.35 | 1.23 / 2.04 | 0.235 / 0.825 | 0.114 / 0.205 | 0.120 / 0.235 | 1.274 / 1.434 | 0.32 | 0.0247 | 30-34 |
+| FMX Invictus Pro 108 (2026) | 0.128 / 1.63 | 0.000 / 0.35 | 1.23 / 2.04 | 0.235 / 0.825 | 0.143 / 0.240 | 0.120 / 0.235 | 1.274 / 1.434 | 0.36 | 0.0286 | 34-38 |
+| FMX Invictus Pro 118 (2026) | 0.128 / 1.63 | 0.000 / 0.35 | 1.23 / 2.04 | 0.235 / 0.825 | 0.152 / 0.250 | 0.120 / 0.235 | 1.274 / 1.434 | 0.37 | 0.0296 | 35-39 |
+| FMX Invictus Pro 128 (2026) | 0.128 / 1.60 | 0.000 / 0.35 | 1.20 / 2.00 | 0.235 / 0.825 | 0.190 / 0.295 | 0.120 / 0.235 | 1.245 / 1.405 | 0.41 | 0.0344 | 39-44 |
+| **Forbidden** | | | | | | | | | | |
+| Tabou Manta 61 (2026, Team) | 0.128 / 1.63 | 0.000 / 0.35 | 1.23 / 2.04 | 0.235 / 0.825 | 0.105 / 0.195 | 0.120 / 0.235 | 1.274 / 1.434 | 0.31 | 0.0236 | - |
+| Tabou Manta 66 (2026, Team) | 0.128 / 1.63 | 0.000 / 0.35 | 1.23 / 2.04 | 0.235 / 0.825 | 0.126 / 0.220 | 0.120 / 0.235 | 1.274 / 1.434 | 0.34 | 0.0267 | - |
+| Tabou Manta 71 (2026, Team) | 0.128 / 1.63 | 0.000 / 0.35 | 1.23 / 2.04 | 0.235 / 0.825 | 0.148 / 0.245 | 0.120 / 0.235 | 1.274 / 1.434 | 0.37 | 0.0296 | - |
+| Tabou Manta 77 (2026, Team) | 0.128 / 1.62 | 0.000 / 0.35 | 1.22 / 2.03 | 0.235 / 0.825 | 0.173 / 0.275 | 0.120 / 0.235 | 1.268 / 1.428 | 0.41 | 0.0344 | - |
+| Tabou Manta 85 (2026, Team) | 0.128 / 1.62 | 0.000 / 0.35 | 1.22 / 2.03 | 0.235 / 0.825 | 0.207 / 0.315 | 0.120 / 0.235 | 1.268 / 1.428 | 0.46 | 0.0405 | - |
+
+Not built, but available if the team wants a bigger light-wind board: the iSonic 85 (147 L, 229 × 85 cm, tail 0.604, 0.122 thick, 7.65 kg, fin 44 to 48 cm), the JP 85 (139 L, 228 × 85, 7.5 kg), the Falcon_Fin SLS 139 (224 × 85, 7.95 kg, fin 46 to 50) and the Invictus 138 (228 × 85, 7.6 kg, fin 42 to 48).
+
+### 3.3 Free race boards
+
+The shape:
+
+| Modelled on | length_m | width_m | widest_point_from_tail_m | tail_width_m | nose_width_m | thickness_m | tail_thickness_m | nose_thickness_m | volume_m3 | mass_kg (published) | derived |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| **Moonboard** | | | | | | | | | | | |
+| Starboard Futura 110 (2026, Wood Sandwich) | 2.29 | 0.710 | 1.10 | 0.466 | 0.497 | 0.115 | 0.050 | 0.040 | 0.110 | 8.36 (7.00) | - |
+| Starboard Futura 120 (2026, WS) | 2.30 | 0.760 | 1.10 | 0.487 | 0.532 | 0.116 | 0.050 | 0.040 | 0.120 | 8.86 (7.40) | - |
+| Starboard Futura 135 (2026, WS) | 2.34 | 0.830 | 1.12 | 0.525 | 0.581 | 0.119 | 0.050 | 0.040 | 0.135 | 9.51 (8.00) | - |
+| **PJ New Sealand** | | | | | | | | | | | |
+| JP Super Sport 111 (2026, Wood Pro) | 2.34 | 0.700 | 1.12 | 0.451 | 0.490 | 0.115 | 0.050 | 0.040 | 0.111 | 8.61 (7.20) | tail,thick |
+| JP Super Sport 122 (2026) | 2.34 | 0.760 | 1.12 | 0.485 | 0.532 | 0.116 | 0.050 | 0.040 | 0.122 | 9.31 (7.80) | tail,thick |
+| JP Super Sport 133 (2026) | 2.34 | 0.820 | 1.12 | 0.519 | 0.574 | 0.117 | 0.050 | 0.040 | 0.133 | 9.70 (8.10) | tail,thick |
+| **Tripletone** | | | | | | | | | | | |
+| Duotone Blitz SLS 116 (2026) | 2.34 | 0.680 | 1.12 | 0.439 | 0.476 | 0.124 | 0.050 | 0.040 | 0.116 | 8.36 (7.00) | tail,thick |
+| Duotone Blitz SLS 126 (2026) | 2.35 | 0.710 | 1.13 | 0.456 | 0.497 | 0.128 | 0.050 | 0.040 | 0.126 | 8.86 (7.40) | tail,thick |
+| Duotone Blitz SLS 136 (2026) | 2.38 | 0.770 | 1.14 | 0.491 | 0.539 | 0.126 | 0.050 | 0.040 | 0.136 | 9.31 (7.80) | tail,thick |
+| **BMX Boards** | | | | | | | | | | | |
+| FMX Invictus GTR 98 (2026) | 2.33 | 0.630 | 1.12 | 0.411 | 0.441 | 0.113 | 0.050 | 0.040 | 0.098 | 7.72 (6.50) | tail,thick |
+| FMX Invictus GTR 118 (2026) | 2.33 | 0.720 | 1.12 | 0.462 | 0.504 | 0.119 | 0.050 | 0.040 | 0.118 | 8.74 (7.40) | tail,thick |
+| **Forbidden** | | | | | | | | | | | |
+| Tabou Rocket+ 113 (2026, LTD) | 2.32 | 0.730 | 1.11 | 0.468 | 0.511 | 0.113 | 0.050 | 0.040 | 0.113 | 8.96 (7.60) | tail,thick |
+| Tabou Rocket+ 123 (2026, LTD) | 2.32 | 0.770 | 1.11 | 0.491 | 0.539 | 0.117 | 0.050 | 0.040 | 0.123 | 9.31 (7.90) | tail,thick |
+| Tabou Rocket+ 133 (2026, LTD) | 2.32 | 0.810 | 1.11 | 0.514 | 0.567 | 0.120 | 0.050 | 0.040 | 0.133 | 9.61 (8.10) | tail,thick |
+| **Savanna** | | | | | | | | | | | |
+| Severne Fox Pro 105 (2026) | 2.39 | 0.650 | 1.15 | 0.422 | 0.455 | 0.115 | 0.050 | 0.040 | 0.105 | 7.38 (6.07) | tail,thick |
+| Severne Fox Pro 115 (2026) | 2.41 | 0.690 | 1.16 | 0.445 | 0.483 | 0.117 | 0.050 | 0.040 | 0.115 | 7.90 (6.49) | tail,thick |
+| Severne Fox Pro 125 (2026) | 2.44 | 0.710 | 1.17 | 0.456 | 0.497 | 0.122 | 0.050 | 0.040 | 0.125 | 8.25 (6.79) | tail,thick |
+
+The layout and the fin:
+
+| Modelled on | nose_rocker_m / _length_m | tail_rocker_m / _length_m | hard_rail_to_m / soft_rail_from_m | back / front strap from tail | back / front strap out | fin box screws from tail | mast track back / front | fin span_m | fin area_m2 | fin (brand's range) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **Moonboard** | | | | | | | | | | |
+| Starboard Futura 110 (2026, Wood Sandwich) | 0.128 / 1.60 | 0.000 / 0.35 | 1.20 / 2.01 | 0.235 / 0.825 | 0.138 / 0.245 | 0.120 / 0.235 | 1.250 / 1.410 | 0.38 | 0.0301 | 36-40 |
+| Starboard Futura 120 (2026, WS) | 0.128 / 1.61 | 0.000 / 0.35 | 1.21 / 2.02 | 0.235 / 0.825 | 0.148 / 0.270 | 0.120 / 0.235 | 1.256 / 1.416 | 0.42 | 0.0345 | 40-44 |
+| Starboard Futura 135 (2026, WS) | 0.128 / 1.64 | 0.000 / 0.35 | 1.23 / 2.05 | 0.235 / 0.825 | 0.168 / 0.305 | 0.120 / 0.235 | 1.280 / 1.440 | 0.44 | 0.0370 | 42-46 |
+| **PJ New Sealand** | | | | | | | | | | |
+| JP Super Sport 111 (2026, Wood Pro) | 0.128 / 1.64 | 0.000 / 0.35 | 1.23 / 2.05 | 0.235 / 0.825 | 0.130 / 0.240 | 0.120 / 0.235 | 1.280 / 1.440 | 0.40 | 0.0322 | Slalom 40 G10 |
+| JP Super Sport 122 (2026) | 0.128 / 1.64 | 0.000 / 0.35 | 1.23 / 2.05 | 0.235 / 0.825 | 0.147 / 0.270 | 0.120 / 0.235 | 1.280 / 1.440 | 0.44 | 0.0370 | Slalom 44 G10 |
+| JP Super Sport 133 (2026) | 0.128 / 1.64 | 0.000 / 0.35 | 1.23 / 2.05 | 0.235 / 0.825 | 0.165 / 0.300 | 0.120 / 0.235 | 1.280 / 1.440 | 0.48 | 0.0418 | Slalom 48 G10 |
+| **Tripletone** | | | | | | | | | | |
+| Duotone Blitz SLS 116 (2026) | 0.128 / 1.64 | 0.000 / 0.35 | 1.23 / 2.05 | 0.235 / 0.825 | 0.125 / 0.230 | 0.120 / 0.235 | 1.280 / 1.440 | 0.38 | 0.0301 | F_Ride 38 |
+| Duotone Blitz SLS 126 (2026) | 0.128 / 1.65 | 0.000 / 0.35 | 1.24 / 2.06 | 0.235 / 0.825 | 0.133 / 0.245 | 0.120 / 0.235 | 1.285 / 1.445 | 0.42 | 0.0345 | F_Ride 42 |
+| Duotone Blitz SLS 136 (2026) | 0.128 / 1.67 | 0.000 / 0.35 | 1.25 / 2.09 | 0.235 / 0.825 | 0.150 / 0.275 | 0.120 / 0.235 | 1.303 / 1.463 | 0.44 | 0.0370 | F_Ride 44 |
+| **BMX Boards** | | | | | | | | | | |
+| FMX Invictus GTR 98 (2026) | 0.128 / 1.63 | 0.000 / 0.35 | 1.23 / 2.04 | 0.235 / 0.825 | 0.110 / 0.205 | 0.120 / 0.235 | 1.274 / 1.434 | 0.32 | 0.0242 | 30-34 |
+| FMX Invictus GTR 118 (2026) | 0.128 / 1.63 | 0.000 / 0.35 | 1.23 / 2.04 | 0.235 / 0.825 | 0.136 / 0.250 | 0.120 / 0.235 | 1.274 / 1.434 | 0.37 | 0.0291 | 35-39 |
+| **Forbidden** | | | | | | | | | | |
+| Tabou Rocket+ 113 (2026, LTD) | 0.128 / 1.62 | 0.000 / 0.35 | 1.22 / 2.03 | 0.235 / 0.825 | 0.139 / 0.255 | 0.120 / 0.235 | 1.268 / 1.428 | 0.38 | 0.0301 | MFC 38 |
+| Tabou Rocket+ 123 (2026, LTD) | 0.128 / 1.62 | 0.000 / 0.35 | 1.22 / 2.03 | 0.235 / 0.825 | 0.150 / 0.275 | 0.120 / 0.235 | 1.268 / 1.428 | 0.40 | 0.0322 | MFC 40 |
+| Tabou Rocket+ 133 (2026, LTD) | 0.128 / 1.62 | 0.000 / 0.35 | 1.22 / 2.03 | 0.235 / 0.825 | 0.162 / 0.295 | 0.120 / 0.235 | 1.268 / 1.428 | 0.44 | 0.0370 | MFC 44 |
+| **Savanna** | | | | | | | | | | |
+| Severne Fox Pro 105 (2026) | 0.128 / 1.67 | 0.001 / 0.35 | 1.26 / 2.10 | 0.235 / 0.825 | 0.116 / 0.215 | 0.120 / 0.235 | 1.309 / 1.469 | 0.36 | 0.0282 | 36 |
+| Severne Fox Pro 115 (2026) | 0.128 / 1.69 | 0.001 / 0.35 | 1.27 / 2.11 | 0.235 / 0.825 | 0.127 / 0.235 | 0.120 / 0.235 | 1.320 / 1.480 | 0.40 | 0.0322 | 40 |
+| Severne Fox Pro 125 (2026) | 0.128 / 1.71 | 0.001 / 0.35 | 1.28 / 2.14 | 0.235 / 0.825 | 0.133 / 0.245 | 0.120 / 0.235 | 1.338 / 1.498 | 0.42 | 0.0345 | 42 |
+
+The Fox Pro is sold without a fin; its mass assumes the regular Fox's G10 fin of the same length. The Rocket+ is given in the mid-priced LTD construction (the Team is 0.4 to 0.7 kg lighter).
+
+### 3.4 Slalom sails
+
+All in the units of `SailConfig` (m, m², kg). "Mast (cm)" is the recommended mast; `mast_m` adds the extension. The rig mass is the whole rig; see rule 5 for the two columns. The last column says what was estimated beyond the rules that apply to every sail (boom height, camber, centre of effort).
+
+| Modelled on | area_m2 | luff_m | boom_m | mast (cm) | mast_m (mast + extension) | boom_height_m | cams | camber | sail kg | rig_mass_kg real | rig_mass_kg at the default's ratio | ce_height_fraction | aspect ratio (luff²/area) | estimated |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| **Tripletone** | | | | | | | | | | | | | | |
+| Duotone Warp_Fin 5.7 (2026) | 5.7 | 4.26 | 1.88 | 400 | 4.28 | 1.40 | 4 | 0.075 | 5.10 | 10.4 | 8.0 | 0.41 | 3.18 | mast_m |
+| Warp_Fin 6.2 (2026) | 6.2 | 4.32 | 1.92 | 430 | 4.34 | 1.40 | 4 | 0.075 | 5.40 | 10.9 | 8.3 | 0.41 | 3.01 | mast_m |
+| Warp_Fin 6.7 (2026) | 6.7 | 4.62 | 2.02 | 430 | 4.64 | 1.45 | 4 | 0.075 | 5.60 | 11.1 | 8.5 | 0.41 | 3.19 | mast_m |
+| Warp_Fin 7.7 (2026) | 7.7 | 4.88 | 2.14 | 460 | 4.90 | 1.50 | 4 | 0.075 | 6.00 | 11.8 | 9.0 | 0.41 | 3.09 | mast_m |
+| Warp_Fin 8.5 (2026) | 8.5 | 5.14 | 2.28 | 490 | 5.16 | 1.50 | 4 | 0.075 | 6.30 | 13.2 | 10.1 | 0.41 | 3.11 | mast_m |
+| **Savanna** | | | | | | | | | | | | | | |
+| Severne Mach 9 5.5 (026) | 5.5 | 4.28 | 1.77 | 400 | 4.30 | 1.40 | 4 | 0.075 | 5.30 | 10.2 | 7.9 | 0.41 | 3.33 | mast_m |
+| Mach 9 6.5 (026) | 6.5 | 4.56 | 1.98 | 430 | 4.58 | 1.45 | 4 | 0.075 | 5.96 | 11.4 | 8.7 | 0.41 | 3.20 | mast_m |
+| Mach 9 7.5 (026) | 7.5 | 4.90 | 2.08 | 460 | 4.92 | 1.50 | 4 | 0.075 | 6.33 | 12.1 | 9.3 | 0.41 | 3.20 | mast_m |
+| Mach 9 8.5 (026) | 8.5 | 5.18 | 2.22 | 490 | 5.20 | 1.50 | 4 | 0.075 | 6.74 | 13.6 | 10.4 | 0.41 | 3.16 | mast_m |
+| **Point.9** | | | | | | | | | | | | | | |
+| Point-7 AC-1 LTD 5.9 (026, stitched) | 5.9 | 4.42 | 1.92 | 400 | 4.44 | 1.45 | 3 | 0.072 | 5.30 | 10.6 | 8.1 | 0.41 | 3.31 | - |
+| AC-1 LTD 6.5 (026) | 6.5 | 4.64 | 1.96 | 430 | 4.66 | 1.45 | 3 | 0.072 | 5.80 | 11.3 | 8.6 | 0.41 | 3.31 | - |
+| AC-1 LTD 7.3 (026) | 7.3 | 4.98 | 2.10 | 460 | 5.00 | 1.50 | 3 | 0.072 | 6.50 | 12.2 | 9.4 | 0.41 | 3.40 | - |
+| AC-1 LTD 7.8 (026) | 7.8 | 4.98 | 2.12 | 460 | 5.00 | 1.50 | 3 | 0.072 | 6.60 | 12.3 | 9.5 | 0.41 | 3.18 | - |
+| AC-1 LTD 8.8 (025/026) | 8.8 | 5.24 | 2.30 | 490 | 5.26 | 1.50 | 3 | 0.072 | 6.90 | 13.8 | 10.5 | 0.41 | 3.12 | - |
+| **NielsTrots** | | | | | | | | | | | | | | |
+| NeilPryde RS:Racing EVO XVII 5.6 (2026) | 5.6 | 4.26 | 1.80 | 400 | 4.26 | 1.40 | 4 | 0.075 | 5.00 | 10.0 | 7.6 | 0.41 | 3.24 | - |
+| RS:Racing EVO XVII 6.5 | 6.5 | 4.58 | 1.92 | 430 | 4.58 | 1.45 | 4 | 0.075 | 5.30 | 10.8 | 8.2 | 0.41 | 3.23 | - |
+| RS:Racing EVO XVII 7.4 | 7.4 | 4.86 | 2.06 | 460 | 4.86 | 1.50 | 4 | 0.075 | 5.50 | 11.2 | 8.6 | 0.41 | 3.19 | - |
+| RS:Racing EVO XVII 8.2 | 8.2 | 5.12 | 2.16 | 490 | 5.12 | 1.50 | 4 | 0.075 | 6.10 | 13.0 | 9.9 | 0.41 | 3.20 | - |
+| RS:Racing EVO XVII 9.0 | 9.0 | 5.38 | 2.26 | 520 | 5.38 | 1.50 | 4 | 0.075 | 6.40 | 13.3 | 10.2 | 0.41 | 3.22 | - |
+| **SouthSails** | | | | | | | | | | | | | | |
+| North Slalom Race GEN3 6.0 (2026) | 6.0 | 4.38 | 1.83 | 430 | 4.38 | 1.40 | air cam | 0.072 | 4.30 | 9.8 | 7.5 | 0.41 | 3.20 | - |
+| Slalom Race GEN3 6.8 (2026) | 6.8 | 4.56 | 1.96 | 430 | 4.56 | 1.45 | air cam | 0.072 | 4.50 | 10.0 | 7.6 | 0.41 | 3.06 | - |
+| Slalom Race GEN3 7.7 (2026) | 7.7 | 4.92 | 2.15 | 460 | 4.92 | 1.50 | air cam | 0.072 | 4.70 | 10.5 | 8.0 | 0.41 | 3.14 | - |
+| Slalom Race 8.6 (2025 luff/boom) | 8.6 | 5.18 | 2.17 | 490 | 5.20 | 1.50 | air cam | 0.072 | 4.95 | 11.8 | 9.0 | 0.41 | 3.12 | mast_m, sail kg |
+| **s3kauai** | | | | | | | | | | | | | | |
+| S2Maui Venom-XI 5.6 (2026) | 5.6 | 4.13 | 1.85 | 400 | 4.15 | 1.40 | 4 | 0.075 | 5.20 | 10.5 | 8.1 | 0.41 | 3.05 | mast_m, sail kg |
+| Venom-XI 6.7 (2026) | 6.7 | 4.60 | 2.02 | 430 | 4.62 | 1.45 | 4 | 0.075 | 5.80 | 11.3 | 8.7 | 0.41 | 3.16 | mast_m, sail kg |
+| Venom-XI 7.6 (2026) | 7.6 | 4.81 | 2.17 | 460 | 4.83 | 1.50 | 4 | 0.075 | 6.20 | 12.8 | 9.8 | 0.41 | 3.04 | mast_m, sail kg |
+| Venom-XI 8.2 (2026) | 8.2 | 4.91 | 2.29 | 460 | 4.93 | 1.50 | 4 | 0.075 | 6.40 | 13.0 | 9.9 | 0.41 | 2.94 | mast_m, sail kg |
+| Venom-XI 9.0 (2026) | 9.0 | 5.16 | 2.40 | 490 | 5.18 | 1.50 | 4 | 0.075 | 6.80 | 13.7 | 10.5 | 0.41 | 2.96 | mast_m, sail kg |
+| **GG Sails** | | | | | | | | | | | | | | |
+| GA Vapor 5.7 (2026) | 5.7 | 4.25 | 1.87 | 400 | 4.26 | 1.40 | 4 | 0.075 | 5.27 | 10.6 | 8.1 | 0.41 | 3.17 | - |
+| Vapor 6.7 (2026) | 6.7 | 4.61 | 1.96 | 430 | 4.62 | 1.45 | 4 | 0.075 | 5.80 | 11.3 | 8.6 | 0.41 | 3.17 | - |
+| Vapor 7.7 (2026) | 7.7 | 4.94 | 2.09 | 460 | 4.94 | 1.50 | 4 | 0.075 | 6.15 | 11.9 | 9.1 | 0.41 | 3.17 | - |
+| Vapor 8.4 (2026) | 8.4 | 5.15 | 2.17 | 490 | 5.16 | 1.50 | 4 | 0.075 | 6.39 | 13.2 | 10.2 | 0.41 | 3.16 | - |
+
+Left out: sizes below 5.5 m² (speed and storm sizes) and Severne's 5.0, Point-7's 5.4, S2Maui's 6.1 and NeilPryde's 4.9 and 5.3, which the brands make but which are below the game's range or between its steps. Point-7's 6.8 and 8.2 are the in-between sizes of the 6.5 and 7.8 (same luff, longer boom).
+
+### 3.5 Free race sails
+
+| Modelled on | area_m2 | luff_m | boom_m | mast (cm) | mast_m (mast + extension) | boom_height_m | cams | camber | sail kg | rig_mass_kg real | rig_mass_kg at the default's ratio | ce_height_fraction | aspect ratio (luff²/area) | estimated |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| **Tripletone** | | | | | | | | | | | | | | |
+| Duotone S_Pace 6.0 (2026) | 6.0 | 4.42 | 1.90 | 430 | 4.44 | 1.45 | 3 | 0.072 | 4.90 | 10.4 | 7.9 | 0.42 | 3.26 | mast_m |
+| S_Pace 6.6 (2026) | 6.6 | 4.62 | 2.00 | 430 | 4.64 | 1.45 | 3 | 0.072 | 5.10 | 10.6 | 8.1 | 0.42 | 3.23 | mast_m |
+| S_Pace 7.3 (2026) | 7.3 | 4.76 | 2.04 | 460 | 4.78 | 1.45 | 3 | 0.072 | 5.30 | 11.1 | 8.5 | 0.42 | 3.10 | mast_m |
+| S_Pace 7.8 (2026) | 7.8 | 4.88 | 2.14 | 460 | 4.90 | 1.50 | 3 | 0.072 | 5.50 | 11.2 | 8.6 | 0.42 | 3.05 | mast_m |
+| S_Pace 8.3 (2026) | 8.3 | 5.00 | 2.22 | 490 | 5.02 | 1.50 | 3 | 0.072 | 5.70 | 12.6 | 9.6 | 0.42 | 3.01 | mast_m |
+| **Savanna** | | | | | | | | | | | | | | |
+| Severne Overdrive M4 6.2 | 6.2 | 4.33 | 1.86 | 430 | 4.35 | 1.40 | 3 | 0.072 | 4.40 | 9.9 | 7.6 | 0.42 | 3.02 | mast_m |
+| Overdrive M4 7.0 | 7.0 | 4.61 | 1.89 | 430 | 4.63 | 1.45 | 3 | 0.072 | 4.65 | 10.1 | 7.7 | 0.42 | 3.04 | mast_m |
+| Overdrive M4 7.8 | 7.8 | 4.89 | 2.00 | 460 | 4.91 | 1.50 | 3 | 0.072 | 4.90 | 10.6 | 8.1 | 0.42 | 3.07 | mast_m |
+| Overdrive M4 8.6 | 8.6 | 5.12 | 2.08 | 490 | 5.14 | 1.50 | 3 | 0.072 | 5.20 | 11.2 | 8.6 | 0.42 | 3.05 | mast_m |
+| **Point.9** | | | | | | | | | | | | | | |
+| Point-7 AC-2 5.8 (025-026) | 5.8 | 4.40 | 1.92 | 400 | 4.42 | 1.45 | 2 | 0.070 | 4.70 | 10.0 | 7.7 | 0.42 | 3.34 | - |
+| AC-2 6.8 | 6.8 | 4.63 | 2.04 | 430 | 4.66 | 1.45 | 2 | 0.070 | 4.80 | 10.3 | 7.9 | 0.42 | 3.15 | - |
+| AC-2 7.8 | 7.8 | 4.97 | 2.12 | 460 | 5.00 | 1.50 | 2 | 0.070 | 4.90 | 10.7 | 8.2 | 0.42 | 3.17 | - |
+| **NielsTrots** | | | | | | | | | | | | | | |
+| NeilPryde V8 6.2 (2026) | 6.2 | 4.30 | 1.94 | 400 | 4.30 | 1.40 | 2 | 0.070 | 4.20 | 9.5 | 7.3 | 0.42 | 2.98 | - |
+| V8 7.2 (2026) | 7.2 | 4.67 | 2.04 | 460 | 4.68 | 1.45 | 2 | 0.070 | 4.50 | 10.2 | 7.9 | 0.42 | 3.03 | - |
+| V8 7.7 (2026) | 7.7 | 4.86 | 2.09 | 460 | 4.86 | 1.50 | 2 | 0.070 | 4.70 | 10.5 | 8.0 | 0.42 | 3.07 | - |
+| V8 8.2 (2026) | 8.2 | 5.05 | 2.13 | 490 | 5.06 | 1.50 | 2 | 0.070 | 4.90 | 11.0 | 8.4 | 0.42 | 3.11 | - |
+| **SouthSails** | | | | | | | | | | | | | | |
+| North Free Speed 6.0 (2025) | 6.0 | 4.32 | 1.89 | 430 | 4.34 | 1.40 | 0 | 0.068 | 4.00 | 9.5 | 7.2 | 0.42 | 3.11 | mast_m, sail kg |
+| North Free Speed 7.7 (2024 test) | 7.7 | 4.90 | 2.09 | 460 | 4.92 | 1.50 | 0 | 0.068 | 4.60 | 10.3 | 7.9 | 0.42 | 3.12 | mast_m, sail kg |
+| **s3kauai** | | | | | | | | | | | | | | |
+| S2Maui Wicked 5.8 (2026) | 5.8 | 4.33 | 1.82 | 430 | 4.35 | 1.40 | 2 | 0.070 | 4.20 | 9.7 | 7.4 | 0.42 | 3.23 | mast_m, sail kg |
+| Wicked 6.7 (2026) | 6.7 | 4.56 | 1.98 | 430 | 4.58 | 1.45 | 2 | 0.070 | 4.50 | 10.0 | 7.6 | 0.42 | 3.10 | mast_m, sail kg |
+| Wicked 7.6 (2026) | 7.6 | 4.76 | 2.12 | 460 | 4.78 | 1.45 | 2 | 0.070 | 4.80 | 10.6 | 8.1 | 0.42 | 2.98 | mast_m, sail kg |
+| Wicked 8.2 (2026) | 8.2 | 4.89 | 2.24 | 460 | 4.91 | 1.50 | 2 | 0.070 | 5.00 | 11.6 | 8.9 | 0.42 | 2.92 | mast_m, sail kg |
+| **GG Sails** | | | | | | | | | | | | | | |
+| GA Cosmic 6.2 (2026) | 6.2 | 4.48 | 1.87 | 430 | 4.48 | 1.45 | 2 | 0.070 | 4.70 | 10.2 | 7.8 | 0.42 | 3.24 | sail kg |
+| Cosmic 7.2 (2026) | 7.2 | 4.81 | 2.02 | 460 | 4.82 | 1.50 | 2 | 0.070 | 5.00 | 10.8 | 8.2 | 0.42 | 3.21 | sail kg |
+| Cosmic 7.7 (2026) | 7.7 | 4.92 | 2.12 | 460 | 4.92 | 1.50 | 2 | 0.070 | 5.20 | 11.0 | 8.4 | 0.42 | 3.14 | sail kg |
+| Cosmic 8.3 (2026) | 8.3 | 5.03 | 2.20 | 490 | 5.04 | 1.50 | 2 | 0.070 | 5.40 | 12.3 | 9.4 | 0.42 | 3.05 | sail kg |
+
+North publishes too little of its free race line for more than two sizes; the two Free Speed rows rest on single-size shop and test data (section 2.8). Point-7's free race sail could also be the 3-cam AC-3 (5.4 to 8.2, the AC-1 LTD's body with a 20 % slimmer sleeve); the AC-2 is proposed because it looks and rigs differently from the race sail.
+
+### 3.6 The fins in short
+
+Every board in 3.2 and 3.3 has its own fin (the columns `fin span_m` and `fin area_m2`), from 0.30 m and 0.0226 m² (the 60 cm boards) to 0.46 m and 0.0405 m² (the Manta 85) for slalom, and 0.32 to 0.48 m for free race. For a `.tres` per fin, keep the default's planform and bending numbers (`tip_chord_ratio` 0.37, the flex test of the 37 cm carbon fin; `flex_test_span_m` and `flex_test_area_m2` stay those of the test fin, as `fin_config.gd` says) and change only `span_m`, `area_m2` and `root_local` (rule 11). The free race boards come with G10 (glass) fins, softer than carbon: a softer flex test would be the honest number, but no published flex test of a G10 fin was found (an open question).
+
+### 3.7 Names for the models (a suggestion)
+
+The brief names only the brands. If the gear page needs model names, these keep the spirit of the team's brand names (a twist on the real one, never the real one). They are only a proposal for the team.
+
+| Game brand | Slalom board / sail | Free race board / sail | Real model |
+|---|---|---|---|
+| Tripletone | "Hawk_Fin" board, "Weft_Fin" sail | "Bolt" board, "T_Pace" sail | Falcon_Fin, Warp_Fin; Blitz, S_Pace |
+| Savanna | (no slalom board) "Mach 10" sail | "Wolf" board, "Underdrive" sail | Mach 9; Fox, Overdrive |
+| Point.9 | "BC-1" sail | "BC-2" sail | AC-1 LTD; AC-2 |
+| Moonboard | "uSonic" board | "Futurama" board | iSonic; Futura |
+| NielsTrots | "RT:Racing" sail | "V9" sail | RS:Racing; V8 |
+| PJ New Sealand | "Slalom T-SEC" board | "Hyper Sport" board | Slalom S-TEC; Super Sport |
+| BMX Boards | "Invincible" board | "Invincible GTS" board | Invictus Pro; Invictus GTR |
+| SouthSails | "Slalom Sprint" sail | "Free Sprint" sail | Slalom Race GEN3; Free Speed |
+| s3kauai | "Viper" sail | "Wild" sail | Venom-XI; Wicked |
+| Forbidden | "Stingray" board | "Missile+" board | Manta; Rocket+ |
+| GG Sails | "Vapour" sail | "Cosmos" sail | Vapor; Cosmic |
+
+### 3.8 What this means for the personas and for PH14
+
+- The personas rig a 7.8 below 16 kt and a 6.2 above (`Game/race/persona.gd`). Every sail brand has a size within 0.2 m² of both except S2Maui (7.6 and 6.1 or 6.3 in its lines) and Point-7's race line (7.8 and 5.9 or 6.5); the gear page can map a persona's two sizes to the nearest of its brand.
+- PH14 (the sizes do not sail right yet) is Michiel's. The facts this research adds: the real sails' geometry changes smoothly with the size (aspect ratio 2.9 to 3.4 everywhere), the real rig weighs about 1 kg more per 1 m² of sail at the large end (10 kg as a 5.6, 12 to 13.7 kg from 7.5 up), and the brands' wind ranges overlap widely (Point-7: one rider of 75 to 90 kg sails a 7.3 or 7.8 from 16 to 21 kt and an 8.2 below). A 7.8 that is slower than a 6.5 in 12 kt contradicts every brand's chart.
 
 ---
