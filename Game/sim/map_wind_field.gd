@@ -121,6 +121,11 @@ func set_wind(_from_bearing_rad: float, _speed_ms: float) -> void:
 	pass
 
 
+## The map's gusts are its own (MapWind, drawn by WindRippleMap): never the open water's patches.
+func uses_patches() -> bool:
+	return false
+
+
 func _update() -> void:
 	# The parent's constructor calls this before map_wind is set; the first real update comes
 	# from this class's constructor.

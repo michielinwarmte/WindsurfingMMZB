@@ -1,0 +1,38 @@
+[gd_resource type="Resource" script_class="WindGusts" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://maps/wind/wind_gusts.gd" id="1"]
+
+; The open water's gust patches (PHYSICS_SPEC.md 8.3, ROADMAP PH7): the shapes measured on Lake
+; Silvaplana (maps/silvaplana/wind/maloja_gusts.tres, where every number's source is), taken as
+; they are because the open sea is not measured: lanes along the wind of 190 x 100 m that change
+; over 210 s, fronts across it of 900 x 4000 m over 980 s, 70 % of the ups and downs in the fronts,
+; a sideways part of 0.8, rolling downwind at 1.1 times the wind. The spread is NOT this file's
+; (spread_base_kt and spread_per_knot are the lake's and unused here): the open water takes it
+; from the settings' gust strength (WindField.PATCH_SPREAD_PER_INTENSITY). The gustiness is the
+; same everywhere (both ends 1.0), and the pulses, the shifts and the lee are not used on the open
+; water (WindConfig's own shifts are), so their amplitudes are 0.
+
+[resource]
+script = ExtResource("1")
+seed = 1
+spread_base_kt = 0.48
+spread_per_knot = 0.087
+sideways_share = 0.8
+front_share = 0.7
+front_cell_along_m = 900.0
+front_cell_across_m = 4000.0
+front_life_s = 980.0
+lane_cell_along_m = 190.0
+lane_cell_across_m = 100.0
+lane_life_s = 210.0
+drift_factor = 1.1
+gustiness_upwind = 1.0
+gustiness_downwind = 1.0
+upwind_end_m = -1700.0
+downwind_end_m = 1700.0
+pulse_amplitudes = PackedFloat32Array(0, 0, 0)
+pulse_periods_s = PackedFloat32Array(2220, 1380, 780)
+shift_amplitudes_deg = PackedFloat32Array(0, 0, 0)
+shift_periods_s = PackedFloat32Array(2700, 1500, 840)
+reach_share = 0.1
+reach_width = 0.5

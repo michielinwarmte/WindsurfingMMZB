@@ -54,6 +54,7 @@ func test_gusts_are_deterministic_and_bounded() -> void:
 	config.gusts_enabled = true
 	config.gust_intensity = 0.2
 	config.gust_period_s = 8.0
+	config.gust_patches = false  # the three sines, which this test pins
 	var wind: WindField = WindField.new(config)
 	var base: float = 15.0 * SimMath.KNOT_MS
 	assert_almost_eq(wind.current_speed_ms, base, TOL, "exactly the base wind at t = 0")

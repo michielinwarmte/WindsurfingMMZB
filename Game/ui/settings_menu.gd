@@ -142,15 +142,12 @@ func _build_wind_rows(s: SettingsValues) -> void:
 	_add_slider(grid, "Wind from", 0.0, 359.0, 1.0, s.wind_from_deg,
 		func(v: float) -> String: return "%03.0f°  %s" % [v, SettingsValues.compass_name(v)],
 		func(v: float) -> void: s.wind_from_deg = v)
-	var gusts: Row = _add_switch(grid, "Gusts", s.gusts_enabled, "The wind comes and goes",
+	var gusts: Row = _add_switch(grid, "Gusts", s.gusts_enabled, "Stronger and lighter patches roll down with the air: watch the water",
 		func(on: bool) -> void: s.gusts_enabled = on)
 	var gust_strength: Row = _add_slider(grid, "Gust strength", SettingsValues.GUST_INTENSITY_MIN, SettingsValues.GUST_INTENSITY_MAX, 0.05, s.gust_intensity,
 		func(v: float) -> String: return "up to ± %.0f %% of the wind" % (v * 100.0),
 		func(v: float) -> void: s.gust_intensity = v)
-	var gust_period: Row = _add_slider(grid, "Gust period", SettingsValues.GUST_PERIOD_MIN_S, SettingsValues.GUST_PERIOD_MAX_S, 1.0, s.gust_period_s,
-		func(v: float) -> String: return "%.0f s" % v,
-		func(v: float) -> void: s.gust_period_s = v)
-	_enable_with(gusts, [gust_strength, gust_period])
+	_enable_with(gusts, [gust_strength])
 	var shifts: Row = _add_switch(grid, "Wind shifts", s.shifts_enabled, "The direction swings slowly",
 		func(on: bool) -> void: s.shifts_enabled = on)
 	var shift_size: Row = _add_slider(grid, "Largest shift", SettingsValues.SHIFT_MIN_DEG, SettingsValues.SHIFT_MAX_DEG, 1.0, s.max_shift_deg,

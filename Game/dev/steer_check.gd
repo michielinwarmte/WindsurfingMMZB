@@ -12,7 +12,7 @@ extends SceneTree
 ## the levers. Use tools/steer_check.sh.
 ##
 ## Arguments after "--": [--winds=12,18,24] [--twa=100] [--from=40] [--hold=8] [--legs=<share>]
-## [--push=<level>] [--waves=0] [--gusts=0] [--pilot.<field>=<n>] [--sailor.<field>=<n>]
+## [--push=<level>] [--waves=0] [--gusts=0] [--gust_patches=1] [--pilot.<field>=<n>] [--sailor.<field>=<n>]
 ## [--controller.<field>=<n>] [--out=<csv>] [--label=<text>] [--trace=1] (a per-tick CSV of every
 ## case next to the results, from 2 s before the stick goes over or from --trace_from=<s>: the helm,
 ## the yaw moments by source, the sail, the fin, the speed) [--probe=<rake|legs|rail>:<step>] (the physics alone: at
@@ -206,6 +206,7 @@ func _make_sim(wind_kt: float) -> WindsurferSim:
 	wind.speed_kt = wind_kt
 	wind.from_bearing_deg = WIND_FROM_DEG
 	wind.gusts_enabled = _options.get("gusts", "0") == "1"
+	wind.gust_patches = _options.get("gust_patches", "1") == "1"
 	wind.shifts_enabled = false
 	sim.wind = WindField.new(wind)
 	return sim

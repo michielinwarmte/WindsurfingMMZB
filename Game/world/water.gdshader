@@ -67,6 +67,20 @@ uniform float ripple_fade_m = 1500.0;
 // gust with twice the ripples (darker, rougher water), 0 a calm patch.
 uniform sampler2D wind_ripple_map : hint_default_white, filter_linear, repeat_disable;
 uniform vec4 wind_ripple_map_area = vec4(0.0);
+// How a gust looks (GR2): a gust's small ripples tilt the surface away from the bright horizon
+// sky toward the darker zenith and scatter the sky's mirror image, so a sailor sees a gust as
+// a darker, matt patch coming down the water, and a lull as a pale, glassy one. The ripple
+// factor from the picture (1 at the mean wind) is turned into a gust from -1 (a deep lull) to
+// 1 (a full gust) by gust_look_contrast (3: a gust with 1.33 times the mean's ripples is full);
+// gust_darkening is how much darker a full gust is, gust_glassiness how much more mirror a full
+// lull has.
+uniform float gust_look_contrast = 3.0;
+uniform float gust_darkening : hint_range(0.0, 1.0) = 0.4;
+uniform float gust_glassiness : hint_range(0.0, 2.0) = 0.6;
+// The mirror's roughness in a full gust. At a grazing angle water mirrors the sky whatever its
+// strength (Fresnel), so far away only a rougher mirror, which blurs the bright horizon sky into
+// the darker sky above, makes a gust show as a darker patch.
+uniform float gust_roughness : hint_range(0.0, 1.0) = 0.35;
 // How rough the mirror is near by, and far away. Far away the ripples are smaller than a
 // pixel: they no longer show as bumps, but they still scatter the mirror, so the surface gets
 // rougher (otherwise far water turns into a flat mirror of the pale horizon).
@@ -154,6 +168,9 @@ void fragment() {
 	float distance_m = length(VERTEX);
 	float near = clamp(1.0 - distance_m / ripple_fade_m, 0.0, 1.0);
 	float wind = wind_ripple_factor(world_position.xz);
+	float gust = clamp((wind - 1.0) * gust_look_contrast, -1.0, 1.0);
+	float darker = 1.0 - gust_darkening * max(gust, 0.0);
+	float glassier = 1.0 + gust_glassiness * max(-gust, 0.0);
 
 	// 4. Two layers of ripples, a big and a small one, at slightly different angles. They
 	// drift on the engine's clock: they are only a look, and keep moving in the menus.
@@ -187,7 +204,7 @@ void fragment() {
 	float mirrored = 0.02 + 0.98 * pow(1.0 - facing, 5.0);
 	vec3 own_color = mix(deep_color, shallow_color, clamp(0.5 + 0.5 * crest_factor, 0.0, 1.0) * crest_lightening);
 	float shore = (1.0 - smoothstep(0.0, shore_line_depth_m, world_position.y - bed.y)) * shore_line_strength;
-	vec3 albedo = mix(own_color * (vec3(1.0) - through), vec3(0.9), shore) * (1.0 - mirrored);
+	vec3 albedo = mix(own_color * (vec3(1.0) - through), vec3(0.9), shore) * (1.0 - mirrored) * darker;
 	vec3 emission = bed_color * through * (1.0 - shore) * (1.0 - mirrored);
 
 	// 5. Foam on the steep crests covers the rest; the grid lines lie on top.
@@ -200,10 +217,12 @@ void fragment() {
 	ALBEDO = mix(albedo, line_color, lines);
 	EMISSION = emission * (1.0 - lines);
 	float roughness = mix(roughness_value, roughness_far, smoothstep(0.0, roughness_far_m, distance_m));
-	// A gust's rougher water mirrors the bright sky less: it looks darker.
-	roughness *= mix(1.0, wind, 0.5);
+	// A gust's rougher water mirrors the bright sky less and more diffusely: darker and matt;
+	// a lull's is glassier.
+	roughness = max(roughness * wind, gust_roughness * max(gust, 0.0));
 	ROUGHNESS = clamp(mix(roughness, 0.5, foam), 0.0, 1.0);
 	METALLIC = 0.0;
-	// Godot's mirror strength: 0.25 gives water's 2 % reflection straight on.
-	SPECULAR = 0.25;
+	// Godot's mirror strength: 0.25 gives water's 2 % reflection straight on; less in a gust,
+	// more in a lull (the glassy patch).
+	SPECULAR = 0.25 * darker * glassier;
 }

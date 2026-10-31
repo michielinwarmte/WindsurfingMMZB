@@ -64,6 +64,9 @@ var _aground: bool = false
 ## The race course (--course=<name>), or null; and what shows it on the water.
 var _course: Course = null
 var _course_on_water: CourseOnWater = null
+## The gust patches on the water (OpenGustMap, GR2), on the open water only: a map scene draws
+## its own picture of its own wind (WindRippleMap).
+var _open_gusts: OpenGustMap = null
 ## The race asked for (the start menu's RaceSetup, or --skippers= on the command line), or null;
 ## and the node that runs it (RaceRunner).
 var _race_setup: RaceSetup = null
@@ -101,6 +104,7 @@ func _ready() -> void:
 	if _sun != null:
 		_sun.rotation_degrees = Vector3(-59.0, -45.0, 0.0)
 	_ocean.setup(_windsurfer.sim, _camera_rig.camera)
+	_add_open_gusts()
 	# Which gear the player's board sails, on the F1 panel and in the terminal.
 	_hud.gear_text = Hud.gear_line(_windsurfer.sim)
 	print(_hud.gear_text)
@@ -170,6 +174,7 @@ func _process(delta: float) -> void:
 	if _audio != null:
 		_audio.follow(shown)
 	_hud.update_from(shown.telemetry(), shown.controller, _camera_rig.mode_name(), shown.use_autopilot)
+	_follow_the_open_gusts(shown)
 	if _race_runner != null:
 		_hud.set_other_boards(_race_runner.other_positions())
 
@@ -245,6 +250,8 @@ func _rebuild_sea() -> void:
 		child.free()
 	_ocean.setup(_windsurfer.sim, _camera_rig.camera)
 	_put_course_lines_on_the_waves()
+	if _open_gusts != null:
+		_open_gusts.put_on_water(_ocean)
 
 
 ## The settings that set up a run: the controls, the camera, the HUD panel, the shadows.
@@ -609,4 +616,65 @@ func _measure_frame_rate(seconds: float) -> void:
 		print("  the AI boards: %s" % _race_runner.opponents_cost_text())
 	if _race_runner != null:
 		print("  the race runner: %s" % _race_runner.cost_text())
+	get_tree().quit()
+
+
+## The gust patches on the water (OpenGustMap, GR2): the open water's wind drawn around the
+## board, where the physics feels it. A map scene draws its own (WindRippleMap over the lake),
+## so it gets none here.
+func _add_open_gusts() -> void:
+	if _windsurfer.sim.wind is MapWindField:
+		return
+	_open_gusts = OpenGustMap.new()
+	_open_gusts.name = "GustPicture"
+	add_child(_open_gusts)
+	_open_gusts.setup()
+	_open_gusts.follow(_windsurfer.sim.wind, _windsurfer.sim.telemetry.position)
+	_open_gusts.put_on_water(_ocean)
+	if not _user_option("check-gusts").is_empty():
+		_check_open_gusts(maxi(_user_option("check-gusts").to_int(), 10))
+
+
+## Every frame: the patches of the moment around the board on the screen.
+func _follow_the_open_gusts(shown: WindsurferNode) -> void:
+	if _open_gusts == null:
+		return
+	_open_gusts.follow(shown.sim.wind, shown.sim.telemetry.position)
+	_open_gusts.move_on_water(_ocean)
+
+
+## --check-gusts=<frames>: switches the gust patches on at the settings' strength, waits that many
+## frames (at least 10), reads the gust picture
+## back from the graphics card and compares it, every 8th pixel, with WindField.velocity_at() for
+## the same moment (as the picture's red channel: the wind relative to the mean, to the shader's
+## contrast, halved, in 8-bit steps of 0.004). Prints the result and quits.
+func _check_open_gusts(frames: int) -> void:
+	const GUST_CONTRAST: float = 2.0  # open_gusts.gdshader's contrast
+	var wind: WindField = _windsurfer.sim.wind
+	wind.config.gusts_enabled = true
+	wind.config.gust_patches = true
+	wind.set_wind(wind.current_from_bearing_rad, wind.config.speed_ms())
+	for i: int in frames:
+		await get_tree().process_frame
+	var image: Image = _open_gusts.get_texture().get_image()
+	image.save_png(ProjectSettings.globalize_path("res://../.screenshots/gust_picture.png"))  # the picture itself, to look at
+	var area: Rect2 = _open_gusts.area_xz
+	var pixels: int = image.get_width()
+	var worst: float = 0.0
+	var lowest: float = INF
+	var highest: float = 0.0
+	for column: int in range(0, pixels, 8):
+		for row: int in range(0, pixels, 8):
+			var at: Vector3 = Vector3(area.position.x + (column + 0.5) / pixels * area.size.x, wind.config.reference_height_m,
+				area.position.y + (row + 0.5) / pixels * area.size.y)
+			var ratio: float = wind.velocity_at(at).length() / wind.speed_at_height(at.y)
+			var expected: float = clampf(pow(ratio, GUST_CONTRAST) / 2.0, 0.0, 1.0)
+			var drawn: float = image.get_pixel(column, row).r
+			worst = maxf(worst, absf(drawn - expected))
+			lowest = minf(lowest, 2.0 * drawn)
+			highest = maxf(highest, 2.0 * drawn)
+	print("Gust picture at %.1f s: largest difference from WindField %.4f (one 8-bit step is 0.0039); ripples x%.2f to x%.2f over %.0f m" % [
+		wind.time_s, worst, lowest, highest, area.size.x])
+	var near: ShaderMaterial = _ocean.near_material()
+	print("The water holds: area %s, picture %s; the field: patches %s, spread %.3f, pattern %s, time %.2f s, travel %.1f m" % [near.get_shader_parameter("wind_ripple_map_area"), near.get_shader_parameter("wind_ripple_map"), wind.uses_patches(), wind.patch_spread_share(), wind.pattern(), wind.time_s, wind.travel_m])
 	get_tree().quit()

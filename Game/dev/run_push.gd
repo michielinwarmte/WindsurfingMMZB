@@ -14,7 +14,7 @@ extends SceneTree
 ##
 ## Arguments after "--":
 ##   [--winds=12,18,24] [--twas=48,100,135] [--seconds=150] [--from=40]
-##   [--waves=1] [--gusts=1] [--gust_intensity=0.2] [--gust_period=8] [--gradient=1]
+##   [--waves=1] [--gusts=1] [--gust_patches=1] [--gust_intensity=0.2] [--gust_period=8] [--gradient=1]
 ##   [--sweep=<group>.<field>[+<group>.<field>]=<v1>,<v2>,...] [--sweep2=...]  (crossed)
 ##   [--pilot.<field>=<n>] [--sailor.<field>=<n>] [--board.<field>=<n>]   (fixed for every case;
 ##   board: only the numbers the sim copies every tick, such as the footstraps)
@@ -236,10 +236,24 @@ func _run_case(case: PushCase, falls: Array[String]) -> PushResult:
 		var t: Telemetry = sim.telemetry
 		var easing: bool = false
 		if timing:
-			probe.time_s = sim.wind.time_s + lead_s
-			probe.step(0.0)
-			var ahead: float = probe.current_speed_ms / maxf(sim.wind_config.speed_ms(), 0.01)
-			var now: float = sim.wind.current_speed_ms / maxf(sim.wind_config.speed_ms(), 0.01)
+			var mean_ms: float = maxf(sim.wind_config.speed_ms(), 0.01)
+			var ahead: float
+			var now: float
+			if sim.wind.uses_patches():
+				# The patches: the gust over the board now, and the one lead_s upwind on the
+				# water, which the air brings here in lead_s (the sailor sees it coming).
+				var axis: Vector2 = sim.wind.downwind_axis()
+				var upwind_m: float = sim.wind.pattern().drift_ms(mean_ms) * lead_s
+				var here: Vector3 = Vector3(t.position.x, sim.wind_config.reference_height_m, t.position.z)
+				var upwind_spot: Vector3 = here - Vector3(axis.x, 0.0, axis.y) * upwind_m
+				now = sim.wind.velocity_at(here).length() / mean_ms
+				ahead = sim.wind.velocity_at(upwind_spot).length() / mean_ms
+			else:
+				# The sines: a second field on the same config, read lead_s ahead in time.
+				probe.time_s = sim.wind.time_s + lead_s
+				probe.step(0.0)
+				ahead = probe.current_speed_ms / mean_ms
+				now = sim.wind.current_speed_ms / mean_ms
 			easing = maxf(ahead, now) > gust_line
 		# The case's own pilot numbers go through the controller's overrides, as the game's
 		# --pilot. options do: the controller applies them after the slider every update (and
@@ -351,6 +365,7 @@ func _make_sim(wind_kt: float) -> WindsurferSim:
 	wind.from_bearing_deg = WIND_FROM_DEG
 	wind.height_gradient_enabled = _options.get("gradient", "1") == "1"
 	wind.gusts_enabled = _options.get("gusts", "1") == "1"
+	wind.gust_patches = _options.get("gust_patches", "1") == "1"
 	wind.gust_intensity = _gust_intensity()
 	wind.gust_period_s = _gust_period_s()
 	wind.shifts_enabled = false

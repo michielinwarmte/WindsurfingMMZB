@@ -24,12 +24,21 @@ extends Resource
 @export var min_height_m: float = 0.1
 
 @export_group("Gusts")
-## Deterministic gusts: a sum of three sine waves (section 8.3).
+## Gusts on or off: as patches rolling over the water (gust_patches) or as three sine waves in
+## time (section 8.3).
 @export var gusts_enabled: bool = false
-## Gust amplitude as a fraction of the base speed.
+## How strong the gusts are, as a fraction of the base speed: the sines' amplitude, or for the
+## patches the strength of the usual gusts (two spreads above the mean; the spread is half this).
 @export var gust_intensity: float = 0.2
-## Period of the slowest gust component.
+## The sines only: the period of the slowest wave. The patches' sizes are the pattern's.
 @export var gust_period_s: float = 8.0
+## The gusts as patches of stronger and lighter air rolling downwind with the air, so a gust can
+## be seen coming on the water (WindField, section 8.3, ROADMAP PH7): the game. Off: the three
+## sines, the same everywhere at once (the older tests and measurements).
+@export var gust_patches: bool = true
+## The patches' pattern: the shapes of the fronts and the lanes, their lives and the drift
+## (WindGusts). Null: res://config/open_gusts_default.tres, the lake's measured shapes.
+@export var gust_pattern: WindGusts = null
 
 @export_group("Shifts")
 ## Slow swings of the wind direction (section 8.4).
