@@ -6,16 +6,21 @@ extends Node
 ##   Sail on Lake Silvaplana: the real lake in a Maloja wind (maps/silvaplana/sail_silvaplana.tscn).
 ##   Silvaplana wind viewer, with the race course maker (the map track's wind viewer).
 ##   Lake Silvaplana: fly over the map (the map track's terrain view).
-## And Settings, Controls, How to sail and Quit. The menu remembers the play option chosen
-## last time and puts the focus on it.
+## And Gear (the board, sail and fin to sail: gear_page.gd), Settings, Controls, How to sail and
+## Quit. The menu remembers the play option chosen last time and puts the focus on it. When a page
+## closes with other gear in the settings, the sailing scene behind the menu is built again, so the
+## next run on the open water sails it (the lake's scene is built anew each time anyway).
 ##
 ## Keys: arrows (or the gamepad's stick/d-pad) move, Enter (or A) chooses, Esc (or B) goes
 ## back, and on the main page asks whether to quit.
-## For screenshots (after "--"): --page=settings/<tab>|controls|howto|race|quit opens that page.
+## For screenshots (after "--"): --page=settings/<tab>|controls|howto|race|gear/<tab>|quit opens
+## that page.
 
 const SAIL_SILVAPLANA_SCENE: String = "res://maps/silvaplana/sail_silvaplana.tscn"
 const FLY_OVER_SCENE: String = "res://maps/silvaplana/dev/terrain_view.tscn"
 const WIND_VIEWER_SCENE: String = "res://maps/silvaplana/wind_viewer.tscn"
+## The sailing scene behind the menu, to build it again with new gear.
+const SAILING_SCENE: PackedScene = preload("res://main.tscn")
 
 ## The play options, as last_play_option in the settings saves them (new ones go at the end, so
 ## a saved choice keeps its meaning; the menu shows them in its own order).
@@ -30,6 +35,7 @@ enum PlayOption { OPEN_WATER, FLY_OVER, WIND_VIEWER, SAIL_SILVAPLANA, RACE_OPEN_
 @onready var _race_lake_button: Button = %RaceLakeButton
 @onready var _silvaplana_button: Button = %SilvaplanaButton
 @onready var _wind_button: Button = %WindButton
+@onready var _gear_button: Button = %GearButton
 @onready var _settings_button: Button = %SettingsButton
 @onready var _controls_button: Button = %ControlsButton
 @onready var _howto_button: Button = %HowToButton
@@ -41,6 +47,7 @@ enum PlayOption { OPEN_WATER, FLY_OVER, WIND_VIEWER, SAIL_SILVAPLANA, RACE_OPEN_
 @onready var _controls: ControlsPage = %Controls
 @onready var _howto: HowToPage = %HowTo
 @onready var _race: RacePage = %Race
+@onready var _gear: GearPage = %Gear
 @onready var _quit_confirm: ConfirmDialog = %QuitConfirm
 
 
@@ -51,16 +58,17 @@ func _ready() -> void:
 	_race_lake_button.pressed.connect(_on_race_lake_pressed)
 	_silvaplana_button.pressed.connect(_open_map_scene.bind(PlayOption.FLY_OVER, FLY_OVER_SCENE, "the map of Lake Silvaplana"))
 	_wind_button.pressed.connect(_open_map_scene.bind(PlayOption.WIND_VIEWER, WIND_VIEWER_SCENE, "the wind viewer"))
+	_gear_button.pressed.connect(_open_page.bind(_gear))
 	_settings_button.pressed.connect(_open_page.bind(_settings))
 	_controls_button.pressed.connect(_open_page.bind(_controls))
 	_howto_button.pressed.connect(_open_page.bind(_howto))
 	_quit_button.pressed.connect(_open_page.bind(_quit_confirm))
 	_quit_confirm.confirmed.connect(_on_quit_confirmed)
 	_race.start_race.connect(_on_race_page_start)
-	for page: MenuPage in [_settings, _controls, _howto, _race, _quit_confirm]:
+	for page: MenuPage in [_settings, _controls, _howto, _race, _gear, _quit_confirm]:
 		page.closed.connect(_on_page_closed.bind(page))
 	MenuFocus.setup_buttons([_open_water_button, _sail_silvaplana_button, _race_open_water_button, _race_lake_button, _wind_button, _silvaplana_button,
-		_settings_button, _controls_button, _howto_button, _quit_button])
+		_gear_button, _settings_button, _controls_button, _howto_button, _quit_button])
 	_version.text = _version_text()
 	_show_main_page(_play_buttons()[GameSettings.values.last_play_option])
 	_apply_command_line_options()
@@ -147,10 +155,36 @@ func _on_page_closed(page: MenuPage) -> void:
 	if page == _settings:
 		# The new wind and waves show behind the menu at once.
 		_sailing.apply_settings_live()
+	# Other gear (chosen on the gear page, or put back by a reset of the settings): the board
+	# behind the menu is built again for it.
+	if _gear_changed():
+		_build_sailing_again()
 	var buttons: Dictionary[MenuPage, Button] = {
 		_settings: _settings_button, _controls: _controls_button, _howto: _howto_button, _quit_confirm: _quit_button,
-		_race: _race_lake_button if RacePage.chosen_lake else _race_open_water_button}
+		_race: _race_lake_button if RacePage.chosen_lake else _race_open_water_button, _gear: _gear_button}
 	_show_main_page(buttons[page])
+
+
+## Whether the settings' gear is not the gear the sailing scene behind the menu sails.
+func _gear_changed() -> bool:
+	var windsurfer: WindsurferNode = _sailing.get_node("Windsurfer") as WindsurferNode
+	var sailed: GearChoice = windsurfer.gear if windsurfer.gear != null else GearChoice.defaults()
+	return sailed.ids_text() != GearChoice.from_settings(GameSettings.values).ids_text()
+
+
+## Builds the sailing scene behind the menu again from the settings, so its board sails the new
+## gear: the simulation, the rig, the HUD's gear line and everything that follows the board are
+## made for it, as when the game starts.
+func _build_sailing_again() -> void:
+	var fresh: SailingScene = SAILING_SCENE.instantiate() as SailingScene
+	fresh.start_in_menu = true
+	var place: int = _sailing.get_index()
+	remove_child(_sailing)
+	_sailing.queue_free()
+	fresh.name = "Sailing"
+	add_child(fresh)
+	move_child(fresh, place)
+	_sailing = fresh
 
 
 func _show_main_page(focus: Button) -> void:
@@ -203,6 +237,10 @@ func _apply_command_line_options() -> void:
 			"race":
 				_main_page.hide()
 				_race.open_on(false)
+			"gear":
+				_open_page(_gear)
+				if parts.size() > 1:
+					_gear.show_tab(parts[1])
 			"quit":
 				_open_page(_quit_confirm)
 

@@ -56,6 +56,10 @@ var _boards: Array[WindsurferNode] = []
 ## The other sails' wind shadows on each board's wind (one per board of _boards, its own copy of
 ## the fleet's places each tick; AI_FLEET_PLAN.md D5), empty with the setup's shadows off.
 var _shadows: Array[WindShadows] = []
+## The race's one wind clock (ROADMAP RA13): every board's wind field is handed it before every
+## tick, so the player and the fleet sail in the same gusts. Taken from the player's field at each
+## restart (its gusts are the ones drawn on the water), then read back after every tick.
+var wind_clock: RaceWindClock = null
 ## The racing rules' judge (RaceRules, F3), new with each race; null with the setup's rules off.
 var rules: RaceRules = null
 ## What the runner's own tick costs (the physics of all boards, side by side or not, and the
@@ -171,6 +175,7 @@ func restart() -> void:
 		if setup.gear and scripted != null and scripted.persona != null:
 			scripted.persona.rig(opponents[i].sim, opponents[i].sim.telemetry.tws_10m_kt)
 	_tell_the_race()
+	wind_clock = RaceWindClock.of(player.sim.wind)
 	race.start_in(setup.free_sail_s)
 	hud.reset()
 	if records != null:
@@ -230,6 +235,7 @@ func _physics_process(delta: float) -> void:
 		return
 	var scene: SailingScene = get_parent() as SailingScene
 	var player_stopped: bool = not spectating and scene != null and scene.is_aground()
+	_hand_the_wind_clock()
 	for node: WindsurferNode in _boards:
 		if not (player_stopped and node == player):
 			node.sail(delta)
@@ -245,6 +251,7 @@ func _physics_process(delta: float) -> void:
 		for i: int in _boards.size():
 			_step_board(i, delta, player_stopped)
 	var t1: int = Time.get_ticks_usec()
+	_read_the_wind_clock(player_stopped)
 	_pose_boards(player_stopped)
 	_tell_the_race()
 	race.step(delta)
@@ -253,6 +260,28 @@ func _physics_process(delta: float) -> void:
 	_us_race += Time.get_ticks_usec() - t1
 	_ticks_counted += 1
 	_tick += 1
+
+
+## The race's wind clock onto every board's wind field (RA13), on this thread before the sailors
+## look at the wind and the physics steps. A field that shows it already is left as it was; one
+## made later (a new board, a new sea from the pause menu) joins the others' gusts.
+func _hand_the_wind_clock() -> void:
+	if wind_clock == null:
+		return
+	for node: WindsurferNode in _boards:
+		wind_clock.hand_to(node.sim.wind)
+	if spectating and player != null:
+		wind_clock.hand_to(player.sim.wind)
+
+
+## The clock one tick on, read from the first board that stepped (every field that stepped shows
+## the same); unchanged if none did (the player alone and aground).
+func _read_the_wind_clock(player_stopped: bool) -> void:
+	for node: WindsurferNode in _boards:
+		if player_stopped and node == player:
+			continue
+		wind_clock = RaceWindClock.of(node.sim.wind)
+		return
 
 
 ## Every board's place and whether its sail is up, into every board's shadows (each its own copy),

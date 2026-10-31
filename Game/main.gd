@@ -86,6 +86,8 @@ func _enter_tree() -> void:
 	_course = _course_from_options(Vector2(windsurfer.start_position.x, windsurfer.start_position.z))
 	windsurfer.wind_config = _build_wind_config()
 	windsurfer.wave_set_config = settings.build_wave_set_config()
+	# The board, sail and fin chosen on the gear page (an unknown id sails the default).
+	windsurfer.gear = GearChoice.from_settings(settings)
 	if _course != null:
 		var spot: Vector2 = RaceCourses.pre_start_spot(_course)
 		windsurfer.start_position = Vector3(spot.x, 0.0, spot.y)
@@ -105,8 +107,9 @@ func _ready() -> void:
 		_sun.rotation_degrees = Vector3(-59.0, -45.0, 0.0)
 	_ocean.setup(_windsurfer.sim, _camera_rig.camera)
 	_add_open_gusts()
-	# Which gear the player's board sails, on the F1 panel and in the terminal.
-	_hud.gear_text = Hud.gear_line(_windsurfer.sim)
+	# Which gear the player's board sails, on the F1 panel and in the terminal: the names chosen on
+	# the gear page, then the numbers the simulation sails.
+	_hud.gear_text = _windsurfer.gear.names_line() + "\n" + Hud.gear_line(_windsurfer.sim)
 	print(_hud.gear_text)
 	_show_course()
 	_start_race_runner()

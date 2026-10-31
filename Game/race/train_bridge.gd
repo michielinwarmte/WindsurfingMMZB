@@ -10,7 +10,7 @@ extends RefCounted
 ##   hello()               what the trainer needs to know first: the observation's size and names,
 ##                         the actions', how many boards, the stage
 ##   reset(seed)           a new race for the stage; every board's first observation
-##   step(actions, seed)   one decision for every board (the network's three numbers each), held
+##   step(actions, seed)   one decision for every board (the network's four numbers each), held
 ##                         for the stage's half second; then each board's observation, reward,
 ##                         whether its episode is over (and whether it was only cut short by the
 ##                         time limit), its stats at the end of an episode, and, for a board whose
@@ -18,7 +18,11 @@ extends RefCounted
 ##                         now is the first of the next)
 ##
 ## A board whose episode is over is set down again at once where the stage's rule says (S1 to S4:
-## the drops do not depend on the race's clock), so the trainer always has a board in play; in the
+## the drops do not depend on the race's clock), so the trainer always has a board in play. Such a
+## race does not go on for ever: once it has run RACE_EPISODES episodes' time, every board's episode
+## is cut short there (reported as cut by the time limit, which the trainer knows how to value) and
+## a new race begins, with a new course in new conditions (otherwise a worker would sail one course
+## in one wind and sea for the whole night: the trainer resets each worker only once). In the
 ## stages with a countdown (S5, S6) a board that is done waits, parked, until the race is over for
 ## everyone, and then the whole race is new. While it waits it reports its last observation, no
 ## reward and no end, so the trainer sees a few idle steps there (bounded: the race ends 60 s after
@@ -26,6 +30,10 @@ extends RefCounted
 
 ## A stage's races are seeded from the trainer's seeds; the drops of the respawns from this much on.
 const RESPAWN_SEED_STEP: int = 7919
+## In the stages that set boards down again at once (S1 to S4), a race lasts this many of the
+## stage's episodes (180 s in S1, 16 min in S4), then a new one begins. At the start every board's
+## episode runs out together, so the first cut comes as they end.
+const RACE_EPISODES: float = 2.0
 
 
 var stage: TrainingDrops.Stage
@@ -57,6 +65,9 @@ func hello() -> Dictionary:
 		"obs_names": Array(RaceObservation.names()),
 		"action_size": LearnedSkipper.TWA_ACTION_NAMES.size(),
 		"action_names": Array(LearnedSkipper.TWA_ACTION_NAMES),
+		# A fresh policy's push output starts here: the slider level of the pilot's own margin,
+		# where the fleet sails today (RA12).
+		"push_start_output": LearnedSkipper.output_for_push(LearnedSkipper.pilot_margin_level()),
 		"boards": boards,
 		"stage": stage.name,
 		"stage_description": stage.describe(),
@@ -84,6 +95,7 @@ func reset(seed: int) -> Dictionary:
 func step(actions: Array, seed: int) -> Dictionary:
 	if env == null:
 		return {"error": "no race: reset first"}
+	var started_us: int = Time.get_ticks_usec()
 	steps += 1
 	var count: int = env.board_count()
 	for i: int in mini(actions.size(), count):
@@ -102,14 +114,24 @@ func step(actions: Array, seed: int) -> Dictionary:
 	var truncated: Array = []
 	var infos: Array = []
 	var terminal: Array = []
+	# A race of a stage that sets boards down at once is over after RACE_EPISODES episodes' time
+	# (half a tick early, so the sum of the ticks' 1/60 s cannot leave it one decision late).
+	var race_over: bool = stage.respawn_alone and env.time_s >= stage.episode_s * RACE_EPISODES - 0.5 * RaceEnv.DT
 	for i: int in count:
 		rewards.append(env.reward(i))
 		# A board done at this step ends its episode now; one parked since an earlier step does not
-		# end it again.
-		var done_now: bool = env.done(i) and not _parked.get(i, false)
+		# end it again. When the race is over, every board still sailing is cut short with it.
+		var cut: bool = race_over and not env.done(i)
+		var done_now: bool = (env.done(i) and not _parked.get(i, false)) or cut
 		dones.append(done_now)
-		truncated.append(done_now and env.board(i).truncated)
-		infos.append(env.info(i) if done_now else null)
+		truncated.append(done_now and (env.board(i).truncated or cut))
+		var info: Variant = null
+		if done_now:
+			var stats: Dictionary = env.info(i)
+			if cut:
+				stats["truncated"] = true
+			info = stats
+		infos.append(info)
 		if done_now:
 			episodes += 1
 			var last: PackedFloat32Array = env.observe(i)
@@ -119,7 +141,11 @@ func step(actions: Array, seed: int) -> Dictionary:
 		else:
 			terminal.append(null)
 	var race_new: bool = false
-	if stage.respawn_alone:
+	if race_over:
+		# A new course in new conditions, from the trainer's seed.
+		reset(seed)
+		race_new = true
+	elif stage.respawn_alone:
 		for i: int in count:
 			if env.done(i):
 				_respawn(i, seed)
@@ -135,7 +161,10 @@ func step(actions: Array, seed: int) -> Dictionary:
 			var o: PackedFloat32Array = env.observe(i)
 			_last_obs[i] = o
 			obs.append(Array(o))
-	var reply: Dictionary = {"obs": obs, "rew": rewards, "done": dones, "trunc": truncated, "info": infos, "terminal_obs": terminal}
+	# How long this worker was busy with the step (the trainer compares it with the time the step
+	# took for all workers: the rest is waiting for the slowest).
+	var reply: Dictionary = {"obs": obs, "rew": rewards, "done": dones, "trunc": truncated, "info": infos, "terminal_obs": terminal,
+		"busy_ms": snappedf((Time.get_ticks_usec() - started_us) / 1000.0, 0.01)}
 	if race_new:
 		reply["race"] = _race_facts()
 	return reply
@@ -162,4 +191,9 @@ func _race_facts() -> Dictionary:
 		"length_m": snappedf(SailingDistance.course_length_m(env.race, env.course.axis_deg), 1.0),
 		"prestart_s": snappedf(env.options.prestart_s, 0.1),
 		"episode_s": snappedf(env.options.episode_s, 0.1),
+		"lake": env.options.environment != null,
+		"sea_m": snappedf(env.board(0).sea_height_m, 0.01),
+		# The open water's drawn gusts and shifts (the lake's are the map's own: -1).
+		"gusts": -1.0 if env.options.environment != null else (snappedf(env.options.wind.gust_intensity, 0.01) if env.options.gusts and env.options.wind != null else 0.0),
+		"shift_deg": -1.0 if env.options.environment != null else (snappedf(env.options.wind.max_shift_deg, 0.1) if env.options.shifts and env.options.wind != null else 0.0),
 	}

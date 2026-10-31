@@ -10,8 +10,7 @@ extends RefCounted
 ##   S2 the rounding   60 to 150 m from any mark at any bearing (inside and outside the laylines,
 ##                     port and starboard roundings); ends at the rounding, or after 60 s
 ##   S3 the run        the same, at the marks reached downwind and at the gates
-##   S4 full laps      just past the start line, started, the whole course to sail; 8 min; waves,
-##                     gusts and shifts
+##   S4 full laps      just past the start line, started, the whole course to sail; 8 min
 ##   S5 the start      a random spot in the sailing area round the line (F2), a countdown of 45 to
 ##                     90 s, the line's bias up to 10 degrees; the episode ends 120 s after the gun
 ##                     (how far up the beat the board is by then is the measure of its start), or
@@ -19,11 +18,31 @@ extends RefCounted
 ##   S6 company        6 to 12 boards from random spots, the countdown, the whole race, the boards
 ##                     seeing each other; the race ends 60 s after the first finisher
 ##
+## The conditions (Session 64, Michiel: "as fast as possible around all the courses with different
+## wind and wave conditions"): every race of every stage is sailed in conditions drawn from the whole
+## range the settings menu offers (SettingsValues), so the head learns every wind and sea a player
+## can set (draw_conditions()): the wind from 4 to 35 kt; the sea one of the menu's five (flat, the
+## swell, the medium and the strong chop, the sea made by the wind over a fetch) at a random height,
+## from flat water up to a 0.6 m crest (SEA_HEIGHT_MAX_M: the menu goes rougher, the hands cannot
+## yet); the gust patches from none to the menu's strongest; the shifts from none to the menu's
+## largest, at a random period. On the lake the wind, its gusts and its shifts are the map's
+## (below); the sea is drawn there too, as the game puts the player's sea on the lake.
+##
 ## From S4 on, a share of the races (lake_share, 30 %) are sailed on Lake Silvaplana: the course
 ## (the saved T2, a template or a random shape) fitted to the water by CourseFitter, in the map's
 ## wind at a random hour of the Maloja's day, thin air and fresh water (D6), the sailing area kept
 ## off the shore; the rest on the open water in a random wind.
 ##
+## The highest sea a training race is drawn in: its highest crest above the still water (the sum of
+## the waves' amplitudes, WaveSetConfig.total_amplitude_m(): the sea_height the brain sees), metres.
+## The menu goes up to about 1.8 m, but the hands cannot sail the rough end today: the all-rounder on
+## the autopilot's margin fell 25 times in 4 minutes in a 0.55 m sea on the lake and stalled in 0.45
+## to 0.83 m seas at 17 kt (Documentation/reports/fleet_gear/training.md), so a race in such a sea
+## teaches the brain only falling (the lead's decision, 31 October 2026). The seas from 0.45 to 0.6 m
+## stay: there the brain must learn to ease the push. Making the board sail rougher water is a
+## physics and controller item for Michiel, who may raise this number once the hands can.
+const SEA_HEIGHT_MAX_M: float = 0.6
+
 ## The stages' names are S1 to S6; make_env() builds a race for a stage from a seed, drop() sets a
 ## board down again for its next episode in the same race.
 
@@ -63,15 +82,18 @@ class Stage:
 	## it is done (the drops do not depend on the race's clock) or all wait for the race to end.
 	var blind: bool = true
 	var respawn_alone: bool = true
-	var waves: bool = false
-	var gusts: bool = false
-	var shifts: bool = false
+	## Whether the sea, the gusts and the shifts are drawn (draw_conditions()); off: flat water, a
+	## steady wind, a wind that keeps its direction. Every stage draws all three (Session 64).
+	var waves: bool = true
+	var gusts: bool = true
+	var shifts: bool = true
 	## The sails shadow each other (F3's WindShadows), and the racing rules are kept (RaceRules):
 	## the stages with company.
 	var shadows: bool = false
 	var rules: bool = false
-	var wind_min_kt: float = 10.0
-	var wind_max_kt: float = 24.0
+	## The wind's strength, knots: the settings menu's whole range.
+	var wind_min_kt: float = SettingsValues.WIND_SPEED_MIN_KT
+	var wind_max_kt: float = SettingsValues.WIND_SPEED_MAX_KT
 	## The countdown, seconds, drawn between the two (0: no countdown; the boards are started).
 	var prestart_min_s: float = 0.0
 	var prestart_max_s: float = 0.0
@@ -84,11 +106,82 @@ class Stage:
 	var lake_share: float = 0.0
 
 	func describe() -> String:
-		return "%s (%s): %d boards%s%s%s, %.0f s episodes, %.0f to %.0f kt, %s water, %s%s%s" % [name, Kind.keys()[kind].to_lower(),
-			boards, " blind" if blind else "", " with wind shadows" if shadows else "", " and the rules" if rules else "", episode_s, wind_min_kt, wind_max_kt, "wavy" if waves else "flat",
-			"gusts and shifts" if gusts and shifts else ("gusts" if gusts else ("shifts" if shifts else "a steady wind")),
+		return "%s (%s): %d boards%s%s%s, %.0f s episodes, %.0f to %.0f kt, %s, %s%s%s" % [name, Kind.keys()[kind].to_lower(),
+			boards, " blind" if blind else "", " with wind shadows" if shadows else "", " and the rules" if rules else "", episode_s, wind_min_kt, wind_max_kt,
+			("the sea from flat to %.2f m" % SEA_HEIGHT_MAX_M) if waves else "flat water",
+			"gusts and shifts drawn" if gusts and shifts else ("gusts drawn" if gusts else ("shifts drawn" if shifts else "a steady wind")),
 			(", a countdown of %.0f to %.0f s" % [prestart_min_s, prestart_max_s]) if prestart_max_s > 0.0 else "",
 			(", %.0f %% on Lake Silvaplana" % (100.0 * lake_share)) if lake_share > 0.0 else ""]
+
+
+## The conditions of one race (draw_conditions()): the wind's strength, the sea and the wind's gusts
+## and shifts, each a number the settings menu offers, so the race is one a player could set up.
+class Conditions:
+	var wind_kt: float = 15.0
+	## The sea: the menu's preset and its numbers (SettingsValues: the heights of all the waves and
+	## of the swell alone; for the sea made by the wind, the fetch and the depth).
+	var sea_preset: SettingsValues.WavePreset = SettingsValues.WavePreset.FLAT
+	var wave_height_scale: float = 1.0
+	var swell_height_scale: float = 1.0
+	var fetch_km: float = 5.0
+	var water_depth_m: float = SettingsValues.DEPTH_DEEP_M
+	## The gust patches' strength (WindConfig.gust_intensity; 0: a steady wind), and the shifts'
+	## swing either way (degrees; 0: none) and their period (seconds).
+	var gust_intensity: float = 0.0
+	var max_shift_deg: float = 0.0
+	var shift_period_s: float = 60.0
+
+	func waves() -> bool:
+		return sea_preset != SettingsValues.WavePreset.FLAT
+
+	func gusts() -> bool:
+		return gust_intensity > 0.0
+
+	func shifts() -> bool:
+		return max_shift_deg > 0.0
+
+	## The sea as the settings menu builds it (SettingsValues.build_wave_set_config()).
+	func wave_set() -> WaveSetConfig:
+		var menu: SettingsValues = settings()
+		return menu.build_wave_set_config()
+
+	## The open water's wind settings: the default wind file's, with these gusts (as patches) and
+	## shifts. RaceEnv sets the speed, the direction and the two switches.
+	func wind_config() -> WindConfig:
+		var wind: WindConfig = (load(SettingsValues.WIND_DEFAULT_PATH) as WindConfig).duplicate()
+		wind.speed_kt = wind_kt
+		wind.gusts_enabled = gusts()
+		wind.gust_patches = true
+		wind.gust_intensity = gust_intensity
+		wind.shifts_enabled = shifts()
+		wind.max_shift_deg = max_shift_deg
+		wind.shift_period_s = shift_period_s
+		return wind
+
+	## These conditions as the settings menu's values (the ones a player would set for them).
+	func settings() -> SettingsValues:
+		var menu: SettingsValues = SettingsValues.new()
+		menu.wind_speed_kt = wind_kt
+		menu.waves_enabled = waves()
+		menu.wave_preset = sea_preset
+		menu.wave_height_scale = wave_height_scale
+		menu.swell_height_scale = swell_height_scale
+		menu.fetch_km = fetch_km
+		menu.water_depth_m = water_depth_m
+		menu.gusts_enabled = gusts()
+		menu.gust_intensity = gust_intensity
+		menu.shifts_enabled = shifts()
+		menu.max_shift_deg = max_shift_deg
+		menu.shift_period_s = shift_period_s
+		return menu
+
+	## In words, for the logs: "18 kt, strong chop x1.4 (0.21 m), gusts 0.31, shifts 12 deg / 140 s".
+	func describe() -> String:
+		var sea: String = "flat water"
+		if waves():
+			sea = "%s x%.1f (%.2f m)" % [SettingsValues.wave_preset_name(sea_preset).to_lower(), wave_height_scale, wave_set().total_amplitude_m()]
+		return "%.0f kt, %s, %s, %s" % [wind_kt, sea, ("gusts %.2f" % gust_intensity) if gusts() else "steady",
+			("shifts %.0f deg / %.0f s" % [max_shift_deg, shift_period_s]) if shifts() else "no shifts"]
 
 
 ## The stage of a name (S1 to S6); null for any other name.
@@ -108,9 +201,6 @@ static func stage_named(name: String) -> Stage:
 		"S4":
 			stage.kind = Kind.LAPS
 			stage.episode_s = 480.0
-			stage.waves = true
-			stage.gusts = true
-			stage.shifts = true
 			stage.stall_s = 60.0
 			stage.lake_share = 0.3
 		"S5":
@@ -121,8 +211,6 @@ static func stage_named(name: String) -> Stage:
 			stage.respawn_alone = false
 			stage.shadows = true
 			stage.rules = true
-			stage.waves = true
-			stage.gusts = true
 			stage.prestart_min_s = 45.0
 			stage.prestart_max_s = 90.0
 			stage.wind_bias_max_deg = 10.0
@@ -135,9 +223,6 @@ static func stage_named(name: String) -> Stage:
 			stage.respawn_alone = false
 			stage.shadows = true
 			stage.rules = true
-			stage.waves = true
-			stage.gusts = true
-			stage.shifts = true
 			stage.prestart_min_s = 60.0
 			stage.prestart_max_s = 60.0
 			stage.wind_bias_max_deg = 5.0
@@ -172,11 +257,14 @@ static func make_env(stage: Stage, seed: int, boards: int = 0) -> RaceEnv:
 			options.environment = null
 	if course == null:
 		course = _course_for(stage, rng, wind_kt)
+	var conditions: Conditions = draw_conditions(stage, rng, wind_kt)
 	options.actions = LearnedSkipper.ActionMode.TWA
 	options.decision_ticks = 30
-	options.waves = stage.waves
-	options.gusts = stage.gusts
-	options.shifts = stage.shifts
+	options.waves = conditions.waves()
+	options.sea = conditions.wave_set() if conditions.waves() else null
+	options.gusts = conditions.gusts()
+	options.shifts = conditions.shifts()
+	options.wind = conditions.wind_config()
 	options.blind = stage.blind
 	options.shadows = stage.shadows
 	options.rules = stage.rules
@@ -195,6 +283,45 @@ static func make_env(stage: Stage, seed: int, boards: int = 0) -> RaceEnv:
 			drops.append(drop(stage, race, course, rng))
 	env.reset_dropped(seed, drops)
 	return env
+
+
+## The conditions of a race of a stage, from the race's random numbers (the same seed, the same
+## conditions): each number drawn evenly across the settings menu's range (SettingsValues), the
+## sea's preset evenly among the menu's five (so flat water a fifth of the time), the sea's height
+## kept at or under SEA_HEIGHT_MAX_M. The same count of numbers is drawn whatever the stage switches
+## off, so the rest of a race's draws do not move.
+static func draw_conditions(stage: Stage, rng: RandomNumberGenerator, wind_kt: float) -> Conditions:
+	var c: Conditions = Conditions.new()
+	c.wind_kt = wind_kt
+	var preset: int = rng.randi_range(0, SettingsValues.WavePreset.size() - 1)
+	c.sea_preset = (preset if stage.waves else SettingsValues.WavePreset.FLAT) as SettingsValues.WavePreset
+	var height_share: float = rng.randf()
+	c.swell_height_scale = rng.randf_range(SettingsValues.SWELL_SCALE_MIN, SettingsValues.SWELL_SCALE_MAX)
+	c.fetch_km = rng.randf_range(SettingsValues.FETCH_MIN_KM, SettingsValues.FETCH_MAX_KM)
+	c.water_depth_m = rng.randf_range(SettingsValues.DEPTH_MIN_M, SettingsValues.DEPTH_DEEP_M)
+	var highest_scale: float = _highest_height_scale(c)
+	c.wave_height_scale = lerpf(minf(SettingsValues.WAVE_SCALE_MIN, highest_scale), highest_scale, height_share)
+	var gust_intensity: float = rng.randf_range(0.0, SettingsValues.GUST_INTENSITY_MAX)
+	c.gust_intensity = gust_intensity if stage.gusts else 0.0
+	var shift_deg: float = rng.randf_range(0.0, SettingsValues.SHIFT_MAX_DEG)
+	c.max_shift_deg = shift_deg if stage.shifts else 0.0
+	c.shift_period_s = rng.randf_range(SettingsValues.SHIFT_PERIOD_MIN_S, SettingsValues.SHIFT_PERIOD_MAX_S)
+	return c
+
+
+## The most the menu's height (wave_height_scale) may be for this sea and stay at or under
+## SEA_HEIGHT_MAX_M: the menu's most (2 times) for a sea that stays low anyway, less for a rough one.
+## Every wave's amplitude is the scale times its own, so the sea's height is the scale times its
+## height at 1. In the one case where even the menu's least height (half) is too high, the scale goes
+## below it: never with the menu's seas today (the roughest is about 0.9 m at 1, 0.45 m at half).
+static func _highest_height_scale(c: Conditions) -> float:
+	if not c.waves():
+		return SettingsValues.WAVE_SCALE_MAX
+	c.wave_height_scale = 1.0
+	var height_at_one_m: float = c.wave_set().total_amplitude_m()
+	if height_at_one_m * SettingsValues.WAVE_SCALE_MAX <= SEA_HEIGHT_MAX_M:
+		return SettingsValues.WAVE_SCALE_MAX
+	return SEA_HEIGHT_MAX_M / height_at_one_m
 
 
 ## A new drop for a board in a race of a stage (its next episode, in the same race).

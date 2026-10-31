@@ -85,16 +85,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not is_visible_in_tree():
 		return
 	# Switch tabs with the gamepad's shoulder buttons or Ctrl+Tab / Ctrl+Shift+Tab.
-	var step: int = 0
-	var button: InputEventJoypadButton = event as InputEventJoypadButton
-	if button != null and button.pressed:
-		if button.button_index == JOY_BUTTON_RIGHT_SHOULDER:
-			step = 1
-		elif button.button_index == JOY_BUTTON_LEFT_SHOULDER:
-			step = -1
-	var key: InputEventKey = event as InputEventKey
-	if key != null and key.pressed and key.ctrl_pressed and key.physical_keycode == KEY_TAB:
-		step = -1 if key.shift_pressed else 1
+	var step: int = MenuFocus.tab_step(event)
 	if step != 0:
 		_tabs.current_tab = posmod(_tabs.current_tab + step, _tabs.get_tab_count())
 		_tabs.get_tab_bar().grab_focus()

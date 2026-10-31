@@ -1,0 +1,152 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://ui/gear_page.gd" id="1_script"]
+[ext_resource type="Theme" path="res://ui/theme.tres" id="2_theme"]
+
+[sub_resource type="StyleBoxFlat" id="Preview_frame"]
+bg_color = Color(0.09, 0.19, 0.3, 0.6)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[node name="GearPage" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+script = ExtResource("1_script")
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="Center"]
+custom_minimum_size = Vector2(1200, 0)
+layout_mode = 2
+
+[node name="Layout" type="VBoxContainer" parent="Center/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Header" type="HBoxContainer" parent="Center/Panel/Layout"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Center/Panel/Layout/Header"]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+text = "Gear"
+
+[node name="Sailing" type="Label" parent="Center/Panel/Layout/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HintLabel"
+text = "You sail: "
+horizontal_alignment = 2
+vertical_alignment = 1
+text_overrun_behavior = 3
+
+[node name="Body" type="HBoxContainer" parent="Center/Panel/Layout"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="Tabs" type="TabContainer" parent="Center/Panel/Layout/Body"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(790, 500)
+layout_mode = 2
+size_flags_horizontal = 3
+current_tab = 0
+
+[node name="Board" type="ScrollContainer" parent="Center/Panel/Layout/Body/Tabs"]
+layout_mode = 2
+follow_focus = true
+horizontal_scroll_mode = 0
+metadata/_tab_index = 0
+
+[node name="Rows" type="VBoxContainer" parent="Center/Panel/Layout/Body/Tabs/Board"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="Sail" type="ScrollContainer" parent="Center/Panel/Layout/Body/Tabs"]
+visible = false
+layout_mode = 2
+follow_focus = true
+horizontal_scroll_mode = 0
+metadata/_tab_index = 1
+
+[node name="Rows" type="VBoxContainer" parent="Center/Panel/Layout/Body/Tabs/Sail"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="Fin" type="ScrollContainer" parent="Center/Panel/Layout/Body/Tabs"]
+visible = false
+layout_mode = 2
+follow_focus = true
+horizontal_scroll_mode = 0
+metadata/_tab_index = 2
+
+[node name="Rows" type="VBoxContainer" parent="Center/Panel/Layout/Body/Tabs/Fin"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="PreviewBox" type="VBoxContainer" parent="Center/Panel/Layout/Body"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Frame" type="PanelContainer" parent="Center/Panel/Layout/Body/PreviewBox"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Preview_frame")
+
+[node name="Preview" type="SubViewportContainer" parent="Center/Panel/Layout/Body/PreviewBox/Frame"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 440)
+layout_mode = 2
+stretch = true
+
+[node name="Viewport" type="SubViewport" parent="Center/Panel/Layout/Body/PreviewBox/Frame/Preview"]
+unique_name_in_owner = true
+own_world_3d = true
+transparent_bg = true
+handle_input_locally = false
+msaa_3d = 2
+size = Vector2i(320, 440)
+render_target_update_mode = 3
+
+[node name="PreviewName" type="Label" parent="Center/Panel/Layout/Body/PreviewBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 0)
+layout_mode = 2
+theme_type_variation = &"HintLabel"
+text = ""
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Buttons" type="HBoxContainer" parent="Center/Panel/Layout"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Note" type="Label" parent="Center/Panel/Layout/Buttons"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HintLabel"
+text = "Kept at once and sailed from the next start."
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="BackButton" type="Button" parent="Center/Panel/Layout/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+text = "Back"

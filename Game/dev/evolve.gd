@@ -510,7 +510,9 @@ static func _summary(generation: int, fitness: Array[float], order: Array[int], 
 func _note(brain: NeuralNet, run_name: String, generation: int, result: Result, sigma: float) -> void:
 	brain.obs_names = RaceObservation.names()
 	var twa_mode: bool = _env_options.actions == LearnedSkipper.ActionMode.TWA
-	brain.action_names = LearnedSkipper.TWA_ACTION_NAMES if twa_mode else LearnedSkipper.ACTION_NAMES
+	# As many names as the brain has outputs (the evolution's brains have three: no push).
+	var names: PackedStringArray = LearnedSkipper.TWA_ACTION_NAMES if twa_mode else LearnedSkipper.ACTION_NAMES
+	brain.action_names = names.slice(0, brain.output_count())
 	brain.meta = {
 		"course": RaceCourses.T1_NAME,
 		"run": run_name,

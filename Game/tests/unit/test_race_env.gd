@@ -7,7 +7,9 @@ extends GutTest
 ## limit, far from the course, or (if asked) when the board stops gaining; a board can be dropped
 ## at any step of the course and respawned for a new episode in the same race; and a hand-written
 ## wind-angle policy, answering as a network does in the "twa" mode, starts and rounds mark 1 within
-## 240 s (the ceiling a learner chases).
+## 240 s (the ceiling a learner chases). A fourth number is the push slider; three leave the pilot's
+## own margin. Every board's wind runs on the race's one clock, a board set down again too, so all
+## see the same gusts (RA13).
 ##
 ## The course is T1 for a wind from the west (270): the start line runs north and south through
 ## the origin, mark 1 lies 556 m to the west, and the boards wait 150 m east of the line, heading
@@ -297,6 +299,67 @@ func test_a_board_that_stops_gaining_is_done_when_asked() -> void:
 	assert_true(env.done(0), "done")
 	assert_true(env.board(0).stalled)
 	assert_true(env.time_s < 10.0, "a few seconds after it stopped gaining: %.1f s" % env.time_s)
+
+
+func test_a_fourth_number_is_the_push_slider_and_three_leave_the_pilots_own_margin() -> void:
+	var options: RaceEnv.Options = RaceEnv.Options.new()
+	options.actions = LearnedSkipper.ActionMode.TWA
+	var env: RaceEnv = RaceEnv.new(_course(), 2, 15.0, options)
+	env.reset(3)
+	env.act(0, PackedFloat32Array([0.3, 0.0, 0.0, 1.0]))
+	env.act(1, PackedFloat32Array([0.3, 0.0, 0.0]))
+	env.tick()
+	assert_eq(env.board(0).hands.push, 1.0, "the push output at 1: the slider at 100 %")
+	assert_eq(env.board(0).controller.push_level, 1.0, "on the controller's slider")
+	assert_almost_eq(env.board(0).controller.auto_sheet_pilot.hike_share, 1.6, 1e-6, "the ladder's top: the pull held 1.6")
+	assert_true(is_nan(env.board(1).hands.push), "three numbers: no push")
+	assert_almost_eq(env.board(1).controller.auto_sheet_pilot.hike_share, Autopilot.new().hike_share, 1e-6, "the pilot's own margin")
+	# What the board sees: the push it told the hands, and the pilot's level for the one that told none.
+	var names: PackedStringArray = RaceObservation.names()
+	assert_eq(env.observe(0)[names.find("pushing")], 1.0)
+	assert_almost_eq(env.observe(1)[names.find("pushing")], LearnedSkipper.pilot_margin_level(), 1e-6)
+	# Without the push option the fourth number is not read.
+	options.push = false
+	var plain: RaceEnv = RaceEnv.new(_course(), 1, 15.0, options)
+	plain.reset(3)
+	plain.act(0, PackedFloat32Array([0.3, 0.0, 0.0, 1.0]))
+	assert_true(is_nan(plain.board(0).hands.push))
+
+
+## Two boards in gusts (the patches, shifts too): a board set down again gets a new wind field, which
+## starts on the race's clock, not at nought, so after the next tick its field and the other's show
+## the same time, the same travel and the same gust at the same spot (RA13).
+func test_every_boards_wind_runs_on_the_races_one_clock_a_respawned_board_too() -> void:
+	var options: RaceEnv.Options = RaceEnv.Options.new()
+	options.actions = LearnedSkipper.ActionMode.TWA
+	options.gusts = true
+	options.shifts = true
+	var wind: WindConfig = (load(SettingsValues.WIND_DEFAULT_PATH) as WindConfig).duplicate()
+	wind.gust_patches = true
+	wind.gust_intensity = 0.4
+	options.wind = wind
+	var course: Course = _course()
+	var env: RaceEnv = RaceEnv.new(course, 2, 18.0, options)
+	env.reset(3)
+	for t: int in 600:
+		env.tick()
+	var a: WindField = env.board(0).sim.wind
+	assert_true(a.uses_patches(), "gusts as patches")
+	assert_almost_eq(a.time_s, 10.0, 1e-6, "ten seconds on")
+	assert_true(a.travel_m > 50.0, "the air has travelled: %.1f m" % a.travel_m)
+	env.respawn(1, RaceEnv.Drop.at(course.mark("1").position + Vector2(300.0, 0.0), 225.0, 1), 9)
+	var b: WindField = env.board(1).sim.wind
+	assert_ne(b, a, "a new field for the new board")
+	assert_eq(b.time_s, a.time_s, "the new field starts on the race's clock")
+	env.tick()
+	assert_eq(b.time_s, a.time_s, "and stays on it")
+	assert_eq(b.travel_m, a.travel_m, "the same air travelled")
+	var spot: Vector3 = Vector3(course.mark("1").position.x + 120.0, 10.0, course.mark("1").position.y - 40.0)
+	assert_eq(b.patch_unit_at(spot), a.patch_unit_at(spot), "the same gust at the same spot")
+	assert_eq(b.velocity_at(spot), a.velocity_at(spot), "the same wind there")
+	# Without the clock a field made now would be ten seconds behind: its gusts somewhere else.
+	var late: WindField = WindField.new(env.board(0).sim.wind_config)
+	assert_ne(late.patch_unit_at(spot), a.patch_unit_at(spot), "a field on its own clock sees another gust")
 
 
 func test_a_dropped_board_starts_at_its_step_and_a_respawn_begins_a_new_episode() -> void:

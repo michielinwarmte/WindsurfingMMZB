@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="GearItem" format=3]
+
+[ext_resource type="Script" path="res://gear/gear_item.gd" id="1"]
+[ext_resource type="Resource" path="res://gear/brands/pj_new_sealand.tres" id="2"]
+[ext_resource type="Resource" path="res://config/board_default.tres" id="3"]
+
+[resource]
+script = ExtResource("1")
+kind = 0
+brand = ExtResource("2")
+model_name = "Selkie"
+line = 0
+size = 117.0
+description = "The default board: 72 cm wide, quick onto the plane and fast on a reach."
+wind_from_kt = 12.0
+wind_to_kt = 25.0
+config = ExtResource("3")

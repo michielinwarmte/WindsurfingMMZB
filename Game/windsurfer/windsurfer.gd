@@ -24,6 +24,10 @@ var environment: EnvironmentConfig = null
 ## this node is ready.
 var wind_config: WindConfig = null
 var wave_set_config: WaveSetConfig = null
+## The board, sail and fin this board sails and shows (the gear page's choice, GearChoice). null =
+## the default gear of Game/config/ (the AI fleet's boards). The sailing scene (main.gd) sets it
+## from the player's settings before this node is ready.
+var gear: GearChoice = null
 
 var sim: WindsurferSim
 var controls: SimControls = SimControls.new()
@@ -74,6 +78,9 @@ var _effects: WindsurferEffects
 
 func _ready() -> void:
 	sim = WindsurferSim.create_for(environment if environment != null else EnvironmentConfig.new(), true, own_config_copies)
+	if gear != null:
+		# The same place, wind and sea on the chosen board, sail and fin (copies of their numbers).
+		sim = gear.sim_with(sim)
 	if wind_config != null or wave_set_config != null:
 		set_sea(wind_config, wave_set_config)
 	controller.set_sail(sim.sail, sim.sailor_config, sim.air_density_kg_m3)
@@ -243,7 +250,7 @@ func _build_visuals() -> void:
 	_rig = RigVisuals.new()
 	_rig.name = "Rig"
 	add_child(_rig)
-	_rig.build(sim.board_config, sim.sail_config, sim.fin_config)
+	_rig.build(sim.board_config, sim.sail_config, sim.fin_config, gear)
 	_figure = SailorFigure.new()
 	_figure.name = "SailorFigure"
 	add_child(_figure)

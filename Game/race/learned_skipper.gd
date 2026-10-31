@@ -19,6 +19,11 @@ extends RaceSkipper
 ## In the wind-angle mode a brain whose third output is called "hold" (the trainer's brains since
 ## F5) uses it for the hands' hold-back skill (AI_FLEET_PLAN.md, D1): above 0 the sheet is eased
 ## until the board sails no faster than hold_from_output() says, down to 1.5 m/s at 1.
+## A brain with an output called "push" (the trainer's brains since Session 64, ROADMAP RA12) sets
+## the push slider with it at every decision (AiHands.push, from 0 at -1 to 1 at 1:
+## push_from_output()): how hard the sailor commits, so a brain can push on flat water and ease in
+## waves and gusts. A brain without one leaves AiHands.push at NaN: the pilot's own margin, as
+## before the slider. The outputs are found by their names in the brain file, like the inputs.
 ##
 ## The trainer (RaceEnv) uses the same Driver as here, so a brain sails in the game exactly as it
 ## sailed in training.
@@ -39,7 +44,11 @@ const ACTION_NAMES: PackedStringArray = ["steer", "sheet", "tack"]
 ## The names of the outputs in the wind-angle mode: the wind angle, the sheet, and the hold-back
 ## speed (the night's first brains had "unused" there and never hold back).
 const HOLD: int = 2
-const TWA_ACTION_NAMES: PackedStringArray = ["twa", "sheet", "hold"]
+## The fourth output in the trainer's brains since Session 64: the push slider (RA12).
+const PUSH: int = 3
+const TWA_ACTION_NAMES: PackedStringArray = ["twa", "sheet", "hold", "push"]
+## The name of the push output (a brain's outputs are found by name: push_index_of()).
+const PUSH_NAME: String = "push"
 ## The hold-back speed for a hold output just above 0 (as good as no hold) and at 1 (the controller's
 ## slowest, where the board still steers), m/s.
 const HOLD_FASTEST_MS: float = 8.0
@@ -83,6 +92,9 @@ class Driver:
 	var hands: AiHands
 	## Wind-angle mode: whether the third output is the hold-back speed (uses_hold_of()).
 	var uses_hold: bool = false
+	## Wind-angle mode: which output is the push slider (push_index_of()); -1 for none, and then
+	## the hands' push is left alone (NaN: the pilot's own margin).
+	var push_index: int = -1
 	## Wind-angle mode: the angle the last decision asked for (degrees, positive from starboard),
 	## and whether there has been a decision yet.
 	var wanted_twa_deg: float = 0.0
@@ -106,6 +118,8 @@ class Driver:
 		hands.sheet = LearnedSkipper.sheet_from_output(action[SHEET])
 		if uses_hold:
 			hands.hold_speed_ms = LearnedSkipper.hold_from_output(action[HOLD]) if action.size() > HOLD else 0.0
+		if push_index >= 0 and action.size() > push_index:
+			hands.push = LearnedSkipper.push_from_output(action[push_index])
 		has_wish = true
 
 	## Every tick, before the controller's update (wind-angle mode only; the stick mode's hands stay
@@ -129,6 +143,10 @@ class Driver:
 			since_tack_request_s = 0.0
 			return
 		hands.steer = LearnedSkipper.steer_toward_twa(telemetry.twa_deg, tack, off_wind_deg)
+
+
+## pilot_margin_level() on the game's ladder, once worked out.
+static var _default_pilot_margin_level: float = NAN
 
 
 ## The brain, and with it how often it decides (its note's decision_ticks, if it has one).
@@ -158,6 +176,8 @@ var _others_positions: PackedVector2Array = PackedVector2Array()
 var _others_velocities: PackedVector2Array = PackedVector2Array()
 ## Ticks until the next decision; 0 decides on the next update.
 var _ticks_to_decision: int = 0
+## The sea's height where this board sails (RaceObservation.sea_height_m()), taken at setup().
+var _sea_height_m: float = 0.0
 var _since_manoeuvre_s: float = RaceObservation.SINCE_MANOEUVRE_SCALE_S
 ## The last answer of the brain, for the HUD and the tests.
 var last_action: PackedFloat32Array = PackedFloat32Array([0.0, 0.0, 0.0])
@@ -174,6 +194,7 @@ func setup(sim: WindsurferSim, controller: PlayerController, hands: AiHands, rac
 	_race = race
 	_index = index
 	_wind = sim.wind if sim != null else null
+	_sea_height_m = RaceObservation.sea_height_m(sim) if sim != null else 0.0
 	_controller.hands = _hands
 	_ticks_to_decision = 0
 	_since_manoeuvre_s = RaceObservation.SINCE_MANOEUVRE_SCALE_S
@@ -235,8 +256,10 @@ func _decide(telemetry: Telemetry, in_manoeuvre: bool) -> void:
 		return
 	_driver.mode = mode_of(brain)
 	_driver.uses_hold = uses_hold_of(brain)
+	_driver.push_index = push_index_of(brain) if _driver.mode == ActionMode.TWA else -1
 	var observation: PackedFloat32Array = RaceObservation.build(telemetry, _race, _index, _wind,
-			_others_positions, _others_velocities, in_manoeuvre, _since_manoeuvre_s, _driver.wanted_twa_deg, _hands.hold_speed_ms)
+			_others_positions, _others_velocities, in_manoeuvre, _since_manoeuvre_s, _driver.wanted_twa_deg, _hands.hold_speed_ms,
+			_hands.push, _sea_height_m)
 	# The brain's inputs by name: a brain from before a number was added still sails.
 	last_action = brain.forward(brain.select_inputs(observation, RaceObservation.names()))
 	_driver.decide(last_action, in_manoeuvre)
@@ -262,6 +285,46 @@ static func mode_name(mode: ActionMode) -> String:
 ## Whether a brain's third output is the hold-back speed: its outputs' names say so.
 static func uses_hold_of(net: NeuralNet) -> bool:
 	return net.action_names.size() > HOLD and net.action_names[HOLD] == "hold"
+
+
+## Which output of a brain is the push slider: the one called PUSH_NAME; -1 when it has none (the
+## brains made before Session 64), and then the hands' push stays NaN.
+static func push_index_of(net: NeuralNet) -> int:
+	return net.action_names.find(PUSH_NAME)
+
+
+## The push slider's level (0 to 1, PlayerController.push_level) for a push output (-1 to 1, as
+## every output): straight from 0 at -1 to 1 at 1, so 0 is the slider's middle (cruising).
+static func push_from_output(output: float) -> float:
+	return clampf(0.5 * (output + 1.0), 0.0, 1.0)
+
+
+## The push output that gives a slider level (push_from_output() turned round).
+static func output_for_push(level: float) -> float:
+	return 2.0 * clampf(level, 0.0, 1.0) - 1.0
+
+
+## The slider level that asks the autopilot for its own margin, the one the AI boards sail with
+## AiHands.push at NaN: where the push curve's pull held (hike_share) reaches the pilot's default
+## (1.1, between "neutral" at 75 % and 85 %: about 78 %). A fresh policy's push starts here, so
+## the training begins where the fleet sails today. The slider also sets what the pilot leaves at
+## its defaults (at 78 % about 1 degree more rig lean and up to 3 degrees of rail for the sea); the
+## pull is the lever that pays (push_curve_default.tres).
+static func pilot_margin_level(curve: PushCurveConfig = null) -> float:
+	if curve == null:
+		# The game's ladder: worked out once (every observation asks for it).
+		if is_nan(_default_pilot_margin_level):
+			_default_pilot_margin_level = pilot_margin_level(PushDial.default_curve())
+		return _default_pilot_margin_level
+	var ladder: PushCurveConfig = curve
+	var wanted: float = Autopilot.new().hike_share
+	var n: int = mini(ladder.levels.size(), ladder.hike_share.size())
+	for i: int in range(1, n):
+		var low: float = ladder.hike_share[i - 1]
+		var high: float = ladder.hike_share[i]
+		if wanted >= low and wanted <= high and high > low:
+			return lerpf(ladder.levels[i - 1], ladder.levels[i], (wanted - low) / (high - low))
+	return PushDial.NEUTRAL
 
 
 ## The hold-back speed (m/s) for a hold output: none at 0 or below; from HOLD_FASTEST_MS just above
