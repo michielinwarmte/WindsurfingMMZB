@@ -28,6 +28,19 @@ var step_forward: float = 0.0
 ## The sailor's balance reflex: lean against the heel and the sail's heeling moment.
 ## Part of the sailor model, on by default (PHYSICS_SPEC.md section 15).
 var balance_reflex: bool = true
+## The back foot against the fin (PH35, the push slider): which foot carries the sideways hold
+## against the sail's pull into the hull, once the feet are in the straps. 0 = the feet's
+## pressure point between the straps, as before; +1 = the back foot pushes it all to leeward
+## against its strap (the tail goes to leeward, the bow to windward, the fin carries more of the
+## side force); -1 = the front foot does. The sailor's weight does not move with it.
+var back_foot_push: float = 0.0
+## The technique's own targets, moved by the rider (PH3, the push slider): degrees added to the
+## bank the feet aim for while planing in the straps (the leeward rail down is positive), to the
+## trim the feet press for, and to the rig's lean toward the sailor at full hike. 0 = the
+## technique as in SailorConfig, bit for bit.
+var rail_bank_extra_deg: float = 0.0
+var trim_aim_extra_deg: float = 0.0
+var rig_lean_extra_deg: float = 0.0
 
 
 func duplicate_controls() -> SimControls:
@@ -40,6 +53,10 @@ func duplicate_controls() -> SimControls:
 	copy.hold_side = hold_side
 	copy.step_forward = step_forward
 	copy.balance_reflex = balance_reflex
+	copy.back_foot_push = back_foot_push
+	copy.rail_bank_extra_deg = rail_bank_extra_deg
+	copy.trim_aim_extra_deg = trim_aim_extra_deg
+	copy.rig_lean_extra_deg = rig_lean_extra_deg
 	return copy
 ## Testing aid: when true the sailor stops moving fore and aft (stance and hang-back hold
 ## still) while still balancing sideways, so a scenario can show whether the board's pitch

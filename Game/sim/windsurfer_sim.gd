@@ -298,6 +298,13 @@ var _controls_hold_side: int = 0
 var _controls_step_forward: float = 0.0
 var _controls_balance_reflex: bool = true
 var _controls_freeze_fore_aft: bool = false
+var _controls_back_foot_push: float = 0.0
+var _controls_rail_bank_extra_deg: float = 0.0
+var _controls_trim_aim_extra_deg: float = 0.0
+var _controls_rig_lean_extra_deg: float = 0.0
+## The yaw moment of the back foot's push against the fin on the hull this substep, N m, body y
+## (positive turns the bow to port); 0 with the control at 0 (_back_foot_yaw_nm).
+var back_foot_yaw_nm: float = 0.0
 
 
 func _init(board: BoardConfig, sail_cfg: SailConfig, fin_cfg: FinConfig, sailor_cfg: SailorConfig,
@@ -581,6 +588,10 @@ func _read_controls(controls: SimControls) -> void:
 	_controls_step_forward = controls.step_forward
 	_controls_balance_reflex = controls.balance_reflex
 	_controls_freeze_fore_aft = controls.freeze_fore_aft
+	_controls_back_foot_push = controls.back_foot_push
+	_controls_rail_bank_extra_deg = controls.rail_bank_extra_deg
+	_controls_trim_aim_extra_deg = controls.trim_aim_extra_deg
+	_controls_rig_lean_extra_deg = controls.rig_lean_extra_deg
 
 
 ## The hull's mass and inertia, with the water it drags along (the added inertias of the
@@ -805,7 +816,11 @@ func _fin_load_bank_rad(asked: float) -> float:
 	var in_the_straps: float = clampf(stance, 0.0, 1.0)
 	var not_turning: float = 1.0 - clampf(absf(asked), 0.0, 1.0)
 	var planing_stance: float = absf(clampf(lean, -1.0, 1.0)) * in_the_straps * not_turning
-	var aim: float = deg_to_rad(_rail_bank_deg_by_point_of_sail()) * planing_stance
+	# The rider's own rail on top of the technique's (SimControls.rail_bank_extra_deg, PH3).
+	var aim_deg: float = _rail_bank_deg_by_point_of_sail()
+	if _controls_rail_bank_extra_deg != 0.0:
+		aim_deg += _controls_rail_bank_extra_deg
+	var aim: float = deg_to_rad(aim_deg) * planing_stance
 	var feet_reach: float = 2.0 * _feet_moment_max_nm / _feet_roll_stiffness_nm_per_rad * planing_stance
 	return -signf(lean) * clampf(aim - _felt_heel_beyond_rad, aim - feet_reach, aim)
 
@@ -856,6 +871,15 @@ func _running_trim_target_deg(forward_speed: float) -> float:
 	var span: float = _running_trim_fastest_speed_ms - slow
 	var share: float = clampf((forward_speed - slow) / span, 0.0, 1.0) if span > 0.0 else (1.0 if forward_speed >= slow else 0.0)
 	return lerpf(_running_trim_deg, _running_trim_fast_deg, share)
+
+
+## The trim the feet press for: the technique's by speed, plus what the rider asks on top
+## (SimControls.trim_aim_extra_deg, PH3: the push slider's "more trim"; 0 = the technique's).
+func _trim_aim_deg(forward_speed: float) -> float:
+	var aim: float = _running_trim_target_deg(forward_speed)
+	if _controls_trim_aim_extra_deg != 0.0:
+		aim += _controls_trim_aim_extra_deg
+	return aim
 
 
 ## Feels how far the board heels past the bank the sailor works toward, on the side away
@@ -1018,7 +1042,12 @@ func _set_posture() -> void:
 ## it over), and the arms tilt it further or back within their reach (the controls' tilt of
 ## this tick).
 func _rig_lean_rad() -> float:
-	var hanging: float = lean * deg_to_rad(_max_rig_lean_deg)
+	# The rider leans the rig further to windward when powered (SimControls.rig_lean_extra_deg,
+	# PH3: the push slider's lean; 0 = the config's max_rig_lean_deg).
+	var max_lean_deg: float = _max_rig_lean_deg
+	if _controls_rig_lean_extra_deg != 0.0:
+		max_lean_deg += _controls_rig_lean_extra_deg
+	var hanging: float = lean * deg_to_rad(max_lean_deg)
 	# Hooked in on a short line (harness_line_m), the body holds the boom within the line's
 	# length: the rig leans out with the hike as far as that takes, blending in as the sailor
 	# hooks in.
@@ -1120,7 +1149,7 @@ func _update_sailor(dt: float) -> void:
 			# Only as far as the board is planing: standing on the tail of a board that has
 			# dropped off the plane sinks the stern and rears the nose.
 			# The trim aimed for falls with the speed (_running_trim_target_deg).
-			var trim_target_deg: float = _running_trim_target_deg(forward_speed)
+			var trim_target_deg: float = _trim_aim_deg(forward_speed)
 			press_target = clampf((trim_target_deg - rad_to_deg(body.pitch_rad())) / _trim_press_band_deg, -1.0, 1.0) * _trim_press_max_m * clampf(hull.planing_ratio, 0.0, 1.0)
 		if not _controls_freeze_fore_aft:
 			trim_press_m = move_toward(trim_press_m, press_target, _trim_press_rate_ms * dt)
@@ -1234,7 +1263,7 @@ func _front_foot_couple_nm(trimming: bool, forward_speed: float) -> float:
 	if not trimming or stance < 1.0 or _strap_spread_m <= 0.0:
 		return 0.0
 	var felt_deg: float = felt_trim_deg if _trim_feel_time_s > 0.0 else rad_to_deg(body.pitch_rad())
-	var below_aim: float = clampf((_running_trim_target_deg(forward_speed) - felt_deg) / _trim_press_band_deg, 0.0, 1.0)
+	var below_aim: float = clampf((_trim_aim_deg(forward_speed) - felt_deg) / _trim_press_band_deg, 0.0, 1.0)
 	return below_aim * _front_foot_pull_held_n * _strap_spread_m
 
 
@@ -1292,7 +1321,7 @@ func _trim_by_feel(trimming: bool, forward_speed: float, dt: float) -> void:
 		trim_press_m = move_toward(trim_press_m, 0.0, _trim_press_release_ms * dt)
 		return
 	var reach_m: float = _trim_press_max_m * clampf(hull.planing_ratio, 0.0, 1.0)
-	var aim: float = clampf((_running_trim_target_deg(forward_speed) - felt_trim_deg) / _trim_press_band_deg, -1.0, 1.0)
+	var aim: float = clampf((_trim_aim_deg(forward_speed) - felt_trim_deg) / _trim_press_band_deg, -1.0, 1.0)
 	var chatter: float = clampf((felt_bounce_dps - _bounce_tolerance_dps) / _bounce_tolerance_dps, 0.0, 1.0)
 	# Easing off on a chatter wins over the aim while the board rides at or above the trim aimed
 	# for: a board that porpoises with its nose up goes forward. Riding well below the aim (a band
@@ -1498,6 +1527,11 @@ func _apply_leg_forces(dt: float) -> void:
 
 	leg_force_world = hold + knees
 	feet_moment_world = moment_to_deck + roll_axis * (roll_passed - residual) + across_axis * (pitch_passed - pitch_residual)
+	# The back foot against the fin (PH35): the sideways hold enters the hull at the foot the rider
+	# chooses, a yaw couple on the hull and nothing else (_back_foot_yaw_nm).
+	back_foot_yaw_nm = _back_foot_yaw_nm(hold)
+	if back_foot_yaw_nm != 0.0:
+		feet_moment_world += body.up_axis() * back_foot_yaw_nm
 	sailor.add_force(leg_force_world)
 	body.add_force_at(feet_world, -leg_force_world)
 	body.add_torque(feet_moment_world)
@@ -1506,6 +1540,33 @@ func _apply_leg_forces(dt: float) -> void:
 
 	knee_bend_m = along
 	leg_sway_m = 0.0
+
+
+## The back foot against the fin (PH35, the push slider; sailor_controls_plan.md P1.2 and P4.1).
+## The sailor's sideways hold against the sail's pull goes into the hull through the feet, at
+## the feet's pressure point between the straps (feet_body). A rider in the straps chooses which
+## foot carries it: pushing the back foot to leeward against its strap while the front foot
+## pulls to windward moves the sideways force's entry aft, to the back strap; the other way
+## round, forward to the front strap. The force is the same, so the body's balance and the
+## board's heel and trim are untouched; what changes is the yaw couple on the hull: the tail is
+## pushed to leeward and the bow to windward (with the back foot), and the fin, under the back
+## foot, carries more of the side force and the rails less, so its angle of attack rises and
+## with it its lift and the upward part of its lift. Too far and the fin stalls (the soft
+## spin-out of today; PH6 is the sudden one). The bound is the straps: the whole sideways hold on
+## one foot and no more (SimControls.back_foot_push, -1 the front foot to +1 the back foot), and
+## only as far as the feet are in the straps (the stance). The moment about body y of the hull's
+## share of the hold (-hold, the pull passed on) moved from the feet's point to the strap: the
+## entry's distance aft times the force to starboard. Positive turns the bow to port. 0 = as
+## before, bit for bit.
+func _back_foot_yaw_nm(hold_world: Vector3) -> float:
+	var push: float = clampf(_controls_back_foot_push, -1.0, 1.0)
+	if push == 0.0 or _strap_spread_m <= 0.0:
+		return 0.0
+	var in_the_straps: float = clampf(stance, 0.0, 1.0)
+	var entry_z: float = _back_strap_z_m if push > 0.0 else _front_strap_z_m
+	var shift_m: float = (entry_z - feet_body.z) * absf(push) * in_the_straps
+	var side_n: float = -body.to_body(hold_world).x
+	return shift_m * side_n
 
 
 ## The harness line as a rope between the hips and the boom. Its length is what the
@@ -1707,6 +1768,9 @@ func _fill_telemetry(controls: SimControls) -> void:
 	t.felt_heel_deg = rad_to_deg(_felt_heel_rad())
 	t.lean = lean
 	t.rail_press = rail_press
+	t.back_foot_push = _controls_back_foot_push
+	t.back_foot_yaw_nm = back_foot_yaw_nm
+	t.trim_aim_deg = _trim_aim_deg(-body.to_body(body.velocity).z)
 	t.hang_back_m = hang_back_m
 	t.knee_bend_m = knee_bend_m
 	t.leg_sway_m = leg_sway_m

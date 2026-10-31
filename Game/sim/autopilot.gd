@@ -49,6 +49,14 @@ var lean_share: float = 0.0
 ## reach, about 110 degrees.
 var lean_share_twa_max_deg: float = 110.0
 var lean_share_fade_deg: float = 25.0
+## The legs in the course hold (PH35, the push slider): how much of the helm toward the wind
+## the back foot carries by pushing the sideways hold to leeward against its strap (Helm), and a
+## push held on top of the steering, the slider's "load the fin" (0 to 1). Both 0: as before.
+var legs_share: float = 0.0
+var back_foot_bias: float = 0.0
+## The sail trimmed between luffing (0) and the most drive (1), for the push slider's lower half
+## (0 %: the sail let fly, the board stops; 50 %: the full drive). 1 = as before, bit for bit.
+var drive_share: float = 1.0
 ## How the steady part of the course hold is carried (U1.6). Off: the helm moves the rake
 ## and the rig's sideways tilt together (Helm.steer), so the heading-up helm a planing reach
 ## needs also tilts the rig to leeward: on the 18 kt beam reach it leans 10 degrees to
@@ -208,13 +216,18 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		# Heading up is a right turn on starboard tack and a left turn on port tack.
 		var pivot: bool = Helm.pivoting(telemetry, controls, 30.0)
 		var rail_share: float = lean_share * _rail_share_by_point_of_sail(telemetry)
+		# The legs steer only in the straps, which the sim sees to; while pivoting through the
+		# wind the feet are out of them and the push is left off.
 		if trim_with_rake_first and not pivot:
-			Helm.hold_rake_first(controls, head_up, correction, tack, rail_share, dt, rake_rate_per_s)
+			Helm.hold_rake_first(controls, head_up, correction, tack, rail_share, dt, rake_rate_per_s, legs_share, back_foot_bias)
 		else:
-			Helm.steer(controls, clampf(head_up, -1.0, 1.0) * tack, tack, 0.0 if pivot else rail_share, dt, rake_rate_per_s, 0.0 if pivot else 1.0)
+			Helm.steer(controls, clampf(head_up, -1.0, 1.0) * tack, tack, 0.0 if pivot else rail_share, dt, rake_rate_per_s, 0.0 if pivot else 1.0, 0.0 if pivot else legs_share, 0.0 if pivot else back_foot_bias)
 	if trim_sheet:
 		_feel_the_pull(telemetry, dt)
 		var alpha_deg: float = minf(best_alpha_deg(deg_to_rad(telemetry.awa_deg), _sail_pressure_pa(telemetry)), max_alpha_deg)
+		# The slider's lower half: the sail eased on purpose between luffing and the most drive.
+		if drive_share < 1.0:
+			alpha_deg = lerpf(min_alpha_deg, alpha_deg, clampf(drive_share, 0.0, 1.0))
 		# Leeward heel is heel away from the wind: negative on starboard tack (wind from
 		# starboard). The bank the sailor holds on purpose (carving) is not overpowering:
 		# only the heel beyond it counts. The felt version adds the push of a sustained
