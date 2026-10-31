@@ -275,6 +275,69 @@ func test_the_default_board_model_is_stretched_to_another_board() -> void:
 	assert_almost_eq((rig.get_node("Board") as Node3D).scale, expected, Vector3.ONE * 1e-6)
 
 
+# --- The page --------------------------------------------------------------------------------
+
+func test_the_page_shows_the_brands_and_keeps_a_choice_at_once() -> void:
+	var page: GearPage = (load("res://ui/gear_page.tscn") as PackedScene).instantiate()
+	add_child_autofree(page)
+	page.open()
+	page.show_tab("sail")
+	assert_eq(page.find_children("Brand_*", "Button", true, false).size(), 6 + 7 + 1, "the brands of every tab")
+	var chosen_card: Button = page.find_child("Item_" + GearCatalogue.DEFAULT_SAIL_ID, true, false) as Button
+	assert_not_null(chosen_card, "the chosen sail's brand is shown")
+	assert_true(chosen_card.button_pressed, "the chosen sail is lit")
+	# Another brand, then its sail.
+	(page.find_child("Brand_southsails", true, false) as Button).pressed.emit()
+	await wait_frames(1)
+	var card: Button = page.find_child("Item_" + SAIL_6_5_ID, true, false) as Button
+	assert_not_null(card, "the brand's models are shown")
+	card.pressed.emit()
+	assert_eq(GameSettings.values.gear_sail, SAIL_6_5_ID, "kept in the settings at once")
+	assert_almost_eq(RigVisuals.fit_sail(load("res://config/sail_6_5.tres"), RigVisuals.MODEL_SAIL).x, 1.95 / 2.2, 1e-6)
+	var rig: RigVisuals = page.preview_rig()
+	assert_not_null(rig, "a preview")
+	var cloth: ShaderMaterial = rig.sail_cloth().get_surface_override_material(0) as ShaderMaterial
+	assert_eq(cloth.get_shader_parameter("sail_tint"), Brand.find("southsails").primary, "the preview in the brand's cloth")
+	page.close()
+
+
+func test_the_page_can_be_walked_with_the_keyboard() -> void:
+	var page: GearPage = (load("res://ui/gear_page.tscn") as PackedScene).instantiate()
+	add_child_autofree(page)
+	page.open()
+	var back: Button = page.get_node("%BackButton")
+	for tab: String in ["board", "sail", "fin"]:
+		page.show_tab(tab)
+		await wait_frames(2)
+		var at: Control = page.first_focus()
+		var steps: int = 0
+		var passed_a_card: bool = false
+		while at != null and at != back and steps < 20:
+			at = at.find_valid_focus_neighbor(SIDE_BOTTOM)
+			passed_a_card = passed_a_card or (at != null and at.name.begins_with("Item_"))
+			steps += 1
+		assert_eq(at, back, tab + ": Down from the tabs reaches Back")
+		assert_true(passed_a_card, tab + ": past a model's card")
+
+
+func test_the_start_menu_sails_the_gear_chosen_on_its_page() -> void:
+	var menu: Node = (load("res://ui/start_menu.tscn") as PackedScene).instantiate()
+	add_child_autofree(menu)
+	(menu.get_node("%GearButton") as Button).pressed.emit()
+	var page: GearPage = menu.get_node("%Gear")
+	assert_true(page.visible, "the Gear button opens the page")
+	(page.find_child("Brand_southsails", true, false) as Button).pressed.emit()
+	(page.find_child("Item_" + SAIL_6_5_ID, true, false) as Button).pressed.emit()
+	page.close()
+	await wait_frames(1)
+	var windsurfer: WindsurferNode = menu.get_node("Sailing/Windsurfer")
+	assert_almost_eq(windsurfer.sim.sail_config.area_m2, 6.5, 1e-6, "the scene behind the menu sails the new sail")
+	assert_true(windsurfer.use_autopilot, "still behind the menu")
+	assert_eq(menu.get_node("Sailing").get_index(), 0, "in the old one's place, under the menu")
+	(menu.get_node("%OpenWaterButton") as Button).pressed.emit()
+	assert_false(windsurfer.use_autopilot, "and the player sails it")
+
+
 # --- Helpers ---------------------------------------------------------------------------------
 
 ## Every stored number of two configs is the same.

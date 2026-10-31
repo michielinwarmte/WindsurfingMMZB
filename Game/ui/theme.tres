@@ -1,9 +1,10 @@
 [gd_resource type="Theme" format=3]
 
-; The menus' look (start menu, pause menu, settings, controls). Set on each menu's root
+; The menus' look (start menu, pause menu, settings, controls, gear). Set on each menu's root
 ; Control, not project-wide, so the HUD and the map track's panels keep their own look.
 ; Colours: deep sea blue panels, white text, the HUD's sky-blue (wind arrow) for sliders and
 ; the selected tab, and its orange (board triangle) for the keyboard/gamepad focus outline.
+; CardTitleLabel and CardTextLabel are the gear page's cards' two lines of text.
 
 [sub_resource type="SystemFont" id="Font_body"]
 font_names = PackedStringArray("Fira Sans", "Cantarell", "Noto Sans", "Ubuntu", "Segoe UI", "Helvetica Neue", "DejaVu Sans", "sans-serif")
@@ -238,6 +239,13 @@ default_font_size = 20
 BigButton/base_type = &"Button"
 BigButton/font_sizes/font_size = 24
 BigButton/fonts/font = SubResource("Font_bold")
+CardTextLabel/base_type = &"Label"
+CardTextLabel/colors/font_color = Color(0.7, 0.79, 0.88, 1)
+CardTextLabel/font_sizes/font_size = 14
+CardTitleLabel/base_type = &"Label"
+CardTitleLabel/colors/font_color = Color(1, 1, 1, 1)
+CardTitleLabel/font_sizes/font_size = 17
+CardTitleLabel/fonts/font = SubResource("Font_bold")
 Button/colors/font_color = Color(0.93, 0.96, 1, 1)
 Button/colors/font_disabled_color = Color(0.93, 0.96, 1, 0.35)
 Button/colors/font_focus_color = Color(1, 1, 1, 1)
