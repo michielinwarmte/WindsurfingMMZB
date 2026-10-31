@@ -14,8 +14,8 @@ extends SceneTree
 ## Arguments after "--": [--winds=12,18,24] [--twa=100] [--from=40] [--hold=8] [--legs=<share>]
 ## [--push=<level>] [--waves=0] [--gusts=0] [--pilot.<field>=<n>] [--sailor.<field>=<n>]
 ## [--controller.<field>=<n>] [--out=<csv>] [--label=<text>] [--trace=1] (a per-tick CSV of every
-## case next to the results, from 2 s before the stick goes over: the helm, the yaw moments by
-## source, the sail, the fin, the speed) [--probe=<rake|legs|rail>:<step>] (the physics alone: at
+## case next to the results, from 2 s before the stick goes over or from --trace_from=<s>: the helm,
+## the yaw moments by source, the sail, the fin, the speed) [--probe=<rake|legs|rail>:<step>] (the physics alone: at
 ## --from the helm is frozen where the controller left it (the auto-sheet keeps trimming) and one
 ## lever is stepped toward the turn: the rake by <step> of its range (+ is the rig back), the back
 ## foot's push to <step>, the weight on the inside rail to <step>. The line then also gives the
@@ -138,7 +138,7 @@ func _run_case(wind_kt: float, direction: float) -> SteerResult:
 			controls.back_foot_push = held.back_foot_push
 		sim.step(DT, controls)
 		t = sim.telemetry
-		if trace != null and t.time_s >= from_s - 2.0:
+		if trace != null and t.time_s >= _options.get("trace_from", str(from_s - 2.0)).to_float():
 			_trace_row(trace, t, controller, controls, heading0 if over else t.heading_deg, direction)
 		if not over:
 			continue
