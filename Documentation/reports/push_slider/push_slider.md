@@ -71,9 +71,23 @@ Each lever alone on top of 75 %, 150 s per case, at 18 and 24 kt. The speed made
 
 So the ladder above 75 % is the pull with the lean, a little rail and trim at the top for the broad reaches, and no held fin push. The 24 kt broad reach is the one course the rail and the trim help and the pull does not (the sail is eased there, its pull mostly forward; the autopilot suite found the same).
 
-## 5. The rungs' safety (round 2) and the sheet
+## 5. The rungs' safety, the rail for the sea, and the sheet
 
-(To be filled from `r2_*`: the falls per 300 s at 75, 85, 95 and 100 % and at 75 % with the rail at 5°, on flat water, the default sea and twice the height, at gusts 0.2 and 0.3; the sheet's mean by level.)
+`tools/push_check.sh`, 300 s per case, 18 and 24 kt on 48 to 150°, flat water, the default sea and the sea at twice its height, at gusts 0.2 and 0.3: 72 cases a rung, six hours of sailing each. The falls, flat / the default sea / twice the height:
+
+| Rung | Round 2: the ladder alone (`r2_*`) | Round 3: with the rail for the sea (`r3_*`, the merged code) | Final (`r4_*`, the sea rail 1° at 95 %, none at 100 %) |
+|---|---|---|---|
+| 75 % | 0 / 3 / 8 = 11 | **0 / 2 / 3 = 5** | as round 3 |
+| 85 % | 1 / 2 / 17 = 20 | **0 / 1 / 12 = 13** | as round 3 |
+| 95 % | 0 / 3 / 19 = 22 | 1 / 10 / 37 = 48 | (round 4) |
+| 100 % | 0 / 7 / 37 = 44 | 0 / 7 / 48 = 55 | (round 4) |
+| 75 % with the rail at 5° held always | 0 / 2 / 3 = 5, and -5 % on flat water | | |
+
+**The rail for the sea.** A rail held always makes 75 % safe in waves but costs 5 % on flat water (round 2's last row), so the sailor rails only when it gets wild: the bounce felt is the pitch rate's RMS over 3 s (measured at 75 %: 1 to 3°/s on flat water, 6 to 8 on the default sea, 12 to 14 at twice its height), no extra rail below 4°/s, 3° from 12°/s (`Autopilot.wave_rail_deg`, the ladder's `wave_rail_deg`). It halves the falls at 75 and 85 % and costs nothing on flat water (the 75 % flat-water speeds the same to 0.1 m/s). What remains at 75 %: the 24 kt broad reach on the default sea, one fall in 300 s at each gust strength, and three falls at twice the height (the 24 kt beam reach and broad reach in gusts of 0.3); nothing at 18 kt, nothing on flat water. The goal's "at most one fall in 600 s per case" is met everywhere but that 24 kt broad reach in waves, the sim's known catapult case (PH17).
+
+**Stacked on the top rungs it did the opposite.** At 95 % the sea's 3° on top of the ladder's degree, with the pull at 1.5 and the rig leaned 32°, tipped the 24 kt upwind board over in waves: five falls in 300 s on the default sea and eight at twice the height, none with the sea rail off, and 20 % faster without it (`.sim_output/push/p95_*`). So the sea rail is 3° up to 85 %, 1° at 95 % and none at 100 %: fully pushing, the sailor does not ease for the sea, which is Michiel's ladder ("a crash likely"; "pushing hard in higher waves is riskier").
+
+**The sheet.** On the planing courses the sheet's mean is 0.81 at 75 % and 0.85 at 100 % on flat water (the boom 13 to 11° off its stop), 0.78 to 0.81 on the default sea, 0.72 to 0.75 at twice the height. The sail is trimmed to its best drive (an angle of attack of about 15° at the sim's 14 to 16 m/s, where the apparent wind is 40 to 45° off the bow); sheeted fully in it would meet the wind at 28°, past its stall, and the pull cap of the pulled rungs lets it come further in, not less. When the pull passes what the sailor holds (the sea, the gusts) the pilot eases it: the sheet falls with the waves at every rung. So "closed when fully powered, opened only when overpowered" holds as far as the sim's sail allows; a sail that is fastest fully sheeted at these speeds would be a faster board (PH8) with a smaller apparent wind angle.
 
 ## 6. The steering when planing
 
