@@ -38,7 +38,7 @@ const BOARD_TAB: int = 0
 const RIG_TAB: int = 1
 ## The line at the bottom of the page; on the Sail tab with PH14's warning.
 const NOTE: String = "Kept at once and sailed from the next start. Most models are stand-ins that sail the default gear's numbers."
-const PH14_NOTE: String = " The sail sizes do not sail true yet (PH14): a bigger sail is not yet faster in light wind."
+const PH14_NOTE: String = " The sail sizes are not tuned yet (PH14): how each size sails may still change."
 
 @onready var _tabs: TabContainer = %Tabs
 @onready var _sailing: Label = %Sailing
@@ -113,16 +113,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not is_visible_in_tree():
 		return
 	# Switch tabs with the gamepad's shoulder buttons or Ctrl+Tab / Ctrl+Shift+Tab (as the settings).
-	var step: int = 0
-	var button: InputEventJoypadButton = event as InputEventJoypadButton
-	if button != null and button.pressed:
-		if button.button_index == JOY_BUTTON_RIGHT_SHOULDER:
-			step = 1
-		elif button.button_index == JOY_BUTTON_LEFT_SHOULDER:
-			step = -1
-	var key: InputEventKey = event as InputEventKey
-	if key != null and key.pressed and key.ctrl_pressed and key.physical_keycode == KEY_TAB:
-		step = -1 if key.shift_pressed else 1
+	var step: int = MenuFocus.tab_step(event)
 	if step != 0:
 		_tabs.current_tab = posmod(_tabs.current_tab + step, _tabs.get_tab_count())
 		_tabs.get_tab_bar().grab_focus()
@@ -407,8 +398,9 @@ func _build_rig() -> void:
 	if _pivot == null:
 		return
 	if _rig != null:
+		# Freed at once: nothing else holds it, and the new one takes its name.
 		_pivot.remove_child(_rig)
-		_rig.queue_free()
+		_rig.free()
 	var choice: GearChoice = chosen()
 	_rig = RigVisuals.new()
 	_rig.name = "Rig"

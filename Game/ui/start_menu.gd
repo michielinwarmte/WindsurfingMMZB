@@ -7,8 +7,8 @@ extends Node
 ##   Silvaplana wind viewer, with the race course maker (the map track's wind viewer).
 ##   Lake Silvaplana: fly over the map (the map track's terrain view).
 ## And Gear (the board, sail and fin to sail: gear_page.gd), Settings, Controls, How to sail and
-## Quit. The menu remembers the play option chosen last time and puts the focus on it. When the
-## gear page closes with other gear chosen, the sailing scene behind the menu is built again, so the
+## Quit. The menu remembers the play option chosen last time and puts the focus on it. When a page
+## closes with other gear in the settings, the sailing scene behind the menu is built again, so the
 ## next run on the open water sails it (the lake's scene is built anew each time anyway).
 ##
 ## Keys: arrows (or the gamepad's stick/d-pad) move, Enter (or A) chooses, Esc (or B) goes
@@ -155,7 +155,9 @@ func _on_page_closed(page: MenuPage) -> void:
 	if page == _settings:
 		# The new wind and waves show behind the menu at once.
 		_sailing.apply_settings_live()
-	if page == _gear and _gear_changed():
+	# Other gear (chosen on the gear page, or put back by a reset of the settings): the board
+	# behind the menu is built again for it.
+	if _gear_changed():
 		_build_sailing_again()
 	var buttons: Dictionary[MenuPage, Button] = {
 		_settings: _settings_button, _controls: _controls_button, _howto: _howto_button, _quit_confirm: _quit_button,

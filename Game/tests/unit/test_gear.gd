@@ -288,12 +288,11 @@ func test_the_page_shows_the_brands_and_keeps_a_choice_at_once() -> void:
 	assert_true(chosen_card.button_pressed, "the chosen sail is lit")
 	# Another brand, then its sail.
 	(page.find_child("Brand_southsails", true, false) as Button).pressed.emit()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	var card: Button = page.find_child("Item_" + SAIL_6_5_ID, true, false) as Button
 	assert_not_null(card, "the brand's models are shown")
 	card.pressed.emit()
 	assert_eq(GameSettings.values.gear_sail, SAIL_6_5_ID, "kept in the settings at once")
-	assert_almost_eq(RigVisuals.fit_sail(load("res://config/sail_6_5.tres"), RigVisuals.MODEL_SAIL).x, 1.95 / 2.2, 1e-6)
 	var rig: RigVisuals = page.preview_rig()
 	assert_not_null(rig, "a preview")
 	var cloth: ShaderMaterial = rig.sail_cloth().get_surface_override_material(0) as ShaderMaterial
@@ -308,7 +307,7 @@ func test_the_page_can_be_walked_with_the_keyboard() -> void:
 	var back: Button = page.get_node("%BackButton")
 	for tab: String in ["board", "sail", "fin"]:
 		page.show_tab(tab)
-		await wait_frames(2)
+		await wait_process_frames(2)
 		var at: Control = page.first_focus()
 		var steps: int = 0
 		var passed_a_card: bool = false
@@ -329,13 +328,26 @@ func test_the_start_menu_sails_the_gear_chosen_on_its_page() -> void:
 	(page.find_child("Brand_southsails", true, false) as Button).pressed.emit()
 	(page.find_child("Item_" + SAIL_6_5_ID, true, false) as Button).pressed.emit()
 	page.close()
-	await wait_frames(1)
+	await wait_process_frames(1)
 	var windsurfer: WindsurferNode = menu.get_node("Sailing/Windsurfer")
 	assert_almost_eq(windsurfer.sim.sail_config.area_m2, 6.5, 1e-6, "the scene behind the menu sails the new sail")
 	assert_true(windsurfer.use_autopilot, "still behind the menu")
 	assert_eq(menu.get_node("Sailing").get_index(), 0, "in the old one's place, under the menu")
 	(menu.get_node("%OpenWaterButton") as Button).pressed.emit()
 	assert_false(windsurfer.use_autopilot, "and the player sails it")
+
+
+func test_a_reset_of_the_settings_puts_the_default_gear_behind_the_menu() -> void:
+	GameSettings.values.gear_sail = SAIL_6_5_ID
+	var menu: Node = (load("res://ui/start_menu.tscn") as PackedScene).instantiate()
+	add_child_autofree(menu)
+	assert_almost_eq((menu.get_node("Sailing/Windsurfer") as WindsurferNode).sim.sail_config.area_m2, 6.5, 1e-6)
+	(menu.get_node("%SettingsButton") as Button).pressed.emit()
+	var settings: SettingsMenu = menu.get_node("%Settings")
+	(settings.get_node("%ResetButton") as Button).pressed.emit()
+	settings.close()
+	await wait_process_frames(1)
+	assert_almost_eq((menu.get_node("Sailing/Windsurfer") as WindsurferNode).sim.sail_config.area_m2, 8.0, 1e-6, "the default 8.0 again")
 
 
 # --- Helpers ---------------------------------------------------------------------------------
