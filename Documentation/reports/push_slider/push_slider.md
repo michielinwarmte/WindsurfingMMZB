@@ -92,9 +92,13 @@ At 12 kt nothing changed (2.92 s). What was wrong, lever by lever: not the physi
 
 The manoeuvre matrix with it: 24 of 24 without a fall; the 18 and 24 kt tacks reach the new course 0.4 to 0.5 s sooner and leave 0.2 to 0.9 m/s faster, the 24 kt gybes come out 1.5 to 2.4 m/s faster. Two things the agent found for Michiel: the powered board does not bank to windward because the feet hold the body first (`_apply_leg_forces`), which is what limits the head-up rate; and a 30 Hz yaw flutter on the steady 18 kt reach (±0.4°/s every tick, the fin's yaw moment alternating 602 / 716 N m), there before this work.
 
-## 7. Regression
+## 7. Regression (the merged code, with the steering)
 
-(To be filled: unit tests, the check, the matrix, the lake, the races, validation.)
+- Unit tests 602 of 602; `tools/check.sh` 298 files green.
+- The manoeuvre matrix: 24 of 24, no fall, every manoeuvre completed (the 18 and 24 kt tacks a little quicker and faster out, the 24 kt gybes 1.5 to 2.4 m/s faster out: the steering's legs).
+- The lake matrix: no fall; the 12:00 run turn not completed, as before this work.
+- Validation: **35 pass, 9 fail, 2 pending**, the same count and the same nine reds as the autopilot suite left them ([autopilot_rework.md](../autopilot/autopilot_rework.md) section 6): the polar's band and the top speed (the band is the old gear's), the planing onset (14.4 kn), the fin's side force (743 N against a band without a source, PH36), the push-warning test (its catapult case moved to the broad reach, GP3), the skipper's 12 kt race (14:11 against 12:00; PH26, RA11), the waves at 135° (PH11), the fleet's start (one board late, RA11), the polar's 45° point (PH27). One line inside the already-red skipper test moved: the 18 kt T1 race takes 8:01 against its 8:00 limit (7:58 before; the agent read it as race-to-race noise: on other seeds the new steering won by up to 26 s, and the 24 kt race here is 7:37 against 6:27 with three tacks stalled head to wind on one seed). The AI boards sail without the slider, so their change is the steering's legs in the heading hold alone.
+- Bit for bit: with the four new controls at 0 and no slider, the reach check's nine CSVs and the matrix were identical before and after the physics step; the steering's change to the auto-sheet acts only when a windward bank is asked for.
 
 ## 8. For Michiel's play-test
 
