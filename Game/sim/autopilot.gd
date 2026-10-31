@@ -240,7 +240,21 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		var felt_leeward_heel_deg: float = -telemetry.felt_heel_deg * windward - deliberate_leeward_deg
 		alpha_deg = minf(alpha_deg, _alpha_for_torque_deg(telemetry, _righting_moment_now_nm(telemetry)))
 		var over_heel: float = clampf((felt_leeward_heel_deg - depower_heel_allowance_deg) / depower_heel_span_deg, -1.0, 1.0)
-		var urgency: float = maxf(over_heel - 0.5, 0.0)
+		# Carving up on purpose: weight on the windward rail (the controls' lean toward the wind)
+		# asks for a head-up, and the sailor banks the board to windward for it, as far as a
+		# coordinated turn at that rate needs (wanted_bank_deg). The bank takes time to come
+		# (SailorConfig.bank_rate_dps, and the feet, which hold the body first), and until it is
+		# there the turn's push is felt as heel to leeward. The sailor asked for the turn and
+		# expects that push: it still eases the sail a little (the slow part above, "a sailor flung
+		# outward in a turn eases a little"), but only the felt heel beyond the windward bank still
+		# to come is urgent. Before, the urgent part read every head-up at planing speed as being
+		# pulled over and eased the sail nearly to luffing within a second (the steering check, 18
+		# and 24 kt: the depowering at 0.9, the board from 14 to 7 m/s, the turn nearly stopped
+		# between 15 and 28 degrees for 2 s; Documentation/reports/push_slider/steering.md). Without
+		# a windward bank asked for (straight sailing, bearing away, the course hold with lean_share
+		# 0) nothing changes.
+		var unexpected_heel: float = clampf((felt_leeward_heel_deg - windward_bank_to_come_deg(telemetry, windward) - depower_heel_allowance_deg) / depower_heel_span_deg, -1.0, 1.0)
+		var urgency: float = maxf(unexpected_heel - 0.5, 0.0)
 		_depower = clampf(_depower + (depower_rate_per_s * over_heel + depower_urgent_rate_per_s * urgency) * dt, 0.0, 1.0)
 		alpha_deg = lerpf(alpha_deg, min_alpha_deg, _depower)
 		if leeward_heel_deg > depower_heel_allowance_deg:
@@ -346,6 +360,14 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		var wanted_sheet: float = 1.0 - (boom_angle_deg - sheet_angle_in_deg) / (sheet_angle_out_deg - sheet_angle_in_deg)
 		controls.sheet = move_toward(controls.sheet, wanted_sheet, sheet_rate_per_s * dt)
 		controls.boom_across = move_toward(controls.boom_across, across, sheet_rate_per_s * dt)
+
+
+## The windward bank the sailor is working toward and the board has not reached yet, degrees (0
+## when the bank wanted is to leeward or none). windward is +1 with the wind from starboard.
+static func windward_bank_to_come_deg(telemetry: Telemetry, windward: float) -> float:
+	if telemetry.wanted_bank_deg * windward <= 0.0:
+		return 0.0
+	return maxf((telemetry.wanted_bank_deg - telemetry.heel_deg) * windward, 0.0)
 
 
 ## How much of lean_share applies on this course: all of it up to lean_share_twa_max_deg of true

@@ -53,3 +53,50 @@ func test_the_legs_head_up_on_both_tacks_and_the_bias_loads_the_fin() -> void:
 	assert_almost_eq(controls.back_foot_push, 0.2, 1e-6, "the course hold's legs head up on either tack: no tack sign")
 	Helm.hold_rake_first(controls, 0.5, 0.0, 1.0, 0.0, 1.0, 100.0)
 	assert_almost_eq(controls.back_foot_push, 0.0, 1e-6, "nothing asked: nothing, as before")
+
+
+func test_the_pilot_does_not_let_go_for_the_push_of_a_head_up_it_was_asked_for() -> void:
+	# Carving up (steering.md): weight on the windward rail asks for a bank to windward, and until
+	# the board has it the turn's push is felt as heel to leeward. Read as being pulled over, it
+	# eased the sail nearly to luffing at every head-up at planing speed. Now the bank still to
+	# come is expected: the sailor still eases a little (the slow part), not urgently.
+	var carving: Autopilot = _sheeting_pilot()
+	var flung: Autopilot = _sheeting_pilot()
+	var t: Telemetry = _starboard_reach()
+	t.felt_heel_deg = -14.0  # 14 degrees to leeward (port) on starboard tack
+	var bank: Telemetry = _starboard_reach()
+	bank.felt_heel_deg = -14.0
+	bank.wanted_bank_deg = 16.0  # the board to be banked 16 degrees to windward (starboard)
+	bank.heel_deg = 2.0  # and banked 2 so far: 14 still to come
+	var controls: SimControls = SimControls.new()
+	for i: int in 30:
+		flung.update(t, controls, 1.0 / 60.0)
+		carving.update(bank, controls, 1.0 / 60.0)
+	# Half a second at 14 degrees of felt heel: 0.25 x 0.9 per second slowly, plus 2.0 x 0.4 urgently.
+	assert_almost_eq(flung._depower, 0.5 * (0.25 * 0.9 + 2.0 * 0.4), 0.01, "flung to leeward on a flat board: the sailor lets go")
+	assert_almost_eq(carving._depower, 0.5 * 0.25 * 0.9, 0.01, "carving up into a bank still coming: only the slow ease")
+	assert_almost_eq(Autopilot.windward_bank_to_come_deg(bank, 1.0), 14.0, 1e-6)
+	bank.wanted_bank_deg = -4.0  # a leeward bank (the fin's load) is deliberate already, not to come
+	assert_eq(Autopilot.windward_bank_to_come_deg(bank, 1.0), 0.0)
+	bank.twa_deg = -100.0  # on port tack the windward bank is negative
+	bank.wanted_bank_deg = -16.0
+	bank.heel_deg = -2.0
+	assert_almost_eq(Autopilot.windward_bank_to_come_deg(bank, -1.0), 14.0, 1e-6, "the same on port tack")
+
+
+## A pilot that only trims the sheet, as the player controller's auto-sheet does.
+func _sheeting_pilot() -> Autopilot:
+	var pilot: Autopilot = Autopilot.new()
+	pilot.hold_course = false
+	pilot.trim_sheet = true
+	return pilot
+
+
+func _starboard_reach() -> Telemetry:
+	var t: Telemetry = Telemetry.new()
+	t.twa_deg = 100.0
+	t.awa_deg = 35.0
+	t.aws_kt = 25.0
+	t.sail_side = -1
+	t.speed_ms = 13.0
+	return t
