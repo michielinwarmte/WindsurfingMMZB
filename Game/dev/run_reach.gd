@@ -19,6 +19,9 @@ extends SceneTree
 ## Arguments after "--": [--winds=12,18,24] [--twas=60,100,135] [--seconds=40] [--from=25]
 ## [--out_dir=<absolute dir>: write each case's CSV there, one row per 0.1 s]
 ## [--pilot.<field>=<n> --sailor.<field>=<n> --sail.<field>=<n> --board.<field>=<n> --fin.<field>=<n>]
+## [--push=<level>] the push slider's level (0 to 1, a percentage, or eased / neutral / pushed),
+##   applied to the scenario's pilot and controls every step as the game does (PushDial); the
+##   --pilot. overrides then win field by field
 
 const DT: float = 1.0 / 60.0
 const CSV_EVERY_STEPS: int = 6
@@ -107,8 +110,13 @@ func _run_case(wind_kt: float, twa_deg: float, seconds: float, from_s: float) ->
 	var sailor_weight_n: float = sim.sailor_config.mass_kg * sim.sim_config.gravity_ms2
 	var pitch_sum: float = 0.0
 	var pitch_square_sum: float = 0.0
+	var push_level: float = PushDial.level_of(_options["push"]) if _options.has("push") else NAN
+	var push_curve: PushCurveConfig = PushDial.default_curve()
 	var steps: int = int(scenario.seconds / DT)
 	for i: int in steps:
+		if not is_nan(push_level):
+			PushDial.apply_level(push_level, push_curve, scenario.pilot, scenario.controls)
+			_apply_overrides({"pilot": scenario.pilot})
 		scenario.update(sim, DT)
 		sim.step(DT, scenario.controls)
 		var t: Telemetry = sim.telemetry
