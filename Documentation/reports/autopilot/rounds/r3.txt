@@ -1,0 +1,7 @@
+# Round 3: the new defaults (the rail 5 upwind, 2 across, to 160; the pilot's rail steering by point
+# of sail, full to 110 degrees and gone by 135) with the rail steering's share, and the border.
+base:
+ls02: --pilot.lean_share=0.2
+ls03: --pilot.lean_share=0.3
+ls03_to100: --pilot.lean_share=0.3 --pilot.lean_share_twa_max_deg=100
+ls02_lean35: --pilot.lean_share=0.2 --sailor.max_rig_lean_deg=35
