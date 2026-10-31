@@ -904,7 +904,119 @@ The brief names only the brands. If the gear page needs model names, these keep 
 
 ### 3.8 What this means for the personas and for PH14
 
-- The personas rig a 7.8 below 16 kt and a 6.2 above (`Game/race/persona.gd`). Every sail brand has a size within 0.2 m² of both except S2Maui (7.6 and 6.1 or 6.3 in its lines) and Point-7's race line (7.8 and 5.9 or 6.5); the gear page can map a persona's two sizes to the nearest of its brand.
+- The personas rig a 7.8 below 16 kt and a 6.2 above (`Game/race/persona.gd`). Every free race line in 3.5 has sizes within 0.2 m² of both, except Point-7's AC-2 (7.8, and 5.8 or 6.8). Of the race lines, Duotone (7.7, 6.2), North (7.7, 6.0) and S2Maui (7.6, 6.1) do too; Severne (7.5, 6.5), Point-7 (7.8, 5.9 or 6.5), NeilPryde (7.4, 6.5) and GA (7.7, 5.7 or 6.7) are 0.3 to 0.5 m² off one of them. The gear page can map a persona's two sizes to the nearest of its brand.
 - PH14 (the sizes do not sail right yet) is Michiel's. The facts this research adds: the real sails' geometry changes smoothly with the size (aspect ratio 2.9 to 3.4 everywhere), the real rig weighs about 1 kg more per 1 m² of sail at the large end (10 kg as a 5.6, 12 to 13.7 kg from 7.5 up), and the brands' wind ranges overlap widely (Point-7: one rider of 75 to 90 kg sails a 7.3 or 7.8 from 16 to 21 kt and an 8.2 below). A 7.8 that is slower than a 6.5 in 12 kt contradicts every brand's chart.
+
+---
+
+## 4. Notes for the shaper
+
+For each game brand: the look to aim for, the palette, the details that make the brand recognisable at ten metres, and where the real brand puts its logo and model name (and how big), so the game's own logos (from the logo designer, part 3 of the plan) can go in the same places. The builder `tools/blender/build_rig_models.py` already draws every part these notes refer to: the outline (traced as a table of widths, `JP_OUTLINE`), the rocker (with a traced nose, `JP_NOSE_ROCKER`), the rails, the cut-outs (`CUTOUT_LENGTH`, `CUTOUT_BOTTOM_HALF_W`), the deck pads and the wedge, the straps, the fin box, the mast track, and on the sail the panels, battens, windows, sleeve, clew, the stripe, the number boxes and the foot letters, all painted into `board_deck.png`, `board_bottom.png` and `sail_panels.png`. Logo sizes below are estimated from the brands' pictures (scaled by the board's known length or the sail's known luff), to about ±20 %.
+
+**Sail numbers.** Production pictures show none; racing sails carry the rider's number (country letters and digits) on both sides of the upper middle sail. The game already draws two number boxes (`NUMBER_BOX_STARBOARD` and `_PORT`, between 0.43 and 0.65 of the luff): keep them on every brand, in the brand's contrast colour (black on light sails, white on dark ones).
+
+### Tripletone (Duotone): boards and sails
+
+- **The look.** Boards: clean and light, a white deck marbled lengthwise with cyan, turning lilac at the tail, black pads; the bottom a deep royal blue. Sails: technical and graphic, teal edges, a black upper sail with a huge "D" broken into pixels, white below.
+- **Palette.** Deck white #EEF5FB, cyan streaks #2BB5D8 (est.), lilac #9C8FD6, violet #8246AF (Pantone 2097 C), pads black #16212C, bottom blue #094AC3, letters red #E63A3F (est.), cut-out aqua #3FC4E0 (est.). Sail teal #249AAB, black #20211C, white #F8F9F8, red #E5323B (est.).
+- **At ten metres.** (1) A white board with a blue belly. (2) The aqua two-step cut-outs at the tail, visible from the side. (3) One black pad wedge across the tail and black diamonds under the front straps. (4) On the sail: the giant pixelated "D" in the black upper half and the teal luff.
+- **Shape.** Board: compact and parallel, 2.24 to 2.26 m, a wide square tail with two steps; on the slalom D/LAB a recessed mast track. Sail: seven battens, a large cutaway clew, the boom range printed on the sleeve at boom height.
+- **Logo placement (real).** The angular "D" mark, about 0.20 m tall, on the deck's nose centreline and near the bottom's nose; "Duotone" along the bottom's centreline, about 0.7 m long and 0.15 m tall, reading along the board; the model name ("Falcon Fin SLS") small (about 0.15 m) beside the mast track, the size on the tail. On the sail: the "D" fills the upper body (about 1 m tall), "DUOTONE" runs down the leech (about 1.4 m), a small logo on the foot.
+
+### Savanna (Severne): boards and sails
+
+- **The look.** Everything red. The sail a translucent deep red with black battens; the board a deep red, marbled carbon with thin orange outline graphics.
+- **Palette.** Sail red #C8161D (daylight est.; #A21310 to #B01D1D on the render), black #1A1A1A, white #FFFFFF (the SV badge). Board red #B0252F (est. from #963039 on a dark render), orange outlines #E2624B, pads charcoal #262626, the tail's grey #3E4043.
+- **At ten metres.** (1) An all-red sail with black battens. (2) Severne's big outlined "boomerang" (an open chevron) on the leech above the boom. (3) Huge black "M9" letters filling the foot. (4) On the board (the Fox): long and narrow-nosed, with large outlined letters drawn in thin orange lines along the deck and a striped orange chevron on the bottom's nose.
+- **Shape.** Sail: race outline with a single seamless foot panel, thin black vertical luff panels. Board: 2.39 to 2.44 m, the longest of the game's boards, a tapered nose, medium cut-outs.
+- **Logo placement (real).** On the sail: the boomerang about 1.1 m long over the leech, a white-on-black "SV" badge about 0.25 m wide mid-sail by the luff, "M9" about 0.5 m tall in the foot with "MACH" small beside it. On the board: an orange "SV" tab about 0.2 m on the nose's port side, the size ("125") on the tail and on the bottom near the tail, the striped boomerang about 0.5 m wide on the bottom's nose.
+
+### Point.9 (Point-7): sails
+
+- **The look.** Black and white, smoked and minimal: a stealth race sail.
+- **Palette.** Smoke black film #1E1F22 (est.), white pearl #F2F2EE (est.), grey window #8A8D92 (est.), the accent yellow #FFC600 (Pantone 7548 C) if one is wanted.
+- **At ten metres.** (1) A dark, smoky sail where most others are bright. (2) White rectangular blocks near the head and a white strip along the foot (the stitched version). (3) The very wide race sleeve. (4) The foot cut straight and low along the deck.
+- **Shape.** Seven battens, three cams, the XXL sleeve, an S-shaped bottom batten.
+- **Logo placement (real).** "P7" about 0.25 m near the clew, the year ("026") at the tack, the model name small on the foot panel.
+
+### Moonboard (Starboard): boards
+
+- **The look.** Sporty blue with red-orange tips and two white racing stripes; the same family look on every board (the wood free race board swaps the blue carbon for bare pine).
+- **Palette.** Deck blue #2B6C95 to #3175A3, dark navy band #1F3550 (est.), red-orange #FC1A0D to #FD340A, stripes white #F1F2F5, bottom sky blue #05B8E8 to #009AC6, wood #D9B48A (Futura, est.).
+- **At ten metres.** (1) Two white stripes running from the nose down the deck either side of the centre. (2) A red-orange tail with the size in giant white-outlined numbers. (3) A bright sky-blue bottom with red-orange nose and tail tips. (4) The tiki logo in a red tab on the nose.
+- **Shape.** Square, wide outline with the widest point near the middle; double-step cut-aways, and on the 2026 63, 67 and 73 a small triangle between them; a thin, spoon-shaped nose on the free race board.
+- **Logo placement (real).** The tiki figure in a red-orange tab about 0.21 × 0.29 m on the deck's nose (port side) and on the bottom's nose; "STARBOARD" in white letters about 0.6 m long and 0.09 m tall along the bottom's centreline; the size number about 0.30 m wide on the tail; "iSONIC" or "FUTURA" small and vertical by the tail rail.
+
+### NielsTrots (NeilPryde): sails
+
+- **The look.** Loud: a magenta-purple sail with a black luff and an orange-red foot, big brand letters up the luff.
+- **Palette.** Magenta-purple #D10FAD to #BD1199, pink-red #E83A6A (est., where the rings fade toward the boom), black #1C1C1E (est.), orange-red #F14D36, window white #FCFCFC.
+- **At ten metres.** (1) The purple upper sail printed with concentric rings like a target. (2) "NEILPRYDE" in tall orange-red letters running up the black luff panel. (3) A white window band below the boom. (4) An orange-red foot.
+- **Shape.** A high, narrow head, a raked batten layout, seven battens, the four-layer sleeve.
+- **Logo placement (real).** The brand name up the luff panel, about 1.7 m long and 0.18 m tall, from the boom up; "RS:RACING EVO XVII" about 0.6 m long in black just under the boom; the size printed on the foot near the clew.
+
+### PJ New Sealand (JP Australia): boards
+
+- **The look.** Dark and rich: mottled purple carbon fading to navy, with a hot orange-red tail. The game's default board already wears it.
+- **Palette.** Purple #775D9F and dark purple #553E7B (the builder's medians), navy #322A47, bottom navy #24274B, orange-red #C04A46 to #E0563A, orange letters #F27028 (the builder's (242, 112, 40)), pads white and grey #D0D0D8. Pantone references: 260 C (about #5F2167), 021 C (#FE5000), 805 C (#FF7276), 433 C (#1D252D).
+- **At ten metres.** (1) A purple board with an orange-red tail. (2) The sunken, lighter purple recess around the mast track. (3) The white-outlined "JP" on the nose. (4) A navy bottom with orange "JP-AUSTRALIA".
+- **Shape.** The traced S-TEC 72 outline, a parallel middle, the double-step tail with the wide deck over it, a pad wedge between the back straps.
+- **Logo placement (real).** "JP" about 0.18 m wide on the nose; "SLALOM S-TEC" (or "SUPER SPORT") about 0.2 m on the tail with the dimensions beside it; "JP-AUSTRALIA" about 0.7 m along the bottom's centreline from the nose.
+
+### BMX Boards (FMX Racing): boards
+
+- **The look.** One bold colour, red for the race board and neon green for the free race board, with a white chevron and a black arrow down the deck.
+- **Palette.** Red #E51B26 (#DF0E0E in shade), white #FFFFFF, black #0A0A0A, GTR neon green #0FDE2A.
+- **At ten metres.** (1) A solid red (or green) board, deck and bottom. (2) A forward-pointing white chevron of thin lines meeting ahead of the mast track. (3) The black arrow-shaped panel behind the track that holds black pads. (4) The white "vortex" (a disc of curved blades) on the nose.
+- **Shape.** The longest slalom outline (2.33 m up to 118 L), a wide nose, straight rails, separate cut-out plates screwed into the tail (draw them as panels of another finish with screw heads), two rows of strap plugs.
+- **Logo placement (real).** The vortex about 0.25 m across on the deck's nose (port side) and about 0.4 m on the bottom's nose; "FMXRACING" vertical beside the mast track (about 0.4 m) and along the bottom's centreline (about 0.7 m, white); "INVICTUS PRO" and "233 - 72 - 118" in black on the tail.
+
+### SouthSails (North Sails): sails
+
+- **The look.** A yacht sail: a smooth grey moulded membrane with the fibre lines showing, no panel seams, thin blue lines and clean windows.
+- **Palette.** Slate grey #5D6F7D to #7F8A97, fibre lines #3E4A55 (est.), royal blue #2E5FB0 (est.), white #FFFFFF.
+- **At ten metres.** (1) A grey sail where the others are coloured. (2) The fibre pattern (lines fanning from the clew and the head). (3) White-framed clear windows in the lower panel. (4) A round white compass logo high on the luff.
+- **Shape.** Six or seven battens, no hard cams (an air-filled sleeve), split batten pockets.
+- **Logo placement (real).** The round "NS" logo about 0.3 m across high near the luff; "RACE" and "NORTH" small (about 0.3 m) in the middle of the sail; the size near the head.
+
+### s3kauai (S2Maui): sails
+
+- **The look.** Bright horizontal bands across the whole sail: sky blue on top, orange around the boom, white and clear below.
+- **Palette.** Sky blue #00B5FF, orange #FC6501, white #FCFCFC, black outlines #111111, logo red #E3262B (est.), "Hot Yellow" #F2E500 (est.).
+- **At ten metres.** (1) The blue top and the two orange bands. (2) Red-orange battens. (3) The red "S2" logo with an orange swoosh on the lower sail. (4) Two clew eyelets.
+- **Shape.** Seven battens, four cams, vertical luff panels.
+- **Logo placement (real).** "S2MAUI" about 0.6 m wide on the lower sail just under the orange bands; "VENOM-XI" about 0.8 m wide across the foot.
+
+### Forbidden (Tabou): boards
+
+- **The look.** Playful: a cyan-to-violet gradient deck, hexagon-shaped navy pads outlined in white, magenta cut-outs and a line-drawn cartoon figure; the colours change every year (2025 was red and white).
+- **Palette.** Cyan #1879B4 to #2A8FD0 (Pantone 313 C: #0092BC), violet #7966A3, navy #132238, magenta #E34978 (Pantone Rubine Red C: #CE0058), bottom sky blue #5CCAFD, logo yellow #F2E64A (est.). The free race board: red #EF3340 (Pantone 032 C), dark teal #003B49 (309 C), light blue pads #9AD7EE.
+- **At ten metres.** (1) The cyan-to-violet deck. (2) Magenta cut-out steps at the tail. (3) Hexagon pads with white outlines. (4) "TABOU" in big outline letters on the bottom.
+- **Shape.** 2.32 to 2.33 m, large cut-outs per size, a deep front vee, more tucked rails in the tail.
+- **Logo placement (real).** Hexagon outlines and the logo on the deck's nose (about 0.3 m); the cartoon figure about 0.25 m between the straps; "MANTA" (or "ROCKET+") about 0.25 m by the tail rail with the size; "TABOU" about 0.5 m in outline letters on the bottom near the nose.
+
+### GG Sails (GA Sails): sails
+
+- **The look.** Cyan blue with a giant logo, magenta edges and lime battens.
+- **Palette.** Cyan #009CCD, teal-blue luff panel #357A98, magenta #CA4CA2 (a more vivid #E0359B in the drawing, est.), lime #D7E83A (est.), black #111111, white #FFFFFF, navy sleeve bottom #1C3550 (est.).
+- **At ten metres.** (1) The huge "GA" (a black "G" beside a magenta triangle) high on the luff. (2) Lime-yellow battens. (3) Magenta tape along the leech and foot. (4) "GA-SAILS" in lime outline letters running down the leech.
+- **Shape.** Seven battens, four cams, radial panels fanning from the sail's centre, a big clew cut-out, a coloured foot panel.
+- **Logo placement (real).** "GA" about 1.3 m tall on the upper luff panel of a 7.7 (from just under the head to about a third down); "GA-SAILS" about 1.6 m long and 0.15 m tall down the leech; "VAPOR" with three colour bars about 0.5 m on the white foot panel.
+
+---
+
+## 5. Open questions for the team
+
+1. **Which year to build.** The catalogue uses the 2026 boards and sails, but keeps the PJ 72 as the 2025 board of `board_default.tres` (117 L, 228 × 72 cm). Update the default to the 2026 72 (119 L, 6.7 kg), or keep it?
+2. **The rig's mass** (Michiel, PH14): build the sails with the real rig weight, or with the default's ratio (9.5 of a real 12.4 kg)? Section 3 gives both columns.
+3. **The camber per sail type** (Michiel): 0.075 to 0.068 by the number of cams (estimates), or 0.07 for all?
+4. **The fins' area** (Michiel): the game's 38 cm fin has the area of a real 42 to 43 cm fin. Section 3 gives every board a real fin (Select's areas); that changes the default board's fin from 0.0365 to 0.0311 m² if it is applied to the PJ 72 too. Apply, or keep the default fin as it is?
+5. **The cut-outs in the physics** (Michiel, PH16): every 2026 slalom board has them, and they differ by brand (JP's two steps, Starboard's triangle, FMX's plates). Keep them visual only, as now?
+6. **Brands without a full line.** Savanna (Severne) has no slalom board: leave it out of the slalom boards, or invent one? SouthSails (North) has only two free race sizes with thin data, and North is replacing its 3Di race sail with the Prisma in November 2026, whose luff and boom are not published yet: build the GEN3 now and the Prisma later?
+7. **Model names.** Section 3.7 suggests names; the team decides (and the logo designer may want them).
+8. **The strap and fin box positions** are Max's Patrik 115 on every board (an estimate). Could Max measure one more board (a wide slalom or a free race board) to check the rule, and his board's inboard strap positions?
+9. **The free race boards' G10 fins** are softer than the carbon fin the game's flex test describes. Use the same stiffness, or estimate a softer one?
+10. **`twist_pressure_pa` per size** (Michiel): the default has 125 Pa for the 8.0 and 140 Pa for the 6.5, both estimates. A rule for the other sizes is a physics question this research cannot answer.
+11. **Speed and storm sizes** (below 5.5 m² and 85 L) are left out: wanted for the 24 kt races?
 
 ---
