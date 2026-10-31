@@ -294,3 +294,28 @@ func test_the_slider_survives_a_waterstart_and_the_legs_follow_the_helm() -> voi
 	controller.reset_controls(controls)
 	assert_almost_eq(controller.push_level, 0.85, 1e-9, "the level is kept through a waterstart")
 	assert_eq(controls.back_foot_push, 0.0, "the controls start clean")
+
+
+func test_planing_in_the_straps_the_legs_push_the_turn_first() -> void:
+	# The planing technique (Documentation/reports/push_slider/steering.md): above 35 to 40 km/h
+	# with the feet in the straps a turn is pushed with the legs first, the back foot to head up and
+	# the front foot to bear away, on either tack. Below it the legs are left as they were.
+	var cases: Array[Array] = [[90.0, "steer_right", 1.0], [90.0, "steer_left", -1.0], [-90.0, "steer_left", 1.0], [-90.0, "steer_right", -1.0]]
+	for c: Array in cases:
+		var controller: PlayerController = PlayerController.new()
+		var controls: SimControls = SimControls.new()
+		var t: Telemetry = _telemetry(c[0])
+		t.stance = 1.0
+		t.speed_ms = 14.0
+		Input.action_press(c[1])
+		_run(controller, t, controls, 0.6)
+		Input.action_release(c[1])
+		assert_almost_eq(controls.back_foot_push, c[2], 1e-6, "TWA %.0f, %s: a full push, %s" % [c[0], c[1], "the back foot" if c[2] > 0.0 else "the front foot"])
+	var slow: PlayerController = PlayerController.new()
+	var slow_controls: SimControls = SimControls.new()
+	var s: Telemetry = _telemetry(90.0)
+	s.stance = 1.0
+	s.speed_ms = 8.0  # the 12 kt reach, 29 km/h
+	Input.action_press("steer_right")
+	_run(slow, s, slow_controls, 0.6)
+	assert_eq(slow_controls.back_foot_push, 0.0, "below the plane the rig and the rail steer, as before")
