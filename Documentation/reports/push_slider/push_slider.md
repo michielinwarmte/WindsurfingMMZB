@@ -4,8 +4,8 @@ For Michiel and Max. Written 31 October 2026 by the lead (Fable 5.1) at the end 
 
 ## 1. In short
 
-1. **The slider is built and works as a ladder.** Up and Down move it (a full range in 2.5 s), the strip shows "push 75 %", the F1 panel shows what the level asks of the sailor. 0 % lets the sail fly and the board drifts at 0.3 to 2.4 m/s (the boom can be eased only to 85°), 25 % moves slowly at every wind, 50 % cruises, 75 % planes, and above 75 % the pull held rises to the measured "pushed" dial with the rig leaned to 35°. The AI boards are untouched until the fleet adopts it: with no level set, the controller sails the pilot's own numbers as before.
-2. **The pull held is the lever that pays**, and the rig's lean with it: 85 % gives +3 % and 100 % gives +5 to 8 % across the wind at 18 and 24 kt, on flat water and on the default sea, with no falls there in 150 s; at twice the wave height the top rungs fall, as the design wants.
+1. **The slider is built and works as a ladder.** Up and Down move it (a full range in 2.5 s), the strip shows "push 75 %", the F1 panel shows what the level asks of the sailor. 0 % lets the sail fly and the board drifts at 0.3 to 2.4 m/s (the boom can be eased only to 85°), 25 % moves slowly at every wind (1.7, 6.1 and 8.1 m/s at 12, 18 and 24 kt on a beam reach), 50 % cruises, 75 % planes, and above 75 % the pull held rises to the measured "pushed" dial with the rig leaned to 35°. The AI boards are untouched until the fleet adopts it: with no level set, the controller sails the pilot's own numbers as before.
+2. **The pull held is the lever that pays, and the risk rises with it as the design asks.** Against 75 %, 85 % gives +3 to 4 % and 100 % +4 to 5 % on the flat-water beam reaches, +7 to 9 % on the sea at 24 kt and +7 % upwind. The falls in six hours of sailing per rung (300 s cases at 18 and 24 kt on six courses, three seas, two gust strengths): 75 % 5, 85 % 13, 95 % 21, 100 % 34, none on flat water but one, all in waves. At 75 % nothing falls at 18 kt or on flat water; what remains is the 24 kt broad reach in waves, the sim's known catapult case. The sailor's reflex that made 75 % that safe is the rail for the sea (section 5).
 3. **"Pushing on the back foot" splits in two in this physics.** The rail (the leeward rail down, the heeled fin) is what loads the fin: at 5° its lift rises 12 % and its upward part 44 %, the 24 kt broad reach gains 18 % and twice-height waves stop causing falls. But this hull rides longer railed, not shorter, so the beam reach loses 5 % (the hull's heeled lift, PH27 and PH31). The sideways couple between the feet (built, `SimControls.back_foot_push`) does not load the fin: held, it makes the fin carry less and costs speed. It is a steering lever (section 6), not a push lever.
 4. **The sail closes as far as the drive asks, not further.** At 100 % the sheet sits at 83 % on the beam reaches (the boom 13° off its stop) because the sail's best drive at the sim's speeds is at an angle of attack of about 15°; sheeted fully in it would stall. When the pull passes what is held the pilot eases it further (78 % at 75 % on the sea). So "closed when fully powered, open only when overpowered" holds in the sense the sim's sail allows (section 5).
 5. **The steering when planing**: see [steering.md](steering.md) (the agent's measurement and change).
@@ -79,8 +79,8 @@ So the ladder above 75 % is the pull with the lean, a little rail and trim at th
 |---|---|---|---|
 | 75 % | 0 / 3 / 8 = 11 | **0 / 2 / 3 = 5** | as round 3 |
 | 85 % | 1 / 2 / 17 = 20 | **0 / 1 / 12 = 13** | as round 3 |
-| 95 % | 0 / 3 / 19 = 22 | 1 / 10 / 37 = 48 | (round 4) |
-| 100 % | 0 / 7 / 37 = 44 | 0 / 7 / 48 = 55 | (round 4) |
+| 95 % | 0 / 3 / 19 = 22 | 1 / 10 / 37 = 48 | **0 / 5 / 16 = 21** |
+| 100 % | 0 / 7 / 37 = 44 | 0 / 7 / 48 = 55 | **1 / 3 / 30 = 34** |
 | 75 % with the rail at 5° held always | 0 / 2 / 3 = 5, and -5 % on flat water | | |
 
 **The rail for the sea.** A rail held always makes 75 % safe in waves but costs 5 % on flat water (round 2's last row), so the sailor rails only when it gets wild: the bounce felt is the pitch rate's RMS over 3 s (measured at 75 %: 1 to 3°/s on flat water, 6 to 8 on the default sea, 12 to 14 at twice its height), no extra rail below 4°/s, 3° from 12°/s (`Autopilot.wave_rail_deg`, the ladder's `wave_rail_deg`). It halves the falls at 75 and 85 % and costs nothing on flat water (the 75 % flat-water speeds the same to 0.1 m/s). What remains at 75 %: the 24 kt broad reach on the default sea, one fall in 300 s at each gust strength, and three falls at twice the height (the 24 kt beam reach and broad reach in gusts of 0.3); nothing at 18 kt, nothing on flat water. The goal's "at most one fall in 600 s per case" is met everywhere but that 24 kt broad reach in waves, the sim's known catapult case (PH17).
@@ -123,7 +123,8 @@ The manoeuvre matrix with it: 24 of 24 without a fall; the 18 and 24 kt tacks re
 ## 9. Open
 
 1. PH27 and PH31: the hull does not reward the rail (the wet front longer, the beam reach slower); until it does, the slider's "back foot" is a modest rail and the fin's push is only a steering lever.
-2. PH6, the sudden spin-out: the fin's slip stays at 1.5 to 2.3° on every course; nothing pushed it near its stall.
-3. The AI fleet on the slider (`AiHands.push`): RA.
-4. GP3: the ladder tuned by play (Max and Tarpie).
-5. PH26: at 12 kt the slider above 75 % changes nothing.
+2. PH37 (new, the steering agent): the powered board does not bank to windward because the feet hold the body first, which is what caps the head-up rate at 12°/s; PH38: a 30 Hz yaw flutter on the steady 18 kt reach.
+3. PH6, the sudden spin-out: the fin's slip stays at 1.5 to 2.3° on every course; nothing pushed it near its stall.
+4. RA12: the AI fleet on the slider (`AiHands.push`); GP11: the beginner's broad reach at 12 and 18 kt never planes (the controller's start, not the physics).
+5. GP3: the ladder tuned by play (Max and Tarpie); the gamepad and the spring-back (GD1, GD2).
+6. PH26: at 12 kt the slider above 75 % changes nothing; PH17: the 24 kt broad reach in waves, the one case 75 % still falls on.
