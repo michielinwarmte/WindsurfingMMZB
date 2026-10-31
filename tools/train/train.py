@@ -420,7 +420,7 @@ def main() -> None:
                 args.resume = first_brain
             else:
                 args.resume = "none"
-            print(f"\n=== stage {stage} (run {args.run}, up to {args.hours:.1f} h, from {args.resume}) ===", flush=True)
+            print(f"\n=== stage {stage} (run {args.run}, up to {args.hours:.2f} h, from {args.resume}) ===", flush=True)
             note = train_stage_with_retries(args)
             print(f"=== stage {stage} over: {note} ===", flush=True)
             if stopped_by_hand:
