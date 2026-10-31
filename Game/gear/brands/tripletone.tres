@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="Brand" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://gear/brand.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/brands/tripletone/logo.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/brands/tripletone/wordmark.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/brands/tripletone/mark.png" id="4"]
+
+[resource]
+script = ExtResource("1")
+name = "Tripletone"
+slug = "tripletone"
+tagline = "Three tones. One line."
+makes_boards = true
+makes_sails = true
+primary = Color(0.0863, 0.098, 0.1176, 1)
+secondary = Color(0.1686, 0.7686, 0.7059, 1)
+accent = Color(0.9333, 0.9529, 0.949, 1)
+logo = ExtResource("2")
+wordmark = ExtResource("3")
+mark = ExtResource("4")

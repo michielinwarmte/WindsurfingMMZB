@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="Brand" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://gear/brand.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/brands/bmx_boards/logo.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/brands/bmx_boards/wordmark.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/brands/bmx_boards/mark.png" id="4"]
+
+[resource]
+script = ExtResource("1")
+name = "BMX Boards"
+slug = "bmx_boards"
+tagline = "No pedals, all speed."
+makes_boards = true
+makes_sails = false
+primary = Color(1, 0.8235, 0.1216, 1)
+secondary = Color(0.0784, 0.0784, 0.0784, 1)
+accent = Color(0.9098, 0.2078, 0.1686, 1)
+logo = ExtResource("2")
+wordmark = ExtResource("3")
+mark = ExtResource("4")

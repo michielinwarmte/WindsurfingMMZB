@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="Brand" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://gear/brand.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/brands/savanna/logo.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/brands/savanna/wordmark.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/brands/savanna/mark.png" id="4"]
+
+[resource]
+script = ExtResource("1")
+name = "Savanna"
+slug = "savanna"
+tagline = "Wide open water."
+makes_boards = true
+makes_sails = true
+primary = Color(0.7608, 0.3451, 0.1216, 1)
+secondary = Color(0.2275, 0.1412, 0.0863, 1)
+accent = Color(1, 0.7725, 0.2824, 1)
+logo = ExtResource("2")
+wordmark = ExtResource("3")
+mark = ExtResource("4")

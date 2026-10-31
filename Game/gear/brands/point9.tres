@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="Brand" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://gear/brand.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/brands/point9/logo.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/brands/point9/wordmark.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/brands/point9/mark.png" id="4"]
+
+[resource]
+script = ExtResource("1")
+name = "Point.9"
+slug = "point9"
+tagline = "Two points ahead."
+makes_boards = false
+makes_sails = true
+primary = Color(0.0667, 0.0706, 0.0824, 1)
+secondary = Color(0.7843, 0.949, 0.1098, 1)
+accent = Color(1, 0.1804, 0.5333, 1)
+logo = ExtResource("2")
+wordmark = ExtResource("3")
+mark = ExtResource("4")

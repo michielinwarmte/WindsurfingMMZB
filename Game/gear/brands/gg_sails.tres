@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="Brand" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://gear/brand.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/brands/gg_sails/logo.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/brands/gg_sails/wordmark.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/brands/gg_sails/mark.png" id="4"]
+
+[resource]
+script = ExtResource("1")
+name = "GG Sails"
+slug = "gg_sails"
+tagline = "Good game."
+makes_boards = false
+makes_sails = true
+primary = Color(0.3569, 0.1686, 0.8196, 1)
+secondary = Color(0.1137, 0.1059, 0.149, 1)
+accent = Color(0.9608, 0.7216, 0, 1)
+logo = ExtResource("2")
+wordmark = ExtResource("3")
+mark = ExtResource("4")

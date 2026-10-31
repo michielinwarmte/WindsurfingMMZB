@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="Brand" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://gear/brand.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/brands/moonboard/logo.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/brands/moonboard/wordmark.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/brands/moonboard/mark.png" id="4"]
+
+[resource]
+script = ExtResource("1")
+name = "Moonboard"
+slug = "moonboard"
+tagline = "Shaped by the tides."
+makes_boards = true
+makes_sails = false
+primary = Color(0.0784, 0.1333, 0.3098, 1)
+secondary = Color(0.949, 0.9176, 0.8275, 1)
+accent = Color(1, 0.7882, 0.2392, 1)
+logo = ExtResource("2")
+wordmark = ExtResource("3")
+mark = ExtResource("4")
