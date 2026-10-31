@@ -276,8 +276,8 @@ func test_ai_hands_set_the_slider_or_leave_it_alone() -> void:
 	hands.push = 0.85
 	_run(controller, _telemetry(90.0), controls, 0.1)
 	assert_almost_eq(controller.push_level, 0.85, 1e-9)
-	assert_almost_eq(controller.auto_sheet_pilot.hike_share, 1.2, 1e-6, "85 %: the pull held 1.2")
-	assert_almost_eq(controls.rail_bank_extra_deg, 1.0, 1e-6, "and a degree more rail")
+	assert_almost_eq(controller.auto_sheet_pilot.hike_share, 1.3, 1e-6, "85 %: the pull held 1.3")
+	assert_almost_eq(controls.rig_lean_extra_deg, 3.0, 1e-6, "and three degrees more lean")
 
 
 func test_the_slider_survives_a_waterstart_and_the_legs_follow_the_helm() -> void:
@@ -290,7 +290,7 @@ func test_the_slider_survives_a_waterstart_and_the_legs_follow_the_helm() -> voi
 	Input.action_press("steer_right")  # heading up on starboard tack
 	_run(controller, t, controls, 1.0)
 	Input.action_release("steer_right")
-	assert_gt(controls.back_foot_push, 0.3, "the back foot pushes the tail to leeward to head up, with the slider's push on top")
+	assert_gt(controls.back_foot_push, 0.3, "the back foot pushes the tail to leeward to head up")
 	controller.reset_controls(controls)
 	assert_almost_eq(controller.push_level, 0.85, 1e-9, "the level is kept through a waterstart")
 	assert_eq(controls.back_foot_push, 0.0, "the controls start clean")
