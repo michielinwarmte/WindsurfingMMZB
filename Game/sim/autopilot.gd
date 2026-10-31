@@ -246,14 +246,15 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		# (SailorConfig.bank_rate_dps, and the feet, which hold the body first), and until it is
 		# there the turn's push is felt as heel to leeward. The sailor asked for the turn and
 		# expects that push: it still eases the sail a little (the slow part above, "a sailor flung
-		# outward in a turn eases a little"), but only the felt heel beyond the windward bank still
-		# to come is urgent. Before, the urgent part read every head-up at planing speed as being
-		# pulled over and eased the sail nearly to luffing within a second (the steering check, 18
-		# and 24 kt: the depowering at 0.9, the board from 14 to 7 m/s, the turn nearly stopped
-		# between 15 and 28 degrees for 2 s; Documentation/reports/push_slider/steering.md). Without
-		# a windward bank asked for (straight sailing, bearing away, the course hold with lean_share
-		# 0) nothing changes.
-		var unexpected_heel: float = clampf((felt_leeward_heel_deg - windward_bank_to_come_deg(telemetry, windward) - depower_heel_allowance_deg) / depower_heel_span_deg, -1.0, 1.0)
+		# outward in a turn eases a little"), but only the felt heel beyond the push expected
+		# (_expected_turn_heel_deg) is urgent. Before, the urgent part read every head-up at
+		# planing speed as being pulled over and eased the sail nearly to luffing within a second
+		# (the steering check, 18 and 24 kt: the depowering at 0.9, the board from 14 to 7 m/s, the
+		# turn nearly stopped between 15 and 28 degrees for 2 s;
+		# Documentation/reports/push_slider/steering.md). Without a windward bank asked for
+		# (straight sailing, bearing away, the course hold with lean_share 0) nothing changes.
+		var expected_deg: float = _expected_turn_heel_deg(telemetry, windward, felt_leeward_heel_deg)
+		var unexpected_heel: float = clampf((felt_leeward_heel_deg - expected_deg - depower_heel_allowance_deg) / depower_heel_span_deg, -1.0, 1.0)
 		var urgency: float = maxf(unexpected_heel - 0.5, 0.0)
 		_depower = clampf(_depower + (depower_rate_per_s * over_heel + depower_urgent_rate_per_s * urgency) * dt, 0.0, 1.0)
 		alpha_deg = lerpf(alpha_deg, min_alpha_deg, _depower)
@@ -360,6 +361,33 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		var wanted_sheet: float = 1.0 - (boom_angle_deg - sheet_angle_in_deg) / (sheet_angle_out_deg - sheet_angle_in_deg)
 		controls.sheet = move_toward(controls.sheet, wanted_sheet, sheet_rate_per_s * dt)
 		controls.boom_across = move_toward(controls.boom_across, across, sheet_rate_per_s * dt)
+
+
+## How much of the felt heel to leeward the sailor expects from a head-up they asked for, degrees.
+## 1. The push of the turn the board is making toward the wind: the heel a turn at this speed and
+##    yaw rate would need to feel level, atan(v w / g) (none while not heading up).
+## 2. Of it, only what the windward bank still to come does not carry yet (the bank the sailor
+##    works toward, less the board's heel).
+## 3. Only while the felt heel stays clear of the catapult: it fades out over the last
+##    depower_heel_span_deg before SailorConfig.catapult_heel_deg, so that near the catapult the
+##    urgent ease acts as it always did, whatever the cause.
+## So a gust's pull on a broad reach is not hidden by a small head-up asked at the same moment: the
+## board hardly turns, so it expects hardly any push (the 24 kt race on T1 catapulted on its broad
+## reach when the whole bank to come was expected). Without a sailor to know the catapult by,
+## no fade.
+func _expected_turn_heel_deg(telemetry: Telemetry, windward: float, felt_leeward_heel_deg: float) -> float:
+	var to_come_deg: float = windward_bank_to_come_deg(telemetry, windward)
+	if to_come_deg <= 0.0:
+		return 0.0
+	# A positive yaw rate turns the bow to port, which is heading up on port tack (windward -1).
+	var heading_up_rad_s: float = maxf(deg_to_rad(-telemetry.yaw_rate_dps * windward), 0.0)
+	# The bank that would make the turn's push feel level: atan(v w / g), g = 9.81 m/s2.
+	var push_deg: float = rad_to_deg(atan2(maxf(telemetry.speed_ms, 0.0) * heading_up_rad_s, 9.81))
+	var expected_deg: float = minf(to_come_deg, push_deg)
+	if sailor == null:
+		return expected_deg
+	var clear: float = clampf((sailor.catapult_heel_deg - felt_leeward_heel_deg) / maxf(depower_heel_span_deg, 1.0), 0.0, 1.0)
+	return expected_deg * clear
 
 
 ## The windward bank the sailor is working toward and the board has not reached yet, degrees (0
