@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="Brand" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://gear/brand.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/brands/montag/logo.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/brands/montag/wordmark.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/brands/montag/mark.png" id="4"]
+
+[resource]
+script = ExtResource("1")
+name = "Montag"
+slug = "montag"
+tagline = "Every week starts fast."
+makes_boards = false
+makes_sails = false
+makes_fins = true
+primary = Color(0.1176, 0.1373, 0.1608, 1)
+secondary = Color(0.7882, 0.8157, 0.8471, 1)
+accent = Color(0.1843, 0.502, 0.9294, 1)
+logo = ExtResource("2")
+wordmark = ExtResource("3")
+mark = ExtResource("4")

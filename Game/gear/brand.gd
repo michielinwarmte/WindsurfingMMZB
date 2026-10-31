@@ -12,7 +12,7 @@ extends Resource
 ## One .tres per brand in Game/gear/brands/; Brand.all() lists them. The logos are drawn by
 ## tools/brands/make_logos.py (SVG and PNG in Game/assets/brands/<slug>/).
 
-## The eleven brands, in the order the gear page lists them.
+## The twelve brands, in the order the gear page lists them.
 const PATHS: PackedStringArray = [
 	"res://gear/brands/tripletone.tres",
 	"res://gear/brands/savanna.tres",
@@ -25,6 +25,7 @@ const PATHS: PackedStringArray = [
 	"res://gear/brands/s3kauai.tres",
 	"res://gear/brands/forbidden.tres",
 	"res://gear/brands/gg_sails.tres",
+	"res://gear/brands/montag.tres",
 ]
 
 ## The brand's name as the game shows it: "Point.9".
@@ -35,6 +36,8 @@ const PATHS: PackedStringArray = [
 @export var tagline: String = ""
 @export var makes_boards: bool = false
 @export var makes_sails: bool = false
+## The fins' brand (Montag): none of the board and sail brands makes fins.
+@export var makes_fins: bool = false
 
 @export_group("Colours")
 ## The sail's main cloth and the board's deck.

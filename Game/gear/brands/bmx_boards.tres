@@ -12,6 +12,7 @@ slug = "bmx_boards"
 tagline = "No pedals, all speed."
 makes_boards = true
 makes_sails = false
+makes_fins = false
 primary = Color(1, 0.8235, 0.1216, 1)
 secondary = Color(0.0784, 0.0784, 0.0784, 1)
 accent = Color(0.9098, 0.2078, 0.1686, 1)

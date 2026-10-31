@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draws the logos of the game's eleven gear brands (Documentation/reports/fleet_gear/brands.md).
+"""Draws the logos of the game's twelve gear brands (Documentation/reports/fleet_gear/brands.md).
 
 Every brand gets three drawings in Game/assets/brands/<slug>/:
   mark.svg      the symbol alone (the menu card, the fin, the board's tail)
@@ -16,7 +16,7 @@ script, not to use its output.
 
 Run from the repo root (it needs Python with pycairo and PyGObject's Pango, rsvg-convert and, for the
 contact sheet, ImageMagick's magick):
-    python -I tools/brands/make_logos.py              all eleven brands, then the contact sheet
+    python -I tools/brands/make_logos.py              all twelve brands, then the contact sheet
     python -I tools/brands/make_logos.py savanna      only these (and the sheet)
 The contact sheet, .screenshots/brands.png, shows per brand: the logo on the menu's dark blue, the
 mark on white and on the menu's blue, the wordmark printed on the brand's cloth, and both small
@@ -620,6 +620,24 @@ def gg_sails():
     return mark, wordmark
 
 
+def montag():
+    """A swept race fin on a silver disc: the brand of the game's own fins (Monday after Sunday)."""
+    carbon, silver, blue = "#1E2329", "#C9D0D8", "#2F80ED"
+    fin = Path().move((335, 300)).line((640, 300))
+    fin.curve((600, 490), (655, 690), (752, 805))
+    fin.curve((768, 826), (742, 842), (716, 826))
+    fin.curve((590, 715), (385, 520), (335, 300)).close()
+    mark = [
+        Shape(circle((500, 500), 440), blue),
+        Shape(circle((500, 500), 410), silver),
+        Shape(rounded_rect(290, 238, 690, 300, 16), carbon),
+        Shape(fin, carbon),
+    ]
+    font = ("Fira Sans", "Heavy")
+    wordmark, _ = word([("MON", *font, "#E8ECF0", 0.06), ("TAG", *font, "#4C9BFF", 0.06)], 200)
+    return mark, wordmark
+
+
 # slug: (name for the SVG title, drawing function, plate colour = the brand's primary)
 BRANDS = {
     "tripletone": ("Tripletone", tripletone, "#16191E"),
@@ -633,6 +651,7 @@ BRANDS = {
     "s3kauai": ("s3kauai", s3kauai, "#0B8FA0"),
     "forbidden": ("Forbidden", forbidden, "#D7141A"),
     "gg_sails": ("GG Sails", gg_sails, "#5B2BD1"),
+    "montag": ("Montag", montag, "#1E2329"),
 }
 
 
