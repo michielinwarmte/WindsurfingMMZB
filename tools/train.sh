@@ -1,12 +1,24 @@
 #!/usr/bin/env bash
 # Trains the learned head (AI_FLEET_PLAN.md, D6b): PPO in Python on races Godot sails headless, one
-# curriculum stage at a time, a brain file for the game every half hour. Needs, once:
-# pip install torch stable-baselines3 (the CPU torch is enough: the network is tiny).
+# curriculum stage at a time, a brain file for the game every half hour.
+#
+# Needs, once, a Python with torch, Stable-Baselines3 and gymnasium. The scripts look for it in this
+# order: $PYTHON if set, then the shared venv ~/.local/venvs/windsurf (made once, outside the repo, so
+# every worktree uses the same one), then `python` on the PATH. To make the venv on Linux (the
+# CUDA 13.0 build of torch for an NVIDIA card; leave out --index-url for the CPU build):
+#   python -m venv ~/.local/venvs/windsurf
+#   ~/.local/venvs/windsurf/bin/python -m pip install torch --index-url https://download.pytorch.org/whl/cu130
+#   ~/.local/venvs/windsurf/bin/python -m pip install stable-baselines3 gymnasium
+# (Session 64, 31 October 2026: Python 3.14.7, torch 2.14.1+cu130, Stable-Baselines3 2.9.2,
+# gymnasium 1.4.0, numpy 2.5.4.)
 #
 #   tools/train.sh --stages=S1,S2,S3,S4,S5,S6 --hours_each=4  the nights unattended: every stage in turn,
 #                                                             each from the one before's best brain, each
 #                                                             ended when its "done when" number holds at an
-#                                                             hourly check or after 4 hours (up to a day)
+#                                                             hourly check or after 4 hours (up to a day);
+#                                                             the runs s1 to s6, or with --run_prefix=all
+#                                                             all_s1 to all_s6 (the brains all_s1_best.json,
+#                                                             ...), so earlier brains are not written over
 #   tools/train.sh --stage=S1 --hours=3                       stage 1 (the beat), 3 hours, run "s1"
 #   tools/train.sh --stage=S2 --hours=3 --resume=Game/race/brains/s1_best.json
 #                                                             the next stage from the last one's best brain
@@ -38,9 +50,17 @@ for arg in "$@"; do
 	esac
 done
 
-python_bin="${PYTHON:-python}"
-if ! "$python_bin" -c "import torch, stable_baselines3" 2>/dev/null; then
-	echo "The trainer needs torch and stable-baselines3: $python_bin -m pip install torch stable-baselines3" >&2
+# The Python with torch: $PYTHON, else the shared venv, else `python` (see the header).
+shared_venv_python="$HOME/.local/venvs/windsurf/bin/python"
+if [[ -n "${PYTHON:-}" ]]; then
+	python_bin="$PYTHON"
+elif [[ -x "$shared_venv_python" ]]; then
+	python_bin="$shared_venv_python"
+else
+	python_bin="python"
+fi
+if ! "$python_bin" -c "import torch, stable_baselines3, gymnasium" 2>/dev/null; then
+	echo "The trainer needs torch, stable-baselines3 and gymnasium in $python_bin (see the header of tools/train.sh)." >&2
 	exit 1
 fi
 exec "$python_bin" -u "$REPO_ROOT/tools/train/train.py" "$@"

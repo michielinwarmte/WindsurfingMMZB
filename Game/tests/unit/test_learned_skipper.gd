@@ -14,10 +14,10 @@ static func _course() -> Course:
 	return RaceCourses.t1_loop(270.0, Vector2.ZERO)
 
 
-static func _random_brain(seed: int) -> NeuralNet:
+static func _random_brain(seed: int, outputs: int = 3) -> NeuralNet:
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = seed
-	return NeuralNet.make([RaceObservation.size(), 16, 16, 3], rng)
+	return NeuralNet.make([RaceObservation.size(), 16, 16, outputs], rng)
 
 
 func test_a_random_brain_moves_the_hands_within_their_range_ten_times_a_second() -> void:
@@ -101,9 +101,9 @@ func test_a_brain_sails_through_the_skipper_exactly_as_in_the_trainer() -> void:
 
 
 func _sail_both_ways(mode: LearnedSkipper.ActionMode) -> void:
-	var brain: NeuralNet = _random_brain(8)
+	var brain: NeuralNet = _random_brain(8, LearnedSkipper.TWA_ACTION_NAMES.size() if mode == LearnedSkipper.ActionMode.TWA else 3)
 	brain.meta["actions"] = LearnedSkipper.mode_name(mode)
-	# A wind-angle brain with a hold output, as the trainer makes them.
+	# A wind-angle brain with the hold and the push outputs, as the trainer makes them.
 	brain.action_names = LearnedSkipper.TWA_ACTION_NAMES if mode == LearnedSkipper.ActionMode.TWA else LearnedSkipper.ACTION_NAMES
 	var course: Course = _course()
 	var options: RaceEnv.Options = RaceEnv.Options.new()
@@ -128,6 +128,9 @@ func _sail_both_ways(mode: LearnedSkipper.ActionMode) -> void:
 	var b: Telemetry = board.sim.telemetry
 	var name: String = LearnedSkipper.mode_name(mode)
 	assert_true(a.speed_ms > 0.1 or b.speed_ms > 0.1, "the board moved (%s)" % name)
+	if mode == LearnedSkipper.ActionMode.TWA:
+		assert_false(is_nan(board.hands.push), "the brain's push is on the hands")
+		assert_eq(board.hands.push, trained.board(0).hands.push, "the same push both ways")
 	assert_eq(b.position, a.position, "the same track, to the last bit (%s)" % name)
 	assert_eq(b.heading_deg, a.heading_deg)
 
@@ -249,6 +252,63 @@ func test_the_hold_output_becomes_the_hands_hold_back_speed_when_the_brain_has_o
 	assert_true(LearnedSkipper.uses_hold_of(brain))
 	brain.action_names = PackedStringArray(["twa", "sheet", "unused"])
 	assert_false(LearnedSkipper.uses_hold_of(brain), "the night's brains")
+
+
+func test_the_push_output_sets_the_hands_push_slider_and_a_brain_without_one_leaves_it_alone() -> void:
+	# The mapping: -1 is the slider at 0, 1 at 1, 0 in the middle; and back.
+	assert_eq(LearnedSkipper.push_from_output(-1.0), 0.0)
+	assert_eq(LearnedSkipper.push_from_output(-3.0), 0.0, "clipped")
+	assert_eq(LearnedSkipper.push_from_output(0.0), 0.5)
+	assert_eq(LearnedSkipper.push_from_output(1.0), 1.0)
+	assert_almost_eq(LearnedSkipper.push_from_output(LearnedSkipper.output_for_push(0.3)), 0.3, 1e-6)
+	# The pilot's own margin: the level where the ladder's pull held is the autopilot's default
+	# (1.1 between 75 % at 1.0 and 85 % at 1.3: a third of the way, 78.3 %).
+	var level: float = LearnedSkipper.pilot_margin_level()
+	var curve: PushCurveConfig = PushDial.default_curve()
+	assert_almost_eq(curve.at(curve.hike_share, level), Autopilot.new().hike_share, 1e-6, "the pilot's pull held")
+	assert_almost_eq(level, 0.75 + 0.1 / 3.0, 1e-4)
+	# A brain finds its push output by name.
+	var brain: NeuralNet = _random_brain(3, 4)
+	assert_eq(LearnedSkipper.push_index_of(brain), -1, "no names: no push")
+	brain.action_names = LearnedSkipper.TWA_ACTION_NAMES
+	assert_eq(LearnedSkipper.push_index_of(brain), LearnedSkipper.PUSH)
+	brain.action_names = PackedStringArray(["twa", "sheet", "hold"])
+	assert_eq(LearnedSkipper.push_index_of(brain), -1, "the brains before Session 64")
+	# A driver with a push output puts it on the hands; one without leaves them at NaN.
+	var hands: AiHands = AiHands.new()
+	var driver: LearnedSkipper.Driver = LearnedSkipper.Driver.new(hands, LearnedSkipper.ActionMode.TWA)
+	driver.decide(PackedFloat32Array([0.25, 0.0, 0.0, 0.6]), false)
+	assert_true(is_nan(hands.push), "no push output: the pilot's own margin")
+	driver.push_index = LearnedSkipper.PUSH
+	driver.decide(PackedFloat32Array([0.25, 0.0, 0.0, 0.6]), false)
+	assert_almost_eq(hands.push, 0.8, 1e-6)
+	driver.decide(PackedFloat32Array([0.25, 0.0, 0.0]), false)
+	assert_almost_eq(hands.push, 0.8, 1e-6, "three numbers leave the push where it was")
+
+
+func test_a_skipper_with_a_push_brain_drives_the_controllers_slider_and_an_old_brain_does_not() -> void:
+	for outputs: int in [4, 3]:
+		var course: Course = _course()
+		var options: RaceEnv.Options = RaceEnv.Options.new()
+		var env: RaceEnv = RaceEnv.new(course, 1, 15.0, options)
+		env.reset(5)
+		var board: RaceEnv.Board = env.board(0)
+		var brain: NeuralNet = _random_brain(6, outputs)
+		brain.meta["actions"] = "twa"
+		brain.action_names = LearnedSkipper.TWA_ACTION_NAMES.slice(0, outputs)
+		var skipper: LearnedSkipper = LearnedSkipper.new()
+		skipper.setup(board.sim, board.controller, board.hands, env.race, 0)
+		skipper.brain = brain
+		for t: int in 3:
+			skipper.update(board.sim.telemetry, DT)
+			board.controller.update(board.sim.telemetry, board.controls, DT)
+		if outputs == 4:
+			assert_false(is_nan(board.hands.push), "the brain's push is on the hands")
+			assert_almost_eq(board.controller.push_level, board.hands.push, 1e-6, "and on the controller's slider")
+			assert_almost_eq(board.hands.push, LearnedSkipper.push_from_output(skipper.last_action[LearnedSkipper.PUSH]), 1e-6)
+		else:
+			assert_true(is_nan(board.hands.push), "an old brain leaves the hands' push at NaN")
+			assert_true(is_nan(board.controller.push_level), "and the controller sails the pilot's own margin")
 
 
 func test_a_brain_picks_its_inputs_by_name_and_decides_as_often_as_its_note_says() -> void:

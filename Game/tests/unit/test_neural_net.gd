@@ -172,6 +172,10 @@ func test_the_network_agrees_with_python_on_the_parity_fixture_to_1e_5() -> void
 	var net: NeuralNet = NeuralNet.from_dict(fixture["brain"])
 	assert_not_null(net)
 	assert_eq(net.layers[-1].activation, "linear", "the trainer's last layer is linear")
+	# The outputs' names come through the export: the trainer's four, the push found by its name.
+	assert_eq(net.action_names, LearnedSkipper.TWA_ACTION_NAMES)
+	assert_eq(LearnedSkipper.push_index_of(net), LearnedSkipper.PUSH)
+	assert_eq(net.output_count(), 4)
 	var inputs: Array = fixture["inputs"]
 	var outputs: Array = fixture["outputs"]
 	assert_eq(inputs.size(), 20)

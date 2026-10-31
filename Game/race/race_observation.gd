@@ -41,6 +41,13 @@ const OTHERS_SEEN: int = 2
 ## Scaled physical numbers are clipped at this, so a board on its side (heel 90 degrees) cannot
 ## swamp the network with a 3.
 const CLIP: float = 2.0
+## The sea's height (the highest crest above the still water: the sum of the waves' amplitudes) is
+## given in metres: the menu's roughest (the sea made by 35 kt over 20 km, twice its height) reaches
+## about 1.8 m, clipped at CLIP.
+const SEA_HEIGHT_SCALE_M: float = 1.0
+## The gusts' spread (the patches' standard deviation as a share of the mean wind) is given in units
+## of the settings' strongest: a gust strength of 0.5 spreads the wind by 25 %.
+const GUST_SPREAD_SCALE: float = 0.25
 ## The four directions the wind is sampled in, turned from the heading (degrees): ahead, behind,
 ## left, right.
 const PROBE_TURNS_DEG: Array[float] = [0.0, 180.0, -90.0, 90.0]
@@ -74,6 +81,9 @@ static func names() -> PackedStringArray:
 	# there is still to sail, and what the hands were last told.
 	list.append_array(PackedStringArray(["aim_distance", "aim_ahead_sin", "aim_ahead_cos", "aim_wind_sin", "aim_wind_cos",
 		"next_out_sin", "next_out_cos", "remaining", "wanted_twa", "holding"]))
+	# Session 64 (ROADMAP RA12): the push the hands were last told, and the water and the wind it
+	# is for: how high the sea is, how gusty the wind.
+	list.append_array(PackedStringArray(["pushing", "sea_height", "gust_spread"]))
 	return list
 
 
@@ -90,10 +100,14 @@ static func size() -> int:
 ##   since_manoeuvre_s: the seconds since the last one ended (advance_since_manoeuvre());
 ##   wanted_twa_deg, hold_speed_ms: what the hands were last told (LearnedSkipper.Driver): the
 ##     wind angle wanted and the hold-back speed (0: none), so a brain without a memory of its own
-##     knows which tack it meant to be on and whether it is holding back.
+##     knows which tack it meant to be on and whether it is holding back;
+##   push_level: the push slider the hands were last told (AiHands.push; NaN: none, the pilot's own
+##     margin, given as the level that asks for it);
+##   sea_height_m: the sea's height where the board sails (sea_height_m()); 0 on flat water.
 static func build(telemetry: Telemetry, race: RaceSim, index: int, wind: WindField,
 		others_positions: PackedVector2Array, others_velocities: PackedVector2Array,
-		in_manoeuvre: bool, since_manoeuvre_s: float, wanted_twa_deg: float = 0.0, hold_speed_ms: float = 0.0) -> PackedFloat32Array:
+		in_manoeuvre: bool, since_manoeuvre_s: float, wanted_twa_deg: float = 0.0, hold_speed_ms: float = 0.0,
+		push_level: float = NAN, sea_height_m: float = 0.0) -> PackedFloat32Array:
 	var obs: PackedFloat32Array = PackedFloat32Array()
 	var here: Vector2 = Vector2(telemetry.position.x, telemetry.position.z)
 	var heading_deg: float = telemetry.heading_deg
@@ -156,7 +170,37 @@ static func build(telemetry: Telemetry, race: RaceSim, index: int, wind: WindFie
 	obs.append(clampf(SailingDistance.remaining_m(race, index, here, axis_deg) / SailingDistance.REMAINING_SCALE_M, 0.0, CLIP))
 	obs.append(clampf(wanted_twa_deg / 180.0, -1.0, 1.0))
 	obs.append(clampf(hold_speed_ms / SPEED_SCALE_MS, 0.0, 1.0))
+
+	# The push told, and what the water and the wind are like: a sailor sees the waves and the
+	# gusts on the water, and pushes or eases for them.
+	obs.append(clampf(LearnedSkipper.pilot_margin_level() if is_nan(push_level) else push_level, 0.0, 1.0))
+	obs.append(clampf(sea_height_m / SEA_HEIGHT_SCALE_M, 0.0, CLIP))
+	obs.append(clampf(gust_spread_share(wind) / GUST_SPREAD_SCALE, 0.0, CLIP))
 	return obs
+
+
+## The sea's height where a board sails: the highest crest above the still water (the sum of the
+## waves' amplitudes, WaveSetConfig.total_amplitude_m()), metres; 0 on flat water. It does not
+## change while a board sails, so a skipper takes it once.
+static func sea_height_m(sim: WindsurferSim) -> float:
+	if sim == null or not sim.has_waves() or sim.wave_set_config == null:
+		return 0.0
+	return sim.wave_set_config.total_amplitude_m()
+
+
+## How gusty the wind is: the gusts' spread as a share of the mean wind (the open water's patches:
+## WindField.patch_spread_share(); the lake's gusts: the map's spread of the moment over its mean
+## wind); 0 for a steady wind or no wind field.
+static func gust_spread_share(wind: WindField) -> float:
+	if wind == null:
+		return 0.0
+	var map_field: MapWindField = wind as MapWindField
+	if map_field != null:
+		var now: WindMoment = map_field.moment()
+		if now == null or now.lake_speed_ms < 0.1:
+			return 0.0
+		return now.spread_ms / now.lake_speed_ms
+	return wind.patch_spread_share()
 
 
 ## The seconds since the last manoeuvre, one tick on: back to 0 while one is under way, counting up

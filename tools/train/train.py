@@ -7,14 +7,18 @@ every so often for the game and for tools/gens.sh. Use tools/train.sh; it finds 
 Options (the defaults in brackets):
   --stage=S1            the curriculum stage (Game/race/training_drops.gd: S1 to S6)
   --stages=S1,S2,S3     the nights unattended: the stages one after another, each run named after
-                        its stage (s1, s2, ...), each starting from the one before's best brain (or
-                        continuing its own model if it has one), each ended when its "done when"
-                        number holds at a check (--check_every_min, --check_episodes: the brain
+                        its stage (s1, s2, ...; with --run_prefix=all: all_s1, all_s2, ...); each
+                        continues its own model if it has one, else starts from the best brain of
+                        the stage before it in the curriculum (S1 from --resume=<brain> if given,
+                        else afresh); each ended when its "done when" number holds at a check (--check_every_min, --check_episodes: the brain
                         evaluated on fresh drops, against the all-rounder where the number needs it)
                         or after --hours_each. AI_FLEET_PLAN.md D6b's table: S1 the speed made good
                         80 % of the all-rounder's; S2 and S3 80 % of the drops round within 40 s; S4
                         finishes 90 % within 1.3 times the all-rounder's time; S5 starts 90 % within
                         10 s of the gun with OCS under 10 %; S6 only ends by the hours.
+  --run_prefix=<name>   with --stages: the runs are <name>_s1, <name>_s2, ... (the brains
+                        <name>_s1_best.json, ...), so a new curriculum does not write over the
+                        brains of an earlier one (Game/race/brains/s1_*.json are 21 October's)
   --run=<name>          [the stage, lower case] the run's name: the brains are <run>_gen<N>.json and
                         <run>_best.json in Game/race/brains, the logs and the model .sim_output/train/<run>/
   --hours=<h>           [6] stop after this long (also --minutes=<m> for a short try)
@@ -35,12 +39,27 @@ Options (the defaults in brackets):
   --twa_bias=0.3        a fresh policy's wind-angle output starts here (54 degrees on starboard, a
                         close reach), not at 0, which is head to wind: a board that starts in irons
                         learns nothing. Not used when resuming from a brain or a model.
+  --push_start=auto     a fresh policy's push output (the push slider, the fourth output since
+                        Session 64) starts here: "auto" is the slider level of the autopilot's own
+                        margin (hike share 1.1, about 78 %), where the fleet sails today, as the
+                        worker says in its hello; or a number from -1 (0 %) to 1 (100 %). Also for a
+                        brain resumed without a push output. Not used when resuming a model.
   --hidden=64,64        the policy's hidden layers (the game's NeuralNet runs whatever is exported)
+  --device=cpu          where the network learns: cpu, cuda (the graphics card) or auto (cuda if
+                        torch has it). Measured in Session 64 (training.md): the physics in Godot is
+                        the cost; the network is tiny.
+
+To stop a run cleanly (the model and a brain saved, the workers closed, the nights not going on to
+the next stage): create the file .sim_output/train/STOP (touch .sim_output/train/STOP), or press
+Ctrl-C once. The next start removes the file.
 
 Every rollout prints one line: the wall time, the timesteps and episodes done, the speed (decisions
 a second), the mean reward and length of the last episodes, how many reached their goal, their
-speed made good, falls and manoeuvres per episode, and the policy's noise. The same goes to
-.sim_output/train/<run>/curve.csv.
+speed made good, falls and manoeuvres per episode, the policy's noise, the mean push slider level
+the policy asked for in the rollout, how long the network's update took ("learn") and the share
+of the workers' time spent sailing ("busy": the rest they waited for the slowest worker, whose
+race may be in a rough sea while another's is flat). The same goes to .sim_output/train/<run>/
+curve.csv (without learn and busy).
 """
 
 from __future__ import annotations
@@ -73,6 +92,10 @@ OUTPUT_DIR = REPO_ROOT / ".sim_output/train"
 # decision is half a second).
 GAMMA_BY_STAGE = {"S1": 0.995, "S2": 0.99, "S3": 0.99, "S4": 0.998, "S5": 0.997, "S6": 0.998}
 RECENT_EPISODES = 300
+# The file that stops a run cleanly at the next decision (see the top).
+STOP_FILE = OUTPUT_DIR / "STOP"
+# Set when a run was stopped by hand (the file or Ctrl-C): the nights do not go on.
+stopped_by_hand = False
 
 
 def parse_args() -> argparse.Namespace:
@@ -82,6 +105,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--hours", type=float, default=6.0)
     parser.add_argument("--minutes", type=float, default=0.0)
     parser.add_argument("--stages", default="")
+    parser.add_argument("--run_prefix", default="")
     parser.add_argument("--hours_each", type=float, default=4.0)
     parser.add_argument("--minutes_each", type=float, default=0.0)
     parser.add_argument("--check_every_min", type=float, default=60.0)
@@ -101,7 +125,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ent", type=float, default=0.0)
     parser.add_argument("--log_std_init", type=float, default=-1.5)
     parser.add_argument("--twa_bias", type=float, default=0.3)
+    parser.add_argument("--push_start", default="auto")
     parser.add_argument("--hidden", default="64,64")
+    parser.add_argument("--device", default="cpu", choices=["cpu", "cuda", "auto"])
     args = parser.parse_args()
     args.stage = args.stage.upper()
     if not args.run:
@@ -113,7 +139,25 @@ def parse_args() -> argparse.Namespace:
     if args.workers <= 0:
         args.workers = min(os.cpu_count() or 4, 16)
     args.gamma = GAMMA_BY_STAGE.get(args.stage, 0.995) if args.gamma == "auto" else float(args.gamma)
+    if args.device == "auto":
+        args.device = "cuda" if torch.cuda.is_available() else "cpu"
+    elif args.device == "cuda" and not torch.cuda.is_available():
+        print("torch has no CUDA here: learning on the CPU", flush=True)
+        args.device = "cpu"
     return args
+
+
+def stage_run(prefix: str, stage: str) -> str:
+    """The run of a stage in the nights: s1, or with a prefix all_s1."""
+    return f"{prefix}_{stage.lower()}" if prefix else stage.lower()
+
+
+def push_start_output(choice: str, hello: dict) -> float:
+    """The push output a fresh policy starts at: the worker's (the autopilot's own margin) for
+    "auto", else the number given."""
+    if choice == "auto":
+        return float(hello.get("push_start_output", 0.5))
+    return max(-1.0, min(1.0, float(choice)))
 
 
 def physics_commit() -> str:
@@ -217,13 +261,16 @@ class Progress(BaseCallback):
         self.rollouts = 0
         self.last_rollout_time = time.time()
         self.last_rollout_steps = 0
+        # How long the last update of the network took (between a rollout's end and the next
+        # one's start): the part the graphics card could speed up.
+        self.learn_s = 0.0
         self.curve_path = run_dir / "curve.csv"
         new_file = not self.curve_path.exists()
         self.curve = open(self.curve_path, "a", encoding="utf-8", newline="")
         self.writer = csv.writer(self.curve)
         if new_file:
             self.writer.writerow(["hours", "timesteps", "episodes", "steps_per_s", "reward_mean", "length_mean_s", "goal_share",
-                                  "vmg_ms", "falls_per_episode", "manoeuvres_per_episode", "policy_std", "generation"])
+                                  "vmg_ms", "falls_per_episode", "manoeuvres_per_episode", "policy_std", "generation", "push_mean"])
         self.commit = physics_commit()
 
     def _on_step(self) -> bool:
@@ -237,7 +284,16 @@ class Progress(BaseCallback):
                     "falls": info.get("falls", 0),
                     "manoeuvres": info.get("manoeuvres", 0),
                 })
+        global stopped_by_hand
+        if STOP_FILE.exists():
+            print(f"stopped by hand ({STOP_FILE} is there)", flush=True)
+            stopped_by_hand = True
+            return False
         return time.time() - self.started < self.args.hours * 3600.0 and not self.stage_is_done
+
+    def _on_rollout_start(self) -> None:
+        if self.rollouts > 0:
+            self.learn_s = time.time() - self.last_rollout_time
 
     def check_stage(self) -> None:
         """With --stages: the latest brain on fresh drops; the stage is done when its number holds."""
@@ -275,6 +331,14 @@ class Progress(BaseCallback):
         except AttributeError:
             return 0.0
 
+    def push_mean(self) -> float:
+        """The mean push slider level (0 to 1) the policy asked for in the last rollout; -1 for a
+        policy without a push output."""
+        if "push" not in self.action_names:
+            return -1.0
+        actions = np.asarray(self.model.rollout_buffer.actions)[..., self.action_names.index("push")]
+        return float(np.mean(np.clip(0.5 * (actions + 1.0), 0.0, 1.0)))
+
     def _on_rollout_end(self) -> None:
         self.rollouts += 1
         now = time.time()
@@ -285,13 +349,17 @@ class Progress(BaseCallback):
         self.last_rollout_steps = steps
         s = self.stats()
         std = self.policy_std()
+        push = self.push_mean()
+        busy = self.workers.busy_share()
         print(f"{hours:6.2f} h  {steps:9d} steps  {self.workers.episodes_done:6d} episodes  {speed:5.0f}/s  "
               f"reward {s['reward_mean']:7.2f}  length {s['length_mean_s']:5.1f} s  goal {100 * s['goal_share']:3.0f} %  "
               f"vmg {s['vmg_ms']:4.2f} m/s  falls {s['falls_per_episode']:4.2f}  manoeuvres {s['manoeuvres_per_episode']:4.1f}  "
-              f"std {std:.2f}", flush=True)
+              f"std {std:.2f}" + (f"  push {100 * push:3.0f} %" if push >= 0.0 else "") + f"  learn {self.learn_s:.2f} s  busy {100 * busy:3.0f} %"
+              + (f"  ({self.workers.bad_numbers} numbers were not numbers)" if self.workers.bad_numbers else ""), flush=True)
         self.writer.writerow([f"{hours:.3f}", steps, self.workers.episodes_done, f"{speed:.0f}", f"{s['reward_mean']:.4f}",
                               f"{s['length_mean_s']:.1f}", f"{s['goal_share']:.3f}", f"{s['vmg_ms']:.3f}",
-                              f"{s['falls_per_episode']:.3f}", f"{s['manoeuvres_per_episode']:.2f}", f"{std:.3f}", self.generation])
+                              f"{s['falls_per_episode']:.3f}", f"{s['manoeuvres_per_episode']:.2f}", f"{std:.3f}", self.generation,
+                              f"{push:.3f}"])
         self.curve.flush()
         if now - self.last_save >= self.args.save_every_min * 60.0:
             self.last_save = now
@@ -325,27 +393,68 @@ class Progress(BaseCallback):
 
 def main() -> None:
     args = parse_args()
+    if STOP_FILE.exists():
+        STOP_FILE.unlink()
+        print(f"removed {STOP_FILE} (left from the last stop)", flush=True)
     if args.stages:
         stages = [part.strip().upper() for part in args.stages.split(",") if part.strip()]
-        previous = ""
+        # A brain given with --resume starts the first stage listed (when it has no model of its
+        # own and the stage before it no best brain).
+        first_brain = args.resume if args.resume.endswith(".json") else ""
         for stage in stages:
             args.stage = stage
-            args.run = stage.lower()
+            args.run = stage_run(args.run_prefix, stage)
             args.hours = args.hours_each
             args.gamma = GAMMA_BY_STAGE.get(stage, 0.995)
             own_model = OUTPUT_DIR / args.run / "model.zip"
+            # The stage before in the curriculum (S1 to S6), whichever stages were listed: a
+            # stage always goes on from the one before's best brain.
+            order = list(GAMMA_BY_STAGE.keys())
+            before = order[order.index(stage) - 1] if stage in order and order.index(stage) > 0 else ""
+            before_best = BRAINS_DIR / f"{stage_run(args.run_prefix, before)}_best.json" if before else None
             if own_model.exists():
                 args.resume = "auto"
-            elif previous and (BRAINS_DIR / f"{previous}_best.json").exists():
-                args.resume = str(BRAINS_DIR / f"{previous}_best.json")
+            elif before_best is not None and before_best.exists():
+                args.resume = str(before_best)
+            elif stage == stages[0] and first_brain:
+                args.resume = first_brain
             else:
                 args.resume = "none"
-            print(f"\n=== stage {stage} (run {args.run}, up to {args.hours:.1f} h, from {args.resume}) ===", flush=True)
-            note = train_one(args)
+            print(f"\n=== stage {stage} (run {args.run}, up to {args.hours:.2f} h, from {args.resume}) ===", flush=True)
+            note = train_stage_with_retries(args)
             print(f"=== stage {stage} over: {note} ===", flush=True)
-            previous = args.run
+            if stopped_by_hand:
+                print(f"=== the nights stop here (stopped by hand); to go on, run the command again with --stages= from "
+                      f"{stage} on: each stage continues its own model, or starts from the best brain of the one before ===", flush=True)
+                return
         return
     train_one(args)
+
+
+# How often a stage of the unattended nights is started again after its training stopped on an
+# error (a Godot worker that crashed or stopped answering), each time from the model it saved.
+STAGE_ATTEMPTS = 4
+
+
+def train_stage_with_retries(args: argparse.Namespace) -> str:
+    """One stage of the nights: if the training stops on an error, the stage goes on from the
+    model it saved on the way out (train_one saves it whatever happens), for the hours it has left,
+    up to STAGE_ATTEMPTS times; then the error stops the nights."""
+    started = time.time()
+    hours = args.hours
+    for attempt in range(1, STAGE_ATTEMPTS + 1):
+        try:
+            return train_one(args)
+        except Exception as error:  # noqa: BLE001 - any error of a worker or the bridge
+            left_h = hours - (time.time() - started) / 3600.0
+            print(f"=== stage {args.stage}: the training stopped on an error (attempt {attempt} of {STAGE_ATTEMPTS}): "
+                  f"{type(error).__name__}: {error} ===", flush=True)
+            if attempt == STAGE_ATTEMPTS or left_h < 0.05:
+                raise
+            args.resume = "auto"
+            args.hours = left_h
+            print(f"=== stage {args.stage}: going on from its saved model for {left_h:.2f} h ===", flush=True)
+    return ""
 
 
 def train_one(args: argparse.Namespace) -> str:
@@ -354,7 +463,7 @@ def train_one(args: argparse.Namespace) -> str:
     run_dir.mkdir(parents=True, exist_ok=True)
     torch.set_num_threads(max(1, min(4, (os.cpu_count() or 4) // 4)))
     print(f"run {args.run}: stage {args.stage}, {args.hours:.2f} h, {args.workers} workers, seed {args.seed}, "
-          f"gamma {args.gamma}, n_steps {args.n_steps}, batch {args.batch}, lr {args.lr}", flush=True)
+          f"gamma {args.gamma}, n_steps {args.n_steps}, batch {args.batch}, lr {args.lr}, on the {args.device}", flush=True)
     workers = GodotWorkers(stage=args.stage, workers=args.workers, boards=args.boards, log_dir=run_dir, seed=args.seed)
     obs_names = list(workers.hello["obs_names"])
     action_names = list(workers.hello["action_names"])
@@ -372,7 +481,7 @@ def train_one(args: argparse.Namespace) -> str:
         if stats_path.exists():
             venv = VecNormalize.load(str(stats_path), workers)
             venv.norm_obs = False
-        model = PPO.load(args.resume, env=venv, device="cpu")
+        model = PPO.load(args.resume, env=venv, device=args.device)
         resumed = True
         generation_file = Path(args.resume).parent / "generation.txt"
         if generation_file.exists():
@@ -381,22 +490,28 @@ def train_one(args: argparse.Namespace) -> str:
     else:
         model = PPO("MlpPolicy", venv, n_steps=args.n_steps, batch_size=args.batch, n_epochs=args.epochs, learning_rate=args.lr,
                     gamma=args.gamma, gae_lambda=args.gae, clip_range=args.clip, ent_coef=args.ent, policy_kwargs=policy_kwargs,
-                    seed=args.seed, device="cpu", verbose=0)
+                    seed=args.seed, device=args.device, verbose=0)
+        # A fresh policy's starting answers (SB3 starts the last layer's weights near zero, so its
+        # outputs are its biases): the wind angle a close reach on starboard (0 would be head to
+        # wind, in irons), the push the autopilot's own margin (the fleet as it sails today).
+        push_start = push_start_output(args.push_start, workers.hello)
+        with torch.no_grad():
+            if args.twa_bias != 0.0 and "twa" in action_names:
+                model.policy.action_net.bias[action_names.index("twa")] = args.twa_bias
+            if "push" in action_names:
+                model.policy.action_net.bias[action_names.index("push")] = push_start
+        if "push" in action_names:
+            print(f"the push output starts at {push_start:.3f}: the slider at {50.0 * (push_start + 1.0):.0f} %", flush=True)
         if args.resume.endswith(".json"):
             brain_path = Path(args.resume)
             if not brain_path.is_absolute():
                 brain_path = REPO_ROOT / brain_path
-            new_names = policy_from_brain(model.policy, load_brain(brain_path), obs_names)
+            new_names, new_outputs = policy_from_brain(model.policy, load_brain(brain_path), obs_names, action_names)
             print(f"the policy starts from the brain {brain_path.name}"
-                  + (f" ({len(new_names)} new inputs start at zero weight: {', '.join(new_names)})" if new_names else ""), flush=True)
-        else:
-            if args.resume not in ("auto", "none", ""):
-                print(f"nothing to resume from at {args.resume}: starting from scratch", flush=True)
-            if args.twa_bias != 0.0:
-                # A fresh policy's mean wind angle: a close reach on starboard, so the boards sail
-                # from the first decision (0 would be head to wind).
-                with torch.no_grad():
-                    model.policy.action_net.bias[0] = args.twa_bias
+                  + (f" ({len(new_names)} new inputs start at zero weight: {', '.join(new_names)})" if new_names else "")
+                  + (f" (new outputs start fresh: {', '.join(new_outputs)})" if new_outputs else ""), flush=True)
+        elif args.resume not in ("auto", "none", ""):
+            print(f"nothing to resume from at {args.resume}: starting from scratch", flush=True)
     print(f"the policy: {hidden} hidden, {sum(p.numel() for p in model.policy.parameters())} parameters in all "
           f"(the value network included)", flush=True)
 
@@ -404,6 +519,8 @@ def train_one(args: argparse.Namespace) -> str:
     try:
         model.learn(total_timesteps=10**12, callback=progress, reset_num_timesteps=not resumed)
     except KeyboardInterrupt:
+        global stopped_by_hand
+        stopped_by_hand = True
         print("stopped by hand", flush=True)
     finally:
         progress.save_generation(final=True)
