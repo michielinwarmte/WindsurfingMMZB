@@ -221,3 +221,31 @@ func test_a_board_that_missed_the_finish_line_goes_back_behind_it() -> void:
 	var on_line: Vector2 = far_enough + (aim - far_enough) * (Skipper.FINISH_BACK_REACHED_M + 5.0) / (aim - far_enough).dot(finish.in_dir)
 	assert_almost_eq(on_line.distance_to(middle), 0.0, 2.0, "through its middle, not near an end")
 
+
+func test_a_fast_board_off_the_finish_line_eases_down_to_turn_onto_it() -> void:
+	var skipper: Skipper = _allrounder_at(24.0)
+	var finish: RaceStep = skipper._race.steps()[skipper._race.steps().size() - 1]
+	var middle: Vector2 = finish.target()
+	var along: Vector2 = (finish.points[1] - finish.points[0]).normalized()
+	# 100 m behind the line, its track 30 degrees off the leg at 13 m/s: that track crosses the line's
+	# extension 58 m from its middle, well past an end of the 35 m line, 8 s from now.
+	var behind: Vector2 = middle - finish.in_dir * 100.0
+	skipper._velocity = finish.in_dir.rotated(deg_to_rad(30.0)) * 13.0
+	skipper._hands.hold_speed_ms = 0.0
+	skipper._finish_target(finish, behind)
+	assert_almost_eq(skipper._hands.hold_speed_ms, Skipper.FINISH_EASE_SPEED_MS, 1e-6, "eases down to turn onto the line")
+	# The track straight at the line: full speed.
+	skipper._velocity = finish.in_dir * 13.0
+	skipper._hands.hold_speed_ms = 0.0
+	skipper._finish_target(finish, behind)
+	assert_almost_eq(skipper._hands.hold_speed_ms, 0.0, 1e-6, "full speed when the track crosses the line")
+	# Off the line but far from it (more than FINISH_EASE_WITHIN_S away): not yet.
+	skipper._velocity = finish.in_dir.rotated(deg_to_rad(30.0)) * 13.0
+	skipper._finish_target(finish, middle - finish.in_dir * 300.0)
+	assert_almost_eq(skipper._hands.hold_speed_ms, 0.0, 1e-6, "not from far away")
+	# Having missed the line once (past an end on the course side), it sails slowly until it has crossed.
+	skipper._finish_target(finish, middle + finish.in_dir * 20.0 + along * 40.0)
+	assert_almost_eq(skipper._hands.hold_speed_ms, Skipper.FINISH_AGAIN_SPEED_MS, 1e-6, "slow to come back")
+	skipper._hands.hold_speed_ms = 0.0
+	skipper._finish_target(finish, middle - finish.in_dir * (Skipper.FINISH_BACK_REACHED_M + 5.0))
+	assert_almost_eq(skipper._hands.hold_speed_ms, Skipper.FINISH_AGAIN_SPEED_MS, 1e-6, "and across the line again")

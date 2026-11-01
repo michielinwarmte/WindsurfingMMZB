@@ -252,6 +252,18 @@ const FREE_CORRIDOR_M: float = 60.0
 ## crosses again once it is FINISH_BACK_REACHED_M behind the line (see _finish_target()).
 const FINISH_BACK_M: float = 30.0
 const FINISH_BACK_REACHED_M: float = 20.0
+## Racing for the finish, within FINISH_EASE_WITHIN_S of the line at its speed, a board whose track
+## over the ground would cross the line's extension more than FINISH_MISS_M beyond an end eases down
+## to FINISH_EASE_SPEED_MS (the hold-back, as at the start), so that it can turn onto the line: at
+## planing speed the head-up is gentle (GENTLE_HEAD_UP_STICK above GENTLE_HEAD_UP_FROM_MS). On T1 at
+## 24 kt the board came out of the 4S rounding at 13 m/s heading 30 degrees off a 35 m line 109 m
+## away, could not head up in time, and swept past the east end. A board that has missed the line
+## sails at FINISH_AGAIN_SPEED_MS until it has crossed: its turns back are tight, not loops of 60 m
+## at 11 m/s (24 tacks and gybes round the line, and no finish; see _finish_target()).
+const FINISH_EASE_WITHIN_S: float = 12.0
+const FINISH_MISS_M: float = 3.0
+const FINISH_EASE_SPEED_MS: float = 8.0
+const FINISH_AGAIN_SPEED_MS: float = 6.0
 ## The share of the finish line kept clear at each end when it aims at the nearest point of it.
 const FINISH_END_SHARE: float = 0.25
 ## Finished: it sails on this far past the finish line (clear of the boards still finishing), then
@@ -620,7 +632,10 @@ func _target_point(step: RaceStep, position: Vector2) -> Vector2:
 ## without having finished) first goes back FINISH_BACK_M behind the middle of the line, until it is
 ## FINISH_BACK_REACHED_M behind it, and then crosses through the middle: aiming at the nearest point
 ## from beyond the line, or at one near an end after turning back wide, it chased the line round in
-## circles (T1 at 24 kt, 25 tacks and 25 gybes and no finish).
+## circles (T1 at 24 kt, 25 tacks and 25 gybes and no finish). Having missed once it sails slowly
+## (FINISH_AGAIN_SPEED_MS) until it has crossed, so the turns back are tight; and before any miss,
+## near the line with its track carrying it past an end, it eases down to turn onto the line
+## (_would_miss_the_line(), FINISH_EASE_SPEED_MS).
 func _finish_target(step: RaceStep, position: Vector2) -> Vector2:
 	var behind_m: float = -RoundingCheck.over_line_m(position, step.points[0], step.points[1], step.in_dir)
 	if behind_m < 0.0:
@@ -628,12 +643,30 @@ func _finish_target(step: RaceStep, position: Vector2) -> Vector2:
 		_finish_missed = true
 	elif behind_m > FINISH_BACK_REACHED_M:
 		_finish_going_back = false
+	if _finish_missed:
+		_hands.hold_speed_ms = FINISH_AGAIN_SPEED_MS
 	if _finish_going_back:
 		return step.target() - step.in_dir * FINISH_BACK_M
 	if _finish_missed:
 		return _through(position, step.target())
+	if _would_miss_the_line(step, position, behind_m):
+		_hands.hold_speed_ms = FINISH_EASE_SPEED_MS
 	var inset: float = maxf(_line_inset(step), FINISH_END_SHARE)
 	return _through(position, step.points[1].lerp(step.points[0], clampf(_share_along_line(step, position), inset, 1.0 - inset)))
+
+
+## Whether the board's track over the ground (its velocity, kept as it is) crosses the finish line's
+## extension more than FINISH_MISS_M beyond an end, within FINISH_EASE_WITHIN_S from now; behind_m is
+## how far behind the line the board is.
+func _would_miss_the_line(step: RaceStep, position: Vector2, behind_m: float) -> bool:
+	var toward_ms: float = _velocity.dot(step.in_dir)
+	if toward_ms <= 0.5:
+		return false
+	var crossing_in_s: float = behind_m / toward_ms
+	if crossing_in_s > FINISH_EASE_WITHIN_S:
+		return false
+	var crossing: Vector2 = position + _velocity * crossing_in_s
+	return _off_the_ends_m(step, crossing) > FINISH_MISS_M
 
 
 ## A mark is rounded by crossing its rounding ray (RoundingCheck) going round it the right way.
