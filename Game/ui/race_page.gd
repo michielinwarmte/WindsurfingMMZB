@@ -2,9 +2,10 @@ class_name RacePage
 extends MenuPage
 ## The Race page of the start menu (AI_FLEET_PLAN.md, F4: "the fleet picker in the menu (size,
 ## who)"; RACING_PLAN.md 9A's race_ui): the water and the course, how many boards, who sails them
-## (the personas, the four characters, the night's brain), the countdown, the wind shadows and the
-## rules. Start builds a RaceSetup and sends it with the water (start_race); the start menu starts
-## the race the way its two race buttons did. The choices are kept for the session.
+## (the personas, the four characters, the night's brain), the countdown, the wind shadows, the
+## rules and the personas' own gear. Start builds a RaceSetup and sends it with the water
+## (start_race); the start menu starts the race the way its two race buttons did. The choices are
+## kept for the session.
 
 signal start_race(setup: RaceSetup, on_lake: bool)
 
@@ -24,7 +25,7 @@ enum Who { PERSONAS, CHARACTERS, MIXED, BRAIN_AND_PERSONAS }
 ## The curriculum's stages, latest first, as the brains' names end (<run>_<stage>_best): the brain
 ## the page races is the latest stage's (latest_brain()).
 const BRAIN_STAGES: PackedStringArray = ["c2", "c1", "s6", "s5", "s4", "s3", "s2", "s1"]
-const WHO_NAMES: PackedStringArray = ["The twelve personas", "The four characters", "Personas and characters", "The trained brain and the personas"]
+const WHO_NAMES: PackedStringArray = ["The personas, rookie to pro", "The four characters", "Personas and characters", "The trained brain and the personas"]
 
 ## The choices, kept for the session.
 static var chosen_lake: bool = false
@@ -34,6 +35,8 @@ static var chosen_who: Who = Who.PERSONAS
 static var chosen_countdown: int = 1
 static var chosen_shadows: bool = true
 static var chosen_rules: bool = true
+## The personas sail their own gear from the catalogue (RaceSetup.gear).
+static var chosen_gear: bool = RaceSetup.new().gear
 
 @onready var _rows: GridContainer = %Rows
 @onready var _start_button: Button = %StartButton
@@ -81,6 +84,7 @@ func _build_rows() -> void:
 	_add_list("Countdown", COUNTDOWN_NAMES, chosen_countdown, "The boards gather from where they sail free.", func(index: int) -> void: chosen_countdown = index)
 	_add_switch("Wind shadows", chosen_shadows, "A sail leaves slower air behind it: a pack slows itself.", func(on: bool) -> void: chosen_shadows = on)
 	_add_switch("The rules", chosen_rules, "Port keeps clear of starboard, and more; a penalty is a turn or 20 s.", func(on: bool) -> void: chosen_rules = on)
+	_add_switch("Their own gear", chosen_gear, "Each persona rigs its own brand's board, sail and fin for the wind.", func(on: bool) -> void: chosen_gear = on)
 	_on_who_chosen(chosen_who)
 
 
@@ -207,6 +211,7 @@ func _on_start_pressed() -> void:
 	setup.time_trial = count == 0
 	setup.shadows = chosen_shadows
 	setup.rules = chosen_rules
+	setup.gear = chosen_gear
 	hide()
 	start_race.emit(setup, chosen_lake)
 

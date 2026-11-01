@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="Persona" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://race/persona.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+name = "Ravi"
+sail_colour = Color(0.95, 0.5, 0.1, 1)
+home_water = "Brouwersdam"
+profile = "the club racer: steady, sensible, never brilliant"
+start_timing = 0.45
+start_nerve = 0.4
+tacking = 0.45
+gybing = 0.4
+boat_speed = 0.45
+upwind_sense = 0.45
+downwind_sense = 0.45
+gust_appetite = 0.2
+risk = 0.4
+aggression = 0.3
+consistency = 0.8
+start_spot = 0.5
+start_style = 1
+pointing_offset_deg = 0.5
+light_wind = 0.5
+strong_wind = 0.4
+sail_brand = "tripletone"
+board_brand = "tripletone"

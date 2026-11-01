@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="Persona" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://race/persona.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+name = "Pia"
+sail_colour = Color(1, 0.6, 0.8, 1)
+home_water = "Lake Neusiedl"
+profile = "first season: slow, careful and wobbly, but she finishes"
+start_timing = 0.1
+start_nerve = 0.1
+tacking = 0.15
+gybing = 0.1
+boat_speed = 0.1
+upwind_sense = 0.15
+downwind_sense = 0.15
+gust_appetite = 0.0
+risk = 0.15
+aggression = 0.1
+consistency = 0.4
+start_spot = 0.5
+start_style = 1
+pointing_offset_deg = 2.0
+light_wind = 0.45
+strong_wind = 0.2
+sail_brand = "savanna"
+board_brand = "savanna"

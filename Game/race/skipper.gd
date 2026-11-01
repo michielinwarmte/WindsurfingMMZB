@@ -282,7 +282,7 @@ var push_wanted: bool = true
 ## margin (see _move_the_push()).
 var _push_now: float = NAN
 ## The persona this skipper plays (F4), if any: its sheet is drawn afresh for every race in
-## setup() (the day's form, seeded by random_seed, and the gear for the wind).
+## setup() (the day's form, seeded by random_seed, and its form in the wind of the race).
 var persona: Persona = null
 ## Before its start: the seconds it has to spare (the time until it wants to cross, less the time
 ## it expects to need to get to its spot), for the tools.
