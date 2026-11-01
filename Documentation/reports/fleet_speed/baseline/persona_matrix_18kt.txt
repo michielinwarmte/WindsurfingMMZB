@@ -1,0 +1,40 @@
+== template:LG2@40 at 18 kt (the course family)
+1. Ines           11:52.4    +0:00.0  6/6 steps  splits 0:01.2 3:36.6 5:43.9 9:12.4 11:35.7 11:52.4  falls 0  tacks 5  gybes 6
+2. Marco          11:54.7    +0:02.3  6/6 steps  splits 0:04.1 3:58.2 6:05.0 9:27.1 11:39.9 11:54.7  falls 0  tacks 7  gybes 7
+3. Mara           11:55.0    +0:02.7  6/6 steps  splits 0:06.9 3:49.3 5:52.3 9:23.0 11:39.1 11:55.0  falls 0  tacks 5  gybes 6
+4. Sven           12:03.5    +0:11.1  6/6 steps  splits 0:07.2 3:54.2 5:58.6 9:33.4 11:47.9 12:03.5  falls 0  tacks 7  gybes 7
+5. Aiko           12:15.0    +0:22.7  6/6 steps  splits 0:01.0 3:58.8 6:06.6 9:39.9 11:58.9 12:15.0  falls 0  tacks 5  gybes 7
+6. Elin           12:37.5    +0:45.1  6/6 steps  splits 0:02.3 4:30.7 6:33.6 10:03.2 12:22.1 12:37.5  falls 0  tacks 6  gybes 8
+7. Kofi           12:52.7    +1:00.4  6/6 steps  splits 0:03.0 3:42.3 5:46.8 9:14.8 12:36.2 12:52.7  falls 0  tacks 6  gybes 9
+8. Noor           12:56.5    +1:04.1  6/6 steps  splits 0:07.9 3:53.9 5:58.6 10:10.5 12:40.4 12:56.5  falls 0  tacks 8  gybes 10
+9. Lena           13:27.3    +1:35.0  6/6 steps  splits 0:04.8 5:31.5 7:31.6 10:56.2 13:10.9 13:27.3  falls 0  tacks 6  gybes 9
+10. Tobias         13:45.2    +1:52.8  6/6 steps  splits 0:03.8 4:36.9 6:42.3 10:22.2 13:10.5 13:45.2  falls 0  tacks 8  gybes 11
+11. Jonas          13:46.9    +1:54.5  6/6 steps  splits 0:08.7 3:47.2 6:06.9 10:58.5 13:29.6 13:46.9  falls 0  tacks 5  gybes 8
+12. Pavel          14:12.9    +2:20.5  6/6 steps  splits 0:04.8 4:33.1 6:39.4 11:09.9 13:57.2 14:12.9  falls 0  tacks 6  gybes 10
+== template:PD3@60 at 18 kt (the slalom family)
+1. Marco           3:10.2    +0:00.0  5/5 steps  splits 0:03.0 0:35.4 2:13.7 2:35.9 3:10.2  falls 0  tacks 25  gybes 10
+2. Aiko            3:14.6    +0:04.4  5/5 steps  splits 0:00.4 0:33.8 2:15.7 2:40.4 3:14.6  falls 0  tacks 21  gybes 13
+3. Sven            3:15.4    +0:05.2  5/5 steps  splits 0:05.5 0:36.3 2:16.7 2:41.6 3:15.4  falls 0  tacks 23  gybes 11
+4. Kofi            3:19.3    +0:09.1  5/5 steps  splits 0:01.6 0:33.3 2:21.0 2:46.1 3:19.3  falls 0  tacks 25  gybes 11
+5. Pavel           3:26.0    +0:15.8  5/5 steps  splits 0:02.5 0:49.2 2:26.7 2:51.4 3:26.0  falls 0  tacks 24  gybes 13
+6. Elin            3:30.3    +0:20.1  5/5 steps  splits 0:01.0 0:50.6 2:30.5 2:54.4 3:30.3  falls 0  tacks 24  gybes 14
+7. Tobias          3:30.6    +0:20.4  5/5 steps  splits 0:04.2 0:53.2 2:33.9 2:58.0 3:30.6  falls 0  tacks 22  gybes 14
+8. Lena            3:40.9    +0:30.7  5/5 steps  splits 0:03.5 1:03.7 2:43.0 3:06.5 3:40.9  falls 0  tacks 26  gybes 15
+9. Jonas           3:43.5    +0:33.3  5/5 steps  splits 0:05.5 0:53.8 2:44.6 3:10.1 3:43.5  falls 0  tacks 22  gybes 12
+10. Ines            3:44.0    +0:33.8  5/5 steps  splits 0:00.5 0:33.8 2:44.8 3:10.2 3:44.0  falls 0  tacks 24  gybes 13
+11. Mara            4:04.3    +0:54.1  5/5 steps  splits 0:01.5 1:06.3 3:05.0 3:28.8 4:04.3  falls 0  tacks 22  gybes 15
+12. Noor           15:49.7   +12:39.6  5/5 steps  splits 0:02.7 13:09.1 14:50.1 15:13.3 15:49.7  falls 0  tacks 3  gybes 32
+
+persona          course   slalom   specialist?
+Aiko                  5        2   slalom
+Elin                  6        6   
+Ines                  1       10   course
+Jonas                11        9   
+Kofi                  7        4   slalom
+Lena                  9        8   
+Mara                  3       11   course
+Marco                 2        1   
+Noor                  8       12   course
+Pavel                12        5   slalom
+Sven                  4        3   
+Tobias               10        7   slalom
