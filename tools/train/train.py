@@ -59,6 +59,8 @@ Options (the defaults in brackets):
                         manoeuvres the hands allow, seconds; auto is the stage's (MANOEUVRE_GAP_S,
                         20 s). The brain's note keeps it, so the game sails the brain by the same rule.
   --manoeuvre_cost_m=auto  what a tack or gybe costs in the reward, metres; auto is the stage's (5)
+  --recent=300          the line's and the curve's means are over this many of the last episodes
+                        (a short try: fewer, to see a trend in a few hundred episodes)
   --own_conditions=0    1: in the blind stages that set boards down at once (S1 to S4, C1, C2) each
                         board sails its own conditions (its own wind, and in S1 to S4 its own sea,
                         gusts and shifts) instead of its race's (TrainingDrops.weather_for())
@@ -151,6 +153,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--manoeuvre_gap_s", default="auto")
     parser.add_argument("--manoeuvre_cost_m", default="auto")
     parser.add_argument("--own_conditions", type=int, default=0)
+    parser.add_argument("--recent", type=int, default=RECENT_EPISODES)
     args = parser.parse_args()
     args.stage = args.stage.upper()
     if not args.run:
@@ -355,7 +358,7 @@ class Progress(BaseCallback):
         self.started = time.time()
         self.last_save = time.time()
         self.generation = started_generation
-        self.recent: deque[dict] = deque(maxlen=RECENT_EPISODES)
+        self.recent: deque[dict] = deque(maxlen=max(1, args.recent))
         self.best_reward = -float("inf")
         self.rollouts = 0
         self.last_rollout_time = time.time()
