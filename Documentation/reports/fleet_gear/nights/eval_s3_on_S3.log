@@ -1,0 +1,44 @@
+all_s3_best.json on S3 (downwind): 4 boards blind, 60 s episodes, 4 to 35 kt, the sea from flat to 0.60 m, gusts and shifts drawn: 20 episodes of 1 board, against the allrounder on the same drops
+  brain      ep   0 board 0  random trapezoid, outer loop         14 kt sea 0.00 m gusts 0.35 shifts 20  reward    0.91  progress    146 m in  44.9 s (3.24 m/s)  goal at  44.9 s  falls 0  manoeuvres 3
+  brain      ep   1 board 0  US3 at 56 %                          26 kt sea 0.27 m gusts 0.19 shifts 42  reward    1.47  progress    130 m in  16.5 s (7.85 m/s)  goal at  16.5 s  falls 0  manoeuvres 0
+  brain      ep   2 board 0  random windward-leeward, 1 round     19 kt sea 0.00 m gusts 0.49 shifts  9  reward   -0.14  progress    136 m in  60.0 s (2.26 m/s)  time up           falls 0  manoeuvres 6
+  brain      ep   3 board 0  random windward-leeward, 2 rounds    32 kt sea 0.00 m gusts 0.21 shifts 35  reward    0.74  progress     77 m in  21.9 s (3.53 m/s)  goal at  21.9 s  falls 0  manoeuvres 2
+  brain      ep   4 board 0  LR2 at 91 %                          21 kt sea 0.12 m gusts 0.29 shifts 33  reward    0.97  progress    122 m in  34.7 s (3.51 m/s)  goal at  34.7 s  falls 0  manoeuvres 1
+  brain      ep   5 board 0  random slalom, 5 marks               32 kt sea 0.26 m gusts 0.14 shifts 40  reward   -0.78  progress    117 m in  60.0 s (1.96 m/s)  time up           falls 1  manoeuvres 5
+  brain      ep   6 board 0  SD3 at 88 %                          17 kt sea 0.37 m gusts 0.14 shifts 36  reward   -0.82  progress     63 m in  60.0 s (1.06 m/s)  time up           falls 0  manoeuvres 5
+  brain      ep   7 board 0  PM1 at 74 %                          17 kt sea 0.30 m gusts 0.20 shifts  2  reward    1.04  progress    135 m in  37.8 s (3.56 m/s)  goal at  37.8 s  falls 0  manoeuvres 1
+  brain      ep   8 board 0  random slalom, 4 marks               32 kt sea 0.00 m gusts 0.30 shifts 35  reward    1.40  progress    144 m in  27.0 s (5.31 m/s)  goal at  27.0 s  falls 0  manoeuvres 0
+  brain      ep   9 board 0  LR2 at 83 %                          24 kt sea 0.08 m gusts 0.06 shifts 40  reward    0.43  progress     76 m in  31.5 s (2.40 m/s)  goal at  31.5 s  falls 0  manoeuvres 4
+  brain      ep  10 board 0  O2 at 46 %                           30 kt sea 0.40 m gusts 0.44 shifts 39  reward   -2.66  progress     64 m in  60.0 s (1.07 m/s)  time up           falls 4  manoeuvres 2
+  brain      ep  11 board 0  PM1 at 83 %                          32 kt sea 0.13 m gusts 0.05 shifts 43  reward    1.58  progress    176 m in  28.9 s (6.08 m/s)  goal at  28.9 s  falls 0  manoeuvres 2
+  brain      ep  12 board 0  random windward-leeward, 2 rounds     6 kt sea 0.37 m gusts 0.34 shifts  6  reward   -2.71  progress     14 m in  60.0 s (0.24 m/s)  time up           falls 3  manoeuvres 3
+  brain      ep  13 board 0  I2 at 66 %                           35 kt sea 0.46 m gusts 0.19 shifts 31  reward    0.68  progress    147 m in  37.2 s (3.96 m/s)  goal at  37.2 s  falls 1  manoeuvres 1
+  brain      ep  14 board 0  LR2 at 82 %                          18 kt sea 0.19 m gusts 0.34 shifts  0  reward    0.04  progress     89 m in  54.9 s (1.62 m/s)  goal at  54.9 s  falls 0  manoeuvres 5
+  brain      ep  15 board 0  LR2 at 60 %                          20 kt sea 0.54 m gusts 0.00 shifts  6  reward   -1.74  progress     21 m in  60.0 s (0.35 m/s)  time up           falls 1  manoeuvres 5
+  brain      ep  16 board 0  PM1 at 72 %                          11 kt sea 0.16 m gusts 0.28 shifts 21  reward   -0.68  progress     62 m in  60.0 s (1.04 m/s)  time up           falls 0  manoeuvres 2
+  brain      ep  17 board 0  LG2 at 50 %                          23 kt sea 0.21 m gusts 0.11 shifts 24  reward   -1.79  progress     61 m in  60.0 s (1.02 m/s)  time up           falls 2  manoeuvres 4
+  brain      ep  18 board 0  random slalom, 2 marks               35 kt sea 0.13 m gusts 0.11 shifts 18  reward   -0.87  progress    100 m in  56.1 s (1.79 m/s)  goal at  56.1 s  falls 2  manoeuvres 5
+  brain      ep  19 board 0  random windward-leeward, 2 rounds    30 kt sea 0.13 m gusts 0.30 shifts  4  reward    0.50  progress    190 m in  60.0 s (3.16 m/s)  time up           falls 0  manoeuvres 4
+  allrounder ep   0 board 0  random trapezoid, outer loop         14 kt sea 0.00 m gusts 0.35 shifts 20  reward    0.80  progress    144 m in  52.2 s (2.76 m/s)  goal at  52.2 s  falls 0  manoeuvres 2
+  allrounder ep   1 board 0  US3 at 56 %                          26 kt sea 0.27 m gusts 0.19 shifts 42  reward    1.44  progress    125 m in  15.9 s (7.89 m/s)  goal at  15.9 s  falls 0  manoeuvres 0
+  allrounder ep   2 board 0  random windward-leeward, 1 round     19 kt sea 0.00 m gusts 0.49 shifts  9  reward   -0.78  progress    107 m in  60.0 s (1.79 m/s)  time up           falls 1  manoeuvres 3
+  allrounder ep   3 board 0  random windward-leeward, 2 rounds    32 kt sea 0.00 m gusts 0.21 shifts 35  reward    0.92  progress    103 m in  27.7 s (3.71 m/s)  goal at  27.7 s  falls 0  manoeuvres 1
+  allrounder ep   4 board 0  LR2 at 91 %                          21 kt sea 0.12 m gusts 0.29 shifts 33  reward    0.75  progress    122 m in  43.2 s (2.82 m/s)  goal at  43.2 s  falls 0  manoeuvres 2
+  allrounder ep   5 board 0  random slalom, 5 marks               32 kt sea 0.26 m gusts 0.14 shifts 40  reward    0.82  progress    160 m in  36.5 s (4.39 m/s)  goal at  36.5 s  falls 1  manoeuvres 1
+  allrounder ep   6 board 0  SD3 at 88 %                          17 kt sea 0.37 m gusts 0.14 shifts 36  reward    0.80  progress     74 m in  19.6 s (3.80 m/s)  goal at  19.6 s  falls 0  manoeuvres 1
+  allrounder ep   7 board 0  PM1 at 74 %                          17 kt sea 0.30 m gusts 0.20 shifts  2  reward    0.95  progress    112 m in  31.3 s (3.58 m/s)  goal at  31.3 s  falls 0  manoeuvres 1
+  allrounder ep   8 board 0  random slalom, 4 marks               32 kt sea 0.00 m gusts 0.30 shifts 35  reward    1.50  progress    149 m in  24.5 s (6.07 m/s)  goal at  24.5 s  falls 0  manoeuvres 0
+  allrounder ep   9 board 0  LR2 at 83 %                          24 kt sea 0.08 m gusts 0.06 shifts 40  reward    0.16  progress     63 m in  40.8 s (1.54 m/s)  goal at  40.8 s  falls 0  manoeuvres 3
+  allrounder ep  10 board 0  O2 at 46 %                           30 kt sea 0.40 m gusts 0.44 shifts 39  reward   -2.10  progress     65 m in  60.0 s (1.08 m/s)  time up           falls 3  manoeuvres 1
+  allrounder ep  11 board 0  PM1 at 83 %                          32 kt sea 0.13 m gusts 0.05 shifts 43  reward    0.57  progress    199 m in  43.6 s (4.56 m/s)  goal at  43.6 s  falls 2  manoeuvres 1
+  allrounder ep  12 board 0  random windward-leeward, 2 rounds     6 kt sea 0.37 m gusts 0.34 shifts  6  reward   -3.02  progress    -17 m in  60.0 s (-0.29 m/s)  time up           falls 3  manoeuvres 3
+  allrounder ep  13 board 0  I2 at 66 %                           35 kt sea 0.46 m gusts 0.19 shifts 31  reward   -1.88  progress     -8 m in  60.0 s (-0.13 m/s)  time up           falls 1  manoeuvres 2
+  allrounder ep  14 board 0  LR2 at 82 %                          18 kt sea 0.19 m gusts 0.34 shifts  0  reward    0.48  progress     89 m in  40.6 s (2.20 m/s)  goal at  40.6 s  falls 0  manoeuvres 2
+  allrounder ep  15 board 0  LR2 at 60 %                          20 kt sea 0.54 m gusts 0.00 shifts  6  reward    0.88  progress     96 m in  29.0 s (3.30 m/s)  goal at  29.0 s  falls 0  manoeuvres 0
+  allrounder ep  16 board 0  PM1 at 72 %                          11 kt sea 0.16 m gusts 0.28 shifts 21  reward   -2.24  progress    -99 m in  60.0 s (-1.66 m/s)  time up           falls 0  manoeuvres 1
+  allrounder ep  17 board 0  LG2 at 50 %                          23 kt sea 0.21 m gusts 0.11 shifts 24  reward    0.22  progress    104 m in  58.5 s (1.77 m/s)  goal at  58.5 s  falls 0  manoeuvres 3
+  allrounder ep  18 board 0  random slalom, 2 marks               35 kt sea 0.13 m gusts 0.11 shifts 18  reward   -1.59  progress     30 m in  60.0 s (0.51 m/s)  time up           falls 1  manoeuvres 4
+  allrounder ep  19 board 0  random windward-leeward, 2 rounds    30 kt sea 0.13 m gusts 0.30 shifts  4  reward    1.60  progress    227 m in  55.7 s (4.07 m/s)  goal at  55.7 s  falls 0  manoeuvres 1
+brain: 20 episodes, mean reward -0.12, goal reached in 11 (55 %, mean 35.6 s), speed made good 2.22 m/s, 0.70 falls and 3.0 manoeuvres per episode
+allrounder: 20 episodes, mean reward 0.01, goal reached in 14 (70 %, mean 37.1 s), speed made good 2.10 m/s, 0.60 falls and 1.6 manoeuvres per episode
+The brain's speed made good is 106 % of the allrounder's on these drops.

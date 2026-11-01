@@ -1,0 +1,13 @@
+Race on T1 training loop (Start-1-4S/4P-1-4S-Finish, 1 lap, 6 steps): wind 18 kt from 270 deg, brain:all_s1_best, brain:all_s3_best, brain:all_s6_best, allrounder, rookie, seed 1, pre-start 60 s, spawn line (seed 0), wind shadows, the rules
+1. All-rounder     7:58.7    +0:00.0  6/6 steps  splits 0:03.6 2:53.9 4:09.4 6:21.2 7:47.9 7:58.7  falls 0  tacks 6  gybes 5
+2. Rookie             DNF          -  4/6 steps  splits 1:17.5 4:22.7 5:54.2 8:07.4  falls 0  tacks 9  gybes 4  to mark 4S 237 m
+3. best               DNF          -  2/6 steps  splits 1:12.8 8:14.8  falls 0  tacks 33  gybes 1  to gate 4S/4P 220 m
+4. best               DNF          -  1/6 steps  splits 1:23.6  falls 0  tacks 39  gybes 0  to mark 1 208 m
+5. best               DNF          -  0/6 steps  splits -  falls 0  tacks 6  gybes 0  to start 193 m
+Finished at race time 8:58.7; CSV files in /tmp/claude-1000/-home-michieldz-Projects-Git-WindsurfingMMZB/8fa885da-8d76-46e5-bc10-ea6ca99619d1/scratchpad/eval/race_t1_18
+Starts:
+  All-rounder      start   +3.6 s
+  Rookie           start  +77.5 s
+  longest start delay 77.5 s, 0 not started, 0 OCS, 0 outside the sailing area at the gun
+Penalties: 2
+  Rookie           2 penalties, 2 turned, 0 s carried

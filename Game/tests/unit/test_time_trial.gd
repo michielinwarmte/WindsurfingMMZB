@@ -17,9 +17,11 @@ func test_the_first_finish_is_the_best_and_only_a_faster_one_replaces_it() -> vo
 	var key: String = TimeTrialRecords.make_key("open", "template:slalom_2@50", "18 kt")
 	assert_lt(records.best_s(key), 0.0, "no best yet")
 	assert_true(records.remember(key, 480.5, PackedFloat32Array([0.0, 120.0, 480.5]), "2026-10-31"), "the first time is the best")
-	assert_false(records.remember(key, 490.0, PackedFloat32Array([0.0, 130.0, 490.0])), "a slower one is not")
+	assert_false(records.remember(key, 490.0, PackedFloat32Array([0.0, 130.0, 490.0]), "2026-11-01"), "a slower one is not")
 	assert_almost_eq(records.best_s(key), 480.5, 1e-6)
-	assert_true(records.remember(key, 470.0, PackedFloat32Array([0.0, 118.0, 470.0])), "a faster one is")
+	assert_eq(records.best_date(key), "2026-10-31", "the first date stays while nobody is faster")
+	# The dates are given, not today's: the test must pass on any day.
+	assert_true(records.remember(key, 470.0, PackedFloat32Array([0.0, 118.0, 470.0]), "2026-11-02"), "a faster one is")
 	assert_almost_eq(records.best_s(key), 470.0, 1e-6)
 	assert_eq(records.best_splits(key), PackedFloat32Array([0.0, 118.0, 470.0]))
 	# Saved: a fresh load reads it back, and another wind is its own record.
@@ -27,7 +29,7 @@ func test_the_first_finish_is_the_best_and_only_a_faster_one_replaces_it() -> vo
 	again.load_from(TEST_PATH)
 	assert_almost_eq(again.best_s(key), 470.0, 1e-6, "kept in the file")
 	assert_eq(again.best_splits(key).size(), 3)
-	assert_eq(again.best_date(key), "2026-10-31", "the first date stays until a faster run")
+	assert_eq(again.best_date(key), "2026-11-02", "the faster run brings its own date")
 	assert_lt(again.best_s(TimeTrialRecords.make_key("open", "template:slalom_2@50", "24 kt")), 0.0, "another wind is another record")
 
 
