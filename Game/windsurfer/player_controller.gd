@@ -128,7 +128,9 @@ var pilot_overrides: Dictionary[String, float] = {}
 ## push_curve (the default curve when null). NaN = no slider: the pilot's own numbers, as before
 ## (the AI boards and the tests until the fleet adopts it). Up and Down move it at
 ## push_rate_per_s (a full range in 2.5 s); an AI skipper's hands set it (AiHands.push). It keeps
-## its level through resets and waterstarts.
+## its level through resets and waterstarts. Hands that set NaN again let go of it: the pilot's own
+## numbers come back (_release_the_slider()), so a skipper can push where it pays and sail the
+## pilot's own margin elsewhere.
 var push_level: float = NAN
 var push_curve: PushCurveConfig = null
 var push_rate_per_s: float = 0.4
@@ -337,6 +339,8 @@ func _move_the_slider(telemetry: Telemetry, controls: SimControls, dt: float) ->
 	if hands != null:
 		if not is_nan(hands.push):
 			push_level = clampf(hands.push, 0.0, 1.0)
+		elif not is_nan(push_level):
+			_release_the_slider(controls)
 	elif not is_nan(push_level):
 		var key: float = _axis("push_more", "push_less")
 		if key != 0.0:
@@ -354,6 +358,21 @@ func _move_the_slider(telemetry: Telemetry, controls: SimControls, dt: float) ->
 	# The rail for the sea (Autopilot.wave_rail_deg): the sailor rails more when the board bounces.
 	auto_sheet_pilot.feel_the_sea(telemetry, dt)
 	controls.rail_bank_extra_deg += auto_sheet_pilot.wave_rail_deg()
+
+
+## The hands let go of the slider (AiHands.push back to NaN): no level, and the pilot's margin and
+## the sailor's technique back to their own numbers, as on a board that never had a slider (the
+## fields PushDial.apply_level() sets: a fresh pilot's, and no extras on the controls).
+func _release_the_slider(controls: SimControls) -> void:
+	push_level = NAN
+	var own: Autopilot = Autopilot.new()
+	auto_sheet_pilot.drive_share = own.drive_share
+	auto_sheet_pilot.hike_share = own.hike_share
+	auto_sheet_pilot.back_foot_bias = own.back_foot_bias
+	auto_sheet_pilot.wave_rail_max_deg = own.wave_rail_max_deg
+	controls.rig_lean_extra_deg = 0.0
+	controls.rail_bank_extra_deg = 0.0
+	controls.trim_aim_extra_deg = 0.0
 
 
 ## The slider's line for the HUD ("" without a slider).

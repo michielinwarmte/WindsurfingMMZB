@@ -16,13 +16,15 @@ enum StartStyle { LOOP, HOLD }
 @export var sail_colour: Color = Color(0.9, 0.3, 0.2)
 
 @export_group("Angles")
-## The best upwind wind angle: where the boat's speed toward the wind (VMG) is highest. From
+## The best upwind wind angle at 15 kt: where the boat's speed toward the wind (VMG) is highest. From
 ## Documentation/POLAR_15KT.md: 45 degrees gives 8.0 kt of VMG at 15 kt of wind, more than 40
-## (7.8 kt) or 60 (7.0 kt).
+## (7.8 kt) or 60 (7.0 kt). The skipper beats at its polar's best angle for the wind of the moment
+## (SkipperPolar: wider in light wind); this sheet's difference from 45 moves that angle.
 @export_range(35.0, 70.0) var upwind_vmg_twa_deg: float = 45.0
-## The best downwind wind angle: where the boat's speed away from the wind is highest. From
+## The best downwind wind angle at 15 kt: where the boat's speed away from the wind is highest. From
 ## Documentation/POLAR_15KT.md: 135 degrees gives 13.4 kt of VMG, more than 120 (12.7 kt) or 150
-## (10.3 kt, the board comes off the plane).
+## (10.3 kt, the board comes off the plane). The skipper runs at its polar's best angle for the wind
+## of the moment; this sheet's difference from 135 moves that angle.
 @export_range(110.0, 170.0) var downwind_vmg_twa_deg: float = 135.0
 ## Sails higher than the polar's best upwind angle (negative) or lower and faster (positive).
 @export_range(-4.0, 6.0) var pointing_offset_deg: float = 0.0
@@ -36,6 +38,12 @@ enum StartStyle { LOOP, HOLD }
 ## The most tacks (or gybes) it makes on one leg. The layline tack is always allowed, so the cap
 ## limits the extra ones (for wind shifts).
 @export_range(2, 8) var max_tacks_per_beat: int = 4
+
+@export_group("Push")
+## Pushes harder (positive) or less (negative) than the polar's push slider level for each point of
+## sail and wind (SkipperPolar.push_level), as a share of the slider (0.1 is ten points of it). More
+## push is faster and falls more. The personas' risk and boat speed can set it (RA6).
+@export_range(-0.5, 0.5) var push_offset: float = 0.0
 
 @export_group("Hands")
 ## The delay between seeing and doing, seconds: every decision reaches the stick this late.

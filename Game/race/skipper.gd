@@ -68,8 +68,10 @@ const APPROACH_ROOM_S: float = 6.0
 ## Rule 6: another board within the sheet's keep_clear_m and getting closer makes it bear away this
 ## much, degrees.
 const KEEP_CLEAR_BEAR_AWAY_DEG: float = 15.0
-## The best downwind angle of POLAR_15KT.md, which the character sheets' downwind angles are
-## measured from (see _downwind_twa_deg()).
+## The best upwind and downwind angles of POLAR_15KT.md (45 and 135 degrees), which the character
+## sheets' angles are measured from: a sheet's difference from them moves the polar's best angle in
+## every wind (see _pointing_twa_deg() and _downwind_twa_deg()).
+const POLAR_15KT_UPWIND_TWA_DEG: float = 45.0
 const POLAR_15KT_DOWNWIND_TWA_DEG: float = 135.0
 ## Steering: inside the dead band the stick is let go and the controller holds the heading; beyond
 ## it the stick moves in proportion to the error, fully at FULL_STICK_ERROR_DEG (30 degrees of
@@ -84,6 +86,14 @@ const GENTLE_HEAD_UP_FROM_MS: float = 12.0
 const GENTLE_HEAD_UP_STICK: float = 0.2
 ## The steering noise wanders on about this time scale, seconds: a slow wobble, not a shake.
 const NOISE_TIME_S: float = 4.0
+## Racing toward a mark, it lets go of the push slider when the mark is this many seconds away at its
+## speed (see _push_level()): it rounds at the pilot's own margin.
+const PUSH_EASE_BEFORE_MARK_S: float = 4.0
+## How fast its hand moves the push slider, a share of the slider per second: as fast as the player's
+## keys move it (PlayerController.push_rate_per_s, the whole slider in 2.5 s). Set at once, the jump
+## from 95 % back to the pilot's own margin as the board bore away at 14 m/s threw the sailor over
+## the front.
+const PUSH_RATE_PER_S: float = 0.4
 ## The head thinks this often, seconds (AI_FLEET_PLAN.md, D1: 1 or 2 Hz); the hands every tick.
 const THINK_INTERVAL_S: float = 0.5
 ## A tack or gybe asked for this soon after the last one ended is not asked for: the board needs
@@ -93,14 +103,20 @@ const MIN_TACK_INTERVAL_S: float = 8.0
 ## above MEASURE_LEEWAY_FROM_MS.
 const MEASURE_SMOOTH_S: float = 3.0
 const MEASURE_LEEWAY_FROM_MS: float = 2.5
-## A sailor's feel for the board. Downwind, below OFF_PLANE_MS the board is off the plane and the
-## sailor heads up RUN_HEAD_UP_DEG to get it planing again, and bears away once it is faster than
-## ON_PLANE_MS. Upwind, a board slower than FOOT_BELOW_MS is sailed FOOT_DEG_PER_MS lower for each
-## m/s it lacks, at most FOOT_MAX_DEG lower.
-const OFF_PLANE_MS: float = 6.0
-const ON_PLANE_MS: float = 7.0
+## A sailor's feel for the board, against what the polar says it makes. Downwind, slower than
+## OFF_PLANE_SHARE of the polar's speed at the best downwind angle the board is off the plane, and
+## the sailor heads up RUN_HEAD_UP_DEG to get it planing again; faster than ON_PLANE_SHARE of it the
+## sailor bears away again. (Fixed speeds, 6 and 7 m/s, held the 12 kt run 10 degrees high all
+## the way: there the board planes at 5.7 to 6.6 m/s.) Off the plane it sails no deeper than
+## OFF_PLANE_TWA_DEG either: in 12 kt a board out of a gybe at 2 m/s planed again at 110 to 115
+## degrees within 20 s, and at 119 it sat at 2.5 m/s for three minutes. Upwind, a board slower
+## than FOOT_BELOW_SHARE of the polar's speed at the best upwind angle (just out of a tack, say) is
+## sailed FOOT_DEG_PER_MS lower for each m/s it lacks, at most FOOT_MAX_DEG lower, to get going.
+const OFF_PLANE_SHARE: float = 0.65
+const ON_PLANE_SHARE: float = 0.8
 const RUN_HEAD_UP_DEG: float = 10.0
-const FOOT_BELOW_MS: float = 5.5
+const OFF_PLANE_TWA_DEG: float = 110.0
+const FOOT_BELOW_SHARE: float = 0.85
 const FOOT_DEG_PER_MS: float = 4.0
 const FOOT_MAX_DEG: float = 10.0
 ## Its memory of the mean wind direction, for the wind shifts, seconds.
@@ -238,26 +254,15 @@ const FINISH_CLEAR_M: float = 40.0
 ## A board getting up to speed gains about this much a second (m/s2): the time it expects to need
 ## includes the speed it still has to gain.
 const ACCELERATION_MS2: float = 1.0
-## What the skipper knows of its board, to say how long a stretch will take: the settled speed
-## (m/s) at each true wind angle in 12, 18 and 24 kt, one row of POLAR_TWA_DEG's angles per wind.
-## Measured on the open water's sea (the headless race's) under the beginner controller with a
-## skipper's stick: 50 s from rest, the mean of the last 20 s (Documentation/reports/racing/
-## skipper.md). 30, 165 and 180 degrees were not measured and are guesses. In 12 kt the board
-## does not get planing from rest deeper than 125 degrees. It is not POLAR_15KT.md's polar (flat
-## water, the plain autopilot), which the board does not reach on the sea: 74 % of it on a run at
-## 18 kt, 119 % on a broad reach at 24 kt. The skipper also measures how fast it goes against
-## this table, and uses that ratio too.
-const POLAR_WINDS_KT: PackedFloat32Array = [12.0, 18.0, 24.0]
-const POLAR_TWA_DEG: PackedFloat32Array = [30.0, 40.0, 45.0, 50.0, 55.0, 60.0, 70.0, 80.0, 90.0, 100.0, 110.0, 120.0, 125.0, 130.0, 135.0, 140.0, 150.0, 165.0, 180.0]
-const POLAR_SPEED_MS: PackedFloat32Array = [
-	0.8, 1.68, 4.29, 5.19, 5.91, 6.65, 7.54, 8.15, 8.66, 8.85, 8.22, 6.65, 6.58, 2.37, 2.09, 2.07, 1.94, 1.9, 1.9,
-	1.0, 5.79, 6.35, 6.84, 7.37, 7.92, 8.88, 9.91, 10.66, 11.53, 11.84, 12.15, 12.08, 11.65, 10.34, 8.15, 4.98, 4.5, 4.5,
-	1.2, 5.80, 6.51, 7.11, 7.70, 8.32, 9.64, 10.84, 11.86, 12.55, 13.73, 14.16, 14.33, 14.33, 14.19, 13.33, 8.76, 6.0, 6.0,
-]
-
 ## The character sheet. (random_seed seeds its steering noise, and note says what it is doing:
 ## "beat", "run", "start: away", ...; both are RaceSkipper's.)
 var config: SkipperConfig = SkipperConfig.new()
+## Whether it sets the push slider (_push_level()); off, the hands leave it alone and the board sails
+## the pilot's own margin, as every AI board did before (tools/race.sh --skipper_push=0 compares).
+var push_wanted: bool = true
+## Where its hand has the push slider now (0 to 1), NaN while it leaves the slider to the pilot's own
+## margin (see _move_the_push()).
+var _push_now: float = NAN
 ## The persona this skipper plays (F4), if any: its sheet is drawn afresh for every race in
 ## setup() (the day's form, seeded by random_seed, and the gear for the wind).
 var persona: Persona = null
@@ -368,10 +373,31 @@ var penalty_turns: int = 0
 const PENALTY_TURN_GIVE_UP_S: float = 45.0
 ## Bearing away to this wind angle between the tack and the gybe of a penalty turn, degrees.
 const PENALTY_GYBE_FROM_TWA_DEG: float = 120.0
-## Its own copies of the polar's tables (see _polar_speed_ms()).
-var _polar_winds: PackedFloat32Array = POLAR_WINDS_KT.duplicate()
-var _polar_twa: PackedFloat32Array = POLAR_TWA_DEG.duplicate()
-var _polar_speeds: PackedFloat32Array = POLAR_SPEED_MS.duplicate()
+## What the skipper knows of its board (SkipperPolar, Game/config/skipper_polar.tres): the speed at
+## each wind angle and wind, the push that pays there, and the best angles to beat and to run at. Its
+## own copies of the tables, not the loaded resource every skipper shares: skippers sailed side by
+## side on threads slowed each other down reading shared data. The skipper also measures how fast it
+## goes against the speeds, and uses that ratio too (_speed_ratio).
+var _polar_winds: PackedFloat32Array = PackedFloat32Array()
+var _polar_twa: PackedFloat32Array = PackedFloat32Array()
+var _polar_speeds: PackedFloat32Array = PackedFloat32Array()
+var _polar_push: PackedFloat32Array = PackedFloat32Array()
+var _polar_upwind: PackedFloat32Array = PackedFloat32Array()
+var _polar_downwind: PackedFloat32Array = PackedFloat32Array()
+
+
+func _init() -> void:
+	take_polar(SkipperPolar.default_polar())
+
+
+## Sails with another polar (a test's, or another board's): copies of its tables.
+func take_polar(polar: SkipperPolar) -> void:
+	_polar_winds = polar.winds_kt.duplicate()
+	_polar_twa = polar.twa_deg.duplicate()
+	_polar_speeds = polar.speed_ms.duplicate()
+	_polar_push = polar.push_level.duplicate()
+	_polar_upwind = polar.best_upwind_twa_deg.duplicate()
+	_polar_downwind = polar.best_downwind_twa_deg.duplicate()
 
 
 ## The name on its character sheet.
@@ -469,8 +495,9 @@ func update(telemetry: Telemetry, dt: float) -> void:
 	_watch_manoeuvres(telemetry)
 	_measure(telemetry, dt)
 	_watch_the_start()
-	# The sheet is the auto-sheet's: the skipper never moves the sheet stick.
+	# The sheet is the auto-sheet's: the skipper never moves the sheet stick. The push slider is its.
 	_hands.sheet = 0.0
+	_hands.push = _move_the_push(telemetry, dt)
 	if _sim.sailor_state != WindsurferSim.SailorState.SAILING:
 		# In the water: hands off, and nothing decided keeps waiting.
 		_hands.steer = 0.0
@@ -553,7 +580,7 @@ func _decide(telemetry: Telemetry) -> float:
 		var wind_deg: float = telemetry.wind_from_bearing_deg
 		var leg_twa: float = absf(wrapf(wind_deg - Course.bearing_deg(Vector2.ZERO, step.in_dir), -180.0, 180.0))
 		var up_deg: float = _pointing_twa_deg()
-		if leg_twa < up_deg + _leeway_deg or leg_twa > config.downwind_vmg_twa_deg + _leeway_deg:
+		if leg_twa < up_deg + _leeway_deg or leg_twa > _run_twa_deg() + _leeway_deg:
 			arrive_tack = _approach_tack(step, wind_deg, up_deg if leg_twa < 90.0 else _downwind_twa_deg())
 	return _course_to(telemetry, target, arrive_tack)
 
@@ -570,6 +597,10 @@ func _target_point(step: RaceStep, position: Vector2) -> Vector2:
 			return _through(position, _gate_target(step, position))
 		RaceStep.Kind.START:
 			return _through(position, _start_spot(step))
+		RaceStep.Kind.FINISH:
+			# The nearest point of the finish line (a few metres in from the ends): the shortest way,
+			# and the least turn after the last mark.
+			return _through(position, _nearest_on_line(step, position))
 	return _through(position, step.target())
 
 
@@ -585,18 +616,29 @@ func _mark_target(step: RaceStep, position: Vector2) -> Vector2:
 	# Leaving a mark to port the board passes on its right: the leg's direction turned a quarter
 	# clockwise, which is -orthogonal() in these axes; to starboard, on its left.
 	var entry_side: Vector2 = step.in_dir.orthogonal() * way
+	var ray: Vector2 = RoundingCheck.rounding_ray(step.in_dir, step.out_dir, step.side)
 	if not _level_with_mark:
 		# Level with the mark (or within a margin of it: a board coming down on the mark from above,
 		# having overstood, must not chase the entry point round in circles) on the side it is left
-		# on. A board that comes level on the wrong side (it could not lay the entry point) still
-		# sails for the entry point, round the mark's far side.
-		_level_with_mark = (position - mark).dot(step.in_dir) >= -margin and (position - mark).dot(entry_side) > 0.0
+		# on, and still before the rounding ray (the half-way point, which it must cross going round
+		# the right way). A board that comes level on the wrong side (it could not lay the entry
+		# point), or that got past the ray without rounding (pushed the wrong side of the mark by the
+		# boards it kept clear of), still sails for the entry point, round the mark's far side: going
+		# for the exit from past the ray it never crossed the ray and circled the mark for twelve
+		# minutes (Noor on the slalom template, 18 kt).
+		_level_with_mark = (position - mark).dot(step.in_dir) >= -margin and (position - mark).dot(entry_side) > 0.0 \
+				and before_rounding_ray(position, mark, ray, way)
 	if not _level_with_mark:
 		return mark + entry_side * margin
-	var ray: Vector2 = RoundingCheck.rounding_ray(step.in_dir, step.out_dir, step.side)
 	# Vector2.rotated() turns clockwise on the map in these axes (X east, Z south), so way * 90
 	# degrees is the direction the board moves when it crosses the ray going the right way round.
 	return mark + ray * 2.0 * margin + ray.rotated(way * PI / 2.0) * margin
+
+
+## Whether a position is still before a mark's rounding ray, going round it the way (1 clockwise, -1
+## anticlockwise): on the side it crosses the ray from (RoundingCheck._across_ray()).
+static func before_rounding_ray(position: Vector2, mark: Vector2, ray: Vector2, way: float) -> bool:
+	return RoundingCheck.clockwise_of(ray, position - mark) * way < 0.0
 
 
 ## A gate is a line between two marks: it aims mark_margin_m inside the nearer mark, chosen when
@@ -800,39 +842,42 @@ func _upwind_twa_deg() -> float:
 
 
 ## The wind angle it sails upwind once the board has speed, and draws its laylines at: the polar's
-## plus its pointing offset, and a little lower for a board slower than FOOT_BELOW_MS
-## (FOOT_DEG_PER_MS for each m/s it lacks, at most FOOT_MAX_DEG): in light wind the polar's angle is
-## too high (at 12 kt on the open water's sea 50 to 55 degrees make the best way to windward, not 45).
+## best angle in the wind of the moment (wider in light wind, where pinching makes the board slip
+## sideways), moved by its character's own difference from POLAR_15KT.md's 45 and its pointing
+## offset; and a little lower while the board is slower than FOOT_BELOW_SHARE of the polar's speed
+## there (FOOT_DEG_PER_MS for each m/s it lacks, at most FOOT_MAX_DEG).
 func _pointing_twa_deg() -> float:
-	var foot_deg: float = clampf((FOOT_BELOW_MS - _sim.telemetry.speed_ms) * FOOT_DEG_PER_MS, 0.0, FOOT_MAX_DEG)
-	return config.upwind_vmg_twa_deg + config.pointing_offset_deg + foot_deg
+	var best_deg: float = _best_upwind_twa_deg()
+	var foot_below_ms: float = FOOT_BELOW_SHARE * _polar_speed_ms(best_deg)
+	var foot_deg: float = clampf((foot_below_ms - _sim.telemetry.speed_ms) * FOOT_DEG_PER_MS, 0.0, FOOT_MAX_DEG)
+	var own_deg: float = config.upwind_vmg_twa_deg - POLAR_15KT_UPWIND_TWA_DEG
+	return best_deg + own_deg + config.pointing_offset_deg + foot_deg
+
+
+## The polar's best wind angle to beat at in the wind of the moment, degrees (SkipperPolar).
+func _best_upwind_twa_deg() -> float:
+	return SkipperPolar.per_wind(_polar_winds, _polar_upwind, _sim.telemetry.tws_10m_kt)
 
 
 ## The wind angle it sails downwind (rule 4: its gybe angle read from the polar, not a constant):
-## the angle with the most speed downwind in the board's polar at the wind of the moment (125
-## degrees at 12 kt, 130 at 18, 140 at 24), moved by the character's own difference from
-## POLAR_15KT.md's 135; and RUN_HEAD_UP_DEG higher while the board is off the plane (_off_plane),
-## which is how a sailor gets it planing again. Deeper than that a board that has stopped planing
-## does not plane again (at 12 kt on the open water's sea it does 6.6 m/s at 125 degrees and 2.4 m/s
-## at 130).
+## the polar's best angle to run at in the wind of the moment, moved by the character's own
+## difference from POLAR_15KT.md's 135; and RUN_HEAD_UP_DEG higher while the board is off the plane
+## (_off_plane), and no deeper than OFF_PLANE_TWA_DEG, which is how a sailor gets it planing again.
 func _downwind_twa_deg() -> float:
-	var own_deg: float = config.downwind_vmg_twa_deg - POLAR_15KT_DOWNWIND_TWA_DEG
-	return _best_downwind_twa_deg() + own_deg - (RUN_HEAD_UP_DEG if _off_plane else 0.0)
+	if _off_plane:
+		return minf(_run_twa_deg() - RUN_HEAD_UP_DEG, OFF_PLANE_TWA_DEG)
+	return _run_twa_deg()
 
 
-## The wind angle between 110 and 150 degrees with the most speed downwind (the speed times the
-## cosine of the angle off dead downwind) in the polar at the wind of the moment, in 5 degree steps.
+## The wind angle it runs at once planing: the polar's best in the wind of the moment, moved by the
+## character's own difference from POLAR_15KT.md's 135.
+func _run_twa_deg() -> float:
+	return _best_downwind_twa_deg() + config.downwind_vmg_twa_deg - POLAR_15KT_DOWNWIND_TWA_DEG
+
+
+## The polar's best wind angle to run at in the wind of the moment, degrees (SkipperPolar).
 func _best_downwind_twa_deg() -> float:
-	var best_twa: float = POLAR_15KT_DOWNWIND_TWA_DEG
-	var best_vmg: float = -1.0
-	var twa: float = 110.0
-	while twa <= 150.0:
-		var vmg: float = _polar_speed_ms(twa) * cos(deg_to_rad(180.0 - twa))
-		if vmg > best_vmg:
-			best_vmg = vmg
-			best_twa = twa
-		twa += 5.0
-	return best_twa
+	return SkipperPolar.per_wind(_polar_winds, _polar_downwind, _sim.telemetry.tws_10m_kt)
 
 
 ## The penalty turn: a full circle, the tack first and then the gybe, so the judge sees the heading
@@ -1169,7 +1214,7 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 	# (Reachable at the angle it points once it has speed: a slow board's own angle is wider.)
 	var spot_twa: float = Navigation.wind_angle_deg(position, spot, wind_deg)
 	var cross_at: Vector2 = spot
-	var at_speed_track_deg: float = config.upwind_vmg_twa_deg + config.pointing_offset_deg + _leeway_deg
+	var at_speed_track_deg: float = _best_upwind_twa_deg() + config.upwind_vmg_twa_deg - POLAR_15KT_UPWIND_TWA_DEG + config.pointing_offset_deg + _leeway_deg
 	if signf(spot_twa) != _tack() or absf(spot_twa) < at_speed_track_deg:
 		cross_at = _choose_crossing(telemetry, step, aim_s)
 	elif absf(spot_twa) > START_GO_SHALLOWEST_TWA_DEG:
@@ -1280,14 +1325,16 @@ func _acceleration_ms2() -> float:
 ## True when the board, at the speed it has toward the start line, would cross it within
 ## START_GUARD_S, START_GUARD_MARGIN_S or more before the gun.
 func _too_early_at_the_line(telemetry: Telemetry, step: RaceStep, behind_m: float) -> bool:
-	var toward_ms: float = Course.direction_of(telemetry.heading_deg).dot(step.in_dir) * telemetry.speed_ms
+	# The board's track over the ground, not its bow: held back to 2 m/s it slips sideways by 6 to 16
+	# degrees, and on T2 in 24 kt the bow ran along the line while the track crossed it before the gun.
+	var toward_ms: float = _velocity.dot(step.in_dir)
 	if toward_ms <= 0.3:
 		return false
 	var crossing_in_s: float = behind_m / toward_ms
 	if crossing_in_s >= START_GUARD_S or crossing_in_s >= -_race.clock_s() + START_GUARD_MARGIN_S:
 		return false
 	# Only a crossing of the line itself: the extension past an end is _keep_behind_the_line()'s.
-	var crossing: Vector2 = _position(telemetry) + Course.direction_of(telemetry.heading_deg) * telemetry.speed_ms * crossing_in_s
+	var crossing: Vector2 = _position(telemetry) + _velocity * crossing_in_s
 	return _off_the_ends_m(step, crossing) <= START_WALL_ENDS_M
 
 
@@ -1471,7 +1518,8 @@ static func _through(position: Vector2, on_line: Vector2) -> Vector2:
 	return on_line + (on_line - position).normalized() * THROUGH_LINE_M
 
 
-## The point of the start line nearest a position, kept a few metres in from the ends.
+## The point of a line (the start or the finish) nearest a position, kept a few metres in from the
+## ends.
 func _nearest_on_line(step: RaceStep, position: Vector2) -> Vector2:
 	var inset: float = _line_inset(step)
 	return step.points[1].lerp(step.points[0], clampf(_share_along_line(step, position), inset, 1.0 - inset))
@@ -1602,29 +1650,9 @@ func _turn_time_s(telemetry: Telemetry, to_twa_deg: float) -> float:
 
 ## The polar's speed at a wind angle (degrees, either tack) in the wind the board sails in now, m/s:
 ## between the table's angles and between its winds (below 12 kt the 12 kt row, above 24 kt the
-## 24 kt row). It reads its own copies of the tables (_polar_winds and the others), not the
-## constants every skipper shares: skippers sailed side by side on threads slowed each other down
-## reading shared data.
+## 24 kt row).
 func _polar_speed_ms(twa_deg: float) -> float:
-	var winds: int = _polar_winds.size()
-	var kt: float = clampf(_sim.telemetry.tws_10m_kt, _polar_winds[0], _polar_winds[winds - 1])
-	var row: int = 0
-	while row < winds - 2 and kt > _polar_winds[row + 1]:
-		row += 1
-	var share: float = (kt - _polar_winds[row]) / (_polar_winds[row + 1] - _polar_winds[row])
-	return lerpf(_polar_row_speed_ms(row, twa_deg), _polar_row_speed_ms(row + 1, twa_deg), share)
-
-
-## The speed at a wind angle in one wind's row of the polar, m/s, between the table's angles.
-func _polar_row_speed_ms(row: int, twa_deg: float) -> float:
-	var angles: int = _polar_twa.size()
-	var base: int = row * angles
-	var angle: float = clampf(absf(twa_deg), _polar_twa[0], _polar_twa[angles - 1])
-	for i: int in range(1, angles):
-		if angle <= _polar_twa[i]:
-			var share: float = (angle - _polar_twa[i - 1]) / (_polar_twa[i] - _polar_twa[i - 1])
-			return lerpf(_polar_speeds[base + i - 1], _polar_speeds[base + i], share)
-	return _polar_speeds[base + angles - 1]
+	return SkipperPolar.value_at(_polar_winds, _polar_twa, _polar_speeds, _sim.telemetry.tws_10m_kt, twa_deg)
 
 
 # ---------------------------------------------------------------- the hands
@@ -1673,6 +1701,54 @@ func _steer_toward(telemetry: Telemetry, wanted_deg: float) -> void:
 	if signf(error_deg) == _tack() and telemetry.speed_ms > GENTLE_HEAD_UP_FROM_MS:
 		stick_limit = GENTLE_HEAD_UP_STICK
 	_hands.steer = clampf(error_deg / FULL_STICK_ERROR_DEG, -stick_limit, stick_limit)
+
+
+## The push slider as a good sailor sets it (AiHands.push, 0 to 1): the polar's level for the wind
+## angle it sails in the wind of the moment where pushing paid (the reaches in 18 and 24 kt), moved
+## by its character's push_offset. NaN, the pilot's own margin without the slider (which the hands
+## hand back to the controller), everywhere else: where pushing did not pay, from the moment a tack
+## or gybe is asked for until the board has settled after it, in the last PUSH_EASE_BEFORE_MARK_S
+## before a mark (it rounds at the margin that rounded without a fall), and when it does not set the
+## push at all (push_wanted). Pushed into the gybes and the 24 kt beat the all-rounder fell seven
+## times in one race; at the pilot's own margin, never.
+func _push_level(telemetry: Telemetry) -> float:
+	if not push_wanted:
+		return NAN
+	var turning: bool = _tack_due_s >= 0.0 or _controller.manoeuvre != PlayerController.Manoeuvre.NONE or _settling
+	if turning or _near_a_mark(telemetry):
+		return NAN
+	var level: float = SkipperPolar.push_at(_polar_winds, _polar_twa, _polar_push, telemetry.tws_10m_kt, telemetry.twa_deg)
+	if is_nan(level):
+		return NAN
+	return clampf(level + config.push_offset, 0.0, 1.0)
+
+
+## Its hand on the push slider: toward the level it wants (_push_level()) at PUSH_RATE_PER_S. Taking
+## the slider, it starts from the level that holds the pilot's own pull (LearnedSkipper.
+## pilot_margin_level(), about 78 %); letting go, it brings the slider back down to that level first
+## and then hands it back (NaN), so the pilot's numbers hardly jump either way.
+func _move_the_push(telemetry: Telemetry, dt: float) -> float:
+	var wanted: float = _push_level(telemetry)
+	var margin: float = LearnedSkipper.pilot_margin_level()
+	if is_nan(wanted):
+		if is_nan(_push_now):
+			return NAN
+		_push_now = move_toward(_push_now, margin, PUSH_RATE_PER_S * dt)
+		if absf(_push_now - margin) < 1e-4:
+			_push_now = NAN
+		return _push_now
+	_push_now = move_toward(margin if is_nan(_push_now) else _push_now, wanted, PUSH_RATE_PER_S * dt)
+	return _push_now
+
+
+## Racing, within PUSH_EASE_BEFORE_MARK_S of the next mark at its speed.
+func _near_a_mark(telemetry: Telemetry) -> bool:
+	if state != State.RACING:
+		return false
+	var step: RaceStep = _race.next_step(_index)
+	if step == null or step.kind != RaceStep.Kind.MARK:
+		return false
+	return _position(telemetry).distance_to(step.points[0]) < telemetry.speed_ms * PUSH_EASE_BEFORE_MARK_S
 
 
 ## Decides on a tack or gybe (the controller chooses which from the wind angle), to be asked for
@@ -1743,10 +1819,12 @@ func _measure(telemetry: Telemetry, dt: float) -> void:
 	var polar_ms: float = _polar_speed_ms(telemetry.twa_deg)
 	if steady and telemetry.speed_ms > pilot.pointing_speed_ms and absf(telemetry.twa_deg) >= 40.0 and polar_ms > 4.0:
 		_speed_ratio = lerpf(_speed_ratio, clampf(telemetry.speed_ms / polar_ms, 0.5, 2.0), share)
-	# Downwind feel: off the plane below OFF_PLANE_MS, planing again above ON_PLANE_MS.
-	if absf(telemetry.twa_deg) > 110.0 and telemetry.speed_ms < OFF_PLANE_MS:
+	# Downwind feel: off the plane below OFF_PLANE_SHARE of the polar's speed at the best downwind
+	# angle, planing again above ON_PLANE_SHARE of it.
+	var planing_ms: float = _polar_speed_ms(_best_downwind_twa_deg())
+	if absf(telemetry.twa_deg) > 110.0 and telemetry.speed_ms < OFF_PLANE_SHARE * planing_ms:
 		_off_plane = true
-	elif telemetry.speed_ms > ON_PLANE_MS:
+	elif telemetry.speed_ms > ON_PLANE_SHARE * planing_ms:
 		_off_plane = false
 	# How slow holding back really gets it, after 3 s of holding back (smoothed over 3 s).
 	if _hands.hold_speed_ms > 0.0 and _controller.manoeuvre == PlayerController.Manoeuvre.NONE:
