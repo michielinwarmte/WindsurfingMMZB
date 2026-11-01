@@ -50,7 +50,12 @@ Each `<name>.json` holds:
   generation, its reward or fitness, how far it got, the date, the physics commit,
   the action mode, `decision_ticks` (how many ticks of 1/60 s between two decisions:
   30 for the trainer's brains, a decision every half second; 6 for the night brains),
-  and the settings of the training.
+  and the settings of the training. Since RA14 (Session 65) also the hands' rules the
+  brain learned with, which the game keeps when it sails it (`LearnedSkipper.gap_of()`,
+  `closest_of()`): `manoeuvre_gap_s`, the least time between two tacks or gybes (20 s;
+  a brain without it keeps the old 6 s), and `closest_twa_deg`, the closest to the wind
+  the hands steer (35 degrees; none without it); with `manoeuvre_cost_m` (what a tack
+  or gybe cost in its reward), `own_conditions` and `ent_coef`.
 
 `NeuralNet.load_file(path)` reads one; `LearnedSkipper` sails a board with it.
 
@@ -61,7 +66,8 @@ Stable-Baselines3 in Python, on races Godot sails headless over a local socket
 (`tools/train/`, `Game/race/train_bridge.gd`, `Game/dev/train_worker.gd`), one
 curriculum stage at a time on random courses in random winds
 (`Game/race/training_drops.gd`: S1 the beat, S2 the rounding, S3 the run and the
-gates, S4 full laps, S5 the start, S6 company). The reward is the fall of the
+gates, S4 full laps, S5 the start, S6 company; and on the plan's two courses, T1 and T2
+at 12 to 24 kt in the game's open water, C1 a leg or two and C2 the whole course). The reward is the fall of the
 sailing distance still to go round the course (`Game/race/sailing_distance.gd`), so
 going out to a layline pays like pointing at the mark, a detour pays nothing and the
 rounding itself pays. Every race is drawn from the settings menu's whole range of

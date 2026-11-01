@@ -91,8 +91,10 @@ class GodotWorkers(VecEnv):
     """A vector of environments: every board of every Godot worker."""
 
     def __init__(self, stage: str, workers: int, boards: int, log_dir: Path, seed: int = 1,
-                 godot: str | None = None, verbose: bool = True) -> None:
+                 godot: str | None = None, verbose: bool = True, extra_args: list[str] | None = None) -> None:
         self.stage = stage
+        # More of the worker's options (--manoeuvre_gap_s=20, ...: Game/dev/train_worker.gd).
+        self.extra_args = list(extra_args or [])
         self.worker_count = workers
         self.boards_per_worker = boards
         self.log_dir = log_dir
@@ -133,7 +135,7 @@ class GodotWorkers(VecEnv):
         for i in range(self.worker_count):
             log = open(self.log_dir / f"worker_{i}.log", "w", encoding="utf-8")
             arguments = [self.godot, "--headless", "--no-header", "--path", str(GAME_DIR), "-s", WORKER_SCRIPT, "--",
-                         f"--port={port}", f"--worker={i}", f"--stage={self.stage}", f"--boards={self.boards_per_worker}"]
+                         f"--port={port}", f"--worker={i}", f"--stage={self.stage}", f"--boards={self.boards_per_worker}"] + self.extra_args
             process = subprocess.Popen(arguments, stdout=log, stderr=subprocess.STDOUT, cwd=str(GAME_DIR))
             self.workers.append(Worker(i, process, log))
         server.settimeout(CONNECT_TIMEOUT_S)
@@ -163,7 +165,8 @@ class GodotWorkers(VecEnv):
         if self.verbose:
             print(f"{self.worker_count} workers connected in {time.time() - started:.1f} s: {self.hello['stage_description']}; "
                   f"{sum(w.boards for w in self.workers)} boards in all, {self.hello['obs_size']} numbers seen, "
-                  f"a decision every {self.hello['decision_s']:.2f} s", flush=True)
+                  f"a decision every {self.hello['decision_s']:.2f} s, a manoeuvre at most every "
+                  f"{float(self.hello.get('manoeuvre_gap_s', 6.0)):.0f} s, costing {float(self.hello.get('manoeuvre_cost_m', 5.0)):.0f} m", flush=True)
 
     # ------------------------------------------------------------------ the VecEnv
 

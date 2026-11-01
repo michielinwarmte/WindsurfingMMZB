@@ -25,6 +25,20 @@ extends RaceSkipper
 ## waves and gusts. A brain without one leaves AiHands.push at NaN: the pilot's own margin, as
 ## before the slider. The outputs are found by their names in the brain file, like the inputs.
 ##
+## The tack discipline (ROADMAP RA14): after a tack or a gybe the hands ignore a wish for the other
+## tack for manoeuvre_gap_s (MANOEUVRE_GAP_S for the brains trained since RA14; their note says it).
+## The brains of the first nights tacked every 10 to 15 s on a beat, because their wish is a wind
+## angle whose sign is the tack and they learned to point at the mark: dead upwind, their wish
+## crossed the wind as the board zigzagged across the line to the mark, and the hands tacked at
+## every crossing. A sailor sails one tack to the layline and tacks once. A rounding (a step of the
+## course done) cuts what is left of the wait to TACK_HOLD_S: the next leg may need a manoeuvre at
+## once (a gybe at a slalom mark, a tack off the gate). A brain whose note says no gap (every brain
+## before RA14) keeps the old rule, TACK_HOLD_S, and sails as it did. With it, the hands never
+## steer nearer the wind than closest_twa_deg (CLOSEST_TWA_DEG, the character sheets' closest beat):
+## the first brains, pointing at the mark, were under 2 m/s for a third to a half of a race, most
+## of it 15 to 45 degrees off the wind, pinched or in irons. A brain without the note steers as it
+## did.
+##
 ## The trainer (RaceEnv) uses the same Driver as here, so a brain sails in the game exactly as it
 ## sailed in training.
 ##
@@ -78,6 +92,18 @@ const TACK_REQUEST_EVERY_S: float = 3.0
 ## network whose wish flips as the board turns would otherwise tack it to a standstill (the first
 ## wind-angle brains did, every 2.5 s).
 const TACK_HOLD_S: float = 6.0
+## The tack discipline (RA14, above): the least time from the end of one manoeuvre to the next ask,
+## seconds, for the brains trained since RA14. The scripted all-rounder tacks about every 90 s on a
+## beat; a tack costs 10 to 20 m. The trainer and the evaluation can set another (--manoeuvre_gap_s);
+## the brain's note keeps the one it learned with.
+const MANOEUVRE_GAP_S: float = 20.0
+## The brain note's key for its gap; a brain without it keeps TACK_HOLD_S (gap_of()).
+const GAP_NOTE: String = "manoeuvre_gap_s"
+## The closest to the wind the hands steer for the brains trained since RA14, degrees: a wish nearer
+## the wind means close-hauled at this angle on the tack the board is on (the scripted skippers'
+## upwind_vmg_twa_deg goes no lower: SkipperConfig). The brain note's key; without it, no floor.
+const CLOSEST_TWA_DEG: float = 35.0
+const CLOSEST_NOTE: String = "closest_twa_deg"
 ## Between these wind angles (either side) the sign of the wind angle says the tack. Nearer head to
 ## wind (in irons) or dead downwind (by the lee) it flickers, and the side the sail is on says it.
 const CLEAR_TACK_FROM_DEG: float = 25.0
@@ -104,6 +130,11 @@ class Driver:
 	## Seconds since the last tack or gybe this driver asked for, and since the last manoeuvre ended.
 	var since_tack_request_s: float = 1.0e9
 	var since_manoeuvre_s: float = 1.0e9
+	## The least time from the end of a manoeuvre to the next ask, seconds (the tack discipline:
+	## MANOEUVRE_GAP_S, or TACK_HOLD_S for a brain from before it).
+	var manoeuvre_gap_s: float = TACK_HOLD_S
+	## The closest to the wind it steers, degrees (CLOSEST_TWA_DEG; 0 for a brain from before RA14).
+	var closest_twa_deg: float = 0.0
 
 	func _init(the_hands: AiHands, action_mode: ActionMode = ActionMode.TWA) -> void:
 		hands = the_hands
@@ -122,10 +153,17 @@ class Driver:
 			hands.push = LearnedSkipper.push_from_output(action[push_index])
 		has_wish = true
 
+	## A step of the course was done (a mark rounded, a gate, the start): what is left of the wait
+	## for the next manoeuvre is cut to TACK_HOLD_S, because the next leg may need one at once. With
+	## the old rule (a gap of TACK_HOLD_S) nothing changes.
+	func leg_done() -> void:
+		since_manoeuvre_s = maxf(since_manoeuvre_s, manoeuvre_gap_s - TACK_HOLD_S)
+
 	## Every tick, before the controller's update (wind-angle mode only; the stick mode's hands stay
 	## as the last decision left them). The angle wanted is clearly on the other tack: ask for a tack
-	## or gybe (the controller picks which), unless one is under way, ended less than TACK_HOLD_S
-	## ago, or was asked for less than TACK_REQUEST_EVERY_S ago. Otherwise steer toward the angle
+	## or gybe (the controller picks which), unless one is under way, ended less than
+	## manoeuvre_gap_s ago (the tack discipline; until then the board holds the angle wanted on the
+	## tack it is on), or was asked for less than TACK_REQUEST_EVERY_S ago. Otherwise steer toward the angle
 	## wanted on this tack. "Clearly" is the rule tack_of() uses for the board: between
 	## CLEAR_TACK_FROM_DEG and CLEAR_TACK_TO_DEG off the wind. A wish nearer head to wind or dead
 	## downwind means "as high (or as deep) as it goes" on the tack the board is on.
@@ -137,26 +175,39 @@ class Driver:
 		var tack: float = LearnedSkipper.tack_of(telemetry)
 		var off_wind_deg: float = absf(wanted_twa_deg)
 		var clearly_other_tack: bool = signf(wanted_twa_deg) == -tack and off_wind_deg > CLEAR_TACK_FROM_DEG and off_wind_deg < CLEAR_TACK_TO_DEG
-		if clearly_other_tack and not in_manoeuvre and since_manoeuvre_s >= TACK_HOLD_S and since_tack_request_s >= TACK_REQUEST_EVERY_S:
+		if clearly_other_tack and not in_manoeuvre and since_manoeuvre_s >= manoeuvre_gap_s and since_tack_request_s >= TACK_REQUEST_EVERY_S:
 			hands.tack = true
 			hands.steer = 0.0
 			since_tack_request_s = 0.0
 			return
-		hands.steer = LearnedSkipper.steer_toward_twa(telemetry.twa_deg, tack, off_wind_deg)
+		hands.steer = LearnedSkipper.steer_toward_twa(telemetry.twa_deg, tack, maxf(off_wind_deg, closest_twa_deg))
 
 
 ## pilot_margin_level() on the game's ladder, once worked out.
 static var _default_pilot_margin_level: float = NAN
 
 
-## The brain, and with it how often it decides (its note's decision_ticks, if it has one).
+## The brain, and with it how often it decides (its note's decision_ticks, if it has one) and its
+## tack discipline (gap_of()).
 var brain: NeuralNet = null:
 	set(value):
 		brain = value
 		if value != null and value.meta.has("decision_ticks"):
 			decision_ticks = maxi(int(value.meta["decision_ticks"]), 1)
+		if value != null:
+			manoeuvre_gap_s = gap_of(value)
+			closest_twa_deg = closest_of(value)
+## The least time between two manoeuvres, seconds (the tack discipline): the brain's own (gap_of());
+## the race tool's --manoeuvre_gap_s sets another after the brain, to compare.
+var manoeuvre_gap_s: float = TACK_HOLD_S
+## The closest to the wind the hands steer, degrees: the brain's own (closest_of()); the race tool's
+## --closest_twa_deg sets another after the brain, to compare.
+var closest_twa_deg: float = 0.0
 ## The brain file's name (night_best, ...), shown on the results and the labels.
 var brain_name: String = "brain"
+## Named by its generation alone ("gen 40", "best"), not with its run: in a race of one run's
+## generations only (Skippers.make_fleet(), tools/gens.sh), where the run says nothing.
+var short_label: bool = false
 var decision_ticks: int = DECISION_TICKS
 ## The sail's colour (sail_colour()).
 var sail: Color = Color(0.6, 0.35, 0.9)
@@ -176,6 +227,9 @@ var _others_positions: PackedVector2Array = PackedVector2Array()
 var _others_velocities: PackedVector2Array = PackedVector2Array()
 ## Ticks until the next decision; 0 decides on the next update.
 var _ticks_to_decision: int = 0
+## The step of the course the board sailed to at the last tick (-1 before the first), to see a
+## rounding (Driver.leg_done()).
+var _last_step: int = -1
 ## The sea's height where this board sails (RaceObservation.sea_height_m()), taken at setup().
 var _sea_height_m: float = 0.0
 var _since_manoeuvre_s: float = RaceObservation.SINCE_MANOEUVRE_SCALE_S
@@ -197,14 +251,21 @@ func setup(sim: WindsurferSim, controller: PlayerController, hands: AiHands, rac
 	_sea_height_m = RaceObservation.sea_height_m(sim) if sim != null else 0.0
 	_controller.hands = _hands
 	_ticks_to_decision = 0
+	_last_step = -1
 	_since_manoeuvre_s = RaceObservation.SINCE_MANOEUVRE_SCALE_S
 
 
-## A night's brain by its generation ("gen 40", "best": Generations.label_of()); any other brain
-## by its file name.
+## A night's brain by its run and generation ("all_s3 best", "night2b gen 40": Generations), so the
+## brains of several runs in one race have names of their own (ROADMAP RA15: they were all "best",
+## and their tracks went to one best.csv); by its generation alone with short_label. Any other
+## brain by its file name.
 func skipper_name() -> String:
 	var generation_label: String = Generations.label_of(brain_name)
-	return generation_label if not generation_label.is_empty() else brain_name
+	if generation_label.is_empty():
+		return brain_name
+	if short_label:
+		return generation_label
+	return "%s %s" % [Generations.run_of(brain_name), generation_label]
 
 
 ## A learned skipper sails under a purple sail, or the colour of its generation in a race of
@@ -233,6 +294,7 @@ func update(telemetry: Telemetry, dt: float) -> void:
 	if _controller == null or _hands == null:
 		return
 	var in_manoeuvre: bool = _controller.manoeuvre != PlayerController.Manoeuvre.NONE
+	_see_rounding()
 	_ticks_to_decision -= 1
 	if _ticks_to_decision <= 0:
 		_ticks_to_decision = maxi(decision_ticks, 1)
@@ -242,6 +304,23 @@ func update(telemetry: Telemetry, dt: float) -> void:
 	# The clock since the last manoeuvre moves on after the decision, as RaceEnv moves it in the
 	# tick that follows its decision: both see the same number.
 	_since_manoeuvre_s = RaceObservation.advance_since_manoeuvre(_since_manoeuvre_s, in_manoeuvre, dt)
+
+
+## The hands' driver (for the tests).
+func driver() -> Driver:
+	return _driver
+
+
+## A step of the course done since the last tick cuts the wait for the next manoeuvre
+## (Driver.leg_done()), as RaceEnv does at the end of the tick in which the step was done: both
+## between the same two ticks.
+func _see_rounding() -> void:
+	if _race == null:
+		return
+	var step_now: int = _race.next_step_index(_index)
+	if _last_step >= 0 and step_now > _last_step:
+		_driver.leg_done()
+	_last_step = step_now
 
 
 ## One decision: what the board sees, through the brain, onto the hands, read in the mode the brain
@@ -257,6 +336,8 @@ func _decide(telemetry: Telemetry, in_manoeuvre: bool) -> void:
 	_driver.mode = mode_of(brain)
 	_driver.uses_hold = uses_hold_of(brain)
 	_driver.push_index = push_index_of(brain) if _driver.mode == ActionMode.TWA else -1
+	_driver.manoeuvre_gap_s = manoeuvre_gap_s
+	_driver.closest_twa_deg = closest_twa_deg
 	var observation: PackedFloat32Array = RaceObservation.build(telemetry, _race, _index, _wind,
 			_others_positions, _others_velocities, in_manoeuvre, _since_manoeuvre_s, _driver.wanted_twa_deg, _hands.hold_speed_ms,
 			_hands.push, _sea_height_m)
@@ -280,6 +361,22 @@ static func mode_named(name: String) -> ActionMode:
 
 static func mode_name(mode: ActionMode) -> String:
 	return ACTION_MODE_NAMES[mode]
+
+
+## The least time between two manoeuvres a brain was trained with (the tack discipline, RA14): its
+## note's manoeuvre_gap_s; TACK_HOLD_S for a brain from before RA14, so it sails as it did.
+static func gap_of(net: NeuralNet) -> float:
+	if net == null or not net.meta.has(GAP_NOTE):
+		return TACK_HOLD_S
+	return maxf(float(net.meta[GAP_NOTE]), 0.0)
+
+
+## The closest to the wind a brain was trained to be steered (RA14): its note's closest_twa_deg; 0
+## (no floor) for a brain from before RA14.
+static func closest_of(net: NeuralNet) -> float:
+	if net == null or not net.meta.has(CLOSEST_NOTE):
+		return 0.0
+	return clampf(float(net.meta[CLOSEST_NOTE]), 0.0, CLEAR_TACK_TO_DEG)
 
 
 ## Whether a brain's third output is the hold-back speed: its outputs' names say so.
