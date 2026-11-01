@@ -33,11 +33,12 @@ extends RaceSkipper
 ## every crossing. A sailor sails one tack to the layline and tacks once. A rounding (a step of the
 ## course done) cuts what is left of the wait to TACK_HOLD_S: the next leg may need a manoeuvre at
 ## once (a gybe at a slalom mark, a tack off the gate). A brain whose note says no gap (every brain
-## before RA14) keeps the old rule, TACK_HOLD_S, and sails as it did. With it, the hands never
-## steer nearer the wind than closest_twa_deg (CLOSEST_TWA_DEG, the character sheets' closest beat):
-## the first brains, pointing at the mark, were under 2 m/s for a third to a half of a race, most
-## of it 15 to 45 degrees off the wind, pinched or in irons. A brain without the note steers as it
-## did.
+## before RA14) keeps the old rule, TACK_HOLD_S, and sails as it did. A brain's note may also set
+## closest_twa_deg, the closest to the wind the hands steer: the first brains, pointing at the mark,
+## were under 2 m/s for a third to a half of a race, most of it 15 to 45 degrees off the wind,
+## pinched or in irons. A floor at 35 degrees made it worse (the board held 35 from low speed and
+## never got going: Documentation/reports/fleet_speed/trainer_tacks.md), so the trainer sets none
+## today; a brain without the note has none.
 ##
 ## The trainer (RaceEnv) uses the same Driver as here, so a brain sails in the game exactly as it
 ## sailed in training.
@@ -99,9 +100,10 @@ const TACK_HOLD_S: float = 6.0
 const MANOEUVRE_GAP_S: float = 20.0
 ## The brain note's key for its gap; a brain without it keeps TACK_HOLD_S (gap_of()).
 const GAP_NOTE: String = "manoeuvre_gap_s"
-## The closest to the wind the hands steer for the brains trained since RA14, degrees: a wish nearer
-## the wind means close-hauled at this angle on the tack the board is on (the scripted skippers'
-## upwind_vmg_twa_deg goes no lower: SkipperConfig). The brain note's key; without it, no floor.
+## A floor for the wind angle the hands steer, degrees, when a brain's note asks for one: a wish
+## nearer the wind means close-hauled at the floor on the tack the board is on (the scripted
+## skippers' upwind_vmg_twa_deg goes no lower than 35: SkipperConfig). Measured on the old brains
+## and off in training (above); the note's key, and without it no floor.
 const CLOSEST_TWA_DEG: float = 35.0
 const CLOSEST_NOTE: String = "closest_twa_deg"
 ## Between these wind angles (either side) the sign of the wind angle says the tack. Nearer head to

@@ -149,8 +149,9 @@ class Stage:
 	## The tack discipline the brain sails with (RaceEnv.Options.manoeuvre_gap_s, LearnedSkipper
 	## RA14), seconds; the trainer may set another (--manoeuvre_gap_s), the evaluation the brain's.
 	var manoeuvre_gap_s: float = LearnedSkipper.MANOEUVRE_GAP_S
-	## The closest to the wind the hands steer (RaceEnv.Options.closest_twa_deg), degrees.
-	var closest_twa_deg: float = LearnedSkipper.CLOSEST_TWA_DEG
+	## The closest to the wind the hands steer (RaceEnv.Options.closest_twa_deg), degrees; 0, none:
+	## a floor at 35 degrees trapped the old brains pinched and slow (trainer_tacks.md, section 2).
+	var closest_twa_deg: float = 0.0
 	## What each tack and gybe costs in the reward, metres (RaceEnv.Options.manoeuvre_cost_m); the
 	## trainer may set another (--manoeuvre_cost_m).
 	var manoeuvre_cost_m: float = RaceEnv.Options.new().manoeuvre_cost_m

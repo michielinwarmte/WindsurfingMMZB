@@ -28,7 +28,7 @@ func test_the_hello_says_what_goes_over_the_bridge() -> void:
 	# The tack discipline and the manoeuvre's cost the brain learns with (RA14): the stage's, or the
 	# trainer's; the hello says which, for the brain's note.
 	assert_eq(hello["manoeuvre_gap_s"], LearnedSkipper.MANOEUVRE_GAP_S)
-	assert_eq(hello["closest_twa_deg"], LearnedSkipper.CLOSEST_TWA_DEG)
+	assert_eq(hello["closest_twa_deg"], 0.0, "no floor in training (it trapped the old brains)")
 	assert_eq(hello["manoeuvre_cost_m"], 5.0)
 	var set: TrainBridge = TrainBridge.new("C1", 2, 25.0, 15.0)
 	assert_eq(set.hello()["manoeuvre_gap_s"], 25.0)

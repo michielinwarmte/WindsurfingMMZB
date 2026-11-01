@@ -397,6 +397,7 @@ class Progress(BaseCallback):
     def check_stage(self) -> None:
         """With --stages: the latest brain on fresh drops; the stage is done when its number holds."""
         scale, episodes = CHECK_SCALE.get(self.args.stage, (1.0, self.args.check_episodes))
+        episodes = min(episodes, self.args.check_episodes)  # a short try asks for fewer
         if time.time() - self.last_check < self.args.check_every_min * 60.0 * scale:
             return
         self.last_check = time.time()
