@@ -215,7 +215,9 @@ func test_a_board_that_missed_the_finish_line_goes_back_behind_it() -> void:
 	assert_almost_eq(skipper._finish_target(finish, missed), middle - finish.in_dir * Skipper.FINISH_BACK_M, Vector2(1e-3, 1e-3), "back behind the middle")
 	var half_way: Vector2 = middle - finish.in_dir * 10.0
 	assert_almost_eq(skipper._finish_target(finish, half_way), middle - finish.in_dir * Skipper.FINISH_BACK_M, Vector2(1e-3, 1e-3), "until it is far enough behind")
-	var far_enough: Vector2 = middle - finish.in_dir * (Skipper.FINISH_BACK_REACHED_M + 5.0)
+	var far_enough: Vector2 = middle - finish.in_dir * (Skipper.FINISH_BACK_REACHED_M + 5.0) + along * length_m
 	aim = skipper._finish_target(finish, far_enough)
 	assert_gt(RoundingCheck.over_line_m(aim, finish.points[0], finish.points[1], finish.in_dir), 0.0, "then through the line again")
+	var on_line: Vector2 = far_enough + (aim - far_enough) * (Skipper.FINISH_BACK_REACHED_M + 5.0) / (aim - far_enough).dot(finish.in_dir)
+	assert_almost_eq(on_line.distance_to(middle), 0.0, 2.0, "through its middle, not near an end")
 

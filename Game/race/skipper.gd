@@ -252,6 +252,8 @@ const FREE_CORRIDOR_M: float = 60.0
 ## crosses again once it is FINISH_BACK_REACHED_M behind the line (see _finish_target()).
 const FINISH_BACK_M: float = 30.0
 const FINISH_BACK_REACHED_M: float = 20.0
+## The share of the finish line kept clear at each end when it aims at the nearest point of it.
+const FINISH_END_SHARE: float = 0.25
 ## Finished: it sails on this far past the finish line (clear of the boards still finishing), then
 ## sails free.
 const FINISH_CLEAR_M: float = 40.0
@@ -324,8 +326,10 @@ var _free_corridor_from: Vector2 = Vector2.ZERO
 ## Finished: the point past the finish line it sails to, and whether it is clear of the line.
 var _finish_clear_point: Vector2 = Vector2.INF
 var _clear_of_finish: bool = false
-## On its way back behind the finish line after missing it (see _finish_target()).
+## On its way back behind the finish line after missing it, and whether it has missed it once (see
+## _finish_target()).
 var _finish_going_back: bool = false
+var _finish_missed: bool = false
 
 ## Rule 8: the wanted headings of the last reaction time, oldest first, with their times.
 var _delay_headings: PackedFloat32Array = PackedFloat32Array()
@@ -468,6 +472,7 @@ func _forget_the_race() -> void:
 	_finish_clear_point = Vector2.INF
 	_clear_of_finish = false
 	_finish_going_back = false
+	_finish_missed = false
 	_penalty_phase = 0
 	if _hands != null:
 		_hands.hold_speed_ms = 0.0
@@ -609,21 +614,26 @@ func _target_point(step: RaceStep, position: Vector2) -> Vector2:
 	return _through(position, step.target())
 
 
-## The finish: through the nearest point of the line (a few metres in from the ends): the shortest
-## way, and the least turn after the last mark. A board that missed the line (it swept past an end at
-## speed and is on the course side without having finished) first goes back FINISH_BACK_M behind the
-## middle of the line, until it is FINISH_BACK_REACHED_M behind it, and crosses from there: aiming at
-## the nearest point from beyond the line it chased the line round in circles (T1 at 24 kt, 25 tacks
-## and 25 gybes and no finish).
+## The finish: through the nearest point of the line, a quarter of the line in from the ends
+## (FINISH_END_SHARE): the shortest way, and the least turn after the last mark, with room for the
+## leeway. A board that missed the line (it swept past an end at speed and is on the course side
+## without having finished) first goes back FINISH_BACK_M behind the middle of the line, until it is
+## FINISH_BACK_REACHED_M behind it, and then crosses through the middle: aiming at the nearest point
+## from beyond the line, or at one near an end after turning back wide, it chased the line round in
+## circles (T1 at 24 kt, 25 tacks and 25 gybes and no finish).
 func _finish_target(step: RaceStep, position: Vector2) -> Vector2:
 	var behind_m: float = -RoundingCheck.over_line_m(position, step.points[0], step.points[1], step.in_dir)
 	if behind_m < 0.0:
 		_finish_going_back = true
+		_finish_missed = true
 	elif behind_m > FINISH_BACK_REACHED_M:
 		_finish_going_back = false
 	if _finish_going_back:
 		return step.target() - step.in_dir * FINISH_BACK_M
-	return _through(position, _nearest_on_line(step, position))
+	if _finish_missed:
+		return _through(position, step.target())
+	var inset: float = maxf(_line_inset(step), FINISH_END_SHARE)
+	return _through(position, step.points[1].lerp(step.points[0], clampf(_share_along_line(step, position), inset, 1.0 - inset)))
 
 
 ## A mark is rounded by crossing its rounding ray (RoundingCheck) going round it the right way.
@@ -867,9 +877,12 @@ func _upwind_twa_deg() -> float:
 ## best angle in the wind of the moment (wider in light wind, where pinching makes the board slip
 ## sideways), moved by its character's own difference from POLAR_15KT.md's 45 and its pointing
 ## offset; and a little lower while the board is slower than FOOT_BELOW_SHARE of the polar's speed
-## there (FOOT_DEG_PER_MS for each m/s it lacks, at most FOOT_MAX_DEG).
+## there (FOOT_DEG_PER_MS for each m/s it lacks, at most FOOT_MAX_DEG). Before its start it points
+## at POLAR_15KT.md's 45 instead (moved by its sheet as before): the start's way in, its crossing and
+## its laylines to the spot were built round that angle, and at the polar's wider one a noisy
+## skipper ran up and down behind T1's line for four minutes, crossing beyond its ends.
 func _pointing_twa_deg() -> float:
-	var best_deg: float = _best_upwind_twa_deg()
+	var best_deg: float = POLAR_15KT_UPWIND_TWA_DEG if state == State.PRE_START else _best_upwind_twa_deg()
 	var foot_below_ms: float = FOOT_BELOW_SHARE * _polar_speed_ms(best_deg)
 	var foot_deg: float = clampf((foot_below_ms - _sim.telemetry.speed_ms) * FOOT_DEG_PER_MS, 0.0, FOOT_MAX_DEG)
 	var own_deg: float = config.upwind_vmg_twa_deg - POLAR_15KT_UPWIND_TWA_DEG
@@ -1236,7 +1249,7 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 	# (Reachable at the angle it points once it has speed: a slow board's own angle is wider.)
 	var spot_twa: float = Navigation.wind_angle_deg(position, spot, wind_deg)
 	var cross_at: Vector2 = spot
-	var at_speed_track_deg: float = _best_upwind_twa_deg() + config.upwind_vmg_twa_deg - POLAR_15KT_UPWIND_TWA_DEG + config.pointing_offset_deg + _leeway_deg
+	var at_speed_track_deg: float = config.upwind_vmg_twa_deg + config.pointing_offset_deg + _leeway_deg
 	if signf(spot_twa) != _tack() or absf(spot_twa) < at_speed_track_deg:
 		cross_at = _choose_crossing(telemetry, step, aim_s)
 	elif absf(spot_twa) > START_GO_SHALLOWEST_TWA_DEG:
