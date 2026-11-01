@@ -10,14 +10,20 @@ extends SceneTree
 ##   --worker=<id>        [0] this worker's number, sent in the hello
 ##   --stage=S1           [S1] the curriculum stage (TrainingDrops: S1 to S6)
 ##   --boards=<n>         [the stage's] boards per race
+##   --manoeuvre_gap_s=<s> [the stage's: LearnedSkipper.MANOEUVRE_GAP_S] the tack discipline (RA14)
+##   --manoeuvre_cost_m=<m> [the stage's: 5] what a tack or gybe costs in the reward
+##   --own_conditions=1   [0] each board its own conditions (TrainingDrops.weather_for(); blind stages)
 ##
 ## Or, without Python: how a brain does on a stage's drops, one line per episode and a summary
 ## (the morning look, and the stages' "done when" numbers):
 ##   --evaluate=<brain.json> [--stage=S1] [--episodes=20] [--boards=1] [--reference=allrounder]
-##   [--seed=1] [--track=<file.csv>]
+##   [--seed=1] [--track=<file.csv>] [--manoeuvre_gap_s=<s>] [--closest_twa_deg=<deg>]
 ## With --reference the same drops are sailed by that scripted character too, for comparison (the
 ## all-rounder's speed made good is S1's yardstick). --track writes the first episode's track.
 ## --evaluate=none with --reference sails only the character: a stage's yardstick on its own.
+## The brain sails by the tack discipline it was trained with (its note: LearnedSkipper.gap_of(),
+## the old 6 s for a brain from before RA14) and the closest to the wind it was steered
+## (closest_of(), none before RA14); --manoeuvre_gap_s and --closest_twa_deg sail it by others.
 ##
 ## Messages from the trainer: {"cmd": "reset", "seed": n}, {"cmd": "step", "actions": [[a, b, c, d],
 ## ...], "seed": n}, {"cmd": "close"}. The worker answers each with one line (TrainBridge.reset(),
@@ -43,7 +49,8 @@ func _initialize() -> void:
 		push_error("train_worker: --port=<n> is needed (or --evaluate=<brain.json>).")
 		quit(2)
 		return
-	var bridge: TrainBridge = TrainBridge.new(_options.get("stage", "S1"), _options.get("boards", "0").to_int())
+	var bridge: TrainBridge = TrainBridge.new(_options.get("stage", "S1"), _options.get("boards", "0").to_int(),
+			_number_option("manoeuvre_gap_s"), _number_option("manoeuvre_cost_m"), _options.get("own_conditions", "0") == "1")
 	_peer = StreamPeerTCP.new()
 	var host: String = _options.get("host", "127.0.0.1")
 	if _peer.connect_to_host(host, port) != OK:
@@ -137,12 +144,16 @@ func _evaluate() -> void:
 		push_error("No training stage called '%s' (the stages are %s)." % [stage_name, ", ".join(TrainingDrops.NAMES)])
 		quit(2)
 		return
+	# The tack discipline: --manoeuvre_gap_s, else the brain's own (the old rule for an old brain).
+	stage.manoeuvre_gap_s = _number_option("manoeuvre_gap_s") if _options.has("manoeuvre_gap_s") else LearnedSkipper.gap_of(brain)
+	stage.closest_twa_deg = _number_option("closest_twa_deg") if _options.has("closest_twa_deg") else LearnedSkipper.closest_of(brain)
 	var episodes: int = maxi(_options.get("episodes", "20").to_int(), 1)
 	var boards: int = maxi(_options.get("boards", "1").to_int(), 1)
 	var seed: int = _options.get("seed", "1").to_int()
 	var track_path: String = _options.get("track", "")
-	print("%s on %s: %d episode%s of %d board%s%s" % [path.get_file(), stage.describe(), episodes, "" if episodes == 1 else "s",
-		boards, "" if boards == 1 else "s", (", against the %s on the same drops" % reference) if not reference.is_empty() else ""])
+	print("%s on %s: %d episode%s of %d board%s%s; the brain tacks at most every %.0f s and steers no closer than %.0f deg" % [
+		path.get_file(), stage.describe(), episodes, "" if episodes == 1 else "s", boards, "" if boards == 1 else "s",
+		(", against the %s on the same drops" % reference) if not reference.is_empty() else "", stage.manoeuvre_gap_s, stage.closest_twa_deg])
 	var who: Array[String] = []
 	if brain != null:
 		who.append("brain")
@@ -268,6 +279,11 @@ static func _summary(sailor: String, rows: Array[Dictionary]) -> Dictionary:
 
 
 # ---------------------------------------------------------------- arguments and paths
+
+## A number given as --<name>=<value>; NaN when it was not given.
+func _number_option(name: String) -> float:
+	return _options[name].to_float() if _options.has(name) else NAN
+
 
 static func _repository_path(relative: String) -> String:
 	return ProjectSettings.globalize_path("res://").path_join("..").path_join(relative).simplify_path()

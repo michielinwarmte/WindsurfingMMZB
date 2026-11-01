@@ -21,6 +21,9 @@ const TEMPLATE_PERCENT: int = 50
 
 ## Who sails the AI boards.
 enum Who { PERSONAS, CHARACTERS, MIXED, BRAIN_AND_PERSONAS }
+## The curriculum's stages, latest first, as the brains' names end (<run>_<stage>_best): the brain
+## the page races is the latest stage's (latest_brain()).
+const BRAIN_STAGES: PackedStringArray = ["c2", "c1", "s6", "s5", "s4", "s3", "s2", "s1"]
 const WHO_NAMES: PackedStringArray = ["The twelve personas", "The four characters", "Personas and characters", "The trained brain and the personas"]
 
 ## The choices, kept for the session.
@@ -136,12 +139,31 @@ static func _persona_cards() -> String:
 	return "\n".join(lines)
 
 
-## The latest stage's best brain in Game/race/brains (s6_best before s5_best, ...); "" for none.
-static func latest_brain() -> String:
-	for stage: int in range(6, 0, -1):
-		var name: String = "s%d_best" % stage
-		if ResourceLoader.exists(Skippers.BRAINS_FOLDER.path_join(name + ".json")) or FileAccess.file_exists(Skippers.BRAINS_FOLDER.path_join(name + ".json")):
-			return name
+## The trained head the page puts in the fleet: the best brain of the latest stage of the curriculum
+## in the brains' folder (BRAIN_STAGES: C2, the whole course, above C1, above S6 down to S1),
+## whatever its run's prefix (s1_best of 21 October, all_s6_best of the first nights, tk_c2_best,
+## ...; ROADMAP RA15: it looked for s6_best to s1_best only); of two of the same stage, the one
+## trained last (its note's date). "" for none.
+static func latest_brain(folder: String = Skippers.BRAINS_FOLDER) -> String:
+	var names: PackedStringArray = PackedStringArray()
+	if not DirAccess.dir_exists_absolute(folder):
+		return ""
+	for file: String in DirAccess.get_files_at(folder):
+		if file.ends_with("_best.json"):
+			names.append(file.get_basename())
+	for stage: String in BRAIN_STAGES:
+		var newest: String = ""
+		var newest_date: String = ""
+		for name: String in names:
+			if name != stage + "_best" and not name.ends_with("_" + stage + "_best"):
+				continue
+			var brain: NeuralNet = NeuralNet.load_file(folder.path_join(name + ".json"))
+			var date: String = str(brain.meta.get("date", "")) if brain != null else ""
+			if newest.is_empty() or date > newest_date:
+				newest = name
+				newest_date = date
+		if not newest.is_empty():
+			return newest
 	return ""
 
 

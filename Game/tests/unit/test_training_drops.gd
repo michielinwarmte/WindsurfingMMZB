@@ -5,7 +5,9 @@ extends GutTest
 ## near a downwind mark or a gate for the run, just past the line for the laps, in the sailing area
 ## with the countdown for the start); every stage draws its conditions from the settings menu's
 ## whole range (the wind, the five seas at every height, the gusts, the shifts) and the race sails
-## in them; the same seed gives the same race; and a scripted skipper can sail a stage's drop.
+## in them; the same seed gives the same race; and a scripted skipper can sail a stage's drop. The
+## stages on the plan's two courses (C1, C2) sail T1 and T2 at 12 to 24 kt in the game's open water,
+## C1 on a leg with the next one or two steps as the goal, C2 the whole course from the start line.
 
 
 func test_every_kind_of_random_course_makes_a_race() -> void:
@@ -123,6 +125,8 @@ func test_every_stage_draws_the_settings_whole_range_of_conditions() -> void:
 	const DRAWS: int = 400
 	for name: String in TrainingDrops.NAMES:
 		var stage: TrainingDrops.Stage = TrainingDrops.stage_named(name)
+		if stage.game_conditions:
+			continue  # C1, C2: the game's open water (below)
 		assert_eq(stage.wind_min_kt, SettingsValues.WIND_SPEED_MIN_KT, "%s: the menu's lightest wind" % name)
 		assert_eq(stage.wind_max_kt, SettingsValues.WIND_SPEED_MAX_KT, "%s: the menu's strongest wind" % name)
 		assert_true(stage.waves and stage.gusts and stage.shifts, "%s draws the sea, the gusts and the shifts" % name)
@@ -225,6 +229,102 @@ func test_a_respawn_drop_fits_the_stage_and_a_scripted_skipper_can_sail_a_drop()
 			env.tick()
 	assert_true(env.board(0).progress_m > 30.0, "the all-rounder made progress on its drop in 20 s: %.0f m" % env.board(0).progress_m)
 	assert_eq(env.board(0).decisions, 0, "the network's decisions are not counted for a scripted board")
+
+
+func test_the_course_stages_sail_t1_and_t2_at_12_to_24_kt_in_the_games_open_water() -> void:
+	for name: String in ["C1", "C2"]:
+		var stage: TrainingDrops.Stage = TrainingDrops.stage_named(name)
+		assert_true(stage.game_conditions, name)
+		assert_eq(stage.manoeuvre_gap_s, LearnedSkipper.MANOEUVRE_GAP_S, "%s: the tack discipline" % name)
+		var courses: Dictionary[String, int] = {}
+		for seed: int in range(1, 9):
+			var env: RaceEnv = TrainingDrops.make_env(stage, seed, 2)
+			courses[env.course.name] = courses.get(env.course.name, 0) + 1
+			assert_between(env.wind_kt, 12.0, 24.0, "%s seed %d: the plan's winds" % [name, seed])
+			assert_true(env.options.waves and env.options.sea == null, "the default sea, as the race tool's")
+			assert_true(env.board(0).sim.has_waves())
+			assert_false(env.board(0).sim.wind_config.gusts_enabled, "the settings' default wind: no gusts")
+			assert_false(env.board(0).sim.wind_config.shifts_enabled, "and no shifts")
+			assert_almost_eq(env.wind_from_deg(), env.course.axis_deg, 1e-6, "the wind along the course's axis, as the race tool blows it")
+			assert_eq(env.board(0).driver.manoeuvre_gap_s, LearnedSkipper.MANOEUVRE_GAP_S, "the hands keep the discipline")
+		assert_eq(courses.size(), 2, "%s: T1 and T2 both: %s" % [name, str(courses)])
+
+
+func test_the_legs_drops_are_on_a_leg_with_the_next_one_or_two_steps_as_the_goal() -> void:
+	var stage: TrainingDrops.Stage = TrainingDrops.stage_named("C1")
+	assert_eq(stage.episode_s, 180.0)
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 3
+	var goals: Dictionary[int, int] = {}
+	for course_index: int in TrainingDrops.PLAN_COURSES.size():
+		var course: Course = TrainingDrops.plan_course(course_index)
+		var race: RaceSim = RaceSim.new(course, 1, 0.0)
+		var steps: Array[RaceStep] = race.steps()
+		for wind_kt: float in [12.0, 18.0, 24.0]:
+			for k: int in 40:
+				var drop: RaceEnv.Drop = TrainingDrops.drop(stage, race, course, rng, wind_kt)
+				assert_between(drop.next_step, 1, steps.size() - 1, "a leg after the start")
+				var steps_in_goal: int = drop.goal_step - drop.next_step
+				assert_between(steps_in_goal, 1, 2, "the next one or two steps")
+				assert_true(drop.goal_step <= steps.size(), "the finish at most")
+				goals[steps_in_goal] = goals.get(steps_in_goal, 0) + 1
+				# The all-rounder's expected time to the goal fits the episode with room to spare.
+				var expected_s: float = TrainingDrops.expected_leg_s(drop.position, steps[drop.next_step].target(), course.axis_deg, wind_kt)
+				if steps_in_goal == 2:
+					expected_s += TrainingDrops.expected_leg_s(steps[drop.next_step].target(), steps[drop.next_step + 1].target(), course.axis_deg, wind_kt)
+				assert_true(expected_s <= 0.75 * stage.episode_s, "%s at %.0f kt, step %d: %.0f s expected" % [course.name, wind_kt, drop.next_step, expected_s])
+				var off_wind_deg: float = absf(Course.turn_deg(course.axis_deg, drop.heading_deg))
+				assert_true(off_wind_deg >= TrainingDrops.DROP_IRONS_DEG - 0.01, "not set down in irons: %.0f deg" % off_wind_deg)
+	assert_true(goals.get(1, 0) > 0 and goals.get(2, 0) > 0, "one step and two steps both: %s" % str(goals))
+	# The legs' times: a beat is slower than a run, a run than a reach, and more wind is faster.
+	var up: float = TrainingDrops.expected_leg_s(Vector2.ZERO, Vector2(-500.0, 0.0), 270.0, 18.0)
+	var down: float = TrainingDrops.expected_leg_s(Vector2(-500.0, 0.0), Vector2.ZERO, 270.0, 18.0)
+	var across: float = TrainingDrops.expected_leg_s(Vector2.ZERO, Vector2(0.0, 500.0), 270.0, 18.0)
+	assert_true(up > down and down > across, "beat %.0f s, run %.0f s, reach %.0f s" % [up, down, across])
+	assert_almost_eq(TrainingDrops.expected_leg_s(Vector2.ZERO, Vector2(-500.0, 0.0), 270.0, 12.0), 2.0 * up, 0.01, "half the pace at 12 kt")
+
+
+func test_the_course_drops_are_just_past_the_start_line_with_the_whole_course_to_go() -> void:
+	var stage: TrainingDrops.Stage = TrainingDrops.stage_named("C2")
+	assert_eq(stage.stall_s, 90.0)
+	for seed: int in range(1, 5):
+		var env: RaceEnv = TrainingDrops.make_env(stage, seed)
+		assert_eq(env.options.episode_s, 1200.0, "time for T1 at 12 kt (the all-rounder's 850 s)")
+		for i: int in env.board_count():
+			assert_eq(env.race.next_step_index(i), 1, "started")
+			assert_eq(env.board(i).goal_step, 0, "the finish ends it")
+			var start: RaceStep = env.race.steps()[0]
+			var p: Vector3 = env.board(i).sim.telemetry.position
+			var over_m: float = RoundingCheck.over_line_m(Vector2(p.x, p.z), start.points[0], start.points[1], start.in_dir)
+			assert_between(over_m, 10.0, 40.0, "10 to 40 m on the course side of the line")
+
+
+func test_with_own_conditions_each_board_sails_a_wind_and_sea_of_its_own() -> void:
+	for name: String in ["S1", "C1"]:
+		var stage: TrainingDrops.Stage = TrainingDrops.stage_named(name)
+		var shared: RaceEnv = TrainingDrops.make_env(stage, 4, 4)
+		for i: int in shared.board_count():
+			assert_false(shared.board(i).own_weather, "%s: off by default: the race's conditions" % name)
+			assert_eq(shared.board(i).sim.wind_config.speed_kt, shared.wind_kt)
+		stage.own_conditions = true
+		var own: RaceEnv = TrainingDrops.make_env(stage, 4, 4)
+		var winds: Dictionary[float, bool] = {}
+		for i: int in own.board_count():
+			var board: RaceEnv.Board = own.board(i)
+			assert_true(board.own_weather, name)
+			winds[board.sim.wind_config.speed_kt] = true
+			assert_between(board.sim.wind_config.speed_kt, stage.wind_min_kt, stage.wind_max_kt, "%s: within the stage's winds" % name)
+			if stage.game_conditions:
+				assert_true(board.sim.has_waves(), "%s: the game's sea" % name)
+				assert_false(board.sim.wind_config.gusts_enabled)
+		assert_eq(winds.size(), own.board_count(), "%s: every board its own wind: %s" % [name, str(winds.keys())])
+	# The bridge sets a board down again in conditions of its own too.
+	var bridge: TrainBridge = TrainBridge.new("S1", 2, NAN, NAN, true)
+	assert_true(bridge.hello()["own_conditions"])
+	bridge.reset(5)
+	bridge.env.board(0).done = true
+	bridge._respawn(0, 6)
+	assert_true(bridge.env.board(0).own_weather, "a respawned board in its own conditions")
 
 
 func test_a_race_on_the_lake_has_the_maps_wind_and_a_course_fitted_to_the_water() -> void:

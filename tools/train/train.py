@@ -5,17 +5,23 @@ every so often for the game and for tools/gens.sh. Use tools/train.sh; it finds 
     python tools/train/train.py --stage=S1 --run=s1 --hours=3 [options]
 
 Options (the defaults in brackets):
-  --stage=S1            the curriculum stage (Game/race/training_drops.gd: S1 to S6)
-  --stages=S1,S2,S3     the nights unattended: the stages one after another, each run named after
-                        its stage (s1, s2, ...; with --run_prefix=all: all_s1, all_s2, ...); each
+  --stage=S1            the curriculum stage (Game/race/training_drops.gd: S1 to S6, and C1 and C2
+                        on the plan's two courses, T1 and T2 at 12 to 24 kt: C1 a leg or two, C2
+                        the whole course alone against the clock)
+  --stages=C1,C2        the nights unattended: the stages one after another, each run named after
+                        its stage (c1, c2, ...; with --run_prefix=tk: tk_c1, tk_c2, ...); each
                         continues its own model if it has one, else starts from the best brain of
-                        the stage before it in the curriculum (S1 from --resume=<brain> if given,
-                        else afresh); each ended when its "done when" number holds at a check (--check_every_min, --check_episodes: the brain
-                        evaluated on fresh drops, against the all-rounder where the number needs it)
-                        or after --hours_each. AI_FLEET_PLAN.md D6b's table: S1 the speed made good
-                        80 % of the all-rounder's; S2 and S3 80 % of the drops round within 40 s; S4
-                        finishes 90 % within 1.3 times the all-rounder's time; S5 starts 90 % within
-                        10 s of the gun with OCS under 10 %; S6 only ends by the hours.
+                        the stage before it (STAGE_BEFORE: S2 from S1, ..., C2 from C1; the first
+                        stage listed from --resume=<brain> if given, else afresh); each ended when
+                        its "done when" number holds at a check (--check_every_min, --check_episodes:
+                        the brain on a fixed set of drops of its own, CHECK_SEED, against the
+                        all-rounder on the same drops, whose number is kept in the run's folder) or
+                        after --hours_each. The bars are shares of the all-rounder's own numbers
+                        (RA14; stage_done()): S1 its speed made good (100 %); S2 and S3 90 % of its
+                        roundings within 1.1 times its time; S4 90 % of its laps within 1.3 times;
+                        C1 90 % of its goals and of its speed made good; C2 as many finishes as it,
+                        no slower. S5 starts 90 % within 10 s of the gun with OCS under 10 %; S6
+                        only ends by the hours.
   --run_prefix=<name>   with --stages: the runs are <name>_s1, <name>_s2, ... (the brains
                         <name>_s1_best.json, ...), so a new curriculum does not write over the
                         brains of an earlier one (Game/race/brains/s1_*.json are 21 October's)
@@ -23,6 +29,7 @@ Options (the defaults in brackets):
                         <run>_best.json in Game/race/brains, the logs and the model .sim_output/train/<run>/
   --hours=<h>           [6] stop after this long (also --minutes=<m> for a short try)
   --hours_each=<h>      [4] with --stages: the most a stage gets (also --minutes_each=<m>)
+  --stage_hours=C1:6,C2:14  with --stages: the most these stages get, in place of --hours_each
   --check_every_min=<m> [60] with --stages: how often a stage's number is checked (S4 to S6: twice that)
   --check_episodes=<n>  [20] with --stages: the drops of a check (S4 and S5: 8, S6: 6)
   --resume=auto|<file>  [auto] continue from this run's own model if it has one; a brain .json from
@@ -48,6 +55,15 @@ Options (the defaults in brackets):
   --device=cpu          where the network learns: cpu, cuda (the graphics card) or auto (cuda if
                         torch has it). Measured in Session 64 (training.md): the physics in Godot is
                         the cost; the network is tiny.
+  --manoeuvre_gap_s=auto  the tack discipline (RA14, LearnedSkipper): the least time between two
+                        manoeuvres the hands allow, seconds; auto is the stage's (MANOEUVRE_GAP_S,
+                        20 s). The brain's note keeps it, so the game sails the brain by the same rule.
+  --manoeuvre_cost_m=auto  what a tack or gybe costs in the reward, metres; auto is the stage's (5)
+  --recent=300          the line's and the curve's means are over this many of the last episodes
+                        (a short try: fewer, to see a trend in a few hundred episodes)
+  --own_conditions=0    1: in the blind stages that set boards down at once (S1 to S4, C1, C2) each
+                        board sails its own conditions (its own wind, and in S1 to S4 its own sea,
+                        gusts and shifts) instead of its race's (TrainingDrops.weather_for())
 
 To stop a run cleanly (the model and a brain saved, the workers closed, the nights not going on to
 the next stage): create the file .sim_output/train/STOP (touch .sim_output/train/STOP), or press
@@ -66,6 +82,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import os
 import re
 import subprocess
@@ -89,8 +106,12 @@ from stable_baselines3.common.vec_env import VecNormalize  # noqa: E402
 BRAINS_DIR = REPO_ROOT / "Game/race/brains"
 OUTPUT_DIR = REPO_ROOT / ".sim_output/train"
 # The stages' discount: the short stages look about 100 s ahead, the long ones about 250 s (a
-# decision is half a second).
-GAMMA_BY_STAGE = {"S1": 0.995, "S2": 0.99, "S3": 0.99, "S4": 0.998, "S5": 0.997, "S6": 0.998}
+# decision is half a second): C1's legs (180 s episodes) 100 s, C2's whole course about a leg, the
+# span over which a tack now pays off or costs.
+GAMMA_BY_STAGE = {"S1": 0.995, "S2": 0.99, "S3": 0.99, "S4": 0.998, "S5": 0.997, "S6": 0.998, "C1": 0.995, "C2": 0.998}
+# The stage whose best brain a stage of the nights starts from when it has no model of its own. C1
+# has none: it starts from --resume (the brain the lead chooses), or afresh.
+STAGE_BEFORE = {"S2": "S1", "S3": "S2", "S4": "S3", "S5": "S4", "S6": "S5", "C2": "C1"}
 RECENT_EPISODES = 300
 # The file that stops a run cleanly at the next decision (see the top).
 STOP_FILE = OUTPUT_DIR / "STOP"
@@ -108,6 +129,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--run_prefix", default="")
     parser.add_argument("--hours_each", type=float, default=4.0)
     parser.add_argument("--minutes_each", type=float, default=0.0)
+    parser.add_argument("--stage_hours", default="")
     parser.add_argument("--check_every_min", type=float, default=60.0)
     parser.add_argument("--check_episodes", type=int, default=20)
     parser.add_argument("--resume", default="auto")
@@ -128,6 +150,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--push_start", default="auto")
     parser.add_argument("--hidden", default="64,64")
     parser.add_argument("--device", default="cpu", choices=["cpu", "cuda", "auto"])
+    parser.add_argument("--manoeuvre_gap_s", default="auto")
+    parser.add_argument("--manoeuvre_cost_m", default="auto")
+    parser.add_argument("--own_conditions", type=int, default=0)
+    parser.add_argument("--recent", type=int, default=RECENT_EPISODES)
     args = parser.parse_args()
     args.stage = args.stage.upper()
     if not args.run:
@@ -152,6 +178,29 @@ def stage_run(prefix: str, stage: str) -> str:
     return f"{prefix}_{stage.lower()}" if prefix else stage.lower()
 
 
+def stage_hours(text: str) -> dict[str, float]:
+    """--stage_hours=C1:6,C2:14 as {"C1": 6.0, "C2": 14.0}."""
+    hours: dict[str, float] = {}
+    for part in text.split(","):
+        if ":" in part:
+            name, value = part.split(":", 1)
+            hours[name.strip().upper()] = float(value)
+    return hours
+
+
+def worker_args(args: argparse.Namespace) -> list[str]:
+    """The worker's options the trainer sets: the tack discipline and the manoeuvre's cost, when
+    not the stage's own ("auto")."""
+    extra = []
+    for name in ("manoeuvre_gap_s", "manoeuvre_cost_m"):
+        value = getattr(args, name, "auto")
+        if value != "auto":
+            extra.append(f"--{name}={float(value)}")
+    if getattr(args, "own_conditions", 0):
+        extra.append("--own_conditions=1")
+    return extra
+
+
 def push_start_output(choice: str, hello: dict) -> float:
     """The push output a fresh policy starts at: the worker's (the autopilot's own margin) for
     "auto", else the number given."""
@@ -169,62 +218,115 @@ def physics_commit() -> str:
 
 # ---------------------------------------------------------------- a stage's "done when" number
 
+# The drops of every check of a stage (a set of their own, not the morning's seed 1): the same each
+# time, so the checks of a night can be compared, and the all-rounder sails them once per run.
+CHECK_SEED = 1001
 SUMMARY_LINE = re.compile(r"^(?P<who>\w+): (?P<episodes>\d+) episodes, mean reward (?P<reward>-?[\d.]+), goal reached in "
                           r"(?P<goals>\d+) \((?P<goal_share>[\d.]+) %, mean (?P<goal_s>[\d.]+) s\), speed made good "
                           r"(?P<vmg>-?[\d.]+) m/s, (?P<falls>[\d.]+) falls and (?P<manoeuvres>[\d.]+) manoeuvres per episode"
                           r"(?:, started in (?P<starts>\d+) of (?P<with_start>\d+) \(mean (?P<start_s>[\d.]+) s after the gun\), "
                           r"OCS (?P<ocs>\d+) \((?P<ocs_share>[\d.]+) %\))?")
-SHARE_LINE = re.compile(r"^The brain's speed made good is (?P<share>-?\d+) % of the")
 # How much longer between checks and on how many drops, for the stages whose episodes take minutes.
-CHECK_SCALE = {"S4": (2.0, 8), "S5": (2.0, 8), "S6": (2.0, 6)}
+# (C2: a whole course is 3 to 15 minutes; a check stops the training while it runs, about 20
+# minutes for 6 drops on a loaded machine, so every 2 hours.)
+CHECK_SCALE = {"S4": (2.0, 8), "S5": (2.0, 8), "S6": (2.0, 6), "C2": (2.0, 6)}
+
+
+# The stages' bars (RA14, Session 65): the brain's number as a share of the all-rounder's own on the
+# same drops, never a fixed share of the drops. The all-rounder itself rounds 70 % of S3's drops and
+# finishes 38 % of S4's laps (nights_review.md), so the old 80 and 90 % were out of anyone's reach,
+# and S1's 80 % ended it after an hour while it was still improving.
+VMG_BAR = {"S1": 1.0, "C1": 0.9}        # the speed made good, a share of the all-rounder's
+GOAL_BAR = {"S2": 0.9, "S3": 0.9, "S4": 0.9, "C1": 0.9, "C2": 1.0}  # the goals reached, a share of its
+TIME_BAR = {"S2": 1.1, "S3": 1.1, "S4": 1.3, "C2": 1.0}  # the mean time to the goal, at most this times its
 
 
 def needs_reference(stage: str) -> bool:
-    return stage in ("S1", "S4")
+    return stage in VMG_BAR or stage in GOAL_BAR
 
 
-def evaluate(brain_path: Path, stage: str, episodes: int, reference: str | None, log: Path) -> dict:
-    """Runs the worker's evaluation on a brain (Game/dev/train_worker.gd --evaluate) and returns the
-    summaries as the lines parse: {"brain": {...}, "allrounder": {...}, "share": P}."""
+def run_evaluation(brain: str, stage: str, episodes: int, reference: str | None, seed: int) -> subprocess.Popen:
+    """Starts the worker's evaluation (Game/dev/train_worker.gd --evaluate) of a brain file, or with
+    brain "none" of the reference character alone."""
     from bridge import GAME_DIR, find_godot
     arguments = [find_godot(), "--headless", "--no-header", "--path", str(GAME_DIR), "-s", "res://dev/train_worker.gd", "--",
-                 f"--evaluate={brain_path}", f"--stage={stage}", f"--episodes={episodes}", "--boards=1",
-                 f"--seed={int(time.time()) % 100000}"]
+                 f"--evaluate={brain}", f"--stage={stage}", f"--episodes={episodes}", "--boards=1", f"--seed={seed}"]
     if reference:
         arguments.append(f"--reference={reference}")
-    output = subprocess.run(arguments, capture_output=True, text=True, cwd=str(GAME_DIR), timeout=7200).stdout
-    with open(log, "a", encoding="utf-8") as file:
-        file.write(output + "\n")
+    return subprocess.Popen(arguments, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, cwd=str(GAME_DIR))
+
+
+def parse_summaries(output: str) -> dict:
+    """The summary lines of an evaluation: {"brain": {...}, "allrounder": {...}}."""
     result: dict = {}
     for line in output.splitlines():
         match = SUMMARY_LINE.match(line.strip())
         if match:
             row = {k: (v if k == "who" else (float(v) if v is not None else None)) for k, v in match.groupdict().items()}
             result[match.group("who")] = row
-            continue
-        match = SHARE_LINE.match(line.strip())
-        if match:
-            result["share"] = float(match.group("share"))
+    return result
+
+
+def evaluate(brain_path: Path, stage: str, episodes: int, reference: str | None, log: Path, seed: int = CHECK_SEED) -> dict:
+    """A brain on a stage's drops and, with a reference, that character on the same drops, in two
+    Godot processes side by side; the reference's summary is kept in the log's folder for the same
+    stage, drops and seed (the scripted character sails them the same way every time). Returns
+    {"brain": {...}, "allrounder": {...}, "share": P}, P the brain's speed made good in % of the
+    reference's."""
+    kept = log.parent / f"reference_{stage}_{reference}_{episodes}_{seed}.json" if reference else None
+    reference_row = None
+    if kept is not None and kept.exists():
+        reference_row = json.loads(kept.read_text())
+    brain_run = run_evaluation(str(brain_path), stage, episodes, None, seed)
+    reference_run = run_evaluation("none", stage, episodes, reference, seed) if reference and reference_row is None else None
+    output = brain_run.communicate(timeout=7200)[0]
+    if reference_run is not None:
+        reference_output = reference_run.communicate(timeout=7200)[0]
+        output += "\n" + reference_output
+        reference_row = parse_summaries(reference_output).get(reference)
+        if reference_row is not None and kept is not None:
+            kept.write_text(json.dumps(reference_row))
+    with open(log, "a", encoding="utf-8") as file:
+        file.write(output + "\n")
+    result = parse_summaries(output)
+    if reference_row is not None:
+        result[reference] = reference_row
+        if "brain" in result:
+            result["share"] = 100.0 * result["brain"]["vmg"] / max(reference_row["vmg"], 0.01)
     return result
 
 
 def stage_done(stage: str, result: dict) -> tuple[bool, str]:
-    """Whether a stage's "done when" number holds, and the number in words."""
+    """Whether a stage's "done when" number holds, and the number in words: the brain's speed made
+    good, goals and time to the goal against the all-rounder's on the same drops (VMG_BAR, GOAL_BAR,
+    TIME_BAR); S5's starts as they are; S6 by its hours."""
     brain = result.get("brain")
     if brain is None:
         return False, "no summary (the evaluation failed; see checks.log)"
-    if stage == "S1":
-        share = result.get("share", 0.0)
-        return share >= 80.0, f"speed made good {brain['vmg']:.2f} m/s, {share:.0f} % of the all-rounder's (done at 80)"
-    if stage in ("S2", "S3"):
-        return (brain["goal_share"] >= 80.0 and brain["goal_s"] <= 40.0,
-                f"rounds {brain['goal_share']:.0f} % of the drops, in {brain['goal_s']:.1f} s on average (done at 80 % within 40 s)")
-    if stage == "S4":
+    if needs_reference(stage):
         other = result.get("allrounder")
-        ratio = brain["goal_s"] / max(other["goal_s"], 1.0) if other and other["goal_s"] > 0.0 else 9.9
-        return (brain["goal_share"] >= 90.0 and ratio <= 1.3,
-                f"finishes {brain['goal_share']:.0f} % of its laps in {brain['goal_s']:.0f} s, {ratio:.2f} times the all-rounder's "
-                f"(done at 90 % within 1.3)")
+        if other is None:
+            return False, "no summary of the all-rounder (see checks.log)"
+        done = True
+        words = []
+        if stage in VMG_BAR:
+            share = brain["vmg"] / max(other["vmg"], 0.01)
+            done = done and share >= VMG_BAR[stage]
+            words.append(f"speed made good {brain['vmg']:.2f} m/s, {100 * share:.0f} % of the all-rounder's {other['vmg']:.2f} "
+                         f"(done at {100 * VMG_BAR[stage]:.0f})")
+        if stage in GOAL_BAR:
+            if other["goal_share"] <= 0.0:
+                return False, "the all-rounder reached no goal on these drops: they cannot be a bar"
+            share = brain["goal_share"] / other["goal_share"]
+            done = done and share >= GOAL_BAR[stage]
+            words.append(f"goal {brain['goal_share']:.0f} % against the all-rounder's {other['goal_share']:.0f} % "
+                         f"({100 * share:.0f} %, done at {100 * GOAL_BAR[stage]:.0f})")
+        if stage in TIME_BAR:
+            ratio = brain["goal_s"] / max(other["goal_s"], 1.0) if brain["goals"] > 0 else 9.9
+            done = done and ratio <= TIME_BAR[stage]
+            words.append(f"in {brain['goal_s']:.0f} s, {ratio:.2f} times its {other['goal_s']:.0f} s (done at {TIME_BAR[stage]:.2f})")
+        words.append(f"{brain['manoeuvres']:.1f} manoeuvres per episode against its {other['manoeuvres']:.1f}")
+        return done, "; ".join(words)
     if stage == "S5":
         starts = brain.get("starts")
         with_start = brain.get("with_start") or 0.0
@@ -256,7 +358,7 @@ class Progress(BaseCallback):
         self.started = time.time()
         self.last_save = time.time()
         self.generation = started_generation
-        self.recent: deque[dict] = deque(maxlen=RECENT_EPISODES)
+        self.recent: deque[dict] = deque(maxlen=max(1, args.recent))
         self.best_reward = -float("inf")
         self.rollouts = 0
         self.last_rollout_time = time.time()
@@ -298,6 +400,7 @@ class Progress(BaseCallback):
     def check_stage(self) -> None:
         """With --stages: the latest brain on fresh drops; the stage is done when its number holds."""
         scale, episodes = CHECK_SCALE.get(self.args.stage, (1.0, self.args.check_episodes))
+        episodes = min(episodes, self.args.check_episodes)  # a short try asks for fewer
         if time.time() - self.last_check < self.args.check_every_min * 60.0 * scale:
             return
         self.last_check = time.time()
@@ -372,8 +475,15 @@ class Progress(BaseCallback):
         self.generation += 1
         s = self.stats()
         hours = (time.time() - self.started) / 3600.0
+        # The tack discipline and the manoeuvre's cost it learned with (RA14): the game sails it by
+        # the same rule (LearnedSkipper.gap_of()).
+        rules = {key: self.workers.hello[key] for key in ("manoeuvre_gap_s", "closest_twa_deg", "manoeuvre_cost_m", "own_conditions")
+                 if key in self.workers.hello}
         meta = meta_for(self.args.run, self.args.stage, self.generation, self.model.num_timesteps, self.workers.episodes_done,
-                        hours, s, self.commit, {"policy_std": round(self.policy_std(), 4)})
+                        hours, s, self.commit, {"policy_std": round(self.policy_std(), 4), "ent_coef": self.args.ent, **rules})
+        if self.args.stage.startswith("C"):
+            meta["course"] = "T1 and T2 (t1_loop, t2_slalom), 12 to 24 kt, the game's open water"
+
         brain = brain_from_policy(self.model.policy, self.obs_names, self.action_names, meta)
         save_brain(brain, BRAINS_DIR / f"{self.args.run}_gen{self.generation}.json")
         save_brain(brain, BRAINS_DIR / f"{self.args.run}_latest.json")
@@ -401,16 +511,16 @@ def main() -> None:
         # A brain given with --resume starts the first stage listed (when it has no model of its
         # own and the stage before it no best brain).
         first_brain = args.resume if args.resume.endswith(".json") else ""
+        hours_of = stage_hours(args.stage_hours)
         for stage in stages:
             args.stage = stage
             args.run = stage_run(args.run_prefix, stage)
-            args.hours = args.hours_each
+            args.hours = hours_of.get(stage, args.hours_each)
             args.gamma = GAMMA_BY_STAGE.get(stage, 0.995)
             own_model = OUTPUT_DIR / args.run / "model.zip"
-            # The stage before in the curriculum (S1 to S6), whichever stages were listed: a
-            # stage always goes on from the one before's best brain.
-            order = list(GAMMA_BY_STAGE.keys())
-            before = order[order.index(stage) - 1] if stage in order and order.index(stage) > 0 else ""
+            # The stage before in the curriculum, whichever stages were listed: a stage always goes
+            # on from the one before's best brain.
+            before = STAGE_BEFORE.get(stage, "")
             before_best = BRAINS_DIR / f"{stage_run(args.run_prefix, before)}_best.json" if before else None
             if own_model.exists():
                 args.resume = "auto"
@@ -463,8 +573,9 @@ def train_one(args: argparse.Namespace) -> str:
     run_dir.mkdir(parents=True, exist_ok=True)
     torch.set_num_threads(max(1, min(4, (os.cpu_count() or 4) // 4)))
     print(f"run {args.run}: stage {args.stage}, {args.hours:.2f} h, {args.workers} workers, seed {args.seed}, "
-          f"gamma {args.gamma}, n_steps {args.n_steps}, batch {args.batch}, lr {args.lr}, on the {args.device}", flush=True)
-    workers = GodotWorkers(stage=args.stage, workers=args.workers, boards=args.boards, log_dir=run_dir, seed=args.seed)
+          f"gamma {args.gamma}, n_steps {args.n_steps}, batch {args.batch}, lr {args.lr}, ent {args.ent}, on the {args.device}", flush=True)
+    workers = GodotWorkers(stage=args.stage, workers=args.workers, boards=args.boards, log_dir=run_dir, seed=args.seed,
+                           extra_args=worker_args(args))
     obs_names = list(workers.hello["obs_names"])
     action_names = list(workers.hello["action_names"])
     hidden = [int(part) for part in args.hidden.split(",") if part.strip()]

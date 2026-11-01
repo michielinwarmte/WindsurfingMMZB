@@ -157,6 +157,30 @@ func test_a_completed_step_earns_its_bonus_and_never_a_loss() -> void:
 	assert_false(env.race.is_ocs(0))
 
 
+func test_a_completed_step_cuts_the_wait_for_the_next_manoeuvre() -> void:
+	var options: RaceEnv.Options = _options(true, false)
+	options.prestart_s = 0.0
+	options.start_behind_m = 10.0
+	options.spot_jitter_m = 0.0
+	options.heading_jitter_deg = 0.0
+	options.manoeuvre_gap_s = 20.0
+	var env: RaceEnv = RaceEnv.new(_course(), 1, 15.0, options)
+	env.reset(1)
+	_point(env, CLOSE_HAULED_DEG)
+	var driver: LearnedSkipper.Driver = env.board(0).driver
+	assert_eq(driver.manoeuvre_gap_s, 20.0, "the options' tack discipline is the hands'")
+	driver.since_manoeuvre_s = 0.0  # as if a tack had just ended
+	var before_s: float = 0.0
+	while env.time_s < 30.0 and env.race.next_step_index(0) == 0:
+		if env.ticks % env.decision_ticks == 0:
+			env.act(0, PackedFloat32Array([0.0, 0.0, 0.0]))
+		before_s = driver.since_manoeuvre_s
+		env.tick()
+	assert_eq(env.race.next_step_index(0), 1, "the board started")
+	assert_true(before_s < 13.0, "the start came before the wait was nearly over: %.2f s" % before_s)
+	assert_almost_eq(driver.since_manoeuvre_s, 20.0 - LearnedSkipper.TACK_HOLD_S, 1e-4, "the start cut the wait to 6 s")
+
+
 func test_a_tack_costs_5_m() -> void:
 	var options: RaceEnv.Options = _options(false, false)
 	options.actions = LearnedSkipper.ActionMode.TWA

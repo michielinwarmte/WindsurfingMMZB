@@ -43,6 +43,42 @@ func test_a_fleet_of_generations_is_labelled_and_coloured_by_generation() -> voi
 	assert_eq(alone[0].sail_colour(), Color(0.6, 0.35, 0.9))
 
 
+func test_brains_of_several_runs_have_names_of_their_own() -> void:
+	# RA15: all_s3_best and all_s6_best were both "best", and their tracks went to one best.csv.
+	assert_eq(Skippers.make("brain:all_s3_best").skipper_name(), "all_s3 best", "a brain alone: its run and its generation")
+	var fleet: Array[RaceSkipper] = Skippers.make_fleet(PackedStringArray(["brain:all_s3_best", "brain:all_s6_best", "allrounder"]))
+	assert_eq(fleet[0].board_name(), "all_s3 best")
+	assert_eq(fleet[1].board_name(), "all_s6 best")
+	assert_ne(fleet[0].board_name(), fleet[1].board_name())
+	# A brain whose name says no generation keeps its file name.
+	var learned: LearnedSkipper = LearnedSkipper.new()
+	learned.brain_name = "my_test_brain"
+	assert_eq(learned.skipper_name(), "my_test_brain")
+
+
+func test_the_race_page_races_the_best_brain_of_the_latest_stage_whatever_its_run() -> void:
+	var folder: String = "user://test_latest_brain"
+	DirAccess.make_dir_recursive_absolute(folder)
+	for file: String in DirAccess.get_files_at(folder):
+		DirAccess.remove_absolute(folder.path_join(file))
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 1
+	var dates: Dictionary[String, String] = {"s1_best": "2026-10-21T10:00:00", "all_s3_best": "2026-11-01T06:57:00",
+		"all_s6_best": "2026-11-01T19:05:00", "all_s6_gen3": "2026-11-01T19:30:00", "old_s6_best": "2026-10-30T12:00:00"}
+	for name: String in dates:
+		var net: NeuralNet = NeuralNet.make([3, 2, 4], rng)
+		net.meta["date"] = dates[name]
+		net.save(folder.path_join(name + ".json"))
+	assert_eq(RacePage.latest_brain(folder), "all_s6_best", "S6 above S3 and S1, the nights' all_ brains too; of two S6, the newer")
+	var c1: NeuralNet = NeuralNet.make([3, 2, 4], rng)
+	c1.meta["date"] = "2026-10-01T00:00:00"
+	c1.save(folder.path_join("tk_c1_best.json"))
+	assert_eq(RacePage.latest_brain(folder), "tk_c1_best", "a brain of the course stages above every S stage")
+	assert_eq(RacePage.latest_brain("user://no_such_folder"), "", "no brains: none")
+	for file: String in DirAccess.get_files_at(folder):
+		DirAccess.remove_absolute(folder.path_join(file))
+
+
 func test_the_race_options_behind_wind_blind_and_spectate() -> void:
 	var setup: RaceSetup = RaceSetup.race("t1_loop", PackedStringArray(["brain:night_best"]), 1, 30.0)
 	assert_almost_eq(setup.wait_behind_m(), 40.0, 0.01, "30 s of countdown: the nearest 40 m")

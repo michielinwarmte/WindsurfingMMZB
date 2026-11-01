@@ -98,16 +98,25 @@ func test_the_networks_numbers_become_the_hands() -> void:
 func test_a_brain_sails_through_the_skipper_exactly_as_in_the_trainer() -> void:
 	_sail_both_ways(LearnedSkipper.ActionMode.STICK)
 	_sail_both_ways(LearnedSkipper.ActionMode.TWA)
+	# A brain trained with the tack discipline (RA14): its note's gap in the game, the stage's in
+	# the trainer.
+	_sail_both_ways(LearnedSkipper.ActionMode.TWA, LearnedSkipper.MANOEUVRE_GAP_S)
 
 
-func _sail_both_ways(mode: LearnedSkipper.ActionMode) -> void:
+func _sail_both_ways(mode: LearnedSkipper.ActionMode, gap_s: float = NAN) -> void:
 	var brain: NeuralNet = _random_brain(8, LearnedSkipper.TWA_ACTION_NAMES.size() if mode == LearnedSkipper.ActionMode.TWA else 3)
 	brain.meta["actions"] = LearnedSkipper.mode_name(mode)
+	if not is_nan(gap_s):
+		brain.meta[LearnedSkipper.GAP_NOTE] = gap_s
+		brain.meta[LearnedSkipper.CLOSEST_NOTE] = LearnedSkipper.CLOSEST_TWA_DEG
 	# A wind-angle brain with the hold and the push outputs, as the trainer makes them.
 	brain.action_names = LearnedSkipper.TWA_ACTION_NAMES if mode == LearnedSkipper.ActionMode.TWA else LearnedSkipper.ACTION_NAMES
 	var course: Course = _course()
 	var options: RaceEnv.Options = RaceEnv.Options.new()
 	options.actions = mode
+	if not is_nan(gap_s):
+		options.manoeuvre_gap_s = gap_s
+		options.closest_twa_deg = LearnedSkipper.CLOSEST_TWA_DEG
 	# The trainer's way: observe, act, six ticks.
 	var trained: RaceEnv = RaceEnv.new(course, 1, 15.0, options)
 	trained.reset(5)
@@ -216,6 +225,106 @@ func test_a_wind_angle_on_the_other_tack_asks_for_one_tack_and_not_again_for_3_s
 	later.decide(PackedFloat32Array([-0.95, 0.0, 0.0]), false)
 	later.steer(t, false, DT)
 	assert_false(hands.tack, "171 degrees on port, from starboard: no gybe")
+
+
+func test_the_tack_discipline_holds_this_tack_until_the_gap_has_passed_and_a_rounding_cuts_it() -> void:
+	var hands: AiHands = AiHands.new()
+	var driver: LearnedSkipper.Driver = LearnedSkipper.Driver.new(hands, LearnedSkipper.ActionMode.TWA)
+	driver.manoeuvre_gap_s = 20.0
+	var t: Telemetry = Telemetry.new()
+	t.twa_deg = 50.0
+	t.sail_side = -1
+	# A tack just ended (a second of it under way), and the wish is now 45 degrees on port.
+	for k: int in 60:
+		driver.steer(t, true, DT)
+	driver.decide(PackedFloat32Array([-0.25, 0.0, 0.0]), false)
+	var asked_at_s: float = -1.0
+	for k: int in 30 * 60:
+		driver.steer(t, false, DT)
+		if hands.tack:
+			asked_at_s = (k + 1) * DT
+			break
+		if k == 10 * 60:
+			assert_almost_eq(hands.steer, 0.25, 1e-6, "meanwhile close-hauled on this tack: 45 degrees, 5 degrees up")
+	assert_almost_eq(asked_at_s, 20.0, 0.05, "the other tack asked for 20 s after the last manoeuvre, not before")
+	hands.tack = false
+	# Another manoeuvre, then a mark rounded 2 s after it: the 18 s left are cut to 6.
+	for k: int in 60:
+		driver.steer(t, true, DT)
+	for k: int in 120:
+		driver.steer(t, false, DT)
+	driver.leg_done()
+	asked_at_s = -1.0
+	for k: int in 30 * 60:
+		driver.steer(t, false, DT)
+		if hands.tack:
+			asked_at_s = (k + 1) * DT
+			break
+	assert_almost_eq(asked_at_s, 6.0, 0.05, "a rounding leaves at most TACK_HOLD_S to wait")
+	# The old rule (a gap of TACK_HOLD_S): a rounding changes nothing.
+	var old: LearnedSkipper.Driver = LearnedSkipper.Driver.new(hands, LearnedSkipper.ActionMode.TWA)
+	old.since_manoeuvre_s = 2.0
+	old.leg_done()
+	assert_eq(old.since_manoeuvre_s, 2.0, "the brains before RA14 sail as they did")
+
+
+func test_a_wish_nearer_the_wind_than_the_floor_is_close_hauled_on_this_tack() -> void:
+	var hands: AiHands = AiHands.new()
+	var t: Telemetry = Telemetry.new()
+	t.twa_deg = 50.0
+	t.sail_side = -1
+	var old: LearnedSkipper.Driver = LearnedSkipper.Driver.new(hands, LearnedSkipper.ActionMode.TWA)
+	old.decide(PackedFloat32Array([10.0 / 180.0, 0.0, 0.0]), false)
+	old.steer(t, false, DT)
+	assert_eq(hands.steer, 1.0, "no floor (the brains before RA14): 10 degrees asked, a full stick up into irons")
+	var floored: LearnedSkipper.Driver = LearnedSkipper.Driver.new(hands, LearnedSkipper.ActionMode.TWA)
+	floored.closest_twa_deg = LearnedSkipper.CLOSEST_TWA_DEG
+	floored.decide(PackedFloat32Array([10.0 / 180.0, 0.0, 0.0]), false)
+	floored.steer(t, false, DT)
+	assert_almost_eq(hands.steer, 15.0 / LearnedSkipper.TWA_FULL_STICK_DEG, 1e-6, "with it: up to 35 degrees only")
+	# Near head to wind on the other side: still no tack (the raw wish decides that), close-hauled here.
+	floored.decide(PackedFloat32Array([-10.0 / 180.0, 0.0, 0.0]), false)
+	floored.steer(t, false, DT)
+	assert_false(hands.tack, "10 degrees on port is not clearly the other tack")
+	assert_almost_eq(hands.steer, 0.75, 1e-6)
+	# A wish further off the wind is left alone.
+	floored.decide(PackedFloat32Array([0.25, 0.0, 0.0]), false)
+	floored.steer(t, false, DT)
+	assert_almost_eq(hands.steer, 0.25, 1e-6, "45 degrees asked, 45 steered")
+
+
+func test_a_brain_sails_by_the_tack_discipline_it_was_trained_with() -> void:
+	var brain: NeuralNet = _random_brain(3, LearnedSkipper.TWA_ACTION_NAMES.size())
+	brain.meta["actions"] = "twa"
+	assert_eq(LearnedSkipper.gap_of(brain), LearnedSkipper.TACK_HOLD_S, "a brain from before RA14: the old 6 s")
+	var skipper: LearnedSkipper = LearnedSkipper.new()
+	skipper.brain = brain
+	assert_eq(skipper.manoeuvre_gap_s, LearnedSkipper.TACK_HOLD_S)
+	assert_eq(LearnedSkipper.closest_of(brain), 0.0, "and no floor")
+	brain.meta[LearnedSkipper.GAP_NOTE] = 25.0
+	brain.meta[LearnedSkipper.CLOSEST_NOTE] = 38.0
+	assert_eq(LearnedSkipper.gap_of(brain), 25.0, "its note says the gap it learned with")
+	assert_eq(LearnedSkipper.closest_of(brain), 38.0, "and the floor")
+	skipper.brain = brain
+	assert_eq(skipper.manoeuvre_gap_s, 25.0)
+	assert_eq(skipper.closest_twa_deg, 38.0)
+	# In a race: the skipper hands its gap to the driver, and a step of the course done (here the
+	# board set past the start) cuts the wait as RaceEnv does.
+	var options: RaceEnv.Options = RaceEnv.Options.new()
+	var env: RaceEnv = RaceEnv.new(_course(), 1, 15.0, options)
+	env.reset(2)
+	var board: RaceEnv.Board = env.board(0)
+	var played: LearnedSkipper = LearnedSkipper.new()
+	played.setup(board.sim, board.controller, board.hands, env.race, 0)
+	played.brain = brain
+	played.manoeuvre_gap_s = 30.0  # the race tool's --manoeuvre_gap_s, after the brain
+	played.update(board.sim.telemetry, DT)
+	assert_eq(played.driver().manoeuvre_gap_s, 30.0, "the override reaches the hands")
+	played.driver().since_manoeuvre_s = 0.0
+	var spot: Vector3 = board.sim.telemetry.position
+	env.race.place_board(0, Vector2(spot.x, spot.z), 1)
+	played.update(board.sim.telemetry, DT)
+	assert_true(played.driver().since_manoeuvre_s >= 30.0 - LearnedSkipper.TACK_HOLD_S, "the rounding cut the wait to 6 s: %.2f" % played.driver().since_manoeuvre_s)
 
 
 func test_a_brain_is_read_in_the_mode_it_was_trained_in() -> void:

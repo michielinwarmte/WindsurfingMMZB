@@ -51,11 +51,19 @@ var episodes: int = 0
 var _parked: Dictionary[int, bool] = {}
 
 
-func _init(stage_name: String = "S1", board_count: int = 0) -> void:
+## The stage, the boards per race (0: the stage's), and the trainer's tack discipline and
+## manoeuvre cost (NaN: the stage's own; RA14), and whether each board sails its own conditions.
+func _init(stage_name: String = "S1", board_count: int = 0, manoeuvre_gap_s: float = NAN, manoeuvre_cost_m: float = NAN,
+		own_conditions: bool = false) -> void:
 	stage = TrainingDrops.stage_named(stage_name)
 	if stage == null:
 		stage = TrainingDrops.stage_named("S1")
 	boards = board_count if board_count > 0 else stage.boards
+	if not is_nan(manoeuvre_gap_s):
+		stage.manoeuvre_gap_s = maxf(manoeuvre_gap_s, 0.0)
+	if not is_nan(manoeuvre_cost_m):
+		stage.manoeuvre_cost_m = maxf(manoeuvre_cost_m, 0.0)
+	stage.own_conditions = own_conditions
 
 
 ## What the trainer needs to know first.
@@ -73,6 +81,12 @@ func hello() -> Dictionary:
 		"stage_description": stage.describe(),
 		"decision_ticks": 30,
 		"decision_s": 30 * RaceEnv.DT,
+		# The rule the brain learns with (RA14): the trainer writes it into the brain's note, so the
+		# game and the evaluation sail the brain by the same rule (LearnedSkipper.gap_of()).
+		"manoeuvre_gap_s": stage.manoeuvre_gap_s,
+		"closest_twa_deg": stage.closest_twa_deg,
+		"manoeuvre_cost_m": stage.manoeuvre_cost_m,
+		"own_conditions": stage.own_conditions,
 	}
 
 
@@ -176,7 +190,7 @@ func _respawn(i: int, seed: int) -> void:
 	_respawns += 1
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = seed * 1000 + i * RESPAWN_SEED_STEP + _respawns
-	var drop: RaceEnv.Drop = TrainingDrops.drop(stage, env.race, env.course, rng)
+	var drop: RaceEnv.Drop = TrainingDrops.drop_in_weather(stage, env.race, env.course, rng, env.wind_kt, env.options.environment != null)
 	env.respawn(i, drop, rng.randi())
 	_parked.erase(i)
 

@@ -53,10 +53,13 @@ static func make(skipper_name: String) -> RaceSkipper:
 static func make_fleet(skipper_names: PackedStringArray) -> Array[RaceSkipper]:
 	var fleet: Array[RaceSkipper] = []
 	var seen: Dictionary[String, int] = {}
+	var one_run: bool = _one_runs_generations(skipper_names)
 	for skipper_name: String in skipper_names:
 		var skipper: RaceSkipper = make(skipper_name)
 		if skipper == null:
 			continue
+		if one_run and skipper is LearnedSkipper:
+			(skipper as LearnedSkipper).short_label = true
 		seen[skipper_name] = seen.get(skipper_name, 0) + 1
 		if skipper_names.count(skipper_name) > 1:
 			skipper.label = "%s %d" % [skipper.skipper_name(), seen[skipper_name]]
@@ -64,6 +67,19 @@ static func make_fleet(skipper_names: PackedStringArray) -> Array[RaceSkipper]:
 	# A night's generations on one line: their sails from red (the oldest) to green (the newest).
 	Generations.colour_fleet(fleet)
 	return fleet
+
+
+## True when the brains among the names are two or more generations of one training run (a night's
+## generations racing each other): they are told apart by their generation alone ("gen 40").
+static func _one_runs_generations(skipper_names: PackedStringArray) -> bool:
+	var runs: Dictionary[String, bool] = {}
+	var brains: int = 0
+	for skipper_name: String in skipper_names:
+		if not skipper_name.begins_with("brain:"):
+			continue
+		brains += 1
+		runs[Generations.run_of(skipper_name.trim_prefix("brain:"))] = true
+	return brains >= 2 and runs.size() == 1 and not runs.has("")
 
 
 ## The character sheet of a name; null if there is none.

@@ -35,6 +35,11 @@ extends SceneTree
 ##                         per second of countdown, 40 to 150 m); 150 with --prestart=30 is where the
 ##                         learned brains were trained
 ##   [--blind=1]           the learned brains see no other boards (as in their training)
+##   [--manoeuvre_gap_s=<s>] the learned brains' tack discipline (LearnedSkipper, RA14): the least time
+##                         between two manoeuvres; without it each brain keeps the one it was trained
+##                         with (6 s for the brains before RA14)
+##   [--closest_twa_deg=<deg>] the closest to the wind the learned brains' hands steer; without it each
+##                         keeps its own (none for the brains before RA14)
 ##   [--shadows=1]         the sails cast wind shadows on each other (F3, WindShadows); 0 turns them off
 ##   [--rules=1]           the racing rules are kept (F3, RaceRules): a scripted skipper turns a circle for a
 ##                         penalty, a learned one carries 20 s to the finish; 0 turns them off
@@ -154,13 +159,29 @@ func _initialize() -> void:
 	if entries.is_empty():
 		quit(2)
 		return
+	if options.has("manoeuvre_gap_s"):
+		for entry: Entry in entries:
+			var learned: LearnedSkipper = entry.skipper as LearnedSkipper
+			if learned != null:
+				learned.manoeuvre_gap_s = maxf(options["manoeuvre_gap_s"].to_float(), 0.0)
+	if options.has("closest_twa_deg"):
+		for entry: Entry in entries:
+			var learned: LearnedSkipper = entry.skipper as LearnedSkipper
+			if learned != null:
+				learned.closest_twa_deg = clampf(options["closest_twa_deg"].to_float(), 0.0, 90.0)
 	if shadows:
 		give_shadows(entries)
 	var rules: RaceRules = give_rules(entries, race, course) if with_rules else null
 	if with_gear:
 		rig_personas(entries, wind_kt)
+	var file_names: Dictionary[String, int] = {}
 	for entry: Entry in entries:
-		entry.file = FileAccess.open(out_dir.path_join(_file_name(entry.name) + ".csv"), FileAccess.WRITE)
+		# One file per board, whatever the names: a second board of the same name gets _2.
+		var file_name: String = _file_name(entry.name)
+		file_names[file_name] = file_names.get(file_name, 0) + 1
+		if file_names[file_name] > 1:
+			file_name += "_%d" % file_names[file_name]
+		entry.file = FileAccess.open(out_dir.path_join(file_name + ".csv"), FileAccess.WRITE)
 		if entry.file != null:
 			entry.file.store_line("race_time_s,x_m,z_m,heading_deg,speed_ms,next_step,doing")
 	race.start_in(free_sail_s)

@@ -62,6 +62,13 @@ class Options:
 	## Whether a fourth number, when the network gives one, is the push slider (AiHands.push;
 	## wind-angle mode). Three numbers leave the hands' push at NaN: the pilot's own margin.
 	var push: bool = true
+	## The tack discipline (LearnedSkipper, RA14): the least time from the end of a manoeuvre to the
+	## next, seconds. The default is the rule of the brains before RA14 (TACK_HOLD_S); TrainingDrops
+	## sets its stage's (LearnedSkipper.MANOEUVRE_GAP_S), and the evaluation the brain's own.
+	var manoeuvre_gap_s: float = LearnedSkipper.TACK_HOLD_S
+	## The closest to the wind the hands steer, degrees (LearnedSkipper, RA14): 0, none, as the brains
+	## before RA14; TrainingDrops sets its stage's (CLOSEST_TWA_DEG), the evaluation the brain's.
+	var closest_twa_deg: float = 0.0
 	var waves: bool = false
 	var gusts: bool = false
 	var shifts: bool = false
@@ -114,6 +121,21 @@ class Options:
 	var time_cost_m_per_s: float = 2.0
 
 
+## A board's own wind and sea, instead of the race's (a Drop's weather): in the blind training
+## stages each board can sail its own conditions (TrainingDrops, own_conditions), so a worker's
+## boards mix calm and rough water and no worker waits on one rough race (training.md, section 8).
+## On the open water only; such a board's wind keeps its own clock (it sees no one else's gusts).
+class Weather:
+	var wind_kt: float = 15.0
+	## The wind's settings to start from (null: the default wind file's), as Options.wind.
+	var wind: WindConfig = null
+	var waves: bool = false
+	## The sea with waves on (null: the default wave set), as Options.sea.
+	var sea: WaveSetConfig = null
+	var gusts: bool = false
+	var shifts: bool = false
+
+
 ## Where a board is set down: a spot, a heading, and the step of the course it is sailing to (0:
 ## the start, with the countdown; 1: mark 1, the start behind it; ...).
 class Drop:
@@ -124,6 +146,8 @@ class Drop:
 	## this one: the stage's goal (a drop below a windward mark ends when the mark is rounded). 0
 	## or less: only the finish line ends it.
 	var goal_step: int = 0
+	## The board's own conditions (Weather), or null for the race's.
+	var weather: Weather = null
 
 	static func at(spot: Vector2, heading: float, step: int = 0, goal: int = 0) -> Drop:
 		var drop: Drop = Drop.new()
@@ -149,6 +173,8 @@ class Board:
 	var controls: SimControls
 	## The sea's height where it sails (RaceObservation.sea_height_m()), taken when it is made.
 	var sea_height_m: float = 0.0
+	## True when it sails its own conditions (Drop.weather): its wind keeps its own clock.
+	var own_weather: bool = false
 	## The reward earned since the last reward() call.
 	var pending: float = 0.0
 	## The whole episode's reward so far, and what it is made of.
@@ -262,7 +288,7 @@ func reset_dropped(seed: int, drops: Array[Drop]) -> void:
 	_board_count = maxi(drops.size(), 1)
 	for i: int in _board_count:
 		var drop: Drop = drops[mini(i, drops.size() - 1)]
-		var board: Board = _make_board(drop.position, drop.heading_deg, seed + i)
+		var board: Board = _make_board(drop.position, drop.heading_deg, seed + i, drop.weather)
 		board.goal_step = drop.goal_step
 		_boards.append(board)
 		race.add_board("board%d" % (i + 1))
@@ -279,11 +305,11 @@ func reset_dropped(seed: int, drops: Array[Drop]) -> void:
 ## decisions, once the board is done): a new simulation at the drop, its counters cleared, the drop's
 ## steps counted as done. The other boards sail on.
 func respawn(index: int, drop: Drop, seed: int) -> void:
-	var board: Board = _make_board(drop.position, drop.heading_deg, seed)
+	var board: Board = _make_board(drop.position, drop.heading_deg, seed, drop.weather)
 	board.goal_step = drop.goal_step
 	_boards[index] = board
 	# Its new wind field starts at the race's clock, not at nought: the same gusts as the others.
-	if _wind_clock != null:
+	if _wind_clock != null and not board.own_weather:
 		_wind_clock.hand_to(board.sim.wind)
 	race.place_board(index, drop.position, drop.next_step)
 	_begin_episode(board, index)
@@ -355,11 +381,13 @@ func tick() -> void:
 		var b: Board = _boards[i]
 		if b.done:
 			continue  # parked: it no longer moves, and earns nothing
-		# One clock for every board's wind (RA13): all step the same time from the same clock.
-		if _wind_clock != null:
-			_wind_clock.hand_to(b.sim.wind)
-		if stepped == null:
-			stepped = b.sim.wind
+		# One clock for every board's wind (RA13): all step the same time from the same clock; a
+		# board in its own conditions keeps its own.
+		if not b.own_weather:
+			if _wind_clock != null:
+				_wind_clock.hand_to(b.sim.wind)
+			if stepped == null:
+				stepped = b.sim.wind
 		b.since_manoeuvre_s = RaceObservation.advance_since_manoeuvre(b.since_manoeuvre_s, _in_manoeuvre(b), DT)
 		if b.scripted != null:
 			# A scripted skipper sets the hands itself, every tick, in the water or not.
@@ -487,8 +515,11 @@ func run_episode(brain: NeuralNet) -> float:
 ## A board at rest at a spot, pointing along a heading: the default open-water simulation in this
 ## environment's wind, with its own copy of the wind's settings (so no two boards share anything
 ## they write to), and the player's beginner controller with the auto-sheet on, its hands an AI's.
-func _make_board(at: Vector2, heading_deg: float, _seed: int) -> Board:
+## A board in its own conditions (weather, on the open water) or the race's.
+func _make_board(at: Vector2, heading_deg: float, _seed: int, weather: Weather = null) -> Board:
 	var b: Board = Board.new()
+	var waves: bool = options.waves
+	var sea: WaveSetConfig = options.sea
 	if options.environment != null:
 		# A place: its own air, water, wind and waves (the map's wind at the hour, when it has one).
 		b.sim = WindsurferSim.create_for(options.environment, options.waves, true)
@@ -496,18 +527,30 @@ func _make_board(at: Vector2, heading_deg: float, _seed: int) -> Board:
 		if map_field != null:
 			map_field.set_time_of_day(options.time_of_day_s)
 	else:
-		b.sim = WindsurferSim.create_default(options.waves)
-		var wind_config: WindConfig = (options.wind if options.wind != null else b.sim.wind_config).duplicate()
-		wind_config.speed_kt = wind_kt
+		b.own_weather = weather != null
+		var wind: WindConfig = options.wind
+		var speed_kt: float = wind_kt
+		var gusts: bool = options.gusts
+		var shifts: bool = options.shifts
+		if b.own_weather:
+			waves = weather.waves
+			sea = weather.sea
+			wind = weather.wind
+			speed_kt = weather.wind_kt
+			gusts = weather.gusts
+			shifts = weather.shifts
+		b.sim = WindsurferSim.create_default(waves)
+		var wind_config: WindConfig = (wind if wind != null else b.sim.wind_config).duplicate()
+		wind_config.speed_kt = speed_kt
 		wind_config.from_bearing_deg = _wind_from_deg
-		wind_config.gusts_enabled = options.gusts
-		wind_config.shifts_enabled = options.shifts
+		wind_config.gusts_enabled = gusts
+		wind_config.shifts_enabled = shifts
 		b.sim.wind_config = wind_config
 		b.sim.wind = WindField.new(wind_config)
-	if options.sea != null:
+	if sea != null:
 		# Each board its own copy of the sea, as of every config it sails with.
-		b.sim.wave_set_config = options.sea.duplicate(true)
-	b.sim.set_waves(options.waves)  # again, so the waves line up with this wind
+		b.sim.wave_set_config = sea.duplicate(true)
+	b.sim.set_waves(waves)  # again, so the waves line up with this wind
 	b.sea_height_m = RaceObservation.sea_height_m(b.sim)
 	b.sim.reset(Vector3(at.x, 0.0, at.y), deg_to_rad(fposmod(heading_deg, 360.0)))
 	b.controller = PlayerController.new()
@@ -517,6 +560,8 @@ func _make_board(at: Vector2, heading_deg: float, _seed: int) -> Board:
 	b.driver = LearnedSkipper.Driver.new(b.hands, options.actions)
 	b.driver.uses_hold = options.hold and options.actions == LearnedSkipper.ActionMode.TWA
 	b.driver.push_index = LearnedSkipper.PUSH if options.push and options.actions == LearnedSkipper.ActionMode.TWA else -1
+	b.driver.manoeuvre_gap_s = options.manoeuvre_gap_s
+	b.driver.closest_twa_deg = options.closest_twa_deg
 	b.controls = SimControls.new()
 	b.controller.reset_controls(b.controls)
 	if options.shadows:
@@ -576,6 +621,9 @@ func _count_progress(index: int, b: Board) -> void:
 	var gained_m: float = b.remaining_m - remaining_now
 	if steps_now > b.last_steps:
 		_add_metres(b, options.rounding_bonus_m * (steps_now - b.last_steps))
+		# A new leg: the wait for the next manoeuvre is cut (the tack discipline), as LearnedSkipper
+		# does in the game before the next tick.
+		b.driver.leg_done()
 		if race.is_finished(index):
 			_add_metres(b, options.finish_bonus_m)
 	b.progress_m += gained_m
