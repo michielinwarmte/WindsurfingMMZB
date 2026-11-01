@@ -481,6 +481,9 @@ class Progress(BaseCallback):
                  if key in self.workers.hello}
         meta = meta_for(self.args.run, self.args.stage, self.generation, self.model.num_timesteps, self.workers.episodes_done,
                         hours, s, self.commit, {"policy_std": round(self.policy_std(), 4), "ent_coef": self.args.ent, **rules})
+        if self.args.stage.startswith("C"):
+            meta["course"] = "T1 and T2 (t1_loop, t2_slalom), 12 to 24 kt, the game's open water"
+
         brain = brain_from_policy(self.model.policy, self.obs_names, self.action_names, meta)
         save_brain(brain, BRAINS_DIR / f"{self.args.run}_gen{self.generation}.json")
         save_brain(brain, BRAINS_DIR / f"{self.args.run}_latest.json")
