@@ -6,13 +6,17 @@ The plan is [PLAN.md](PLAN.md). One line per launch, report and merge, newest at
 
 | Who | Package | Tokens | State |
 |---|---|---|---|
-| the lead (Fable) | the plan, the briefs, the baseline, the diffs, the merges | ~0.1 M so far | running |
-| the speeder (Opus, xhigh) | 1, the skipper's speed | — | running |
-| the tacker (Opus, xhigh) | 2, the trainer's tacks | — | running |
-| the caster (Opus, xhigh) | 3, the characters | — | waits for 1 |
+| the lead (Fable) | the plan, the briefs, the baseline, the diffs, the finish fix, the merges, the night | ~0.35 M so far (an estimate) | running |
+| the speeder (Opus, xhigh) | 1, the skipper's speed | 0.51 M (the harness's count; its own estimate 0.9 M) | done, merged (118fed6) |
+| the tacker (Opus, xhigh) | 2, the trainer's tacks | 0.39 M (the harness's count; its own estimate 0.7 M) | done, merged (87f531f) |
+| the caster (Opus, xhigh) | 3, the characters | — | running |
+| the night (no tokens: the PC) | 4, C1 then C2 | — | running |
 
 ## Log
 
 - 1 November 2026, 21:35: the baseline started (`tools/race_matrix.sh` and `tools/persona_matrix.sh --wind_kt=18`, eight Godot processes) in the lead's repo; the worktrees `../WindsurfingMMZB-speed` (`race/skipper-speed`) and `../WindsurfingMMZB-tacks` (`race/train-tacks`) made from `gear/lead` (f020528).
 - 1 November 2026, 21:50: the plan written; the speeder (package 1) and the tacker (package 2) launched at once.
 - 1 November 2026, 22:00: the baseline in (`baseline/`, commit c984127): the all-rounder is not the fastest character (the gambler 3 minutes ahead on T1 at 12 kt, the cautious 17 s ahead at 24 kt); the starts cost 30 to 50 s (T1 at 12 kt, T2 at 24 kt); on PD3 at 60 % Noor takes 13 minutes to mark 1, alternating a beat and a reach on the other tack; the personas' 21 to 26 "tacks" on the slalom are free sailing after the finish while the race waits for Noor (the counts do not stop at the finish). Sent to the speeder.
+- 1 November 2026, 23:55: the speeder reported (2 h 10 min, [skipper_speed.md](skipper_speed.md)): the polar per wind measured and made a resource (`Game/config/skipper_polar.tres`), the beat at 54 / 55 / 50 degrees in 12 / 18 / 24 kt (it sailed 45 everywhere), off the plane no deeper than 110, the push built but switched off (it fell 2 to 7 times a race at 24 kt and gained nothing at 18), Noor's circling fixed (a rounding begins only before the mark's half-way ray), the counts stop at the finish. The fleet: no falls (6 before), every board finishes, the sum of the 24 times -4.6 % (2:58:17 to 2:50:01), T1 at 12 kt 17:02 to 13:52 for the all-rounder. Two things worse: T2 at 24 kt alone 2:58 to 3:07 (one fall), and T1 at 24 kt alone did not finish (seeds 0 and 1): out of the 4S rounding at 13 m/s heading 30 degrees off the 35 m line 109 m away, the gentle head-up at planing speed could not bring it onto the line, and it circled it.
+- 1 November 2026, 23:58: the tacker reported (2 h 15 min, [trainer_tacks.md](trainer_tacks.md)): the tack discipline (20 s between manoeuvres, cut to 6 s after a rounding; old brains keep their old rule), the course stages C1 (a leg or two of T1 or T2, 180 s) and C2 (the whole course alone, 1200 s), the bars as shares of the all-rounder's own numbers on the same drops, the brains named by their run, every board its own CSV, the Race page takes the latest stage's brain whatever its prefix. A 30-minute C1 try from `all_s6_best`: 72.5 % of the goals (57.5 before), T1 at 18 kt alone 12:27 with 20 tacks (17:11 with 29 before). Merged into `gear/lead` (87f531f): 671 tests, the check green.
+- 2 November 2026, 00:10: the lead's fix for the finish at speed on the speeder's branch (69bc909): a board whose track would cross the finish line's extension more than 3 m past an end within 12 s holds back to 8 m/s to turn onto the line, and after a miss sails at 6 m/s until it has crossed. T1 at 24 kt alone, seed 1: 6:40 (7:37 before the work); the validation race on seed 0 finishes; T2 at 24 kt unchanged (3:07). The polar's own 130 degree run at 24 kt was tried and is slower on both courses (7:11 and 3:32), so the 140 stays. `tools/test.sh validation -gselect=skipper`: only the 12 kt limit is red (13:31 against 12:00; it was 14:39 before the work and red then too). Merged into `gear/lead` (118fed6, one trivial conflict in `run_race.gd`).
