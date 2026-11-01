@@ -45,6 +45,10 @@ extends SceneTree
 ##                         penalty, a learned one carries 20 s to the finish; 0 turns them off
 ##   [--gear=0]            1: the personas rig their own sail for the wind (Persona.rig()); off until the sail
 ##                         sizes are tuned (a bigger sail is slower in this physics, Session 53)
+##   [--skipper_push=1]    0: the scripted skippers leave the push slider alone and sail the pilot's own
+##                         margin, as every AI board did before the skipper set it (to compare)
+##   [--polar=<file.tres>] the scripted skippers sail with another polar (SkipperPolar; a res:// path or a
+##                         path from the repository's folder) instead of Game/config/skipper_polar.tres
 ##   [--stop_after_gun=<s>] stop the race this long after the gun (to look at the start only)
 ##   [--out_dir=<folder>: a CSV per board: race time, x, z, heading, speed, its next step, and what
 ##                         its skipper is doing]
@@ -138,6 +142,8 @@ func _initialize() -> void:
 	var shadows: bool = options.get("shadows", "1") != "0"
 	var with_rules: bool = options.get("rules", "1") != "0"
 	var with_gear: bool = options.get("gear", "0") == "1"
+	var skipper_push: bool = options.get("skipper_push", "1") != "0"
+	var polar_path: String = options.get("polar", "")
 
 	var course_name: String = options.get("course", "test")
 	var course: Course = course_named(course_name)
@@ -174,6 +180,9 @@ func _initialize() -> void:
 	var rules: RaceRules = give_rules(entries, race, course) if with_rules else null
 	if with_gear:
 		rig_personas(entries, wind_kt)
+	if not tune_skippers(entries, skipper_push, polar_path):
+		quit(2)
+		return
 	var file_names: Dictionary[String, int] = {}
 	for entry: Entry in entries:
 		# One file per board, whatever the names: a second board of the same name gets _2.
@@ -342,6 +351,28 @@ static func rig_personas(entries: Array[Entry], wind_kt: float) -> void:
 			scripted.persona.rig(entry.sim, wind_kt)
 
 
+## The scripted skippers' push and polar from the options (--skipper_push, --polar): false if the
+## polar file cannot be loaded.
+static func tune_skippers(entries: Array[Entry], skipper_push: bool, polar_path: String) -> bool:
+	var polar: SkipperPolar = null
+	if polar_path != "":
+		var path: String = polar_path
+		if not (path.begins_with("res://") or path.is_absolute_path()):
+			path = _repository_path(path)
+		polar = load(path) as SkipperPolar if ResourceLoader.exists(path) else null
+		if polar == null:
+			push_error("No skipper polar at %s." % path)
+			return false
+	for entry: Entry in entries:
+		var scripted: Skipper = entry.skipper as Skipper
+		if scripted == null:
+			continue
+		scripted.push_wanted = skipper_push
+		if polar != null:
+			scripted.take_polar(polar)
+	return true
+
+
 ## The racing rules' judge for the race, given to every scripted skipper (it keeps clear by the
 ## rules and turns a circle for a penalty).
 static func give_rules(entries: Array[Entry], race: RaceSim, course: Course) -> RaceRules:
@@ -392,7 +423,7 @@ static func step_race(race: RaceSim, entries: Array[Entry], blind: bool = false,
 		if entries[i].skipper != null and entries.size() > 1 and not blind:
 			_tell_others(entries, i)
 		if race.clock_s() >= entries[i].set_off_s:
-			_sail(entries[i])
+			_sail(entries[i], not race.is_finished(i))
 		race.update_board(i, _where(entries[i]))
 	race.step(DT)
 	if rules != null:
@@ -526,20 +557,24 @@ static func _make_autopilot_board(race: RaceSim, wind_from_deg: float, wind_kt: 
 
 
 ## One tick of a board: the sailor (while on the board), the physics, the falls and the manoeuvres
-## counted.
-static func _sail(entry: Entry) -> void:
+## counted until it has finished (after the finish it sails free while the others finish, and that is
+## not the race's).
+static func _sail(entry: Entry, counting: bool = true) -> void:
 	var sailing: bool = entry.sim.sailor_state == WindsurferSim.SailorState.SAILING
 	if entry.skipper != null:
 		# The skipper keeps watching from the water too (its clock runs, its hands come off).
 		entry.skipper.update(entry.sim.telemetry, DT)
 		if sailing:
 			entry.controller.update(entry.sim.telemetry, entry.controls, DT)
-		_count_manoeuvres(entry)
+		if counting:
+			_count_manoeuvres(entry)
+		else:
+			entry.last_manoeuvre = entry.controller.manoeuvre
 	elif sailing:
 		entry.pilot.update(entry.sim.telemetry, entry.controls, DT)
 	entry.sim.step(DT, entry.controls)
 	var fallen: bool = entry.sim.sailor_state == WindsurferSim.SailorState.FALLEN
-	if fallen and not entry.was_fallen:
+	if fallen and not entry.was_fallen and counting:
 		entry.falls += 1
 	elif entry.was_fallen and not fallen:
 		# Up again after the waterstart (the simulation does it after a while): the sail eased, as at

@@ -29,8 +29,10 @@ func test_a_penalised_skipper_turns_a_full_circle_and_the_judge_clears_it() -> v
 		RunRace.step_race(race, entries, false, rules)
 	assert_eq(race.next_step_index(1), 1, "started")
 	var given_before: int = rules.penalties(1) + rules.turns_done(1)
+	# (A foul of their own in the countdown may already stand: the race knows only what it was told.)
+	var told_before_s: float = race.time_penalty_s(1)
 	rules.penalise(1, RaceRules.Why.PORT_GIVES_WAY)
-	assert_almost_eq(race.time_penalty_s(1), 0.0, 1e-6, "not told the race before the next tick")
+	assert_almost_eq(race.time_penalty_s(1), told_before_s, 1e-6, "not told the race before the next tick")
 	var heading_before: float = entries[1].sim.telemetry.heading_deg
 	var turned_at_s: float = -1.0
 	for t: int in roundi(45.0 / DT):
