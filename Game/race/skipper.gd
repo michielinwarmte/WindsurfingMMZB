@@ -1704,13 +1704,15 @@ func _steer_toward(telemetry: Telemetry, wanted_deg: float) -> void:
 
 
 ## The push slider as a good sailor sets it (AiHands.push, 0 to 1): the polar's level for the wind
-## angle it sails in the wind of the moment where pushing paid (the reaches in 18 and 24 kt), moved
-## by its character's push_offset. NaN, the pilot's own margin without the slider (which the hands
-## hand back to the controller), everywhere else: where pushing did not pay, from the moment a tack
-## or gybe is asked for until the board has settled after it, in the last PUSH_EASE_BEFORE_MARK_S
-## before a mark (it rounds at the margin that rounded without a fall), and when it does not set the
-## push at all (push_wanted). Pushed into the gybes and the 24 kt beat the all-rounder fell seven
-## times in one race; at the pilot's own margin, never.
+## angle it sails in the wind of the moment where the polar says pushing paid, moved by its
+## character's push_offset; where the polar does not push, the level that holds the pilot's own pull
+## moved by the offset (a character that pushes harder, or sails more carefully, everywhere). NaN, the
+## pilot's own margin without the slider (which the hands hand back to the controller): where neither
+## asks for a push, from the moment a tack or gybe is asked for until the board has settled after it,
+## in the last PUSH_EASE_BEFORE_MARK_S before a mark, and when it does not set the push at all
+## (push_wanted). (The game's polar pushes nowhere today: pushed on the 18 and 24 kt reaches, where
+## the steady runs gained 4 to 5 %, the all-rounder fell two to seven times a race at 24 kt and won
+## nothing at 18; at the pilot's own margin it did not fall. See skipper_speed.md.)
 func _push_level(telemetry: Telemetry) -> float:
 	if not push_wanted:
 		return NAN
@@ -1719,7 +1721,9 @@ func _push_level(telemetry: Telemetry) -> float:
 		return NAN
 	var level: float = SkipperPolar.push_at(_polar_winds, _polar_twa, _polar_push, telemetry.tws_10m_kt, telemetry.twa_deg)
 	if is_nan(level):
-		return NAN
+		if config.push_offset == 0.0:
+			return NAN
+		level = LearnedSkipper.pilot_margin_level()
 	return clampf(level + config.push_offset, 0.0, 1.0)
 
 

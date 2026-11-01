@@ -79,7 +79,8 @@ func test_a_slow_board_foots_off_to_get_going() -> void:
 
 func test_the_skipper_pushes_on_the_reach_and_lets_go_to_turn() -> void:
 	var skipper: Skipper = _allrounder_at(18.0)
-	var polar: SkipperPolar = SkipperPolar.default_polar()
+	var polar: SkipperPolar = _pushing_polar()
+	skipper.take_polar(polar)
 	var telemetry: Telemetry = skipper._sim.telemetry
 	telemetry.twa_deg = 100.0
 	var wanted: float = SkipperPolar.push_at(polar.winds_kt, polar.twa_deg, polar.push_level, telemetry.tws_10m_kt, 100.0)
@@ -124,6 +125,33 @@ func test_the_controller_gives_the_pilot_its_own_margin_back() -> void:
 	assert_eq(controls.trim_aim_extra_deg, 0.0, "the trim its own")
 
 
+func test_the_games_polar_pushes_nowhere_but_a_character_can() -> void:
+	var skipper: Skipper = _allrounder_at(18.0)
+	var telemetry: Telemetry = skipper._sim.telemetry
+	telemetry.twa_deg = 100.0
+	assert_true(is_nan(skipper._push_level(telemetry)), "the game's polar: the pilot's own margin on the reach")
+	skipper.config.push_offset = 0.1
+	assert_almost_eq(skipper._push_level(telemetry), LearnedSkipper.pilot_margin_level() + 0.1, 1e-5, "a character that pushes harder: from the pilot's own level")
+	skipper.config.push_offset = -0.1
+	assert_almost_eq(skipper._push_level(telemetry), LearnedSkipper.pilot_margin_level() - 0.1, 1e-5, "or more carefully")
+
+
+## The game's polar with a push table that pushes the 18 and 24 kt reaches (70 to 110 degrees) at 95 %,
+## as the measurement's steady runs suggested.
+func _pushing_polar() -> SkipperPolar:
+	var polar: SkipperPolar = SkipperPolar.default_polar().duplicate()
+	var count: int = polar.twa_deg.size()
+	var table: PackedFloat32Array = PackedFloat32Array()
+	table.resize(polar.winds_kt.size() * count)
+	table.fill(0.0)
+	for row: int in range(1, polar.winds_kt.size()):
+		for col: int in count:
+			if polar.twa_deg[col] >= 70.0 and polar.twa_deg[col] <= 110.0:
+				table[row * count + col] = 0.95
+	polar.push_level = table
+	return polar
+
+
 ## The all-rounder on a board at rest in a wind, set up in a race on T1 (its telemetry read as the
 ## board sails; the tests write the speed and the angle into it).
 func _allrounder_at(wind_kt: float) -> Skipper:
@@ -150,6 +178,7 @@ func test_a_board_past_the_rounding_ray_goes_back_round_before_it_rounds() -> vo
 
 func test_the_hand_moves_the_slider_gradually_and_hands_it_back() -> void:
 	var skipper: Skipper = _allrounder_at(18.0)
+	skipper.take_polar(_pushing_polar())
 	var telemetry: Telemetry = skipper._sim.telemetry
 	var margin: float = LearnedSkipper.pilot_margin_level()
 	var dt: float = 1.0 / 60.0
