@@ -198,3 +198,24 @@ func test_the_hand_moves_the_slider_gradually_and_hands_it_back() -> void:
 		skipper._move_the_push(telemetry, dt)
 	assert_true(is_nan(skipper._move_the_push(telemetry, dt)), "then hands it back")
 
+
+func test_a_board_that_missed_the_finish_line_goes_back_behind_it() -> void:
+	var skipper: Skipper = _allrounder_at(24.0)
+	var finish: RaceStep = skipper._race.steps()[skipper._race.steps().size() - 1]
+	assert_eq(finish.kind, RaceStep.Kind.FINISH)
+	var middle: Vector2 = finish.target()
+	var along: Vector2 = (finish.points[1] - finish.points[0]).normalized()
+	var length_m: float = finish.points[0].distance_to(finish.points[1])
+	# Behind the line, off to one side: through the nearest point of the line.
+	var behind: Vector2 = middle - finish.in_dir * 40.0 + along * length_m
+	var aim: Vector2 = skipper._finish_target(finish, behind)
+	assert_gt(RoundingCheck.over_line_m(aim, finish.points[0], finish.points[1], finish.in_dir), 0.0, "it aims through the line")
+	# Past an end of the line on the course side, not finished: back behind the middle first.
+	var missed: Vector2 = middle + finish.in_dir * 20.0 + along * length_m
+	assert_almost_eq(skipper._finish_target(finish, missed), middle - finish.in_dir * Skipper.FINISH_BACK_M, Vector2(1e-3, 1e-3), "back behind the middle")
+	var half_way: Vector2 = middle - finish.in_dir * 10.0
+	assert_almost_eq(skipper._finish_target(finish, half_way), middle - finish.in_dir * Skipper.FINISH_BACK_M, Vector2(1e-3, 1e-3), "until it is far enough behind")
+	var far_enough: Vector2 = middle - finish.in_dir * (Skipper.FINISH_BACK_REACHED_M + 5.0)
+	aim = skipper._finish_target(finish, far_enough)
+	assert_gt(RoundingCheck.over_line_m(aim, finish.points[0], finish.points[1], finish.in_dir), 0.0, "then through the line again")
+

@@ -29,7 +29,11 @@ extends Resource
 ## the wind (its VMG, measured over the ground, so with the leeway, which is large when it pinches
 ## in light wind).
 @export var best_upwind_twa_deg: PackedFloat32Array = []
-## The best wind angle to run at, degrees, one per wind: the most way away from the wind.
+## The best wind angle to run at, degrees, one per wind. In 12 kt the most way away from the wind
+## measured (129). In 18 and 24 kt the angles that raced fastest (130 and 140): the steady runs' best
+## (120 and 130, 9 and 19 % more way away from the wind) raced 1 to 10 s slower on every run leg of
+## T1 and T2, because a run leg starts from a rounding and has its gybes, which a steady run has not
+## (skipper_speed.md, section 3).
 @export var best_downwind_twa_deg: PackedFloat32Array = []
 
 const DEFAULT_PATH: String = "res://config/skipper_polar.tres"

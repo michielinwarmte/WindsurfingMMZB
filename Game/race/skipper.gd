@@ -248,6 +248,10 @@ const FREE_BACK_INSIDE_M: float = 60.0
 ## straight way there (a long beat sailed to the layline would take it far to the side: on the lake,
 ## onto the shore).
 const FREE_CORRIDOR_M: float = 60.0
+## A board that missed the finish line goes back to a point this far behind its middle, metres, and
+## crosses again once it is FINISH_BACK_REACHED_M behind the line (see _finish_target()).
+const FINISH_BACK_M: float = 30.0
+const FINISH_BACK_REACHED_M: float = 20.0
 ## Finished: it sails on this far past the finish line (clear of the boards still finishing), then
 ## sails free.
 const FINISH_CLEAR_M: float = 40.0
@@ -320,6 +324,8 @@ var _free_corridor_from: Vector2 = Vector2.ZERO
 ## Finished: the point past the finish line it sails to, and whether it is clear of the line.
 var _finish_clear_point: Vector2 = Vector2.INF
 var _clear_of_finish: bool = false
+## On its way back behind the finish line after missing it (see _finish_target()).
+var _finish_going_back: bool = false
 
 ## Rule 8: the wanted headings of the last reaction time, oldest first, with their times.
 var _delay_headings: PackedFloat32Array = PackedFloat32Array()
@@ -461,6 +467,7 @@ func _forget_the_race() -> void:
 	_free_returning = false
 	_finish_clear_point = Vector2.INF
 	_clear_of_finish = false
+	_finish_going_back = false
 	_penalty_phase = 0
 	if _hands != null:
 		_hands.hold_speed_ms = 0.0
@@ -598,10 +605,25 @@ func _target_point(step: RaceStep, position: Vector2) -> Vector2:
 		RaceStep.Kind.START:
 			return _through(position, _start_spot(step))
 		RaceStep.Kind.FINISH:
-			# The nearest point of the finish line (a few metres in from the ends): the shortest way,
-			# and the least turn after the last mark.
-			return _through(position, _nearest_on_line(step, position))
+			return _finish_target(step, position)
 	return _through(position, step.target())
+
+
+## The finish: through the nearest point of the line (a few metres in from the ends): the shortest
+## way, and the least turn after the last mark. A board that missed the line (it swept past an end at
+## speed and is on the course side without having finished) first goes back FINISH_BACK_M behind the
+## middle of the line, until it is FINISH_BACK_REACHED_M behind it, and crosses from there: aiming at
+## the nearest point from beyond the line it chased the line round in circles (T1 at 24 kt, 25 tacks
+## and 25 gybes and no finish).
+func _finish_target(step: RaceStep, position: Vector2) -> Vector2:
+	var behind_m: float = -RoundingCheck.over_line_m(position, step.points[0], step.points[1], step.in_dir)
+	if behind_m < 0.0:
+		_finish_going_back = true
+	elif behind_m > FINISH_BACK_REACHED_M:
+		_finish_going_back = false
+	if _finish_going_back:
+		return step.target() - step.in_dir * FINISH_BACK_M
+	return _through(position, _nearest_on_line(step, position))
 
 
 ## A mark is rounded by crossing its rounding ray (RoundingCheck) going round it the right way.
