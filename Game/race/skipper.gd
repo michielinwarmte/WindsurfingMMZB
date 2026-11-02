@@ -1415,7 +1415,10 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 				# cautious one on T1 at 15 kt, 40 m behind the line for a 30 s countdown).
 				_hands.hold_speed_ms = _controller.hold_back_steerage_ms
 				note += ", holding back hard, early at the line"
-				if signf(Navigation.wind_angle_deg(_position(telemetry), spot, telemetry.wind_from_bearing_deg)) != _tack():
+				if signf(Navigation.wind_angle_deg(_position(telemetry), spot, telemetry.wind_from_bearing_deg)) != _tack() \
+						or telemetry.speed_ms < _controller.hold_back_steerage_ms + 1.0:
+					# (At a crawl, holding back cannot stop it: it turns away whichever side its spot is.
+					# On T2 in 12 kt boards slowed to 1.5 m/s in the others' shadows drifted over the line.)
 					_ask_for_manoeuvre(true, true)
 		return free_deg
 	# Where it will cross: its spot, when that is a reach on this tack (it came in on the way to it);
