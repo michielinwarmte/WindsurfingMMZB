@@ -252,6 +252,14 @@ const FREE_CORRIDOR_M: float = 60.0
 ## crosses again once it is FINISH_BACK_REACHED_M behind the line (see _finish_target()).
 const FINISH_BACK_M: float = 30.0
 const FINISH_BACK_REACHED_M: float = 20.0
+## A board heading the wrong way round a mark (its heading more than 120 degrees from the way
+## a rounding crosses the ray: the cosine below) is not level with it, however near: it goes back
+## WRONG_WAY_BACK_M down the leg first, on the side the mark is left on, and comes up again. Coming
+## back to the slalom template's mark 1 from the north (after two penalty turns beside it), Aiko was
+## counted level, gybed the long way to the exit and went round the mark anticlockwise, again and
+## again: 45 gybes and no finish (18 kt, characters.md).
+const WRONG_WAY_COS: float = -0.5
+const WRONG_WAY_BACK_M: float = 30.0
 ## Racing for the finish, within FINISH_EASE_WITHIN_S of the line at its speed, a board whose track
 ## over the ground would cross the line's extension more than FINISH_MISS_M beyond an end eases down
 ## to FINISH_EASE_SPEED_MS (the hold-back, as at the start), so that it can turn onto the line: at
@@ -691,13 +699,26 @@ func _mark_target(step: RaceStep, position: Vector2) -> Vector2:
 		# boards it kept clear of), still sails for the entry point, round the mark's far side: going
 		# for the exit from past the ray it never crossed the ray and circled the mark for twelve
 		# minutes (Noor on the slalom template, 18 kt).
+		var wrong_way: bool = going_round_the_wrong_way(_sim.telemetry.heading_deg, ray, way)
 		_level_with_mark = (position - mark).dot(step.in_dir) >= -margin and (position - mark).dot(entry_side) > 0.0 \
-				and before_rounding_ray(position, mark, ray, way)
+				and before_rounding_ray(position, mark, ray, way) and not wrong_way
+		if wrong_way and position.distance_to(mark) < WRONG_WAY_BACK_M:
+			# Back down the leg first, on the entry side, so that it comes up to the mark again the
+			# right way round instead of turning on the spot round the wrong side.
+			return mark - step.in_dir * WRONG_WAY_BACK_M + entry_side * margin
 	if not _level_with_mark:
 		return mark + entry_side * margin
 	# Vector2.rotated() turns clockwise on the map in these axes (X east, Z south), so way * 90
 	# degrees is the direction the board moves when it crosses the ray going the right way round.
 	return mark + ray * 2.0 * margin + ray.rotated(way * PI / 2.0) * margin
+
+
+## Whether a board on this heading (degrees) goes the wrong way round a mark: more than 120 degrees
+## (WRONG_WAY_COS) from the direction in which a rounding the right way crosses the ray.
+static func going_round_the_wrong_way(heading_deg: float, ray: Vector2, way: float) -> bool:
+	# Vector2.rotated() turns clockwise on the map (X east, Z south): way * 90 degrees is the way a
+	# board moves when it crosses the ray going round the right way.
+	return Course.direction_of(heading_deg).dot(ray.rotated(way * PI / 2.0)) < WRONG_WAY_COS
 
 
 ## Whether a position is still before a mark's rounding ray, going round it the way (1 clockwise, -1

@@ -17,6 +17,10 @@
 #
 #   tools/persona_matrix.sh --courses=t1_loop,t2_slalom [--winds=12,18,24] [--run=personas] [--gear=1]
 #                                               (some 40 to 60 minutes for twenty personas)
+#   tools/persona_matrix.sh --courses=t2_slalom --run=a   then --courses=t1_loop --run=a, then
+#   tools/persona_matrix.sh --courses=t1_loop,t2_slalom --run=a --table_only=1
+#                                               the same in halves (fewer Godot processes at once),
+#                                               and the table of both from the races already run
 #
 # Extra options go to every race (Game/dev/run_race.gd lists them: --gear=1, --skipper_push=0,
 # --steady_hands=1, ...). The result lines and the table are printed and saved to
@@ -31,6 +35,7 @@ personas=""
 courses=""
 winds="12,18,24"
 run="personas"
+table_only=0
 extra=()
 for arg in "$@"; do
 	case "$arg" in
@@ -40,6 +45,7 @@ for arg in "$@"; do
 		--courses=*) courses="${arg#*=}" ;;
 		--winds=*) winds="${arg#*=}" ;;
 		--run=*) run="${arg#*=}" ;;
+		--table_only=*) table_only="${arg#*=}" ;;
 		*) extra+=("$arg") ;;
 	esac
 done
@@ -59,8 +65,10 @@ result_line() {
 }
 
 if [[ -n "$courses" ]]; then
-	"$(dirname "$0")/race_matrix.sh" "--run=$run" "--courses=$courses" "--winds=$winds" "--skippers=$skippers" \
-		"--seed=$seed" ${extra[@]+"${extra[@]}"} > /dev/null
+	if [[ "$table_only" != "1" ]]; then
+		"$(dirname "$0")/race_matrix.sh" "--run=$run" "--courses=$courses" "--winds=$winds" "--skippers=$skippers" \
+			"--seed=$seed" ${extra[@]+"${extra[@]}"} > /dev/null
+	fi
 	folder="$REPO_ROOT/.sim_output/race_matrix_$run"
 	out="$REPO_ROOT/.sim_output/persona_matrix_$run.txt"
 	races=()
