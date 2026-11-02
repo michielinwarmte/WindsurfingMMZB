@@ -11,7 +11,7 @@ The starter (Opus) on the branch `race/start`: the AI skippers' start (RA16, RA1
 - **The penalty turn eases down first** (to 5 m/s, at most 6 s), gybes first from a beam reach or deeper, and gets going again on a reach between its two manoeuvres. 6 of the 15 falls in the fleet of twenty were penalty turns begun at 6 to 11 m/s.
 - **The fleet of twenty, after:** all 120 races finish (119 before; Ravi finishes T1 in 12 kt), the starts on T1 in 12 kt a minute earlier, but 16 falls against 15 (the penalty-turn falls 6 to 1, the catapults on the close reach in the crowd 5 to 10, half of them at the start, where the twenty now arrive together from 60 m), and on T2 in 12 kt 9 of 20 are over the line at the gun (none before).
 - **Not done:** T2's reaching start from 150 m at 24 kt is still over the line at the gun (the game's distances do not produce it; a turn-away I tried made it 27 s later instead); the catapults on close reaches in the crowd (8 of the 15 falls) are not found; the penalty circles on T2 (one to four a board) are reported, not cut.
-- **One validation test went red:** `test_living_skipper_fleet.gd`, T1: of 16 boards from random spots at 15 kt, Gambler 2 does not start within 20 s (section 7). The skipper validation's 12 kt limit stays red, nearer: 12:19 against the 12:00 it wants (13:31 before).
+- **One validation test went red in round 1** (`test_living_skipper_fleet.gd`, Gambler 2); **green again in round 2** (section 11). The skipper validation's 12 kt limit stays red, nearer: 12:19 against the 12:00 it wants (13:31 before).
 
 ## 2. What changed and why
 
@@ -58,16 +58,16 @@ From 150 m in 12 kt T1's line is out of reach in a minute (physics, not the skip
 
 Better or equal in 19 of 24, the sum 181 s to 125 s; worse: the rookie on T2 in 12 kt (OCS; it is stuck at 1.5 to 2 m/s for 25 s in the others' wind shadows on a line that runs along the wind, before it starts its way in), and four by 0.2 to 0.7 s (the cautious one on T2 at 12, 18 and 24 kt, the all-rounder on T2 at 24 kt). From 150 m the T1 starts in 12 kt went from +45 to +76 s to +24 to +44 s; T2 at 24 kt from 150 m is unchanged (all-rounder and rookie OCS, section 6).
 
-**The twenty in a fleet** (`tools/persona_matrix.sh --courses=t1_loop,t2_slalom --run=fleet_after`, seed 1, their own gear, the rules and the shadows), against the caster's `fleet` run (the code of 54734ed, the boards 150 m back): the median start and the latest, and the boards over at the gun.
+**The twenty in a fleet** (`tools/persona_matrix.sh --courses=t1_loop,t2_slalom --run=fleet_after`, seed 1, their own gear, the rules and the shadows), against the caster's `fleet` run (the code of 54734ed, the boards 150 m back): the median start and the latest, and the boards over at the gun (medians re-read in the second round with a script; the first reading by eye was off by up to 4 s).
 
 | Race | before (150 m): median, latest, OCS | after (60 m): median, latest, OCS |
 |---|---|---|
-| T1 12 kt | +70 s, +144 s, 0 | **+9 s**, +63 s, 0 |
-| T1 18 kt | +4.7 s, +69 s, 0 | +1.6 s, +32 s, 1 |
-| T1 24 kt | +1.7 s, +146 s, 0 | +1.2 s, +72 s, 1 |
-| T2 12 kt | +6.6 s, +15 s, 0 | **+19 s, +82 s, 9** |
-| T2 18 kt | +5.3 s, +46 s, 1 | +3.4 s, +7.4 s, 0 |
-| T2 24 kt | +1.8 s, +38 s, 1 | +1.3 s, +6.9 s, 0 |
+| T1 12 kt | +71.1 s, +144 s, 0 | **+9.6 s**, +63 s, 0 |
+| T1 18 kt | +5.3 s, +69 s, 0 | +1.9 s, +32 s, 1 |
+| T1 24 kt | +1.7 s, +146 s, 0 | +1.8 s, +72 s, 1 |
+| T2 12 kt | +7.0 s, +15 s, 0 | **+23.2 s, +82 s, 9** |
+| T2 18 kt | +5.3 s, +46 s, 1 | +2.9 s, +7.4 s, 0 |
+| T2 24 kt | +1.4 s, +38 s, 1 | +1.3 s, +6.9 s, 0 |
 
 T1 in 12 kt starts a minute earlier, T2 in 18 and 24 kt without the stragglers. **T2 in 12 kt is worse: 9 of 20 over the line at the gun.** Twenty boards 60 m back on a line that runs along the wind are a column in each other's wind shadows in 12 kt (the rookie's OCS among the four characters is the same thing); I did not get to it. Every one of the 120 races finishes (119 before: Ravi now finishes T1 at 12 kt in 15:47.6, 18th; the limit there is 24:15). The winners: T1 11:35.4 (Lena), 8:22.5 (Pavel), 6:49.7 (Sven); T2 5:04.1 (Pavel), 3:14.9 (Mara), 2:48.9 (Elin); before 12:39.5, 7:45.4, 6:46.0, 5:13.0, 3:26.9, 2:43.0. The table of places is in `.sim_output/persona_matrix_fleet_after.txt`.
 
@@ -150,4 +150,31 @@ The first kind is the skipper's and is fixed (section 2, the penalty turn; a uni
 
 ## 10. The tokens
 
-About 0.6 M tokens, the whole budget (my estimate; the harness has the exact count). Most went on reading the start code and the tracks and on the start's iterations (seven rounds of start-only races); the measuring ran in the background, some 200 headless races beside the training night, never more than six Godot processes of mine at once.
+Round 1: the harness counted 0.42 M. Round 2: about 0.18 M more (my estimate), about 0.6 M in all. Round 1 was about 0.6 M by my own estimate, the whole budget (my estimate; the harness has the exact count). Most went on reading the start code and the tracks and on the start's iterations (seven rounds of start-only races); the measuring ran in the background, some 200 headless races beside the training night, never more than six Godot processes of mine at once.
+
+## 11. The second round (the lead's four points)
+
+**1. The fleet start test is green again.** `test_living_skipper_fleet.gd` (16 boards from random spots at 15 kt, T1 and the lake): no board late, none over. The cause: `_time_to_cross_s()` and `_choose_crossing()` judged a point of the line reachable on this tack with the slow board's foot at the polar's wider beat (the gambler's 59 + 10 degrees), so a point a reach away counted as a beat with a tack in it; the time to it came out 7 s long and Gambler 2 went 7 s early from 136 m along the line, slid down it past its end and over the extension. They now judge it at the angle the board points once it has speed (`_beat_twa_deg()`): the same numbers as the old 45 plus the foot, for the all-rounder and the gambler alike. Tried and dropped on the way: the go point at most 35 m along the line from the spot (the lead's "a reach along the line first" in its simplest form): the 16-board test went to 3 late and 5 over, and the gambler was over again on T1 at 18 and 24 kt.
+
+`tools/test.sh validation -gselect=skipper` on the final code: 11 of 12, only the 12 kt limit red (12:19.3 against 12:00, as in round 1). `tools/test.sh`: 693 pass; `tools/check.sh`: 405 files, 0 failed. The validation's 12 kt race: 12:19.3 (the limit asked: no slower than 12:30).
+
+**2. T2 at 12 kt in a crowd: from 9 over at the gun to 1, not to 0.** What the boards did: twenty boards 60 m back in a column along a line that runs with the wind crawl at 1.3 to 2 m/s in each other's shadows, beat up to their waiting points along the line, judge themselves late, go for their spot, drift over the line at that crawl, and, too slow to tack back (the tack waits for pointing speed), sail on over it. Two fixes, both before the gun: on the way to its waiting point, within 12 m of the line and closing on it, a board tacks or gybes away, slow or not; late and about to cross early at a crawl (slower than its steering speed plus 1 m/s), it turns away whichever side its spot is. A third try, turning back at once when over early, made the 16-board test fail again (one late, one over) and was dropped. In the fleet at 60 m: 1 over at the gun (Jonas), the median start +16.5 s against the +7.0 before: **the lead's target (0 over, the median no later than before) is not met.** From the game's own random spots: 1 over, the median +6.8 s.
+
+**3. The matrix tools race to the race's own limit.** `tools/race_matrix.sh` and `tools/persona_matrix.sh` no longer pass `--seconds=1500` (three lines); `--finish_window=900` stays. A race in the matrices now ends at its own time limit (24:15 on T1 in 12 kt, 20 minutes elsewhere on T1 and T2) or 15 minutes after the first finisher.
+
+**4. The fleet of twenty on both placings** (`tools/persona_matrix.sh --courses=... --run=fleet_r2`, and the same with `--spawn=random --spawn_seed=1 --run=fleet_r2_random`, in halves, the T1 races of both runs together and then the T2 ones: six processes). The median and the latest start, the boards over at the gun, the falls, the races not finished, the winner:
+
+| Race | before (caster, 150 m) | round 1 (60 m) | round 2, the line at 60 m | round 2, random spots (the game's) |
+|---|---|---|---|---|
+| T1 12 kt | +71.1, +144, 0 OCS, 0 falls, 1 DNF | +9.6, +63, 0, 0 | +9.6, +63, 0, 0; Lena 11:34.0 | +12.6, +116, 0, 0; Aiko 12:05.3 |
+| T1 18 kt | +5.3, +69, 0, 4 | +1.9, +32, 1, 6 | +2.5, +17, 0, 2; Tobias 8:08.0 | +1.7, +8.0, 0, 2; Elin 8:12.2 |
+| T1 24 kt | +1.7, +146, 0, 6 | +1.8, +72, 1, 7 | +1.6, +41, 1, 7; Bruno 6:25.6 | +2.0, +38, 0, 7; Sven 6:51.6 |
+| T2 12 kt | +7.0, +15, 0, 0 | +23.2, +82, 9, 0 | +16.5, +67, 1, 0, **1 DNF**; Lena 4:49.8 | +6.8, +27, 1, 0; Yusuf 4:46.1 |
+| T2 18 kt | +5.3, +46, 1, 1 | +2.9, +7.4, 0, 0 | +2.9, +9.1, 0, 1; Mara 3:15.6 | +2.6, +6.3, 0, 3; Ines 3:23.6 |
+| T2 24 kt | +1.4, +38, 1, 4 | +1.3, +6.9, 0, 3 | +1.3, +6.9, 0, 3; Elin 2:48.9 | +1.1, +5.5, 0, 5; Hana 2:43.7 |
+
+- The falls: 13 on the line (15 before the work, 16 in round 1), 17 from the random spots. The OCS: 2 on the line, 1 from the random spots (2 before).
+- **New in round 2: Kofi did not finish T2 at 12 kt on the line**: 41 gybes, stuck 42 m from mark 3 when the race's 15 minutes after the first finisher ran out, in a race with 96 penalties (37 in round 1). It looks like circling at the mark in the crowd, not the start; I did not get to read it. The other 119 races of each run finish (Ravi on T1 at 12 kt in 15:18.5).
+- The other five races on the line are no worse than round 1 except T1 at 18 kt's median (+2.5 against +1.9) and T2 at 18 kt's latest (+9.1 against +7.4) and one fall there.
+
+**What is not done in round 2:** T2 at 12 kt in a crowd on the line (1 over, the median 9 s later than before); Kofi's DNF at mark 3; the falls on the random spots (17).
