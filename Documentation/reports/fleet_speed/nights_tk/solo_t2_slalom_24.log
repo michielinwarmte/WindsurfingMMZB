@@ -1,0 +1,12 @@
+Race on T2 sprint slalom (Start-1-2-3-Finish, 1 lap, 5 steps): wind 24 kt from 232 deg, brain:tk_c2_best, seed 1, pre-start 60 s, spawn line (seed 0), wind shadows, the rules
+1. tk_c2 best      5:42.8    +0:00.0  5/5 steps  splits 0:32.8 2:16.2 3:52.5 5:20.6 5:42.8  falls 0  tacks 12  gybes 1
+Finished at race time 5:42.8; CSV files in /home/michieldz/Projects/Git/WindsurfingMMZB-train/.sim_output/review/solo_t2_slalom_24
+Starts:
+  longest start delay 0.0 s, 0 not started, 0 OCS, 0 outside the sailing area at the gun
+Penalties: 0
+WARNING: 40 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+ERROR: 36 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:822)
+ERROR: Pages in use exist at exit in PagedAllocator: N12VariantPools12BucketMediumE
+   at: ~PagedAllocator (./core/templates/paged_allocator.h:170)

@@ -1,0 +1,20 @@
+SCRIPT ERROR: Compile Error: Identifier not found: GameSettings
+          at: GDScript::reload (res://main.gd:82)
+SCRIPT ERROR: Compile Error: Failed to compile depended scripts.
+          at: GDScript::reload (res://race/race_runner.gd:0)
+SCRIPT ERROR: Compile Error: Failed to compile depended scripts.
+          at: GDScript::reload (res://dev/run_race.gd:0)
+ERROR: Failed to load script "res://dev/run_race.gd" with error "Compilation failed".
+   at: load (modules/gdscript/gdscript_resource_format.cpp:46)
+Race on T1 training loop (Start-1-4S/4P-1-4S-Finish, 1 lap, 6 steps): wind 18 kt from 270 deg, brain:tk_c2_best, seed 1, pre-start 60 s, spawn line (seed 0), wind shadows, the rules
+1. tk_c2 best     13:25.2    +0:00.0  6/6 steps  splits 1:13.0 7:25.3 8:50.4 11:41.6 13:10.3 13:25.2  falls 0  tacks 19  gybes 1
+Finished at race time 13:25.2; CSV files in /home/michieldz/Projects/Git/WindsurfingMMZB/.sim_output/review_lead/solo_t1_loop_18
+Starts:
+  longest start delay 0.0 s, 0 not started, 0 OCS, 0 outside the sailing area at the gun
+Penalties: 0
+WARNING: 40 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+ERROR: 36 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:822)
+ERROR: Pages in use exist at exit in PagedAllocator: N12VariantPools12BucketMediumE
+   at: ~PagedAllocator (./core/templates/paged_allocator.h:170)
