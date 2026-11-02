@@ -48,7 +48,8 @@ class Board:
 
 ## The race ends this long after the first board finishes (seconds), if not every board is in.
 var finish_window_s: float = 60.0
-## The race ends at this race time whatever happens, seconds.
+## The race ends at this race time whatever happens, seconds. The game and the race tool set it for
+## the course and the wind (RaceTimeLimit); 1200 until then.
 var time_limit_s: float = 1200.0
 var course: Course
 ## How many times the steps between the start and the finish are sailed.
