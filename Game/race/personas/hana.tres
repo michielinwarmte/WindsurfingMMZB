@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="Persona" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://race/persona.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+name = "Hana"
+sail_colour = Color(1, 0.85, 0.1, 1)
+home_water = "Fuerteventura"
+profile = "the pro: fast everywhere, sharp starts, rarely wrong"
+start_timing = 0.95
+start_nerve = 0.85
+tacking = 0.95
+gybing = 0.95
+boat_speed = 0.95
+upwind_sense = 0.95
+downwind_sense = 0.95
+gust_appetite = 0.5
+risk = 0.6
+aggression = 0.6
+consistency = 0.95
+start_spot = 0.5
+start_style = 0
+pointing_offset_deg = 0.0
+light_wind = 0.8
+strong_wind = 0.8
+sail_brand = "point9"
+board_brand = "forbidden"

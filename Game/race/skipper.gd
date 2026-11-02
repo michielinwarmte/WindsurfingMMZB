@@ -89,6 +89,17 @@ const NOISE_TIME_S: float = 4.0
 ## Racing toward a mark, it lets go of the push slider when the mark is this many seconds away at its
 ## speed (see _push_level()): it rounds at the pilot's own margin.
 const PUSH_EASE_BEFORE_MARK_S: float = 4.0
+## Closer to the wind than this, degrees, a character's push offset is not used: upwind the hands
+## leave the slider to the pilot's own margin, which is the fastest and the safest there. Pushed
+## upwind the polar gains at most 1 % at 18 kt and loses 1 to 4 % at 24 kt (skipper_speed.md); in
+## the personas' races at 24 kt 22 of 23 falls were on the beat, nearly all of them the pushers'
+## (characters.md).
+const PUSH_UPWIND_TWA_DEG: float = 60.0
+## While its heading is this far from the one it wants, degrees, a character's push offset is not
+## used: it is turning onto a new course (the bear-away from the beat onto the run after a mark,
+## where the step has already moved on). Alone on T1 at 24 kt the six falls left after the upwind
+## rule were all pushers', all in that bear-away (122 to 139 degrees off the wind; characters.md).
+const PUSH_TURN_DEG: float = 15.0
 ## How fast its hand moves the push slider, a share of the slider per second: as fast as the player's
 ## keys move it (PlayerController.push_rate_per_s, the whole slider in 2.5 s). Set at once, the jump
 ## from 95 % back to the pilot's own margin as the board bore away at 14 m/s threw the sailor over
@@ -252,6 +263,14 @@ const FREE_CORRIDOR_M: float = 60.0
 ## crosses again once it is FINISH_BACK_REACHED_M behind the line (see _finish_target()).
 const FINISH_BACK_M: float = 30.0
 const FINISH_BACK_REACHED_M: float = 20.0
+## A board heading the wrong way round a mark (its heading more than 120 degrees from the way
+## a rounding crosses the ray: the cosine below) is not level with it, however near: it goes back
+## WRONG_WAY_BACK_M down the leg first, on the side the mark is left on, and comes up again. Coming
+## back to the slalom template's mark 1 from the north (after two penalty turns beside it), Aiko was
+## counted level, gybed the long way to the exit and went round the mark anticlockwise, again and
+## again: 45 gybes and no finish (18 kt, characters.md).
+const WRONG_WAY_COS: float = -0.5
+const WRONG_WAY_BACK_M: float = 30.0
 ## Racing for the finish, within FINISH_EASE_WITHIN_S of the line at its speed, a board whose track
 ## over the ground would cross the line's extension more than FINISH_MISS_M beyond an end eases down
 ## to FINISH_EASE_SPEED_MS (the hold-back, as at the start), so that it can turn onto the line: at
@@ -282,7 +301,7 @@ var push_wanted: bool = true
 ## margin (see _move_the_push()).
 var _push_now: float = NAN
 ## The persona this skipper plays (F4), if any: its sheet is drawn afresh for every race in
-## setup() (the day's form, seeded by random_seed, and the gear for the wind).
+## setup() (the day's form, seeded by random_seed, and its form in the wind of the race).
 var persona: Persona = null
 ## Before its start: the seconds it has to spare (the time until it wants to cross, less the time
 ## it expects to need to get to its spot), for the tools.
@@ -691,13 +710,26 @@ func _mark_target(step: RaceStep, position: Vector2) -> Vector2:
 		# boards it kept clear of), still sails for the entry point, round the mark's far side: going
 		# for the exit from past the ray it never crossed the ray and circled the mark for twelve
 		# minutes (Noor on the slalom template, 18 kt).
+		var wrong_way: bool = going_round_the_wrong_way(_sim.telemetry.heading_deg, ray, way)
 		_level_with_mark = (position - mark).dot(step.in_dir) >= -margin and (position - mark).dot(entry_side) > 0.0 \
-				and before_rounding_ray(position, mark, ray, way)
+				and before_rounding_ray(position, mark, ray, way) and not wrong_way
+		if wrong_way and position.distance_to(mark) < WRONG_WAY_BACK_M:
+			# Back down the leg first, on the entry side, so that it comes up to the mark again the
+			# right way round instead of turning on the spot round the wrong side.
+			return mark - step.in_dir * WRONG_WAY_BACK_M + entry_side * margin
 	if not _level_with_mark:
 		return mark + entry_side * margin
 	# Vector2.rotated() turns clockwise on the map in these axes (X east, Z south), so way * 90
 	# degrees is the direction the board moves when it crosses the ray going the right way round.
 	return mark + ray * 2.0 * margin + ray.rotated(way * PI / 2.0) * margin
+
+
+## Whether a board on this heading (degrees) goes the wrong way round a mark: more than 120 degrees
+## (WRONG_WAY_COS) from the direction in which a rounding the right way crosses the ray.
+static func going_round_the_wrong_way(heading_deg: float, ray: Vector2, way: float) -> bool:
+	# Vector2.rotated() turns clockwise on the map (X east, Z south): way * 90 degrees is the way a
+	# board moves when it crosses the ray going round the right way.
+	return Course.direction_of(heading_deg).dot(ray.rotated(way * PI / 2.0)) < WRONG_WAY_COS
 
 
 ## Whether a position is still before a mark's rounding ray, going round it the way (1 clockwise, -1
@@ -1774,7 +1806,9 @@ func _steer_toward(telemetry: Telemetry, wanted_deg: float) -> void:
 ## The push slider as a good sailor sets it (AiHands.push, 0 to 1): the polar's level for the wind
 ## angle it sails in the wind of the moment where the polar says pushing paid, moved by its
 ## character's push_offset; where the polar does not push, the level that holds the pilot's own pull
-## moved by the offset (a character that pushes harder, or sails more carefully, everywhere). NaN, the
+## moved by the offset (a character that pushes harder, or sails more carefully, off the wind: not
+## closer than PUSH_UPWIND_TWA_DEG, where the pilot's margin is fastest and safest, and not while it
+## turns onto a new course, PUSH_TURN_DEG). NaN, the
 ## pilot's own margin without the slider (which the hands hand back to the controller): where neither
 ## asks for a push, from the moment a tack or gybe is asked for until the board has settled after it,
 ## in the last PUSH_EASE_BEFORE_MARK_S before a mark, and when it does not set the push at all
@@ -1789,10 +1823,15 @@ func _push_level(telemetry: Telemetry) -> float:
 		return NAN
 	var level: float = SkipperPolar.push_at(_polar_winds, _polar_twa, _polar_push, telemetry.tws_10m_kt, telemetry.twa_deg)
 	if is_nan(level):
-		if config.push_offset == 0.0:
+		if config.push_offset == 0.0 or absf(telemetry.twa_deg) < PUSH_UPWIND_TWA_DEG or _turning_onto_a_course(telemetry):
 			return NAN
 		level = LearnedSkipper.pilot_margin_level()
 	return clampf(level + config.push_offset, 0.0, 1.0)
+
+
+## True while its heading is more than PUSH_TURN_DEG from the heading it decided on: it is turning.
+func _turning_onto_a_course(telemetry: Telemetry) -> bool:
+	return absf(wrapf(_last_wanted_deg - telemetry.heading_deg, -180.0, 180.0)) > PUSH_TURN_DEG
 
 
 ## Its hand on the push slider: toward the level it wants (_push_level()) at PUSH_RATE_PER_S. Taking

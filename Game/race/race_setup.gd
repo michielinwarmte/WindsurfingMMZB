@@ -56,10 +56,12 @@ var shadows: bool = true
 ## The racing rules are kept (RaceRules, F3): the AI turns a circle for a penalty, the player is
 ## warned and carries 20 s to the finish unless it turns one. --rules=0 turns them off.
 var rules: bool = true
-## The personas rig their own sail for the wind (Persona.rig(); F3's gear per persona): a bigger
-## sail in light wind, a smaller one in a breeze. Off until the sail sizes are tuned (Michiel): in
-## this physics a 7.8 is slower off the line than the 6.5 even in 12 kt (Session 53). --gear=1.
-var gear: bool = false
+## Each persona sails its own board, sail and fin from the gear catalogue, sized for the wind
+## (Persona.gear_for(), package 3 of fleet_speed/PLAN.md); the other skippers the default gear. On:
+## alone on T1 and T2 the twenty fell 3 times in 120 races on their own gear and 15 times on the
+## default 8.0 (past its range in 24 kt), and were 72 s a persona faster on T1 in 12 kt, about even
+## in 18 kt (characters.md). --gear=0 turns it off.
+var gear: bool = true
 ## A time trial (GP4, GD5): the player alone on the course, timed against the best kept in
 ## TimeTrialRecords for this water, course and wind. The Race page's "You alone" fleet sets it.
 var time_trial: bool = false

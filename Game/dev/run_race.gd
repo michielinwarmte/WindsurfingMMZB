@@ -43,8 +43,12 @@ extends SceneTree
 ##   [--shadows=1]         the sails cast wind shadows on each other (F3, WindShadows); 0 turns them off
 ##   [--rules=1]           the racing rules are kept (F3, RaceRules): a scripted skipper turns a circle for a
 ##                         penalty, a learned one carries 20 s to the finish; 0 turns them off
-##   [--gear=0]            1: the personas rig their own sail for the wind (Persona.rig()); off until the sail
-##                         sizes are tuned (a bigger sail is slower in this physics, Session 53)
+##   [--gear=1]            each persona sails its own board, sail and fin from the gear catalogue, sized
+##                         for the wind (Persona.gear_for()), as in the game (RaceSetup.gear); 0: the
+##                         default gear for every board. The other skippers keep the default gear. The
+##                         gear is printed before the race
+##   [--steady_hands=0]    1: every scripted skipper's hands as quick and steady as the all-rounder's
+##                         (STEADY_REACTION_S, STEADY_NOISE_DEG), to measure what the personas' noise costs
 ##   [--skipper_push=1]    0: the scripted skippers leave the push slider alone and sail the pilot's own
 ##                         margin, as every AI board did before the skipper set it (to compare)
 ##   [--polar=<file.tres>] the scripted skippers sail with another polar (SkipperPolar; a res:// path or a
@@ -87,6 +91,9 @@ const SKIPPER_WAIT_M_PER_S: float = 2.5
 const SKIPPER_NEAREST_M: float = 40.0
 ## The lake's shore grid, for the sailing area of a course on the lake (kept off the shore).
 const SHORE_GRID_PATH: String = "res://maps/silvaplana/terrain/shore_heights.json"
+## The all-rounder's hands (Game/race/skippers/allrounder.tres), for --steady_hands=1.
+const STEADY_REACTION_S: float = 0.25
+const STEADY_NOISE_DEG: float = 0.5
 ## A CSV row every this many ticks (0.1 s).
 const CSV_EVERY: int = 6
 
@@ -141,8 +148,9 @@ func _initialize() -> void:
 	var blind: bool = options.get("blind", "0") != "0"
 	var shadows: bool = options.get("shadows", "1") != "0"
 	var with_rules: bool = options.get("rules", "1") != "0"
-	var with_gear: bool = options.get("gear", "0") == "1"
+	var with_gear: bool = options.get("gear", "1") != "0"
 	var skipper_push: bool = options.get("skipper_push", "1") != "0"
+	var steady_hands: bool = options.get("steady_hands", "0") == "1"
 	var polar_path: String = options.get("polar", "")
 
 	var course_name: String = options.get("course", "test")
@@ -161,7 +169,7 @@ func _initialize() -> void:
 	var who: PackedStringArray = PackedStringArray()
 	for i: int in boards:
 		who.append(names[i % names.size()])
-	var entries: Array[Entry] = make_entries(race, course, who, wind_kt, twa_deg, random_seed, spawn, area, spawn_seed, behind_m)
+	var entries: Array[Entry] = make_entries(race, course, who, wind_kt, twa_deg, random_seed, spawn, area, spawn_seed, behind_m, with_gear)
 	if entries.is_empty():
 		quit(2)
 		return
@@ -178,11 +186,12 @@ func _initialize() -> void:
 	if shadows:
 		give_shadows(entries)
 	var rules: RaceRules = give_rules(entries, race, course) if with_rules else null
-	if with_gear:
-		rig_personas(entries, wind_kt)
+	if steady_hands:
+		steady_the_hands(entries)
 	if not tune_skippers(entries, skipper_push, polar_path):
 		quit(2)
 		return
+	print_sheets(entries)
 	var file_names: Dictionary[String, int] = {}
 	for entry: Entry in entries:
 		# One file per board, whatever the names: a second board of the same name gets _2.
@@ -297,7 +306,7 @@ static func sailing_area_for(course_name: String, course: Course) -> SailingArea
 ## in the game), seeded by spawn_seed; with "line" behind the start line. Every skipper sails free in
 ## the area (one round the start line when none is given). Empty if a name is not a skipper.
 static func make_entries(race: RaceSim, course: Course, who: PackedStringArray, wind_kt: float, twa_deg: float = 50.0, random_seed: int = 0,
-		spawn: String = "line", area: SailingArea = null, spawn_seed: int = 0, behind_m: float = -1.0) -> Array[Entry]:
+		spawn: String = "line", area: SailingArea = null, spawn_seed: int = 0, behind_m: float = -1.0, gear: bool = false) -> Array[Entry]:
 	var entries: Array[Entry] = []
 	var used: Dictionary[String, int] = {}
 	if area == null:
@@ -312,7 +321,7 @@ static func make_entries(race: RaceSim, course: Course, who: PackedStringArray, 
 			entry = _make_autopilot_board(race, course.axis_deg, wind_kt, twa_deg, share)
 			entry.name = "board%d" % (i + 1)
 		else:
-			entry = _make_skipper_board(who[i], race, course, wind_kt, share, behind_m)
+			entry = _make_skipper_board(who[i], race, course, wind_kt, share, behind_m, gear)
 			if entry == null:
 				var none: Array[Entry] = []
 				return none
@@ -343,12 +352,28 @@ static func give_shadows(entries: Array[Entry]) -> void:
 		entry.sim.wind.disturbance = entry.shadows
 
 
-## The personas' gear: each rigs its own sail for the wind (the other skippers keep the default).
-static func rig_personas(entries: Array[Entry], wind_kt: float) -> void:
+## Each scripted skipper's sheet for this race, one line each (a persona's is drawn for the race's
+## seed and wind): its hands (reaction and noise), its push offset, its beat and run angles as
+## differences from the polar's best, and its layline margin.
+static func print_sheets(entries: Array[Entry]) -> void:
 	for entry: Entry in entries:
 		var scripted: Skipper = entry.skipper as Skipper
-		if scripted != null and scripted.persona != null:
-			scripted.persona.rig(entry.sim, wind_kt)
+		if scripted == null:
+			continue
+		var c: SkipperConfig = scripted.config
+		print("sheet %-12s hands %.2f s %.1f deg  push %+.2f  beat %+.1f deg  run %+.0f deg  layline %.0f m" % [entry.name,
+			c.reaction_time_s, c.steering_noise_deg, c.push_offset, c.upwind_vmg_twa_deg - Skipper.POLAR_15KT_UPWIND_TWA_DEG + c.pointing_offset_deg,
+			c.downwind_vmg_twa_deg - Skipper.POLAR_15KT_DOWNWIND_TWA_DEG, c.layline_margin_m])
+
+
+## Every scripted skipper's hands as quick and steady as the all-rounder's (--steady_hands=1): the
+## rest of its sheet (drawn for the race in its setup()) stays.
+static func steady_the_hands(entries: Array[Entry]) -> void:
+	for entry: Entry in entries:
+		var scripted: Skipper = entry.skipper as Skipper
+		if scripted != null:
+			scripted.config.reaction_time_s = STEADY_REACTION_S
+			scripted.config.steering_noise_deg = STEADY_NOISE_DEG
 
 
 ## The scripted skippers' push and polar from the options (--skipper_push, --polar): false if the
@@ -508,7 +533,9 @@ static func _make_sim(wind_from_deg: float, wind_kt: float) -> WindsurferSim:
 ## A skipper's board: at the pre-start spot (brought nearer the line for a short countdown), at
 ## `share` of the way across the line's width, on the pre-start's beam reach, at rest. Its skipper
 ## drives the beginner controller (auto-sheet on), as the player's board is set up in the game.
-static func _make_skipper_board(skipper_name: String, race: RaceSim, course: Course, wind_kt: float, share: float, behind_m: float = -1.0) -> Entry:
+## With `gear` a persona sails its own board, sail and fin for the wind (Skippers.gear_for()).
+static func _make_skipper_board(skipper_name: String, race: RaceSim, course: Course, wind_kt: float, share: float, behind_m: float = -1.0,
+		gear: bool = false) -> Entry:
 	var skipper: RaceSkipper = Skippers.make(skipper_name)
 	if skipper == null:
 		return null
@@ -516,6 +543,12 @@ static func _make_skipper_board(skipper_name: String, race: RaceSim, course: Cou
 	entry.name = skipper.skipper_name()
 	entry.skipper = skipper
 	entry.sim = _make_sim(course.axis_deg, wind_kt)
+	var own_gear: GearChoice = Skippers.gear_for(skipper, wind_kt) if gear else null
+	if own_gear != null:
+		# The same wind and sea on its own gear (copies of the items' numbers); before the
+		# controller is given the sail, so that it trims this one.
+		entry.sim = own_gear.sim_with(entry.sim)
+		print("%s sails %s" % [entry.name, own_gear.names_line()])
 	entry.controller = PlayerController.new()
 	entry.controller.set_sail(entry.sim.sail, entry.sim.sailor_config, entry.sim.air_density_kg_m3)
 	entry.hands = AiHands.new()

@@ -45,6 +45,16 @@ static func make(skipper_name: String) -> RaceSkipper:
 	return skipper
 
 
+## The gear a skipper sails in a wind (knots) when the race's gear is on (RaceSetup.gear, --gear=1):
+## a persona's own board, sail and fin from the catalogue (Persona.gear_for()); null (the default
+## gear) for every other skipper.
+static func gear_for(skipper: RaceSkipper, wind_kt: float) -> GearChoice:
+	var scripted: Skipper = skipper as Skipper
+	if scripted == null or scripted.persona == null:
+		return null
+	return scripted.persona.gear_for(wind_kt)
+
+
 ## A fleet: one skipper per name, in order (a name may come more than once: a fleet of 16 repeats
 ## the four characters). A character that sails more than once gets a numbered label on each of its
 ## boards ("Rookie 1", "Rookie 2"); each skipper has its own copy of its sheet. A name that is no

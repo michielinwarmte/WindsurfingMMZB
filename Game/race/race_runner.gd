@@ -120,6 +120,9 @@ func setup_race(race_course: Course, player_node: WindsurferNode, race_setup: Ra
 		node.effects_wanted = setup.opponent_effects
 		node.stepped_by_runner = true
 		node.own_config_copies = true
+		# A persona's own board, sail and fin for the wind at the start (its simulation and its
+		# look are built on them in its _ready()); every other skipper the default gear.
+		node.gear = Skippers.gear_for(skipper, player.sim.telemetry.tws_10m_kt) if setup.gear else null
 		player.get_parent().add_child(node)
 		node.hands = AiHands.new()
 		node.controller.hands = node.hands
@@ -171,9 +174,6 @@ func restart() -> void:
 		_skippers[i].sailing_area = _area
 		_skippers[i].rules = rules
 		_skippers[i].setup(opponents[i].sim, opponents[i].controller, opponents[i].hands, race, i + _first_ai)
-		var scripted: Skipper = _skippers[i] as Skipper
-		if setup.gear and scripted != null and scripted.persona != null:
-			scripted.persona.rig(opponents[i].sim, opponents[i].sim.telemetry.tws_10m_kt)
 	_tell_the_race()
 	wind_clock = RaceWindClock.of(player.sim.wind)
 	race.start_in(setup.free_sail_s)

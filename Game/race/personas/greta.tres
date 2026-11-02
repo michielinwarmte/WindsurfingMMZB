@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="Persona" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://race/persona.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+name = "Greta"
+sail_colour = Color(0.35, 0.55, 0.3, 1)
+home_water = "Hyeres"
+profile = "the old hand: wins the beats on the shifts, slow hands on a reach"
+start_timing = 0.8
+start_nerve = 0.5
+tacking = 0.85
+gybing = 0.45
+boat_speed = 0.45
+upwind_sense = 0.95
+downwind_sense = 0.6
+gust_appetite = 0.4
+risk = 0.3
+aggression = 0.4
+consistency = 0.9
+start_spot = 0.2
+start_style = 1
+pointing_offset_deg = 0.0
+light_wind = 0.65
+strong_wind = 0.35
+sail_brand = "gg_sails"
+board_brand = "forbidden"

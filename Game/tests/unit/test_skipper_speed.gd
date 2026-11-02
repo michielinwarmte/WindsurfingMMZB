@@ -134,6 +134,20 @@ func test_the_games_polar_pushes_nowhere_but_a_character_can() -> void:
 	assert_almost_eq(skipper._push_level(telemetry), LearnedSkipper.pilot_margin_level() + 0.1, 1e-5, "a character that pushes harder: from the pilot's own level")
 	skipper.config.push_offset = -0.1
 	assert_almost_eq(skipper._push_level(telemetry), LearnedSkipper.pilot_margin_level() - 0.1, 1e-5, "or more carefully")
+	# Upwind the slider is the pilot's, whatever the character: pushed on the 24 kt beat the personas
+	# fell (characters.md).
+	for twa_deg: float in [45.0, -52.0]:
+		telemetry.twa_deg = twa_deg
+		skipper.config.push_offset = 0.1
+		assert_true(is_nan(skipper._push_level(telemetry)), "no push on the beat at %.0f degrees" % twa_deg)
+		skipper.config.push_offset = -0.1
+		assert_true(is_nan(skipper._push_level(telemetry)), "no easing on the beat either")
+	telemetry.twa_deg = -130.0
+	skipper.config.push_offset = 0.1
+	skipper._last_wanted_deg = telemetry.heading_deg + 5.0
+	assert_false(is_nan(skipper._push_level(telemetry)), "it pushes on the run")
+	skipper._last_wanted_deg = telemetry.heading_deg + 40.0
+	assert_true(is_nan(skipper._push_level(telemetry)), "but not while it bears away onto it")
 
 
 ## The game's polar with a push table that pushes the 18 and 24 kt reaches (70 to 110 degrees) at 95 %,
@@ -174,6 +188,30 @@ func test_a_board_past_the_rounding_ray_goes_back_round_before_it_rounds() -> vo
 	assert_true(Skipper.before_rounding_ray(mark + Vector2(-8.0, 20.0), mark, ray, way), "coming up from the south: before it")
 	assert_false(Skipper.before_rounding_ray(mark + Vector2(-5.0, -15.0), mark, ray, way), "back down the west side from the north: past it")
 	assert_false(Skipper.before_rounding_ray(mark + Vector2(5.0, -22.0), mark, ray, way), "past the mark on its east side: past it")
+
+
+func test_a_board_heading_the_wrong_way_round_a_mark_goes_back_down_the_leg() -> void:
+	# The same mark: Aiko came back to it from the north on its west side, heading south (181), and
+	# was counted level with it at (40.9, -369.9), before the ray by a hair; she then went round it
+	# anticlockwise, the wrong way, 45 gybes long.
+	var mark: Vector2 = Vector2(50.4, -360.0)
+	var in_dir: Vector2 = Vector2(0.138648, -0.990342)
+	var ray: Vector2 = RoundingCheck.rounding_ray(in_dir, Vector2(1.0, 0.0), CourseMark.Rounding.STARBOARD)
+	var way: float = RoundingCheck.turn_way(CourseMark.Rounding.STARBOARD)
+	assert_true(Skipper.before_rounding_ray(Vector2(40.9, -369.9), mark, ray, way), "she was before the ray, by a hair")
+	assert_true(Skipper.going_round_the_wrong_way(181.0, ray, way), "heading south past it: the wrong way")
+	assert_true(Skipper.going_round_the_wrong_way(240.0, ray, way), "south-west: the wrong way")
+	assert_false(Skipper.going_round_the_wrong_way(0.0, ray, way), "coming up the leg: the right way")
+	assert_false(Skipper.going_round_the_wrong_way(330.0, ray, way), "coming up a little west of north: the right way")
+	assert_false(Skipper.going_round_the_wrong_way(300.0, ray, way), "west-north-west to the entry point from the east: not the wrong way")
+	assert_false(Skipper.going_round_the_wrong_way(90.0, ray, way), "east across the mark's foot: not the wrong way")
+	# A windward mark left to port, the run after it (the wind from the north): a board that overstood
+	# and comes down on it from the east, heading south-west, is going the right way.
+	var up: Vector2 = Vector2(0.0, -1.0)
+	var windward_ray: Vector2 = RoundingCheck.rounding_ray(up, -up, CourseMark.Rounding.PORT)
+	var port: float = RoundingCheck.turn_way(CourseMark.Rounding.PORT)
+	assert_false(Skipper.going_round_the_wrong_way(225.0, windward_ray, port), "overstood, coming down from the east")
+	assert_false(Skipper.going_round_the_wrong_way(315.0, windward_ray, port), "on starboard tack up to it")
 
 
 func test_the_hand_moves_the_slider_gradually_and_hands_it_back() -> void:
