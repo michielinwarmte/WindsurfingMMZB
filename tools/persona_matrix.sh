@@ -17,6 +17,11 @@
 #
 #   tools/persona_matrix.sh --courses=t1_loop,t2_slalom [--winds=12,18,24] [--run=personas] [--gear=1]
 #                                               (some 40 to 60 minutes for twenty personas)
+#   tools/persona_matrix.sh --courses=t1_loop,t2_slalom --alone=1 [--jobs=6] [--run=solo]
+#                                               each persona alone against the clock in every race (one
+#                                               board, no rules or shadows to meet: the skills alone),
+#                                               at most --jobs Godot processes at a time; the table
+#                                               ranks the times (.sim_output/persona_alone_<run>.txt)
 #   tools/persona_matrix.sh --courses=t2_slalom --run=a   then --courses=t1_loop --run=a, then
 #   tools/persona_matrix.sh --courses=t1_loop,t2_slalom --run=a --table_only=1
 #                                               the same in halves (fewer Godot processes at once),
@@ -36,6 +41,8 @@ courses=""
 winds="12,18,24"
 run="personas"
 table_only=0
+alone=0
+jobs=6
 extra=()
 for arg in "$@"; do
 	case "$arg" in
@@ -46,6 +53,8 @@ for arg in "$@"; do
 		--winds=*) winds="${arg#*=}" ;;
 		--run=*) run="${arg#*=}" ;;
 		--table_only=*) table_only="${arg#*=}" ;;
+		--alone=*) alone="${arg#*=}" ;;
+		--jobs=*) jobs="${arg#*=}" ;;
 		*) extra+=("$arg") ;;
 	esac
 done
@@ -63,6 +72,71 @@ shown_name() {
 result_line() {
 	grep -E "^ *[0-9]+\. +$2( |$)" "$1" | head -1 || true
 }
+
+# Alone: every persona on its own in every race, a few Godot processes at a time; then each race's
+# times ranked, and one line per persona.
+if [[ -n "$courses" && "$alone" == "1" ]]; then
+	folder="$REPO_ROOT/.sim_output/persona_alone_$run"
+	out="$REPO_ROOT/.sim_output/persona_alone_$run.txt"
+	if [[ "$table_only" != "1" ]]; then
+		godot="$(find_godot)"
+		import_project "$godot"
+		for course in ${courses//,/ }; do
+			for w in ${winds//,/ }; do
+				mkdir -p "$folder/${course}_${w}"
+				for name in $(echo "$personas" | tr ',' ' '); do
+					while (( $(jobs -rp | wc -l) >= jobs )); do wait -n || true; done
+					"$godot" --headless --no-header --path "$PROJECT_DIR" -s res://dev/run_race.gd -- \
+						"--course=$course" "--wind_kt=$w" "--skippers=persona:$name" --prestart=60 --seconds=1500 \
+						"--seed=$seed" "--out_dir=$folder/${course}_${w}/$name" ${extra[@]+"${extra[@]}"} \
+						> "$folder/${course}_${w}/$name.txt" 2>&1 &
+				done
+			done
+		done
+		wait
+	fi
+	{
+		# One row per race and persona: the race, the name, the time in seconds (99999 for no
+		# finish), the falls, and the time as printed.
+		for course in ${courses//,/ }; do
+			for w in ${winds//,/ }; do
+				for name in $(echo "$personas" | tr ',' ' '); do
+					line="$(grep -E '^ *1\. ' "$folder/${course}_${w}/$name.txt" 2>/dev/null | head -1 || true)"
+					shown="$(shown_name "$name")"
+					if [[ -z "$line" ]]; then echo "${course}_${w} $shown 99999 0 none"; continue; fi
+					time="$(echo "$line" | awk '{print $3}')"
+					falls="$(echo "$line" | sed -E 's/.*falls ([0-9]+).*/\1/')"
+					seconds="$(echo "$time" | awk -F: '$1 ~ /^[0-9]+$/ {print $1 * 60 + $2; next} {print 99999}')"
+					echo "${course}_${w} $shown $seconds $falls $time"
+				done
+			done
+		done
+	} > "$folder/rows.txt"
+	{
+		echo "Each persona alone against the clock (seed $seed): time, and its rank among the personas in that race"
+		printf '%-8s' "persona"
+		for course in ${courses//,/ }; do for w in ${winds//,/ }; do printf ' %13s' "$(echo "$course" | sed 's/_.*//')@$w"; done; done
+		printf '  %5s %5s\n' "falls" "mean"
+		for name in $(echo "$personas" | tr ',' ' '); do
+			shown="$(shown_name "$name")"
+			printf '%-8s' "$shown"
+			falls=0; rank_sum=0; races=0
+			for course in ${courses//,/ }; do
+				for w in ${winds//,/ }; do
+					row="$(awk -v r="${course}_${w}" -v n="$shown" '$1 == r && $2 == n' "$folder/rows.txt")"
+					seconds="$(echo "$row" | awk '{print $3}')"
+					rank="$(awk -v r="${course}_${w}" -v s="$seconds" '$1 == r && $3 < s {k++} END {print k + 1}' "$folder/rows.txt")"
+					falls=$((falls + $(echo "$row" | awk '{print $4}')))
+					rank_sum=$((rank_sum + rank)); races=$((races + 1))
+					printf ' %9s %3s' "$(echo "$row" | awk '{print $5}')" "$rank"
+				done
+			done
+			printf '  %5d %5s\n' "$falls" "$(awk -v s="$rank_sum" -v n="$races" 'BEGIN {printf "%.1f", s / n}')"
+		done
+	} | tee "$out"
+	echo "Saved to $out"
+	exit 0
+fi
 
 if [[ -n "$courses" ]]; then
 	if [[ "$table_only" != "1" ]]; then
