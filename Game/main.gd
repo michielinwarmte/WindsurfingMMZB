@@ -202,8 +202,11 @@ func start_playing() -> void:
 
 
 ## After the settings menu closes: the new wind blows at once (with its gusts and shifts),
-## a changed control mode or auto-sheet applies at once, and new waves wait for the next
-## restart (behind the start menu they come at once).
+## a changed control mode or auto-sheet applies at once, and a new sea (the waves, or the wind
+## direction they line up with) goes under the board at once too, so the waves never keep
+## running with a wind you no longer sail in (Max, 2 November 2026). Behind the start menu the
+## run restarts instead; in a race the new sea waits for R, because the fleet's boards sail
+## their own copies of it.
 func apply_settings_live() -> void:
 	var settings: SettingsValues = GameSettings.values
 	_apply_wind_settings_live()
@@ -211,8 +214,12 @@ func apply_settings_live() -> void:
 		_apply_control_settings()
 	if _sun != null:
 		_sun.shadow_enabled = settings.shadow_quality > 0
-	if _in_menu and settings.sea_signature() != _sea_signature:
-		_restart_run()
+	if settings.sea_signature() != _sea_signature:
+		if _in_menu:
+			_restart_run()
+		elif _race_runner == null:
+			# The surface changes by a few centimetres under the board, as a restart would do.
+			_rebuild_sea()
 	_pause_menu.set_note(_waiting_for_restart_text())
 
 

@@ -49,21 +49,40 @@ func test_pausing_stops_the_physics_but_not_the_menus() -> void:
 	get_tree().paused = false
 
 
-func test_the_wind_changes_live_and_the_waves_wait_for_a_restart() -> void:
+func test_the_wind_and_the_sea_change_live_while_sailing() -> void:
 	var scene: SailingScene = (load("res://main.tscn") as PackedScene).instantiate()
 	add_child_autofree(scene)
 	var windsurfer: WindsurferNode = scene.get_node("Windsurfer")
-	var amplitude_before: float = (windsurfer.sim.water as WaveField).total_amplitude_m()
 	GameSettings.values.wind_speed_kt = 30.0
+	GameSettings.values.wind_from_deg = 180.0
 	GameSettings.values.gusts_enabled = true
 	GameSettings.values.wave_preset = SettingsValues.WavePreset.MEDIUM_CHOP
 	scene.apply_settings_live()
 	assert_almost_eq(windsurfer.sim.wind.config.speed_kt, 30.0, 1e-6, "the wind at once")
 	assert_true(windsurfer.sim.wind.config.gusts_enabled)
-	assert_almost_eq((windsurfer.sim.water as WaveField).total_amplitude_m(), amplitude_before, 1e-6, "the old waves until the restart")
+	var water: WaveField = windsurfer.sim.water as WaveField
+	assert_almost_eq(water.total_amplitude_m(), 0.08 + 0.04 + 0.015 + 0.006, 1e-5, "the medium chop at once, no restart needed")
+	# The chop lines up with the wind you set: from the South, its 7 m wave (offset -28 from
+	# downwind) travels toward bearing 332.
+	assert_almost_eq(water.dir_x[1], sin(deg_to_rad(332.0)), 1e-6, "the waves follow the new wind direction")
+	assert_almost_eq(water.dir_z[1], -cos(deg_to_rad(332.0)), 1e-6)
+	assert_eq(scene.get_node("Ocean").get_child_count(), 2, "the old water meshes are gone")
+	# Nothing left waiting for a restart (the pause menu's note).
+	scene.get_node("PauseMenu").restart_requested.emit()
+	assert_almost_eq((windsurfer.sim.water as WaveField).dir_x[1], sin(deg_to_rad(332.0)), 1e-6, "the same sea after a restart")
+
+
+func test_in_a_race_a_new_sea_waits_for_the_restart() -> void:
+	RaceSetup.pending = RaceSetup.race("t1_loop")
+	var scene: SailingScene = (load("res://main.tscn") as PackedScene).instantiate()
+	add_child_autofree(scene)
+	var windsurfer: WindsurferNode = scene.get_node("Windsurfer")
+	var amplitude_before: float = (windsurfer.sim.water as WaveField).total_amplitude_m()
+	GameSettings.values.wave_preset = SettingsValues.WavePreset.MEDIUM_CHOP
+	scene.apply_settings_live()
+	assert_almost_eq((windsurfer.sim.water as WaveField).total_amplitude_m(), amplitude_before, 1e-6, "the fleet's sea stays until R")
 	scene.get_node("PauseMenu").restart_requested.emit()
 	assert_almost_eq((windsurfer.sim.water as WaveField).total_amplitude_m(), 0.08 + 0.04 + 0.015 + 0.006, 1e-5, "the medium chop after it")
-	assert_eq(scene.get_node("Ocean").get_child_count(), 2, "the old water meshes are gone")
 
 
 func test_the_start_menu_hands_the_board_to_the_player() -> void:
