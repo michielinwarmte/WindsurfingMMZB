@@ -1396,6 +1396,14 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 			# it does not run far past it while turning.
 			if _velocity.dot(track) < 0.0 and position.distance_to(wait_at) < START_SLOW_FOR_TURN_M:
 				_hands.hold_speed_ms = LOOP_AWAY_SPEED_MS
+			if before_gun and behind_m < START_WALL_M and _velocity.dot(forward) > 0.3:
+				# Its way to the waiting point runs at the line itself and it is near: it tacks (or gybes)
+				# away, slow or not. On T2 in 12 kt the twenty, 60 m back in a column along a line that
+				# runs with the wind, crawled at 1.5 m/s in each other's shadows beating up to their
+				# waiting points, drifted over the line, could not tack back that slowly, and 9 of them
+				# were over at the gun.
+				_ask_for_manoeuvre(true, true)
+				note += ", away from the line"
 		else:
 			free_deg = _late_for_the_spot_deg(telemetry, step, spot, behind_m)
 		if before_gun:
@@ -1521,7 +1529,11 @@ func _time_to_cross_s(telemetry: Telemetry, target: Vector2) -> float:
 	var position: Vector2 = _position(telemetry)
 	var needed_twa: float = Navigation.wind_angle_deg(position, target, telemetry.wind_from_bearing_deg)
 	var sail_deg: float = clampf(absf(needed_twa) - _leeway_deg, _pointing_twa_deg(), _downwind_twa_deg())
-	if signf(needed_twa) != _tack() or absf(needed_twa) - _leeway_deg < _pointing_twa_deg():
+	# A beat only if it is one at speed (_beat_twa_deg(), no footing off): going from a hold the board
+	# gains speed and points higher. Judged with the slow board's foot, a point a reach away was
+	# counted a beat with a tack in it, the time to it came out 7 s long, and the gambler went 7 s
+	# early and slid down the line past its end (16 boards from random spots on T1 at 15 kt).
+	if signf(needed_twa) != _tack() or absf(needed_twa) - _leeway_deg < _beat_twa_deg():
 		return _time_to_s(telemetry, target)
 	var distance_m: float = position.distance_to(target)
 	var expected_ms: float = maxf(_speed_ratio * _polar_speed_ms(sail_deg), 1.0)
@@ -1704,14 +1716,15 @@ func _round_the_end_heading(telemetry: Telemetry, step: RaceStep) -> float:
 
 
 ## The point of the start line it makes for near the line, aiming to cross at aim_s from now: of
-## the points it can reach on a reach on its present tack (no tack, no beat), the one it would reach
+## the points it can reach on a reach on its present tack at speed (no tack, no beat), the one it would reach
 ## soonest without being early; when it would be early at every one of them, the one it reaches
 ## last; with none on this tack, the nearest point of the line (on the other tack, or a beat).
 func _choose_crossing(telemetry: Telemetry, step: RaceStep, aim_s: float) -> Vector2:
 	var position: Vector2 = _position(telemetry)
 	var wind_deg: float = telemetry.wind_from_bearing_deg
 	var tack: float = _tack()
-	var up_track_deg: float = _pointing_twa_deg() + _leeway_deg
+	# (Reachable at the angle it points once it has speed, as in _time_to_cross_s().)
+	var up_track_deg: float = _beat_twa_deg() + _leeway_deg
 	var inset: float = _line_inset(step)
 	_crossing_on_this_tack = true
 	var on_other_tack: bool = false

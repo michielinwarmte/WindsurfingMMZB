@@ -87,7 +87,7 @@ if [[ -n "$courses" && "$alone" == "1" ]]; then
 				for name in $(echo "$personas" | tr ',' ' '); do
 					while (( $(jobs -rp | wc -l) >= jobs )); do wait -n || true; done
 					"$godot" --headless --no-header --path "$PROJECT_DIR" -s res://dev/run_race.gd -- \
-						"--course=$course" "--wind_kt=$w" "--skippers=persona:$name" --prestart=60 --seconds=1500 \
+						"--course=$course" "--wind_kt=$w" "--skippers=persona:$name" --prestart=60 \
 						"--seed=$seed" "--out_dir=$folder/${course}_${w}/$name" ${extra[@]+"${extra[@]}"} \
 						> "$folder/${course}_${w}/$name.txt" 2>&1 &
 				done
@@ -208,7 +208,7 @@ for family in course slalom; do
 	dir="$REPO_ROOT/.sim_output/persona_matrix/$family"
 	mkdir -p "$dir"
 	"$godot" --headless --no-header --path "$PROJECT_DIR" -s res://dev/run_race.gd -- \
-		"--course=${families[$family]}" "--wind_kt=$wind" "--skippers=$skippers" --prestart=60 --seconds=1500 \
+		"--course=${families[$family]}" "--wind_kt=$wind" "--skippers=$skippers" --prestart=60 \
 		--finish_window=900 "--seed=$seed" "--out_dir=$dir" "${extra[@]+"${extra[@]}"}" > "$dir/out.txt" 2>&1 &
 done
 wait
