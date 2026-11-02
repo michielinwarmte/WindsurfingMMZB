@@ -82,3 +82,36 @@ func test_a_race_with_the_rules_on_sails_on() -> void:
 	for i: int in 2:
 		assert_true(race.next_step_index(i) >= 1, "board %d started" % i)
 		assert_true(rules.penalties(i) + rules.turns_done(i) <= 2, "few incidents in 60 s with two boards: %d" % (rules.penalties(i) + rules.turns_done(i)))
+
+
+## A penalty at planing speed (fleet_speed/start.md): the board eases down before it turns, gybes
+## first from a beam reach, gets going between the gybe and the tack, and stays on its feet. Begun at 6 to
+## 11 m/s, the old turn (the tack first, the bear-away for the gybe right after it at 0.5 m/s) put the
+## sailor in the water 6 times in the fleet of twenty.
+func test_a_penalty_at_planing_speed_eases_down_and_stays_upright() -> void:
+	var course: Course = RunRace.course_named("t2_slalom")
+	var race: RaceSim = RaceSim.new(course, 1, 30.0)
+	var entries: Array = RunRace.make_entries(race, course, PackedStringArray(["allrounder"]), 24.0, 50.0, 1)
+	var rules: RaceRules = RunRace.give_rules(entries, race, course)
+	race.start()
+	# Through the countdown and the start, onto the first reach at speed.
+	while race.clock_s() < 15.0:
+		RunRace.step_race(race, entries, false, rules)
+	var entry: RefCounted = entries[0]
+	assert_eq(race.next_step_index(0), 1, "started")
+	assert_gt(entry.sim.telemetry.speed_ms, 9.0, "planing on the reach")
+	assert_gt(absf(entry.sim.telemetry.twa_deg), Skipper.PENALTY_GYBE_FIRST_FROM_TWA_DEG, "on a beam reach or further off the wind")
+	rules.penalise(0, RaceRules.Why.PORT_GIVES_WAY)
+	var first_kind: PlayerController.Manoeuvre = PlayerController.Manoeuvre.NONE
+	var first_speed_ms: float = NAN
+	var falls_before: int = entry.falls
+	for t: int in roundi(45.0 / DT):
+		RunRace.step_race(race, entries, false, rules)
+		if first_kind == PlayerController.Manoeuvre.NONE and entry.controller.manoeuvre != PlayerController.Manoeuvre.NONE:
+			first_kind = entry.controller.manoeuvre
+			first_speed_ms = entry.sim.telemetry.speed_ms
+	assert_eq(entry.falls, falls_before, "no fall in the penalty turn")
+	assert_true(rules.turns_done(0) >= 1, "the penalty is cleared by the turn")
+	var gybed: bool = first_kind == PlayerController.Manoeuvre.GYBE_BEARING_AWAY or first_kind == PlayerController.Manoeuvre.GYBE_HEADING_UP
+	assert_true(gybed, "off the wind it gybes first (manoeuvre %d)" % first_kind)
+	assert_lt(first_speed_ms, 9.0, "eased down before the first manoeuvre: %.1f m/s" % first_speed_ms)

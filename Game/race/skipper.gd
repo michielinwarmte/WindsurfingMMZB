@@ -416,16 +416,40 @@ var _others_dt_s: float = THINK_INTERVAL_S
 ## whether it is keeping clear of one this tick (for the note).
 var _others_last: PackedVector2Array = PackedVector2Array()
 var _keeping_clear: bool = false
-## The penalty turn (F3): its phase (0 none; 1 the tack asked for; 2 bearing away for the gybe;
-## 3 the gybe asked for), when it began, and how many it has taken.
+## The penalty turn (F3, _penalty_turn_heading()): its phase (0 none; PENALTY_EASING,
+## PENALTY_FIRST, PENALTY_BETWEEN, PENALTY_SECOND), when it began, whether it gybes first, when it
+## last pressed for a manoeuvre, and how many turns it has taken.
 var _penalty_phase: int = 0
 var _penalty_from_s: float = 0.0
+var _penalty_gybe_first: bool = false
+var _penalty_pressed_s: float = -INF
 var penalty_turns: int = 0
+const PENALTY_EASING: int = 1
+const PENALTY_FIRST: int = 2
+const PENALTY_BETWEEN: int = 3
+const PENALTY_SECOND: int = 4
 ## A penalty turn that has not come round in this long is given up (the judge keeps the penalty,
 ## and the skipper tries again), seconds.
 const PENALTY_TURN_GIVE_UP_S: float = 45.0
-## Bearing away to this wind angle between the tack and the gybe of a penalty turn, degrees.
+## Bearing away to this wind angle for the gybe of a penalty turn, degrees.
 const PENALTY_GYBE_FROM_TWA_DEG: float = 120.0
+## Before its penalty turn the board eases down, holding its course: held back to
+## PENALTY_EASE_SPEED_MS, it begins the turn once slower than PENALTY_START_BELOW_MS, or after
+## PENALTY_EASE_LONGEST_S at most (m/s, m/s, seconds). Begun at 6 to 11 m/s, the head-up and the tack
+## stopped the board dead and the bear-away right after it put the sailor in the water: 6 of the 15
+## falls of the twenty in a fleet (Documentation/reports/fleet_speed/start.md).
+const PENALTY_EASE_SPEED_MS: float = 5.0
+const PENALTY_START_BELOW_MS: float = 6.5
+const PENALTY_EASE_LONGEST_S: float = 6.0
+## Between the turn's two manoeuvres it gets going again first, on a reach no closer to the wind than
+## the pilot's bear-away angle, until it sails this fast, m/s (a board stopped by the tack fell in
+## when it bore away for the gybe at 0.5 m/s).
+const PENALTY_GOING_MS: float = 4.0
+## From a beam reach (this wind angle, degrees) and further off the wind it gybes first: there the bow
+## is nearly round for the gybe already, and a tack would first head up 40 degrees and more at speed.
+const PENALTY_GYBE_FIRST_FROM_TWA_DEG: float = 80.0
+## A pressed manoeuvre the controller has not begun in this long is pressed again, seconds.
+const PENALTY_PRESS_AGAIN_S: float = 3.0
 ## What the skipper knows of its board (SkipperPolar, Game/config/skipper_polar.tres): the speed at
 ## each wind angle and wind, the push that pays there, and the best angles to beat and to run at. Its
 ## own copies of the tables, not the loaded resource every skipper shares: skippers sailed side by
@@ -584,8 +608,9 @@ func _think(telemetry: Telemetry) -> void:
 	# A penalty from the judge is taken at once, while racing (not in the pre-start crowd, where
 	# a circle would be a danger to everyone; it is carried to the start and taken on the first leg).
 	if rules != null and _penalty_phase == 0 and state == State.RACING and rules.penalties(_index) > 0:
-		_penalty_phase = 1
+		_penalty_phase = PENALTY_EASING
 		_penalty_from_s = _time_s
+		_penalty_pressed_s = -INF
 	var decided_deg: float = _decide(telemetry)
 	if _keeping_clear:
 		note += ", keeping clear"
@@ -999,9 +1024,13 @@ func _best_downwind_twa_deg() -> float:
 	return SkipperPolar.per_wind(_polar_winds, _polar_downwind, _sim.telemetry.tws_10m_kt)
 
 
-## The penalty turn: a full circle, the tack first and then the gybe, so the judge sees the heading
-## sweep round and clears the penalty (RaceRules.FULL_TURN_DEG). The hands are pressed directly:
-## the usual manoeuvre gating (the reaction time, the tacks per beat) does not apply to a penalty.
+## The penalty turn: a full circle, one tack and one gybe turning the same way round, so that the
+## judge sees the heading sweep round and clears the penalty (RaceRules.FULL_TURN_DEG). First it eases
+## down on its course (PENALTY_EASING); then the first manoeuvre: from a beam reach and further off the
+## wind (PENALTY_GYBE_FIRST_FROM_TWA_DEG) the gybe, closer to the wind the tack
+## (PENALTY_FIRST); then it gets going again on a reach (PENALTY_BETWEEN) and makes the other one
+## (PENALTY_SECOND), bearing away for a gybe or heading up for a tack. The hands are pressed directly:
+## the usual gating of manoeuvres (the reaction time, the tacks per beat) does not apply to a penalty.
 func _penalty_turn_heading(telemetry: Telemetry) -> float:
 	note = "penalty turn"
 	var tack: float = _tack()
@@ -1011,25 +1040,75 @@ func _penalty_turn_heading(telemetry: Telemetry) -> float:
 		_penalty_phase = 0  # given up for now; it is asked for again while the penalty stands
 		return _last_wanted_deg
 	match _penalty_phase:
-		1:
-			# The tack: pressed as soon as the controller is free, from the beat's angle.
-			if free and _pointing:
-				_hands.tack = true
-				_penalty_phase = 2
-			return wind_deg - tack * _upwind_twa_deg()
-		2:
-			# After the tack (on the new tack now): bear away for the gybe.
-			if free and absf(telemetry.twa_deg) >= PENALTY_GYBE_FROM_TWA_DEG - 15.0 and _time_s - _penalty_from_s > 4.0:
-				_hands.tack = true
-				_penalty_phase = 3
-			return wind_deg - tack * PENALTY_GYBE_FROM_TWA_DEG
+		PENALTY_EASING:
+			note = "penalty turn: easing down"
+			_hands.hold_speed_ms = PENALTY_EASE_SPEED_MS
+			if telemetry.speed_ms < PENALTY_START_BELOW_MS or _time_s - _penalty_from_s > PENALTY_EASE_LONGEST_S:
+				_penalty_gybe_first = absf(telemetry.twa_deg) >= PENALTY_GYBE_FIRST_FROM_TWA_DEG
+				_penalty_phase = PENALTY_FIRST
+			return _last_wanted_deg
+		PENALTY_FIRST:
+			return _penalty_manoeuvre_heading(telemetry, _penalty_gybe_first, PENALTY_BETWEEN)
+		PENALTY_BETWEEN:
+			if not _penalty_manoeuvre_done(free):
+				return _last_wanted_deg
+			if telemetry.speed_ms < PENALTY_GOING_MS:
+				# Getting going again on a reach before the other manoeuvre.
+				note = "penalty turn: getting going"
+				var reach_twa: float = maxf(absf(telemetry.twa_deg), _controller.auto_sheet_pilot.bear_away_twa_deg)
+				return wind_deg - tack * minf(reach_twa, PENALTY_GYBE_FROM_TWA_DEG)
+			_penalty_phase = PENALTY_SECOND
+			return _penalty_manoeuvre_heading(telemetry, not _penalty_gybe_first, PENALTY_SECOND + 1)
+		PENALTY_SECOND:
+			return _penalty_manoeuvre_heading(telemetry, not _penalty_gybe_first, PENALTY_SECOND + 1)
 		_:
-			# The gybe is under way or done: round it comes; the judge clears the penalty when the
-			# circle is complete, and the turn is over once the controller is free again.
-			if free and _time_s - _penalty_from_s > 8.0:
+			# The second manoeuvre pressed: round it comes; the judge clears the penalty when the circle
+			# is complete, and the turn is over once the controller is done with it.
+			if _penalty_manoeuvre_done(free):
 				_penalty_phase = 0
 				penalty_turns += 1
-			return wind_deg - tack * _upwind_twa_deg()
+			return wind_deg - tack * (_upwind_twa_deg() if _penalty_gybe_first else PENALTY_GYBE_FROM_TWA_DEG)
+
+
+## One manoeuvre of the penalty turn: the heading toward it, and the press once the board is there and
+## the controller is free (then the phase becomes next_phase). A gybe: bearing away to
+## PENALTY_GYBE_FROM_TWA_DEG held back to LOOP_AWAY_SPEED_MS (a gybe at 14 m/s put the sailor in the
+## water), pressed from 15 degrees short of it. A tack: heading up to the beat's angle, pressed once
+## closer to the wind than a beam reach and still moving at a walking pace and more (slower, it would
+## stop in the tack).
+func _penalty_manoeuvre_heading(telemetry: Telemetry, gybe: bool, next_phase: int) -> float:
+	var tack: float = _tack()
+	var wind_deg: float = telemetry.wind_from_bearing_deg
+	var free: bool = _controller.manoeuvre == PlayerController.Manoeuvre.NONE
+	if gybe:
+		note = "penalty turn: the gybe"
+		_hands.hold_speed_ms = LOOP_AWAY_SPEED_MS
+		if free and absf(telemetry.twa_deg) >= PENALTY_GYBE_FROM_TWA_DEG - 15.0:
+			_penalty_press(next_phase)
+		return wind_deg - tack * maxf(PENALTY_GYBE_FROM_TWA_DEG, absf(telemetry.twa_deg))
+	note = "penalty turn: the tack"
+	if free and absf(telemetry.twa_deg) < 90.0 and telemetry.speed_ms > PENALTY_GOING_MS - 1.0:
+		_penalty_press(next_phase)
+	return wind_deg - tack * _upwind_twa_deg()
+
+
+## Presses for the turn's manoeuvre now and moves on to the next phase.
+func _penalty_press(next_phase: int) -> void:
+	_hands.tack = true
+	_penalty_pressed_s = _time_s
+	_penalty_phase = next_phase
+
+
+## Whether the manoeuvre last pressed for is over: the controller free again after it. One the
+## controller did not begin (PENALTY_PRESS_AGAIN_S after the press, still free) is pressed again.
+func _penalty_manoeuvre_done(free: bool) -> bool:
+	if not free:
+		return false
+	if _manoeuvre_ended_s > _penalty_pressed_s:
+		return true
+	if _time_s - _penalty_pressed_s > PENALTY_PRESS_AGAIN_S:
+		_penalty_phase -= 1
+	return false
 
 
 ## Rule 6: another board close and getting closer makes it bear away a little (to pass to leeward
