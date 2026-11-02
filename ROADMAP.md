@@ -357,6 +357,7 @@ The open items are here; the design behind them (D1 to D7, the training's curric
 | GR5 | **The models.** `board.glb` needs a Blender rebuild for the flat tail (`tools/blender.sh tools/blender/build_rig_models.py`; Blender 4.5 is not on Max's PC, see TE2). Nobody has checked the 44 cm fin's look | `Game/assets/models/`, `tools/blender/` | TE2 | S | 0.2 |
 | GR6 | **The team's look at the effects and the water** (Phase 7's check, never done): the water's colour, the foam, the far edge, the spray, the wake and the splash | — | the team | S | 0.2 |
 | GR7 | **The fleet, seen:** the personas' gear visible (sail sizes and colours) and their names (D5 of AI_FLEET_PLAN.md) | `race/`, `windsurfer/rig_visuals.gd` | RA8 | M | later |
+| GR8 | **The waves run 90° off the wind on Max's screen** (2 November 2026, evening, the 0.2.0-beta.1 build; "a big disappointment"), and the beta waits on it. Session 67 found the physics, the shader, `shader_parameters()`, the HUD's and the mini-map's compass on one convention (north = −Z, `direction_for_bearing(b) = (sin b, −cos b)`), the top-down camera bow-up as its measurement assumed, and the lake's waves built from `wind_silvaplana.tres`'s 222 against the Maloja's 236 to 245: a 20° gap, not 90. Its measurement ([waves_direction.md](Documentation/reports/waves/waves_direction.md)) compared the rendered waves with numbers, not with what the player sees. Start from Max's screen: a screenshot of his situation (which water, which camera, the wind setting, the flag and the HUD's wind line in view), the crests against the flag; then the measurement's screen-to-world step; then the sails and the flag themselves, whether they stream with the sim's wind | `sim/wave_field.gd`, `world/water.gdshader`, `camera/camera_rig.gd`, `Documentation/reports/waves/` | Max's screenshot | M | 0.2, now |
 
 The map's details (the camping, trees, buildings and landmarks) are MA3.
 
@@ -442,7 +443,7 @@ Wind-made waves for the lake (Later L2, request R6) are PH11. Other water users 
 |---|---|---|---|---|---|
 | PR1 | **A license** for the repository. The old README said MIT; there is no LICENSE file | `LICENSE`, `README.md` | the team | S | 0.2 |
 | PR2 | **The GitHub Release page of 0.1.0.** The tag `v0.1.0` is on GitHub. The page with the zip and the changelog's text is made by hand (there is no `gh` on Max's PC); check that it is there | GitHub | Max | S | now |
-| PR3 | **The release of 0.2,** with the steps below | `Game/project.godot`, `CHANGELOG.md`, `README.md` | the 0.2 items | S | 0.2 |
+| PR3 | **The release of 0.2,** with the steps below. **The 0.2.0-beta.1 pre-release is prepared and on hold** (2 November 2026): the zip and the page's text are next to the repository (`../WindsurfingSimulator-0.2.0-beta.1-windows.zip`, `../release_notes_0.2.0-beta.1.md`), the tag `v0.2.0-beta.1` is local only (on 1352262, `gp/sea-follows-wind`), and `../publish_0.2.0-beta.1.bat` pushes the tag, makes the page as a pre-release and uploads the zip once its guard line is removed. It waits on GR8 | `Game/project.godot`, `CHANGELOG.md`, `README.md` | the 0.2 items; the beta on GR8 | S | 0.2 |
 | PR4 | **Later** (the rebuild plan): multiplayer, a rigged sailor, more boards and sails, a Linux export, maybe a web build | — | the team | L | later |
 
 ---

@@ -40,3 +40,15 @@ So the picture and the physics agree to a few degrees, and both run downwind wit
 
 - The default spread (0.25) is Max's direction by eye; Michiel may want another number, or the file's offsets narrowed for the validation sea too (then `test_the_default_set_has_the_same_four_waves_as_before_the_groups` and the validation move).
 - On the lake the chop's base is `wind_silvaplana.tres`'s 222 and does not follow the Maloja's turn through the day (−8° in the morning); the map's own wave direction (the fetch along the lake) would be the map track's item.
+
+## 6. Max's play-test of the beta: still 90° off (2 November 2026, evening)
+
+Max, playing the 0.2.0-beta.1 build: "the waves are still wrong, by 90 degrees"; the beta is on hold. So section 1's conclusion is contradicted by the player's eye, and this report is not the last word.
+
+What was checked afterwards, so it need not be repeated:
+
+- The physics, the shader, `WaveField.shader_parameters()`, the HUD's compass and the mini-map all use the same convention (north = −Z, east = +X, `direction_for_bearing(b) = (sin b, −cos b)`), and the shader's phase is the physics' phase on the world (x, z).
+- The top-down camera of `camera_rig.gd` is bow-up (its `look_at` takes the board's heading as up), as section 1's measurement assumed. The map's `top_camera.gd` is north-up; if a screenshot came from that camera, the measurement's bearing is off by the board's heading.
+- On the lake the waves are built once from `wind_silvaplana.tres`'s 222 while the Maloja wind blows from 236 to 245 through the day: a 20° gap, not 90.
+
+What the next session does first, with Max at the screen: a screenshot of his exact situation (the water, the camera, the wind setting, the flag and the HUD's wind line in view) and the crests compared with the flag and the sails, not with a number; then the measurement's screen-to-world step in `wave_direction.py`; then whether the flag and the sails stream with the sim's wind. ROADMAP GR8. The lesson of this report: a fix for what the player sees is verified on the player's screen, with the player.
