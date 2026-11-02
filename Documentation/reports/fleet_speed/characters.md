@@ -5,7 +5,7 @@ This is the caster's report (an Opus agent), written for the team and the lead. 
 ## 1. In short
 
 - **Twenty personas, from rookie to pro.** The twelve that existed are kept, and there are eight new ones: Hana (the pro), Bruno (the strong-wind sailor), Liv (the light-wind sailor), Yusuf (a slalom pro), Greta (an old hand), Tomas (a fearless youngster), Ravi (a club racer) and Pia (a beginner). Each is a skill sheet. The sheet sets the numbers the scripted skipper uses: the angles, the margins, the hands' reaction and noise, the start, the push slider, and the gear from the game's catalogue. Two new wind skills make light-wind and strong-wind specialists.
-- **Every persona finishes every race on T1 and T2 at 12, 18 and 24 kt**, both alone (120 races) and in a fleet of twenty (section 4).
+- **Every persona finishes every race on T1 and T2 at 12, 18 and 24 kt alone** (120 races, 3 falls). In the fleet of twenty, 119 of 120 finish. Ravi ran out of the race's 20-minute limit on T1 at 12 kt, 126 m from the finish, after four penalty circles. The fleet had 15 falls, most of them at 24 kt (section 4).
 - **The specialists show by wind, not by course.**
   - In wind: with their own gear, Liv's average place is 3.0 in 12 kt and 15.5 in 24 kt. Bruno's is 14.5 in 12 kt and 1.0 in 24 kt (he wins both 24 kt races). Sven's is 6.5 and 2.0.
   - From rookie to pro: Hana is 5.3 on average and the three weakest (Jonas, Pia, Ravi) are 17 to 19.
@@ -149,7 +149,50 @@ What it says:
 
 ### 4c. The twenty in a fleet
 
-FLEET_TABLE
+This is `tools/persona_matrix.sh --courses=t1_loop,t2_slalom --run=fleet`: the twenty together, on their own gear (the default), with the rules and the wind shadows, the 60 s countdown, seed 1. Each number is the place; D is a race not finished. The notes on the right are the tool's: three places better on one course, or in one wind, on average.
+
+```
+persona      t1@12     t1@18     t1@24     t2@12     t2@18     t2@24  falls  DNF   specialist?
+Aiko             1         1        18         9        14         2      1    0    light wind
+Bruno            4        18         5         5         2        15      5    0    light wind
+Elin             5        16         6         7        19        18      2    0   course (t1_loop) light wind
+Greta           12         2        17        15        16         9      0    0   course (t1_loop)
+Hana            15        12        14        20         4         7      1    0   slalom strong wind
+Ines            14         7        15        12        18         5      0    0    strong wind
+Jonas           18        20         9        18        13        10      0    0    strong wind
+Kofi            17         4        12        13         6         8      0    0    strong wind
+Lena             2         3        10         3         1        11      0    0    light wind
+Liv             13         9         4        10        20        16      1    0   course (t1_loop)
+Mara            10         6        13         6         3         4      0    0   slalom
+Marco            9        11        20        14         8        17      1    0    light wind
+Noor            11         8         3         8         5         6      1    0    strong wind
+Pavel            6        15         8        16        17        14      1    0   course (t1_loop)
+Pia             16        19        19        11        11        20      1    0   slalom light wind
+Ravi           D20        17        11         2         7        13      0    1   slalom
+Sven             3        13         7         1        10        19      0    0    light wind
+Tobias           7         5         2         4         9         3      0    0    strong wind
+Tomas           19        14        16        17        12        12      1    0    strong wind
+Yusuf            8        10         1        19        15         1      0    0   course (t1_loop) strong wind
+```
+
+- **119 of 120 finish.** Ravi did not finish T1 at 12 kt. He started 55 s late, turned four penalty circles in the crowd, and was 126 m from the finish line when the race's own 20-minute limit ran out (`RaceSim.time_limit_s` = 1200 s, which `--seconds` does not raise). Alone he sails that race in 13:35. In the game a slow board in a crowd can do the same.
+- **The falls: 15 in the fleet against 3 alone**: 4 on T1 at 18 kt, 1 on T2 at 18 kt, and 10 at 24 kt (6 on T1, 4 on T2). Bruno fell 5 times. The crowd (shadows, keep-clear bear-aways, penalty circles at speed) makes the difference. Before, the twelve fell 3 times in their 72 fleet races ([baseline](#4d-before-the-twelve-in-a-fleet-on-t1-and-t2)), on the default gear and without the new push.
+- **The places in a fleet of twenty are mostly the crowd's.** Hana, the pro, is 20th on T2 in 12 kt and 4th in 18 kt. Marco is 20th on T1 in 24 kt. The winners spread over eight personas. On T2 most boards turn one to four penalty circles, and in 12 kt the boards caught in others' wind shadows fall off the plane. The skills show alone (4b), not in this crowd.
+
+### 4d. Before: the twelve in a fleet on T1 and T2
+
+The twelve personas on gear/lead at 118fed6, before this package (`tools/race_matrix.sh --run=p12_before --seed=1`, the twelve as skippers; the 24 kt races on a copy of that code): all twelve finish all six races, with 3 falls (Kofi on T1 at 12 kt, Lena on T1 at 24 kt, Ines on T2 at 24 kt). The winners and the last:
+
+| Race | First | Last |
+|---|---|---|
+| T1 12 kt | Noor 13:53.4 | Jonas 19:05.4 |
+| T1 18 kt | Ines 7:55.3 | Jonas 9:24.1 |
+| T1 24 kt | Elin 6:32.7 | Jonas 8:25.5 |
+| T2 12 kt | Marco 5:05.6 | Aiko 8:09.4 |
+| T2 18 kt | Aiko 3:11.4 | Ines 4:11.5 |
+| T2 24 kt | Elin 2:33.5 | Tobias 3:58.4 |
+
+After, the twenty win T1 in 12:39.5 (Aiko), 7:45.4 (Aiko) and 6:46.0 (Yusuf), and T2 in 5:13.0 (Sven), 3:26.9 (Lena) and 2:43.0 (Yusuf). The 18 kt slalom is slower with twenty boards than with twelve, which is the crowd at the start and at the marks. A fleet of twelve and a fleet of twenty are not the same race, so the fair before-and-after is the alone table (4b) and the lever runs (section 5).
 
 ## 5. What each lever did, measured
 
@@ -217,6 +260,8 @@ Each line compares the twenty alone in the same six races (seed 1). "Sum" is the
 - **RA (the push on the 24 kt run, default gear):** on the default 8.0 the pushers still fall on the run at 120 to 136 degrees. The rule "no push while turning" (`PUSH_TURN_DEG`) did not show a cure in one seed. It is harmless on their own gear (2 falls). Several seeds would tell whether it helps or should go.
 - **RA (several seeds):** the alone matrix with seeds 1 to 3 would separate skill from luck in the top ten. Each seed is 120 races, about 45 minutes on 6 processes.
 - **RA (the fleet of twenty, the rules):** on T2 most boards turn one to four penalty circles. The crowd at a reaching start and at the gybe marks decides the places more than the sailing.
+- **RA (falls in company):** 15 falls in the fleet of twenty against 3 alone, most of them at 24 kt (Bruno 5). They are not found yet. The tracks are in `.sim_output/race_matrix_fleet/` (a speed below 3 m/s after above 6 is a fall). They are likely bear-aways to keep clear and penalty circles at speed.
+- **RA (the 20-minute limit):** `RaceSim.time_limit_s` (1200 s) ends a 12 kt T1 race before a slow board in a crowd finishes, and the race tool's `--seconds` does not raise it.
 - **RA, start (not this package's):** in 12 kt the start costs 33 to 97 s alone, and it decides T1's places (Hana started 97 s late in `final3`). On T2 at 24 kt the reaching start is over early (package 1's open items).
 - **GE / RA (a polar per sail):** the skipper times its legs and its start with the 8.0's polar on every sail. Per sail size, `tools/push_check.sh --gear_sail=<id>` (and `--gear_board`, `--gear_fin`) at 12, 18 and 24 kt, then `Skipper.take_polar()` per board.
 - **PH (the sail sizes, PH14):** on their own gear the twenty were 8.5 % faster in 12 kt (8.0 to 9.0 sails, 122 to 129 L boards) and fell 2 times instead of 11 in 24 kt on 5.9 to 7.6 sails. The order of the sizes and the boards in strong wind is Michiel's to judge.
@@ -235,4 +280,4 @@ Each line compares the twenty alone in the same six races (seed 1). "Sum" is the
 
 ## 9. The tokens
 
-The caster (Opus, effort xhigh): about 0.55 M tokens of the 0.6 M budget. Most of it went on reading the code and the results; the measuring itself ran in the background, about 1,000 headless races in some nine hours beside the training night.
+The caster (Opus, effort xhigh): about 0.6 M tokens, the whole budget. Most of it went on reading the code and the results; the measuring itself ran in the background, about 1,000 headless races in some nine hours beside the training night.
