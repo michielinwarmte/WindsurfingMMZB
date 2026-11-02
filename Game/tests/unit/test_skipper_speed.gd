@@ -144,7 +144,10 @@ func test_the_games_polar_pushes_nowhere_but_a_character_can() -> void:
 		assert_true(is_nan(skipper._push_level(telemetry)), "no easing on the beat either")
 	telemetry.twa_deg = -130.0
 	skipper.config.push_offset = 0.1
+	skipper._last_wanted_deg = telemetry.heading_deg + 5.0
 	assert_false(is_nan(skipper._push_level(telemetry)), "it pushes on the run")
+	skipper._last_wanted_deg = telemetry.heading_deg + 40.0
+	assert_true(is_nan(skipper._push_level(telemetry)), "but not while it bears away onto it")
 
 
 ## The game's polar with a push table that pushes the 18 and 24 kt reaches (70 to 110 degrees) at 95 %,

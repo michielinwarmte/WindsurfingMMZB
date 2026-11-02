@@ -98,8 +98,12 @@ const PUSH_MAX: float = 0.15
 ## the pilot's own margin (a slider taken at all sails a little differently from the pilot's margin).
 const PUSH_DEAD_ZONE: float = 0.02
 
-## How big a rig it chooses (gear_for()): a light-wind sailor rigs big, a strong-wind sailor small,
-## and a risk-taker a size up. 0.5 is the middle of what the catalogue says fits the wind.
+## How big a rig it chooses (gear_for()): a middling sailor RIG_POWER_MIDDLE of the way from the
+## smallest to the biggest item the catalogue says fits the wind; a light-wind sailor bigger, a
+## strong-wind sailor smaller, and a risk-taker a size up. Measured alone on T1 and T2: the middle of
+## the catalogue's range (0.5) rigged 7.5 to 7.8 in 18 kt, 3 % slower than the default 8.0 (as
+## package 1 measured); three quarters up rigs about the 8.0 there (characters.md).
+const RIG_POWER_MIDDLE: float = 0.75
 const RIG_FROM_WIND_SKILLS: float = 0.5
 const RIG_FROM_RISK: float = 0.4
 
@@ -188,10 +192,10 @@ static func push_offset_for(risk_today: float, speed_today: float) -> float:
 
 
 ## How big a rig it chooses, 0 (the smallest that fits the wind: in control) to 1 (the biggest:
-## all the power it can hold): a light-wind sailor rigs big, a strong-wind sailor small, a
-## risk-taker a size up.
+## all the power it can hold): RIG_POWER_MIDDLE for a middling sailor, a light-wind sailor bigger, a
+## strong-wind sailor smaller, a risk-taker a size up.
 func rig_power() -> float:
-	return clampf(0.5 + (light_wind - strong_wind) * RIG_FROM_WIND_SKILLS + (risk - 0.5) * RIG_FROM_RISK, 0.0, 1.0)
+	return clampf(RIG_POWER_MIDDLE + (light_wind - strong_wind) * RIG_FROM_WIND_SKILLS + (risk - 0.5) * RIG_FROM_RISK, 0.0, 1.0)
 
 
 ## The gear it sails in a wind (knots), from the gear catalogue (GE5): its sail brand's sail and its
