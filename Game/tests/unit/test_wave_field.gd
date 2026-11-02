@@ -272,6 +272,24 @@ func test_a_swell_from_a_compass_bearing_stays_when_the_wind_turns() -> void:
 	assert_almost_eq(field.dir_z[1], -1.0, 1e-9)
 
 
+func test_a_chop_from_a_compass_bearing_stays_when_the_wind_turns() -> void:
+	var set_config: WaveSetConfig = _swell_and_chop()
+	set_config.swell_relative_to_wind = true
+	set_config.swell_offset_deg = 0.0
+	set_config.chop_relative_to_wind = false
+	set_config.chop_from_deg = 0.0  # from the North: it travels South, +Z, whatever the wind
+	var field: WaveField = WaveField.new(set_config, null, 270.0)
+	assert_almost_eq(field.dir_x[0], 1.0, 1e-9, "the swell travels East, downwind of a West wind")
+	assert_almost_eq(field.dir_x[1], 0.0, 1e-9, "the chop travels South, from its own bearing")
+	assert_almost_eq(field.dir_z[1], 1.0, 1e-9)
+	field.set_wind_bearing(180.0)  # the wind turns to the South
+	assert_almost_eq(field.dir_z[0], -1.0, 1e-9, "the swell turned with the wind: North")
+	assert_almost_eq(field.dir_z[1], 1.0, 1e-9, "the chop has not moved")
+	set_config.chop_offset_deg = 90.0  # a quarter turn clockwise from its travel direction: West
+	field.set_wind_bearing(180.0)
+	assert_almost_eq(field.dir_x[1], -1.0, 1e-9, "the offset turns the chop from its own bearing")
+
+
 func test_a_swell_relative_to_the_wind_turns_with_it() -> void:
 	var set_config: WaveSetConfig = _swell_and_chop()
 	set_config.swell_relative_to_wind = true

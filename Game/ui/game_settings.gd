@@ -23,6 +23,9 @@ var values: SettingsValues = SettingsValues.new()
 var path: String = DEFAULT_PATH
 
 var _screenshot_run: bool = false
+## The graphics settings as last applied to the picture (apply_display()), so a change of
+## the wind or the waves does not set the picture again.
+var _applied_display: String = ""
 
 
 # The file is read as soon as this autoload is made, before any scene: the first scene's
@@ -67,11 +70,18 @@ func reset_to_defaults() -> void:
 
 
 ## Applies the graphics and the sound settings to the running game. In headless runs (the
-## tests) there is no window or picture, so only the sound is set.
+## tests) there is no window or picture, so only the sound is set. The picture is only set
+## when a graphics setting changed: every slider of the menu (the wind, the waves) comes
+## through here, and setting the shadow atlas, the scaling and the window again at each
+## step made the menu stutter (Session 67).
 func apply_display() -> void:
 	_apply_audio()
 	if DisplayServer.get_name() == "headless":
 		return
+	var wanted: String = "%d/%.2f/%d/%s/%s/%d" % [values.msaa, values.render_scale, values.shadow_quality, values.fullscreen, values.vsync, values.max_fps]
+	if wanted == _applied_display:
+		return
+	_applied_display = wanted
 	var root: Window = get_tree().root
 	# Anti-aliasing smooths the jagged edges of the 3D picture (0 off to 3 = 8x).
 	root.msaa_3d = values.msaa as Viewport.MSAA

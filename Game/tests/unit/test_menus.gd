@@ -62,14 +62,65 @@ func test_the_wind_and_the_sea_change_live_while_sailing() -> void:
 	assert_true(windsurfer.sim.wind.config.gusts_enabled)
 	var water: WaveField = windsurfer.sim.water as WaveField
 	assert_almost_eq(water.total_amplitude_m(), 0.08 + 0.04 + 0.015 + 0.006, 1e-5, "the medium chop at once, no restart needed")
-	# The chop lines up with the wind you set: from the South, its 7 m wave (offset -28 from
-	# downwind) travels toward bearing 332.
-	assert_almost_eq(water.dir_x[1], sin(deg_to_rad(332.0)), 1e-6, "the waves follow the new wind direction")
-	assert_almost_eq(water.dir_z[1], -cos(deg_to_rad(332.0)), 1e-6)
+	# The chop lines up with the wind you set: from the South, its 7 m wave (the file's -28
+	# from downwind at the default spread) travels toward bearing 360 - 28 x spread.
+	var expected: Vector2 = WaveField.direction_for_bearing(360.0 - 28.0 * SettingsValues.WAVE_SPREAD_DEFAULT)
+	assert_almost_eq(water.dir_x[1], expected.x, 1e-6, "the waves follow the new wind direction")
+	assert_almost_eq(water.dir_z[1], expected.y, 1e-6)
 	assert_eq(scene.get_node("Ocean").get_child_count(), 2, "the old water meshes are gone")
 	# Nothing left waiting for a restart (the pause menu's note).
 	scene.get_node("PauseMenu").restart_requested.emit()
-	assert_almost_eq((windsurfer.sim.water as WaveField).dir_x[1], sin(deg_to_rad(332.0)), 1e-6, "the same sea after a restart")
+	assert_almost_eq((windsurfer.sim.water as WaveField).dir_x[1], expected.x, 1e-6, "the same sea after a restart")
+
+
+## The route a player takes: Esc, Settings, the "Wind from" slider on the Wind tab, Back.
+func test_a_wind_direction_set_in_the_pause_menu_turns_the_waves_at_once() -> void:
+	var scene: SailingScene = (load("res://main.tscn") as PackedScene).instantiate()
+	add_child_autofree(scene)
+	var windsurfer: WindsurferNode = scene.get_node("Windsurfer")
+	var pause_menu: PauseMenu = scene.get_node("PauseMenu")
+	pause_menu.open("")
+	pause_menu.open_page("settings")
+	var settings: SettingsMenu = pause_menu.find_child("Settings", true, false) as SettingsMenu
+	assert_not_null(settings, "the settings page of the pause menu")
+	var slider: HSlider = _slider_after_label(settings.find_child("WindRows", true, false) as GridContainer, "Wind from")
+	assert_not_null(slider, "the Wind from slider")
+	slider.value = 90.0
+	settings.close()
+	assert_almost_eq(windsurfer.sim.wind.config.from_bearing_deg, 90.0, 1e-6, "the wind at once")
+	var water: WaveField = windsurfer.sim.water as WaveField
+	var expected: Vector2 = WaveField.direction_for_bearing(270.0 - 28.0 * SettingsValues.WAVE_SPREAD_DEFAULT)
+	assert_almost_eq(water.dir_x[1], expected.x, 1e-6, "the chop runs downwind of the East wind, at once")
+	assert_almost_eq(water.dir_z[1], expected.y, 1e-6)
+	pause_menu.close()
+
+
+## The chop set to a compass bearing in the settings stays there when the wind turns.
+func test_a_chop_from_a_bearing_stays_when_the_player_turns_the_wind() -> void:
+	GameSettings.values.chop_follows_wind = false
+	GameSettings.values.chop_from_deg = 0.0  # from the North: it travels South
+	GameSettings.values.wave_spread = 0.0
+	var scene: SailingScene = (load("res://main.tscn") as PackedScene).instantiate()
+	add_child_autofree(scene)
+	var windsurfer: WindsurferNode = scene.get_node("Windsurfer")
+	var water: WaveField = windsurfer.sim.water as WaveField
+	assert_almost_eq(water.dir_z[1], 1.0, 1e-6, "the chop travels South under a West wind")
+	GameSettings.values.wind_from_deg = 90.0
+	scene.apply_settings_live()
+	water = windsurfer.sim.water as WaveField
+	assert_almost_eq(water.dir_z[1], 1.0, 1e-6, "and still South under an East wind")
+	assert_almost_eq(water.dir_x[1], 0.0, 1e-6)
+
+
+## The slider in the row whose name is `title` (the rows are a label, a control, a text).
+func _slider_after_label(grid: GridContainer, title: String) -> HSlider:
+	var found: bool = false
+	for child: Node in grid.get_children():
+		if child is Label and (child as Label).text == title:
+			found = true
+		elif found and child is HSlider:
+			return child as HSlider
+	return null
 
 
 func test_in_a_race_a_new_sea_waits_for_the_restart() -> void:

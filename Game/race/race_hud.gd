@@ -153,7 +153,9 @@ func set_watching(board_name: String, follows_leader: bool) -> void:
 ## shadow_deficit: the share of the wind the other sails' shadows take from this board right now
 ## (RaceRunner.shadow_deficit(); 0: none), shown on the wind line when it is more than a few percent.
 ## rules: the judge (RaceRules), for the penalty warning and the penalty carried; null for none.
-func update_from(race: RaceSim, index: int, t: Telemetry, shadow_deficit: float = 0.0, rules: RaceRules = null) -> void:
+## push_level: the board's push slider (PlayerController.push_level, 0 to 1), on the wind line as
+## "push 75 %" so the player sees Up and Down work in a race too; NaN for a board without one.
+func update_from(race: RaceSim, index: int, t: Telemetry, shadow_deficit: float = 0.0, rules: RaceRules = null, push_level: float = NAN) -> void:
 	var tack: String = "starboard tack" if t.twa_deg >= 0.0 else "port tack"
 	var state: String = "planing" if t.is_planing else ("luffing" if t.is_luffing else "")
 	if t.sailor_state == 1:
@@ -165,7 +167,8 @@ func update_from(race: RaceSim, index: int, t: Telemetry, shadow_deficit: float 
 	var turn: String = turn_text(relative_bearing_deg(here, race.next_target(index), t.heading_deg))
 	var lines: PackedStringArray = PackedStringArray()
 	var shadow: String = "   in a wind shadow: %d %% less" % roundi(100.0 * shadow_deficit) if shadow_deficit >= 0.03 else ""
-	lines.append("wind %2.0f kt from %s%s" % [t.tws_10m_kt, compass_name(t.wind_from_bearing_deg), shadow])
+	var push: String = "   push %3.0f %%" % (push_level * 100.0) if not is_nan(push_level) else ""
+	lines.append("wind %2.0f kt from %s%s%s" % [t.tws_10m_kt, compass_name(t.wind_from_bearing_deg), push, shadow])
 	if race.phase() == RaceSim.Phase.PRE_START:
 		var left: float = race.countdown_s()
 		_countdown.text = "%d" % ceili(left)

@@ -4368,12 +4368,15 @@ Godot layout (one Resource, D5): `WaveSetConfig extends Resource` with `enable_w
 **9.15 Two groups: the swell and the chop (Session 39).**
 Real water carries two kinds of waves. The **swell** is long waves made by wind somewhere else, hours or days ago; it can come from any direction, also across or against the wind you sail in. The **chop** is the short waves the wind on the spot makes; it travels with that wind. So every wave of the set belongs to one group (`GerstnerWaveConfig.group`), and each group has its own direction:
 ```
-chop_bearing_deg  = wind_from_bearing_deg + 180 + chop_offset_deg
+chop_bearing_deg  = wind_from_bearing_deg + 180 + chop_offset_deg      if chop_relative_to_wind
+                  = chop_from_deg + 180 + chop_offset_deg              otherwise (Session 67: a lake's or a bay's sea runs along its length while the wind veers)
 swell_bearing_deg = wind_from_bearing_deg + 180 + swell_offset_deg     if swell_relative_to_wind
                   = swell_from_deg + 180                               otherwise (a swell FROM the North travels South)
 travel_bearing_deg_i = group_bearing_deg + direction_offset_deg_i      (then d_i by 9.2)
 ```
-The per-wave `direction_offset_deg` still spreads the waves of a group a little around its direction, as on real water. `WaveField.set_wind_bearing()` turns the chop, and the swell only when it is relative to the wind; a swell from a fixed bearing stays put (9.12 still applies: only the *base* wind, never the gusts and shifts). The four shader slots take the active waves in list order whatever their group, so the shader contract of 9.13 is unchanged.
+The per-wave `direction_offset_deg` still spreads the waves of a group a little around its direction, as on real water. `WaveField.set_wind_bearing()` turns the chop and the swell only when they are relative to the wind; a group from a fixed bearing stays put (9.12 still applies: only the *base* wind, never the gusts and shifts). The four shader slots take the active waves in list order whatever their group, so the shader contract of 9.13 is unchanged.
+
+The game's settings (Session 67, `SettingsValues.build_wave_set_config()`) put a *spread* on top: every wave's `direction_offset_deg` and the swell's `swell_offset_deg` are multiplied by `wave_spread` (0 to 1; the menu's "Wave spread", default 0.25), so the player's sea runs visibly with the wind (the chop within ±14° of downwind, the swell +3°) where the file's full spread (−28, +40, −55 and +12) looked as if the waves ignored the wind. The file and the validation suite's sea are unchanged; `wave_spread = 1` is the file's sea.
 
 The default set (`waves_default.tres`) is the Session 36 sea in this form: the 14 m wave is the swell, relative to the wind with `swell_offset_deg = +12` and its own offset 0; the 7 m, 3.5 m and 1.8 m waves are the chop with their old offsets (−28, +40, −55) and `chop_offset_deg = 0`. With the wind from 270 every wave has exactly the direction, length, amplitude and steepness it had before (`test_the_default_set_has_the_same_four_waves_as_before_the_groups`), so the validation suite's sea runs did not move. The settings menu (Waves tab) sets the swell's direction (with the wind, or a compass bearing), the swell's own height scale (0 = no swell, as on a lake), the chop's offset from downwind, and offers the wind-made chop of 9.16 as the preset "From the wind".
 

@@ -24,6 +24,8 @@ func test_defaults_match_the_default_wind_file() -> void:
 	assert_true(settings.swell_follows_wind, "the default file's swell follows the wind")
 	assert_almost_eq(settings.swell_height_scale, 1.0, TOL)
 	assert_almost_eq(settings.chop_offset_deg, 0.0, TOL)
+	assert_true(settings.chop_follows_wind, "the default file's chop follows the wind")
+	assert_almost_eq(settings.wave_spread, SettingsValues.WAVE_SPREAD_DEFAULT, TOL)
 	assert_almost_eq(settings.fetch_km, 3.0, TOL)
 	assert_almost_eq(settings.water_depth_m, SettingsValues.DEPTH_DEEP_M, TOL, "deep water")
 	assert_eq(settings.control_mode, PlayerController.Mode.BEGINNER)
@@ -61,6 +63,9 @@ func test_round_trip_through_a_file() -> void:
 	saved.sailor_view = false
 	saved.camera_close = false
 	saved.chop_offset_deg = -30.0
+	saved.chop_follows_wind = false
+	saved.chop_from_deg = 45.0
+	saved.wave_spread = 0.5
 	saved.fetch_km = 1.5
 	saved.water_depth_m = 2.0
 	saved.control_mode = PlayerController.Mode.ADVANCED
@@ -99,6 +104,9 @@ func test_round_trip_through_a_file() -> void:
 	assert_almost_eq(loaded.swell_from_deg, 0.0, TOL)
 	assert_almost_eq(loaded.swell_height_scale, 2.5, TOL)
 	assert_almost_eq(loaded.chop_offset_deg, -30.0, TOL)
+	assert_false(loaded.chop_follows_wind)
+	assert_almost_eq(loaded.chop_from_deg, 45.0, TOL)
+	assert_almost_eq(loaded.wave_spread, 0.5, TOL)
 	assert_almost_eq(loaded.fetch_km, 1.5, TOL)
 	assert_almost_eq(loaded.water_depth_m, 2.0, TOL)
 	assert_eq(loaded.control_mode, PlayerController.Mode.ADVANCED)
@@ -134,8 +142,12 @@ func test_a_broken_file_is_clamped_and_falls_back() -> void:
 	config.set_value("waves", "chop_offset_deg", 400.0)
 	config.set_value("waves", "fetch_km", 0.0)
 	config.set_value("waves", "swell_from_deg", -45.0)
+	config.set_value("waves", "chop_from_deg", -90.0)
+	config.set_value("waves", "spread", 5.0)
 	var settings: SettingsValues = SettingsValues.new()
 	settings.read_from(config)
+	assert_almost_eq(settings.chop_from_deg, 270.0, TOL, "-90 is 270")
+	assert_almost_eq(settings.wave_spread, SettingsValues.WAVE_SPREAD_MAX, TOL, "clamped to the slider's range")
 	assert_almost_eq(settings.wind_speed_kt, SettingsValues.WIND_SPEED_MAX_KT, TOL, "clamped to the slider's range")
 	assert_almost_eq(settings.wind_from_deg, 270.0, TOL, "-90 is 270")
 	assert_false(settings.gusts_enabled, "not a bool: the old value stays")
@@ -179,6 +191,28 @@ func test_swell_preset_is_the_default_wave_file() -> void:
 		assert_almost_eq(waves.waves[i].amplitude_m, default_waves.waves[i].amplitude_m, TOL)
 		assert_almost_eq(waves.waves[i].steepness, default_waves.waves[i].steepness, TOL)
 		assert_almost_eq(waves.waves[i].wavelength_m, default_waves.waves[i].wavelength_m, TOL)
+
+
+func test_the_chop_from_a_bearing_and_the_spread_reach_the_wave_set() -> void:
+	var settings: SettingsValues = SettingsValues.new()
+	settings.chop_follows_wind = false
+	settings.chop_from_deg = 45.0
+	settings.wave_spread = 0.0
+	var waves: WaveSetConfig = settings.build_wave_set_config()
+	assert_false(waves.chop_relative_to_wind)
+	assert_almost_eq(waves.chop_from_deg, 45.0, TOL)
+	assert_almost_eq(waves.chop_travel_bearing_deg(270.0), 225.0, TOL, "from the North-East, whatever the wind")
+	for wave: GerstnerWaveConfig in waves.waves:
+		assert_almost_eq(wave.direction_offset_deg, 0.0, TOL, "no spread: every wave straight along its group")
+	assert_almost_eq(waves.swell_offset_deg, 0.0, TOL)
+	settings.wave_spread = 1.0
+	var spread: WaveSetConfig = settings.build_wave_set_config()
+	var default_waves: WaveSetConfig = load("res://config/waves_default.tres")
+	for i: int in spread.waves.size():
+		assert_almost_eq(spread.waves[i].direction_offset_deg, default_waves.waves[i].direction_offset_deg, TOL, "full spread: the file's offsets")
+	assert_almost_eq(spread.swell_offset_deg, default_waves.swell_offset_deg, TOL)
+	assert_almost_eq(default_waves.waves[1].direction_offset_deg, -28.0, TOL, "the default file is not changed")
+	assert_almost_eq(SettingsValues.largest_wave_offset_deg(), 55.0, TOL, "the ripple's 55 is the file's largest")
 
 
 func test_chop_presets_have_the_session_37_numbers() -> void:
@@ -244,6 +278,7 @@ func test_the_swell_and_the_chop_get_their_own_directions_and_heights() -> void:
 	settings.swell_from_deg = 0.0
 	settings.swell_height_scale = 2.0
 	settings.chop_offset_deg = 20.0
+	settings.wave_spread = 1.0  # the file's full spread: the long chop's own -28
 	var waves: WaveSetConfig = settings.build_wave_set_config()
 	assert_false(waves.swell_relative_to_wind)
 	assert_almost_eq(waves.swell_from_deg, 0.0, TOL)

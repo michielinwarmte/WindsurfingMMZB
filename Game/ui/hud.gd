@@ -262,7 +262,7 @@ func set_race_mode(on: bool, spectating: bool = false) -> void:
 	_strip.visible = not on
 	if on:
 		set_detail_visible(false)
-		_help.text = "A/D turn   W/S sheet   Space tack/gybe   1-4 camera   R race again   Esc menu   F1 telemetry"
+		_help.text = "Up/Down push   A/D turn   W/S sheet   Space tack/gybe   1-4 camera   R race again   Esc menu   F1 telemetry"
 		if spectating:
 			_help.text = "Tab next board   Shift+Tab previous   L follow the leader   1-4 camera   R race again   Esc menu   F1 telemetry"
 

@@ -46,6 +46,13 @@ const SWELL_SCALE_MIN: float = 0.0
 const SWELL_SCALE_MAX: float = 3.0
 ## How far the chop may be turned from straight downwind, degrees either way.
 const CHOP_OFFSET_MAX_DEG: float = 90.0
+## How far the waves of a group are spread around its direction: 0 is every wave straight
+## along it (long, parallel crests), 1 the default file's spread (the chop up to 55 degrees
+## off, the swell 12: a jumbled sea that looks as if the waves ignore the wind). The default
+## is narrow: the sea visibly runs with the wind (Max, Session 67).
+const WAVE_SPREAD_MIN: float = 0.0
+const WAVE_SPREAD_MAX: float = 1.0
+const WAVE_SPREAD_DEFAULT: float = 0.25
 ## The fetch of the From the wind sea: the open water upwind, km.
 const FETCH_MIN_KM: float = 0.2
 const FETCH_MAX_KM: float = 20.0
@@ -87,8 +94,15 @@ var swell_follows_wind: bool
 var swell_from_deg: float
 ## Multiplies the height (and the steepness) of the swell only, on top of wave_height_scale.
 var swell_height_scale: float
-## The chop's direction as an offset from straight downwind, degrees (positive = clockwise).
+## The chop's direction as an offset from straight downwind (or from its bearing's travel
+## direction), degrees (positive = clockwise).
 var chop_offset_deg: float
+## true: the chop follows the wind; false: it comes from chop_from_deg, whatever the wind does.
+var chop_follows_wind: bool
+## Compass bearing the chop comes FROM when it does not follow the wind, degrees.
+var chop_from_deg: float
+## The waves' spread around their group's direction, WAVE_SPREAD_MIN to WAVE_SPREAD_MAX.
+var wave_spread: float
 ## From the wind: the open water upwind (km) and the depth (m; DEPTH_DEEP_M = deep water).
 var fetch_km: float
 var water_depth_m: float
@@ -165,6 +179,9 @@ func reset_to_defaults() -> void:
 	swell_from_deg = waves.swell_from_deg
 	swell_height_scale = 1.0
 	chop_offset_deg = waves.chop_offset_deg
+	chop_follows_wind = waves.chop_relative_to_wind
+	chop_from_deg = waves.chop_from_deg
+	wave_spread = WAVE_SPREAD_DEFAULT
 	fetch_km = 3.0
 	water_depth_m = DEPTH_DEEP_M
 
@@ -232,11 +249,17 @@ func build_wave_set_config() -> WaveSetConfig:
 			_set_chop(config, STRONG_CHOP_AMPLITUDES_M, STRONG_CHOP_STEEPNESS)
 		WavePreset.FROM_WIND:
 			_set_chop_from_wind(config)
-	# The directions: the swell from the wind (at the file's offset) or from a bearing, the
-	# chop turned from downwind.
+	# The directions: the swell and the chop each from the wind (at the file's offset) or from
+	# a bearing, the chop turned from its base; and the spread of the waves around their
+	# group's direction, from the file's full spread down to none.
 	config.swell_relative_to_wind = swell_follows_wind
 	config.swell_from_deg = swell_from_deg
+	config.chop_relative_to_wind = chop_follows_wind
+	config.chop_from_deg = chop_from_deg
 	config.chop_offset_deg = chop_offset_deg
+	config.swell_offset_deg *= wave_spread
+	for wave: GerstnerWaveConfig in config.waves:
+		wave.direction_offset_deg *= wave_spread
 	# A higher wave of the same length is steeper in proportion (steepness = 2 pi A / L), so
 	# both scale together.
 	for wave: GerstnerWaveConfig in config.waves_in_group(GerstnerWaveConfig.Group.SWELL):
@@ -261,6 +284,17 @@ func _set_chop_from_wind(config: WaveSetConfig) -> void:
 	var waves: Array[GerstnerWaveConfig] = config.waves_in_group(GerstnerWaveConfig.Group.SWELL)
 	waves.append_array(WindWaves.chop_waves(wind_speed_kt * SimMath.KNOT_MS, fetch_km * 1000.0, wind_wave_depth_m()))
 	config.waves = waves
+
+
+## The largest offset a wave of the default file has from its group's direction, degrees
+## (the chop's 55): the spread slider's text says how far the waves go at a setting.
+static func largest_wave_offset_deg() -> float:
+	var waves: WaveSetConfig = load(WAVES_DEFAULT_PATH)
+	var largest: float = 0.0
+	for wave: GerstnerWaveConfig in waves.waves:
+		if wave != null:
+			largest = maxf(largest, absf(wave.direction_offset_deg))
+	return largest
 
 
 ## The depth WindWaves gets: the slider's value, or deep water at the top of its range.
@@ -289,7 +323,7 @@ func _keep_crests_from_folding(config: WaveSetConfig) -> void:
 ## sailing scene compares it to decide whether the water must be built again.
 func sea_signature() -> String:
 	var signature: String = "%s/%d/%.2f/%.0f" % [waves_enabled, wave_preset, wave_height_scale, wind_from_deg]
-	signature += "/swell %s %.0f %.2f/chop %.0f" % [swell_follows_wind, swell_from_deg, swell_height_scale, chop_offset_deg]
+	signature += "/swell %s %.0f %.2f/chop %s %.0f %.0f/spread %.2f" % [swell_follows_wind, swell_from_deg, swell_height_scale, chop_follows_wind, chop_from_deg, chop_offset_deg, wave_spread]
 	if wave_preset == WavePreset.FROM_WIND:
 		signature += "/made by %.0f kt over %.1f km, %.1f m deep" % [wind_speed_kt, fetch_km, water_depth_m]
 	return signature
@@ -315,6 +349,9 @@ func write_to(config: ConfigFile) -> void:
 	config.set_value("waves", "swell_from_deg", swell_from_deg)
 	config.set_value("waves", "swell_height_scale", swell_height_scale)
 	config.set_value("waves", "chop_offset_deg", chop_offset_deg)
+	config.set_value("waves", "chop_follows_wind", chop_follows_wind)
+	config.set_value("waves", "chop_from_deg", chop_from_deg)
+	config.set_value("waves", "spread", wave_spread)
 	config.set_value("waves", "fetch_km", fetch_km)
 	config.set_value("waves", "depth_m", water_depth_m)
 
@@ -362,6 +399,9 @@ func read_from(config: ConfigFile) -> void:
 	swell_from_deg = fposmod(_float(config, "waves", "swell_from_deg", swell_from_deg), 360.0)
 	swell_height_scale = clampf(_float(config, "waves", "swell_height_scale", swell_height_scale), SWELL_SCALE_MIN, SWELL_SCALE_MAX)
 	chop_offset_deg = clampf(_float(config, "waves", "chop_offset_deg", chop_offset_deg), -CHOP_OFFSET_MAX_DEG, CHOP_OFFSET_MAX_DEG)
+	chop_follows_wind = _bool(config, "waves", "chop_follows_wind", chop_follows_wind)
+	chop_from_deg = fposmod(_float(config, "waves", "chop_from_deg", chop_from_deg), 360.0)
+	wave_spread = clampf(_float(config, "waves", "spread", wave_spread), WAVE_SPREAD_MIN, WAVE_SPREAD_MAX)
 	fetch_km = clampf(_float(config, "waves", "fetch_km", fetch_km), FETCH_MIN_KM, FETCH_MAX_KM)
 	water_depth_m = clampf(_float(config, "waves", "depth_m", water_depth_m), DEPTH_MIN_M, DEPTH_DEEP_M)
 
@@ -487,6 +527,8 @@ func conditions_text() -> String:
 			sea += " x%.1f" % wave_height_scale
 		if not swell_follows_wind and swell_height_scale > 0.0:
 			sea += ", swell from %s" % compass_name(swell_from_deg)
+		if not chop_follows_wind:
+			sea += ", chop from %s" % compass_name(chop_from_deg)
 	var extras: String = ""
 	if gusts_enabled:
 		extras += ", gusty"

@@ -5,8 +5,22 @@ extends GutTest
 
 const TEST_PATH: String = "user://test_time_trials.cfg"
 
+var _saved_values: SettingsValues
+var _saved_path: String
+
+
+func before_each() -> void:
+	# The tests use the default settings (a record's key holds the settings' wind, so the
+	# player's own settings file would change it) and never write that file.
+	_saved_values = GameSettings.values
+	_saved_path = GameSettings.path
+	GameSettings.values = SettingsValues.new()
+	GameSettings.path = ""
+
 
 func after_each() -> void:
+	GameSettings.values = _saved_values
+	GameSettings.path = _saved_path
 	if FileAccess.file_exists(TEST_PATH):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_PATH))
 

@@ -41,7 +41,7 @@ func _init(wave_set: WaveSetConfig, water_config: WaterConfig = null, wind_from_
 
 
 ## Computes the derived values from the config and the base wind bearing. A new wind
-## direction turns the chop, and the swell only when it is relative to the wind: a swell
+## direction turns the chop and the swell only when they are relative to the wind: a group
 ## from a compass bearing stays where it is (9.15).
 func set_wind_bearing(wind_from_bearing_deg: float) -> void:
 	k.clear()

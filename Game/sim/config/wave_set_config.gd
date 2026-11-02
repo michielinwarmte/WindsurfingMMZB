@@ -7,8 +7,9 @@ extends Resource
 ## The waves come in two groups, each with its own direction (section 9.15):
 ##   - the swell: long waves made by wind far away. They can come from any direction:
 ##     with the local wind (an offset from downwind) or from a fixed compass bearing.
-##   - the chop: the waves the local wind makes. They always travel with the wind, turned
-##     by chop_offset_deg.
+##   - the chop: the waves the local wind makes. They travel with the wind, turned by
+##     chop_offset_deg; or, like the swell, from a fixed compass bearing (a lake's or a bay's
+##     sea runs along its length while the wind veers; Max, Session 67).
 ## Each wave says which group it belongs to (GerstnerWaveConfig.group), and its own
 ## direction_offset_deg spreads it a little around its group's direction.
 
@@ -32,9 +33,16 @@ const MAX_WAVES: int = 4
 @export_range(0.0, 360.0) var swell_from_deg: float = 270.0
 
 @export_group("Chop")
-## The chop's direction as an offset from the downwind bearing, degrees, positive =
-## clockwise seen from above (0: the chop travels straight downwind).
+## true: the chop travels downwind, turned by chop_offset_deg, and turns with the wind.
+## false: it comes FROM the compass bearing chop_from_deg (turned by chop_offset_deg too),
+## whatever the wind does.
+@export var chop_relative_to_wind: bool = true
+## The chop's direction as an offset from its base bearing (downwind, or the travel bearing
+## of chop_from_deg), degrees, positive = clockwise seen from above (0: straight along it).
 @export_range(-90.0, 90.0) var chop_offset_deg: float = 0.0
+## Without chop_relative_to_wind: the compass bearing the chop comes FROM, degrees, said
+## the same way as the wind.
+@export_range(0.0, 360.0) var chop_from_deg: float = 270.0
 
 
 ## The waves that count: an amplitude above zero, at most MAX_WAVES of them.
@@ -64,9 +72,12 @@ func swell_travel_bearing_deg(wind_from_bearing_deg: float) -> float:
 	return swell_from_deg + 180.0
 
 
-## The compass bearing the chop travels toward, degrees: downwind, turned by the offset.
+## The compass bearing the chop travels toward, degrees: downwind (or from its own bearing),
+## turned by the offset.
 func chop_travel_bearing_deg(wind_from_bearing_deg: float) -> float:
-	return wind_from_bearing_deg + 180.0 + chop_offset_deg
+	if chop_relative_to_wind:
+		return wind_from_bearing_deg + 180.0 + chop_offset_deg
+	return chop_from_deg + 180.0 + chop_offset_deg
 
 
 ## The compass bearing one wave travels toward, degrees: its group's direction plus its

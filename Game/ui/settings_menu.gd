@@ -41,6 +41,9 @@ var _swell_mode_row: Row
 var _swell_bearing_row: Row
 var _swell_height_row: Row
 var _chop_direction_row: Row
+var _chop_mode_row: Row
+var _chop_bearing_row: Row
+var _spread_row: Row
 var _fetch_row: Row
 var _depth_row: Row
 
@@ -172,10 +175,19 @@ func _build_wave_rows(s: SettingsValues) -> void:
 	_swell_height_row = _add_slider(grid, "Swell height", SettingsValues.SWELL_SCALE_MIN, SettingsValues.SWELL_SCALE_MAX, 0.1, s.swell_height_scale,
 		func(_v: float) -> String: return _swell_height_text(),
 		func(v: float) -> void: s.swell_height_scale = v)
-	# The chop: the waves the wind makes, turned from straight downwind.
+	# The chop: the waves the wind makes, with the wind or from a bearing, turned a little.
+	_chop_mode_row = _add_list(grid, "Chop comes from", ["The wind's direction", "A compass bearing"], 0 if s.chop_follows_wind else 1, "",
+		func(index: int) -> void: s.chop_follows_wind = index == 0)
+	_chop_bearing_row = _add_slider(grid, "Chop from", 0.0, 355.0, 5.0, s.chop_from_deg,
+		func(v: float) -> String: return "%03.0f°  %s" % [v, SettingsValues.compass_name(v)],
+		func(v: float) -> void: s.chop_from_deg = v)
 	_chop_direction_row = _add_slider(grid, "Chop direction", -SettingsValues.CHOP_OFFSET_MAX_DEG, SettingsValues.CHOP_OFFSET_MAX_DEG, 5.0, s.chop_offset_deg,
 		func(v: float) -> String: return _chop_direction_text(v),
 		func(v: float) -> void: s.chop_offset_deg = v)
+	# How far the waves of a group fan out around its direction.
+	_spread_row = _add_slider(grid, "Wave spread", SettingsValues.WAVE_SPREAD_MIN, SettingsValues.WAVE_SPREAD_MAX, 0.05, s.wave_spread,
+		func(v: float) -> String: return _spread_text(v),
+		func(v: float) -> void: s.wave_spread = v)
 	# From the wind: how far the wind blows over open water, and how deep it is.
 	_fetch_row = _add_slider(grid, "Fetch", SettingsValues.FETCH_MIN_KM, SettingsValues.FETCH_MAX_KM, 0.1, s.fetch_km,
 		func(v: float) -> String: return "%.1f km of open water upwind" % v,
@@ -200,12 +212,15 @@ func _update_wave_rows() -> void:
 	_wave_height_row.value_label.text = _wave_height_text()
 	_swell_mode_row.value_label.text = "Turns with the wind" if s.swell_follows_wind else "Stays when the wind turns"
 	_swell_height_row.value_label.text = _swell_height_text()
+	_chop_mode_row.value_label.text = "Turns with the wind" if s.chop_follows_wind else "Stays when the wind turns"
 	_chop_direction_row.value_label.text = _chop_direction_text(s.chop_offset_deg)
+	_spread_row.value_label.text = _spread_text(s.wave_spread)
 	var has_waves: bool = s.waves_enabled and s.wave_preset != SettingsValues.WavePreset.FLAT
 	_set_wave_row_enabled(_sea_state_row, s.waves_enabled)
-	for row: Row in [_wave_height_row, _swell_mode_row, _swell_height_row, _chop_direction_row]:
+	for row: Row in [_wave_height_row, _swell_mode_row, _swell_height_row, _chop_mode_row, _chop_direction_row, _spread_row]:
 		_set_wave_row_enabled(row, has_waves)
 	_set_wave_row_enabled(_swell_bearing_row, has_waves and not s.swell_follows_wind)
+	_set_wave_row_enabled(_chop_bearing_row, has_waves and not s.chop_follows_wind)
 	var from_wind: bool = has_waves and s.wave_preset == SettingsValues.WavePreset.FROM_WIND
 	_set_wave_row_enabled(_fetch_row, from_wind)
 	_set_wave_row_enabled(_depth_row, from_wind)
@@ -259,10 +274,20 @@ func _swell_height_text() -> String:
 
 ## "+20° off the wind: from 290° WNW": where the chop comes from with this offset.
 func _chop_direction_text(offset_deg: float) -> String:
-	var from_deg: float = fposmod(GameSettings.values.wind_from_deg + offset_deg, 360.0)
+	var s: SettingsValues = GameSettings.values
+	var base_deg: float = s.wind_from_deg if s.chop_follows_wind else s.chop_from_deg
+	var from_deg: float = fposmod(base_deg + offset_deg, 360.0)
+	var base: String = "the wind" if s.chop_follows_wind else "its bearing"
 	if is_zero_approx(offset_deg):
-		return "Straight downwind: from %03.0f° %s" % [from_deg, SettingsValues.compass_name(from_deg)]
-	return "%+.0f° off the wind: from %03.0f° %s" % [offset_deg, from_deg, SettingsValues.compass_name(from_deg)]
+		return "Straight %s: from %03.0f° %s" % ["downwind" if s.chop_follows_wind else "from its bearing", from_deg, SettingsValues.compass_name(from_deg)]
+	return "%+.0f° off %s: from %03.0f° %s" % [offset_deg, base, from_deg, SettingsValues.compass_name(from_deg)]
+
+
+## "Within ±14° of their direction": how far the waves fan out at this spread.
+func _spread_text(spread: float) -> String:
+	if is_zero_approx(spread):
+		return "None: long, parallel crests"
+	return "Within ±%.0f° of their direction" % (spread * SettingsValues.largest_wave_offset_deg())
 
 
 ## "16 kt: waves of 23 cm, 5.2 m long": the significant height and the peak wavelength the
