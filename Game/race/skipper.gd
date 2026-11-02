@@ -89,6 +89,12 @@ const NOISE_TIME_S: float = 4.0
 ## Racing toward a mark, it lets go of the push slider when the mark is this many seconds away at its
 ## speed (see _push_level()): it rounds at the pilot's own margin.
 const PUSH_EASE_BEFORE_MARK_S: float = 4.0
+## Closer to the wind than this, degrees, a character's push offset is not used: upwind the hands
+## leave the slider to the pilot's own margin, which is the fastest and the safest there. Pushed
+## upwind the polar gains at most 1 % at 18 kt and loses 1 to 4 % at 24 kt (skipper_speed.md); in
+## the personas' races at 24 kt 22 of 23 falls were on the beat, nearly all of them the pushers'
+## (characters.md).
+const PUSH_UPWIND_TWA_DEG: float = 60.0
 ## How fast its hand moves the push slider, a share of the slider per second: as fast as the player's
 ## keys move it (PlayerController.push_rate_per_s, the whole slider in 2.5 s). Set at once, the jump
 ## from 95 % back to the pilot's own margin as the board bore away at 14 m/s threw the sailor over
@@ -1795,7 +1801,8 @@ func _steer_toward(telemetry: Telemetry, wanted_deg: float) -> void:
 ## The push slider as a good sailor sets it (AiHands.push, 0 to 1): the polar's level for the wind
 ## angle it sails in the wind of the moment where the polar says pushing paid, moved by its
 ## character's push_offset; where the polar does not push, the level that holds the pilot's own pull
-## moved by the offset (a character that pushes harder, or sails more carefully, everywhere). NaN, the
+## moved by the offset (a character that pushes harder, or sails more carefully, off the wind: not
+## closer than PUSH_UPWIND_TWA_DEG, where the pilot's margin is fastest and safest). NaN, the
 ## pilot's own margin without the slider (which the hands hand back to the controller): where neither
 ## asks for a push, from the moment a tack or gybe is asked for until the board has settled after it,
 ## in the last PUSH_EASE_BEFORE_MARK_S before a mark, and when it does not set the push at all
@@ -1810,7 +1817,7 @@ func _push_level(telemetry: Telemetry) -> float:
 		return NAN
 	var level: float = SkipperPolar.push_at(_polar_winds, _polar_twa, _polar_push, telemetry.tws_10m_kt, telemetry.twa_deg)
 	if is_nan(level):
-		if config.push_offset == 0.0:
+		if config.push_offset == 0.0 or absf(telemetry.twa_deg) < PUSH_UPWIND_TWA_DEG:
 			return NAN
 		level = LearnedSkipper.pilot_margin_level()
 	return clampf(level + config.push_offset, 0.0, 1.0)

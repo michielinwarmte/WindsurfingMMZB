@@ -134,6 +134,17 @@ func test_the_games_polar_pushes_nowhere_but_a_character_can() -> void:
 	assert_almost_eq(skipper._push_level(telemetry), LearnedSkipper.pilot_margin_level() + 0.1, 1e-5, "a character that pushes harder: from the pilot's own level")
 	skipper.config.push_offset = -0.1
 	assert_almost_eq(skipper._push_level(telemetry), LearnedSkipper.pilot_margin_level() - 0.1, 1e-5, "or more carefully")
+	# Upwind the slider is the pilot's, whatever the character: pushed on the 24 kt beat the personas
+	# fell (characters.md).
+	for twa_deg: float in [45.0, -52.0]:
+		telemetry.twa_deg = twa_deg
+		skipper.config.push_offset = 0.1
+		assert_true(is_nan(skipper._push_level(telemetry)), "no push on the beat at %.0f degrees" % twa_deg)
+		skipper.config.push_offset = -0.1
+		assert_true(is_nan(skipper._push_level(telemetry)), "no easing on the beat either")
+	telemetry.twa_deg = -130.0
+	skipper.config.push_offset = 0.1
+	assert_false(is_nan(skipper._push_level(telemetry)), "it pushes on the run")
 
 
 ## The game's polar with a push table that pushes the 18 and 24 kt reaches (70 to 110 degrees) at 95 %,
