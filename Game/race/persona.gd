@@ -80,6 +80,11 @@ const STRONG_WIND_KT: float = 24.0
 ## How much a wind skill moves its sailing skills (tacking, boat speed, upwind and downwind sense)
 ## in its own wind: a wind skill of 1 adds half of this, 0 takes half of it away.
 const WIND_FORM_WEIGHT: float = 0.6
+## How much lower than the polar's best beat a light-wind sailor (light_wind 1) sails in a light
+## wind, degrees: low and fast keeps the board planing. One who dislikes light wind (0) pinches as
+## much. Measured: alone on T1 in 12 kt the six fastest after the start all beat about 3 degrees
+## below the polar's best, the ones at its best were 10 to 25 s slower (characters.md).
+const LIGHT_WIND_FOOT_DEG: float = 3.0
 
 ## The push slider (SkipperConfig.push_offset, a share of the slider): its risk moves it up to this
 ## far either way from the pilot's own margin (a bold sailor pushes, a careful one eases)...
@@ -113,6 +118,7 @@ func to_skipper_config(seed: int, wind_kt: float = 15.0) -> SkipperConfig:
 	var upwind: float = _today(clampf(upwind_sense + form, 0.0, 1.0), wander, rng)
 	var downwind: float = _today(clampf(downwind_sense + form, 0.0, 1.0), wander, rng)
 	var risky: float = _today(risk, wander, rng)
+	var gybes: float = _today(clampf(gybing + form, 0.0, 1.0), wander, rng)
 	var config: SkipperConfig = SkipperConfig.new()
 	config.name = name
 	config.sail_colour = sail_colour
@@ -122,9 +128,10 @@ func to_skipper_config(seed: int, wind_kt: float = 15.0) -> SkipperConfig:
 	config.push_offset = push_offset_for(risky, speed)
 	# Upwind: a poor sense sails low and tacks late; a good one points, reads the shifts and uses
 	# the laylines; the risk sets the margins.
-	config.pointing_offset_deg = clampf(pointing_offset_deg + lerpf(3.0, 0.0, upwind), -4.0, 6.0)
+	config.pointing_offset_deg = clampf(pointing_offset_deg + lerpf(3.0, 0.0, upwind) + light_wind_foot_deg(wind_kt), -4.0, 6.0)
 	config.layline_margin_m = clampf(lerpf(30.0, 8.0, risky) + lerpf(15.0, 0.0, upwind), 0.0, 60.0)
-	config.mark_margin_m = clampf(lerpf(16.0, 5.0, risky), 4.0, 20.0)
+	# The marks: a good gybe and nerve round them tight.
+	config.mark_margin_m = clampf(lerpf(16.0, 5.0, (risky + gybes) / 2.0), 4.0, 20.0)
 	config.shift_sensitivity_deg = lerpf(20.0, 6.0, upwind)
 	config.max_tacks_per_beat = clampi(2 + roundi(tacks * 4.0), 2, 8)
 	# Downwind: a poor sense runs too deep and slow.
@@ -148,10 +155,25 @@ func to_skipper_config(seed: int, wind_kt: float = 15.0) -> SkipperConfig:
 ## fully at the matrix's light and strong wind; at most WIND_FORM_WEIGHT / 2 either way.
 func wind_form(wind_kt: float) -> float:
 	if wind_kt <= MIDDLE_WIND_KT:
-		var light_share: float = clampf((MIDDLE_WIND_KT - wind_kt) / (MIDDLE_WIND_KT - LIGHT_WIND_KT), 0.0, 1.0)
-		return (clampf(light_wind, 0.0, 1.0) - 0.5) * WIND_FORM_WEIGHT * light_share
-	var strong_share: float = clampf((wind_kt - MIDDLE_WIND_KT) / (STRONG_WIND_KT - MIDDLE_WIND_KT), 0.0, 1.0)
-	return (clampf(strong_wind, 0.0, 1.0) - 0.5) * WIND_FORM_WEIGHT * strong_share
+		return (clampf(light_wind, 0.0, 1.0) - 0.5) * WIND_FORM_WEIGHT * light_share(wind_kt)
+	return (clampf(strong_wind, 0.0, 1.0) - 0.5) * WIND_FORM_WEIGHT * strong_share(wind_kt)
+
+
+## How much lower (positive) or higher than its sheet says it beats in this wind, degrees: in a
+## light wind a light-wind sailor foots off to keep planing, one who dislikes it pinches.
+func light_wind_foot_deg(wind_kt: float) -> float:
+	return (clampf(light_wind, 0.0, 1.0) - 0.5) * 2.0 * LIGHT_WIND_FOOT_DEG * light_share(wind_kt)
+
+
+## How much of the light-wind skill counts in this wind: all of it at LIGHT_WIND_KT and below,
+## none from MIDDLE_WIND_KT up.
+static func light_share(wind_kt: float) -> float:
+	return clampf((MIDDLE_WIND_KT - wind_kt) / (MIDDLE_WIND_KT - LIGHT_WIND_KT), 0.0, 1.0)
+
+
+## How much of the strong-wind skill counts: none up to MIDDLE_WIND_KT, all at STRONG_WIND_KT.
+static func strong_share(wind_kt: float) -> float:
+	return clampf((wind_kt - MIDDLE_WIND_KT) / (STRONG_WIND_KT - MIDDLE_WIND_KT), 0.0, 1.0)
 
 
 ## Its hand on the push slider (SkipperConfig.push_offset) from the day's risk and boat speed, 0 to

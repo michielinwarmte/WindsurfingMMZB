@@ -42,6 +42,9 @@ func test_the_skills_map_onto_the_character_sheet_within_its_ranges() -> void:
 	assert_true(good.steering_noise_deg < poor.steering_noise_deg, "a steadier line")
 	assert_true(good.layline_margin_m < poor.layline_margin_m, "tighter laylines")
 	assert_true(good.mark_margin_m < poor.mark_margin_m, "closer roundings")
+	var gyber: Persona = _sheet("Gyber", 0.5)
+	gyber.gybing = 1.0
+	assert_true(gyber.to_skipper_config(1, 18.0).mark_margin_m < _sheet("Plain", 0.5).to_skipper_config(1, 18.0).mark_margin_m, "a good gyber rounds tighter")
 	assert_true(good.shift_sensitivity_deg < poor.shift_sensitivity_deg, "sees smaller shifts")
 	assert_true(good.max_tacks_per_beat > poor.max_tacks_per_beat, "tacks more freely")
 	assert_true(good.downwind_vmg_twa_deg < poor.downwind_vmg_twa_deg, "runs at the fast angle, not too deep")
@@ -137,7 +140,12 @@ func test_the_wind_skills_make_light_and_strong_wind_specialists() -> void:
 	var in_light: SkipperConfig = light.to_skipper_config(1, 12.0)
 	var in_strong: SkipperConfig = light.to_skipper_config(1, 24.0)
 	assert_true(in_light.steering_noise_deg < in_strong.steering_noise_deg, "steadier in its own light wind")
-	assert_true(in_light.pointing_offset_deg < in_strong.pointing_offset_deg, "points better in its own wind")
+	assert_true(light.light_wind_foot_deg(12.0) > 2.0, "foots off in a light wind to keep planing")
+	assert_eq(light.light_wind_foot_deg(18.0), 0.0, "not in the middle wind")
+	var hater: Persona = _sheet("Hater", 0.6)
+	hater.light_wind = 0.0
+	assert_true(hater.light_wind_foot_deg(12.0) < -2.0, "one who dislikes light wind pinches")
+	assert_true(in_light.mark_margin_m < in_strong.mark_margin_m, "rounds tighter in its own wind")
 	# The sheets: Liv is the light-wind sailor, Bruno the strong-wind one.
 	var liv: Persona = Skippers.load_persona("liv")
 	var bruno: Persona = Skippers.load_persona("bruno")
