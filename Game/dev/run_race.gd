@@ -23,7 +23,10 @@ extends SceneTree
 ##   [--finish_window=60]  the race ends this long after the first board finishes, seconds (the game's
 ##                         rule; tools/race_matrix.sh waits longer, so every board gets a time)
 ##   [--laps=1] [--wind_kt=15]
-##   [--seconds: the longest race time after the gun: 1200 with skippers, 300 with only autopilots]
+##   [--seconds: how long the race is sailed after the gun: with skippers the race's own time limit
+##                         for its course and wind (RaceTimeLimit: 2.5 times the polar's time, at least
+##                         1200 s); a longer --seconds raises that limit, a shorter one stops the race
+##                         early; 300 with only autopilots]
 ##   [--prestart: the countdown, seconds: 60 (the game's) with skippers, 10 with only autopilots]
 ##   [--twa=50: the wind angle the autopilot holds]
 ##   [--spawn=line]        where the skippers' boards appear: line (behind the start line, below) or
@@ -31,9 +34,9 @@ extends SceneTree
 ##                         game puts them: SailingArea; on the lake kept off the shore)
 ##   [--spawn_seed=0]      the seed of the random spots: the same seed, the same spots
 ##   [--free_sail=0]       seconds of free sailing before the countdown starts
-##   [--behind=<m>]        how far behind the start line the skippers' boards wait (the usual is 1 m
-##                         per second of countdown, 40 to 150 m); 150 with --prestart=30 is where the
-##                         learned brains were trained
+##   [--behind=<m>]        how far behind the start line the skippers' boards wait (the game's: 1 m
+##                         per second of countdown, 40 to 100 m, RaceRunner); 150 with --prestart=30 is
+##                         where the learned brains were trained (tools/gens.sh passes it)
 ##   [--blind=1]           the learned brains see no other boards (as in their training)
 ##   [--manoeuvre_gap_s=<s>] the learned brains' tack discipline (LearnedSkipper, RA14): the least time
 ##                         between two manoeuvres; without it each brain keeps the one it was trained
@@ -64,10 +67,9 @@ extends SceneTree
 ## blows from the course's axis, so the course is square to it. After every tick the race is told
 ## where the boards are.
 ##
-## Where the boards wait: a skipper sails the whole countdown itself, from RACING_PLAN.md's pre-start
-## spot (RaceCourses.pre_start_spot(), 150 m behind the start line, spread across it, on a beam
-## reach at rest), brought nearer the line for a countdown shorter than a minute, so that it can
-## still get there. An autopilot cannot sail a countdown: it is put back along its approach so that
+## Where the boards wait: a skipper sails the whole countdown itself, from where the game puts the
+## boards with its spawn on the line (RaceRunner: 1 m behind the start line per second of countdown,
+## 40 to 100 m; spread across it, on a beam reach at rest), or --behind. An autopilot cannot sail a countdown: it is put back along its approach so that
 ## it reaches the line at about the gun, and waits until SET_OFF_S before it.
 
 const DT: float = 1.0 / 60.0
@@ -84,11 +86,6 @@ const START_MARGIN_S: float = 3.0
 ## were put (their simulations are not stepped). A fixed-angle pilot sailing a long countdown would
 ## drift far from the spot it was aimed at.
 const SET_OFF_S: float = 10.0
-## A skipper waits 150 m behind the line for a countdown of a minute (RaceCourses.PRE_START_BEHIND_M),
-## and this much less per second of countdown short of that, but never nearer than SKIPPER_NEAREST_M.
-## From 150 m behind the line of T1 (a beat) a skipper needs about 45 s to get to the line.
-const SKIPPER_WAIT_M_PER_S: float = 2.5
-const SKIPPER_NEAREST_M: float = 40.0
 ## The lake's shore grid, for the sailing area of a course on the lake (kept off the shore).
 const SHORE_GRID_PATH: String = "res://maps/silvaplana/terrain/shore_heights.json"
 ## The all-rounder's hands (Game/race/skippers/allrounder.tres), for --steady_hands=1.
@@ -134,7 +131,7 @@ func _initialize() -> void:
 	# The skippers sail the game's whole countdown and the whole race (it ends when everyone is in);
 	# the 9A autopilot only the last 10 s of the countdown, and it never finishes.
 	var all_autopilot: bool = Array(names).all(func(skipper_name: String) -> bool: return skipper_name == "autopilot")
-	var seconds: float = options.get("seconds", "300" if all_autopilot else "1200").to_float()
+	var seconds: float = options.get("seconds", "300" if all_autopilot else "0").to_float()
 	var prestart_s: float = maxf(options.get("prestart", "10" if all_autopilot else "60").to_float(), 0.0)
 	var twa_deg: float = options.get("twa", "50").to_float()
 	var random_seed: int = options.get("seed", "0").to_int()
@@ -160,6 +157,10 @@ func _initialize() -> void:
 		return
 	var race: RaceSim = RaceSim.new(course, laps, prestart_s)
 	race.finish_window_s = finish_window_s
+	# The race's own time limit for its course and wind, as the game sets it; --seconds raises it.
+	race.time_limit_s = maxf(RaceTimeLimit.for_race(race, course.axis_deg, wind_kt), seconds)
+	if not all_autopilot and not options.has("seconds"):
+		seconds = race.time_limit_s
 	if race.steps().is_empty():
 		quit(2)
 		return
@@ -555,13 +556,22 @@ static func _make_skipper_board(skipper_name: String, race: RaceSim, course: Cou
 	entry.controller.hands = entry.hands
 	entry.controls = _fresh_controls()
 	var start: RaceStep = race.steps()[0]
-	# Where it waits: --behind, or 1 m per second of countdown within the usual bounds.
-	var behind: float = behind_m if behind_m > 0.0 else clampf(race.prestart_s * SKIPPER_WAIT_M_PER_S, SKIPPER_NEAREST_M, RaceCourses.PRE_START_BEHIND_M)
+	# Where it waits: --behind, or where the game puts the boards on the line (RaceRunner: 1 m per
+	# second of countdown, 40 to 100 m; 60 m for the 60 s countdown). It waited 150 m back before
+	# (2.5 m per second), which in 12 kt no board could sail to the line in a minute: its best way to
+	# windward is 2.3 m/s (fleet_speed/start.md).
+	var behind: float = behind_m if behind_m > 0.0 else wait_behind_m(race.prestart_s)
 	var along: Vector2 = start.points[0] - start.points[1]
 	var at: Vector2 = RaceCourses.pre_start_spot(course) + start.in_dir * (RaceCourses.PRE_START_BEHIND_M - behind) + along * (share - 0.5)
 	entry.sim.reset(Vector3(at.x, 0.0, at.y), deg_to_rad(RaceCourses.pre_start_heading_deg(course)))
 	entry.controller.reset_controls(entry.controls)
 	return entry
+
+
+## How far behind the start line a skipper's board waits for a countdown of this many seconds, metres:
+## as the game puts them (RaceSetup.wait_behind_m() with no --behind).
+static func wait_behind_m(prestart_s: float) -> float:
+	return clampf(prestart_s * RaceRunner.WAIT_M_PER_S, RaceRunner.NEAREST_M, RaceRunner.FARTHEST_M)
 
 
 ## A 9A autopilot board behind the start line at `share` of the way along it (from the pin to the

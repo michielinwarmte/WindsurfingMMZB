@@ -149,6 +149,9 @@ func setup_race(race_course: Course, player_node: WindsurferNode, race_setup: Ra
 ## setup's spawn LINE). The countdown starts at once, or after the setup's free sailing.
 func restart() -> void:
 	race = RaceSim.new(course, setup.laps, setup.prestart_s)
+	# The time limit fits the course, its laps and the wind (RaceTimeLimit): a fixed 20 minutes ended a
+	# 12 kt race on T1 before a slow board in a crowd had finished.
+	race.time_limit_s = RaceTimeLimit.for_race(race, player.sim.telemetry.wind_from_bearing_deg, player.sim.telemetry.tws_10m_kt)
 	if not spectating:
 		race.add_board(PLAYER_NAME)
 	for skipper: RaceSkipper in _skippers:

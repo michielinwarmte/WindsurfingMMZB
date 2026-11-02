@@ -19,7 +19,7 @@ extends GutTest
 
 const RunRace: GDScript = preload("res://dev/run_race.gd")
 const DT: float = 1.0 / 60.0
-## The game's countdown: the skippers wait 150 m behind the line.
+## The game's countdown: the skippers wait 60 m behind the line, where the game puts them (RaceRunner).
 const PRESTART_S: float = 60.0
 ## The longest any of these races may take after the gun, seconds.
 const RACE_LIMIT_S: float = 900.0

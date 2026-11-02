@@ -14,7 +14,8 @@
 #                                        .sim_output/race_matrix_solo/<course>_<wind>/
 #
 # Extra options go to every race (Game/dev/run_race.gd lists them). The countdown is the game's
-# 60 s; the race waits up to 15 minutes after the first finisher, so every board gets a time. The
+# 60 s; the race runs to its own time limit (RaceTimeLimit, as in the game) and waits up to 15
+# minutes after the first finisher, so every board gets a time. The
 # six races run as six Godot processes at once (each one is a race of its own).
 set -euo pipefail
 source "$(dirname "$0")/common.sh"
@@ -46,7 +47,7 @@ for course in ${courses//,/ }; do
 		dir="$REPO_ROOT/.sim_output/$name/${course}_${wind}"
 		mkdir -p "$dir"
 		"$godot" --headless --no-header --path "$PROJECT_DIR" -s res://dev/run_race.gd -- \
-			"--course=$course" "--wind_kt=$wind" "--skippers=$skippers" --prestart=60 --seconds=1500 \
+			"--course=$course" "--wind_kt=$wind" "--skippers=$skippers" --prestart=60 \
 			--finish_window=900 "--out_dir=$dir" ${extra[@]+"${extra[@]}"} > "$dir/out.txt" 2>&1 &
 	done
 done
