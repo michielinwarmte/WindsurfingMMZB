@@ -201,7 +201,7 @@ func test_with_the_gear_on_a_persona_sails_its_own_gear_and_a_character_the_defa
 	var plain: SailConfig = load("res://config/sail_default.tres") as SailConfig
 	assert_almost_eq(entries[1].sim.sail_config.area_m2, plain.area_m2, 1e-6, "the all-rounder keeps the default sail")
 	assert_null(Skippers.gear_for(entries[1].skipper, 24.0), "a character has no gear of its own")
-	# Off (the default), the persona sails the default gear too.
+	# Without the gear (make_entries' default; --gear=0), the persona sails the default gear too.
 	var off: Array = RunRace.make_entries(RaceSim.new(course, 1, 10.0), course, PackedStringArray(["persona:bruno"]), 24.0, 50.0, 2)
 	assert_almost_eq(off[0].sim.sail_config.area_m2, plain.area_m2, 1e-6)
 	# They sail on their gear.

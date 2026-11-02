@@ -43,9 +43,10 @@ extends SceneTree
 ##   [--shadows=1]         the sails cast wind shadows on each other (F3, WindShadows); 0 turns them off
 ##   [--rules=1]           the racing rules are kept (F3, RaceRules): a scripted skipper turns a circle for a
 ##                         penalty, a learned one carries 20 s to the finish; 0 turns them off
-##   [--gear=0]            1: each persona sails its own board, sail and fin from the gear catalogue, sized
-##                         for the wind (Persona.gear_for()); the other skippers keep the default gear.
-##                         The gear is printed before the race
+##   [--gear=1]            each persona sails its own board, sail and fin from the gear catalogue, sized
+##                         for the wind (Persona.gear_for()), as in the game (RaceSetup.gear); 0: the
+##                         default gear for every board. The other skippers keep the default gear. The
+##                         gear is printed before the race
 ##   [--steady_hands=0]    1: every scripted skipper's hands as quick and steady as the all-rounder's
 ##                         (STEADY_REACTION_S, STEADY_NOISE_DEG), to measure what the personas' noise costs
 ##   [--skipper_push=1]    0: the scripted skippers leave the push slider alone and sail the pilot's own
@@ -147,7 +148,7 @@ func _initialize() -> void:
 	var blind: bool = options.get("blind", "0") != "0"
 	var shadows: bool = options.get("shadows", "1") != "0"
 	var with_rules: bool = options.get("rules", "1") != "0"
-	var with_gear: bool = options.get("gear", "0") == "1"
+	var with_gear: bool = options.get("gear", "1") != "0"
 	var skipper_push: bool = options.get("skipper_push", "1") != "0"
 	var steady_hands: bool = options.get("steady_hands", "0") == "1"
 	var polar_path: String = options.get("polar", "")
