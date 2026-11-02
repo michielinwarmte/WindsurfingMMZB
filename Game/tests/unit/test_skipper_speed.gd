@@ -287,3 +287,28 @@ func test_a_fast_board_off_the_finish_line_eases_down_to_turn_onto_it() -> void:
 	skipper._hands.hold_speed_ms = 0.0
 	skipper._finish_target(finish, middle - finish.in_dir * (Skipper.FINISH_BACK_REACHED_M + 5.0))
 	assert_almost_eq(skipper._hands.hold_speed_ms, Skipper.FINISH_AGAIN_SPEED_MS, 1e-6, "and across the line again")
+
+
+## The start plan at the polar's beat (fleet_speed/start.md, RA16): before its start the skipper
+## points at the polar's angle for the wind, as it does racing; its run in to the line is 15 degrees
+## wider than that (60 at least, 72 at most), so that its track lays its spot; its waiting point is at
+## least 30 m behind the line or its extensions; and the race tool waits where the game puts the boards.
+func test_the_start_plan_is_drawn_at_the_polars_beat() -> void:
+	var skipper: Skipper = _allrounder_at(18.0)
+	skipper.state = Skipper.State.PRE_START
+	skipper._sim.telemetry.speed_ms = 10.0
+	var best_deg: float = SkipperPolar.per_wind(skipper._polar_winds, skipper._polar_upwind, 18.0)
+	assert_almost_eq(skipper._pointing_twa_deg(), best_deg, 0.01, "before the start too it points at the polar's angle, not 45")
+	assert_almost_eq(skipper._run_in_twa_deg(), best_deg + Skipper.START_RUN_IN_ABOVE_BEAT_DEG, 0.01, "the run in 15 degrees wider")
+	var gambler: Skipper = _allrounder_at(18.0)
+	gambler.config.pointing_offset_deg = 4.0
+	assert_almost_eq(gambler._run_in_twa_deg(), Skipper.START_RUN_IN_WIDEST_TWA_DEG, 0.01, "no wider than 72")
+	var start: RaceStep = skipper._race.steps()[0]
+	var near: Vector2 = start.target() - start.in_dir * 5.0
+	var moved: Vector2 = skipper._well_behind_the_line(start, near)
+	var behind_m: float = -RoundingCheck.over_line_m(moved, start.points[0], start.points[1], start.in_dir)
+	assert_almost_eq(behind_m, Skipper.START_WAIT_BEHIND_M, 0.5, "a waiting point 5 m behind the line goes back to 30 m")
+	var far: Vector2 = start.target() - start.in_dir * 50.0
+	assert_almost_eq(skipper._well_behind_the_line(start, far), far, Vector2(1e-3, 1e-3), "one far enough back stays")
+	assert_almost_eq(RunRace.wait_behind_m(60.0), 60.0, 0.01, "the race tool waits 60 m back for a 60 s countdown, as the game")
+	assert_almost_eq(RunRace.wait_behind_m(30.0), RaceRunner.NEAREST_M, 0.01, "and never nearer than 40 m")
