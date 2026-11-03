@@ -299,7 +299,7 @@ func _apply_start_settings() -> void:
 	_apply_control_settings()
 	_camera_rig.set_mode(settings.start_camera)
 	# In a race the racing block takes the panel's place (F1 brings the panel back).
-	_hud.set_detail_visible(settings.show_hud_panel and _race_runner == null)
+	_hud.set_detail_visible(settings.show_hud_panel and _race_runner == null and (_net == null or _net.mirror == null))
 	_hud.sailor_view = settings.sailor_view
 	_camera_rig.follow_close = settings.camera_close
 	if _sun != null:

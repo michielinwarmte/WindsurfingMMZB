@@ -276,6 +276,9 @@ func set_race_mode(on: bool, spectating: bool = false) -> void:
 		_help.text = "Up/Down push   A/D turn   W/S sheet   Space tack/gybe   1-4 camera   R race again   Esc menu   F1 telemetry"
 		if spectating:
 			_help.text = "Tab next board   Shift+Tab previous   L follow the leader   1-4 camera   R race again   Esc menu   F1 telemetry"
+		elif Lan.in_game and not Lan.is_host():
+			# The guest of a network game: only the host restarts the race (main.gd, _net_reset()).
+			_help.text = "Up/Down push   A/D turn   W/S sheet   Space tack/gybe   1-4 camera   R after a fall: back on the board   Esc menu   F1 telemetry"
 
 
 ## The bearing of a race's next mark, as a dot on the compass rose (NAN clears it).

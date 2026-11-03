@@ -19,14 +19,17 @@ signal gear_requested
 enum View { START, JOIN, LOBBY }
 
 const NAME_WIDTH: float = 200.0
-const VALUE_WIDTH: float = 420.0
+## The host's choices sit in two columns of a name and a control (the hints are the controls'
+## tooltips), so the lobby fits a 720-pixel-high window.
+const CHOICE_NAME_WIDTH: float = 130.0
+const CHOICE_WIDTH: float = 330.0
 ## The AI boards the lobby offers. Each one's state goes to the guest 30 times a second (about 45 kB/s).
 const FLEET_SIZES: PackedInt32Array = [0, 3, 7, 11, 15, 19]
 const COUNTDOWNS_S: PackedFloat32Array = [30.0, 60.0, 180.0]
 const COUNTDOWN_NAMES: PackedStringArray = ["30 s", "60 s", "3 min"]
 const LAPS: PackedInt32Array = [1, 2, 3]
 const LAKE_TIMES_S: PackedFloat32Array = [43200.0, 52200.0, 61200.0]
-const LAKE_TIME_NAMES: PackedStringArray = ["12:00, the Maloja building", "14:30, the Maloja at its strongest", "17:00, the evening"]
+const LAKE_TIME_NAMES: PackedStringArray = ["12:00, building", "14:30, strongest", "17:00, evening"]
 const FIREWALL_HINT: String = "Both PCs on the same network (Wi-Fi or cable) with the same version of the game. The first time a PC hosts, Windows asks whether the game may use the network: allow it on private networks."
 
 ## The host's choices, kept for the session.
@@ -254,6 +257,8 @@ func _refresh_lobby() -> void:
 	_lake_time_list.disabled = not chosen_lake
 	_conditions_label.text = "Wind and waves: %s" % _conditions_text()
 	var me: LanPlayer = Lan.player_in(Lan.my_slot)
+	if Lan.is_guest() and me != null:
+		_ready_now = me.ready  # the host's record is the one that counts
 	_gear_label.text = "Your gear: %s" % (me.gear_text() if me != null else GearChoice.from_settings(GameSettings.values).names_line())
 	_back_button.text = "Leave"
 	if Lan.is_host():
@@ -349,7 +354,7 @@ func _build() -> void:
 	panel.custom_minimum_size = Vector2(1060.0, 0.0)
 	center.add_child(panel)
 	var layout: VBoxContainer = VBoxContainer.new()
-	layout.add_theme_constant_override("separation", 12)
+	layout.add_theme_constant_override("separation", 8)
 	panel.add_child(layout)
 	_title = _label(layout, "Play with a friend", &"HeaderLabel")
 	_hint = _label(layout, FIREWALL_HINT, &"HintLabel")
@@ -432,8 +437,8 @@ func _build_lobby(layout: VBoxContainer) -> void:
 	_players_label.custom_minimum_size = Vector2(1000.0, 0.0)
 	_lobby_box.add_child(HSeparator.new())
 	_host_rows = GridContainer.new()
-	_host_rows.columns = 3
-	_host_rows.add_theme_constant_override("h_separation", 20)
+	_host_rows.columns = 4
+	_host_rows.add_theme_constant_override("h_separation", 16)
 	_host_rows.add_theme_constant_override("v_separation", 4)
 	_lobby_box.add_child(_host_rows)
 	_add_list("Water", PackedStringArray(["Open water", "Lake Silvaplana"]), 1 if chosen_lake else 0, "The lake loads for a few seconds on both PCs.",
@@ -523,10 +528,11 @@ func _add_list(title: String, items: PackedStringArray, selected: int, hint: Str
 	for item: String in items:
 		list.add_item(item)
 	list.select(clampi(selected, 0, maxi(items.size() - 1, 0)))
-	list.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	list.custom_minimum_size = Vector2(320.0, 0.0)
+	list.fit_to_longest_item = false
+	list.clip_text = true
+	list.custom_minimum_size = Vector2(CHOICE_WIDTH, 0.0)
+	list.tooltip_text = hint
 	_host_rows.add_child(list)
-	_add_value(hint)
 	list.item_selected.connect(func(index: int) -> void: store.call(index))
 	return list
 
@@ -537,8 +543,8 @@ func _add_switch(title: String, on: bool, hint: String, store: Callable) -> Chec
 	switch.button_pressed = on
 	switch.text = "On" if on else "Off"
 	switch.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	switch.tooltip_text = hint
 	_host_rows.add_child(switch)
-	_add_value(hint)
 	switch.toggled.connect(func(now_on: bool) -> void:
 		switch.text = "On" if now_on else "Off"
 		store.call(now_on))
@@ -548,16 +554,6 @@ func _add_switch(title: String, on: bool, hint: String, store: Callable) -> Chec
 func _add_name(title: String) -> void:
 	var label: Label = Label.new()
 	label.text = title
-	label.custom_minimum_size = Vector2(NAME_WIDTH, 0.0)
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_host_rows.add_child(label)
-
-
-func _add_value(text: String) -> void:
-	var label: Label = Label.new()
-	label.text = text
-	label.theme_type_variation = &"HintLabel"
-	label.custom_minimum_size = Vector2(VALUE_WIDTH, 0.0)
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.custom_minimum_size = Vector2(CHOICE_NAME_WIDTH, 0.0)
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_host_rows.add_child(label)
