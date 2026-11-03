@@ -56,6 +56,13 @@ var stepped_by_runner: bool = false
 ## player's board has it on in its scenes (main.tscn, sail_silvaplana.tscn), so the push dial
 ## (main.gd, --dial=) can set the sailor's numbers without writing the shared .tres files.
 @export var own_config_copies: bool = false
+## A board sailed on another PC (LAN multiplayer, Documentation/reports/multiplayer/PLAN.md, D4): a
+## puppet. Its simulation is never stepped here and no one sails it here; show_state() writes the
+## other PC's state into it, and the visuals pose it as usual. Set before the node is added.
+var is_puppet: bool = false
+## A puppet's state is this old (seconds): the race moves its place on by its speed for that long
+## (RaceRunner._where(), D8). 0 for a board sailed here.
+var state_age_s: float = 0.0
 var _name_label: Label3D = null
 ## Far from the camera in a race (set_far_away).
 var _far_away: bool = false
@@ -140,6 +147,8 @@ func _physics_process(delta: float) -> void:
 ## The sailor's part of a tick: the skipper (who keeps watching from the water too: its clock
 ## runs, its hands come off) and the controller or the autopilot set the controls.
 func sail(delta: float) -> void:
+	if is_puppet:
+		return
 	var t0: int = Time.get_ticks_usec()
 	if skipper != null:
 		skipper.update(sim.telemetry, delta)
@@ -158,6 +167,8 @@ func sail(delta: float) -> void:
 ## The physics of a tick. It touches only this board's simulation, so a race may run several
 ## boards' steps side by side on worker threads (with own_config_copies).
 func step_physics(delta: float) -> void:
+	if is_puppet:
+		return
 	var t1: int = Time.get_ticks_usec()
 	sim.step(delta, controls)
 	_us_sim += Time.get_ticks_usec() - t1
@@ -177,6 +188,13 @@ func after_step(pose: bool = true) -> void:
 		_copy_place_to_visuals()
 	_us_visuals += Time.get_ticks_usec() - t3
 	_ticks_counted += 1
+
+
+## A puppet (is_puppet): the other PC's state of this board written into its simulation, `age_s`
+## old. The visuals follow at after_step() (the board's own tick, or the race's).
+func show_state(state: BoardSnapshot, age_s: float) -> void:
+	state.apply(sim)
+	state_age_s = age_s
 
 
 ## A race's opponent far from the camera (RaceRunner.FAR_DETAIL_M): its fin's bend is not

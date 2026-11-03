@@ -23,6 +23,13 @@ extends Node3D
 ## --spectate=1 with the race (RaceSetup.read_options()); while spectating Tab and Shift+Tab pick
 ## the next or the previous board to watch and L follows the leader again (RaceRunner).
 ##
+## LAN multiplayer (Documentation/reports/multiplayer/PLAN.md): when the game is a network game
+## (Lan.in_game) a NetBoards node shows the other PCs' boards and sends this one's; the host's
+## RaceRunner races the other player's board too, the guest's race is a RaceMirror of the host's.
+## The game never pauses then (Esc opens the menu, the water goes on), R only puts a fallen sailor
+## back on the board (and the host's R restarts the race for everyone), and the wind and the waves
+## are the host's for the whole game.
+##
 ## A map scene sails with this script too (maps/silvaplana/sail_silvaplana.gd extends it): the
 ## map brings its own sun and sky (so Sun is optional), its own wind and start (it overrides
 ## _build_wind_config() and _start_heading_deg()), and a depth grid for the shore (shore_grid).
@@ -73,6 +80,11 @@ var _race_setup: RaceSetup = null
 var _race_runner: RaceRunner = null
 ## The sounds; they follow the board the camera follows.
 var _audio: GameAudio = null
+## LAN multiplayer: the other PCs' boards (null when the game is not a network game); whether the
+## menu is open (the game does not pause), and until when a message from the network stays.
+var _net: NetBoards = null
+var _net_menu_open: bool = false
+var _net_message_until_ms: int = -1
 
 
 func _enter_tree() -> void:
@@ -112,6 +124,7 @@ func _ready() -> void:
 	_hud.gear_text = _windsurfer.gear.names_line() + "\n" + Hud.gear_line(_windsurfer.sim)
 	print(_hud.gear_text)
 	_show_course()
+	_start_network()
 	_start_race_runner()
 	_apply_start_settings()
 	_pause_menu.resume_requested.connect(_set_paused.bind(false))
@@ -128,7 +141,7 @@ func _ready() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	# Behind the start menu, and while paused, the menus have the keys.
-	if _in_menu or get_tree().paused:
+	if _in_menu or get_tree().paused or _net_menu_open:
 		return
 	if event.is_action_pressed("pause"):
 		_set_paused(true)
@@ -141,6 +154,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("reset"):
 		if _windsurfer.is_fallen() and not _aground:
 			_windsurfer.waterstart_now()
+		elif _net != null:
+			_net_reset()
 		else:
 			_restart_run()
 	elif event.is_action_pressed("toggle_hud"):
@@ -180,6 +195,11 @@ func _process(delta: float) -> void:
 	_follow_the_open_gusts(shown)
 	if _race_runner != null:
 		_hud.set_other_boards(_race_runner.other_positions())
+	elif _net != null:
+		_hud.set_other_boards(_net.puppet_positions())
+	if _net_message_until_ms >= 0 and Time.get_ticks_msec() > _net_message_until_ms:
+		_net_message_until_ms = -1
+		_hud.set_message("")
 
 
 ## Whether a race is on with the player's board parked (--spectate=1).
@@ -209,6 +229,12 @@ func start_playing() -> void:
 ## their own copies of it.
 func apply_settings_live() -> void:
 	var settings: SettingsValues = GameSettings.values
+	if _net != null:
+		# A network game sails the host's wind and waves to the end (LAN multiplayer, D11).
+		_apply_control_settings()
+		if _sun != null:
+			_sun.shadow_enabled = settings.shadow_quality > 0
+		return
 	_apply_wind_settings_live()
 	if settings.control_mode != _applied_mode or settings.auto_sheet != _applied_auto_sheet:
 		_apply_control_settings()
@@ -357,6 +383,9 @@ func _enter_menu_mode() -> void:
 
 
 func _set_paused(paused: bool) -> void:
+	if _net != null:
+		_set_net_menu_open(paused)
+		return
 	get_tree().paused = paused
 	if paused:
 		_pause_menu.open(_waiting_for_restart_text())
@@ -365,11 +394,17 @@ func _set_paused(paused: bool) -> void:
 
 
 func _on_restart_requested() -> void:
-	_restart_run()
+	if _net != null and _race_runner != null:
+		_race_runner.restart()  # the host's restart: a new start for everyone
+		_set_aground(false)
+	else:
+		_restart_run()
 	_set_paused(false)
 
 
 func _go_to_start_menu() -> void:
+	if _net != null:
+		Lan.leave()
 	get_tree().paused = false
 	get_tree().change_scene_to_file(START_MENU_SCENE)
 
@@ -592,10 +627,64 @@ func start_race(setup: RaceSetup) -> void:
 func _start_race_runner() -> void:
 	if _race_setup == null or _course == null or _race_runner != null:
 		return
+	if _net != null and Lan.is_guest():
+		# The guest shows the host's race (LAN multiplayer, D8).
+		if _net.mirror == null:
+			_net.start_mirror(_course, _race_setup, _hud)
+		return
 	_race_runner = RaceRunner.new()
 	_race_runner.name = "RaceRunner"
+	if _net != null:
+		_race_runner.remote_players = _net.remote_players()
+		_race_runner.remote_names = _net.remote_names()
 	add_child(_race_runner)
 	_race_runner.setup_race(_course, _windsurfer, _race_setup, _hud)
+	if _net != null:
+		_net.attach_runner(_race_runner)
+
+
+# ---------------------------------------------------------------- LAN multiplayer
+
+## In a network game: the node that shows the other PCs' boards and sends this one's.
+func _start_network() -> void:
+	if not Lan.in_game or _net != null or _in_menu:
+		return
+	_net = NetBoards.new()
+	add_child(_net)
+	_net.setup(self, _windsurfer)
+	_pause_menu.set_network_game(Lan.is_host() and Lan.game.race)
+
+
+## R in a network game (not after a fall): free sailing, back to this player's start; in a race the
+## host's R starts it again for everyone, the guest's only takes a board off the shore.
+func _net_reset() -> void:
+	if not Lan.game.race:
+		_restart_run()
+	elif _race_runner != null:
+		_race_runner.restart()
+		_set_aground(false)
+	elif _aground:
+		_windsurfer.reset()
+		_set_aground(false)
+	else:
+		show_net_message("The host restarts the race. R after a fall puts you back on the board.", 3.0)
+
+
+## A network game's menu: it opens without pausing (the other PC sails on), and the sailor holds a
+## steady course meanwhile (still hands instead of the keys).
+func _set_net_menu_open(open: bool) -> void:
+	_net_menu_open = open
+	_windsurfer.controller.hands = AiHands.new() if open else null
+	if open:
+		_pause_menu.open("A network game: the water goes on while this menu is open.")
+	else:
+		_pause_menu.close()
+
+
+## A line on the HUD from the network (the other player left, ...) for a few seconds.
+func show_net_message(text: String, seconds: float) -> void:
+	_hud.set_message(text)
+	_net_message_until_ms = Time.get_ticks_msec() + roundi(seconds * 1000.0)
 
 
 ## --measure=<seconds>: the frame rate without vsync, the frame on average and at worst, and how

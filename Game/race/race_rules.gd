@@ -283,3 +283,28 @@ func _breach(i: int, j: int, burdened: int, why: Why) -> void:
 		return
 	_incidents[key] = _time_s
 	penalise(burdened, why)
+
+
+# ---------------------------------------------------------------- a copy on the guest's PC (LAN multiplayer)
+
+## What the guest's HUD shows of the judge (LAN multiplayer, D8): per board its penalties, the turns
+## it took, its last breach and whom it must keep clear of now. The host judges; the guest shows.
+func to_state() -> Dictionary:
+	var boards: Array = []
+	for b: BoardState in _boards:
+		boards.append([b.penalties, b.turns_done, int(b.last_breach_why), b.last_breach_s, b.burdened_by, int(b.why)])
+	return {"time": _time_s, "boards": boards}
+
+
+func apply_state(state: Dictionary) -> void:
+	_time_s = float(state.get("time", _time_s))
+	var boards: Array = state.get("boards", [])
+	for i: int in mini(boards.size(), _boards.size()):
+		var values: Array = boards[i]
+		var b: BoardState = _boards[i]
+		b.penalties = int(values[0])
+		b.turns_done = int(values[1])
+		b.last_breach_why = int(values[2]) as Why
+		b.last_breach_s = float(values[3])
+		b.burdened_by = int(values[4])
+		b.why = int(values[5]) as Why

@@ -156,6 +156,9 @@ func _start_the_clock() -> void:
 	var field: MapWindField = map_wind_field()
 	if field == null:
 		return
+	if Lan.in_game and Lan.is_host():
+		# The host's choice in the lobby (LAN multiplayer); the guest's lake follows the host's clock.
+		field.set_time_of_day(Lan.game.lake_time_s)
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--time="):
 			var parts: PackedStringArray = arg.get_slice("=", 1).split(":")

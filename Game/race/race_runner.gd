@@ -7,6 +7,11 @@ extends Node
 ## race where they are. The skippers sail through the beginner controller with their AiHands, as
 ## the player does (RD1); nothing here touches the physics.
 ##
+## LAN multiplayer (Documentation/reports/multiplayer/PLAN.md, D8): on the host, the other players'
+## boards are puppets (remote_players, set before setup_race()): in the race, the judge and the wind
+## shadows like any board, but not stepped here (their PCs sail them) and judged where they are now
+## (where_now()). restarted tells the host's NetBoards to send the new start to the guests.
+##
 ## Spectating (RaceSetup.spectate, tools/gens.sh): the player's board does not race. It is parked
 ## where it is, hidden and not stepped, and it is not in the race; the camera, the HUD's block and
 ## the sounds follow one AI board instead, chosen by a SpectateChoice (the leader, or the board Tab
@@ -34,6 +39,9 @@ const MAX_THREADS: int = 8
 ## every other tick, and its fin's bend is not updated. At 300 m a sailor is a few pixels tall.
 ## The physics and the skipper are never leveled: only what is drawn.
 const FAR_DETAIL_M: float = 300.0
+
+## A new start (restart()): LAN multiplayer's host sends it to the guests.
+signal restarted
 
 var race: RaceSim = null
 var course: Course = null
@@ -78,6 +86,13 @@ var _report_at_s: float = -INF
 var _reported_polars: bool = false
 ## Spectating (RaceSetup.spectate): the player's board is parked out of the race.
 var spectating: bool = false
+## LAN multiplayer: the other players' boards (puppets, in slot order) and their names, set before
+## setup_race(); where each waits at the last start, and where this PC's player waits.
+var remote_players: Array[WindsurferNode] = []
+var remote_names: PackedStringArray = PackedStringArray()
+var remote_spots: PackedVector2Array = PackedVector2Array()
+var player_spot: Vector2 = Vector2.ZERO
+var start_heading_deg: float = 0.0
 ## Which AI board the camera follows while spectating.
 var choice: SpectateChoice = SpectateChoice.new()
 ## The race's number of the first AI board: 1 after the player's, 0 while spectating.
@@ -99,7 +114,7 @@ func setup_race(race_course: Course, player_node: WindsurferNode, race_setup: Ra
 	hud = RaceHud.new()
 	hud.name = "RaceHud"
 	hud_layer.add_child(hud)
-	spectating = setup.spectate
+	spectating = setup.spectate and remote_players.is_empty()
 	_first_ai = 0 if spectating else 1
 	hud_layer.set_race_mode(true, spectating)
 	for arg: String in OS.get_cmdline_user_args():
@@ -108,6 +123,10 @@ func setup_race(race_course: Course, player_node: WindsurferNode, race_setup: Ra
 	# The runner steps the player's board with the others (its own _physics_process steps nothing).
 	player.stepped_by_runner = true
 	_boards = [player]
+	for node: WindsurferNode in remote_players:
+		node.stepped_by_runner = true
+		_boards.append(node)
+	_first_ai = (0 if spectating else 1) + remote_players.size()
 	if spectating:
 		# Parked: hidden, not stepped (stepped_by_runner, and not among the boards), not in the race.
 		_boards = []
@@ -146,7 +165,7 @@ func setup_race(race_course: Course, player_node: WindsurferNode, race_setup: Ra
 		_boards.append(node)
 		_skippers.append(skipper)
 	# A race of one is a time trial: the player's time against the best kept for this course.
-	if setup.time_trial or (opponents.is_empty() and not spectating):
+	if remote_players.is_empty() and (setup.time_trial or (opponents.is_empty() and not spectating)):
 		setup.time_trial = true
 		records = TimeTrialRecords.new()
 		records.load_from(setup.records_path)
@@ -164,16 +183,23 @@ func restart() -> void:
 	race.time_limit_s = RaceTimeLimit.for_race(race, player.sim.telemetry.wind_from_bearing_deg, player.sim.telemetry.tws_10m_kt)
 	if not spectating:
 		race.add_board(PLAYER_NAME)
+	for i: int in remote_players.size():
+		race.add_board(remote_names[i] if i < remote_names.size() else "Player %d" % (i + 2))
 	for skipper: RaceSkipper in _skippers:
 		race.add_board(skipper.board_name())
 	rules = RaceRules.new(race.board_count(), course.axis_deg) if setup.rules else null
 	var behind_m: float = setup.wait_behind_m()
-	var spots: PackedVector2Array = pre_start_spots(course, race.steps()[0], opponents.size() + 1, behind_m)
+	var spots: PackedVector2Array = pre_start_spots(course, race.steps()[0], opponents.size() + 1 + remote_players.size(), behind_m)
 	var heading_deg: float = RaceCourses.pre_start_heading_deg(course)
 	if spectating:
 		# The AI boards in their order along the line (no player's slot in the middle).
 		spots = PackedVector2Array([spots[0]]) + line_spots(course, race.steps()[0], opponents.size(), behind_m)
 	_place(player, spots[0], heading_deg)
+	# The other players' spots beside this PC's player's (their PCs put them there: restart_info()).
+	player_spot = spots[0]
+	start_heading_deg = heading_deg
+	remote_spots = spots.slice(1, 1 + remote_players.size())
+	spots = PackedVector2Array([spots[0]]) + spots.slice(1 + remote_players.size())
 	# New dice at every start unless the setup fixes them (--seed): each skipper's day and the spots.
 	var dice: int = setup.race_seed if setup.race_seed >= 0 else randi_range(1, 999999)
 	if setup.spawn == RaceSetup.Spawn.RANDOM:
@@ -199,6 +225,7 @@ func restart() -> void:
 	_record_checked = false
 	choice = SpectateChoice.new()
 	_running = true
+	restarted.emit()
 
 
 ## The sailing area of this race (where the AI boards appear and sail free).
@@ -297,7 +324,7 @@ func _hand_the_wind_clock() -> void:
 ## the same); unchanged if none did (the player alone and aground).
 func _read_the_wind_clock(player_stopped: bool) -> void:
 	for node: WindsurferNode in _boards:
-		if player_stopped and node == player:
+		if (player_stopped and node == player) or node.is_puppet:
 			continue
 		wind_clock = RaceWindClock.of(node.sim.wind)
 		return
@@ -336,7 +363,7 @@ func _judge(delta: float) -> void:
 	for i: int in _boards.size():
 		var t: Telemetry = _boards[i].sim.telemetry
 		var in_race: int = i if spectating else i  # the boards' order is the race's order
-		rules.set_board(in_race, Vector2(t.position.x, t.position.z), t.heading_deg, 1.0 if t.twa_deg >= 0.0 else -1.0, t.speed_ms,
+		rules.set_board(in_race, where_now(_boards[i]), t.heading_deg, 1.0 if t.twa_deg >= 0.0 else -1.0, t.speed_ms,
 			t.sailor_state == WindsurferSim.SailorState.SAILING)
 		var step: RaceStep = race.next_step(in_race)
 		marks.append(step.points[0] if step != null and step.kind == RaceStep.Kind.MARK else Vector2.INF)
@@ -373,6 +400,8 @@ func _step_board(i: int, delta: float, player_stopped: bool) -> void:
 func _pose_boards(player_stopped: bool) -> void:
 	if not player_stopped and not spectating:
 		player.after_step()
+	for node: WindsurferNode in remote_players:
+		node.after_step()
 	var camera: Camera3D = get_viewport().get_camera_3d()
 	var eye: Vector3 = camera.global_position if camera != null else player.global_position
 	for i: int in opponents.size():
@@ -476,6 +505,8 @@ func follow_leader() -> void:
 func _tell_the_race() -> void:
 	if not spectating:
 		race.update_board(0, _where(player))
+	for i: int in remote_players.size():
+		race.update_board(1 + i, where_now(remote_players[i]))
 	for i: int in opponents.size():
 		race.update_board(i + _first_ai, _where(opponents[i]))
 
@@ -484,6 +515,8 @@ func _tell_the_race() -> void:
 func other_positions() -> PackedVector3Array:
 	var positions: PackedVector3Array = PackedVector3Array()
 	var followed: WindsurferNode = followed_node()
+	for node: WindsurferNode in remote_players:
+		positions.append(node.sim.telemetry.position)
 	for node: WindsurferNode in opponents:
 		if node != followed:
 			positions.append(node.sim.telemetry.position)
@@ -492,6 +525,16 @@ func other_positions() -> PackedVector3Array:
 
 static func _where(node: WindsurferNode) -> Vector2:
 	var position: Vector3 = node.sim.telemetry.position
+	return Vector2(position.x, position.z)
+
+
+## Where a board is now: its place, and for a puppet (LAN multiplayer) its shown state's place moved
+## on by its speed for the state's age, so the judge times the other player's start and finish as
+## their own PC sailed them (D8).
+static func where_now(node: WindsurferNode) -> Vector2:
+	var position: Vector3 = node.sim.telemetry.position
+	if node.state_age_s > 0.0:
+		position += node.sim.body.velocity * node.state_age_s
 	return Vector2(position.x, position.z)
 
 

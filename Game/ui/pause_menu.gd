@@ -59,6 +59,13 @@ func is_open() -> bool:
 	return _root.visible
 
 
+## A network game (LAN multiplayer): Restart starts the race again for everyone, and only the host
+## of a race has it; nobody else restarts anything from here.
+func set_network_game(can_restart: bool) -> void:
+	_restart_button.visible = can_restart
+	_restart_button.text = "Restart the race (everyone)"
+
+
 ## The line in orange under the title: what changes only after a restart.
 func set_note(text: String) -> void:
 	_note.text = text

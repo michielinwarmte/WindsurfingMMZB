@@ -520,3 +520,49 @@ func _marks_exist(id: String) -> bool:
 		if course.mark(part) == null:
 			return false
 	return true
+
+
+# ---------------------------------------------------------------- a copy on the guest's PC (LAN multiplayer)
+
+## The race as it stands, for a guest's PC (LAN multiplayer, Documentation/reports/multiplayer/
+## PLAN.md, D8): the clock and the phase, and per board its next step, splits, finish time, penalty,
+## OCS and wrong-side warning. Not the boards' places: the guest knows where every board is.
+func to_state() -> Dictionary:
+	var boards: Array = []
+	for board: Board in _boards:
+		boards.append([board.next_step, board.splits, board.finish_time_s, board.penalty_s, board.ocs, board.wrong_side_until_s])
+	return {"phase": int(_phase), "started": _started, "clock": _clock_s, "first_finish": _first_finish_s,
+		"start_in": _start_in_s, "boards": boards}
+
+
+## Takes the host's race as it stands (to_state()). Boards the state does not name keep theirs.
+func apply_state(state: Dictionary) -> void:
+	_phase = int(state.get("phase", _phase)) as Phase
+	_started = bool(state.get("started", _started))
+	_clock_s = float(state.get("clock", _clock_s))
+	_first_finish_s = float(state.get("first_finish", _first_finish_s))
+	_start_in_s = float(state.get("start_in", _start_in_s))
+	var boards: Array = state.get("boards", [])
+	for i: int in mini(boards.size(), _boards.size()):
+		var values: Array = boards[i]
+		var board: Board = _boards[i]
+		board.next_step = int(values[0])
+		board.splits = PackedFloat32Array(values[1])
+		board.finish_time_s = float(values[2])
+		board.penalty_s = float(values[3])
+		board.ocs = bool(values[4])
+		board.wrong_side_until_s = float(values[5])
+	_order_stale = true
+
+
+## The guest's tick between two of the host's states: the clock runs on (so the countdown and the
+## race time move smoothly), the places follow the boards, and nothing is judged: the host judges.
+func mirror_step(dt: float) -> void:
+	if not _started and _start_in_s >= 0.0:
+		_start_in_s = maxf(_start_in_s - dt, 0.0)
+	if _started and _phase != Phase.FINISHED and dt > 0.0:
+		_clock_s += dt
+		if _phase == Phase.PRE_START and _clock_s >= 0.0:
+			_phase = Phase.RACING
+	for board: Board in _boards:
+		board.last_position = board.position

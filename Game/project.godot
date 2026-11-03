@@ -26,6 +26,7 @@ buses/default_bus_layout="res://default_bus_layout.tres"
 DevCapture="*res://dev/dev_capture.gd"
 GameSettings="*res://ui/game_settings.gd"
 MapEscape="*res://ui/map_escape.gd"
+Lan="*res://net/lan_session.gd"
 
 [debug]
 
