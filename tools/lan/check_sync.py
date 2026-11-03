@@ -17,6 +17,9 @@ import sys
 # A board's states every tick (a player) are shown exactly; an AI board's every 2nd tick are halfway
 # between two states on the other ticks: a few centimetres at most.
 PLACE_TOLERANCE_M = 0.10
+# What Godot prints when a game quits (leak reports of the engine itself): not the game's errors.
+SHUTDOWN_NOISE = ("Unreferenced static string", "resources still in use at exit", "Pages in use exist at exit",
+                  "ObjectDB instances were leaked")
 
 
 def read(path):
@@ -32,7 +35,7 @@ def read(path):
                 (tracks if parts[0] == "TRACK" else seens)[(tick, board)] = numbers
             elif parts[0] == "RESULT":
                 results.append(parts[1:])
-            elif "SCRIPT ERROR" in line or line.startswith("ERROR"):
+            elif ("SCRIPT ERROR" in line or line.startswith("ERROR")) and not any(noise in line for noise in SHUTDOWN_NOISE):
                 errors.append(line.strip())
     return tracks, seens, results, errors
 

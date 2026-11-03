@@ -77,6 +77,17 @@ A gamepad works in the menus (stick or d-pad, A, B, Start, the shoulder buttons 
 - **The Race page:** the water, the course, the fleet's size, who sails (the twelve personas, the four characters, both, or the trained brain and the personas), the countdown, the shadows and the rules.
 - **Up to 20 AI boards and you at 60 fps** on the release build (the opponents' physics runs on worker threads; the editor build is far slower).
 
+### Play with a friend (LAN multiplayer, from 0.2.0-beta.3)
+
+Two PCs on the same network (Wi-Fi or a cable), each with the same version of the game.
+
+1. Both: **Play with a friend (LAN)** on the start menu, and type your name.
+2. One of you presses **Host a game**. The host is the admin and chooses in the lobby: open water or Lake Silvaplana, a race or free sailing, the course, the AI fleet (up to 19 boards) and who sails it, the countdown, the laps, the level, the rules and wind shadows, the lake's time of day, and the wind and the waves (the **Wind and waves** button opens the settings).
+3. The other presses **Join a game**: the host's game shows up in the list by itself (or type the address the host's lobby shows), chooses their own gear with **Change gear**, and presses **Ready**.
+4. The host presses **Start**: both PCs load the water, and the race starts for both at the same moment.
+
+What travels between the PCs is each board's **whole physics state**, sixty times a second: where the board is and how it lies in the water, the rig and the sail's shape, the sailor's body, the falls and the spray. Each PC sails its own board's full physics, and the host's PC also sails the AI fleet; the race and the rules are the host's, and both PCs show the same places and results. In a network game the game does not pause (Esc opens the menu while the water goes on), R after a fall puts you back on the board, and only the host restarts a race (for everyone). **Windows Firewall** asks the first time a PC hosts whether the game may use the network: allow it on private networks.
+
 ### The AI skippers
 
 - **The scripted skipper** sails the course like a club racer: laylines, tacks and gybes, a timed start with a loop or a hold-back, picking the favoured end from the line bias, keeping clear by the rules, a penalty turn when it has to. Between races it sails free around the start area.

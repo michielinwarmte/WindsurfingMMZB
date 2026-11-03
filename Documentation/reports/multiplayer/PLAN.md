@@ -51,7 +51,21 @@ This file is the live state of the work: the design, the steps, and at the end t
 | M5 | **The menus:** the Multiplayer page on the start menu (Host / Join, name, found games, IP), the lobby (host: map, mode, wind and waves, race page; guest: read-only summary, gear, Ready). | Screenshots of the pages; a full run host and join through the menus by command-line options. |
 | M6 | **Documentation, the roadmap item, the changelog, `0.2.0-beta.3` zip** in `.release/` (not published). | `tools/check.sh`, `tools/test.sh`, the release build's two-instance smoke test. |
 
-## 4. What cannot be verified on one laptop
+## 4. How it works when you play (for the team)
+
+**Starting a game.** Start menu > **Play with a friend (LAN)** > your name. One PC presses **Host a game**: the lobby shows its address and the game's choices (water, race or free sailing, course, AI fleet and who sails it, countdown, laps, level, rules, wind shadows, the lake's time of day; **Wind and waves** opens the settings' wind tab). The other presses **Join a game**: the host shows up in the list within a second (or type its address), **Change gear**, **Ready**. The host presses **Start**; both PCs load the scene; when the guest's scene is loaded the host starts the race again so the countdown is the same for both.
+
+**What each PC does every tick (60 a second).**
+1. Its own board: the full physics, from its own keys (the guest's board on the host's water and wind clock).
+2. The host only: the AI boards' full physics (the RaceRunner, on threads, as in a race alone), the race and the judge.
+3. Sends: its own board's state every tick; the host also the AI boards' (every 2nd tick), its clock (every tick) and the race (10 a second).
+4. Shows the other PC's boards as puppets, 3 ticks (players) or 4 ticks (AI) behind the newest state: 50 to 67 ms. At 12 m/s the other board is drawn 60 cm behind where it really is; the race judges it where it really is (D8).
+
+**What travels for a board:** every number of `WindsurferSim` and its parts (475 fields): the board's place, attitude, speed and spin, the rig's frame, the mast and boom, the sail's angles, forces, side and backwind, the fin's bend and load, the hull's wet length and planing lift, the buoyancy, the sailor's stance, lean, hang, feet, hands, harness, knees, the fall (kind, side, time), the telemetry. Not the configs (each PC builds the board from the same gear) and not the scratch arrays the physics refills every tick.
+
+**The rules of a network game:** no pause (Esc opens the menu, the board holds a steady course meanwhile); R after a fall waterstarts; R otherwise: free sailing, back to your start; in a race only the host's R (or the menu's "Restart the race (everyone)") restarts the race for both; the guest's R only takes a grounded board off the shore. The wind and the waves stay the host's for the whole game. Leaving: the other player's board stays where it was with "(left)" (host), or the game ends with "The host has left the game." (guest).
+
+## 5. What cannot be verified on one laptop
 
 - Two real PCs over Wi-Fi or a cable (tested here: two game instances on the same PC through 127.0.0.1, and the discovery broadcast on the loopback). The real-network test is Max's with the beta.3 zip on both PCs.
 - **Windows Firewall** will ask, the first time the game hosts, whether to allow it on private networks: say **Allow**, or the guest cannot connect.
@@ -60,6 +74,14 @@ This file is the live state of the work: the design, the steps, and at the end t
 ---
 
 ## Progress log (newest first)
+
+### 3 November 2026, Session 69 (evening): the sync check, a full race, the menus
+- **The sync check** (`tools/lan_test.sh`, `tools/lan/check_sync.py`; `--lan_track=30` prints TRACK lines for the boards a PC sails and SEEN lines for the puppets it shows at the same host tick): two instances, a 40 s race with two AI boards: **every board each PC showed was within 2.2 mm of where its own PC had it at that tick** (height 0.4 mm, heading 0.07 deg, speed 6 mm/s, mast direction 0.008, lean 0.0025), 217 moments of 3 boards on the guest and 74 of the guest's board on the host, the sailor up or down the same every time.
+- **A full race over the link** (`--robot=allrounder`: a scripted skipper sails each player's board; T1, 30 s countdown, the all-rounder and the rookie as the AI fleet): **both PCs printed the same finish list**: 1 Guest 457.17 s, 2 All-rounder 477.46 s, 3 Rookie and 4 Host not finished (4 of 6 steps; the race ends 60 s after the first finisher). The race clocks were equal on both PCs throughout (470.4 s at the same moment). The host's robot looped about the start for 140 s before it went (being checked: the robot's own start, or something of the network on the host).
+- **The menus (M5):** the start menu's **Play with a friend (LAN)** (`ui/lan_page.gd`): the start view (name, Host, Join), the join view (the games heard, the address), the lobby (players and gear; the host's choices: water, race or free sailing, course, AI fleet 0 to 19 and who, countdown, laps, level, rules, shadows, the lake's time; Wind and waves opens the settings' wind tab; Change gear the Gear page; the guest's Ready). The name and the last address are kept in the settings file (`[lan]`). `RacePage.course_choices()` shared with the lobby. To make room, the main page's two map tools sit side by side ("Wind viewer", "Fly over the lake") with one hint, and its margins are tighter (screenshots `.screenshots/lan/`). A host on the same PC is heard twice (LAN address and loopback): the list keeps one.
+- The puppets are posed by NetBoards right after their state is written, and a puppet beyond 300 m from the camera every other tick (as the host's RaceRunner does with its AI boards).
+- Version `0.2.0-beta.3` in `project.godot`.
+- **Lesson:** two `tools/lan_test.sh` runs at once share the port and the log files; run one at a time.
 
 ### 3 November 2026, Session 69 (continued): M1 to M4's core built, first two-instance race
 - **Name change:** the snapshot class is `BoardSnapshot` (`Game/net/board_snapshot.gd`), because `RaceRules` already has an inner class `BoardState`.

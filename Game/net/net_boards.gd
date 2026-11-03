@@ -536,7 +536,8 @@ func report_line() -> String:
 	var host_tick: int = my_tick if Lan.is_host() else _clock.host_tick_now(my_tick)
 	var parts: PackedStringArray = PackedStringArray()
 	parts.append("LAN %s t=%.1f host_tick=%d water=%.2f" % ["host" if Lan.is_host() else "guest", _clock_s, host_tick, own.sim.time_s])
-	parts.append("me[%d] %s" % [Lan.my_slot, _board_text(own)])
+	var robot_note: String = (" robot: %s" % str(own.skipper.get("note"))) if own.skipper != null and "note" in own.skipper else ""
+	parts.append("me[%d] %s%s" % [Lan.my_slot, _board_text(own), robot_note])
 	var ids: Array[int] = puppets.keys()
 	ids.sort()
 	for id: int in ids:
@@ -547,10 +548,15 @@ func report_line() -> String:
 	_bytes_in = 0
 	_states_in = 0
 	_states_late = 0
-	if runner != null and runner.race != null:
-		parts.append("race %s clock=%.1f" % [RaceSim.Phase.keys()[runner.race.phase()], runner.race.clock_s()])
-	elif mirror != null and mirror.race != null:
-		parts.append("race %s clock=%.1f" % [RaceSim.Phase.keys()[mirror.race.phase()], mirror.race.clock_s()])
+	var race: RaceSim = runner.race if runner != null else (mirror.race if mirror != null else null)
+	if race != null:
+		# Each board's next step, * when over the line early, +n its penalties.
+		var steps: PackedStringArray = PackedStringArray()
+		var rules: RaceRules = runner.rules if runner != null else mirror.rules
+		for i: int in race.board_count():
+			var penalties: int = rules.penalties(i) if rules != null else 0
+			steps.append("%d%s%s" % [race.next_step_index(i), "*" if race.is_ocs(i) else "", ("+%d" % penalties) if penalties > 0 else ""])
+		parts.append("race %s clock=%.1f steps=%s" % [RaceSim.Phase.keys()[race.phase()], race.clock_s(), ",".join(steps)])
 	return " | ".join(parts)
 
 

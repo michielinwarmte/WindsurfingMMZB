@@ -39,7 +39,7 @@ repo="$(cd "$(dirname "$0")/.." && pwd)"
 logs="$repo/.logs/lan"
 mkdir -p "$logs"
 if [[ "$release" == "1" ]]; then
-	exe="$(ls -d "$repo"/.release/*/wsim_console.exe 2>/dev/null | tail -1)"
+	exe="$repo/.release/wsim_console.exe"; [[ -f "$exe" ]] || exe=""
 	if [[ -z "$exe" ]]; then echo "No release build in .release/ (tools/release.sh build)." >&2; exit 1; fi
 	run=("$exe" --headless)
 else

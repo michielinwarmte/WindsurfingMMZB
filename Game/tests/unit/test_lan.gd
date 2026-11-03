@@ -57,6 +57,19 @@ func test_the_guest_follows_the_hosts_clock_from_its_quickest_messages() -> void
 	assert_eq(clock.host_tick, 1040)
 
 
+func test_the_guests_count_of_the_hosts_ticks_goes_up_one_a_tick() -> void:
+	var clock: NetClock = NetClock.new()
+	clock.receive(500, 100, 0.0, 0.0, 0.0, -1.0)
+	assert_eq(clock.host_tick_now(101), 501)
+	assert_eq(clock.host_tick_now(101), 501, "asked twice in a tick: the same answer")
+	# A quicker message raises the estimate by one: the count stays steady (within the slack).
+	clock.receive(502, 101, 0.0, 0.0, 0.0, -1.0)
+	assert_eq(clock.host_tick_now(102), 502, "one on from the last, not two")
+	# A long frame on this PC: the estimate jumps well ahead, and the count follows it.
+	clock.receive(560, 105, 0.0, 0.0, 0.0, -1.0)
+	assert_eq(clock.host_tick_now(106), 561)
+
+
 func test_the_hosts_game_travels_whole() -> void:
 	var game: LanGame = LanGame.new()
 	game.map = LanGame.Map.LAKE
