@@ -140,12 +140,20 @@ vec3 bed_behind(vec2 screen_uv, vec3 surface, mat4 inv_projection, mat4 inv_view
 }
 
 // One layer of ripples: the normal map, stretched along the crests (wind ripples are longer
-// than they are wide), drifting downwind.
+// than they are wide), drifting downwind. Returns the unpacked normal in the water's own frame
+// (x along TANGENT, the world's +x; y along BINORMAL, the world's -z).
+// The map's tilt is turned with the pattern: its x tilts toward rising u (here downwind), its y
+// toward falling v (here against `across`), and the stretch halves the slope across. Without the
+// turn the pattern drifted downwind but its slopes, which make the light and the sky's mirror,
+// kept the map's own axes: right only for a wind from the West (the default), 90 degrees off for
+// a wind from the North or the South (Max's play-test, ROADMAP GR8).
 vec3 ripple_layer(vec2 position, float size_m, float speed_ms, vec2 along, float time_s) {
 	vec2 across = vec2(-along.y, along.x);
 	vec2 local = vec2(dot(position, along), dot(position, across) * 0.5);
 	vec2 uv = (local - vec2(speed_ms * time_s, 0.0)) / size_m;
-	return texture(ripple_normals, uv).rgb;
+	vec3 n = texture(ripple_normals, uv).rgb * 2.0 - 1.0;
+	vec2 tilt = n.x * along - 0.5 * n.y * across;
+	return vec3(tilt.x, -tilt.y, n.z);
 }
 
 // How strong the wind's ripples are here, from the gust picture (1 without one).
@@ -178,7 +186,7 @@ void fragment() {
 	vec3 big = ripple_layer(world_position.xz, ripple_size_m, ripple_speed_ms, along, TIME);
 	vec3 small = ripple_layer(world_position.xz, ripple_size_m * 0.35, ripple_speed_ms * 0.6,
 		normalize(along + vec2(-along.y, along.x) * 0.4), TIME);
-	vec3 ripple = normalize(big + small - 1.0);
+	vec3 ripple = normalize(big + small);
 	NORMAL_MAP = ripple * 0.5 + 0.5;
 	NORMAL_MAP_DEPTH = ripple_strength * wind * near;
 

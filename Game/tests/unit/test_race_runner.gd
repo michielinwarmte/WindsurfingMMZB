@@ -44,3 +44,21 @@ func test_the_race_hud_tells_the_gap_the_turn_and_the_wind() -> void:
 	assert_eq(RaceHud.compass_name(270.0), "W")
 	assert_eq(RaceHud.compass_name(222.0), "SW")
 	assert_eq(RaceHud.clock(65.2), "1:05.2")
+
+
+## The fleet table: everyone in a small fleet; in a big one the leaders, a gap, and the boards
+## around you (RaceHud.FLEET_ROWS lines at most).
+func test_the_fleet_table_keeps_the_leaders_and_the_boards_around_you() -> void:
+	var small: Array[int] = [3, 0, 1, 2]
+	assert_eq(RaceHud.fleet_rows(small, 0, 9), small)
+	var big: Array[int] = []
+	for i: int in 21:
+		big.append(20 - i)  # board 20 leads, board 0 is last
+	assert_eq(RaceHud.fleet_rows(big, 17, 9), big.slice(0, 9), "you are among the first: no gap")
+	var middle: Array[int] = RaceHud.fleet_rows(big, 10, 9)
+	assert_eq(middle.size(), 9)
+	assert_eq(middle.slice(0, 4), [20, 19, 18, -1] as Array[int], "the leaders, then the gap")
+	assert_true(middle.has(10) and middle.has(11) and middle.has(9), "you and the boards either side")
+	var last: Array[int] = RaceHud.fleet_rows(big, 0, 9)
+	assert_eq(last.back(), 0, "the last board's own line is the bottom one")
+	assert_eq(last.size(), 9)

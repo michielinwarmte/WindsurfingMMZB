@@ -20,6 +20,7 @@ var _detail: Label
 var _fall_watch: FallWatch = FallWatch.new()
 var _help: Label
 var _rose: WindRose
+var _push_gauge: PushGauge
 ## Only in a map scene (show_mini_map), or with a race course (show_course).
 var _mini_map: MiniMap = null
 var _message: Label
@@ -52,6 +53,16 @@ func _ready() -> void:
 	add_child(_help)
 	_help.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 12)
 	_help.offset_left = 16.0
+
+	# The push slider as a gauge, at the bottom in the middle above the key help (free sailing and
+	# racing alike, for the board on the screen).
+	_push_gauge = PushGauge.new()
+	add_child(_push_gauge)
+	_push_gauge.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_push_gauge.offset_left = -PushGauge.GAUGE_SIZE.x * 0.5
+	_push_gauge.offset_right = PushGauge.GAUGE_SIZE.x * 0.5
+	_push_gauge.offset_top = -PushGauge.GAUGE_SIZE.y - 30.0
+	_push_gauge.offset_bottom = -30.0
 
 	_rose = WindRose.new()
 	add_child(_rose)
@@ -158,16 +169,16 @@ func update_from(t: Telemetry, controller: PlayerController, camera_name: String
 		state = "%s!  waterstart in %d s (R: now)" % [t.fall_kind.to_upper(), ceili(t.waterstart_in_s)]
 	var who: String = "autopilot" if use_autopilot else controller.mode_name()
 	var manoeuvre: String = controller.manoeuvre_name()
-	# The push slider's level (Up/Down), when the controller has one.
-	var push: String = "push %3.0f %%    " % (controller.push_level * 100.0) if not (use_autopilot or is_nan(controller.push_level)) else ""
+	# The push slider's level (Up/Down) on the gauge, when the controller has one.
+	_push_gauge.set_level(NAN if use_autopilot else controller.push_level)
 	var prefix: String = "%s   " % clock_text if clock_text != "" else ""
 	var rest: String = "%s, %s%s    %s    camera: %s" % [tack, state, ("  " + manoeuvre) if manoeuvre != "" else "", who, camera_name]
 	if sailor_view:
-		# No speed and no wind at the sail: the forecast wind and the push only (GD6).
-		_strip.text = prefix + "%swind %.0f kt from %03.0f    %s" % [push, t.tws_10m_kt, t.wind_from_bearing_deg, rest]
+		# No speed and no wind at the sail: the forecast wind only (GD6).
+		_strip.text = prefix + "wind %.0f kt from %03.0f    %s" % [t.tws_10m_kt, t.wind_from_bearing_deg, rest]
 	else:
-		_strip.text = prefix + "%5.1f km/h  %4.1f kt    %swind %4.1f kt at 10 m, %4.1f kt at the sail, from %03.0f    %s" % [
-			t.speed_kmh, t.speed_kt, push, t.tws_10m_kt, t.tws_at_sail_kt, t.wind_from_bearing_deg, rest]
+		_strip.text = prefix + "%5.1f km/h  %4.1f kt    wind %4.1f kt at 10 m, %4.1f kt at the sail, from %03.0f    %s" % [
+			t.speed_kmh, t.speed_kt, t.tws_10m_kt, t.tws_at_sail_kt, t.wind_from_bearing_deg, rest]
 	_rose.heading_deg = t.heading_deg
 	_rose.wind_from_deg = t.wind_from_bearing_deg
 	_rose.queue_redraw()

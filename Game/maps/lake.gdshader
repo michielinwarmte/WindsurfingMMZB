@@ -64,12 +64,17 @@ vec3 world_from_depth(vec2 screen_uv, mat4 inv_projection, mat4 inv_view) {
 }
 
 // One layer of ripples: the normal map, stretched along the crests (wind ripples are longer
-// than they are wide), drifting downwind.
+// than they are wide), drifting downwind. Returns the unpacked normal in the plane's frame
+// (x toward the world's +x, y toward -z), its tilt turned with the pattern as in
+// res://world/water.gdshader's ripple_layer (ROADMAP GR8: unturned, the slopes kept the map's
+// own axes and ran 90 degrees off the wind for a wind from the North or the South).
 vec3 ripple_layer(vec2 position, float size_m, float speed_ms, vec2 along) {
 	vec2 across = vec2(-along.y, along.x);
 	vec2 local = vec2(dot(position, along), dot(position, across) * 0.5);
 	vec2 uv = (local - vec2(speed_ms * TIME, 0.0)) / size_m;
-	return texture(ripple_normals, uv).rgb;
+	vec3 n = texture(ripple_normals, uv).rgb * 2.0 - 1.0;
+	vec2 tilt = n.x * along - 0.5 * n.y * across;
+	return vec3(tilt.x, -tilt.y, n.z);
 }
 
 void fragment() {
@@ -81,7 +86,7 @@ void fragment() {
 	vec3 big = ripple_layer(world_position.xz, ripple_size_m, ripple_speed_ms, along);
 	vec3 small = ripple_layer(world_position.xz, ripple_size_m * 0.35, ripple_speed_ms * 0.6,
 		normalize(along + vec2(-along.y, along.x) * 0.4));
-	vec3 ripple = normalize((big + small) * 0.5 * 2.0 - 1.0);
+	vec3 ripple = normalize(big + small);
 	NORMAL_MAP = ripple * 0.5 + 0.5;
 	NORMAL_MAP_DEPTH = ripple_strength * near;
 

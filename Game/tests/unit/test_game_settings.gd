@@ -358,6 +358,21 @@ func test_compass_names_and_points_of_sail() -> void:
 	assert_eq(SettingsValues.point_of_sail(260.0, 270.0), "into the wind (you will stop)")
 
 
+## A maximized window stays maximized when a graphics setting changes (Max, 3 November 2026: it
+## turned small), and comes back maximized out of fullscreen.
+func test_a_maximized_window_is_left_alone() -> void:
+	var gs: GDScript = load("res://ui/game_settings.gd")
+	const W := DisplayServer.WINDOW_MODE_WINDOWED
+	const MAX := DisplayServer.WINDOW_MODE_MAXIMIZED
+	const FULL := DisplayServer.WINDOW_MODE_FULLSCREEN
+	assert_eq(gs.window_mode_to_set(MAX, false, false), MAX, "maximized and not fullscreen: no change")
+	assert_eq(gs.window_mode_to_set(W, false, false), W)
+	assert_eq(gs.window_mode_to_set(DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN, true, false), DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)
+	assert_eq(gs.window_mode_to_set(MAX, true, false), FULL, "fullscreen switched on")
+	assert_eq(gs.window_mode_to_set(FULL, false, true), MAX, "back to maximized")
+	assert_eq(gs.window_mode_to_set(FULL, false, false), W, "back to a window")
+
+
 func _assert_wave(waves: WaveSetConfig, index: int, amplitude_m: float, steepness: float, text: String) -> void:
 	assert_almost_eq(waves.waves[index].amplitude_m, amplitude_m, TOL, text + " (amplitude)")
 	assert_almost_eq(waves.waves[index].steepness, steepness, TOL, text + " (steepness)")

@@ -1,31 +1,46 @@
 class_name RaceHud
 extends Control
 ## The race on the screen (RACING_PLAN.md, 9A), made for racing rather than for reading the
-## physics: at the top left the speed, the tack, the wind, the next mark with its distance and
-## which way to turn for it, the place and the race clock, and the fleet (place, where each board
-## is going, and its gap to you at the last mark you both rounded); the countdown large in the
-## middle; a split for a few seconds at every rounding; the warnings for over the line early and
-## the wrong side of a mark; and the results when you finish or the race is over. RaceRunner
-## updates it every frame from the race (RaceSim) and the player's telemetry; the HUD's own
+## physics, in the menus' look (HudStyle; Max, 3 November 2026: the old block looked like the
+## physics panel). At the top left a card with the place and the race clock large, the next mark
+## with its distance and which way to turn for it, and the speed and the wind small; under it the
+## fleet as a table (place, name, where each board is going, its gap to you at the last mark you
+## both rounded; the leaders and the boards around you when the fleet is big). The countdown large
+## in the middle; a split for a few seconds at every rounding; the warnings for over the line early
+## and the wrong side of a mark; and the results when you finish or the race is over. The push
+## slider is the HUD's gauge at the bottom (PushGauge, for the board on the screen). RaceRunner
+## updates this every frame from the race (RaceSim) and the player's telemetry; the HUD's own
 ## telemetry strip and panel are hidden meanwhile (Hud.set_race_mode), F1 brings the panel back.
-## While spectating (set_watching) the block is about the board the camera follows, with its name
+## While spectating (set_watching) the card is about the board the camera follows, with its name
 ## on a line above, and the fleet marks that board instead of "you".
 
 const SPLIT_SHOWN_S: float = 4.0
 const GO_SHOWN_S: float = 2.0
 ## The fleet's lines and the results table are worked out a few times a second, not every frame.
 const FLEET_REFRESH_S: float = 0.25
+## The most lines the fleet table shows: with more boards, the leaders and the boards around you.
+const FLEET_ROWS: int = 9
+## The leaders always shown in a big fleet.
+const FLEET_LEADERS: int = 3
+const CARD_WIDTH: float = 380.0
 const COUNTDOWN_COLOR: Color = Color(1.0, 0.9, 0.5)
 const WARNING_COLOR: Color = Color(1.0, 0.35, 0.3)
-const TEXT_COLOR: Color = Color(0.95, 0.97, 1.0)
-const PANEL_COLOR: Color = Color(0.0, 0.0, 0.0, 0.45)
+const TEXT_COLOR: Color = HudStyle.TEXT_COLOR
 const COMPASS_NAMES: PackedStringArray = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
 
-## The name of the board watched while spectating, above the speed (hidden otherwise).
+## The name of the board watched while spectating, above the place (hidden otherwise).
 var _title: Label
-var _speed: Label
-var _info: Label
-var _fleet: Label
+## The card's big line: the place ("2nd", or "Start" in the countdown), "of 8", the clock.
+var _place: Label
+var _of: Label
+var _clock: Label
+## The next mark (or the line, or the finish), its distance and the turn to it.
+var _next: Label
+## Small: the speed, the tack and the state; the wind; the time trial's best.
+var _status: Label
+## The fleet table: one row of four labels per line (place, name, going, gap).
+var _fleet_card: PanelContainer
+var _fleet_cells: Array[Label] = []
 var _countdown: Label
 var _split: Label
 var _warning: Label
@@ -54,62 +69,85 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var font: SystemFont = SystemFont.new()
-	font.font_names = PackedStringArray(["DejaVu Sans Mono", "Liberation Mono", "monospace"])
-	# The top-left block: the speed large, the facts under it, the fleet under those.
-	var block: PanelContainer = PanelContainer.new()
-	block.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var style: StyleBoxFlat = StyleBoxFlat.new()
-	style.bg_color = PANEL_COLOR
-	style.set_corner_radius_all(6)
-	style.content_margin_left = 12.0
-	style.content_margin_right = 12.0
-	style.content_margin_top = 8.0
-	style.content_margin_bottom = 8.0
-	block.add_theme_stylebox_override("panel", style)
-	add_child(block)
-	block.position = Vector2(16.0, 10.0)
+	# The top-left column: the race card, the fleet card under it.
 	var column: VBoxContainer = VBoxContainer.new()
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	block.add_child(column)
-	_title = _text_label(font, 20, COUNTDOWN_COLOR)
+	column.add_theme_constant_override("separation", 8)
+	column.position = Vector2(16.0, 12.0)
+	add_child(column)
+	var card: PanelContainer = _card()
+	column.add_child(card)
+	var lines: VBoxContainer = VBoxContainer.new()
+	lines.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lines.add_theme_constant_override("separation", 2)
+	card.add_child(lines)
+	_title = HudStyle.label(HudStyle.sans(700), 16, HudStyle.HIGHLIGHT_COLOR)
 	_title.hide()
-	column.add_child(_title)
-	_speed = _text_label(font, 30, TEXT_COLOR)
-	column.add_child(_speed)
-	_info = _text_label(font, 17, TEXT_COLOR)
-	column.add_child(_info)
-	_fleet = _text_label(font, 17, TEXT_COLOR)
-	column.add_child(_fleet)
+	lines.add_child(_title)
+	var top: HBoxContainer = HBoxContainer.new()
+	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	top.add_theme_constant_override("separation", 8)
+	lines.add_child(top)
+	_place = HudStyle.label(HudStyle.sans(800), 36)
+	top.add_child(_place)
+	_of = HudStyle.label(HudStyle.sans(500), 18, HudStyle.DIM_COLOR)
+	_of.size_flags_vertical = Control.SIZE_SHRINK_END
+	top.add_child(_of)
+	_clock = HudStyle.label(HudStyle.mono(700), 30)
+	_clock.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_clock.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_clock.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	top.add_child(_clock)
+	_next = HudStyle.label(HudStyle.sans(600), 19, HudStyle.ACCENT_COLOR)
+	lines.add_child(_next)
+	_status = HudStyle.label(HudStyle.sans(500), 15, HudStyle.DIM_COLOR)
+	lines.add_child(_status)
+	# The fleet table.
+	_fleet_card = _card()
+	column.add_child(_fleet_card)
+	var grid: GridContainer = GridContainer.new()
+	grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	grid.columns = 4
+	grid.add_theme_constant_override("h_separation", 14)
+	grid.add_theme_constant_override("v_separation", 1)
+	_fleet_card.add_child(grid)
+	for row: int in FLEET_ROWS:
+		for column_index: int in 4:
+			var cell: Label = HudStyle.label(HudStyle.mono(700) if column_index == 0 or column_index == 3 else HudStyle.sans(600 if column_index == 1 else 500), 15)
+			if column_index == 3:
+				cell.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+				cell.custom_minimum_size.x = 76.0
+			grid.add_child(cell)
+			_fleet_cells.append(cell)
 	# The middle of the screen.
-	_countdown = _centre_label(font, 96, COUNTDOWN_COLOR, 150.0, 130.0)
-	_split = _centre_label(font, 26, COUNTDOWN_COLOR, 290.0, 34.0)
-	_warning = _centre_label(font, 26, WARNING_COLOR, 330.0, 34.0)
+	_countdown = _centre_label(HudStyle.sans(800), 96, COUNTDOWN_COLOR, 150.0, 130.0)
+	_split = _centre_label(HudStyle.sans(700), 26, COUNTDOWN_COLOR, 290.0, 34.0)
+	_warning = _centre_label(HudStyle.sans(700), 26, WARNING_COLOR, 330.0, 34.0)
 	_results = PanelContainer.new()
 	_results.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_results.add_theme_stylebox_override("panel", HudStyle.card(16.0))
 	add_child(_results)
 	_results.set_anchors_preset(Control.PRESET_CENTER)
 	_results.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_results.grow_vertical = Control.GROW_DIRECTION_BOTH
-	_results_text = _text_label(font, 17, TEXT_COLOR)
+	_results_text = HudStyle.label(HudStyle.mono(700), 17)
 	_results.add_child(_results_text)
 	reset()
 
 
-func _text_label(font: Font, size: int, colour: Color) -> Label:
-	var label: Label = Label.new()
-	label.add_theme_font_override("font", font)
-	label.add_theme_font_size_override("font_size", size)
-	label.add_theme_color_override("font_color", colour)
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return label
+func _card() -> PanelContainer:
+	var card: PanelContainer = PanelContainer.new()
+	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.add_theme_stylebox_override("panel", HudStyle.card())
+	card.custom_minimum_size.x = CARD_WIDTH
+	return card
 
 
 ## A centred label across the screen at `top` pixels from the top.
 func _centre_label(font: Font, size: int, colour: Color, top: float, height: float) -> Label:
-	var label: Label = _text_label(font, size, colour)
+	var label: Label = HudStyle.label(font, size, colour)
 	label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.7))
-	label.add_theme_constant_override("outline_size", 4)
+	label.add_theme_constant_override("outline_size", 5)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	add_child(label)
 	label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
@@ -129,9 +167,13 @@ func reset() -> void:
 	_split.hide()
 	_warning.hide()
 	_results.hide()
-	_speed.text = ""
-	_info.text = ""
-	_fleet.text = ""
+	_place.text = ""
+	_of.text = ""
+	_clock.text = ""
+	_next.text = ""
+	_status.text = ""
+	for cell: Label in _fleet_cells:
+		cell.text = ""
 
 
 ## Spectating: the name of the board the camera follows, and whether it follows the leader by
@@ -153,46 +195,55 @@ func set_watching(board_name: String, follows_leader: bool) -> void:
 ## shadow_deficit: the share of the wind the other sails' shadows take from this board right now
 ## (RaceRunner.shadow_deficit(); 0: none), shown on the wind line when it is more than a few percent.
 ## rules: the judge (RaceRules), for the penalty warning and the penalty carried; null for none.
-## push_level: the board's push slider (PlayerController.push_level, 0 to 1), on the wind line as
-## "push 75 %" so the player sees Up and Down work in a race too; NaN for a board without one.
-func update_from(race: RaceSim, index: int, t: Telemetry, shadow_deficit: float = 0.0, rules: RaceRules = null, push_level: float = NAN) -> void:
-	var tack: String = "starboard tack" if t.twa_deg >= 0.0 else "port tack"
-	var state: String = "planing" if t.is_planing else ("luffing" if t.is_luffing else "")
+func update_from(race: RaceSim, index: int, t: Telemetry, shadow_deficit: float = 0.0, rules: RaceRules = null) -> void:
+	var state: String = "   ·   planing" if t.is_planing else ("   ·   luffing" if t.is_luffing else "")
 	if t.sailor_state == 1:
-		state = "%s: waterstart in %d s (R: now)" % [t.fall_kind, ceili(t.waterstart_in_s)]
-	_speed.text = "%4.1f km/h  %4.1f kt   %s   %s" % [t.speed_kmh, t.speed_kt, tack, state]
+		state = "   ·   %s: waterstart in %d s (R: now)" % [t.fall_kind, ceili(t.waterstart_in_s)]
 	var here: Vector2 = Vector2(t.position.x, t.position.z)
-	var next_name: String = race.next_step_name(index)
 	var distance_m: float = race.distance_to_next_m(index)
-	var turn: String = turn_text(relative_bearing_deg(here, race.next_target(index), t.heading_deg))
-	var lines: PackedStringArray = PackedStringArray()
-	var shadow: String = "   in a wind shadow: %d %% less" % roundi(100.0 * shadow_deficit) if shadow_deficit >= 0.03 else ""
-	var push: String = "   push %3.0f %%" % (push_level * 100.0) if not is_nan(push_level) else ""
-	lines.append("wind %2.0f kt from %s%s%s" % [t.tws_10m_kt, compass_name(t.wind_from_bearing_deg), push, shadow])
+	var turn: String = turn_text(relative_bearing_deg(here, race.next_target(index), t.heading_deg)).replace(" deg ", "° ")
+	var status: PackedStringArray = PackedStringArray()
+	status.append("%.1f km/h   ·   %.1f kt   ·   %s tack%s" % [t.speed_kmh, t.speed_kt, "starboard" if t.twa_deg >= 0.0 else "port", state])
+	var shadow: String = "   ·   in a wind shadow: %d %% less" % roundi(100.0 * shadow_deficit) if shadow_deficit >= 0.03 else ""
+	status.append("wind %.0f kt from %s%s" % [t.tws_10m_kt, compass_name(t.wind_from_bearing_deg), shadow])
 	if race.phase() == RaceSim.Phase.PRE_START:
 		var left: float = race.countdown_s()
 		_countdown.text = "%d" % ceili(left)
 		_countdown.show()
-		lines.append("start in %s   the line %d m %s" % [clock(left), roundi(distance_m), turn])
+		_place.text = "Start"
+		_of.text = "in"
+		_clock.text = clock(left)
+		_next.text = "The line   %d m   %s" % [roundi(distance_m), turn]
 	else:
 		var time_s: float = race.race_time_s()
 		_countdown.text = "GO!"
 		_countdown.visible = time_s < GO_SHOWN_S
 		if race.is_finished(index):
 			if _time_trial:
-				lines.append(time_trial_finish_text(race.finish_time_s(index) + race.time_penalty_s(index), _record_is_best, _record_best_before_s))
+				_place.text = "Finished"
+				_of.text = ""
+				_clock.text = clock(race.finish_time_s(index) + race.time_penalty_s(index))
+				_next.text = time_trial_finish_text(race.finish_time_s(index) + race.time_penalty_s(index), _record_is_best, _record_best_before_s)
 			else:
-				lines.append("finished %s in %s" % [ordinal(race.place(index)), clock(race.finish_time_s(index))])
+				_place.text = ordinal(race.place(index))
+				_of.text = "of %d" % race.board_count()
+				_clock.text = clock(race.finish_time_s(index))
+				_next.text = "Finished"
 		else:
-			lines.append("next: %s   %d m %s" % [next_name, roundi(distance_m), turn])
+			_next.text = "Next   %s   %d m   %s" % [race.next_step_name(index), roundi(distance_m), turn]
+			_clock.text = clock(time_s)
 			if _time_trial:
-				lines.append(time_trial_race_text(time_s, _best_s))
+				_place.text = "Time trial"
+				_of.text = ""
+				status.append(("best %s" % clock(_best_s)) if _best_s >= 0.0 else "no best yet")
 			else:
-				lines.append("%s of %d   race %s" % [ordinal(race.place(index)), race.board_count(), clock(time_s)])
-	_info.text = "\n".join(lines)
+				_place.text = ordinal(race.place(index))
+				_of.text = "of %d" % race.board_count()
+	_status.text = "\n".join(status)
 	var refresh: bool = race.clock_s() >= _fleet_refresh_at_s
 	if refresh:
-		_fleet.text = "" if _time_trial else fleet_text(race, index, "you" if _watching.is_empty() else "<< camera")
+		if not _time_trial:
+			_fill_fleet(race, index, "you" if _watching.is_empty() else "camera")
 		_fleet_refresh_at_s = race.clock_s() + FLEET_REFRESH_S
 	_show_split(race, index)
 	var penalised_s: float = race.race_time_s() - rules.last_breach_s(index) if rules != null else INF
@@ -216,6 +267,45 @@ func update_from(race: RaceSim, index: int, t: Telemetry, shadow_deficit: float 
 		_results.show()
 	else:
 		_results.hide()
+
+
+## The fleet table: the rows fleet_rows() picks, the board followed (`player`) in orange with `mark`
+## in place of a gap.
+func _fill_fleet(race: RaceSim, player: int, mark: String) -> void:
+	var rows: Array[int] = fleet_rows(race.race_order(), player, FLEET_ROWS)
+	_fleet_card.visible = rows.size() > 1
+	for row: int in FLEET_ROWS:
+		var cells: Array[Label] = _fleet_cells.slice(row * 4, row * 4 + 4)
+		var board: int = rows[row] if row < rows.size() else -2
+		var texts: PackedStringArray = PackedStringArray(["", "", "", ""])
+		if board == -1:
+			texts = PackedStringArray(["", "...", "", ""])
+		elif board >= 0:
+			var going: String = "finished" if race.is_finished(board) else "to " + race.next_step_name(board)
+			texts = PackedStringArray(["%d" % race.place(board), race.board_name(board).left(14), going,
+				mark if board == player else gap_text(race.splits_s(board), race.splits_s(player))])
+		var colour: Color = HudStyle.HIGHLIGHT_COLOR if board == player else TEXT_COLOR
+		for i: int in 4:
+			cells[i].text = texts[i]
+			cells[i].visible = board != -2
+			cells[i].add_theme_color_override("font_color", HudStyle.DIM_COLOR if i == 2 and board != player else colour)
+
+
+## The boards the fleet table shows, in race order: all of them up to `rows`; in a bigger fleet the
+## leaders, then -1 for the boards left out, then the boards around `player` (or the first `rows`
+## when the player is among them).
+static func fleet_rows(order: Array[int], player: int, rows: int) -> Array[int]:
+	if order.size() <= rows:
+		return order
+	var at: int = order.find(player)
+	if at < rows - 1:
+		return order.slice(0, rows)
+	var around: int = rows - FLEET_LEADERS - 1
+	var start: int = clampi(at - floori(around * 0.5), FLEET_LEADERS, order.size() - around)
+	var shown: Array[int] = order.slice(0, FLEET_LEADERS)
+	shown.append(-1)
+	shown.append_array(order.slice(start, start + around))
+	return shown
 
 
 ## The time at a step just completed, for a few seconds.
@@ -279,7 +369,7 @@ func set_time_trial(on: bool, best_s: float, best_splits: PackedFloat32Array) ->
 	_best_splits = best_splits
 	_record_is_best = false
 	_record_best_before_s = -1.0
-	_fleet.visible = not on
+	_fleet_card.visible = not on
 
 
 ## The time trial's finish: whether this run is the new best, and the best before it.

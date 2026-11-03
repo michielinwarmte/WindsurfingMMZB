@@ -31,8 +31,25 @@ static func fins() -> Array[GearItem]:
 	return items(GearItem.Kind.FIN)
 
 
-## Every item of one kind, sorted by the file name (so by the brand, the line and the size).
+## The items already loaded, by kind, kept for the session. Every lookup (find(), a persona's
+## gear) used to load the whole catalogue again, its models and textures with it, and a race's
+## fleet of personas did that some thirty times in one frame: the graphics card ran out of memory
+## ("Can't create buffer", Session 68) and the race took long to appear. Loaded once, the
+## textures (compressed) hold about 110 MB of the card's memory.
+static var _loaded: Dictionary[int, Array] = {}
+
+
+## Every item of one kind, sorted by the file name (so by the brand, the line and the size). A new
+## array each call (the items themselves are shared).
 static func items(kind: GearItem.Kind) -> Array[GearItem]:
+	if not _loaded.has(kind):
+		_loaded[kind] = _load_items(kind)
+	var found: Array[GearItem] = []
+	found.assign(_loaded[kind])
+	return found
+
+
+static func _load_items(kind: GearItem.Kind) -> Array[GearItem]:
 	var folder: String = folder_of(kind)
 	var files: PackedStringArray = PackedStringArray()
 	for file: String in ResourceLoader.list_directory(folder):

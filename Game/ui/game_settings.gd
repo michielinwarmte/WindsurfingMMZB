@@ -26,6 +26,8 @@ var _screenshot_run: bool = false
 ## The graphics settings as last applied to the picture (apply_display()), so a change of
 ## the wind or the waves does not set the picture again.
 var _applied_display: String = ""
+## Whether the window was maximized when Fullscreen was switched on, so switching it off restores it.
+var _maximized_before_fullscreen: bool = false
 
 
 # The file is read as soon as this autoload is made, before any scene: the first scene's
@@ -90,11 +92,26 @@ func apply_display() -> void:
 	_apply_shadow_quality()
 	if _screenshot_run:
 		return
-	var mode: DisplayServer.WindowMode = DisplayServer.WINDOW_MODE_FULLSCREEN if values.fullscreen else DisplayServer.WINDOW_MODE_WINDOWED
-	if DisplayServer.window_get_mode() != mode:
+	var mode: DisplayServer.WindowMode = window_mode_to_set(DisplayServer.window_get_mode(), values.fullscreen, _maximized_before_fullscreen)
+	if mode != DisplayServer.window_get_mode():
+		if mode == DisplayServer.WINDOW_MODE_FULLSCREEN:
+			_maximized_before_fullscreen = DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_MAXIMIZED
 		DisplayServer.window_set_mode(mode)
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if values.vsync else DisplayServer.VSYNC_DISABLED)
 	Engine.max_fps = values.max_fps
+
+
+## The window mode the Fullscreen setting asks for, given the window's mode now. A maximized (or
+## minimized) window is a window too: setting WINDOWED on it made it small again whenever a graphics
+## setting changed (Max, 3 November 2026). Out of fullscreen the window goes back to maximized if it
+## was before.
+static func window_mode_to_set(current: DisplayServer.WindowMode, fullscreen: bool, was_maximized: bool) -> DisplayServer.WindowMode:
+	var is_fullscreen: bool = current == DisplayServer.WINDOW_MODE_FULLSCREEN or current == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN
+	if fullscreen == is_fullscreen:
+		return current
+	if fullscreen:
+		return DisplayServer.WINDOW_MODE_FULLSCREEN
+	return DisplayServer.WINDOW_MODE_MAXIMIZED if was_maximized else DisplayServer.WINDOW_MODE_WINDOWED
 
 
 ## The sun's shadow map: bigger is sharper and slower; the filter softens the edges.

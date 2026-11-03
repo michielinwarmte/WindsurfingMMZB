@@ -52,3 +52,24 @@ What was checked afterwards, so it need not be repeated:
 - On the lake the waves are built once from `wind_silvaplana.tres`'s 222 while the Maloja wind blows from 236 to 245 through the day: a 20° gap, not 90.
 
 What the next session does first, with Max at the screen: a screenshot of his exact situation (the water, the camera, the wind setting, the flag and the HUD's wind line in view) and the crests compared with the flag and the sails, not with a number; then the measurement's screen-to-world step in `wave_direction.py`; then whether the flag and the sails stream with the sim's wind. ROADMAP GR8. The lesson of this report: a fix for what the player sees is verified on the player's screen, with the player.
+
+## 7. Found: the ripples' slopes did not turn with the wind (Session 68, 3 November 2026)
+
+Written by Claude Opus 5.5 on Max's laptop, on `gp/sea-follows-wind`.
+
+The water has two kinds of waves. The Gerstner waves move the surface and are what section 1 measured (with the swell at three times its height, they fill the picture). On top of them `water.gdshader` draws **ripples**: a normal map with bumps 7 m and 2.5 m long, which only changes the shading but in an ordinary sea, with the waves a few decimetres high, is most of what the eye reads as waves. The shader turned the ripples' pattern with the wind (it drifts downwind, stretched along the crests) but not their slopes: the normal map's tilt stayed on the map's own axes, which are the world's East and North. The light, the sun's glints and the mirrored sky come from the slopes, so the crests you see kept the map's direction:
+
+- right for a wind from the West (270), the game's default, which is why the early play-tests looked fine;
+- 90° off for a wind from the North or the South (Session 67's measurement was in a North wind, but measured the Gerstner swell, not the ripples);
+- 25 to 48° off on the lake (the Maloja from 222 to 245).
+
+The fix (`ripple_layer()` in `Game/world/water.gdshader`, and the same in the map's `Game/maps/lake.gdshader`): the map's tilt is turned onto the downwind and across directions, and the stretch halves the slope across the wind, so the ripples' crests lie across the wind whatever its direction.
+
+Measured on flat water (the waves off, so only the ripples show), 18 kt, the follow camera, the wind from the camera's left in both: the West wind with the board heading North (the case that was right) against the North wind heading East. `ripple_compare.py` reads the water left of the board: the share of the picture's gradient across the screen, and how alike the two pictures' spectra are.
+
+| | West, heading North | North, heading East | Spectra alike |
+|---|---|---|---|
+| Before | 0.05 (`ripples_west_before.png`) | 0.10 (`ripples_north_before.png`: grainy, cross-hatched) | 0.81 |
+| After | 0.06 (`ripples_west_after.png`) | 0.06 (`ripples_north_after.png`) | 0.97 |
+
+After the fix the North wind's water looks like the West wind's, turned with it. **Not verified yet: Max's own eye on his screen** (section 6's lesson). To check: open water, Settings, Wind, "Wind from" 0 (North), Back, and look at the water against the flag.
