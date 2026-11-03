@@ -450,14 +450,14 @@ Wind-made waves for the lake (Later L2, request R6) are PH11. Other water users 
 
 | ID | Item | Where | Waits on | Size | For |
 |---|---|---|---|---|---|
-| MP1 | **Max's test on two real PCs** with the 0.2.0-beta.3 zip on both: finding the game on the network, the firewall question (allow on private networks), a race with the AI fleet over Wi-Fi and over a cable, how it feels to race the other player, the traffic with 19 AI boards (about 0.9 MB/s from the host). Only two instances on one laptop were tested (127.0.0.1) | `Game/net/` | Max | S | 0.2 |
+| MP1 | **Max's test on two real PCs** with the 0.2.0-beta.3 zip on both: finding the game on the network, the firewall question (allow on private networks), a race with the AI fleet over Wi-Fi and over a cable, how it feels to race the other player, the frame rate and the traffic with 19 AI boards (measured on one laptop: about 0.7 MB/s from the host, and the host at 65 to 70 % of real time with both games on the laptop, the guest following its pace). Only two instances on one laptop were tested (127.0.0.1) | `Game/net/` | Max | S | 0.2 |
 | MP2 | **Collisions between the two players** (and with the AI boards and the marks): the contact force of PH12 and RA3; today boards sail through each other, as in a race alone | `net/`, `race/` | PH12, RA3 | M | 0.3 |
 | MP3 | **The host changes the wind during a game**: today the wind and the waves are fixed from the start (both PCs' seas must be the same); a change would go to the guest and rebuild both seas at one tick (RA24 is the same for the fleet) | `net/net_boards.gd`, `main.gd` | MP1 | S | 0.3 |
 | MP4 | **The other player's board heard**: its splashes and sail near you (SO5 for the fleet) | `audio/` | SO5 | M | later |
 | MP5 | **More than two players**: the code is written for any number (`LanSession.MAX_PLAYERS`); the host's traffic grows with each guest (every board to every guest), to be measured | `net/` | MP1 | M | later |
 | MP6 | **Joining a game that has started**, and watching (spectating) the other player | `net/` | MP1 | M | later |
 | MP7 | **Over the internet**: needs a relay or port forwarding (the LAN game finds and reaches the host directly) | `net/` | — | L | later |
-| MP8 | **Less traffic, if Wi-Fi needs it** (after MP1): the AI boards at 20 a second instead of 30, or the telemetry's display numbers at half precision; a lost packet only costs a tick (the boards are drawn between states) | `net/board_snapshot.gd`, `net/net_boards.gd` | MP1 | S | later |
+| MP8 | **The host's cost of a big fleet, and less traffic, if MP1 needs it**: reading an AI board's whole state costs the host about 0.2 to 0.5 ms (3 ms a tick with 19 boards at 20 a second) and writing it costs the guest as much; the GDScript loop over 475 fields is the cost (a native helper, or the AI boards at 10 to 15 a second, or the telemetry's display numbers at half precision). A lost packet only costs a state (the boards are drawn between states) | `net/board_snapshot.gd`, `net/net_boards.gd` | MP1 | M | later |
 
 ## PR The project and releases
 
