@@ -69,6 +69,13 @@ var _us_race: int = 0
 var _ticks_counted: int = 0
 ## The ticks since the race was built, for posing the far boards on alternate ticks.
 var _tick: int = 0
+## --race_report=<s>: every this many seconds of the race clock, one line per AI board on the console
+## (what its skipper is doing, its hands, its speed and heading): to see what the fleet does in an
+## exported game, which shows no scene tree. 0: none.
+var _report_every_s: float = 0.0
+var _report_at_s: float = -INF
+## The skippers' polars are printed with the first report only.
+var _reported_polars: bool = false
 ## Spectating (RaceSetup.spectate): the player's board is parked out of the race.
 var spectating: bool = false
 ## Which AI board the camera follows while spectating.
@@ -95,6 +102,9 @@ func setup_race(race_course: Course, player_node: WindsurferNode, race_setup: Ra
 	spectating = setup.spectate
 	_first_ai = 0 if spectating else 1
 	hud_layer.set_race_mode(true, spectating)
+	for arg: String in OS.get_cmdline_user_args():
+		if arg.begins_with("--race_report="):
+			_report_every_s = arg.get_slice("=", 1).to_float()
 	# The runner steps the player's board with the others (its own _physics_process steps nothing).
 	player.stepped_by_runner = true
 	_boards = [player]
@@ -263,6 +273,9 @@ func _physics_process(delta: float) -> void:
 	_us_race += Time.get_ticks_usec() - t1
 	_ticks_counted += 1
 	_tick += 1
+	if _report_every_s > 0.0 and race.clock_s() >= _report_at_s:
+		_report_at_s = race.clock_s() + _report_every_s
+		_print_report()
 
 
 ## The race's wind clock onto every board's wind field (RA13), on this thread before the sailors
@@ -498,3 +511,24 @@ func _check_record() -> void:
 	var time_s: float = race.finish_time_s(0) + race.time_penalty_s(0)
 	var is_best: bool = records.remember(record_key, time_s, race.splits_s(0))
 	hud.set_record(is_best, best_before_s)
+
+
+## The --race_report lines: the race clock, then per AI board its name, its skipper's note, whether
+## it sails, its speed, heading and wind angle, the hands' steer and the controls' sheet; the first
+## time also what each skipper knows of its board (its polar's sizes).
+func _print_report() -> void:
+	print("race %s (%s)" % [RaceHud.clock(race.race_time_s()) if race.phase() != RaceSim.Phase.PRE_START else "-" + RaceHud.clock(race.countdown_s()), RaceSim.Phase.keys()[race.phase()]])
+	for node: WindsurferNode in opponents:
+		var t: Telemetry = node.sim.telemetry
+		var note: String = str(node.skipper.get("note")) if node.skipper != null and "note" in node.skipper else ""
+		if not _reported_polars and node.skipper != null and "_polar_winds" in node.skipper:
+			# What the skipper knows of its board: empty in the exported game before Session 68 (the
+			# export's binary conversion dropped the polar's numbers; project.godot's
+			# editor/export/convert_text_resources_to_binary), and the fleet pointed into the wind.
+			print("  %s's polar: %d winds, %d angles, %d speeds, beat %s" % [node.skipper.board_name(), node.skipper.get("_polar_winds").size(),
+				node.skipper.get("_polar_twa").size(), node.skipper.get("_polar_speeds").size(), node.skipper.get("_polar_upwind")])
+		print("  %-10s %-9s %5.1f m/s  heading %3.0f  twa %4.0f  steer %+.2f  sheet %.2f  autopilot %s  hands %s  | %s" % [
+			node.skipper.board_name().left(10) if node.skipper != null else node.name, WindsurferSim.SailorState.keys()[node.sim.sailor_state],
+			t.speed_ms, t.heading_deg, t.twa_deg, node.hands.steer if node.hands != null else NAN, node.controls.sheet,
+			node.use_autopilot, node.controller.hands != null, note])
+	_reported_polars = true

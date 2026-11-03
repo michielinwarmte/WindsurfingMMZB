@@ -46,6 +46,17 @@ func test_the_race_hud_tells_the_gap_the_turn_and_the_wind() -> void:
 	assert_eq(RaceHud.clock(65.2), "1:05.2")
 
 
+## The exported game must ship the .tres files as text: the export's conversion to binary dropped
+## every number of the skippers' polar (Game/config/skipper_polar.tres; its defaults are empty), and
+## in the released game the whole fleet pointed into the wind at the start (Session 68).
+func test_the_export_keeps_the_resources_as_text() -> void:
+	assert_false(ProjectSettings.get_setting("editor/export/convert_text_resources_to_binary", true),
+		"project.godot: [editor] export/convert_text_resources_to_binary=false")
+	var polar: SkipperPolar = SkipperPolar.default_polar()
+	assert_eq(polar.winds_kt.size(), 3, "the polar's winds")
+	assert_eq(polar.speed_ms.size(), polar.winds_kt.size() * polar.twa_deg.size(), "a speed for every wind and angle")
+
+
 ## The fleet table: everyone in a small fleet; in a big one the leaders, a gap, and the boards
 ## around you (RaceHud.FLEET_ROWS lines at most).
 func test_the_fleet_table_keeps_the_leaders_and_the_boards_around_you() -> void:
