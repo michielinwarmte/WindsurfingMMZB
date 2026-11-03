@@ -110,19 +110,22 @@ const RIG_FROM_RISK: float = 0.4
 
 ## The character sheet for one race: the skills, each moved by its form in this wind (wind_form())
 ## and a little by the day (seeded), mapped onto the scripted skipper's numbers.
-func to_skipper_config(seed: int, wind_kt: float = 15.0) -> SkipperConfig:
+## level_spread pulls the day's skills toward the top (squeezed()): 1 keeps the sheet, the game's
+## close fleet less (RaceSetup.LEVEL_CLOSE). The style (the risk, the nerve, the start spot, the
+## aggression) is the sheet's whatever the spread.
+func to_skipper_config(seed: int, wind_kt: float = 15.0, level_spread: float = 1.0) -> SkipperConfig:
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = seed * 7919 + name.hash()
 	var wander: float = (1.0 - clampf(consistency, 0.0, 1.0)) * WANDER_AT_ZERO
 	var form: float = wind_form(wind_kt)
-	var timing: float = _today(start_timing, wander, rng)
+	var timing: float = squeezed(_today(start_timing, wander, rng), level_spread)
 	var nerve: float = _today(start_nerve, wander, rng)
-	var tacks: float = _today(clampf(tacking + form, 0.0, 1.0), wander, rng)
-	var speed: float = _today(clampf(boat_speed + form, 0.0, 1.0), wander, rng)
-	var upwind: float = _today(clampf(upwind_sense + form, 0.0, 1.0), wander, rng)
-	var downwind: float = _today(clampf(downwind_sense + form, 0.0, 1.0), wander, rng)
+	var tacks: float = squeezed(_today(clampf(tacking + form, 0.0, 1.0), wander, rng), level_spread)
+	var speed: float = squeezed(_today(clampf(boat_speed + form, 0.0, 1.0), wander, rng), level_spread)
+	var upwind: float = squeezed(_today(clampf(upwind_sense + form, 0.0, 1.0), wander, rng), level_spread)
+	var downwind: float = squeezed(_today(clampf(downwind_sense + form, 0.0, 1.0), wander, rng), level_spread)
 	var risky: float = _today(risk, wander, rng)
-	var gybes: float = _today(clampf(gybing + form, 0.0, 1.0), wander, rng)
+	var gybes: float = squeezed(_today(clampf(gybing + form, 0.0, 1.0), wander, rng), level_spread)
 	var config: SkipperConfig = SkipperConfig.new()
 	config.name = name
 	config.sail_colour = sail_colour
@@ -152,6 +155,13 @@ func to_skipper_config(seed: int, wind_kt: float = 15.0) -> SkipperConfig:
 	config.keep_clear_m = clampf(lerpf(20.0, 8.0, clampf(aggression, 0.0, 1.0)), 5.0, 30.0)
 	config.hold_speed_ms = clampf(config.hold_speed_ms, 1.5, 4.0)
 	return config
+
+
+## A skill (0 to 1) pulled toward the top: its distance below 1 times the spread. 1 keeps it; 0.5
+## makes the rookie's 0.2 a 0.6 and the pro's 0.95 a 0.975, so the order and the specialists stay and
+## the gaps halve (Max, 3 November 2026: the fleet within about 10 % on a slalom, 15 % on a course).
+static func squeezed(skill: float, level_spread: float) -> float:
+	return 1.0 - (1.0 - clampf(skill, 0.0, 1.0)) * clampf(level_spread, 0.0, 1.0)
 
 
 ## How much better (positive) or worse (negative) it sails in this wind (knots) than its sheet

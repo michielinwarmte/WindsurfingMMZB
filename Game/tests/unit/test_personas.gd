@@ -91,6 +91,32 @@ static func _spread(persona: Persona) -> float:
 	return sqrt(variance / values.size())
 
 
+## The fleet's level (RaceSetup.level_spread; Max, 3 November 2026: the fleet closer together): the
+## skills pulled toward the top keep their order and halve the gaps at 0.5; the style is the sheet's.
+func test_the_level_spread_brings_the_rookie_closer_and_keeps_the_order() -> void:
+	assert_almost_eq(Persona.squeezed(0.2, 0.5), 0.6, 1e-6)
+	assert_almost_eq(Persona.squeezed(0.95, 0.5), 0.975, 1e-6)
+	assert_almost_eq(Persona.squeezed(0.3, 1.0), 0.3, 1e-6, "1 keeps the sheet")
+	var pro: Persona = load("res://race/personas/hana.tres")
+	var rookie: Persona = load("res://race/personas/pia.tres")
+	var wide: float = rookie.to_skipper_config(1, 18.0).reaction_time_s - pro.to_skipper_config(1, 18.0).reaction_time_s
+	var close: float = rookie.to_skipper_config(1, 18.0, 0.5).reaction_time_s - pro.to_skipper_config(1, 18.0, 0.5).reaction_time_s
+	assert_gt(close, 0.0, "the pro's hands still the quicker")
+	assert_lt(close, wide * 0.6, "the gap about halved")
+	assert_eq(rookie.to_skipper_config(1, 18.0, 0.5).start_spot, rookie.to_skipper_config(1, 18.0).start_spot, "the style kept")
+
+
+## The Race page's race: the close level, and new dice at every start unless --seed fixes them.
+func test_the_race_is_close_and_rolls_new_dice_unless_told() -> void:
+	var setup: RaceSetup = RaceSetup.new()
+	assert_almost_eq(setup.level_spread, RaceSetup.LEVEL_CLOSE, 1e-6)
+	assert_eq(setup.race_seed, -1, "new dice at every start")
+	assert_eq(setup.spawn_seed, -1, "the spots from the dice too")
+	setup.read_options_from(PackedStringArray(["--seed=7", "--spread=1"]))
+	assert_eq(setup.race_seed, 7)
+	assert_almost_eq(setup.level_spread, 1.0, 1e-6)
+
+
 func test_a_persona_races_headless_with_its_sheet_drawn_for_the_race() -> void:
 	var skipper: RaceSkipper = Skippers.make("persona:lena")
 	assert_not_null(skipper)

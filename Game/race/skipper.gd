@@ -496,7 +496,7 @@ func setup(sim: WindsurferSim, controller: PlayerController, hands: AiHands, rac
 	_index = index
 	_controller.hands = hands
 	if persona != null:
-		config = persona.to_skipper_config(random_seed, sim.telemetry.tws_10m_kt)
+		config = persona.to_skipper_config(random_seed, sim.telemetry.tws_10m_kt, level_spread)
 	_rng.seed = random_seed
 	_time_s = 0.0
 	_wind_memory_deg = sim.telemetry.wind_from_bearing_deg

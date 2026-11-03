@@ -20,6 +20,8 @@ extends SceneTree
 ##                         The names are dealt round the boards in order.
 ##   [--boards=<n>]        how many boards (the default: one per name in --skippers)
 ##   [--seed=0]            the skippers' random seed (board i gets seed + i): the same seed, the same race
+##   [--spread=1]          the personas' levels (RaceSkipper.level_spread): 1 the sheets as written, the
+##                         game's RaceSetup.LEVEL_CLOSE closer together
 ##   [--finish_window=60]  the race ends this long after the first board finishes, seconds (the game's
 ##                         rule; tools/race_matrix.sh waits longer, so every board gets a time)
 ##   [--laps=1] [--wind_kt=15]
@@ -135,6 +137,7 @@ func _initialize() -> void:
 	var prestart_s: float = maxf(options.get("prestart", "10" if all_autopilot else "60").to_float(), 0.0)
 	var twa_deg: float = options.get("twa", "50").to_float()
 	var random_seed: int = options.get("seed", "0").to_int()
+	var level_spread: float = clampf(options.get("spread", "1").to_float(), 0.0, 1.0)
 	var finish_window_s: float = options.get("finish_window", "60").to_float()
 	var out_dir: String = options.get("out_dir", _repository_path(".sim_output/race"))
 	var spawn: String = options.get("spawn", "line")
@@ -170,7 +173,7 @@ func _initialize() -> void:
 	var who: PackedStringArray = PackedStringArray()
 	for i: int in boards:
 		who.append(names[i % names.size()])
-	var entries: Array[Entry] = make_entries(race, course, who, wind_kt, twa_deg, random_seed, spawn, area, spawn_seed, behind_m, with_gear)
+	var entries: Array[Entry] = make_entries(race, course, who, wind_kt, twa_deg, random_seed, spawn, area, spawn_seed, behind_m, with_gear, level_spread)
 	if entries.is_empty():
 		quit(2)
 		return
@@ -307,7 +310,8 @@ static func sailing_area_for(course_name: String, course: Course) -> SailingArea
 ## in the game), seeded by spawn_seed; with "line" behind the start line. Every skipper sails free in
 ## the area (one round the start line when none is given). Empty if a name is not a skipper.
 static func make_entries(race: RaceSim, course: Course, who: PackedStringArray, wind_kt: float, twa_deg: float = 50.0, random_seed: int = 0,
-		spawn: String = "line", area: SailingArea = null, spawn_seed: int = 0, behind_m: float = -1.0, gear: bool = false) -> Array[Entry]:
+		spawn: String = "line", area: SailingArea = null, spawn_seed: int = 0, behind_m: float = -1.0, gear: bool = false,
+		level_spread: float = 1.0) -> Array[Entry]:
 	var entries: Array[Entry] = []
 	var used: Dictionary[String, int] = {}
 	if area == null:
@@ -331,6 +335,7 @@ static func make_entries(race: RaceSim, course: Course, who: PackedStringArray, 
 				entry.controller.reset_controls(entry.controls)
 			entry.skipper.sailing_area = area
 			entry.skipper.random_seed = random_seed + i
+			entry.skipper.level_spread = level_spread
 			# Two of the same character are told apart by their number.
 			used[entry.name] = used.get(entry.name, 0) + 1
 			if who.count(who[i]) > 1:

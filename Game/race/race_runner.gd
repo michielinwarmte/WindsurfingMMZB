@@ -174,8 +174,10 @@ func restart() -> void:
 		# The AI boards in their order along the line (no player's slot in the middle).
 		spots = PackedVector2Array([spots[0]]) + line_spots(course, race.steps()[0], opponents.size(), behind_m)
 	_place(player, spots[0], heading_deg)
+	# New dice at every start unless the setup fixes them (--seed): each skipper's day and the spots.
+	var dice: int = setup.race_seed if setup.race_seed >= 0 else randi_range(1, 999999)
 	if setup.spawn == RaceSetup.Spawn.RANDOM:
-		var places: Array[Vector3] = _area.spawn_places(opponents.size(), setup.spawn_seed, spots[0])
+		var places: Array[Vector3] = _area.spawn_places(opponents.size(), setup.spawn_seed if setup.spawn_seed >= 0 else dice, spots[0])
 		for i: int in opponents.size():
 			_place(opponents[i], Vector2(places[i].x, places[i].y), places[i].z)
 	else:
@@ -183,7 +185,8 @@ func restart() -> void:
 			_place(opponents[i], spots[i + 1], heading_deg)
 	# The skippers look at the whole fleet, so they are set up once every board is in the race.
 	for i: int in opponents.size():
-		_skippers[i].random_seed = i + 1
+		_skippers[i].random_seed = dice + i
+		_skippers[i].level_spread = setup.level_spread
 		_skippers[i].sailing_area = _area
 		_skippers[i].rules = rules
 		_skippers[i].setup(opponents[i].sim, opponents[i].controller, opponents[i].hands, race, i + _first_ai)

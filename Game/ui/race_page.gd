@@ -16,6 +16,8 @@ const VALUE_WIDTH: float = 380.0
 const FLEET_SIZES: PackedInt32Array = [0, 3, 7, 11, 15, 19, 23, 31]
 const COUNTDOWNS_S: PackedFloat32Array = [30.0, 60.0, 180.0]
 const COUNTDOWN_NAMES: PackedStringArray = ["30 s", "60 s", "3 min"]
+## The fleet's level (RaceSetup.level_spread): close (the game's), or rookie to pro as the sheets say.
+const LEVEL_NAMES: PackedStringArray = ["Close: everyone can win", "Wide: rookie to pro"]
 ## The templates on the open water are raced at this size (the class's full courses take 7 to 11
 ## minutes a lap for the scripted skippers; half is a race of a few minutes).
 const TEMPLATE_PERCENT: int = 50
@@ -37,6 +39,7 @@ static var chosen_shadows: bool = true
 static var chosen_rules: bool = true
 ## The personas sail their own gear from the catalogue (RaceSetup.gear).
 static var chosen_gear: bool = RaceSetup.new().gear
+static var chosen_level: int = 0
 
 @onready var _rows: GridContainer = %Rows
 @onready var _start_button: Button = %StartButton
@@ -84,6 +87,8 @@ func _build_rows() -> void:
 	_add_list("Countdown", COUNTDOWN_NAMES, chosen_countdown, "The boards gather from where they sail free.", func(index: int) -> void: chosen_countdown = index)
 	_add_switch("Wind shadows", chosen_shadows, "A sail leaves slower air behind it: a pack slows itself.", func(on: bool) -> void: chosen_shadows = on)
 	_add_switch("The rules", chosen_rules, "Port keeps clear of starboard, and more; a penalty is a turn or 20 s.", func(on: bool) -> void: chosen_rules = on)
+	_add_list("Level", LEVEL_NAMES, chosen_level, "Close: the personas keep their strengths, the gaps are small.",
+		func(index: int) -> void: chosen_level = index)
 	_add_switch("Their own gear", chosen_gear, "Each persona rigs its own brand's board, sail and fin for the wind.", func(on: bool) -> void: chosen_gear = on)
 	_on_who_chosen(chosen_who)
 
@@ -212,6 +217,7 @@ func _on_start_pressed() -> void:
 	setup.shadows = chosen_shadows
 	setup.rules = chosen_rules
 	setup.gear = chosen_gear
+	setup.level_spread = RaceSetup.LEVEL_CLOSE if chosen_level == 0 else 1.0
 	hide()
 	start_race.emit(setup, chosen_lake)
 

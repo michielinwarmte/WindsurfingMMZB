@@ -9,6 +9,10 @@ extends RefCounted
 ## The seed of whatever randomness the skipper has (a scripted one's wander and reaction), so a
 ## race can be repeated.
 var random_seed: int = 0
+## How far apart the fleet's levels are (Persona.to_skipper_config()): 1 the sheets as written, rookie
+## to pro; less pulls every persona's skills toward the top, its strengths and weaknesses kept in
+## order. Given by whoever sets up the race before setup(); a skipper without a persona ignores it.
+var level_spread: float = 1.0
 ## A few words on what the skipper is doing right now, for the HUD and the race tool's CSV.
 var note: String = ""
 ## Where it sails when it is not racing (AI_FLEET_PLAN.md, D4): given by whoever sets up the race

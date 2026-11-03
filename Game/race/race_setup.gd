@@ -13,6 +13,10 @@ extends RefCounted
 ## The opponents of a race from the menu: three characters of different skill and style.
 const DEFAULT_SKIPPERS: PackedStringArray = ["allrounder", "gambler", "rookie"]
 const DEFAULT_PRESTART_S: float = 60.0
+## The game's fleet level (level_spread): the personas' skills pulled halfway to the top, which brings
+## the fastest and the slowest within about 15 % on a course and 10 % on a slalom, falls and early
+## starts aside (Max, 3 November 2026; Documentation/reports/fleet_speed/levels.md).
+const LEVEL_CLOSE: float = 0.5
 
 ## Where the AI boards appear (spawn below).
 enum Spawn { RANDOM, LINE }
@@ -34,8 +38,9 @@ var threads: int = RaceRunner.MAX_THREADS
 ## round the start line (SailingArea), sailing free until the countdown gathers them; LINE, spread
 ## along the start line behind it, as before. The player's board always starts behind the line.
 var spawn: Spawn = Spawn.RANDOM
-## The seed of the random spots: the same seed, the same spots, so a race replays.
-var spawn_seed: int = 0
+## The seed of the random spots: the same seed, the same spots, so a race replays; -1 takes the
+## race's dice (race_seed).
+var spawn_seed: int = -1
 ## How long the boards sail free before the countdown starts, seconds (0: the countdown starts at
 ## once, as the menu's races do).
 var free_sail_s: float = 0.0
@@ -62,6 +67,13 @@ var rules: bool = true
 ## default 8.0 (past its range in 24 kt), and were 72 s a persona faster on T1 in 12 kt, about even
 ## in 18 kt (characters.md). --gear=0 turns it off.
 var gear: bool = true
+## How far apart the AI's levels are (RaceSkipper.level_spread): LEVEL_CLOSE, the game's, or 1 for the
+## sheets as written (the Race page's "Level"; --spread=<0 to 1>).
+var level_spread: float = LEVEL_CLOSE
+## The dice of the race: the skippers' days (their form, timing and small mistakes) and, without a
+## --spawn_seed, the AI boards' starting spots. -1 rolls new ones at every start (Max, 3 November
+## 2026: "they race the same every time"); --seed=<n> fixes them, so a race can be repeated.
+var race_seed: int = -1
 ## A time trial (GP4, GD5): the player alone on the course, timed against the best kept in
 ## TimeTrialRecords for this water, course and wind. The Race page's "You alone" fleet sets it.
 var time_trial: bool = false
@@ -109,8 +121,8 @@ func read_options() -> void:
 	read_options_from(OS.get_cmdline_user_args())
 
 
-## --behind=<m>, --wind=<kt>, --blind=1, --spectate=1 and --shadows=0 from a list of arguments;
-## others are left.
+## --behind=<m>, --wind=<kt>, --blind=1, --spectate=1, --shadows=0, --rules=0, --gear=0, --seed=<n>
+## and --spread=<0 to 1> from a list of arguments; others are left.
 func read_options_from(args: PackedStringArray) -> void:
 	for arg: String in args:
 		var value: String = arg.get_slice("=", 1)
@@ -128,6 +140,10 @@ func read_options_from(args: PackedStringArray) -> void:
 			rules = value != "0"
 		elif arg.begins_with("--gear="):
 			gear = value != "0"
+		elif arg.begins_with("--seed="):
+			race_seed = maxi(value.to_int(), 0)
+		elif arg.begins_with("--spread="):
+			level_spread = clampf(value.to_float(), 0.0, 1.0)
 
 
 ## How far behind the start line the boards wait, metres: behind_m when it is set, else 1 m per
