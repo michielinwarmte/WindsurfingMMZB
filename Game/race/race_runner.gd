@@ -400,8 +400,7 @@ func _step_board(i: int, delta: float, player_stopped: bool) -> void:
 func _pose_boards(player_stopped: bool) -> void:
 	if not player_stopped and not spectating:
 		player.after_step()
-	for node: WindsurferNode in remote_players:
-		node.after_step()
+	# The other players' boards (LAN multiplayer) are posed by NetBoards as their states come in.
 	var camera: Camera3D = get_viewport().get_camera_3d()
 	var eye: Vector3 = camera.global_position if camera != null else player.global_position
 	for i: int in opponents.size():

@@ -13,8 +13,8 @@ extends Node
 ##
 ## Keys: arrows (or the gamepad's stick/d-pad) move, Enter (or A) chooses, Esc (or B) goes
 ## back, and on the main page asks whether to quit.
-## For screenshots (after "--"): --page=settings/<tab>|controls|howto|race|gear/<tab>|quit opens
-## that page.
+## For screenshots (after "--"): --page=settings/<tab>|controls|howto|race|gear/<tab>|lan[/host|/join]|quit
+## opens that page.
 
 const SAIL_SILVAPLANA_SCENE: String = "res://maps/silvaplana/sail_silvaplana.tscn"
 const FLY_OVER_SCENE: String = "res://maps/silvaplana/dev/terrain_view.tscn"
@@ -33,6 +33,7 @@ enum PlayOption { OPEN_WATER, FLY_OVER, WIND_VIEWER, SAIL_SILVAPLANA, RACE_OPEN_
 @onready var _sail_silvaplana_button: Button = %SailSilvaplanaButton
 @onready var _race_open_water_button: Button = %RaceOpenWaterButton
 @onready var _race_lake_button: Button = %RaceLakeButton
+@onready var _lan_button: Button = %LanButton
 @onready var _silvaplana_button: Button = %SilvaplanaButton
 @onready var _wind_button: Button = %WindButton
 @onready var _gear_button: Button = %GearButton
@@ -48,6 +49,10 @@ enum PlayOption { OPEN_WATER, FLY_OVER, WIND_VIEWER, SAIL_SILVAPLANA, RACE_OPEN_
 @onready var _howto: HowToPage = %HowTo
 @onready var _race: RacePage = %Race
 @onready var _gear: GearPage = %Gear
+@onready var _lan: LanPage = %Lan
+## The page the Settings or the Gear page was opened from, when not the main page (the LAN lobby's
+## "Wind and waves" and "Change gear"): it opens again when they close.
+var _return_to: MenuPage = null
 @onready var _quit_confirm: ConfirmDialog = %QuitConfirm
 
 
@@ -56,6 +61,9 @@ func _ready() -> void:
 	_sail_silvaplana_button.pressed.connect(_open_map_scene.bind(PlayOption.SAIL_SILVAPLANA, SAIL_SILVAPLANA_SCENE, "Lake Silvaplana"))
 	_race_open_water_button.pressed.connect(_on_race_open_water_pressed)
 	_race_lake_button.pressed.connect(_on_race_lake_pressed)
+	_lan_button.pressed.connect(_open_page.bind(_lan))
+	_lan.settings_requested.connect(_open_from_lan.bind(_settings))
+	_lan.gear_requested.connect(_open_from_lan.bind(_gear))
 	_silvaplana_button.pressed.connect(_open_map_scene.bind(PlayOption.FLY_OVER, FLY_OVER_SCENE, "the map of Lake Silvaplana"))
 	_wind_button.pressed.connect(_open_map_scene.bind(PlayOption.WIND_VIEWER, WIND_VIEWER_SCENE, "the wind viewer"))
 	_gear_button.pressed.connect(_open_page.bind(_gear))
@@ -65,12 +73,17 @@ func _ready() -> void:
 	_quit_button.pressed.connect(_open_page.bind(_quit_confirm))
 	_quit_confirm.confirmed.connect(_on_quit_confirmed)
 	_race.start_race.connect(_on_race_page_start)
-	for page: MenuPage in [_settings, _controls, _howto, _race, _gear, _quit_confirm]:
+	for page: MenuPage in [_settings, _controls, _howto, _race, _gear, _lan, _quit_confirm]:
 		page.closed.connect(_on_page_closed.bind(page))
-	MenuFocus.setup_buttons([_open_water_button, _sail_silvaplana_button, _race_open_water_button, _race_lake_button, _wind_button, _silvaplana_button,
-		_gear_button, _settings_button, _controls_button, _howto_button, _quit_button])
+	MenuFocus.setup_buttons([_open_water_button, _sail_silvaplana_button, _race_open_water_button, _race_lake_button, _lan_button, _wind_button,
+		_silvaplana_button, _gear_button, _settings_button, _controls_button, _howto_button, _quit_button])
 	_version.text = _version_text()
 	_show_main_page(_play_buttons()[GameSettings.values.last_play_option])
+	if Lan.last_error != "":
+		# Back from a network game that ended (the host left): why.
+		_status.text = Lan.last_error
+		_status.show()
+		Lan.last_error = ""
 	_apply_command_line_options()
 	if _run_bench_from_options():
 		return
@@ -151,7 +164,24 @@ func _open_page(page: MenuPage) -> void:
 	page.open()
 
 
+## The LAN lobby's "Wind and waves" (Settings on its wind tab) and "Change gear" (the Gear page):
+## the lobby opens again when they close.
+func _open_from_lan(page: MenuPage) -> void:
+	_return_to = _lan
+	_lan.hide()
+	page.open()
+	if page == _settings:
+		_settings.show_tab("wind")
+
+
 func _on_page_closed(page: MenuPage) -> void:
+	if _return_to != null and page != _return_to:
+		var back: LanPage = _return_to as LanPage
+		_return_to = null
+		if page == _settings:
+			_sailing.apply_settings_live()
+		back.reopen_after(page == _settings)
+		return
 	if page == _settings:
 		# The new wind and waves show behind the menu at once.
 		_sailing.apply_settings_live()
@@ -161,7 +191,7 @@ func _on_page_closed(page: MenuPage) -> void:
 		_build_sailing_again()
 	var buttons: Dictionary[MenuPage, Button] = {
 		_settings: _settings_button, _controls: _controls_button, _howto: _howto_button, _quit_confirm: _quit_button,
-		_race: _race_lake_button if RacePage.chosen_lake else _race_open_water_button, _gear: _gear_button}
+		_race: _race_lake_button if RacePage.chosen_lake else _race_open_water_button, _gear: _gear_button, _lan: _lan_button}
 	_show_main_page(buttons[page])
 
 
@@ -243,6 +273,10 @@ func _apply_command_line_options() -> void:
 					_gear.show_tab(parts[1])
 			"quit":
 				_open_page(_quit_confirm)
+			"lan":
+				_open_page(_lan)
+				if parts.size() > 1:
+					_lan.show_for_screenshot(parts[1])
 
 
 ## --race=t1_loop|t2_slalom [--skippers=a,b,c] [--prestart=<s>] [--spawn=random|line]

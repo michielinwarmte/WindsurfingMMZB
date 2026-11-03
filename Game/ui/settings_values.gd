@@ -153,6 +153,12 @@ var gear_fin: String
 ## 3 sailing on Lake Silvaplana: StartMenu.PlayOption).
 var last_play_option: int
 
+# LAN multiplayer (the start menu's "Play with a friend" page)
+## The name the other player sees; empty: the PC's user name.
+var lan_name: String
+## The host's address typed last on the Join page.
+var lan_address: String
+
 
 func _init() -> void:
 	reset_to_defaults()
@@ -208,6 +214,8 @@ func reset_to_defaults() -> void:
 	gear_sail = GearCatalogue.DEFAULT_SAIL_ID
 	gear_fin = GearCatalogue.DEFAULT_FIN_ID
 	last_play_option = 0
+	lan_name = ""
+	lan_address = ""
 
 
 # --- The physics' config resources ---------------------------------------------------
@@ -378,6 +386,8 @@ func write_to(config: ConfigFile) -> void:
 	config.set_value("gear", "sail", gear_sail)
 	config.set_value("gear", "fin", gear_fin)
 	config.set_value("menu", "last_play_option", last_play_option)
+	config.set_value("lan", "name", lan_name)
+	config.set_value("lan", "address", lan_address)
 
 
 ## Reads every setting from a ConfigFile. A missing or broken entry keeps its current value,
@@ -428,6 +438,8 @@ func read_from(config: ConfigFile) -> void:
 	gear_sail = _string(config, "gear", "sail", gear_sail)
 	gear_fin = _string(config, "gear", "fin", gear_fin)
 	last_play_option = clampi(_int(config, "menu", "last_play_option", last_play_option), 0, 3)
+	lan_name = _string(config, "lan", "name", lan_name)
+	lan_address = _string(config, "lan", "address", lan_address)
 
 
 ## Saves to a file (for example user://settings.cfg). Returns OK or the error.

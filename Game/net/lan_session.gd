@@ -601,6 +601,13 @@ func _listen() -> void:
 		entry["heard_s"] = now_s
 		changed = changed or not found_games.has(address)
 		found_games[address] = entry
+	# A host on this PC is heard twice, on its LAN address and on the loopback: the LAN one is kept.
+	if found_games.has("127.0.0.1"):
+		for address: String in found_games.keys():
+			if address != "127.0.0.1" and found_games[address].get("name") == found_games["127.0.0.1"].get("name"):
+				found_games.erase("127.0.0.1")
+				changed = true
+				break
 	for address: String in found_games.keys():
 		if now_s - float(found_games[address]["heard_s"]) > FORGET_AFTER_S:
 			found_games.erase(address)

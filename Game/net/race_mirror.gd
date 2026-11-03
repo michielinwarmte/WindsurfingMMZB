@@ -60,6 +60,11 @@ func restart(info: Dictionary) -> void:
 	hud.reset()
 
 
+## This PC's board's number in the race (-1 before the host's first start).
+func my_index() -> int:
+	return _my_index
+
+
 ## The host's race and judge as they stand.
 func take_state(race_state: Dictionary, rules_state: Dictionary) -> void:
 	if race == null:

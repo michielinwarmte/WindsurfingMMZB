@@ -93,24 +93,32 @@ func _build_rows() -> void:
 	_on_who_chosen(chosen_who)
 
 
-## The course list for the water chosen: T1 and the templates at half size on the open water; T2
-## and the course maker's saved courses on the lake.
-func _fill_courses() -> void:
-	_course_names.clear()
+## The courses a water offers, as [their names, their titles]: T1 and the templates at half size on
+## the open water; T2 and the course maker's saved courses on the lake. (The LAN lobby offers the same.)
+static func course_choices(lake: bool) -> Array[PackedStringArray]:
+	var names: PackedStringArray = PackedStringArray()
 	var titles: PackedStringArray = PackedStringArray()
-	if chosen_lake:
-		_course_names.append(RaceCourses.T2_NAME)
+	if lake:
+		names.append(RaceCourses.T2_NAME)
 		titles.append("T2 sprint slalom")
 		for saved: String in RaceCourses.saved_names():
 			if saved != RaceCourses.T2_NAME:
-				_course_names.append(saved)
+				names.append(saved)
 				titles.append(saved)
 	else:
-		_course_names.append(RaceCourses.T1_NAME)
+		names.append(RaceCourses.T1_NAME)
 		titles.append("T1 training loop")
 		for id: String in CourseTemplates.ALL:
-			_course_names.append("template:%s@%d" % [id, TEMPLATE_PERCENT])
+			names.append("template:%s@%d" % [id, TEMPLATE_PERCENT])
 			titles.append("%s at %d %%" % [CourseTemplates.title(id), TEMPLATE_PERCENT])
+	return [names, titles]
+
+
+## The course list for the water chosen (course_choices()).
+func _fill_courses() -> void:
+	var choices: Array[PackedStringArray] = course_choices(chosen_lake)
+	_course_names = choices[0]
+	var titles: PackedStringArray = choices[1]
 	_course_list.clear()
 	for title: String in titles:
 		_course_list.add_item(title)

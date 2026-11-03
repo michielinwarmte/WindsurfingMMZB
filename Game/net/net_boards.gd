@@ -78,6 +78,13 @@ var _report_every_s: float = 0.0
 var _report_at_s: float = 0.0
 var _quit_at_s: float = -1.0
 var _clock_s: float = 0.0
+## --lan_track=<n>: every n host ticks a TRACK line per board this PC sails and a SEEN line per
+## puppet shown at such a tick (tools/lan_test.sh compares them: the sync check). 0: none.
+var _track_every: int = 0
+## --lan_robot=<skipper>: a scripted skipper sails this PC's board in a race (tools/lan_test.sh races
+## two robots and the AI fleet to the finish and compares both PCs' results). Empty: the player sails.
+var _robot_name: String = ""
+var _results_printed: bool = false
 
 
 ## The after-physics half of the tick (step 3 in the note at the top).
@@ -111,6 +118,8 @@ func setup(sailing: SailingScene, mine: WindsurferNode) -> void:
 	var options: Dictionary[String, String] = LanSession.command_line_options()
 	_report_every_s = options.get("lan_report", "0").to_float()
 	_quit_at_s = options.get("lan_quit", "-1").to_float()
+	_track_every = maxi(options.get("lan_track", "0").to_int(), 0)
+	_robot_name = options.get("lan_robot", "")
 	if not Lan.game.race:
 		_place_for_free_sailing()
 	for player: LanPlayer in Lan.game.players:
@@ -153,6 +162,8 @@ func _make_puppet(id: int, gear: GearChoice, label: String, colour: Color, effec
 	node.own_config_copies = true
 	node.wind_flag_wanted = false
 	node.effects_wanted = effects
+	# Posed here, right after its state is written (_show_puppet()), not in its own tick.
+	node.stepped_by_runner = true
 	node.process_mode = Node.PROCESS_MODE_ALWAYS
 	scene.add_child(node)
 	if colour != Color.TRANSPARENT:
@@ -200,6 +211,7 @@ func puppet_positions() -> PackedVector3Array:
 func attach_runner(race_runner: RaceRunner) -> void:
 	runner = race_runner
 	runner.restarted.connect(_on_runner_restarted)
+	_put_robot_on_board(runner.race, 0, runner.rules, runner.sailing_area())
 
 
 ## The guest's race: a mirror of the host's.
@@ -265,10 +277,17 @@ func _show_puppet(id: int, now_tick: int) -> void:
 	var shown_tick: float = minf(show_tick, float(buffer.newest_tick()))
 	var node: WindsurferNode = puppets[id]
 	node.show_state(state, maxf(float(now_tick) - shown_tick, 0.0) * _dt)
+	if _track_every > 0 and show_tick == shown_tick and roundi(show_tick) % _track_every == 0:
+		print("SEEN %d %d %s" % [roundi(show_tick), id, _track_text(node)])
+	# Posed as the host's RaceRunner poses its AI boards: one farther than RaceRunner.FAR_DETAIL_M
+	# from the camera only every other tick (its place every tick).
+	var camera: Camera3D = get_viewport().get_camera_3d()
+	var far: bool = camera != null and node.global_position.distance_to(camera.global_position) > RaceRunner.FAR_DETAIL_M
+	node.set_far_away(far)
+	node.after_step(not far or (now_tick + id) % 2 == 0)
 	if not _shown.has(id):
 		_shown[id] = true
 		node.visible = true
-		node.after_step()
 		node.reset_physics_interpolation()
 
 
@@ -286,6 +305,8 @@ func send_states() -> void:
 			for i: int in runner.opponents.size():
 				if (my_tick + i) % AI_SEND_EVERY == 0:
 					_send_board(AI_ID_BASE + i, runner.opponents[i], my_tick)
+				elif _track_every > 0 and my_tick % _track_every == 0:
+					print("TRACK %d %d %s" % [my_tick, AI_ID_BASE + i, _track_text(runner.opponents[i])])
 			if my_tick % RACE_STATE_EVERY == 0 and runner.race != null:
 				Lan.send_race_state(runner.race.to_state(), runner.rules.to_state() if runner.rules != null else {})
 	elif _clock.is_known():
@@ -303,6 +324,8 @@ func _send_clock(tick: int) -> void:
 
 
 func _send_board(id: int, node: WindsurferNode, tick: int) -> void:
+	if _track_every > 0 and tick % _track_every == 0:
+		print("TRACK %d %d %s" % [tick, id, _track_text(node)])
 	if not _keyframes_out.has(id):
 		return  # its keyframe goes out first (to a guest when its scene is ready)
 	var bytes: PackedByteArray = BoardSnapshot.capture(node.sim).encode_diff(_keyframes_out[id])
@@ -434,6 +457,7 @@ func on_fleet(fleet: Array) -> void:
 
 ## The host's race starts again (on the host, from its RaceRunner): where each player waits.
 func _on_runner_restarted() -> void:
+	_put_robot_on_board(runner.race, 0, runner.rules, runner.sailing_area())
 	if _ready_peers.is_empty():
 		return
 	Lan.send_race_restart(restart_info())
@@ -468,6 +492,7 @@ func on_race_restart(info: Dictionary) -> void:
 		own.reset()
 	if mirror != null:
 		mirror.restart(info)
+		_put_robot_on_board(mirror.race, mirror.my_index(), mirror.rules, SailingArea.for_course(mirror.course, scene.shore_grid))
 
 
 func on_race_state(race_state: Dictionary, rules_state: Dictionary) -> void:
@@ -496,6 +521,7 @@ func _check_command_line_timers() -> void:
 	if _report_every_s > 0.0 and _clock_s >= _report_at_s:
 		_report_at_s = _clock_s + _report_every_s
 		print(report_line())
+	_print_results_once()
 	if _quit_at_s > 0.0 and _clock_s >= _quit_at_s:
 		_quit_at_s = -1.0
 		print(report_line())
@@ -526,6 +552,47 @@ func report_line() -> String:
 	elif mirror != null and mirror.race != null:
 		parts.append("race %s clock=%.1f" % [RaceSim.Phase.keys()[mirror.race.phase()], mirror.race.clock_s()])
 	return " | ".join(parts)
+
+
+## The sync check's numbers of a board: its place, heading, speed, the mast's direction (the rig)
+## and the sailor's lean (the body), to four decimals.
+static func _track_text(node: WindsurferNode) -> String:
+	var t: Telemetry = node.sim.telemetry
+	var mast: Vector3 = node.sim.sail.mast_direction()
+	return "%.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %d" % [t.position.x, t.position.y, t.position.z, t.heading_deg, t.speed_ms,
+		mast.x, mast.z, node.sim.lean, node.sim.sailor_state]
+
+
+## Once the race is over (--lan_report or --lan_track): every board's place, name, finish and
+## penalty, as this PC has the race (the host its own, the guest its mirror).
+func _print_results_once() -> void:
+	if _results_printed or (_report_every_s <= 0.0 and _track_every <= 0):
+		return
+	var race: RaceSim = runner.race if runner != null else (mirror.race if mirror != null else null)
+	if race == null or race.phase() != RaceSim.Phase.FINISHED:
+		return
+	_results_printed = true
+	for result: RaceResult in race.results():
+		var who: String = Lan.my_name if result.name == RaceRunner.PLAYER_NAME else result.name
+		print("RESULT %d %s %s %.2f %.1f %d/%d" % [result.place, who.replace(" ", "_"), "finished" if result.finished else "dnf",
+			result.finish_time_s, result.penalty_s, result.steps_done, result.steps_total])
+
+
+## --lan_robot: a scripted skipper on this PC's board for the race just started (again at every
+## start: the race is new). Its hands sail the board through the controller, as the AI's do.
+func _put_robot_on_board(race: RaceSim, index: int, rules: RaceRules, area: SailingArea) -> void:
+	if _robot_name == "" or race == null or index < 0:
+		return
+	var robot: RaceSkipper = Skippers.make(_robot_name)
+	if robot == null:
+		return
+	own.hands = AiHands.new()
+	own.controller.hands = own.hands
+	own.skipper = robot
+	robot.random_seed = 7 + Lan.my_slot
+	robot.sailing_area = area
+	robot.rules = rules
+	robot.setup(own.sim, own.controller, own.hands, race, index)
 
 
 static func _board_text(node: WindsurferNode) -> String:
