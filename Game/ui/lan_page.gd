@@ -30,7 +30,7 @@ const COUNTDOWN_NAMES: PackedStringArray = ["30 s", "60 s", "3 min"]
 const LAPS: PackedInt32Array = [1, 2, 3]
 const LAKE_TIMES_S: PackedFloat32Array = [43200.0, 52200.0, 61200.0]
 const LAKE_TIME_NAMES: PackedStringArray = ["12:00, building", "14:30, strongest", "17:00, evening"]
-const FIREWALL_HINT: String = "Both PCs on the same network (Wi-Fi or cable) with the same version of the game. The first time a PC hosts, Windows asks whether the game may use the network: allow it on private networks."
+const FIREWALL_HINT: String = "Both PCs on the same network (Wi-Fi or cable) with the same version of the game. The first time, Windows asks on each PC whether the game may use the network: allow it (and set the network to Private in Windows if it is Public)."
 
 ## The host's choices, kept for the session.
 static var chosen_lake: bool = false

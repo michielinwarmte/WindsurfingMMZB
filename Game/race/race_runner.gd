@@ -347,7 +347,7 @@ func _cast_shadows() -> void:
 		var position: Vector3 = node.sim.telemetry.position
 		xs.append(position.x)
 		zs.append(position.z)
-		casts.append(1 if node.sim.sailor_state == WindsurferSim.SailorState.SAILING else 0)
+		casts.append(1 if node.sim.sailor_state == WindsurferSim.SailorState.SAILING and node.visible else 0)
 	for i: int in _boards.size():
 		_shadows[i].set_fleet(xs, zs, casts, i)
 		_boards[i].sim.wind.disturbance = _shadows[i]
@@ -364,7 +364,7 @@ func _judge(delta: float) -> void:
 		var t: Telemetry = _boards[i].sim.telemetry
 		var in_race: int = i if spectating else i  # the boards' order is the race's order
 		rules.set_board(in_race, where_now(_boards[i]), t.heading_deg, 1.0 if t.twa_deg >= 0.0 else -1.0, t.speed_ms,
-			t.sailor_state == WindsurferSim.SailorState.SAILING)
+			t.sailor_state == WindsurferSim.SailorState.SAILING and _boards[i].visible)
 		var step: RaceStep = race.next_step(in_race)
 		marks.append(step.points[0] if step != null and step.kind == RaceStep.Kind.MARK else Vector2.INF)
 	if _boards.size() > 0:
@@ -505,7 +505,9 @@ func _tell_the_race() -> void:
 	if not spectating:
 		race.update_board(0, _where(player))
 	for i: int in remote_players.size():
-		race.update_board(1 + i, where_now(remote_players[i]))
+		# Not before its first state has come (the puppet shows then): until then it is nowhere.
+		if remote_players[i].visible:
+			race.update_board(1 + i, where_now(remote_players[i]))
 	for i: int in opponents.size():
 		race.update_board(i + _first_ai, _where(opponents[i]))
 

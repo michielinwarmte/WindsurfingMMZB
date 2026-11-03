@@ -69,12 +69,20 @@ This file is the live state of the work: the design, the steps, and at the end t
 ## 5. What cannot be verified on one laptop
 
 - Two real PCs over Wi-Fi or a cable (tested here: two game instances on the same PC through 127.0.0.1, and the discovery broadcast on the loopback). The real-network test is Max's with the beta.3 zip on both PCs.
-- **Windows Firewall** will ask, the first time the game hosts, whether to allow it on private networks: say **Allow**, or the guest cannot connect.
+- **Windows Firewall** will ask, the first time, on each PC (the host for the game, the guest when it listens for hosts): say **Allow**, or the guest cannot connect or find the host. A network Windows calls "Public" may still block it: set it to "Private".
 - How it feels to race the other player.
 
 ---
 
 ## Progress log (newest first)
+
+### 3 November 2026, Session 69 (night): the last checks, the beta.3 zip
+- **A second full race to the finish, on the exported game** (T1, 60 s countdown, robots on both players' boards, the all-rounder and the rookie): **11,946 states compared, all equal; the judge median 1 mm, worst 1.6 cm over 1,799 moments; the same finish list on both PCs**: 1 All-rounder 477.30 s, 2 Host 501.00 s, 3 Rookie 513.75 s, 4 Guest not finished (4 of 6). The guest's robot lost its race to the rules: the host's judge gave it a penalty in contact with the host's board, and it sailed the penalty turn from its copy of the judge (the rules work end to end).
+- **Lake Silvaplana over the link** (T2, the map's Maloja wind, robots, two AI boards, exported game): every state equal, the judge median 1 mm, worst 1.7 cm.
+- The host's race, judge and wind shadows ignore the other player's board until its first state has come (the puppet shows then); before, it stood at the map's origin for the first moments.
+- The firewall hint: Windows may ask on both PCs (the guest listens for hosts too); a "Public" network may block it (the page, the README, the zip's README.txt).
+- Roadmap MP9 (back to the lobby after a race; chat) and the Tailscale idea under MP7.
+- **The test build:** `.release/WindsurfingSimulator-0.2.0-beta.3/` (wsim.exe, wsim_console.exe, wsim.pck, README.txt with the two-PC checklist) and `.release/WindsurfingSimulator-0.2.0-beta.3-windows.zip` (304 MB), built from `mp/lan` after the last game change; the folder's own exe smoke-tested. Not published, nothing pushed.
 
 ### 3 November 2026, Session 69 (late evening): the big fleet, the pace, exact states
 - **The first measurement with 19 AI boards** (the exported game, host headless, guest in a window, on this one laptop) found two problems. (1) The guest's physics tick took about 20 ms: writing 19 whole states into puppets every tick (apply about 0.3 ms each, measured: capture 0.21 ms, apply 0.31 ms, interpolate 0.19 ms, decode 0.04 ms, encode 0.04 ms per call; the engine's get()/set() and the GDScript loop are the cost, `StringName` names saved 10 %, reading with `inst_to_dict()` was slower). Fixed (D6): a whole state only when a new one is due and only the changed fields; in between only the place and attitude; AI boards at 20 a second; puppets beyond 300 m a whole state every 4th tick. Guest's NetBoards about 3 to 5 ms a tick with 19 AI boards (8 ms when both games and the fleet share the laptop). (2) **The host fell behind real time** (66 % with both games and 19 AI boards on one laptop) and the guest, in real time, ran ahead of it: its boards were shown up to a second late. Fixed (D12): the guest keeps the host's pace. A first try with `Engine.time_scale` alone did nothing for the tick count (Godot 4 still runs 60 ticks a second, each shorter); the tick rate itself is lowered now. The pace is measured on the host's own clock (stamped on each clock message): measured on arrival, the burst of messages after the guest's loading read as a slow host and slowed the guest for 4 s.

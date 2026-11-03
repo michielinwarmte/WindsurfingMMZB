@@ -50,7 +50,7 @@ Alongside, at any time: the small fixes that are ready (RA2, SO3, UI3, UI4, MA2,
 | [GE Gear and the brands](#ge-gear-and-the-brands) | The brands, the boards, sails and fins, the gear page | 1 / 0 / 0, and the team's choices | The fleet on the gear; the team's look at the brands and the models | The team looks; AI sessions build |
 | [MA The map and the wind](#ma-the-map-and-the-wind) | Lake Silvaplana and the Maloja wind | 2 / 0 / 6 | The lake play-test, the credits screen | Max |
 | [TE Performance, tools and code](#te-performance-tools-and-code) | Speed, tools and tidying up | 2 / 0 / 4 | Godot rewriting the audio bus file, the tools on Max's PC | AI sessions; Max for his PC |
-| [MP LAN multiplayer](#mp-lan-multiplayer) | Two players on two PCs with the AI fleet | 1 / 2 / 5 | Max's test on two PCs (MP1) | Max tests; AI sessions build |
+| [MP LAN multiplayer](#mp-lan-multiplayer) | Two players on two PCs with the AI fleet | 1 / 2 / 6 | Max's test on two PCs (MP1) | Max tests; AI sessions build |
 | [PR The project and releases](#pr-the-project-and-releases) | The license and the releases | 2 / 0 / 1, and 1 now | The license, the 0.2 release; now: check 0.1's release page | The team |
 
 ## Contents
@@ -456,7 +456,8 @@ Wind-made waves for the lake (Later L2, request R6) are PH11. Other water users 
 | MP4 | **The other player's board heard**: its splashes and sail near you (SO5 for the fleet) | `audio/` | SO5 | M | later |
 | MP5 | **More than two players**: the code is written for any number (`LanSession.MAX_PLAYERS`); the host's traffic grows with each guest (every board to every guest), to be measured | `net/` | MP1 | M | later |
 | MP6 | **Joining a game that has started**, and watching (spectating) the other player | `net/` | MP1 | M | later |
-| MP7 | **Over the internet**: needs a relay or port forwarding (the LAN game finds and reaches the host directly) | `net/` | — | L | later |
+| MP7 | **Over the internet**: needs a relay or port forwarding (the LAN game finds and reaches the host directly). Untested idea: a private network over the internet such as Tailscale gives each PC an address the guest can type (the host's lobby lists every address it has) | `net/` | — | L | later |
+| MP9 | **Back to the lobby after a race** (today the host restarts the race, or both leave to the start menu and host and join again); and a chat line or emotes | `net/`, `ui/lan_page.gd` | MP1 | S | later |
 | MP8 | **The host's cost of a big fleet, and less traffic, if MP1 needs it**: reading an AI board's whole state costs the host about 0.2 to 0.5 ms (3 ms a tick with 19 boards at 20 a second) and writing it costs the guest as much; the GDScript loop over 475 fields is the cost (a native helper, or the AI boards at 10 to 15 a second, or the telemetry's display numbers at half precision). A lost packet only costs a state (the boards are drawn between states) | `net/board_snapshot.gd`, `net/net_boards.gd` | MP1 | M | later |
 
 ## PR The project and releases
