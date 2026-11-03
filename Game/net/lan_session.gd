@@ -202,6 +202,9 @@ func leave() -> void:
 		_peer.close()
 		_peer = null
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
+	# A guest may have slowed its game to the host's pace (NetBoards.restore_pace()).
+	Engine.time_scale = 1.0
+	Engine.physics_ticks_per_second = int(ProjectSettings.get_setting("physics/common/physics_ticks_per_second", 60))
 	_restore_own_settings()
 	role = Role.NONE
 	in_game = false
@@ -485,14 +488,15 @@ func _state(tick: int, board_id: int, part: int, parts: int, bytes: PackedByteAr
 	_deliver("on_state_part", [multiplayer.get_remote_sender_id(), tick, board_id, part, parts, bytes], false)
 
 
-## The host's clock, every tick: its tick, the water's clock and the wind's (RaceWindClock).
-func send_clock(tick: int, water_time_s: float, wind_time_s: float, wind_travel_m: float, time_of_day_s: float) -> void:
-	_clock.rpc(tick, water_time_s, wind_time_s, wind_travel_m, time_of_day_s)
+## The host's clock, every tick: its tick, the water's clock and the wind's (RaceWindClock), and the
+## host's real time in seconds (the guest measures the host's pace from it: NetClock).
+func send_clock(tick: int, water_time_s: float, wind_time_s: float, wind_travel_m: float, time_of_day_s: float, real_s: float) -> void:
+	_clock.rpc(tick, water_time_s, wind_time_s, wind_travel_m, time_of_day_s, real_s)
 
 
 @rpc("authority", "call_remote", "unreliable", 1)
-func _clock(tick: int, water_time_s: float, wind_time_s: float, wind_travel_m: float, time_of_day_s: float) -> void:
-	_deliver("on_clock", [tick, water_time_s, wind_time_s, wind_travel_m, time_of_day_s], false)
+func _clock(tick: int, water_time_s: float, wind_time_s: float, wind_travel_m: float, time_of_day_s: float, real_s: float) -> void:
+	_deliver("on_clock", [tick, water_time_s, wind_time_s, wind_travel_m, time_of_day_s, real_s], false)
 
 
 ## The guest's scene is loaded and its NetBoards is listening (to the host).

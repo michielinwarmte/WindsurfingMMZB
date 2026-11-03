@@ -104,3 +104,33 @@ func test_angles_go_the_short_way_round() -> void:
 	assert_almost_eq(BoardSnapshot._short_way(179.0, -179.0, 0.25, 180.0), 179.5, 1e-4, "a wind angle through dead downwind")
 	assert_almost_eq(BoardSnapshot._short_way(10.0, 20.0, 0.5, 180.0), 15.0, 1e-4, "an ordinary angle in between")
 	assert_almost_eq(absf(BoardSnapshot._short_way(3.1, -3.1, 0.5, PI)), PI, 0.01, "radians the same (plus or minus pi is one angle)")
+
+
+func test_writing_only_what_changed_gives_the_same_puppet() -> void:
+	var first: BoardSnapshot = BoardSnapshot.capture(_sailed_sim(2.0))
+	var second: BoardSnapshot = BoardSnapshot.capture(_sailed_sim(3.0))
+	var whole: WindsurferSim = _puppet()
+	second.apply(whole)
+	var by_changes: WindsurferSim = _puppet()
+	first.apply(by_changes)
+	second.apply(by_changes, first)
+	assert_eq(BoardSnapshot.capture(by_changes).values, BoardSnapshot.capture(whole).values, "the same numbers either way")
+
+
+func test_the_body_between_two_states() -> void:
+	var a: BoardSnapshot = BoardSnapshot.capture(_sailed_sim(3.0))
+	var b: BoardSnapshot = BoardSnapshot.capture(_sailed_sim(3.2))
+	var half: Transform3D = BoardSnapshot.body_between(a, b, 0.5)
+	var pa: Vector3 = a.get_field("body", "position")
+	var pb: Vector3 = b.get_field("body", "position")
+	assert_almost_eq(half.origin.distance_to((pa + pb) * 0.5), 0.0, 1e-3, "the centre of mass halfway")
+	assert_true(BoardSnapshot.body_between(a, b, 0.0).basis.is_equal_approx(a.get_field("body", "basis")), "at a state: its own attitude")
+	var buffer: StateBuffer = StateBuffer.new()
+	buffer.add(10, a)
+	buffer.add(12, b)
+	assert_eq(buffer.tick_at_or_before(11.5), 10)
+	assert_eq(buffer.tick_at_or_before(12.0), 12)
+	assert_eq(buffer.tick_at_or_before(9.0), -1)
+	assert_almost_eq(buffer.body_at(11.0).origin.distance_to(half.origin), 0.0, 1e-3)
+	assert_eq(buffer.state_of(12), b)
+	assert_null(buffer.state_of(11))

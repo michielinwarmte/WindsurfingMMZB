@@ -39,6 +39,34 @@ func size() -> int:
 	return _ticks.size()
 
 
+## The newest tick held at or before a moment (-1 for none).
+func tick_at_or_before(tick: float) -> int:
+	var at: int = _ticks.bsearch(floori(tick), false) - 1
+	return _ticks[at] if at >= 0 else -1
+
+
+## The state held for a tick (null when that tick is not held).
+func state_of(tick: int) -> BoardSnapshot:
+	var at: int = _ticks.bsearch(tick)
+	return _states[at] if at < _ticks.size() and _ticks[at] == tick else null
+
+
+## The body's centre of mass and attitude at a moment: between the two held states around it
+## (BoardSnapshot.body_between()), the newest's when it is newer than all, the oldest's when older.
+func body_at(tick: float) -> Transform3D:
+	var last: int = _ticks.size() - 1
+	if tick >= float(_ticks[last]):
+		return BoardSnapshot.body_between(_states[last], null, 0.0)
+	if tick <= float(_ticks[0]):
+		return BoardSnapshot.body_between(_states[0], null, 0.0)
+	var after: int = _ticks.bsearch(ceili(tick))
+	var before: int = maxi(after - 1, 0)
+	if float(_ticks[after]) == tick:
+		return BoardSnapshot.body_between(_states[after], null, 0.0)
+	var share: float = (tick - float(_ticks[before])) / float(_ticks[after] - _ticks[before])
+	return BoardSnapshot.body_between(_states[before], _states[after], share)
+
+
 ## The state to show at a tick (a fraction is a moment between two ticks): between the two held
 ## states around it; the newest when it is newer than all (the board holds still rather than guess),
 ## the oldest when it is older than all. null when nothing is held.

@@ -39,7 +39,9 @@ enum Kind {
 ## One field of the state: which part, its name, its type and where its slots start.
 class Field:
 	var part: int = 0
-	var name: String = ""
+	## As a StringName: the engine looks a property up by StringName, and a String would be
+	## turned into one on every get() and set() (half the cost of capture() and apply()).
+	var name: StringName = &""
 	var type: int = TYPE_NIL
 	## The first slot in values() (for a String: its index in texts()).
 	var slot: int = 0
@@ -53,6 +55,10 @@ class Layout:
 	var slot_count: int = 0
 	var text_count: int = 0
 	var hash_value: int = 0
+	## Where the body's centre of mass (body.position) and its attitude (body.basis) start: an
+	## in-between tick moves only these (body_between()).
+	var body_position_slot: int = -1
+	var body_basis_slot: int = -1
 
 
 static var _layout: Layout = null
@@ -94,7 +100,7 @@ static func _make_layout(sim: WindsurferSim) -> Layout:
 				continue  # objects and arrays do not travel
 			var field: Field = Field.new()
 			field.part = part
-			field.name = String(property["name"])
+			field.name = StringName(property["name"])
 			field.type = type
 			if type == TYPE_STRING:
 				field.slot = made.text_count
@@ -105,6 +111,10 @@ static func _make_layout(sim: WindsurferSim) -> Layout:
 				_add_kinds(made.kinds, field)
 			made.fields.append(field)
 			signature.append("%d.%s:%d" % [part, field.name, type])
+			if PARTS[part] == "body" and field.name == &"position":
+				made.body_position_slot = field.slot
+			elif PARTS[part] == "body" and field.name == &"basis":
+				made.body_basis_slot = field.slot
 	made.hash_value = hash("|".join(signature))
 	return made
 
@@ -153,7 +163,8 @@ static func _part_of(sim: WindsurferSim, part: int) -> Object:
 
 # ---------------------------------------------------------------- reading and writing a simulation
 
-## The state of a simulation now.
+## The state of a simulation now (about 0.2 ms: the loop over the fields is the cost; reading all
+## members at once with inst_to_dict() was measured slower, Session 69).
 static func capture(sim: WindsurferSim) -> BoardSnapshot:
 	var shape: Layout = layout()
 	var state: BoardSnapshot = BoardSnapshot.new()
@@ -198,15 +209,52 @@ static func capture(sim: WindsurferSim) -> BoardSnapshot:
 
 
 ## Writes this state into a simulation (a puppet's: it is not stepped afterwards). Its wind and
-## water are its own; only the board's numbers change.
-func apply(sim: WindsurferSim) -> void:
+## water are its own; only the board's numbers change. With `before`, the state this simulation
+## already holds, only the fields that differ from it are written: writing a field is the costly
+## part (the engine's set(), about half a microsecond), and the gear's constants never change.
+func apply(sim: WindsurferSim, before: BoardSnapshot = null) -> void:
 	var shape: Layout = layout()
 	if values.size() != shape.slot_count or texts.size() != shape.text_count:
 		push_error("A board state of another layout (%d slots, %d expected)." % [values.size(), shape.slot_count])
 		return
+	if before != null and before.values.size() != values.size():
+		before = null
 	var holders: Array[Object] = _holders(sim)
 	for field: Field in shape.fields:
+		if before != null and _same_as(before, field):
+			continue
 		holders[field.part].set(field.name, _value_of(field))
+
+
+## Whether a field holds the same value here as in another state.
+func _same_as(other: BoardSnapshot, field: Field) -> bool:
+	if field.type == TYPE_STRING:
+		return texts[field.slot] == other.texts[field.slot]
+	for i: int in range(field.slot, field.slot + _slots_of(field.type)):
+		if values[i] != other.values[i]:
+			return false
+	return true
+
+
+## The body's centre of mass and attitude a share t from state a to state b (positions in between,
+## the attitude by slerp): what a board shown between two states moves by (NetBoards).
+static func body_between(a: BoardSnapshot, b: BoardSnapshot, t: float) -> Transform3D:
+	var shape: Layout = layout()
+	var pa: int = shape.body_position_slot
+	var ba: int = shape.body_basis_slot
+	var from: Transform3D = Transform3D(_basis_at(a.values, ba), Vector3(a.values[pa], a.values[pa + 1], a.values[pa + 2]))
+	if b == null or b == a or t <= 0.0:
+		return from
+	var to: Transform3D = Transform3D(_basis_at(b.values, ba), Vector3(b.values[pa], b.values[pa + 1], b.values[pa + 2]))
+	if t >= 1.0:
+		return to
+	var rotation: Quaternion = from.basis.get_rotation_quaternion().slerp(to.basis.get_rotation_quaternion(), t)
+	return Transform3D(Basis(rotation), from.origin.lerp(to.origin, t))
+
+
+static func _basis_at(slots: PackedFloat32Array, i: int) -> Basis:
+	return Basis(Vector3(slots[i], slots[i + 1], slots[i + 2]), Vector3(slots[i + 3], slots[i + 4], slots[i + 5]),
+		Vector3(slots[i + 6], slots[i + 7], slots[i + 8]))
 
 
 ## A field's value from the slots, as its own type.

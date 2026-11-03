@@ -27,18 +27,27 @@ extends Node
 ## AI_ID_BASE plus its place in the fleet.
 
 const AI_ID_BASE: int = 100
-## The AI boards' states go out every this many ticks (30 a second), each on its own tick of the
-## pair so the load is even; the players' every tick.
-const AI_SEND_EVERY: int = 2
+## The AI boards' states go out every this many ticks (20 a second), each on its own tick of the
+## three so the load is even; the players' every tick. (Reading a board's whole state costs the host
+## 0.1 to 0.2 ms and writing it into a puppet the guest as much: with 19 AI boards at 30 a second
+## the host fell behind real time on Max's laptop, Session 69.)
+const AI_SEND_EVERY: int = 3
 ## How many ticks behind the newest state a board is shown: a player's board (states every tick) and
-## an AI board (every 2nd tick). Two ticks of margin for a message that comes late.
+## an AI board (every 3rd tick). Two ticks of margin for a message that comes late.
 const PLAYER_SHOW_DELAY_TICKS: float = 3.0
-const AI_SHOW_DELAY_TICKS: float = 4.0
+const AI_SHOW_DELAY_TICKS: float = 5.0
 ## The race's state goes to the guest ten times a second.
 const RACE_STATE_EVERY: int = 6
+## A puppet beyond RaceRunner.FAR_DETAIL_M from the camera takes a whole new state at most every
+## this many ticks (15 a second); its place moves every tick.
+const FAR_STATE_EVERY: int = 4
 ## In free sailing the guest starts this far upwind of the host's start spot (no one on top of the
 ## other; upwind is open water on the lake too, where the beach is behind the start).
 const FREE_SAIL_APART_M: float = 30.0
+## The guest's game never runs slower than this share of real time to keep the host's pace, nor
+## faster than real time; each tick it moves this share of the way to the host's pace.
+const PACE_MIN: float = 0.4
+const PACE_FOLLOW: float = 0.02
 ## How long the message stays after the other player left, before a host's race simply goes on.
 const LEFT_MESSAGE_S: float = 6.0
 
@@ -57,6 +66,11 @@ var _keyframes_out: Dictionary[int, BoardSnapshot] = {}
 ## Which peer sails each puppet (to drop a state for a board that is not theirs).
 var _owners: Dictionary[int, int] = {}
 var _clock: NetClock = NetClock.new()
+## The game's own physics rate (project.godot): a tick is always 1 / NORMAL_TICKS s of game time,
+## also while the guest keeps a slow host's pace (keep_the_hosts_pace()).
+var _normal_ticks: int = 60
+## The pace the guest follows, a share of real time (1 = real time).
+var _pace: float = 1.0
 ## The host's tick when the scene began: its water clock counts from there.
 var _start_tick: int = 0
 var _dt: float = 1.0 / 60.0
@@ -65,6 +79,9 @@ var _ready_peers: Array[int] = []
 var _sender: Node = null
 ## The puppets that have shown a state (the first one also resets the smoothing between frames).
 var _shown: Dictionary[int, bool] = {}
+## The state each puppet's simulation holds now, and its tick (apply() writes only what changed).
+var _applied: Dictionary[int, BoardSnapshot] = {}
+var _applied_tick: Dictionary[int, int] = {}
 ## The parts of a board's state that have come so far, by board and tick (on_state_part()).
 var _parts: Dictionary[Vector2i, Array] = {}
 var _message_until_s: float = -1.0
@@ -73,13 +90,24 @@ var _bytes_out: int = 0
 var _bytes_in: int = 0
 var _states_in: int = 0
 var _states_late: int = 0
+## What NetBoards costs, microseconds since the last report: showing the puppets (the tick's first
+## half), reading the states that came in, and sending this PC's (the Sender); and the ticks counted.
+var _us_show: int = 0
+var _us_read: int = 0
+var _us_send: int = 0
+var _us_capture: int = 0
+var _us_rpc: int = 0
+## Real seconds since the scene began (the report: game time against real time).
+var _real_start_ms: int = 0
+var _ticks_costed: int = 0
 ## --lan_report=<s> / --lan_quit=<s> (LanSession's note).
 var _report_every_s: float = 0.0
 var _report_at_s: float = 0.0
 var _quit_at_s: float = -1.0
 var _clock_s: float = 0.0
-## --lan_track=<n>: every n host ticks a TRACK line per board this PC sails and a SEEN line per
-## puppet shown at such a tick (tools/lan_test.sh compares them: the sync check). 0: none.
+## --lan_track=<n>: in the first AI_SEND_EVERY ticks of every n host ticks, a TRACK line for each
+## state this PC sends and a SEEN line for each state a puppet takes (tools/lan_test.sh compares
+## them: the sync check). 0: none.
 var _track_every: int = 0
 ## --lan_robot=<skipper>: a scripted skipper sails this PC's board in a race (tools/lan_test.sh races
 ## two robots and the AI fleet to the finish and compares both PCs' results). Empty: the player sails.
@@ -106,8 +134,10 @@ func _init() -> void:
 func setup(sailing: SailingScene, mine: WindsurferNode) -> void:
 	scene = sailing
 	own = mine
-	_dt = 1.0 / float(Engine.physics_ticks_per_second)
+	_normal_ticks = int(ProjectSettings.get_setting("physics/common/physics_ticks_per_second", 60))
+	_dt = 1.0 / float(_normal_ticks)
 	_start_tick = Engine.get_physics_frames()
+	_real_start_ms = Time.get_ticks_msec()
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_sender = Sender.new()
 	_sender.name = "Sender"
@@ -136,6 +166,7 @@ func setup(sailing: SailingScene, mine: WindsurferNode) -> void:
 
 func _exit_tree() -> void:
 	Lan.unregister_handler(self)
+	restore_pace()
 
 
 ## In free sailing each player starts at the usual spot, the guest FREE_SAIL_APART_M upwind of it.
@@ -233,8 +264,12 @@ func _physics_process(_delta: float) -> void:
 	elif _clock.is_known():
 		now_tick = _clock.host_tick_now(my_tick)
 		_keep_own_board_on_the_hosts_clock(now_tick)
+		_keep_the_hosts_pace()
+	var t0: int = Time.get_ticks_usec()
 	for id: int in puppets:
 		_show_puppet(id, now_tick)
+	_us_show += Time.get_ticks_usec() - t0
+	_ticks_costed += 1
 	_check_command_line_timers()
 
 
@@ -266,26 +301,69 @@ func _keep_own_board_on_the_hosts_clock(host_tick: int) -> void:
 		map_field.clock.set_time(day_s)
 
 
+## A puppet at the moment it is shown (a few ticks behind the newest state). Writing a whole state
+## costs about 0.2 ms, so it is written only when a newer state than the one the puppet holds is
+## due (every tick for a player's board, every 2nd for an AI board's, every FAR_STATE_EVERY for
+## one far away), and only the fields that changed; on the other ticks only the board's place and
+## attitude move, between the two states around the moment. The rig and the sailor keep the last
+## state's pose for that tick.
+## The guest's game runs at the host's pace: a host that cannot keep up with real time (a big AI
+## fleet on a slow PC: Session 69 measured 66 % with 19 AI boards and two games on one laptop) would
+## otherwise fall further behind the guest every second, and the guest would show its boards later
+## and later. The guest then runs fewer physics ticks a second, each still 1 / 60 s of game time:
+## Engine.physics_ticks_per_second lower and Engine.time_scale lower by the same share (time_scale
+## alone shortens each tick and keeps 60 a second). Everything of the guest's game slows alike, as if
+## the host's world were in slow motion; on two PCs that keep up both stay as they are.
+func _keep_the_hosts_pace() -> void:
+	var normal: float = float(_normal_ticks)
+	# The host's pace, and a little slower while this PC's count of the host's ticks is ahead of
+	# what the host's messages say (it never counts back: NetClock.host_tick_now()).
+	var catch_up: float = 0.01 * maxf(float(_clock.lead() - NetClock.STEADY_SLACK), 0.0)
+	var wanted: float = clampf(_clock.host_ticks_per_second(normal) / normal - catch_up, PACE_MIN, 1.0)
+	_pace = lerpf(_pace, wanted, PACE_FOLLOW)
+	var ticks: int = clampi(roundi(normal * _pace), roundi(normal * PACE_MIN), _normal_ticks)
+	if ticks != Engine.physics_ticks_per_second:
+		Engine.physics_ticks_per_second = ticks
+		Engine.time_scale = float(ticks) / normal
+
+
+## The game's own pace again (the session ends, or this node leaves the scene).
+func restore_pace() -> void:
+	Engine.physics_ticks_per_second = _normal_ticks
+	Engine.time_scale = 1.0
+
+
 func _show_puppet(id: int, now_tick: int) -> void:
 	var buffer: StateBuffer = _buffers[id]
 	if buffer.is_empty():
 		return
 	var delay: float = AI_SHOW_DELAY_TICKS if id >= AI_ID_BASE else PLAYER_SHOW_DELAY_TICKS
 	var show_tick: float = float(now_tick) - delay
-	var state: BoardSnapshot = buffer.state_at(show_tick)
-	# Its age: how far behind now the shown moment is (behind the newest when it holds still).
-	var shown_tick: float = minf(show_tick, float(buffer.newest_tick()))
 	var node: WindsurferNode = puppets[id]
-	node.show_state(state, maxf(float(now_tick) - shown_tick, 0.0) * _dt)
-	if _track_every > 0 and show_tick == shown_tick and roundi(show_tick) % _track_every == 0:
-		print("SEEN %d %d %s" % [roundi(show_tick), id, _track_text(node)])
-	# Posed as the host's RaceRunner poses its AI boards: one farther than RaceRunner.FAR_DETAIL_M
-	# from the camera only every other tick (its place every tick).
 	var camera: Camera3D = get_viewport().get_camera_3d()
 	var far: bool = camera != null and node.global_position.distance_to(camera.global_position) > RaceRunner.FAR_DETAIL_M
 	node.set_far_away(far)
-	node.after_step(not far or (now_tick + id) % 2 == 0)
-	if not _shown.has(id):
+	var newest_due: int = buffer.tick_at_or_before(show_tick)
+	if newest_due < 0:
+		newest_due = buffer.newest_tick() if show_tick > float(buffer.newest_tick()) else -1
+	var last: int = _applied_tick.get(id, -1)
+	var whole: bool = newest_due > last and (not far or last < 0 or newest_due - last >= FAR_STATE_EVERY)
+	if whole:
+		var state: BoardSnapshot = buffer.state_of(newest_due)
+		state.apply(node.sim, _applied.get(id, null))
+		_applied[id] = state
+		_applied_tick[id] = newest_due
+		if _track_every > 0 and newest_due % _track_every < AI_SEND_EVERY:
+			print("SEEN %d %d %s" % [newest_due, id, _track_text(node)])
+	# The board's place and attitude at the moment shown (the state's own at a state's tick).
+	var body: Transform3D = buffer.body_at(show_tick)
+	node.sim.body.position = body.origin
+	node.sim.body.basis = body.basis
+	# The age of the whole state it holds (its telemetry, which the race reads): the race moves the
+	# board on by its speed for that long (RaceRunner.where_now()).
+	node.state_age_s = maxf(float(now_tick - _applied_tick.get(id, now_tick)), 0.0) * _dt
+	node.after_step(whole)
+	if not _shown.has(id) and _applied.has(id):
 		_shown[id] = true
 		node.visible = true
 		node.reset_physics_interpolation()
@@ -295,18 +373,29 @@ func _show_puppet(id: int, now_tick: int) -> void:
 
 ## This PC's boards' states, the host's clock and the race (the Sender, after the physics).
 func send_states() -> void:
+	var t0: int = Time.get_ticks_usec()
+	_send_states_now()
+	_us_send += Time.get_ticks_usec() - t0
+
+
+func _send_states_now() -> void:
 	var my_tick: int = Engine.get_physics_frames()
 	if Lan.is_host():
 		if _ready_peers.is_empty():
 			return
 		_send_clock(my_tick)
 		_send_board(Lan.my_slot, own, my_tick)
+		if _track_every > 0 and my_tick % _track_every == 0 and runner != null:
+			# Where the judge has the other players now (the sync check compares it with their own PCs').
+			for slot: int in remote_slots():
+				if not _applied.has(slot):
+					continue  # no state of theirs yet
+				var judged: Vector2 = RaceRunner.where_now(puppets[slot])
+				print("JUDGED %d %d %.4f %.4f" % [my_tick, slot, judged.x, judged.y])
 		if runner != null:
 			for i: int in runner.opponents.size():
 				if (my_tick + i) % AI_SEND_EVERY == 0:
 					_send_board(AI_ID_BASE + i, runner.opponents[i], my_tick)
-				elif _track_every > 0 and my_tick % _track_every == 0:
-					print("TRACK %d %d %s" % [my_tick, AI_ID_BASE + i, _track_text(runner.opponents[i])])
 			if my_tick % RACE_STATE_EVERY == 0 and runner.race != null:
 				Lan.send_race_state(runner.race.to_state(), runner.rules.to_state() if runner.rules != null else {})
 	elif _clock.is_known():
@@ -320,17 +409,21 @@ func _send_clock(tick: int) -> void:
 	var wind: WindField = own.sim.wind
 	var map_field: MapWindField = wind as MapWindField
 	var day_s: float = map_field.time_of_day_s() if map_field != null else -1.0
-	Lan.send_clock(tick + 1, host_water_time_s(tick + 1), wind.time_s, wind.travel_m, day_s)
+	Lan.send_clock(tick + 1, host_water_time_s(tick + 1), wind.time_s, wind.travel_m, day_s, Time.get_ticks_usec() / 1e6)
 
 
 func _send_board(id: int, node: WindsurferNode, tick: int) -> void:
-	if _track_every > 0 and tick % _track_every == 0:
+	if _track_every > 0 and tick % _track_every < AI_SEND_EVERY:
 		print("TRACK %d %d %s" % [tick, id, _track_text(node)])
 	if not _keyframes_out.has(id):
 		return  # its keyframe goes out first (to a guest when its scene is ready)
+	var t0: int = Time.get_ticks_usec()
 	var bytes: PackedByteArray = BoardSnapshot.capture(node.sim).encode_diff(_keyframes_out[id])
+	var t1: int = Time.get_ticks_usec()
 	_bytes_out += bytes.size()
 	Lan.send_state(tick, id, bytes)
+	_us_capture += t1 - t0
+	_us_rpc += Time.get_ticks_usec() - t1
 
 
 ## A board's keyframe (made once; a later guest gets the same one) to a peer.
@@ -393,7 +486,9 @@ func _drop_old_parts(tick: int) -> void:
 func on_state(sender: int, tick: int, id: int, bytes: PackedByteArray) -> void:
 	if not _keyframes_in.has(id) or not _buffers.has(id) or not _may_send(sender, id):
 		return
+	var t0: int = Time.get_ticks_usec()
 	var state: BoardSnapshot = BoardSnapshot.decode_diff(bytes, _keyframes_in[id])
+	_us_read += Time.get_ticks_usec() - t0
 	if state == null:
 		return
 	_bytes_in += bytes.size()
@@ -410,8 +505,8 @@ func _may_send(sender: int, id: int) -> bool:
 	return sender == 1
 
 
-func on_clock(tick: int, water_s: float, wind_s: float, travel_m: float, day_s: float) -> void:
-	_clock.receive(tick, Engine.get_physics_frames(), water_s, wind_s, travel_m, day_s)
+func on_clock(tick: int, water_s: float, wind_s: float, travel_m: float, day_s: float, host_real_s: float) -> void:
+	_clock.receive(tick, Engine.get_physics_frames(), water_s, wind_s, travel_m, day_s, host_real_s)
 
 
 ## A guest's scene is loaded (the host): it gets the AI fleet, every board's keyframe and a new
@@ -535,7 +630,8 @@ func report_line() -> String:
 	var my_tick: int = Engine.get_physics_frames()
 	var host_tick: int = my_tick if Lan.is_host() else _clock.host_tick_now(my_tick)
 	var parts: PackedStringArray = PackedStringArray()
-	parts.append("LAN %s t=%.1f host_tick=%d water=%.2f" % ["host" if Lan.is_host() else "guest", _clock_s, host_tick, own.sim.time_s])
+	parts.append("LAN %s t=%.1f real=%.1f speed=%.2f host_tick=%d water=%.2f" % ["host" if Lan.is_host() else "guest", _clock_s,
+		(Time.get_ticks_msec() - _real_start_ms) / 1000.0, Engine.time_scale, host_tick, own.sim.time_s])
 	var robot_note: String = (" robot: %s" % str(own.skipper.get("note"))) if own.skipper != null and "note" in own.skipper else ""
 	parts.append("me[%d] %s%s" % [Lan.my_slot, _board_text(own), robot_note])
 	var ids: Array[int] = puppets.keys()
@@ -544,6 +640,15 @@ func report_line() -> String:
 		parts.append("p[%d] %s age=%.0fms buf=%d" % [id, _board_text(puppets[id]), puppets[id].state_age_s * 1000.0, _buffers[id].size()])
 	var seconds: float = maxf(_report_every_s, 1.0)
 	parts.append("out=%.1fkB/s in=%.1fkB/s states_in=%d late=%d" % [_bytes_out / 1000.0 / seconds, _bytes_in / 1000.0 / seconds, _states_in, _states_late])
+	var ticks: float = maxf(float(_ticks_costed), 1.0)
+	parts.append("net ms/tick: show %.2f read %.2f send %.2f (capture %.2f, rpc %.2f)" % [_us_show / ticks / 1000.0, _us_read / ticks / 1000.0,
+		_us_send / ticks / 1000.0, _us_capture / ticks / 1000.0, _us_rpc / ticks / 1000.0])
+	_us_capture = 0
+	_us_rpc = 0
+	_us_show = 0
+	_us_read = 0
+	_us_send = 0
+	_ticks_costed = 0
 	_bytes_out = 0
 	_bytes_in = 0
 	_states_in = 0

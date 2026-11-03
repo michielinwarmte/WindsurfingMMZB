@@ -68,6 +68,14 @@ func test_the_guests_count_of_the_hosts_ticks_goes_up_one_a_tick() -> void:
 	# A long frame on this PC: the estimate jumps well ahead, and the count follows it.
 	clock.receive(560, 105, 0.0, 0.0, 0.0, -1.0)
 	assert_eq(clock.host_tick_now(106), 561)
+	# The host slower than this PC: the count runs ahead of the estimate but never goes back.
+	var fresh: NetClock = NetClock.new()
+	fresh.receive(1000, 0, 0.0, 0.0, 0.0, -1.0)
+	assert_eq(fresh.host_tick_now(10), 1010)
+	for my_tick: int in range(11, 300):
+		fresh.receive(1000 + my_tick / 2, my_tick, 0.0, 0.0, 0.0, -1.0)  # the host at half the pace
+		assert_eq(fresh.host_tick_now(my_tick), 1000 + my_tick, "one a tick, never back")
+	assert_gt(fresh.lead(), 10, "and it says it is ahead")
 
 
 func test_the_hosts_game_travels_whole() -> void:

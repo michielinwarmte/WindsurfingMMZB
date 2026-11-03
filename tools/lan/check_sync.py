@@ -14,9 +14,9 @@ lists differ.
 import math
 import sys
 
-# A board's states every tick (a player) are shown exactly; an AI board's every 2nd tick are halfway
-# between two states on the other ticks: a few centimetres at most.
-PLACE_TOLERANCE_M = 0.10
+# A SEEN line is a state a puppet took, a TRACK line the state its PC sent for that tick: they should
+# be the same numbers (to the four decimals printed and the 32-bit floats that travel).
+PLACE_TOLERANCE_M = 0.01
 # What Godot prints when a game quits (leak reports of the engine itself): not the game's errors.
 SHUTDOWN_NOISE = ("Unreferenced static string", "resources still in use at exit", "Pages in use exist at exit",
                   "ObjectDB instances were leaked")
@@ -24,6 +24,7 @@ SHUTDOWN_NOISE = ("Unreferenced static string", "resources still in use at exit"
 
 def read(path):
     tracks, seens, results, errors = {}, {}, [], []
+    judged = {}
     with open(path, encoding="utf-8", errors="replace") as log:
         for line in log:
             parts = line.split()
@@ -33,10 +34,13 @@ def read(path):
                 tick, board = int(parts[1]), int(parts[2])
                 numbers = [float(v) for v in parts[3:11]] + [int(parts[11])]
                 (tracks if parts[0] == "TRACK" else seens)[(tick, board)] = numbers
+            elif parts[0] == "JUDGED" and len(parts) >= 5:
+                judged[(int(parts[1]), int(parts[2]))] = (float(parts[3]), float(parts[4]))
             elif parts[0] == "RESULT":
                 results.append(parts[1:])
             elif ("SCRIPT ERROR" in line or line.startswith("ERROR")) and not any(noise in line for noise in SHUTDOWN_NOISE):
                 errors.append(line.strip())
+    read.judged = judged
     return tracks, seens, results, errors
 
 
@@ -69,6 +73,7 @@ def compare(label, seens, tracks):
 
 def main():
     host_tracks, host_seens, host_results, host_errors = read(sys.argv[1])
+    host_judged = read.judged
     guest_tracks, guest_seens, guest_results, guest_errors = read(sys.argv[2])
     ok = True
     for who, errors in (("host", host_errors), ("guest", guest_errors)):
@@ -76,6 +81,13 @@ def main():
             print("%s log: %s" % (who, error))
     matched_g, worst_g = compare("The guest shows the host's boards", guest_seens, host_tracks)
     matched_h, worst_h = compare("The host shows the guest's board ", host_seens, guest_tracks)
+    # The judge (on the host) has the guest's board where its newest state, moved on by its speed for
+    # the state's age, puts it now: against where the guest's own PC had it at that tick.
+    judge_errors = [math.hypot(x - guest_tracks[key][0], z - guest_tracks[key][2]) for key, (x, z) in host_judged.items() if key in guest_tracks]
+    if judge_errors:
+        judge_errors.sort()
+        print("The host's judge has the guest's board, against the guest's own: median %.3f m, worst %.3f m (%d moments)"
+              % (judge_errors[len(judge_errors) // 2], judge_errors[-1], len(judge_errors)))
     if matched_g == 0 or matched_h == 0:
         print("FAIL: nothing to compare (did the two connect? see the logs)")
         ok = False
