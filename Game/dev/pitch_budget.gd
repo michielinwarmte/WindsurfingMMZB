@@ -17,8 +17,15 @@ extends SceneTree
 ##
 ## Run from the repo root (Git Bash):
 ##   tools/godot.sh --path Game --headless -s res://dev/pitch_budget.gd -- --wind=18 --twa=100
+## Section 4 of the print is the power each force model puts into the hull's oscillation over the
+## window (the mean of its pitch moment's swing times the pitch rate's, and of its vertical force's
+## swing times the vertical speed's): + pumps a bounce, - damps it (PH16 step 18).
 ## Options: --seconds=40 --window=5 and any --pilot.<field>= --sailor.<field>= --sail.<field>=
-## --board.<field>= --fin.<field>= override, as in the reach check.
+## --board.<field>= --fin.<field>= override, as in the reach check; --sim.substeps=6 halves the
+## substep (PH28, the bounce check of flying_the_board.md 4.6). Section 1 and 4 also print what
+## the hull's clip withheld (the strips that would have pulled, HullModel.clipped_force_world:
+## not applied, so the water as it would be without the clip is the applied line plus this one),
+## and section 5 the pitch's mean and swing, the bounce's frequency and the wet front's range.
 
 const DT: float = 1.0 / 60.0
 
@@ -29,6 +36,28 @@ var _stage_pitch: PackedFloat64Array = PackedFloat64Array()
 var _stage_yaw: PackedFloat64Array = PackedFloat64Array()
 var _samples: int = 0
 var _means: Dictionary[String, float] = {}
+## What feeds a bounce: per stage, the sums for the covariance of its pitch moment with the
+## hull's pitch rate and of its vertical force with the hull's vertical speed. The mean of
+## M' q' is the power the stage puts into the pitch oscillation (positive: it pumps the bounce,
+## negative: it damps it); F' w' the same for the heave.
+var _stage_m: PackedFloat64Array = PackedFloat64Array()
+var _stage_mq: PackedFloat64Array = PackedFloat64Array()
+var _stage_f: PackedFloat64Array = PackedFloat64Array()
+var _stage_fw: PackedFloat64Array = PackedFloat64Array()
+var _sum_q: float = 0.0
+var _sum_qq: float = 0.0
+var _sum_w: float = 0.0
+var _sum_ww: float = 0.0
+var _power_samples: int = 0
+## The same sums for what the hull's clip withheld (the pulls not applied).
+var _clip_m: float = 0.0
+var _clip_mq: float = 0.0
+var _clip_f: float = 0.0
+var _clip_fw: float = 0.0
+## The pitch every substep of the window, for its swing and the bounce's frequency.
+var _pitch_series: PackedFloat64Array = PackedFloat64Array()
+var _front_min_m: float = INF
+var _front_max_m: float = -INF
 
 
 func _initialize() -> void:
@@ -41,6 +70,15 @@ func _initialize() -> void:
 	_stage_pitch.fill(0.0)
 	_stage_yaw.resize(_stages.size())
 	_stage_yaw.fill(0.0)
+	# Each on its own: a packed array in an array literal is a copy.
+	_stage_m.resize(_stages.size())
+	_stage_m.fill(0.0)
+	_stage_mq.resize(_stages.size())
+	_stage_mq.fill(0.0)
+	_stage_f.resize(_stages.size())
+	_stage_f.fill(0.0)
+	_stage_fw.resize(_stages.size())
+	_stage_fw.fill(0.0)
 
 	var scenario: SimScenario = (load("res://dev/scenarios/beam_reach.gd") as GDScript).new()
 	scenario.seconds = seconds
@@ -89,14 +127,18 @@ func _step_taken_apart(sim: WindsurferSim, dt: float, controls: SimControls) -> 
 			sim._update_sailor(sub_dt)
 		sim.wind.step(sub_dt)
 		var marks: Array[Vector3] = [body.torque_sum()]
+		var force_marks: Array[Vector3] = [body._force_sum]
 		body.add_force(Vector3(0.0, -sim._gravity_ms2 * body.mass_kg, 0.0))
 		if sailing:
 			sim.sailor.add_force(Vector3(0.0, -sim._gravity_ms2 * sim.sailor.mass_kg, 0.0))
 		marks.append(body.torque_sum())
+		force_marks.append(body._force_sum)
 		sim.buoyancy.apply(body, sim.water, sim.time_s, sim._gravity_ms2, sub_dt)
 		marks.append(body.torque_sum())
+		force_marks.append(body._force_sum)
 		sim.hull.compute(body, sim.buoyancy, sim.water, sim.time_s, sim._gravity_ms2, sim.mass_model.total_mass_kg, sub_dt)
 		marks.append(body.torque_sum())
+		force_marks.append(body._force_sum)
 		var heave_added_mass_kg: float = sim.hull.heave_added_mass_kg
 		var inertia_with_water: Basis = sim._inertia_with_added_water(sim._hull_inertia_body)
 		body.take_water_along(heave_added_mass_kg, inertia_with_water)
@@ -107,25 +149,53 @@ func _step_taken_apart(sim: WindsurferSim, dt: float, controls: SimControls) -> 
 		body.set_mass_properties(sim._hull_mass_kg, inertia_with_water, Vector3.ZERO)
 		sim.fin.compute(body, sim.water, sim.time_s, sim._water_density_kg_m3)
 		marks.append(body.torque_sum())
+		force_marks.append(body._force_sum)
 		if sailing:
-			sim._hold_the_rig()
+			sim._hold_the_rig(sub_dt)
 			sim.sail.compute(sim.rig, sim.wind, sim._controls_sheet, sim._controls_rake, sim.air_density_kg_m3, sim._rig_lean_now_rad, sim._controls_boom_across, sim._controls_hold_side)
 			sim._apply_rig_forces()
 			marks.append(body.torque_sum())
+			force_marks.append(body._force_sum)
 			sim._apply_windage()
 			sim._apply_leg_forces(sub_dt)
 			marks.append(body.torque_sum())
+			force_marks.append(body._force_sum)
 			sim._attach_sailor_across_the_deck()
 			marks.append(body.torque_sum())
+			force_marks.append(body._force_sum)
 			_sample_system(sim)
 			sim._feel_the_turn(sub_dt)
 			sim.sailor.integrate(sub_dt)
 		else:
 			sim._apply_rig_in_water_drag(sub_dt)
 		var pitch_axis: Vector3 = body.starboard_axis()
+		var q: float = body.angular_velocity.dot(pitch_axis)
+		var w: float = body.velocity.y
 		for s: int in mini(marks.size() - 1, _stages.size()):
 			_stage_pitch[s] += (marks[s + 1] - marks[s]).dot(pitch_axis)
 			_stage_yaw[s] += (marks[s + 1] - marks[s]).dot(body.up_axis())
+			var m: float = (marks[s + 1] - marks[s]).dot(pitch_axis)
+			var f: float = (force_marks[s + 1] - force_marks[s]).y
+			_stage_m[s] += m
+			_stage_mq[s] += m * q
+			_stage_f[s] += f
+			_stage_fw[s] += f * w
+		if sailing:
+			_sum_q += q
+			_sum_qq += q * q
+			_sum_w += w
+			_sum_ww += w * w
+			_power_samples += 1
+			var clip_m: float = sim.hull.clipped_torque_world.dot(pitch_axis)
+			var clip_f: float = sim.hull.clipped_force_world.y
+			_clip_m += clip_m
+			_clip_mq += clip_m * q
+			_clip_f += clip_f
+			_clip_fw += clip_f * w
+			_pitch_series.append(rad_to_deg(body.pitch_rad()))
+			var front: float = sim.hull.wetted_aft_m + sim.hull.wetted_length_m
+			_front_min_m = minf(_front_min_m, front)
+			_front_max_m = maxf(_front_max_m, front)
 		sim._net_torque_world = body.torque_sum()
 		body.integrate(sub_dt)
 		if sailing:
@@ -254,6 +324,8 @@ func _print_budget(sim: WindsurferSim, wind_kt: float, twa_deg: float) -> void:
 		hull_sum += value
 		print("   %-24s %8.1f   yaw %8.1f" % [_stages[s], value, _stage_yaw[s] / n])
 	print("   %-24s %8.1f" % ["sum", hull_sum])
+	var np: float = float(maxi(_power_samples, 1))
+	print("   %-24s %8.1f   (the pulls the clip withheld, not applied; the water without the clip = hull water + this)" % ["clip withheld", _clip_m / np])
 	print("")
 	print("2. The whole windsurfer, pitch moment about the centre of the water's push (N m):")
 	var system_sum: float = 0.0
@@ -268,6 +340,60 @@ func _print_budget(sim: WindsurferSim, wind_kt: float, twa_deg: float) -> void:
 	for key: String in _means:
 		if not key.begins_with("sys: "):
 			print("   %-24s %8.2f" % [key, _means[key] / n])
+	print("")
+	var q_mean: float = _sum_q / np
+	var w_mean: float = _sum_w / np
+	var q_rms: float = sqrt(maxf(_sum_qq / np - q_mean * q_mean, 0.0))
+	var w_rms: float = sqrt(maxf(_sum_ww / np - w_mean * w_mean, 0.0))
+	print("4. What feeds the bounce: each stage's power into the hull's oscillation, the mean of")
+	print("   M' q' (pitch) and F' w' (heave) over the window, in W. + pumps it, - damps it.")
+	print("   The pitch rate's RMS %.2f deg/s, the vertical speed's RMS %.3f m/s." % [rad_to_deg(q_rms), w_rms])
+	var pitch_total: float = 0.0
+	var heave_total: float = 0.0
+	for s: int in _stages.size():
+		var pitch_power: float = _stage_mq[s] / np - (_stage_m[s] / np) * q_mean
+		var heave_power: float = _stage_fw[s] / np - (_stage_f[s] / np) * w_mean
+		pitch_total += pitch_power
+		heave_total += heave_power
+		print("   %-24s pitch %8.2f   heave %8.2f" % [_stages[s], pitch_power, heave_power])
+	print("   %-24s pitch %8.2f   heave %8.2f" % ["sum", pitch_total, heave_total])
+	var clip_pitch_power: float = _clip_mq / np - (_clip_m / np) * q_mean
+	var clip_heave_power: float = _clip_fw / np - (_clip_f / np) * w_mean
+	print("   %-24s pitch %8.2f   heave %8.2f   (not applied: what the clipped pulls would put in)" % ["clip withheld", clip_pitch_power, clip_heave_power])
+	print("   %-24s pitch %8.2f   heave %8.2f   (hull water + clip withheld)" % ["water without the clip", _stage_mq[2] / np - (_stage_m[2] / np) * q_mean + clip_pitch_power, _stage_fw[2] / np - (_stage_f[2] / np) * w_mean + clip_heave_power])
+	print("")
+	print("5. The pitch over the window: mean %.2f deg, SD %.2f deg, the bounce at %.2f Hz (upward crossings of the mean); the wet front from %.2f to %.2f m from the tail." % [_pitch_mean(), _pitch_sd(), _bounce_hz(), _front_min_m, _front_max_m])
+
+
+func _pitch_mean() -> float:
+	var sum: float = 0.0
+	for p: float in _pitch_series:
+		sum += p
+	return sum / float(maxi(_pitch_series.size(), 1))
+
+
+func _pitch_sd() -> float:
+	var mean: float = _pitch_mean()
+	var sum: float = 0.0
+	for p: float in _pitch_series:
+		sum += (p - mean) * (p - mean)
+	return sqrt(sum / float(maxi(_pitch_series.size(), 1)))
+
+
+## How often the pitch crosses its mean upward per second over the window: the bounce's
+## frequency, 0 when it does not swing (a crossing counts only when the pitch has been more
+## than 0.05 deg below the mean since the last one, so a steady board's jitter is not a bounce).
+func _bounce_hz() -> float:
+	var mean: float = _pitch_mean()
+	var crossings: int = 0
+	var below: bool = false
+	for p: float in _pitch_series:
+		if p < mean - 0.05:
+			below = true
+		elif p > mean and below:
+			crossings += 1
+			below = false
+	return float(crossings) / maxf(_options.get("window", "5").to_float(), 0.01)
 
 
 ## The default open-water simulation, built again on copies with any --board. or --fin.
@@ -276,10 +402,11 @@ func _make_sim() -> WindsurferSim:
 	var sim: WindsurferSim = WindsurferSim.create_default(false)
 	var board: BoardConfig = sim.board_config.duplicate() as BoardConfig
 	var fin: FinConfig = sim.fin_config.duplicate() as FinConfig
-	if not _apply_overrides({"board": board, "fin": fin}):
+	var sim_config: SimConfig = sim.sim_config.duplicate() as SimConfig
+	if not _apply_overrides({"board": board, "fin": fin, "sim": sim_config}):
 		return sim
 	var rebuilt: WindsurferSim = WindsurferSim.new(board, sim.sail_config, fin, sim.sailor_config,
-		sim.water_config, sim.wind_config, sim.sim_config, sim.wave_set_config)
+		sim.water_config, sim.wind_config, sim_config, sim.wave_set_config)
 	rebuilt.air_density_kg_m3 = sim.air_density_kg_m3
 	return rebuilt
 
@@ -295,6 +422,15 @@ func _apply_overrides(targets: Dictionary) -> bool:
 			push_error("No field '%s' to override." % key)
 			continue
 		var current: Variant = target.get(parts[1])
+		if current is Vector3:
+			# A point as x,y,z (the mast foot, the fin's root), as run_reach.gd takes it.
+			var xyz: PackedStringArray = _options[key].split(",")
+			if xyz.size() != 3:
+				push_error("'%s' needs x,y,z." % key)
+				continue
+			target.set(parts[1], Vector3(xyz[0].to_float(), xyz[1].to_float(), xyz[2].to_float()))
+			changed = true
+			continue
 		var number: float = _options[key].to_float()
 		target.set(parts[1], (number != 0.0) if current is bool else (int(number) if current is int else number))
 		changed = true
