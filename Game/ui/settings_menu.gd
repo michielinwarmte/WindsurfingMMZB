@@ -84,6 +84,14 @@ func show_tab(tab_name: String) -> void:
 			_tabs.current_tab = i
 
 
+## Scrolls the shown tab to its last rows (for --page=settings/<tab>/end: a screenshot of them).
+func scroll_to_end() -> void:
+	await get_tree().process_frame
+	var scroll: ScrollContainer = _tabs.get_current_tab_control() as ScrollContainer
+	if scroll != null:
+		scroll.scroll_vertical = int(scroll.get_v_scroll_bar().max_value)
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if not is_visible_in_tree():
 		return
@@ -196,7 +204,8 @@ func _build_wave_rows(s: SettingsValues) -> void:
 		func(v: float) -> String: return "Deep water" if v >= SettingsValues.DEPTH_DEEP_M else "%.1f m deep: waves at most %.0f cm" % [v, 60.0 * v],
 		func(v: float) -> void: s.water_depth_m = v)
 	# Lake Silvaplana's own waves (PH44): grown by the lake's wind over the open water upwind.
-	_add_switch(grid, "Lake waves", s.lake_waves, "On: on Lake Silvaplana the waves grow with the wind over the open water upwind; off: the waves above",
+	# Its hint is short: a row's hint does not wrap, and a long one widens the whole page.
+	_add_switch(grid, "Lake waves", s.lake_waves, "Silvaplana: grown by its wind",
 		func(on: bool) -> void: s.lake_waves = on)
 	# Every change, here or on another tab (the wind's speed and direction), updates the
 	# wave rows' texts and greys out the rows that do not count.
