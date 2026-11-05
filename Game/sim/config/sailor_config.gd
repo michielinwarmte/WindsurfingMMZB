@@ -275,6 +275,13 @@ extends Resource
 ## at most tip_time_s at a time, as the hips hold a body tipped harder than hip_force_max_n
 ## only that long.
 @export var front_foot_pull_brief_n: float = 400.0
+## The front foot pulls up at once when the nose starts dropping fast (a launch off a crest,
+## PH43): the pull grows with the nose-down pitch rate and is the whole held pull from this
+## rate on (degrees a second), on top of the pull for a board riding below its aim. 20 is an
+## estimate: the game's board bounces at 2 to 5 degrees a second on the default sea and dived
+## at 27 off the biggest swell's crests (Documentation/reports/playtest/feedback_5_november_2026.md,
+## section 6). 0 = no reaction to the rate, as before PH43.
+@export var front_foot_react_dps: float = 20.0
 ## The back foot against the fin (PH35, the push slider; SimControls.back_foot_push): the two
 ## feet pushing against each other sideways in their straps, the back foot to leeward and the
 ## front foot to windward, a yaw couple of this force times the straps' spread (88.5 N m on
@@ -283,6 +290,25 @@ extends Resource
 ## 40 km/h, all the strength I have"). 0 = no push. Measured in the slider rounds
 ## (Documentation/reports/push_slider/push_slider.md).
 @export var back_foot_push_n: float = 150.0
+
+@export_group("A launch (PH43)")
+## Board and rider leave a crest as one. The simulation's rigid body is the hull alone (7.8 kg,
+## 3.4 kg m2 in pitch); the rider is a body of their own on the legs. On the water the water's
+## added inertia and the planing strips hold the hull's pitch; in the air nothing does, and the
+## bare hull pitched to wherever the mast foot and the light legs pushed it within a tenth of a
+## second (the dive after a crest, Documentation/reports/playtest/feedback_5_november_2026.md,
+## section 6). With the feet in the straps the rider's and the rig's pitch inertia join the
+## hull's (the whole kit's, about 74 kg m2) as the water lets go: in full when the hull carries
+## nothing, fading in from where it carries this share of what it was carrying a moment ago
+## (0.5: half; the hull's load remembered over launch_load_memory_s, because in steady planing
+## the rig and the fin carry up to two thirds of the weight and the hull's own load is the only
+## yardstick that is 1 on the water and 0 in the air). The rider joins with the pitch rate the
+## hull has (the body was already turning with the board), and the trim press holds where it is
+## while the kit is in the air. 0 = off, as before PH43: the hull alone, bit for bit.
+@export var launch_carry_share: float = 0.5
+## How long the rider remembers what the hull was carrying (s): the yardstick for "the water
+## has let go". Longer than a bounce (0.5 s), shorter than a change of course.
+@export var launch_load_memory_s: float = 2.0
 
 @export_group("Falling and getting back up")
 ## The board heels toward the sail only when the sailor can no longer balance the sail's

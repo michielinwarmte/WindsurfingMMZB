@@ -318,6 +318,11 @@ func _build_sailing_rows(s: SettingsValues) -> void:
 		func(on: bool) -> void: s.sailor_view = on)
 	_add_switch(grid, "Close camera", s.camera_close, "The follow camera low behind the board: the rail, the spray and the water ahead",
 		func(on: bool) -> void: s.camera_close = on)
+	# The fin's stiffness against the measured fin's (PH43): Max cannot measure his, so he finds
+	# the one that feels like his here. Takes effect at the next start (R).
+	_add_slider(grid, "Fin stiffness", SettingsValues.FIN_STIFFNESS_MIN, SettingsValues.FIN_STIFFNESS_MAX, 0.25, s.fin_stiffness,
+		func(v: float) -> String: return "%.2f x  (1 = the measured carbon slalom fin; at the next start)" % v,
+		func(v: float) -> void: s.fin_stiffness = v)
 
 
 func _build_graphics_rows(s: SettingsValues) -> void:

@@ -54,6 +54,12 @@ extends Resource
 ## span_m and area_m2, not these) is made of the same material: the same stiffness scale.
 @export var flex_test_span_m: float = 0.38
 @export var flex_test_area_m2: float = 0.0365
+## How much stiffer than the test fin this fin is: the stiffness scale from the flex test times
+## this (2 = half the bend under the same load). 1 = the measured fin (the F-Hot 37 cm, which
+## its FEA bends 61 mm at the tip at 20 kn and 4 degrees, Cardoso de Brito 2021). Max cannot
+## measure his fin (5 November 2026); the Settings > Sailing slider "Fin stiffness" sets this so
+## he can find the fin that feels like his.
+@export var stiffness_factor: float = 1.0
 ## The linear beam holds to about this slope; beyond it a real fin has long spun out. The
 ## slope of every part of the fin is capped here.
 @export var max_bend_deg: float = 35.0

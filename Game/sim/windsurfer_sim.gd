@@ -158,6 +158,16 @@ var mast_foot_force_world: Vector3 = Vector3.ZERO
 var leg_force_world: Vector3 = Vector3.ZERO
 var windage_force_world: Vector3 = Vector3.ZERO
 var feet_moment_world: Vector3 = Vector3.ZERO
+## A launch (PH43). The air's push on the dry part of the bottom (_apply_air_under_the_board),
+## world frame, its upward part and its pitch moment about the hull's centre of mass (N m,
+## positive nose-up). How far the rider has joined the hull in pitch (_launch_coupling: 0 on the
+## water, 1 in the air with the feet in the straps) and the pitch inertia that joining adds to
+## the hull's (_rider_pitch_inertia_kgm2, kg m2).
+var air_force_world: Vector3 = Vector3.ZERO
+var air_lift_n: float = 0.0
+var air_pitch_nm: float = 0.0
+var launch_coupling: float = 0.0
+var rider_inertia_kgm2: float = 0.0
 ## The hands' pull as a moment about the feet, body axes (z = roll): the pull the sailor
 ## has to lean against.
 var hand_moment_body: Vector3 = Vector3.ZERO
@@ -282,6 +292,16 @@ var _strap_spread_m: float = 0.0
 var _front_foot_pull_held_n: float = 0.0
 var _back_foot_push_n: float = 0.0
 var _front_foot_pull_brief_n: float = 0.0
+var _front_foot_react_dps: float = 0.0
+var _launch_carry_share: float = 0.0
+var _launch_load_memory_s: float = 0.0
+## What the hull has been carrying lately (N, _remember_hull_load): the yardstick of a launch.
+var _hull_load_avg_n: float = 0.0
+var _air_lift: bool = false
+var _air_lift_slope_factor: float = 0.0
+var _air_vortex_lift: float = 0.0
+var _air_normal_max: float = 0.0
+var _air_centre_from_nose: float = 0.0
 var _front_strap_z_m: float = -INF
 var _trim_press_rate_ms: float = 0.0
 var _trim_feel_time_s: float = 0.0
@@ -366,6 +386,15 @@ static func create_for(environment: EnvironmentConfig, with_waves: bool = false,
 ## Puts the wave set on the water (oriented to the base wind of the moment) or takes it
 ## off. The models never notice: they ask the water surface for heights, normals and
 ## velocities either way.
+## The player's fin made stiffer or softer than the measured one (FinConfig.stiffness_factor; the
+## Settings > Sailing slider "Fin stiffness"): on a copy of the fin's numbers, so the AI boards and
+## the gear's shared files keep theirs, with the beam worked out again for it.
+func set_fin_stiffness(factor: float) -> void:
+	fin_config = fin_config.duplicate()
+	fin_config.stiffness_factor = maxf(factor, 0.05)
+	fin = FinModel.new(fin_config)
+
+
 func set_waves(enabled: bool) -> void:
 	if enabled and wave_set_config != null and wave_set_config.enable_waves:
 		water = WaveField.new(wave_set_config, water_config, wind_config.from_bearing_deg)
@@ -405,6 +434,12 @@ func reset(origin_xz: Vector3, heading_rad: float) -> void:
 	trim_press_m = 0.0
 	felt_trim_deg = 0.0
 	felt_bounce_dps = 0.0
+	launch_coupling = 0.0
+	rider_inertia_kgm2 = 0.0
+	_hull_load_avg_n = 0.0
+	air_force_world = Vector3.ZERO
+	air_lift_n = 0.0
+	air_pitch_nm = 0.0
 	body = SimRigidBody.new()
 	_set_hull_mass_properties()
 	# The water's last answers are where the next solves start (WaveField.sample_at); a board
@@ -450,13 +485,21 @@ func step(dt: float, controls: SimControls) -> void:
 		# the hull's mass and inertia with it (what _set_hull_mass_properties() sets).
 		var heave_added_mass_kg: float = hull.heave_added_mass_kg
 		var inertia_with_water: Basis = _inertia_with_added_water(_hull_inertia_body)
-		body.take_water_along(heave_added_mass_kg, inertia_with_water)
+		# A launch (PH43): as the water lets go, the rider's and the rig's pitch inertia join the
+		# hull's (_rider_pitch_inertia_kgm2). The water's momentum sharing sees last substep's
+		# share, so only water that joins shares the hull's momentum; the rider joins with the
+		# pitch rate the hull has (the body was already turning with the board over the crest).
+		body.take_water_along(heave_added_mass_kg, _with_rider_pitch_inertia(inertia_with_water, rider_inertia_kgm2))
 		body.set_added_mass_up(heave_added_mass_kg)
 		var sway_added_mass_kg: float = _sway_added_mass_kg()
 		body.take_water_along_sideways(sway_added_mass_kg)
 		body.set_added_mass_sway(sway_added_mass_kg)
-		body.set_mass_properties(_hull_mass_kg, inertia_with_water, Vector3.ZERO)
+		launch_coupling = _launch_coupling() if sailing else 0.0
+		_remember_hull_load(sub_dt)
+		rider_inertia_kgm2 = _rider_pitch_inertia_kgm2(launch_coupling)
+		body.set_mass_properties(_hull_mass_kg, _with_rider_pitch_inertia(inertia_with_water, rider_inertia_kgm2), Vector3.ZERO)
 		fin.compute(body, water, time_s, _water_density_kg_m3)
+		_apply_air_under_the_board()
 		if sailing:
 			_hold_the_rig(sub_dt)
 			sail.compute(rig, wind, _controls_sheet, _controls_rake, air_density_kg_m3, _rig_lean_now_rad, _controls_boom_across, _controls_hold_side)
@@ -568,6 +611,14 @@ func _copy_configs() -> void:
 	_front_foot_pull_held_n = sailor_config.front_foot_pull_held_n
 	_back_foot_push_n = sailor_config.back_foot_push_n
 	_front_foot_pull_brief_n = sailor_config.front_foot_pull_brief_n
+	_front_foot_react_dps = sailor_config.front_foot_react_dps
+	_launch_carry_share = sailor_config.launch_carry_share
+	_launch_load_memory_s = sailor_config.launch_load_memory_s
+	_air_lift = board_config.air_lift
+	_air_lift_slope_factor = board_config.air_lift_slope_factor
+	_air_vortex_lift = board_config.air_vortex_lift
+	_air_normal_max = board_config.air_normal_max
+	_air_centre_from_nose = board_config.air_centre_from_nose
 	_trim_press_band_deg = sailor_config.trim_press_band_deg
 	_trim_press_max_m = sailor_config.trim_press_max_m
 	_trim_press_rate_ms = sailor_config.trim_press_rate_ms
@@ -1266,7 +1317,12 @@ func _front_foot_couple_nm(trimming: bool, forward_speed: float) -> float:
 		return 0.0
 	var felt_deg: float = felt_trim_deg if _trim_feel_time_s > 0.0 else rad_to_deg(body.pitch_rad())
 	var below_aim: float = clampf((_trim_aim_deg(forward_speed) - felt_deg) / _trim_press_band_deg, 0.0, 1.0)
-	return below_aim * _front_foot_pull_held_n * _strap_spread_m
+	# The nose dropping fast (off a crest, PH43): the front foot pulls up at once, in proportion
+	# to the nose-down rate up to front_foot_react_dps, whatever the felt trim says. 0 = off.
+	var dropping: float = 0.0
+	if _front_foot_react_dps > 0.0:
+		dropping = clampf(-rad_to_deg(body.angular_velocity_body().x) / _front_foot_react_dps, 0.0, 1.0)
+	return maxf(below_aim, dropping) * _front_foot_pull_held_n * _strap_spread_m
 
 
 ## The pitch part of the feet's moment (PH28): two feet in their straps pass a nose-up moment as
@@ -1319,6 +1375,10 @@ func _trim_by_feel(trimming: bool, forward_speed: float, dt: float) -> void:
 	felt_bounce_dps = sqrt(lerpf(felt_bounce_dps * felt_bounce_dps, pitch_rate_dps * pitch_rate_dps, blend))
 	if _controls_freeze_fore_aft:
 		return
+	# In the air (a launch, PH43: the rider has joined the hull) the press holds where it is: a
+	# rider off a crest moves no weight along the board until it lands.
+	if launch_coupling > 0.0:
+		return
 	if not trimming:
 		trim_press_m = move_toward(trim_press_m, 0.0, _trim_press_release_ms * dt)
 		return
@@ -1364,6 +1424,104 @@ func _inertia_with_added_water(base: Basis) -> Basis:
 	inertia.y = Vector3(inertia.y.x, inertia.y.y + yaw_added, inertia.y.z)
 	inertia.z = Vector3(inertia.z.x, inertia.z.y, inertia.z.z + hull.roll_added_inertia_kgm2)
 	return inertia
+
+
+## A launch (PH43, SailorConfig.launch_carry_share): how far board and rider go as one in pitch.
+## 0 while the hull carries at least launch_carry_share of what it has been carrying lately
+## (_hull_load_avg_n: in steady planing the rig and the fin carry up to two thirds of the
+## weight, so the hull's own recent load is the yardstick, not the weight), rising to 1 where
+## the hull carries nothing (the kit in the air), times how far the feet are in the straps (the
+## stance). 0 with the option off, and before the hull has carried anything.
+func _launch_coupling() -> float:
+	if _launch_carry_share <= 0.0 or _hull_load_avg_n < 50.0:
+		return 0.0
+	var carried: float = maxf(hull.hull_load_n, 0.0) / _hull_load_avg_n
+	var in_the_straps: float = clampf(stance, 0.0, 1.0)
+	return in_the_straps * clampf(1.0 - carried / _launch_carry_share, 0.0, 1.0)
+
+
+## What the hull has been carrying lately: its load averaged over launch_load_memory_s (a
+## first-order lag), the yardstick of _launch_coupling. While the kit is in the air the memory
+## holds (the lift that let go is not forgotten within the flight).
+func _remember_hull_load(dt: float) -> void:
+	if _launch_load_memory_s <= 0.0:
+		_hull_load_avg_n = maxf(hull.hull_load_n, 0.0)
+		return
+	if launch_coupling > 0.0:
+		return
+	var blend: float = clampf(dt / _launch_load_memory_s, 0.0, 1.0)
+	_hull_load_avg_n = lerpf(_hull_load_avg_n, maxf(hull.hull_load_n, 0.0), blend)
+
+
+## The pitch inertia the rider and the rig add to the hull's at this coupling (kg m2): the
+## whole windsurfer's about its centre of mass (MassModel.inertia_body, with the posture of the
+## moment) less the hull's own, times the coupling. On the water (coupling 0) nothing: the hull
+## answers the legs as before.
+func _rider_pitch_inertia_kgm2(coupling: float) -> float:
+	if coupling <= 0.0:
+		return 0.0
+	var whole_kit: float = mass_model.inertia_body.x.x
+	return coupling * maxf(whole_kit - _hull_inertia_body.x.x, 0.0)
+
+
+## The hull's inertia with the rider's pitch share added (the x axis, across the board).
+func _with_rider_pitch_inertia(base: Basis, extra_kgm2: float) -> Basis:
+	if extra_kgm2 <= 0.0:
+		return base
+	var inertia: Basis = base
+	inertia.x = Vector3(inertia.x.x + extra_kgm2, inertia.x.y, inertia.x.z)
+	return inertia
+
+
+## The air under the board (PH43, BoardConfig.air_lift). The apparent wind meets the dry part of
+## the bottom, from the wet front (the transom, out of the water) to the nose, at the angle the
+## board's pitch and the nose rocker's mean slope give, and pushes square to it. The dry part is
+## a plate of low aspect ratio (its width squared over its area): the normal force coefficient
+## is Kp sin(a) cos(a) + Kv sin(a)^2 (Polhamus 1966), Kp the slender wing's pi AR / 2 (Jones
+## 1946) times air_lift_slope_factor, Kv air_vortex_lift, capped at air_normal_max (a plate
+## square to the flow). It acts air_centre_from_nose of the dry part's length behind the nose
+## (0.4: a low-aspect-ratio plate's centre of pressure, an estimate). On a board flying
+## nose-high off a crest at 20 m/s of apparent wind it is tens of newtons up and ahead of the centre of mass,
+## so nose-up; on the water, at 1 to 2 degrees of trim, a few newtons. Nothing when the air
+## flows away from the bottom (the deck side is not modelled).
+func _apply_air_under_the_board() -> void:
+	air_force_world = Vector3.ZERO
+	air_lift_n = 0.0
+	air_pitch_nm = 0.0
+	if not _air_lift:
+		return
+	var wet_front_m: float = hull.wetted_aft_m + hull.wetted_length_m if hull.wetted_length_m > 0.0 else 0.0
+	var dry_m: float = _board_length_m - wet_front_m
+	if dry_m < 0.05:
+		return
+	var middle_m: float = wet_front_m + 0.5 * dry_m
+	# The dry part's area (Simpson's rule on the bottom's width) and its mean slope.
+	var area_m2: float = dry_m * (board_config.bottom_width_at(wet_front_m) + 4.0 * board_config.bottom_width_at(middle_m) + board_config.bottom_width_at(_board_length_m)) / 6.0
+	if area_m2 < 0.01:
+		return
+	var slope: float = (board_config.bottom_rise_m(_board_length_m) - board_config.bottom_rise_m(wet_front_m)) / dry_m
+	# Out of the bottom into the air: down, and a little forward where the rocker rises.
+	var normal_world: Vector3 = body.to_world(Vector3(0.0, -1.0, -slope).normalized())
+	var centre_m: float = _board_length_m - _air_centre_from_nose * dry_m
+	var centre_body: Vector3 = Vector3(0.0, -0.5 * _board_thickness_m + board_config.bottom_rise_m(centre_m), 0.5 * _board_length_m - centre_m)
+	var centre_world: Vector3 = body.point_world(centre_body)
+	var air: Vector3 = wind.velocity_at(centre_world) - body.point_velocity(centre_world)
+	var speed: float = air.length()
+	if speed < 0.5:
+		return
+	var into: float = -air.dot(normal_world)  # the air's speed into the bottom's face
+	if into <= 0.0:
+		return
+	var along: float = sqrt(maxf(speed * speed - into * into, 0.0))
+	var alpha: float = atan2(into, along)
+	var aspect: float = board_config.bottom_width_at(middle_m) * board_config.bottom_width_at(middle_m) / area_m2
+	var cn: float = _air_lift_slope_factor * 0.5 * PI * aspect * sin(alpha) * cos(alpha) + _air_vortex_lift * sin(alpha) * sin(alpha)
+	cn = minf(cn, _air_normal_max)
+	var q: float = 0.5 * air_density_kg_m3 * speed * speed
+	air_force_world = -normal_world * (q * area_m2 * cn)
+	body.add_force_at(centre_world, air_force_world)
+	air_lift_n = air_force_world.y
+	air_pitch_nm = body.to_body((centre_world - body.position).cross(air_force_world)).x
 
 
 ## The rig is held at the mast foot (a joint: force, no moment) and at the boom by the
@@ -1777,6 +1935,10 @@ func _fill_telemetry(controls: SimControls) -> void:
 	t.back_foot_push = _controls_back_foot_push
 	t.back_foot_yaw_nm = back_foot_yaw_nm
 	t.trim_aim_deg = _trim_aim_deg(-body.to_body(body.velocity).z)
+	t.air_lift_n = air_lift_n
+	t.air_pitch_nm = air_pitch_nm
+	t.launch_coupling = launch_coupling
+	t.pitch_inertia_kgm2 = body.inertia_body.x.x
 	t.hang_back_m = hang_back_m
 	t.knee_bend_m = knee_bend_m
 	t.leg_sway_m = leg_sway_m

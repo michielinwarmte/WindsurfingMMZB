@@ -65,6 +65,10 @@ const DEPTH_DEEP_M: float = 20.0
 const MAX_TOTAL_STEEPNESS: float = 0.9
 const RENDER_SCALE_MIN: float = 0.5
 const RENDER_SCALE_MAX: float = 1.0
+## The player's fin stiffness against the measured fin's (FinConfig.stiffness_factor): 1 is the
+## F-Hot 37 cm carbon slalom fin of the flex test, 4 a fin a quarter as bendy.
+const FIN_STIFFNESS_MIN: float = 0.5
+const FIN_STIFFNESS_MAX: float = 4.0
 ## Frame-rate caps the menu offers; 0 means no cap.
 const FPS_CAPS: Array[int] = [0, 30, 60, 120, 144]
 
@@ -119,6 +123,8 @@ var show_hud_panel: bool
 var sailor_view: bool
 ## The follow camera low and close behind the board, the water ahead in view (GR4).
 var camera_close: bool
+## How much stiffer the player's fin is than the measured one (PH43; FinConfig.stiffness_factor).
+var fin_stiffness: float
 
 # --- Graphics (section "graphics") ---
 var fullscreen: bool
@@ -198,6 +204,7 @@ func reset_to_defaults() -> void:
 	show_hud_panel = true
 	sailor_view = true
 	camera_close = true
+	fin_stiffness = 1.0
 
 	fullscreen = false
 	vsync = true
@@ -370,6 +377,7 @@ func write_to(config: ConfigFile) -> void:
 	config.set_value("sailing", "show_hud_panel", show_hud_panel)
 	config.set_value("sailing", "sailor_view", sailor_view)
 	config.set_value("sailing", "camera_close", camera_close)
+	config.set_value("sailing", "fin_stiffness", fin_stiffness)
 
 	config.set_value("graphics", "fullscreen", fullscreen)
 	config.set_value("graphics", "vsync", vsync)
@@ -422,6 +430,7 @@ func read_from(config: ConfigFile) -> void:
 	show_hud_panel = _bool(config, "sailing", "show_hud_panel", show_hud_panel)
 	sailor_view = _bool(config, "sailing", "sailor_view", sailor_view)
 	camera_close = _bool(config, "sailing", "camera_close", camera_close)
+	fin_stiffness = clampf(_float(config, "sailing", "fin_stiffness", fin_stiffness), FIN_STIFFNESS_MIN, FIN_STIFFNESS_MAX)
 
 	fullscreen = _bool(config, "graphics", "fullscreen", fullscreen)
 	vsync = _bool(config, "graphics", "vsync", vsync)

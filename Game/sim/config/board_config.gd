@@ -170,6 +170,28 @@ const ONE_FOOT_M: float = 0.3048
 ## decides (PHYSICS_SPEC.md section 5, F23).
 @export var heel_as_rolled_plate: float = 0.0
 
+@export_group("Air under the board (PH43)")
+## The apparent wind meets the dry part of the bottom, from the wet front to the nose, and
+## pushes square to it: up and a little aft on a board flying nose-high off a crest, where it
+## holds the nose up for a moment (Max, 5 November 2026: "there is wind under the board"). On
+## the water, with 1 to 2 degrees of trim and the nose rocker, it is a few newtons. Off: no air
+## force on the hull, as before PH43 (the sailor's windage stays).
+@export var air_lift: bool = true
+## The dry bottom as a low-aspect-ratio plate (its width squared over its area, about 0.3 to
+## 0.5): the normal force coefficient is Kp sin(a) cos(a) + Kv sin(a)^2 at the angle a between
+## the plate and the air (Polhamus 1966, the leading-edge suction analogy), with Kp the slender
+## wing's lift slope pi AR / 2 (Jones 1946) times this factor (1 = Jones).
+@export var air_lift_slope_factor: float = 1.0
+## Kv, the vortex lift's coefficient: pi for a slender delta wing (Polhamus); for a rectangular
+## plate over water an estimate until a plate measurement is found.
+@export var air_vortex_lift: float = 3.14
+## The normal force coefficient never exceeds a plate square to the flow (about 1.2).
+@export var air_normal_max: float = 1.2
+## Where the air's push acts on the dry part, as a share of its length from the nose (the
+## leading edge): 0.4 for a plate of low aspect ratio at moderate angles, between the thin
+## wing's quarter chord and a stalled plate's middle (Hoerner, Fluid-Dynamic Lift; an estimate).
+@export var air_centre_from_nose: float = 0.4
+
 
 ## Height of the bottom above the flat planing section, at a distance forward of the transom.
 func bottom_rise_m(from_transom_m: float) -> float:

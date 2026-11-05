@@ -100,6 +100,7 @@ func _enter_tree() -> void:
 	windsurfer.wave_set_config = settings.build_wave_set_config()
 	# The board, sail and fin chosen on the gear page (an unknown id sails the default).
 	windsurfer.gear = GearChoice.from_settings(settings)
+	windsurfer.fin_stiffness = settings.fin_stiffness
 	if _course != null:
 		var spot: Vector2 = RaceCourses.pre_start_spot(_course)
 		windsurfer.start_position = Vector3(spot.x, 0.0, spot.y)
