@@ -7,6 +7,8 @@
 #   tools/screenshot.sh res://main.tscn out.png 180     scene, output file, frames to wait
 #   tools/screenshot.sh res://main.tscn out.png 180 --camera=3 --autopilot=1
 #                                                       extra options for the game (main.gd)
+#   tools/screenshot.sh res://ui/start_menu.tscn wide.png 120 --resolution=3137x1263
+#                                                       another window size (default 1280x720)
 #
 # The game runs at a fixed 60 frames per second of game time, so 180 frames = 3 seconds.
 # Prints any engine or shader errors. Needs a desktop session: a window opens briefly.
@@ -16,7 +18,15 @@ source "$(dirname "$0")/common.sh"
 scene="${1:-}"
 output="${2:-$REPO_ROOT/.screenshots/latest.png}"
 frames="${3:-60}"
-extra=("${@:4}")
+# The window size is Godot's own option; every other extra option goes to the game.
+resolution="1280x720"
+extra=()
+for option in "${@:4}"; do
+	case "$option" in
+		--resolution=*) resolution="${option#--resolution=}" ;;
+		*) extra+=("$option") ;;
+	esac
+done
 
 mkdir -p "$(dirname "$output")"
 output="$(cd "$(dirname "$output")" && pwd)/$(basename "$output")"
@@ -25,7 +35,7 @@ rm -f "$output"
 godot="$(find_godot)"
 import_project "$godot"
 
-args=(--no-header --path "$PROJECT_DIR" --resolution 1280x720 --fixed-fps 60 --audio-driver Dummy)
+args=(--no-header --path "$PROJECT_DIR" --resolution "$resolution" --fixed-fps 60 --audio-driver Dummy)
 # Safety net: quit even if the screenshot helper never runs (for example after a script error).
 args+=(--quit-after "$((frames + 600))")
 if [[ -n "$scene" ]]; then args+=("$scene"); fi
