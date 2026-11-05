@@ -71,6 +71,19 @@ const FIN_STIFFNESS_MIN: float = 0.5
 const FIN_STIFFNESS_MAX: float = 4.0
 ## Frame-rate caps the menu offers; 0 means no cap.
 const FPS_CAPS: Array[int] = [0, 30, 60, 120, 144]
+## The body on the mouse (package B, MouseBody): the ranges of its sliders. The rail's range is the
+## leeward rail the mouse may add to the technique's (the design: 0 to +6; GP0: 8 in all at most),
+## the back foot's the trim either way (the design: 1.5; 1 is gentler; GP0's band is 0.5 to 3.5 in
+## all), the travel the mouse moves from one end to the other (the design: about 300 px), and the
+## spring's time back to the middle (the design: 1 to 2 s).
+const BODY_RAIL_MIN_DEG: float = 2.0
+const BODY_RAIL_MAX_DEG: float = 8.0
+const BODY_TRIM_MIN_DEG: float = 0.5
+const BODY_TRIM_MAX_DEG: float = 2.0
+const BODY_TRAVEL_MIN_PX: float = 100.0
+const BODY_TRAVEL_MAX_PX: float = 800.0
+const BODY_SPRING_MIN_S: float = 0.5
+const BODY_SPRING_MAX_S: float = 4.0
 
 # --- Wind (section "wind" in the file) ---
 ## Wind speed at 10 m height, knots (what a forecast says).
@@ -125,6 +138,24 @@ var sailor_view: bool
 var camera_close: bool
 ## How much stiffer the player's fin is than the measured one (PH43; FinConfig.stiffness_factor).
 var fin_stiffness: float
+
+# --- The body on the mouse (section "body"; package B, ROADMAP GP2, an experiment) ---
+## The mouse is the sailor's body while sailing (MouseBody). Off by default: it is an experiment.
+var mouse_body: bool
+## Max's open choices (GD7), the lead's recommendation the default: the mouse stays where you put it
+## (MouseBody.Centre), and the board rolls the way the mouse moves (MouseBody.Sideways).
+var body_centre: int
+var body_spring_s: float
+var body_sideways: int
+## Whether the far side goes on past flat to the windward rail down.
+var body_windward_rail: bool
+## The ranges: the most leeward rail added, degrees; the back foot's trim either way, degrees; the
+## mouse travel from end to end, pixels.
+var body_rail_deg: float
+var body_trim_deg: float
+var body_travel_px: float
+## 1: the feet still hold the rail for you; 2: they correct slowly and your hand holds it.
+var body_level: int
 
 # --- Graphics (section "graphics") ---
 var fullscreen: bool
@@ -205,6 +236,16 @@ func reset_to_defaults() -> void:
 	sailor_view = true
 	camera_close = true
 	fin_stiffness = 1.0
+
+	mouse_body = false
+	body_centre = MouseBody.Centre.STAYS
+	body_spring_s = 1.5
+	body_sideways = MouseBody.Sideways.AS_SEEN
+	body_windward_rail = false
+	body_rail_deg = 6.0
+	body_trim_deg = 1.5
+	body_travel_px = 300.0
+	body_level = 1
 
 	fullscreen = false
 	vsync = true
@@ -379,6 +420,16 @@ func write_to(config: ConfigFile) -> void:
 	config.set_value("sailing", "camera_close", camera_close)
 	config.set_value("sailing", "fin_stiffness", fin_stiffness)
 
+	config.set_value("body", "mouse_body", mouse_body)
+	config.set_value("body", "centre", body_centre)
+	config.set_value("body", "spring_s", body_spring_s)
+	config.set_value("body", "sideways", body_sideways)
+	config.set_value("body", "windward_rail", body_windward_rail)
+	config.set_value("body", "rail_deg", body_rail_deg)
+	config.set_value("body", "trim_deg", body_trim_deg)
+	config.set_value("body", "travel_px", body_travel_px)
+	config.set_value("body", "level", body_level)
+
 	config.set_value("graphics", "fullscreen", fullscreen)
 	config.set_value("graphics", "vsync", vsync)
 	config.set_value("graphics", "msaa", msaa)
@@ -431,6 +482,16 @@ func read_from(config: ConfigFile) -> void:
 	sailor_view = _bool(config, "sailing", "sailor_view", sailor_view)
 	camera_close = _bool(config, "sailing", "camera_close", camera_close)
 	fin_stiffness = clampf(_float(config, "sailing", "fin_stiffness", fin_stiffness), FIN_STIFFNESS_MIN, FIN_STIFFNESS_MAX)
+
+	mouse_body = _bool(config, "body", "mouse_body", mouse_body)
+	body_centre = clampi(_int(config, "body", "centre", body_centre), 0, MouseBody.Centre.size() - 1)
+	body_spring_s = clampf(_float(config, "body", "spring_s", body_spring_s), BODY_SPRING_MIN_S, BODY_SPRING_MAX_S)
+	body_sideways = clampi(_int(config, "body", "sideways", body_sideways), 0, MouseBody.Sideways.size() - 1)
+	body_windward_rail = _bool(config, "body", "windward_rail", body_windward_rail)
+	body_rail_deg = clampf(_float(config, "body", "rail_deg", body_rail_deg), BODY_RAIL_MIN_DEG, BODY_RAIL_MAX_DEG)
+	body_trim_deg = clampf(_float(config, "body", "trim_deg", body_trim_deg), BODY_TRIM_MIN_DEG, BODY_TRIM_MAX_DEG)
+	body_travel_px = clampf(_float(config, "body", "travel_px", body_travel_px), BODY_TRAVEL_MIN_PX, BODY_TRAVEL_MAX_PX)
+	body_level = clampi(_int(config, "body", "level", body_level), 1, 2)
 
 	fullscreen = _bool(config, "graphics", "fullscreen", fullscreen)
 	vsync = _bool(config, "graphics", "vsync", vsync)
