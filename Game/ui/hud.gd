@@ -23,6 +23,9 @@ var _rose: WindRose
 var _push_gauge: PushGauge
 ## Only in a map scene (show_mini_map), or with a race course (show_course).
 var _mini_map: MiniMap = null
+## Whether the small map shows the course's own water (the open water, no lake's map): it is framed
+## on the course, again when the course is laid anew (a turned wind at R, ROADMAP RA24).
+var _mini_map_frames_course: bool = false
 var _message: Label
 ## The race course's name, above the small map (show_course).
 var _course_line: Label = null
@@ -100,6 +103,8 @@ func show_course(course: Course) -> void:
 	if _mini_map == null:
 		_mini_map = MiniMap.new()
 		add_child(_mini_map)
+		_mini_map_frames_course = true
+	if _mini_map_frames_course:
 		_mini_map.setup_for_course(course)
 		_place_mini_map()
 	else:
@@ -111,8 +116,8 @@ func show_course(course: Course) -> void:
 		_course_line.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 		_course_line.offset_left = -420.0
 		_course_line.offset_right = -20.0
-		_course_line.offset_top = -_mini_map.size.y - 66.0
-		_course_line.offset_bottom = -_mini_map.size.y - 44.0
+	_course_line.offset_top = -_mini_map.size.y - 66.0
+	_course_line.offset_bottom = -_mini_map.size.y - 44.0
 	_course_line.text = "Course: " + course.name
 
 

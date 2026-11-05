@@ -134,6 +134,46 @@ func test_in_a_race_a_new_sea_waits_for_the_restart() -> void:
 	assert_almost_eq((windsurfer.sim.water as WaveField).total_amplitude_m(), amplitude_before, 1e-6, "the fleet's sea stays until R")
 	scene.get_node("PauseMenu").restart_requested.emit()
 	assert_almost_eq((windsurfer.sim.water as WaveField).total_amplitude_m(), 0.08 + 0.04 + 0.015 + 0.006, 1e-5, "the medium chop after it")
+	var runner: RaceRunner = scene.get_node("RaceRunner")
+	assert_false(runner.opponents.is_empty())
+	for node: WindsurferNode in runner.opponents:
+		assert_almost_eq((node.sim.water as WaveField).total_amplitude_m(), 0.08 + 0.04 + 0.015 + 0.006, 1e-5, "%s sails the new chop too" % node.name)
+
+
+## ROADMAP RA24: in a race a wind changed in the pause menu waits for R, like the sea (the AI boards
+## sail their own copies of the wind, and the course is laid to it); at R every board takes it at
+## once, each its own copy, and a course laid for the wind is laid again for the new direction.
+func test_in_a_race_a_new_wind_waits_for_the_restart_and_then_blows_for_every_board() -> void:
+	RaceSetup.pending = RaceSetup.race("t1_loop", PackedStringArray(["allrounder", "rookie"]))
+	var scene: SailingScene = (load("res://main.tscn") as PackedScene).instantiate()
+	add_child_autofree(scene)
+	var runner: RaceRunner = scene.get_node("RaceRunner")
+	var pause_menu: PauseMenu = scene.get_node("PauseMenu")
+	var boards: Array[WindsurferNode] = [scene.get_node("Windsurfer") as WindsurferNode]
+	boards.append_array(runner.opponents)
+	assert_eq(boards.size(), 3, "the player and two AI boards")
+	assert_almost_eq(runner.course.axis_deg, 270.0, 1e-6, "T1 is laid for the settings' West wind")
+	GameSettings.values.wind_speed_kt = 24.0
+	GameSettings.values.wind_from_deg = 300.0
+	scene.apply_settings_live()
+	for node: WindsurferNode in boards:
+		assert_almost_eq(node.sim.wind.config.speed_kt, 18.0, 1e-6, "%s: the race's wind stays until R" % node.name)
+		assert_almost_eq(node.sim.wind.config.from_bearing_deg, 270.0, 1e-6)
+	assert_string_contains((pause_menu.get_node("%Note") as Label).text, "the new wind", "the pause menu says R brings it")
+
+	pause_menu.restart_requested.emit()
+	for node: WindsurferNode in boards:
+		assert_almost_eq(node.sim.wind.config.speed_kt, 24.0, 1e-6, "%s sails the new wind after R" % node.name)
+		assert_almost_eq(node.sim.wind.config.from_bearing_deg, 300.0, 1e-6)
+		assert_almost_eq(node.sim.wind.time_s, boards[0].sim.wind.time_s, 1e-9, "one wind clock (RA13)")
+	assert_ne(runner.opponents[0].sim.wind.config, boards[0].sim.wind.config, "each board its own copy (worker threads)")
+	assert_almost_eq(runner.course.axis_deg, 300.0, 1e-6, "the course is laid again for the new wind")
+	assert_eq(runner.race.course, runner.course, "the race is sailed on it")
+	assert_eq(runner.race.board_count(), 3)
+	assert_eq((pause_menu.get_node("%Note") as Label).text, "", "nothing waits any more")
+	assert_eq(scene.find_children("CourseOnWater", "CourseOnWater", false, false).size(), 1, "one course on the water")
+	# Free sailing is unchanged: there the new wind blows at once (test_the_wind_and_the_sea_change_live_while_sailing).
+	await wait_process_frames(1)  # the old course's buoys are freed at the end of the frame
 
 
 func test_the_start_menu_hands_the_board_to_the_player() -> void:

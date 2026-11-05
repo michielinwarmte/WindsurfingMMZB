@@ -132,8 +132,7 @@ func setup_race(race_course: Course, player_node: WindsurferNode, race_setup: Ra
 		_boards = []
 		player.visible = false
 	# The sailing area round the start line, kept off the shore on a map (the scene's shore grid).
-	var sailing_scene: SailingScene = player.get_parent() as SailingScene
-	_area = SailingArea.for_course(course, sailing_scene.shore_grid if sailing_scene != null else null)
+	_area = SailingArea.for_course(course, _shore_grid())
 	var scene: PackedScene = load(WINDSURFER_SCENE)
 	for skipper: RaceSkipper in Skippers.make_fleet(setup.skippers):
 		var node: WindsurferNode = scene.instantiate()
@@ -221,11 +220,35 @@ func restart() -> void:
 	race.start_in(setup.free_sail_s)
 	hud.reset()
 	if records != null:
+		# The key again: R may bring a new wind (RA24), and the best is kept per wind.
+		record_key = _record_key()
 		hud.set_time_trial(true, records.best_s(record_key), records.best_splits(record_key))
 	_record_checked = false
 	choice = SpectateChoice.new()
 	_running = true
 	restarted.emit()
+
+
+## A new wind and sea for the race, at R (ROADMAP RA24): every AI board takes the wind and the waves
+## the player's board now sails, each its own copy (own_config_copies), as when the race was built.
+## Call restart() afterwards: the water changes under the boards. The other players' boards (LAN)
+## are sailed on their own PCs and are left alone.
+func give_the_fleet_the_sea_of(source: WindsurferNode) -> void:
+	for node: WindsurferNode in opponents:
+		node.set_sea(source.wind_config, source.wave_set_config)
+
+
+## The race's course laid again (for a turned wind, RA24): the sailing area round its start line
+## with it. restart() then builds the race, the rules and the start on it.
+func lay_course(new_course: Course) -> void:
+	course = new_course
+	_area = SailingArea.for_course(course, _shore_grid())
+
+
+## The scene's depth grid for the shore, or null on the open water.
+func _shore_grid() -> TerrainGrid:
+	var sailing_scene: SailingScene = player.get_parent() as SailingScene if player != null else null
+	return sailing_scene.shore_grid if sailing_scene != null else null
 
 
 ## The sailing area of this race (where the AI boards appear and sail free).
