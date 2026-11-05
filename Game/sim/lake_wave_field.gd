@@ -94,6 +94,13 @@ func height_at(x: float, z: float, t: float) -> float:
 	return super(x, z, t)
 
 
+## The rest point of the surface point at (x, z), with the amplitudes there (so the _rest functions
+## that follow answer for this point).
+func rest_point_at(x: float, z: float, t: float) -> Vector2:
+	amplitudes_for(x, z)
+	return super(x, z, t)
+
+
 func normal_at(x: float, z: float, t: float) -> Vector3:
 	amplitudes_for(x, z)
 	return super(x, z, t)

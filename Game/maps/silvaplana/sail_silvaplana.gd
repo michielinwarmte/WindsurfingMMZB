@@ -90,6 +90,7 @@ func _ready() -> void:
 	_start_the_clock()
 	_add_gust_picture()
 	_apply_map_options()
+	_say_which_waves()
 
 
 func _process(delta: float) -> void:
@@ -222,6 +223,18 @@ func _show_the_wind_of_the_moment() -> void:
 	_hud.clock_text = field.time_of_day_text().left(5)  # hours and minutes: the strip is full
 	if _gust_picture != null:
 		_gust_picture.show_moment(field.moment())
+
+
+## Which waves the lake has, in the console (and the logs of the checks): its own (Lake waves on)
+## with the wind they were built for, or the settings'.
+func _say_which_waves() -> void:
+	var lake_water: LakeWaveField = _windsurfer.sim.water as LakeWaveField
+	if lake_water == null:
+		print("Lake Silvaplana: the settings' waves (Lake waves off)")
+		return
+	var lake: LakeWaves = lake_water.lake
+	print("Lake Silvaplana's own waves (PHYSICS_SPEC.md 9.17): built for %.1f kt at 10 m from %.0f degrees; the physics floats on the %d longest of %d trains; crests up to %.0f cm" % [
+		lake.wind_10m_ms / SimMath.KNOT_MS, lake.from_deg, lake.physics_count, lake.band_count, 100.0 * lake.max_total_amplitude_m])
 
 
 ## --overview and --measure (see the top of this file).

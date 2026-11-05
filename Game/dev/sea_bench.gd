@@ -19,16 +19,39 @@ extends SceneTree
 ##    board can still be dearer on eight. This is the editor engine; the game's release
 ##    engine scales better, but the same way.
 ##
-## Arguments after "--": [--points=20000] [--ticks=600] [--boards=8]
+## 4. With --lake=<n>: the same on Lake Silvaplana's own waves (LakeWaveField, PHYSICS_SPEC.md 9.17)
+##    with the physics on its n longest trains (2 in the game; 4 for all of them), the points round
+##    the start spot, the board on its beam reach there in the map's wind at 14:30; "flat" is then
+##    the lake with flat water. --lake=old: the lake with the waves it had before (the default set,
+##    Lake waves off), the "before" of the lake's own waves.
+##
+## Arguments after "--": [--points=20000] [--ticks=600] [--boards=8] [--lake=2|4|old]
 
 const DT: float = 1.0 / 60.0
 
 var _sims: Array[WindsurferSim] = []
 var _scenarios: Array[SimScenario] = []
+## --lake: how many trains the physics floats on (0: the open sea, no lake; -1: the lake with its
+## old waves, the default set).
+var _lake_trains: int = 0
+var _lake_environment: EnvironmentConfig = null
+const LAKE_ENVIRONMENT_PATH: String = "res://maps/silvaplana/environment_silvaplana.tres"
+## The lake scene's start spot (game x, z) and heading (SilvaplanaSailing).
+const LAKE_START: Vector2 = Vector2(380.0, -910.0)
+const LAKE_HEADING_DEG: float = 132.0
 
 
 func _initialize() -> void:
 	var options: Dictionary[String, String] = _read_user_args()
+	_lake_trains = -1 if options.get("lake", "0") == "old" else options.get("lake", "0").to_int()
+	if _lake_trains != 0:
+		_lake_environment = (load(LAKE_ENVIRONMENT_PATH) as EnvironmentConfig).duplicate()
+		_lake_environment.lake_waves = _lake_environment.lake_waves.duplicate()
+		_lake_environment.lake_waves.physics_trains = maxi(_lake_trains, 0)
+		if _lake_trains > 0:
+			print("Lake Silvaplana's own waves, the physics on its %d longest trains" % _lake_trains)
+		else:
+			print("Lake Silvaplana with its old waves (the default set)")
 	var n: int = options.get("points", "20000").to_int()
 	var ticks: int = options.get("ticks", "600").to_int()
 	_time_the_queries(n)
@@ -42,17 +65,31 @@ func _initialize() -> void:
 
 
 func _default_sea() -> WaveField:
+	if _lake_trains != 0:
+		var sim: WindsurferSim = _lake_sim(true)
+		return sim.water as WaveField
 	var waves: WaveSetConfig = load("res://config/waves_default.tres")
 	var water: WaterConfig = load("res://config/water_default.tres")
 	return WaveField.new(waves, water, 270.0)
+
+
+## A simulation on the lake at its start spot, with the lake's own waves or flat water.
+func _lake_sim(with_waves: bool) -> WindsurferSim:
+	var sim: WindsurferSim = WindsurferSim.create_for(_lake_environment, false, true)
+	sim.wave_set_config = sim.wave_set_config.duplicate(true)
+	sim.wave_set_config.place_waves = _lake_trains > 0
+	sim.set_waves(with_waves)
+	sim.reset(Vector3(LAKE_START.x, 0.0, LAKE_START.y), deg_to_rad(LAKE_HEADING_DEG))
+	return sim
 
 
 func _random_points(n: int) -> PackedVector2Array:
 	var points: PackedVector2Array = PackedVector2Array()
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = 1
+	var centre: Vector2 = LAKE_START if _lake_trains != 0 else Vector2.ZERO
 	for i: int in n:
-		points.append(Vector2(rng.randf_range(-50.0, 50.0), rng.randf_range(-50.0, 50.0)))
+		points.append(centre + Vector2(rng.randf_range(-50.0, 50.0), rng.randf_range(-50.0, 50.0)))
 	return points
 
 
@@ -180,6 +217,15 @@ func _time_boards_side_by_side(boards: int, ticks: int) -> float:
 ## the config files (boards stepped side by side must not share objects).
 func _add_board(with_waves: bool) -> void:
 	var scenario: SimScenario = load("res://dev/scenarios/beam_reach.gd").new()
+	if _lake_trains != 0:
+		# The map's wind and the lake's waves; the pilot holds a beam reach as on the open sea.
+		var lake_sim: WindsurferSim = _lake_sim(with_waves)
+		scenario.pilot.sail = lake_sim.sail
+		scenario.pilot.sailor = lake_sim.sailor_config
+		scenario.setup(lake_sim)
+		_sims.append(lake_sim)
+		_scenarios.append(scenario)
+		return
 	var sim: WindsurferSim = WindsurferSim.create_for(EnvironmentConfig.new(), with_waves, true)
 	sim.wind_config.speed_kt = scenario.wind_kt
 	sim.wind = WindField.new(sim.wind_config)

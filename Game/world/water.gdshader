@@ -211,17 +211,59 @@ float wind_recent_ratio(vec2 position) {
 	return 2.0 * texture(wind_ripple_map, uv).g;
 }
 
-// The lake's surface at a pixel: every train's exact Gerstner tangents at the pixel's rest point,
-// faded where its wavelength covers too few pixels, and the picture's short train as slope (raised
-// by the recent wind); `faded_slope2` gets the mean square slope of what was faded out.
+// A train the picture shows as shading only (the physics does not ride it), as three short-crested
+// parts that share its energy (each a / sqrt(3)): turned 26 degrees either way and stretched over
+// its octave (x 1.14, 1, 0.88), each with its own phase. Real short wind waves spread about 40
+// degrees either side of the wind at 1.6 times the peak frequency (Donelan-Banner spreading, as
+// Horvath 2015 gives it; the research, 4.1), so one long-crested train looks like brushed metal. The
+// parts' turn and stretch are a choice for the look, within that spread. Adds the parts' slopes to
+// the tangents (as a height field) and the mean square slope of what the pixels cannot show to
+// `faded_slope2`.
+const vec3 SHADING_TURNS_RAD = vec3(-0.45, 0.0, 0.45);
+const vec3 SHADING_STRETCH = vec3(1.14, 1.0, 0.88);
+const vec3 SHADING_PHASES = vec3(1.7, 0.0, 4.1);
+
+void lake_shading_train(vec4 wave, float amplitude, float pixel_m, vec2 rest, inout vec3 tangent_x, inout vec3 tangent_z, inout float faded_slope2) {
+	if (amplitude <= 0.0) {
+		return;
+	}
+	float part_a = amplitude * 0.57735;
+	for (int j = 0; j < 3; j++) {
+		float turn_c = cos(SHADING_TURNS_RAD[j]);
+		float turn_s = sin(SHADING_TURNS_RAD[j]);
+		vec2 d = vec2(wave.x * turn_c - wave.y * turn_s, wave.x * turn_s + wave.y * turn_c);
+		float length_m = wave.w * SHADING_STRETCH[j];
+		float k = 2.0 * PI / length_m;
+		float shown = 1.0 - smoothstep(length_m / 6.0, length_m / 3.0, pixel_m);
+		float phase = k * dot(d, rest) - sqrt(G * k) * water_time_s + wave.z + SHADING_PHASES[j];
+		float slope = part_a * k * cos(phase) * shown;
+		tangent_x.y += slope * d.x;
+		tangent_z.y += slope * d.y;
+		faded_slope2 += 0.5 * (1.0 - shown) * (part_a * k) * (part_a * k);
+	}
+}
+
+// The lake's surface at a pixel: where the mesh shows a train as shape (near the camera, where the
+// board floats on it), its exact Gerstner tangents at the pixel's rest point, faded where a
+// wavelength covers too few pixels; elsewhere (farther out, from high up, on the far water) and for
+// the trains the physics does not ride, short-crested shading (lake_shading_train()), so few long
+// trains do not show as regular stripes from afar. The two are blended by the square roots of the
+// shape's share, which keeps the slopes' energy. The picture's short train (raised by the recent
+// wind) as shading too. `faded_slope2` gets the mean square slope of what was faded out.
 void lake_pixel_surface(vec2 rest, float pixel_m, out vec3 tangent_x, out vec3 tangent_z, out float crest, out float total_steepness, out float faded_slope2) {
 	vec4 lengths = vec4(wave_a.w, wave_b.w, wave_c.w, wave_d.w);
 	vec4 shown = vec4(1.0) - smoothstep(lengths / 6.0, lengths / 3.0, vec4(pixel_m));
+	vec4 near_shape = lake_shape_weights(rest);
 	vec3 displacement;
-	lake_wave_surface(rest, shown, displacement, tangent_x, tangent_z, crest, total_steepness);
+	lake_wave_surface(rest, shown * sqrt(near_shape), displacement, tangent_x, tangent_z, crest, total_steepness);
 	vec4 amplitudes = lake_amplitudes(rest);
 	vec4 slopes = amplitudes * 2.0 * PI / lengths;
-	faded_slope2 = dot((vec4(1.0) - shown) * slopes * slopes, vec4(0.5));
+	faded_slope2 = dot((vec4(1.0) - shown) * near_shape * slopes * slopes, vec4(0.5));
+	vec4 waves[4] = vec4[](wave_a, wave_b, wave_c, wave_d);
+	vec4 elsewhere = sqrt(max(vec4(1.0) - near_shape, vec4(0.0)));
+	for (int i = 0; i < 4; i++) {
+		lake_shading_train(waves[i], amplitudes[i] * elsewhere[i], pixel_m, rest, tangent_x, tangent_z, faded_slope2);
+	}
 	// The short train: nodes as lake_envelope; its amplitude at the recent wind (9.17, the gusts).
 	vec2 f = (rest - lake_grid.xy) * lake_grid.z;
 	if (f.x < 0.0 || f.y < 0.0 || f.x >= float(lake_grid_size.x - 1) || f.y >= float(lake_grid_size.y - 1)) {
@@ -231,14 +273,8 @@ void lake_pixel_surface(vec2 rest, float pixel_m, out vec3 tangent_x, out vec3 t
 	vec2 t = f - vec2(node);
 	vec4 look = mix(mix(texelFetch(lake_look_data, node, 0), texelFetch(lake_look_data, node + ivec2(1, 0), 0), t.x),
 		mix(texelFetch(lake_look_data, node + ivec2(0, 1), 0), texelFetch(lake_look_data, node + ivec2(1, 1), 0), t.x), t.y);
-	float k = 2.0 * PI / lake_look_band.w;
 	float a = look.r * pow(max(wind_recent_ratio(rest), 0.0), look.g);
-	float look_shown = 1.0 - smoothstep(lake_look_band.w / 6.0, lake_look_band.w / 3.0, pixel_m);
-	float phase = k * dot(lake_look_band.xy, rest) - sqrt(G * k) * water_time_s + lake_look_band.z;
-	float slope = a * k * cos(phase) * look_shown;
-	tangent_x.y += slope * lake_look_band.x;
-	tangent_z.y += slope * lake_look_band.y;
-	faded_slope2 += 0.5 * (1.0 - look_shown) * (a * k) * (a * k);
+	lake_shading_train(lake_look_band, a, pixel_m, rest, tangent_x, tangent_z, faded_slope2);
 }
 
 float grid_line(vec2 p, float cell, float width) {
