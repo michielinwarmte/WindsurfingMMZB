@@ -218,6 +218,10 @@ func _run_case(case: PushCase, falls: Array[String]) -> PushResult:
 		controller.push_level = case.settings["push.level"]
 	elif push_text != "":
 		controller.push_level = PushDial.level_of(push_text)
+	# The hands hold the slider at that level: hands with no level (NaN) let go of it
+	# (PlayerController._release_the_slider(), since the skipper's speed package), and the case
+	# then sailed without a slider whatever --push said (found by GP2, 5 November 2026).
+	hands.push = controller.push_level
 	controller.legs_share = _options.get("legs", "0").to_float()
 	_apply_settings(case.settings, "controller.", controller)
 	_put_on_a_body(case, controller, sim)
