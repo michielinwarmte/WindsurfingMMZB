@@ -25,8 +25,8 @@
 #   tools/play_body.sh --sideways=right         right is always more rail (default: the board rolls
 #                                               with the mouse, as seen from behind)
 #   tools/play_body.sh --windward=1             the far side goes on to a windward rail
-#   tools/play_body.sh --trim=1                 a gentler back foot (+-1 degree; default 1.5)
-#   tools/play_body.sh --rail=4                 less rail (default up to +6 degrees)
+#   tools/play_body.sh --trim=1                 a gentler back foot (+-1 degree; default 2.5)
+#   tools/play_body.sh --rail=4                 less rail (default up to +9 degrees)
 #   tools/play_body.sh --travel=500             a slower mouse (pixels from end to end; default 300)
 #   tools/play_body.sh --push=100 --gusts=0.3   the slider and the gusts as in tools/play_push.sh
 #   tools/play_body.sh --body=0                 the same water without the body, to compare
@@ -46,8 +46,8 @@ centre=0
 spring=1.5
 sideways=0
 windward=false
-trim=1.5
-rail=6.0
+trim=2.5
+rail=9.0
 travel=300
 for arg in "$@"; do
 	case "$arg" in

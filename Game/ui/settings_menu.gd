@@ -358,7 +358,7 @@ func _build_body_rows(s: SettingsValues) -> void:
 		"Rolls with the mouse: as seen from behind the board",
 		func(index: int) -> void: s.body_sideways = index))
 	rows.append(_add_slider(grid, "Rail", SettingsValues.BODY_RAIL_MIN_DEG, SettingsValues.BODY_RAIL_MAX_DEG, 0.5, s.body_rail_deg,
-		func(v: float) -> String: return "up to %.1f° more leeward rail (8° in all at most)" % v,
+		func(v: float) -> String: return "up to %.1f° more leeward rail (%.0f° in all at most)" % [v, MouseBody.RAIL_MAX_DEG],
 		func(v: float) -> void: s.body_rail_deg = v))
 	rows.append(_add_switch(grid, "Windward rail", s.body_windward_rail,
 		"Off: the other way ends at a flat board. On: on to %.0f° of windward rail" % MouseBody.WINDWARD_RAIL_DEG,

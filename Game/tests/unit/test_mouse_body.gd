@@ -54,15 +54,15 @@ func test_left_in_the_middle_the_body_adds_nothing() -> void:
 		assert_eq(body.trim_extra_deg(base), 0.0, "no trim added at base %.1f" % base)
 
 
-func test_the_rail_goes_up_to_its_range_and_never_past_eight_degrees() -> void:
+func test_the_rail_goes_up_to_its_range_and_never_past_twelve_degrees() -> void:
 	var body: MouseBody = MouseBody.new()
 	body.sideways = MouseBody.Sideways.RIGHT_IS_MORE_RAIL
 	body.side = 1.0
-	assert_almost_eq(body.rail_extra_deg(2.0, 1.0), 6.0, 1e-6, "the technique's 2 plus the design's 6: 8")
-	assert_almost_eq(body.rail_extra_deg(5.0, 1.0), 3.0, 1e-6, "upwind the technique has 5: only 3 more (GP0: beyond 8 is only slower)")
-	assert_eq(body.rail_extra_deg(9.0, 1.0), 0.0, "already past 8 (the slider and the sea): nothing more")
+	assert_almost_eq(body.rail_extra_deg(2.0, 1.0), 9.0, 1e-6, "the technique's 2 plus the default 9: 11")
+	assert_almost_eq(body.rail_extra_deg(5.0, 1.0), 7.0, 1e-6, "upwind the technique has 5: only 7 more, 12 in all")
+	assert_eq(body.rail_extra_deg(13.0, 1.0), 0.0, "already past 12 (the slider and the sea): nothing more")
 	body.side = 0.5
-	assert_almost_eq(body.rail_extra_deg(2.0, 1.0), 3.0, 1e-6, "half way, half the range")
+	assert_almost_eq(body.rail_extra_deg(2.0, 1.0), 4.5, 1e-6, "half way, half the range")
 	body.rail_more_deg = 4.0
 	assert_almost_eq(body.rail_extra_deg(2.0, -1.0), 2.0, 1e-6, "a smaller range (a setting)")
 
@@ -96,18 +96,18 @@ func test_as_seen_the_board_rolls_the_way_the_mouse_moves() -> void:
 	assert_eq(body.more_rail(-1.0), 1.0)
 
 
-func test_the_back_foot_stays_inside_gp0s_band() -> void:
+func test_the_back_foot_stays_inside_its_band() -> void:
 	var body: MouseBody = MouseBody.new()
-	assert_eq(body.trim_range_deg, 1.5, "the design's default range")
+	assert_eq(body.trim_range_deg, 2.5, "the default range (Max's more, 6 November 2026)")
 	body.back = 1.0
-	assert_almost_eq(body.trim_extra_deg(2.0), 1.5, 1e-6, "2 + 1.5 = 3.5, the top of the band")
-	assert_almost_eq(body.trim_extra_deg(1.5), 1.5, 1e-6, "at speed the technique's 1.5 + 1.5 = 3")
-	assert_almost_eq(body.trim_extra_deg(3.0), 0.5, 1e-6, "with the slider's extra: held at 3.5")
-	assert_eq(body.trim_extra_deg(4.0), 0.0, "already above the band: the body adds nothing")
+	assert_almost_eq(body.trim_extra_deg(2.0), 2.5, 1e-6, "2 + 2.5 = 4.5")
+	assert_almost_eq(body.trim_extra_deg(1.5), 2.5, 1e-6, "at speed the technique's 1.5 + 2.5 = 4")
+	assert_almost_eq(body.trim_extra_deg(3.0), 2.0, 1e-6, "with the slider's extra: held at 5, the top of the band")
+	assert_eq(body.trim_extra_deg(6.0), 0.0, "already above the band: the body adds nothing")
 	body.back = -1.0
-	assert_almost_eq(body.trim_extra_deg(2.0), -1.5, 1e-6, "weight forward: 0.5, the bottom of the band")
-	assert_almost_eq(body.trim_extra_deg(1.5), -1.0, 1e-6, "held at 0.5")
-	assert_almost_eq(body.trim_extra_deg(4.0), -1.5, 1e-6, "above the band, forward still takes the full range")
+	assert_almost_eq(body.trim_extra_deg(2.0), -2.0, 1e-6, "weight forward: 0, the bottom of the band")
+	assert_almost_eq(body.trim_extra_deg(1.5), -1.5, 1e-6, "held at 0")
+	assert_almost_eq(body.trim_extra_deg(6.0), -2.5, 1e-6, "above the band, forward still takes the full range")
 	body.back = 0.5
 	body.trim_range_deg = 1.0
 	assert_almost_eq(body.trim_extra_deg(2.0), 0.5, 1e-6, "the gentler range (a setting)")
@@ -228,8 +228,8 @@ func test_the_controller_adds_the_body_to_the_sliders_extras() -> void:
 	assert_almost_eq(controls.trim_aim_extra_deg, slider_trim + body.trim_deg, 1e-6)
 	var technique_rail: float = MouseBody.technique_rail_deg(sim.sailor_config, sim.telemetry.twa_at_sail_deg)
 	var technique_trim: float = MouseBody.technique_trim_deg(sim.sailor_config, sim.telemetry.speed_ms)
-	assert_almost_eq(body.rail_total_deg, minf(technique_rail + slider_rail + 6.0, MouseBody.RAIL_MAX_DEG), 1e-6, "the rail in all, at most 8")
-	assert_almost_eq(body.trim_total_deg, minf(technique_trim + slider_trim + 1.5, MouseBody.TRIM_MAX_DEG), 1e-6, "the trim in all, at most 3.5")
+	assert_almost_eq(body.rail_total_deg, minf(technique_rail + slider_rail + body.rail_more_deg, MouseBody.RAIL_MAX_DEG), 1e-6, "the rail in all, at most 12")
+	assert_almost_eq(body.trim_total_deg, minf(technique_trim + slider_trim + body.trim_range_deg, MouseBody.TRIM_MAX_DEG), 1e-6, "the trim in all, at most 5")
 	assert_string_contains(controller.body_text(), "mouse body")
 	# In a manoeuvre the body adds nothing.
 	controller.manoeuvre = PlayerController.Manoeuvre.GYBE_BEARING_AWAY
@@ -253,7 +253,7 @@ func test_without_a_slider_the_body_alone_sets_the_extras_and_leaves_none_behind
 		controller.update(sim.telemetry, controls, DT)
 	assert_almost_eq(controls.rail_bank_extra_deg, body.rail_deg, 1e-6, "written afresh every tick, not added up")
 	assert_almost_eq(controls.trim_aim_extra_deg, body.trim_deg, 1e-6)
-	assert_almost_eq(body.trim_deg, 0.75, 1e-6, "half of the 1.5 range")
+	assert_almost_eq(body.trim_deg, 1.25, 1e-6, "half of the 2.5 range")
 	controller.body = null
 	controller.update(sim.telemetry, controls, DT)
 	assert_eq(controls.rail_bank_extra_deg, 0.0, "the body switched off: nothing left")
@@ -304,8 +304,8 @@ func test_the_settings_default_to_off_and_to_the_leads_recommendations() -> void
 	assert_eq(values.body_centre, MouseBody.Centre.STAYS)
 	assert_eq(values.body_sideways, MouseBody.Sideways.AS_SEEN)
 	assert_false(values.body_windward_rail, "the other way ends flat")
-	assert_eq(values.body_rail_deg, 6.0)
-	assert_eq(values.body_trim_deg, 1.5)
+	assert_eq(values.body_rail_deg, 9.0)
+	assert_eq(values.body_trim_deg, 2.5)
 	assert_eq(values.body_travel_px, 300.0)
 	assert_eq(values.body_spring_s, 1.5)
 	assert_eq(values.body_level, 1)

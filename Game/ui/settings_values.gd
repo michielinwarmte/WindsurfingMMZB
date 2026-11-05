@@ -72,14 +72,14 @@ const FIN_STIFFNESS_MAX: float = 4.0
 ## Frame-rate caps the menu offers; 0 means no cap.
 const FPS_CAPS: Array[int] = [0, 30, 60, 120, 144]
 ## The body on the mouse (package B, MouseBody): the ranges of its sliders. The rail's range is the
-## leeward rail the mouse may add to the technique's (the design: 0 to +6; GP0: 8 in all at most),
-## the back foot's the trim either way (the design: 1.5; 1 is gentler; GP0's band is 0.5 to 3.5 in
-## all), the travel the mouse moves from one end to the other (the design: about 300 px), and the
+## leeward rail the mouse may add to the technique's (the design: 0 to +6; Max wanted more on
+## 6 November 2026: 9 by default, MouseBody.RAIL_MAX_DEG in all at most), the back foot's the trim
+## either way (the design: 1.5; Max's more: 2.5; MouseBody's band in all), the travel the mouse moves from one end to the other (the design: about 300 px), and the
 ## spring's time back to the middle (the design: 1 to 2 s).
 const BODY_RAIL_MIN_DEG: float = 2.0
-const BODY_RAIL_MAX_DEG: float = 8.0
+const BODY_RAIL_MAX_DEG: float = 12.0
 const BODY_TRIM_MIN_DEG: float = 0.5
-const BODY_TRIM_MAX_DEG: float = 2.0
+const BODY_TRIM_MAX_DEG: float = 4.0
 const BODY_TRAVEL_MIN_PX: float = 100.0
 const BODY_TRAVEL_MAX_PX: float = 800.0
 const BODY_SPRING_MIN_S: float = 0.5
@@ -247,8 +247,8 @@ func reset_to_defaults() -> void:
 	body_spring_s = 1.5
 	body_sideways = MouseBody.Sideways.AS_SEEN
 	body_windward_rail = false
-	body_rail_deg = 6.0
-	body_trim_deg = 1.5
+	body_rail_deg = 9.0
+	body_trim_deg = 2.5
 	body_travel_px = 300.0
 	body_level = 1
 
