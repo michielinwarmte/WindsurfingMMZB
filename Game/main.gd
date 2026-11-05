@@ -324,7 +324,7 @@ func _lay_the_course_again() -> void:
 		_course_on_water.queue_free()
 		_course_on_water = null
 	_show_course()
-	_race_runner.lay_course(_course)
+	_race_runner.lay_course(_course, shore_grid)
 
 
 ## A new wind and wave set from the settings, for the physics and for the water you see.

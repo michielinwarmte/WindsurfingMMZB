@@ -142,7 +142,8 @@ func setup_race(race_course: Course, player_node: WindsurferNode, race_setup: Ra
 		_boards = []
 		player.visible = false
 	# The sailing area round the start line, kept off the shore on a map (the scene's shore grid).
-	_area = SailingArea.for_course(course, _shore_grid())
+	var sailing_scene: SailingScene = player.get_parent() as SailingScene
+	_area = SailingArea.for_course(course, sailing_scene.shore_grid if sailing_scene != null else null)
 	var scene: PackedScene = load(WINDSURFER_SCENE)
 	for skipper: RaceSkipper in Skippers.make_fleet(setup.skippers):
 		var node: WindsurferNode = scene.instantiate()
@@ -253,16 +254,11 @@ func give_the_fleet_the_sea_of(source: WindsurferNode) -> void:
 
 
 ## The race's course laid again (for a turned wind, RA24): the sailing area round its start line
-## with it. restart() then builds the race, the rules and the start on it.
-func lay_course(new_course: Course) -> void:
+## with it, kept off the scene's shore (its depth grid; null on the open water). restart() then
+## builds the race, the rules and the start on it.
+func lay_course(new_course: Course, shore: TerrainGrid) -> void:
 	course = new_course
-	_area = SailingArea.for_course(course, _shore_grid())
-
-
-## The scene's depth grid for the shore, or null on the open water.
-func _shore_grid() -> TerrainGrid:
-	var sailing_scene: SailingScene = player.get_parent() as SailingScene if player != null else null
-	return sailing_scene.shore_grid if sailing_scene != null else null
+	_area = SailingArea.for_course(course, shore)
 
 
 ## The sailing area of this race (where the AI boards appear and sail free).
@@ -334,7 +330,7 @@ func _physics_process(delta: float) -> void:
 			_step_board(i, delta, stopped)
 	var t1: int = Time.get_ticks_usec()
 	_read_the_wind_clock(stopped)
-	_check_the_shore()
+	_check_the_shore(scene.shore_grid if scene != null else null)
 	_pose_boards(player_stopped)
 	_tell_the_race()
 	race.step(delta)
@@ -386,10 +382,9 @@ func _stopped_boards(player_stopped: bool) -> PackedByteArray:
 ## _check_shore(), ShoreCheck): where the water under a board is shallower than its fin plus a
 ## margin, or off the map, the board has run aground and stops where it is until the next start
 ## (restart(): R, or the host's R in a LAN game). No collision physics: nothing pushes on the board.
-## On the open water (no shore grid) nothing is checked. The other players' boards (LAN) are
-## checked on their own PCs.
-func _check_the_shore() -> void:
-	var grid: TerrainGrid = _shore_grid()
+## On the open water (no shore grid: grid is null) nothing is checked. The other players' boards
+## (LAN) are checked on their own PCs.
+func _check_the_shore(grid: TerrainGrid) -> void:
 	if grid == null:
 		return
 	_aground.resize(_boards.size())
