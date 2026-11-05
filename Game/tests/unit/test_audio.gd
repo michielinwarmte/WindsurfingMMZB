@@ -132,6 +132,27 @@ func test_the_buses_and_their_filters() -> void:
 	assert_true(AudioServer.get_bus_effect(AudioServer.get_bus_index("SailFlutter"), 0) is AudioEffectLowPassFilter)
 
 
+## ROADMAP TE1: the editor's Audio panel (it also runs inside a headless import) loads the bus layout
+## and saves it again 0.8 s later. The file must already be exactly what Godot's saver writes, or
+## that save shows up as a change in git. So: loaded and saved again, the text is the same, and the
+## file names its own uid (without one the editor makes one up and writes it in).
+func test_the_bus_layout_file_is_what_godot_itself_would_write() -> void:
+	var path: String = "res://default_bus_layout.tres"
+	var copy_path: String = "user://bus_layout_resaved.tres"
+	var layout: AudioBusLayout = ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_IGNORE) as AudioBusLayout
+	assert_not_null(layout, "the bus layout loads")
+	assert_eq(ResourceSaver.save(layout, copy_path), OK)
+	var committed: PackedStringArray = FileAccess.get_file_as_string(path).split("\n")
+	var resaved: PackedStringArray = FileAccess.get_file_as_string(copy_path).split("\n")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(copy_path))
+	assert_string_contains(committed[0], "uid=\"uid://", "the file's first line names its uid")
+	# The first line holds the uid, which belongs to the path; everything after it must match.
+	committed.remove_at(0)
+	resaved.remove_at(0)
+	assert_eq("\n".join(committed), "\n".join(resaved),
+		"default_bus_layout.tres differs from what Godot writes: change the buses in the editor's Audio tab, not by hand")
+
+
 func test_the_volume_sliders_set_the_buses() -> void:
 	var values: SettingsValues = SettingsValues.new()
 	values.wind_volume = 0.5
