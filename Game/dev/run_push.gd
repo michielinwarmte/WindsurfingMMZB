@@ -23,6 +23,9 @@ extends SceneTree
 ##      1 + threshold x intensity, the timing_ease settings replace the case's own
 ##   [--slice=<i>/<n>] (run every n-th case from the i-th) [--out=<csv>] [--falls_out=<csv>]
 ##   [--label=<text>] (a column in the CSV, to tell runs apart)
+##   [--trace=<csv>] [--trace_every=6] every n-th tick of every case after --from, the feet's
+##      numbers (the heel and the bank the feet aim for, the hike, the feet's roll moment, the trim
+##      and the press, the bounce felt, the body's press): to see what the feet do with what is asked
 ##   [--gear_board=<id>] [--gear_sail=<id>] [--gear_fin=<id>] a gear page item (Game/gear/; the ids
 ##      are the files' names) in place of the default board, sail or fin, built as the game builds
 ##      the player's board (GearChoice.sim_with()); an unknown id sails the default
@@ -257,6 +260,8 @@ func _run_case(case: PushCase, falls: Array[String]) -> PushResult:
 	var last_sheet: float = 0.0
 	var sheet_rate_square_sum: float = 0.0
 	var alpha_square_sum: float = 0.0
+	var trace_path: String = _options.get("trace", "")
+	var trace_every: int = maxi(_options.get("trace_every", "6").to_int(), 1)
 	for i: int in steps:
 		var t: Telemetry = sim.telemetry
 		var easing: bool = false
@@ -313,6 +318,8 @@ func _run_case(case: PushCase, falls: Array[String]) -> PushResult:
 		previous_state = sim.sailor_state
 		var sheet_before: float = last_sheet
 		last_sheet = controls.sheet
+		if trace_path != "" and t.time_s >= from_s and i % trace_every == 0:
+			_append_row(trace_path, _trace_header(), _trace_row(case, sim, controls))
 		history.append(_warning_sample(t))
 		if history.size() > int(WARNING_BACK_S[0] / DT) + 2:
 			history.pop_front()
@@ -494,6 +501,30 @@ func _warning_sample(t: Telemetry) -> Dictionary:
 		"lean": absf(t.lean), "feet_excess_nm": t.feet_moment_excess_nm, "alpha_deg": t.alpha_deg,
 		"tws_kt": t.tws_at_sail_kt, "speed_ms": t.speed_ms, "pitch_deg": t.pitch_deg,
 		"yaw_rate_dps": t.yaw_rate_dps, "stalled": 1.0 if t.fin_stalled else 0.0}
+
+
+## --trace: what the feet did at one tick (starboard tack: the leeward rail is port, a negative
+## heel, so the heel and the banks are written leeward-positive; the roll moments are about the
+## aft axis, which on starboard tack is leeward-positive too: positive rails the board).
+func _trace_header() -> String:
+	return "label,wind_kt,twa_deg,sweep,time_s,speed_ms,sailing,planing_ratio,heel_lee_deg,wanted_bank_lee_deg,felt_beyond_deg,lean,asked_lean,stance,feet_roll_nm,feet_excess_nm,roll_fin_nm,roll_water_nm,roll_rig_nm,pitch_deg,trim_deg,trim_aim_deg,felt_trim_deg,felt_bounce_dps,trim_press_m,hang_back_m,rail_extra_deg,trim_extra_deg,roll_press,pitch_press"
+
+
+func _trace_row(c: PushCase, sim: WindsurferSim, controls: SimControls) -> String:
+	var t: Telemetry = sim.telemetry
+	return ",".join(PackedStringArray([_options.get("label", ""), _short(c.wind_kt), _short(c.twa_deg), c.sweep_text,
+		"%.2f" % t.time_s, "%.3f" % t.speed_ms, "1" if sim.sailor_state == WindsurferSim.SailorState.SAILING else "0",
+		"%.3f" % t.planing_ratio, "%.3f" % -t.heel_deg, "%.3f" % -t.wanted_bank_deg, "%.3f" % rad_to_deg(sim._felt_heel_beyond_rad),
+		"%.3f" % t.lean, "%.3f" % controls.lean, "%.3f" % t.stance, "%.1f" % t.feet_moment_roll_nm, "%.1f" % t.feet_moment_excess_nm,
+		"%.1f" % t.roll_fin_nm, "%.1f" % t.roll_water_nm, "%.1f" % t.roll_rig_nm,
+		"%.3f" % t.pitch_deg, "%.3f" % t.trim_deg, "%.3f" % t.trim_aim_deg, "%.3f" % sim.felt_trim_deg, "%.2f" % sim.felt_bounce_dps,
+		"%.3f" % sim.trim_press_m, "%.3f" % sim.hang_back_m, "%.2f" % controls.rail_bank_extra_deg, "%.2f" % controls.trim_aim_extra_deg,
+		"%.3f" % _press_of(controls, "feet_roll_press"), "%.3f" % _press_of(controls, "feet_pitch_press")]))
+
+
+## A control that may not exist yet in this build (the feet's press), 0 without it.
+func _press_of(controls: SimControls, field: String) -> float:
+	return float(controls.get(field)) if field in controls else 0.0
 
 
 const WARNING_FIELDS: PackedStringArray = ["fin_share", "slip_deg", "heel_lee_deg", "lean", "feet_excess_nm", "alpha_deg", "tws_kt", "speed_ms", "pitch_deg", "yaw_rate_dps", "stalled"]
