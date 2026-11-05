@@ -1,6 +1,6 @@
 class_name SettingsMenu
 extends MenuPage
-## The settings, on five tabs: Wind, Waves, Sailing, Graphics and Audio. Every change goes
+## The settings, on six tabs: Wind, Waves, Sailing, Body, Graphics and Audio. Every change goes
 ## straight into GameSettings.values (the graphics and the sound apply at once) and the
 ## file is saved when the page closes. The start menu and the pause menu each have one;
 ## what happens to the wind and the waves of a running game is up to the sailing scene
@@ -25,6 +25,7 @@ const VALUE_WIDTH: float = 330.0
 @onready var _wind_rows: GridContainer = %WindRows
 @onready var _wave_rows: GridContainer = %WaveRows
 @onready var _sailing_rows: GridContainer = %SailingRows
+@onready var _body_rows: GridContainer = %BodyRows
 @onready var _graphics_rows: GridContainer = %GraphicsRows
 @onready var _audio_rows: GridContainer = %AudioRows
 @onready var _conditions: Label = %Conditions
@@ -77,7 +78,7 @@ func first_focus() -> Control:
 	return _tabs.get_tab_bar()
 
 
-## Shows one tab: wind, waves, sailing, graphics or audio (for --page=settings/<tab>).
+## Shows one tab: wind, waves, sailing, body, graphics or audio (for --page=settings/<tab>).
 func show_tab(tab_name: String) -> void:
 	for i: int in _tabs.get_tab_count():
 		if _tabs.get_tab_title(i).to_lower() == tab_name.to_lower():
@@ -112,7 +113,7 @@ func _changed() -> void:
 # --- The rows ---------------------------------------------------------------------------
 
 func _build_rows() -> void:
-	for grid: GridContainer in [_wind_rows, _wave_rows, _sailing_rows, _graphics_rows, _audio_rows]:
+	for grid: GridContainer in [_wind_rows, _wave_rows, _sailing_rows, _body_rows, _graphics_rows, _audio_rows]:
 		for child: Node in grid.get_children():
 			grid.remove_child(child)
 			child.queue_free()
@@ -120,6 +121,7 @@ func _build_rows() -> void:
 	_build_wind_rows(s)
 	_build_wave_rows(s)
 	_build_sailing_rows(s)
+	_build_body_rows(s)
 	_build_graphics_rows(s)
 	_build_audio_rows(s)
 	_conditions.text = s.conditions_text()
@@ -323,6 +325,43 @@ func _build_sailing_rows(s: SettingsValues) -> void:
 	_add_slider(grid, "Fin stiffness", SettingsValues.FIN_STIFFNESS_MIN, SettingsValues.FIN_STIFFNESS_MAX, 0.25, s.fin_stiffness,
 		func(v: float) -> String: return "%.2f x  (1 = the measured carbon slalom fin; at the next start)" % v,
 		func(v: float) -> void: s.fin_stiffness = v)
+
+
+## Package B, the body on the mouse (an experiment, ROADMAP GP2; MouseBody). The switch turns it on;
+## the rows below are Max's open choices (GD7) with the lead's recommendation as the default, and
+## they apply at once, also from the pause menu while sailing.
+func _build_body_rows(s: SettingsValues) -> void:
+	var grid: GridContainer = _body_rows
+	var on_row: Row = _add_switch(grid, "Mouse body (experiment)", s.mouse_body,
+		"The mouse is the sailor's body while sailing. Esc frees the mouse",
+		func(on: bool) -> void: s.mouse_body = on)
+	var rows: Array[Row] = []
+	rows.append(_add_list(grid, "Mouse left alone", ["Stays where you put it", "Springs back to the middle"], s.body_centre,
+		"Back to the middle at every tack, gybe and fall",
+		func(index: int) -> void: s.body_centre = index))
+	rows.append(_add_slider(grid, "Spring-back time", SettingsValues.BODY_SPRING_MIN_S, SettingsValues.BODY_SPRING_MAX_S, 0.25, s.body_spring_s,
+		func(v: float) -> String: return "%.2f s back to the middle (when it springs back)" % v,
+		func(v: float) -> void: s.body_spring_s = v))
+	rows.append(_add_list(grid, "Sideways", ["The board rolls with the mouse", "Right is always more rail"], s.body_sideways,
+		"Rolls with the mouse: as seen from behind the board",
+		func(index: int) -> void: s.body_sideways = index))
+	rows.append(_add_slider(grid, "Rail", SettingsValues.BODY_RAIL_MIN_DEG, SettingsValues.BODY_RAIL_MAX_DEG, 0.5, s.body_rail_deg,
+		func(v: float) -> String: return "up to %.1f° more leeward rail (8° in all at most)" % v,
+		func(v: float) -> void: s.body_rail_deg = v))
+	rows.append(_add_switch(grid, "Windward rail", s.body_windward_rail,
+		"Off: the other way ends at a flat board. On: on to %.0f° of windward rail" % MouseBody.WINDWARD_RAIL_DEG,
+		func(on: bool) -> void: s.body_windward_rail = on))
+	rows.append(_add_slider(grid, "Back foot", SettingsValues.BODY_TRIM_MIN_DEG, SettingsValues.BODY_TRIM_MAX_DEG, 0.25, s.body_trim_deg,
+		func(v: float) -> String: return "±%.2f° of trim (the nose up or down)" % v,
+		func(v: float) -> void: s.body_trim_deg = v))
+	rows.append(_add_slider(grid, "Mouse travel", SettingsValues.BODY_TRAVEL_MIN_PX, SettingsValues.BODY_TRAVEL_MAX_PX, 50.0, s.body_travel_px,
+		func(v: float) -> String: return "%.0f px from one end to the other (less is quicker)" % v,
+		func(v: float) -> void: s.body_travel_px = v))
+	rows.append(_add_list(grid, "Level", ["1: the feet hold the rail", "2: you hold the rail"], s.body_level - 1,
+		"2: the feet correct slowly, a gust heels the board past your angle",
+		func(index: int) -> void: s.body_level = index + 1))
+	_enable_with(on_row, rows)
+	_add_note(grid, "Sideways is the rail: how far the leeward rail goes down. Forward and back is the back foot: pull the mouse back to put weight on the tail (the nose lifts, faster, until it bounces), push it forward for less. The middle is the sailor's own technique. It works only planing in the footstraps, not in a turn. Hold the right mouse button or C to look around with the orbit camera.")
 
 
 func _build_graphics_rows(s: SettingsValues) -> void:

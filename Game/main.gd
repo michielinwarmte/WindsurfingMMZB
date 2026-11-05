@@ -14,6 +14,8 @@ extends Node3D
 ## --fall=<seconds> (the sailor is catapulted at that time), --pause=<seconds> (the pause
 ## menu opens at that time), --page=settings/<tab>|controls|howto (and that page of it).
 ## --settings=<file.cfg> or --settings=defaults: see ui/game_settings.gd.
+## --body=<side>,<back> turns the body on the mouse on (package B) and holds it there by script,
+## each from -1 to 1 (MouseBody.side and back; the mouse is then not captured).
 ## A race course on the water (RACING_PLAN.md, 9A): --course=<name> shows it (t1_loop on the open
 ## water, placed for the settings' wind; a map scene has its own, see _course_named()), starts the
 ## board 150 m behind its start line and puts it on the HUD and the mini-map; --lines=1 draws its
@@ -85,6 +87,11 @@ var _audio: GameAudio = null
 var _net: NetBoards = null
 var _net_menu_open: bool = false
 var _net_message_until_ms: int = -1
+## Package B, the body on the mouse (MouseBody; Settings > Body): --body=<side>,<back> holds the
+## body there by script (each -1 to 1; the LAN test and demos), NaN without the option. A screenshot
+## run never captures the mouse.
+var _body_hold: Vector2 = Vector2(NAN, NAN)
+var _screenshot_run: bool = false
 
 
 func _enter_tree() -> void:
@@ -112,6 +119,7 @@ func _ready() -> void:
 	# This node, the cameras, the HUD and the menus keep running while the game is paused;
 	# the windsurfer (the physics) stops.
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	_screenshot_run = _user_option("screenshot") != ""
 	_windsurfer.process_mode = Node.PROCESS_MODE_PAUSABLE
 	# The Silvaplana map's sun (maps/silvaplana/silvaplana.tscn): mid-July, 15:00 summer time, in
 	# the south-west (azimuth 225 degrees), 59 degrees up, so both scenes have the same light.
@@ -138,6 +146,25 @@ func _ready() -> void:
 	# The sounds (audio/game_audio.gd): they follow the windsurfer's telemetry every frame.
 	_audio = GameAudio.create(_windsurfer, _camera_rig, func() -> bool: return _in_menu)
 	add_child(_audio)
+
+
+func _exit_tree() -> void:
+	# Leaving the sailing scene (the start menu, quitting): the mouse is free again.
+	if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+
+## The body on the mouse (package B): while the mouse is captured its movement is the sailor's body,
+## unless the look key (the right mouse button, or C) is held, which turns the orbit camera instead.
+## _input, not _unhandled_input: no part of the HUD may take the movement first.
+func _input(event: InputEvent) -> void:
+	var body: MouseBody = _windsurfer.controller.body
+	if body == null or not (event is InputEventMouseMotion) or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+		return
+	if Input.is_action_pressed("camera_look"):
+		return
+	# Screen pixels: the same hand movement on any window size.
+	body.move((event as InputEventMouseMotion).screen_relative)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -176,6 +203,7 @@ func _physics_process(_delta: float) -> void:
 
 
 func _process(delta: float) -> void:
+	_update_mouse_capture()
 	if _in_menu:
 		_camera_rig.orbit_azimuth_rad += MENU_ORBIT_RATE * delta
 		return
@@ -239,6 +267,7 @@ func apply_settings_live() -> void:
 	_apply_wind_settings_live()
 	if settings.control_mode != _applied_mode or settings.auto_sheet != _applied_auto_sheet:
 		_apply_control_settings()
+	_apply_body_settings()
 	if _sun != null:
 		_sun.shadow_enabled = settings.shadow_quality > 0
 	if settings.sea_signature() != _sea_signature:
@@ -369,6 +398,41 @@ func _apply_control_settings() -> void:
 	_windsurfer.controller.auto_sheet = settings.auto_sheet
 	_applied_mode = settings.control_mode
 	_applied_auto_sheet = settings.auto_sheet
+	_apply_body_settings()
+
+
+## Package B, the body on the mouse (MouseBody; Settings > Body, ROADMAP GP2): on or off, Max's
+## choices (GD7) and the level, the last on the player's own copy of the sailor's config. A body
+## already there keeps its place when a setting changes. --body=<side>,<back> turns it on, held there.
+func _apply_body_settings() -> void:
+	var settings: SettingsValues = GameSettings.values
+	var controller: PlayerController = _windsurfer.controller
+	var held: bool = not is_nan(_body_hold.x)
+	if not (settings.mouse_body or held):
+		controller.body = null
+	else:
+		if controller.body == null:
+			controller.body = MouseBody.new()
+		controller.body.configure(settings)
+		if held:
+			controller.body.scripted = true
+			controller.body.side = clampf(_body_hold.x, -1.0, 1.0)
+			controller.body.back = clampf(_body_hold.y, -1.0, 1.0)
+	_windsurfer.use_body_level(controller.body)
+	_update_mouse_capture()
+
+
+## The mouse is captured (hidden, its movement the body's) while the body is on and the player
+## sails; it is free in every menu (Esc, the start menu, a network game's menu), while spectating,
+## behind the autopilot, for a body held by script, and in headless and screenshot runs.
+func _update_mouse_capture() -> void:
+	var body: MouseBody = _windsurfer.controller.body
+	var wanted: bool = body != null and not body.scripted and not _in_menu and not get_tree().paused 		and not _net_menu_open and not _is_spectating() and not _windsurfer.use_autopilot 		and not _screenshot_run and DisplayServer.get_name() != "headless"
+	var captured: bool = Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
+	if wanted and not captured:
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	elif captured and not wanted:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 
 ## Behind the start menu: the autopilot sails, the camera circles, no HUD.
@@ -392,6 +456,7 @@ func _set_paused(paused: bool) -> void:
 		_pause_menu.open(_waiting_for_restart_text())
 	else:
 		_pause_menu.close()
+	_update_mouse_capture()
 
 
 func _on_restart_requested() -> void:
@@ -437,6 +502,12 @@ func _apply_command_line_options() -> void:
 	if options.has("measure"):
 		_measure_frame_rate(options["measure"].to_float())
 	_apply_pilot_options(options)
+	if options.has("body"):
+		# --body=<side>,<back>: the body on the mouse held there by script (MouseBody, -1 to 1 each).
+		var parts: PackedStringArray = options["body"].split(",")
+		_body_hold = Vector2(parts[0].to_float(), parts[1].to_float() if parts.size() > 1 else 0.0)
+		_apply_body_settings()
+		print(_windsurfer.controller.body_text())
 
 
 ## The push slider from the command line (Documentation/reports/push_slider/PLAN.md;
@@ -680,6 +751,7 @@ func _set_net_menu_open(open: bool) -> void:
 		_pause_menu.open("A network game: the water goes on while this menu is open.")
 	else:
 		_pause_menu.close()
+	_update_mouse_capture()
 
 
 ## A line on the HUD from the network (the other player left, ...) for a few seconds.

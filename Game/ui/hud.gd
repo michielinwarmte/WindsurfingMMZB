@@ -213,6 +213,9 @@ func update_from(t: Telemetry, controller: PlayerController, camera_name: String
 		+ "auto-sheet %s%s" % ["on" if controller.auto_sheet else "off", "   pilot set from the command line (--pilot.)" if not controller.pilot_overrides.is_empty() else ""]
 		# The push slider and what it asks of the sailor (PushDial.describe), with the legs' push.
 		+ ("\n%s\nnow: sea rail +%.1f deg (bounce %.0f deg/s)   back foot %+.2f" % [controller.push_text(), controller.auto_sheet_pilot.wave_rail_deg(), controller.auto_sheet_pilot.felt_bounce_dps(), t.back_foot_push] if controller.push_text() != "" else "")
+		# The body on the mouse (package B, an experiment): what it adds, for tuning only; the strip
+		# never shows it (the player reads the board, the spray and the sound).
+		+ ("\n" + controller.body_text() if controller.body_text() != "" else "")
 		+ ("\n" + _fall_watch.last_fall_text if _fall_watch.last_fall_text != "" else ""))
 
 

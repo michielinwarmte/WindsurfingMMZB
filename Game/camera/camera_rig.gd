@@ -1,7 +1,7 @@
 class_name CameraRig
 extends Node3D
-## The cameras: follow (behind the board), orbit (drag with the right mouse button, zoom
-## with the wheel), top-down (map view, bow up) and free (a fixed spectator that keeps
+## The cameras: follow (behind the board), orbit (move the mouse while holding the look key,
+## the right mouse button or C; zoom with the wheel), top-down (map view, bow up) and free (a fixed spectator that keeps
 ## looking at the board). All of them read the board's interpolated transform, so the
 ## picture is smooth even though the physics runs in fixed ticks.
 
@@ -92,7 +92,10 @@ func mode_name() -> String:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if mode == Mode.ORBIT and event is InputEventMouseMotion and Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
+	# The look key (the action camera_look: the right mouse button, or C held): with the body on the
+	# mouse (package B) the mouse is the sailor's body, and only while the key is held does it turn
+	# the camera (main.gd hands the movement to the body otherwise).
+	if mode == Mode.ORBIT and event is InputEventMouseMotion and Input.is_action_pressed("camera_look"):
 		var motion: InputEventMouseMotion = event
 		orbit_azimuth_rad -= motion.relative.x * 0.005
 		orbit_elevation_rad = clampf(orbit_elevation_rad + motion.relative.y * 0.005, 0.05, 1.4)

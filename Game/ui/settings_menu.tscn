@@ -97,12 +97,27 @@ theme_override_constants/h_separation = 22
 theme_override_constants/v_separation = 14
 columns = 3
 
-[node name="Graphics" type="ScrollContainer" parent="Center/Panel/Layout/Tabs"]
+[node name="Body" type="ScrollContainer" parent="Center/Panel/Layout/Tabs"]
 visible = false
 layout_mode = 2
 follow_focus = true
 horizontal_scroll_mode = 0
 metadata/_tab_index = 3
+
+[node name="BodyRows" type="GridContainer" parent="Center/Panel/Layout/Tabs/Body"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 22
+theme_override_constants/v_separation = 14
+columns = 3
+
+[node name="Graphics" type="ScrollContainer" parent="Center/Panel/Layout/Tabs"]
+visible = false
+layout_mode = 2
+follow_focus = true
+horizontal_scroll_mode = 0
+metadata/_tab_index = 4
 
 [node name="GraphicsRows" type="GridContainer" parent="Center/Panel/Layout/Tabs/Graphics"]
 unique_name_in_owner = true
@@ -117,7 +132,7 @@ visible = false
 layout_mode = 2
 follow_focus = true
 horizontal_scroll_mode = 0
-metadata/_tab_index = 4
+metadata/_tab_index = 5
 
 [node name="AudioRows" type="GridContainer" parent="Center/Panel/Layout/Tabs/Audio"]
 unique_name_in_owner = true
