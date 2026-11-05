@@ -189,6 +189,31 @@ func test_the_start_menu_hands_the_board_to_the_player() -> void:
 	assert_eq(GameSettings.values.last_play_option, 0, "the choice is remembered")
 
 
+## ROADMAP UI4: the start menu fits any window. While it is up Godot draws its pages as in a window
+## of MENU_SIZE_PX (sharp, at the window's own resolution), every page fits in that, and the game
+## gets the window's own scaling back (the HUD's sizes do not change).
+func test_the_start_menu_fits_any_window_and_gives_the_window_back_for_the_game() -> void:
+	var window: Window = get_window()
+	var mode_before: Window.ContentScaleMode = window.content_scale_mode
+	var size_before: Vector2i = window.content_scale_size
+	var menu: Node = (load("res://ui/start_menu.tscn") as PackedScene).instantiate()
+	add_child_autofree(menu)
+	var menu_size: Vector2i = (menu.get_script() as Script).get_script_constant_map()["MENU_SIZE_PX"]
+	assert_eq(window.content_scale_mode, Window.CONTENT_SCALE_MODE_CANVAS_ITEMS, "Godot scales the menu")
+	assert_eq(window.content_scale_aspect, Window.CONTENT_SCALE_ASPECT_EXPAND, "a wider or taller window gives more room")
+	assert_eq(window.content_scale_size, menu_size)
+	# The main page with its status line showing (it says "Loading..." while a map opens).
+	(menu.get_node("%Status") as Label).show()
+	var main_page: Control = menu.get_node("%MainPage")
+	assert_lte(main_page.get_combined_minimum_size().y, float(menu_size.y), "the main page fits, title and all")
+	for page_name: String in ["Race", "HowTo"]:
+		var page: Control = menu.get_node("%" + page_name).get_node("Center")
+		assert_lte(page.get_combined_minimum_size().y, float(menu_size.y), "the %s page fits" % page_name)
+	(menu.get_node("%OpenWaterButton") as Button).pressed.emit()
+	assert_eq(window.content_scale_mode, mode_before, "the game gets the window's own scaling back")
+	assert_eq(window.content_scale_size, size_before)
+
+
 func test_every_settings_tab_can_be_walked_with_the_keyboard() -> void:
 	# From the tabs, Down goes through every row to the buttons at the bottom (the way a
 	# keyboard or gamepad player moves), on each tab.

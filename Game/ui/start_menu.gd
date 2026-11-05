@@ -15,12 +15,23 @@ extends Node
 ## back, and on the main page asks whether to quit.
 ## For screenshots (after "--"): --page=settings/<tab>|controls|howto|race|gear/<tab>|lan[/host|/join]|quit
 ## opens that page.
+##
+## Any window size (ROADMAP UI4; Max: "resize", the title cut off at the top of a 1280 x 720 window):
+## while the menu is up, Godot's "canvas items" stretch draws its pages as big, compared to the
+## window, as in a window MENU_SIZE_PX big (a wider or taller window gives them more room), and
+## Godot draws the text, lines and panels at the window's full resolution, so they stay sharp. The
+## pages are anchored to the window's edges or centred in it. The game's own screen settings do not
+## change: the window gets its scaling back when the menu goes (the HUD keeps its own sizes), as the
+## wind viewer does for its panels.
 
 const SAIL_SILVAPLANA_SCENE: String = "res://maps/silvaplana/sail_silvaplana.tscn"
 const FLY_OVER_SCENE: String = "res://maps/silvaplana/dev/terrain_view.tscn"
 const WIND_VIEWER_SCENE: String = "res://maps/silvaplana/wind_viewer.tscn"
 ## The sailing scene behind the menu, to build it again with new gear.
 const SAILING_SCENE: PackedScene = preload("res://main.tscn")
+## The window the menu's pages are laid out for, pixels (see the top): every page fits in it (the
+## tallest, the Race page, needs about 800; tests/unit/test_menus.gd checks them).
+const MENU_SIZE_PX: Vector2i = Vector2i(1280, 800)
 
 ## The play options, as last_play_option in the settings saves them (new ones go at the end, so
 ## a saved choice keeps its meaning; the menu shows them in its own order).
@@ -54,9 +65,16 @@ enum PlayOption { OPEN_WATER, FLY_OVER, WIND_VIEWER, SAIL_SILVAPLANA, RACE_OPEN_
 ## "Wind and waves" and "Change gear"): it opens again when they close.
 var _return_to: MenuPage = null
 @onready var _quit_confirm: ConfirmDialog = %QuitConfirm
+## The window's own scaling before the menu fitted itself to the window (_fit_to_window()), given
+## back when the menu goes; whether it is fitted now.
+var _scale_mode_before: Window.ContentScaleMode = Window.CONTENT_SCALE_MODE_DISABLED
+var _scale_aspect_before: Window.ContentScaleAspect = Window.CONTENT_SCALE_ASPECT_IGNORE
+var _scale_size_before: Vector2i = Vector2i.ZERO
+var _fitted: bool = false
 
 
 func _ready() -> void:
+	_fit_to_window()
 	_open_water_button.pressed.connect(_on_open_water_pressed)
 	_sail_silvaplana_button.pressed.connect(_open_map_scene.bind(PlayOption.SAIL_SILVAPLANA, SAIL_SILVAPLANA_SCENE, "Lake Silvaplana"))
 	_race_open_water_button.pressed.connect(_on_race_open_water_pressed)
@@ -105,9 +123,44 @@ func _play_buttons() -> Array[Button]:
 ## Sail on open water: the menu goes away and the backdrop becomes the game.
 func _on_open_water_pressed() -> void:
 	_remember_choice(PlayOption.OPEN_WATER)
+	_close_the_menu()
+	_sailing.start_playing()
+
+
+## The menu goes away for good and the backdrop becomes the game: the window gets its own scaling
+## back, so the HUD keeps the sizes it always has.
+func _close_the_menu() -> void:
 	set_process_unhandled_input(false)
 	_menu.queue_free()
-	_sailing.start_playing()
+	_give_the_window_back()
+
+
+## The menu's pages drawn as big, compared to the window, as in a MENU_SIZE_PX window (see the top).
+func _fit_to_window() -> void:
+	var window: Window = get_window()
+	_scale_mode_before = window.content_scale_mode
+	_scale_aspect_before = window.content_scale_aspect
+	_scale_size_before = window.content_scale_size
+	window.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
+	window.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
+	window.content_scale_size = MENU_SIZE_PX
+	_fitted = true
+
+
+## The window's scaling as it was before the menu.
+func _give_the_window_back() -> void:
+	if not _fitted:
+		return
+	_fitted = false
+	var window: Window = get_window()
+	window.content_scale_mode = _scale_mode_before
+	window.content_scale_aspect = _scale_aspect_before
+	window.content_scale_size = _scale_size_before
+
+
+## Another scene takes over (the lake, the wind viewer, a LAN game): the window's scaling goes back.
+func _exit_tree() -> void:
+	_give_the_window_back()
 
 
 ## Race on open water: the Race page, on the open water (the course, the fleet, who, the countdown);
@@ -131,8 +184,7 @@ func _on_race_page_start(setup: RaceSetup, on_lake: bool) -> void:
 		_open_map_scene(PlayOption.RACE_LAKE, SAIL_SILVAPLANA_SCENE, "Lake Silvaplana")
 		return
 	_remember_choice(PlayOption.RACE_OPEN_WATER)
-	set_process_unhandled_input(false)
-	_menu.queue_free()
+	_close_the_menu()
 	_sailing.start_race(setup)
 
 
@@ -296,8 +348,7 @@ func _start_race_from_options() -> void:
 	setup.threads = RaceSetup.threads_from_option(_race_option("threads"))
 	setup.read_options()
 	if course == RaceCourses.T1_NAME:
-		set_process_unhandled_input(false)
-		_menu.queue_free()
+		_close_the_menu()
 		_sailing.start_race(setup)
 	else:
 		RaceSetup.pending = setup
