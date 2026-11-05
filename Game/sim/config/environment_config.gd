@@ -42,9 +42,23 @@ const DEFAULT_WAVES_PATH: String = "res://config/waves_default.tres"
 ## strongest Maloja of the average day).
 @export var start_hour: float = 14.5
 
+@export_group("Lake waves")
+## The lake's own waves, grown by its wind over its fetch (LakeWavesConfig, PHYSICS_SPEC.md 9.17),
+## on the depth grid below. Used only when the wave set asks for the place's own waves
+## (WaveSetConfig.place_waves); otherwise, and when this is null, the wave set's waves.
+@export var lake_waves: LakeWavesConfig = null
+## The map's depth grid (TerrainGrid's .json): where the water is and how deep.
+@export_file("*.json") var depth_grid_path: String = ""
+
 ## The map's wind, loaded once and shared: it is a fixed function of the place and the time of
 ## day, so every simulation in this environment can ask the same one.
 var _map_wind: MapWind = null
+## The depth grid, loaded once and shared (null until asked).
+var _depth_grid: TerrainGrid = null
+## The lake waves built so far, by the wind they were built for (a few at most; see
+## lake_waves_for()). Built on the main thread when a simulation's water is made.
+var _lake_waves_built: Dictionary[String, LakeWaves] = {}
+const LAKE_WAVES_KEPT: int = 4
 
 
 func water_or_default() -> WaterConfig:
@@ -76,3 +90,57 @@ func map_wind() -> MapWind:
 ## The start time as seconds since midnight.
 func start_time_of_day_s() -> float:
 	return start_hour * 3600.0
+
+
+## The map's depth grid (null without one, or when it can't be loaded).
+func depth_grid() -> TerrainGrid:
+	if _depth_grid == null and depth_grid_path != "":
+		_depth_grid = TerrainGrid.load_from(depth_grid_path)
+	return _depth_grid
+
+
+## The lake's waves for a simulation's wind (null when this place has none): built for the lake's
+## mean wind of that moment (9.17). With the map's wind: its direction and speed at the field's
+## time of day, the local wind from its pattern and the lee's average; with one wind for the whole
+## world (the map's wind off): that wind, the same everywhere. Every simulation asking at the same
+## wind gets the same LakeWaves, so the boards of a race sail on one sea.
+func lake_waves_for(wind: WindField, wind_config: WindConfig) -> LakeWaves:
+	if lake_waves == null or depth_grid() == null or wind_config == null:
+		return null
+	var from_deg: float = wind_config.from_bearing_deg
+	var wind_10m_ms: float = wind_config.speed_kt * SimMath.KNOT_MS
+	var speed_factor_at: Callable = func(_x: float, _z: float) -> float: return 1.0
+	var map_field: MapWindField = wind as MapWindField
+	if map_field != null:
+		var time_s: float = map_field.time_of_day_s()
+		var map_wind: MapWind = map_field.map_wind
+		from_deg = map_wind.lake_from_deg(time_s)
+		var pattern_ms: float = map_wind.day.lake_speed_ms(time_s)
+		wind_10m_ms = pattern_ms * map_field.speed_at_height(10.0) / maxf(map_field.speed_at_height(map_field.pattern_height_m), 1e-6)
+		speed_factor_at = map_speed_factor.bind(map_wind, from_deg, pattern_ms / SimMath.KNOT_MS)
+	var key: String = "%.2f/%.3f" % [from_deg, wind_10m_ms]
+	if _lake_waves_built.has(key):
+		return _lake_waves_built[key]
+	var grid: TerrainGrid = depth_grid()
+	var area: Rect2 = Rect2(grid.x0_m, grid.z0_m, (grid.columns - 1) * grid.cell_m, (grid.rows - 1) * grid.cell_m)
+	var depth_at: Callable = func(x: float, z: float) -> float: return ShoreCheck.depth_at(grid, Vector3(x, 0.0, z))
+	var built: LakeWaves = LakeWaves.build(lake_waves, depth_at, area, from_deg, wind_10m_ms, speed_factor_at)
+	if _lake_waves_built.size() >= LAKE_WAVES_KEPT:
+		_lake_waves_built.erase(_lake_waves_built.keys()[0])
+	_lake_waves_built[key] = built
+	return built
+
+
+## The map's mean wind at a game position relative to the lake's mean (9.17, step 2): the pattern's
+## speed there times the lee's average (MapWind.velocity_in() without the gusts: the lee lets 1 in
+## 10 gusts in, so over time it takes the band's lee times its shape off, W3), divided by what the
+## pattern already holds of the lee (WindLee).
+func map_speed_factor(x: float, z: float, map_wind: MapWind, from_deg: float, lake_kt: float) -> float:
+	var factor: float = map_wind.pattern.speed_factor_at(x, z)
+	if map_wind.lee == null:
+		return factor
+	var shape_held: Vector2 = map_wind.lee.at(x, z)
+	if shape_held == Vector2.ZERO:
+		return factor
+	var lee_left: float = maxf(1.0 - shape_held.x * map_wind.lee.band_lee(from_deg, lake_kt), 0.05)
+	return factor * lee_left / (1.0 - shape_held.y)

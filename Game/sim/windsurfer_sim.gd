@@ -46,6 +46,9 @@ var sailor_config: SailorConfig
 var water_config: WaterConfig
 ## The sea state (Phase 5); null or disabled means flat water.
 var wave_set_config: WaveSetConfig = null
+## The place this simulation sails in (create_for()); null for the open water's default configs. Only
+## its own lake waves are read here (set_waves(), PHYSICS_SPEC.md 9.17).
+var environment: EnvironmentConfig = null
 var wind_config: WindConfig
 var sim_config: SimConfig
 
@@ -374,6 +377,7 @@ static func create_for(environment: EnvironmentConfig, with_waves: bool = false,
 	var sim: WindsurferSim = WindsurferSim.new(
 		configs[0], configs[1], configs[2], configs[3], configs[4], configs[5], configs[6], configs[7])
 	sim.air_density_kg_m3 = environment.air_density_kg_m3
+	sim.environment = environment
 	var map_wind: MapWind = environment.map_wind()
 	if map_wind != null:
 		sim.wind = MapWindField.new(map_wind, wind_cfg, environment.start_time_of_day_s(), environment.map_wind_height_m)
@@ -397,9 +401,21 @@ func set_fin_stiffness(factor: float) -> void:
 
 func set_waves(enabled: bool) -> void:
 	if enabled and wave_set_config != null and wave_set_config.enable_waves:
-		water = WaveField.new(wave_set_config, water_config, wind_config.from_bearing_deg)
+		var lake: LakeWaves = _place_lake_waves()
+		if lake != null:
+			water = LakeWaveField.new(lake, water_config)
+		else:
+			water = WaveField.new(wave_set_config, water_config, wind_config.from_bearing_deg)
 	else:
 		water = FlatWater.new(water_config)
+
+
+## The place's own lake waves for this wind, when the wave set asks for them and the place has them
+## (9.17); null otherwise (the wave set's waves).
+func _place_lake_waves() -> LakeWaves:
+	if environment == null or not wave_set_config.place_waves:
+		return null
+	return environment.lake_waves_for(wind, wind_config)
 
 
 ## Whether the water has waves on it.

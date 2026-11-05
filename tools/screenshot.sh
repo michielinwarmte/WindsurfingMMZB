@@ -9,6 +9,8 @@
 #                                                       extra options for the game (main.gd)
 #
 # The game runs at a fixed 60 frames per second of game time, so 180 frames = 3 seconds.
+# The window is 1280x720; SCREENSHOT_RESOLUTION=3137x1263 tools/screenshot.sh ... makes it another size
+# (Max's wide window).
 # Prints any engine or shader errors. Needs a desktop session: a window opens briefly.
 set -euo pipefail
 source "$(dirname "$0")/common.sh"
@@ -25,7 +27,7 @@ rm -f "$output"
 godot="$(find_godot)"
 import_project "$godot"
 
-args=(--no-header --path "$PROJECT_DIR" --resolution 1280x720 --fixed-fps 60 --audio-driver Dummy)
+args=(--no-header --path "$PROJECT_DIR" --resolution "${SCREENSHOT_RESOLUTION:-1280x720}" --fixed-fps 60 --audio-driver Dummy)
 # Safety net: quit even if the screenshot helper never runs (for example after a script error).
 args+=(--quit-after "$((frames + 600))")
 if [[ -n "$scene" ]]; then args+=("$scene"); fi

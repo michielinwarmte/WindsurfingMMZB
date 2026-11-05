@@ -47,6 +47,28 @@ func show_moment(now: WindMoment) -> void:
 	_set_parameters(now.shader_parameters())
 
 
+## The green channel's average: the wind of the last `seconds` (the lake's short wave train's response
+## time, LakeWaves.look_response_s); 0: the wind of the moment.
+func set_recent_time(seconds: float) -> void:
+	_material.set_shader_parameter("recent_s", seconds)
+
+
+## The wind relative to the lake's mean over the last `seconds` at a game position, as the green
+## channel computes it (for the check against MapWind): the same three points downwind and weights.
+static func recent_ratio(wind: MapWind, now: WindMoment, x: float, z: float, seconds: float) -> float:
+	var nodes: Vector3 = Vector3(0.415775, 2.294280, 6.289945)
+	var weights: Vector3 = Vector3(0.711093, 0.278518, 0.0103893)
+	var at: Vector3 = Vector3(x, 0.0, z)
+	if seconds <= 0.0:
+		return wind.velocity_in(now, at).length() / maxf(now.lake_speed_ms, 0.1)
+	var back: Vector2 = wind.lake_axis * now.drift_ms * seconds
+	var ratio: float = 0.0
+	for i: int in 3:
+		var point: Vector3 = at + Vector3(back.x, 0.0, back.y) * nodes[i]
+		ratio += weights[i] * wind.velocity_in(now, point).length() / maxf(now.lake_speed_ms, 0.1)
+	return ratio
+
+
 ## The area as the water shader's wind_ripple_map_area wants it.
 func area_vector() -> Vector4:
 	return Vector4(area_xz.position.x, area_xz.position.y, area_xz.size.x, area_xz.size.y)

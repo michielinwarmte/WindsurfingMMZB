@@ -52,6 +52,20 @@ const SHORT_WAVE_OFFSET_DEG: float = 30.0
 ## The wave set's shortest wave (GerstnerWaveConfig, section 9.14).
 const MIN_WAVELENGTH_M: float = 0.5
 
+## The Coastal Engineering Manual's fetch laws (CEM 2002, ch. II-2; Resio, Bratos and Thompson
+## 2003, as the `waver` package's reference manual gives them; the research,
+## wave_system_research.md 1.3), for the lake waves' switch (LakeWavesConfig.growth_law, 9.17).
+## They scale with the friction velocity u* instead of the wind at 10 m:
+##   u*² = 0.001·(1.1 + 0.035·U10)·U10²
+##   g·Hs / u*² = 0.0413 · (g·F / u*²)^(1/2), at most 211.5
+##   g·Tp / u*  = 0.651  · (g·F / u*²)^(1/3), at most 239.8
+const CEM_DRAG_BASE: float = 1.1
+const CEM_DRAG_PER_MS: float = 0.035
+const CEM_HEIGHT_COEFFICIENT: float = 0.0413
+const CEM_PERIOD_COEFFICIENT: float = 0.651
+const CEM_FULLY_DEVELOPED_HEIGHT: float = 211.5
+const CEM_FULLY_DEVELOPED_PERIOD: float = 239.8
+
 
 ## Significant wave height (the mean of the highest third of the waves), m. depth_m is
 ## DEEP_WATER for no depth limit.
@@ -74,6 +88,36 @@ static func peak_period_s(wind_speed_ms: float, fetch_m: float) -> float:
 	var fetch_number: float = G * fetch_m / (wind_speed_ms * wind_speed_ms)
 	var period_s: float = PERIOD_COEFFICIENT * pow(fetch_number, 1.0 / 3.0) * wind_speed_ms / G
 	return minf(period_s, FULLY_DEVELOPED_PERIOD * wind_speed_ms / G)
+
+
+## The friction velocity of the CEM's laws, m/s: u*² = 0.001·(1.1 + 0.035·U10)·U10².
+static func friction_velocity_ms(wind_speed_ms: float) -> float:
+	var drag: float = 0.001 * (CEM_DRAG_BASE + CEM_DRAG_PER_MS * wind_speed_ms)
+	return sqrt(drag) * wind_speed_ms
+
+
+## The significant wave height by the CEM's law (2002), m. depth_m as significant_height_m().
+static func significant_height_cem_m(wind_speed_ms: float, fetch_m: float, depth_m: float = DEEP_WATER) -> float:
+	if wind_speed_ms <= 0.0 or fetch_m <= 0.0:
+		return 0.0
+	var u_star: float = friction_velocity_ms(wind_speed_ms)
+	var u_star_squared_over_g: float = u_star * u_star / G
+	var fetch_number: float = fetch_m / u_star_squared_over_g  # g·F / u*², no unit
+	var number: float = minf(CEM_HEIGHT_COEFFICIENT * sqrt(fetch_number), CEM_FULLY_DEVELOPED_HEIGHT)
+	var height_m: float = number * u_star_squared_over_g
+	if not is_inf(depth_m):
+		height_m = minf(height_m, DEPTH_LIMITED_HEIGHT_RATIO * depth_m)
+	return height_m
+
+
+## The peak period by the CEM's law (2002), s.
+static func peak_period_cem_s(wind_speed_ms: float, fetch_m: float) -> float:
+	if wind_speed_ms <= 0.0 or fetch_m <= 0.0:
+		return 0.0
+	var u_star: float = friction_velocity_ms(wind_speed_ms)
+	var fetch_number: float = G * fetch_m / (u_star * u_star)
+	var number: float = minf(CEM_PERIOD_COEFFICIENT * pow(fetch_number, 1.0 / 3.0), CEM_FULLY_DEVELOPED_PERIOD)
+	return number * u_star / G
 
 
 ## The length of a wave with this period, m. In deep water L = g·T² / 2π. In water of

@@ -73,6 +73,7 @@ func sim_with(base: WindsurferSim) -> WindsurferSim:
 	var sim: WindsurferSim = WindsurferSim.new(board_config(), sail_config(), fin_config(), base.sailor_config,
 		base.water_config, base.wind_config, base.sim_config, base.wave_set_config)
 	sim.air_density_kg_m3 = base.air_density_kg_m3
+	sim.environment = base.environment
 	sim.wind = base.wind
 	# Again, so the sail's side and the telemetry come from that wind (as create_for() does).
 	sim.reset(Vector3.ZERO, 0.0)

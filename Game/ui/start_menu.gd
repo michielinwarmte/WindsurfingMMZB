@@ -13,7 +13,7 @@ extends Node
 ##
 ## Keys: arrows (or the gamepad's stick/d-pad) move, Enter (or A) chooses, Esc (or B) goes
 ## back, and on the main page asks whether to quit.
-## For screenshots (after "--"): --page=settings/<tab>|controls|howto|race|gear/<tab>|lan[/host|/join]|quit
+## For screenshots (after "--"): --page=settings/<tab>[/end: scrolled to its last rows]|controls|howto|race|gear/<tab>|lan[/host|/join]|quit
 ## opens that page.
 
 const SAIL_SILVAPLANA_SCENE: String = "res://maps/silvaplana/sail_silvaplana.tscn"
@@ -260,6 +260,8 @@ func _apply_command_line_options() -> void:
 				_open_page(_settings)
 				if parts.size() > 1:
 					_settings.show_tab(parts[1])
+				if parts.size() > 2 and parts[2] == "end":
+					_settings.scroll_to_end()
 			"controls":
 				_open_page(_controls)
 			"howto":
