@@ -66,6 +66,9 @@ var is_puppet: bool = false
 ## A puppet's state is this old (seconds): the race moves its place on by its speed for that long
 ## (RaceRunner._where(), D8). 0 for a board sailed here.
 var state_age_s: float = 0.0
+## The sailor's own time to correct the rail (SailorConfig.lean_feel_time_s) before package B's
+## level 2 slowed it; -1 until use_body_level() first runs.
+var _own_lean_feel_time_s: float = -1.0
 var _name_label: Label3D = null
 ## Far from the camera in a race (set_far_away).
 var _far_away: bool = false
@@ -101,6 +104,18 @@ func _ready() -> void:
 	autopilot.air_density_kg_m3 = sim.air_density_kg_m3
 	_build_visuals()
 	reset()
+
+
+## Package B's level (the body on the mouse, MouseBody.feel_time_s()): the sailor's feet correct the
+## rail at their own pace (level 1, or no body) or slowed (level 2), written into this board's own
+## copy of the sailor's config (SailorConfig.lean_feel_time_s; the simulation copies it every tick).
+## A board that shares its configs with others (own_config_copies off) is never changed.
+func use_body_level(body: MouseBody) -> void:
+	if not own_config_copies or sim == null:
+		return
+	if _own_lean_feel_time_s < 0.0:
+		_own_lean_feel_time_s = sim.sailor_config.lean_feel_time_s
+	sim.sailor_config.lean_feel_time_s = body.feel_time_s(_own_lean_feel_time_s) if body != null else _own_lean_feel_time_s
 
 
 ## Puts the board back at the start, at rest.

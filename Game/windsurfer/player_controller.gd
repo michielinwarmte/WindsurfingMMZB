@@ -21,6 +21,8 @@ extends RefCounted
 ## Up/Down move the push slider (push_level): how hard the sailor commits, from standing still
 ## with the sail let fly to the most speed with a crash likely (PushDial, the ladder in
 ## PushCurveConfig; Documentation/reports/push_slider/PLAN.md).
+## The mouse can be the sailor's body (package B, an experiment, the setting "Mouse body"):
+## sideways the rail, forward and back the back foot, on top of the slider (body, MouseBody).
 
 enum Mode { BEGINNER, ADVANCED }
 enum Manoeuvre { NONE, TACK_HEADING_UP, TACK_BEARING_AWAY, GYBE_BEARING_AWAY, GYBE_HEADING_UP }
@@ -159,6 +161,15 @@ var planing_steer_from_ms: float = 9.7
 var planing_steer_full_ms: float = 11.1
 var legs_rate_gain: float = 1.0 / 12.0
 
+## Package B, an experiment: the sailor's body on the mouse (MouseBody, mouse_body.gd; ROADMAP GP2).
+## Sideways the rail, forward and back the back foot, added to the push slider's extras every
+## update (_move_the_body()). It comes back to the middle (the technique) at every tack, gybe and
+## reset. null: no body (the AI boards, the tests, and the player with the setting off), and the
+## controller is exactly as before.
+var body: MouseBody = null
+var _body_was_on: bool = false
+static var _fallback_sailor: SailorConfig = null
+
 ## Beginner mode holds the heading when no steering key is pressed.
 var hold_heading: bool = true
 ## The trim, kept as "heading up" so that it stays right when the tack changes.
@@ -245,6 +256,9 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 				wanted_sheet = _scratch.sheet
 				wanted_across = _scratch.boom_across
 			controls.rake = clampf(helm_right * auto_sheet_pilot.tack, -1.0, 1.0)
+			# A new tack: the body comes back to the sailor's own technique (GD7 a).
+			if body != null:
+				body.recentre()
 		_last_sail_side = telemetry.sail_side
 	if _just_pressed("toggle_mode"):
 		set_mode(Mode.ADVANCED if mode == Mode.BEGINNER else Mode.BEGINNER)
@@ -330,6 +344,50 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 	controls.boom_across = wanted_across if ease < 0.01 else 0.0
 
 	controls.balance_reflex = true
+	_move_the_body(telemetry, controls, dt)
+
+
+## Package B, the body on the mouse (MouseBody; ROADMAP GP2): the rail and the back foot the mouse
+## asks for, added to the slider's extras (and the sea's rail) every tick. Without a body nothing
+## changes. In a manoeuvre the body adds nothing (the turn's own bank and trim rule there).
+func _move_the_body(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
+	if body == null:
+		if _body_was_on and is_nan(push_level):
+			# The body just went (the setting switched off) and no slider writes the extras afresh.
+			controls.rail_bank_extra_deg = 0.0
+			controls.trim_aim_extra_deg = 0.0
+		_body_was_on = false
+		return
+	_body_was_on = true
+	if is_nan(push_level):
+		# No slider: nothing else writes the extras each tick, so the body's are written afresh.
+		controls.rail_bank_extra_deg = 0.0
+		controls.trim_aim_extra_deg = 0.0
+	# What the feet aim for without the body: the technique's own on this course and at this speed,
+	# plus what the slider (and the sea) just asked.
+	var sailor: SailorConfig = _sailor if _sailor != null else _default_sailor()
+	var rail_base_deg: float = MouseBody.technique_rail_deg(sailor, telemetry.twa_at_sail_deg) + controls.rail_bank_extra_deg
+	var trim_base_deg: float = MouseBody.technique_trim_deg(sailor, telemetry.speed_ms) + controls.trim_aim_extra_deg
+	body.spring(dt)
+	if manoeuvre != Manoeuvre.NONE:
+		body.rest(rail_base_deg, trim_base_deg)
+		return
+	body.aim(rail_base_deg, trim_base_deg, tack_sign(telemetry))
+	controls.rail_bank_extra_deg += body.rail_deg
+	controls.trim_aim_extra_deg += body.trim_deg
+
+
+## The body's line for the F1 panel ("" without a body).
+func body_text() -> String:
+	return body.describe() if body != null else ""
+
+
+## The game's sailor (Game/config/sailor_default.tres), for a controller that was not handed the
+## simulation's own (set_sail() without a sailor).
+static func _default_sailor() -> SailorConfig:
+	if _fallback_sailor == null:
+		_fallback_sailor = load("res://config/sailor_default.tres")
+	return _fallback_sailor
 
 
 ## The push slider: the keys or the hands move the level, and the level sets the pilot and the
@@ -582,6 +640,9 @@ func reset_controls(controls: SimControls) -> void:
 	controls.rail_bank_extra_deg = 0.0
 	controls.trim_aim_extra_deg = 0.0
 	controls.rig_lean_extra_deg = 0.0
+	# After a fall or a restart the body starts from the sailor's own technique again.
+	if body != null:
+		body.recentre()
 
 
 func mode_name() -> String:
@@ -601,6 +662,8 @@ func manoeuvre_name() -> String:
 func _start_manoeuvre(telemetry: Telemetry) -> void:
 	_tack_sign_at_start = tack_sign(telemetry)
 	_manoeuvre_timer_s = 0.0
+	if body != null:
+		body.recentre()
 	# From a beam reach (and a little beyond) the quicker way onto the other tack is up
 	# through the wind; from a broad reach it is round through the gybe.
 	manoeuvre = Manoeuvre.TACK_HEADING_UP if absf(telemetry.twa_deg) <= tack_up_to_twa_deg else Manoeuvre.GYBE_BEARING_AWAY

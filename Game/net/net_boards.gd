@@ -666,12 +666,14 @@ func report_line() -> String:
 
 
 ## The sync check's numbers of a board: its place, heading, speed, the mast's direction (the rig)
-## and the sailor's lean (the body), to four decimals.
+## and the sailor's lean (the body), to four decimals; then the board's heel and pitch and the rail
+## and the trim the sailor's feet aim for (Telemetry.wanted_bank_deg, trim_aim_deg), which carry the
+## body on the mouse (package B, GP2) when the player sails with it.
 static func _track_text(node: WindsurferNode) -> String:
 	var t: Telemetry = node.sim.telemetry
 	var mast: Vector3 = node.sim.sail.mast_direction()
-	return "%.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %d" % [t.position.x, t.position.y, t.position.z, t.heading_deg, t.speed_ms,
-		mast.x, mast.z, node.sim.lean, node.sim.sailor_state]
+	return "%.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %d %.4f %.4f %.4f %.4f" % [t.position.x, t.position.y, t.position.z, t.heading_deg, t.speed_ms,
+		mast.x, mast.z, node.sim.lean, node.sim.sailor_state, t.heel_deg, t.pitch_deg, t.wanted_bank_deg, t.trim_aim_deg]
 
 
 ## Once the race is over (--lan_report or --lan_track): every board's place, name, finish and
