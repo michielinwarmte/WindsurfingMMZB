@@ -10,6 +10,7 @@
 [ext_resource type="PackedScene" path="res://ui/race_page.tscn" id="8_race"]
 [ext_resource type="PackedScene" path="res://ui/gear_page.tscn" id="9_gear"]
 [ext_resource type="PackedScene" path="res://ui/lan_page.tscn" id="10_lan"]
+[ext_resource type="PackedScene" path="res://ui/credits_page.tscn" id="11_credits"]
 
 [sub_resource type="Gradient" id="Gradient_shade"]
 offsets = PackedFloat32Array(0, 0.36, 0.62)
@@ -213,6 +214,11 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "How to sail"
 
+[node name="CreditsButton" type="Button" parent="Menu/Root/MainPage/Layout/MoreButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Credits"
+
 [node name="QuitButton" type="Button" parent="Menu/Root/MainPage/Layout/MoreButtons"]
 unique_name_in_owner = true
 layout_mode = 2
@@ -273,6 +279,11 @@ visible = false
 layout_mode = 1
 
 [node name="Lan" parent="Menu/Root" instance=ExtResource("10_lan")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+
+[node name="Credits" parent="Menu/Root" instance=ExtResource("11_credits")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1

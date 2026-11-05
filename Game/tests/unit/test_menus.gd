@@ -214,6 +214,34 @@ func test_the_start_menu_fits_any_window_and_gives_the_window_back_for_the_game(
 	assert_eq(window.content_scale_size, size_before)
 
 
+## ROADMAP MA2: the start menu's Credits page names the open data's sources as the providers ask, and
+## carries the licence notices the shipped game must have (Godot's, its parts', GUT's and its fonts').
+func test_the_credits_page_names_the_data_sources_and_the_licences() -> void:
+	var menu: Node = (load("res://ui/start_menu.tscn") as PackedScene).instantiate()
+	add_child_autofree(menu)
+	(menu.get_node("%CreditsButton") as Button).pressed.emit()
+	var credits: CreditsPage = menu.get_node("%Credits")
+	assert_true(credits.visible, "the Credits button opens the page")
+	var text: String = credits.text()
+	assert_string_contains(text, "Terrain, aerial photos and lakebed: © swisstopo. Wind data: MeteoSwiss. Lake level: BAFU.", "the map plan's line")
+	assert_string_contains(text, "Federal Office of Topography swisstopo", "swisstopo's wording")
+	assert_string_contains(text, "TINITALY", "swissALTIRegio's own reference")
+	assert_string_contains(text, "Source: MeteoSwiss", "MeteoSwiss's wording")
+	assert_string_contains(text, "CC BY 4.0")
+	assert_string_contains(text, "This game uses Godot Engine, available under the following license:")
+	assert_string_contains(text, Engine.get_license_text().strip_edges().get_slice("\n", 0), "Godot's copyright, from the engine")
+	assert_string_contains(text, "FreeType", "the parts Godot is made of")
+	assert_string_contains(text, "Tom \"Butch\" Wesley", "GUT, shipped in the package")
+	assert_string_contains(text, "Lobster Two", "and its fonts")
+	for license_name: Variant in Engine.get_license_info():
+		assert_string_contains(text, "Licence text: %s" % license_name)
+	var panel: Control = credits.get_node("Panel")
+	var menu_size: Vector2i = (menu.get_script() as Script).get_script_constant_map()["MENU_SIZE_PX"]
+	assert_lte(panel.get_combined_minimum_size().y + 80.0, float(menu_size.y), "the page fits the menu's window, margins and all")
+	credits.close()
+	assert_true((menu.get_node("%MainPage") as Control).visible, "Back: the main page again")
+
+
 func test_every_settings_tab_can_be_walked_with_the_keyboard() -> void:
 	# From the tabs, Down goes through every row to the buttons at the bottom (the way a
 	# keyboard or gamepad player moves), on each tab.

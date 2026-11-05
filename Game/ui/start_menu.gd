@@ -6,14 +6,14 @@ extends Node
 ##   Sail on Lake Silvaplana: the real lake in a Maloja wind (maps/silvaplana/sail_silvaplana.tscn).
 ##   Silvaplana wind viewer, with the race course maker (the map track's wind viewer).
 ##   Lake Silvaplana: fly over the map (the map track's terrain view).
-## And Gear (the board, sail and fin to sail: gear_page.gd), Settings, Controls, How to sail and
-## Quit. The menu remembers the play option chosen last time and puts the focus on it. When a page
+## And Gear (the board, sail and fin to sail: gear_page.gd), Settings, Controls, How to sail,
+## Credits (credits_page.gd: the map data's sources and the licences) and Quit. The menu remembers the play option chosen last time and puts the focus on it. When a page
 ## closes with other gear in the settings, the sailing scene behind the menu is built again, so the
 ## next run on the open water sails it (the lake's scene is built anew each time anyway).
 ##
 ## Keys: arrows (or the gamepad's stick/d-pad) move, Enter (or A) chooses, Esc (or B) goes
 ## back, and on the main page asks whether to quit.
-## For screenshots (after "--"): --page=settings/<tab>|controls|howto|race|gear/<tab>|lan[/host|/join]|quit
+## For screenshots (after "--"): --page=settings/<tab>|controls|howto|race|gear/<tab>|lan[/host|/join]|credits|quit
 ## opens that page.
 ##
 ## Any window size (ROADMAP UI4; Max: "resize", the title cut off at the top of a 1280 x 720 window):
@@ -51,6 +51,7 @@ enum PlayOption { OPEN_WATER, FLY_OVER, WIND_VIEWER, SAIL_SILVAPLANA, RACE_OPEN_
 @onready var _settings_button: Button = %SettingsButton
 @onready var _controls_button: Button = %ControlsButton
 @onready var _howto_button: Button = %HowToButton
+@onready var _credits_button: Button = %CreditsButton
 @onready var _quit_button: Button = %QuitButton
 @onready var _conditions: Label = %OpenWaterHint
 @onready var _status: Label = %Status
@@ -61,6 +62,7 @@ enum PlayOption { OPEN_WATER, FLY_OVER, WIND_VIEWER, SAIL_SILVAPLANA, RACE_OPEN_
 @onready var _race: RacePage = %Race
 @onready var _gear: GearPage = %Gear
 @onready var _lan: LanPage = %Lan
+@onready var _credits: CreditsPage = %Credits
 ## The page the Settings or the Gear page was opened from, when not the main page (the LAN lobby's
 ## "Wind and waves" and "Change gear"): it opens again when they close.
 var _return_to: MenuPage = null
@@ -88,13 +90,14 @@ func _ready() -> void:
 	_settings_button.pressed.connect(_open_page.bind(_settings))
 	_controls_button.pressed.connect(_open_page.bind(_controls))
 	_howto_button.pressed.connect(_open_page.bind(_howto))
+	_credits_button.pressed.connect(_open_page.bind(_credits))
 	_quit_button.pressed.connect(_open_page.bind(_quit_confirm))
 	_quit_confirm.confirmed.connect(_on_quit_confirmed)
 	_race.start_race.connect(_on_race_page_start)
-	for page: MenuPage in [_settings, _controls, _howto, _race, _gear, _lan, _quit_confirm]:
+	for page: MenuPage in [_settings, _controls, _howto, _race, _gear, _lan, _credits, _quit_confirm]:
 		page.closed.connect(_on_page_closed.bind(page))
 	MenuFocus.setup_buttons([_open_water_button, _sail_silvaplana_button, _race_open_water_button, _race_lake_button, _lan_button, _wind_button,
-		_silvaplana_button, _gear_button, _settings_button, _controls_button, _howto_button, _quit_button])
+		_silvaplana_button, _gear_button, _settings_button, _controls_button, _howto_button, _credits_button, _quit_button])
 	_version.text = _version_text()
 	_show_main_page(_play_buttons()[GameSettings.values.last_play_option])
 	if Lan.last_error != "":
@@ -243,7 +246,8 @@ func _on_page_closed(page: MenuPage) -> void:
 		_build_sailing_again()
 	var buttons: Dictionary[MenuPage, Button] = {
 		_settings: _settings_button, _controls: _controls_button, _howto: _howto_button, _quit_confirm: _quit_button,
-		_race: _race_lake_button if RacePage.chosen_lake else _race_open_water_button, _gear: _gear_button, _lan: _lan_button}
+		_race: _race_lake_button if RacePage.chosen_lake else _race_open_water_button, _gear: _gear_button, _lan: _lan_button,
+		_credits: _credits_button}
 	_show_main_page(buttons[page])
 
 
@@ -323,6 +327,8 @@ func _apply_command_line_options() -> void:
 				_open_page(_gear)
 				if parts.size() > 1:
 					_gear.show_tab(parts[1])
+			"credits":
+				_open_page(_credits)
 			"quit":
 				_open_page(_quit_confirm)
 			"lan":
