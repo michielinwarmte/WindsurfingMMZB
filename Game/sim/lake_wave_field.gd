@@ -9,7 +9,7 @@ extends WaveField
 ##   2. Each train has its own phase at the origin (LakeWaves._phase_of()).
 ## The heights change slowly next to a wavelength (nodes 16 m apart), so within one query the
 ## amplitudes of the asked point are used for the whole solve for the rest point and for the
-## answers: the rest point lies at most the sum of the amplitudes (some 0.3 m) away, where the
+## answers: the rest point lies at most the sum of the amplitudes (about 0.1 m) away, where the
 ## amplitudes differ by well under a millimetre. The shader reads the grid at the vertex's rest
 ## point; the two differ by that same fraction of a millimetre (test_lake_waves.gd).
 ##

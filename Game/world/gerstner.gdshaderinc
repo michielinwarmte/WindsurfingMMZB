@@ -63,7 +63,7 @@ void wave_surface(vec2 rest, out vec3 displacement, out vec3 tangent_x, out vec3
 // most pi/7. The physics floats on the first lake_shape_trains trains (the longest): only those
 // move the surface (water_surface(); the water shader draws the others as shading). The physics
 // reads the grid at the asked point, this at the vertex's rest point: they differ by a fraction of
-// a millimetre (the heights change over 16 m, a rest point moves < 0.3 m).
+// a millimetre (the heights change over 16 m, a rest point moves about 0.1 m at most).
 uniform bool lake_waves_on = false;
 uniform int lake_shape_trains = 4;
 uniform sampler2D lake_envelope : filter_nearest, repeat_disable;

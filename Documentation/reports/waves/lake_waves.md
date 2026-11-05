@@ -119,10 +119,12 @@ For comparison, all four trains in the physics would cost 9.64 µs a sample and 
 
 ### Checks
 
-- `tools/test.sh` (the new `test_lake_waves.gd`, 24 tests: the fetch map against hand-worked fetches, the trains against the research's table, the CEM law, flat by the upwind shore and bigger downwind, the depth limit, sample_at against the three queries, physics and picture within a millimetre, the same sea from the same inputs, the short wavelets' response time against Plant's numbers, the switch: off is bit for bit the old sea, the open water ignores it, the settings reach the wave set and the file, one sea for every board): see the counts at the end.
-- `tools/check.sh`, `tools/test.sh validation`: see the end.
+Before the last commit, on the branch's final code:
+- `tools/check.sh`: 429 files, 0 failed.
+- `tools/test.sh`: 761 of 761 pass in 79 scripts (737 before plus the 24 of the new `test_lake_waves.gd`: the fetch map against hand-worked fetches, the trains against the research's table, the CEM law, flat by the upwind shore and bigger downwind, the peak moving to longer trains, the depth limit, the trains' directions, sample_at against the three queries, physics and picture within a millimetre, the same sea from the same inputs, the short wavelets' response time against Plant's numbers and their growth with the wind, the gust picture's average, the switch: off is bit for bit the old sea, the open water ignores it, the settings reach the wave set and the file, one sea for every board). `test_sail_silvaplana.gd` now also checks the lake scene's own waves, and its strong-chop restart with Lake waves off.
+- `tools/test.sh validation`: 46 tests, 36 pass, 8 fail, 2 pending: the same eight known reds with the same numbers as Session 71 (the polar sweep's speeds, its shape, the top speed 14.67 m/s and the planing onset; the fin's side force, 745 N; the push warning; the skipper's 12 kt limit, 12:21.2 against 12:19.0; the settled speed on waves at TWA 120, 12.09 against 14.67 m/s). The validation sails the open sea's file, which this branch does not change.
 - `--check-gusts=1` on the lake: the gust picture against MapWind within 0.0030 (red, the ripples) and 0.0024 (green, the new 14 s average); one 8-bit step is 0.0039.
-- `tools/lan_test.sh --map=lake --seconds=40`: SYNC CHECK PASS; both PCs printed "Lake Silvaplana's own waves: built for 18.2 kt at 10 m from 222 degrees".
+- `tools/lan_test.sh --map=lake --seconds=40`: SYNC CHECK PASS (every board each PC showed against where its own PC had it: 0.0000 m); both PCs printed "Lake Silvaplana's own waves (PHYSICS_SPEC.md 9.17): built for 18.2 kt at 10 m from 222 degrees".
 
 ## Where this differs from the research, and why
 

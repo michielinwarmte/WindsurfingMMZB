@@ -27,7 +27,7 @@ const MAX_STEEPNESS: float = PI / 7.0
 ## frequency, 0.09 above.
 const SIGMA_BELOW: float = 0.07
 const SIGMA_ABOVE: float = 0.09
-## The table of the spectrum's shape (see _cumulative_shape()): steps of the frequency over the peak
+## The table of the spectrum's shape (see _shape_up_to()): steps of the frequency over the peak
 ## frequency, up to this; above it the shape's tail is s^-5 to within 0.01 %.
 const SHAPE_STEP: float = 0.002
 const SHAPE_END: float = 12.0
@@ -73,7 +73,7 @@ var look_response_s: float = 0.0
 ## The largest sum of the physics' trains' amplitudes anywhere: the highest crest possible.
 var max_total_amplitude_m: float = 0.0
 
-## The spectrum's shape added up from 0 (see _cumulative_shape()), shared by every lake.
+## The spectrum's shape added up from 0 (see _shape_up_to()), shared by every lake.
 static var _shape_table: PackedFloat64Array = PackedFloat64Array()
 static var _shape_table_gamma: float = -1.0
 
