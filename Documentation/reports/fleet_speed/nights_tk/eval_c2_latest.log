@@ -1,0 +1,24 @@
+tk_c2_latest.json on C2 (course_race): 4 boards blind, 1200 s episodes, 12 to 24 kt, the game's open water (T1 and T2): 10 episodes of 1 board, against the allrounder on the same drops; the brain tacks at most every 20 s and steers no closer than 0 deg
+  brain      ep   0 board 0  T2 sprint slalom                     16 kt sea 0.11 m gusts 0.00 shifts  0  reward   10.85  progress   1693 m in 426.8 s (3.97 m/s)  goal at 426.8 s  falls 0  manoeuvres 11
+  brain      ep   1 board 0  T1 training loop                     20 kt sea 0.11 m gusts 0.00 shifts  0  reward   16.95  progress   2974 m in 699.3 s (4.25 m/s)  goal at 699.3 s  falls 3  manoeuvres 16
+  brain      ep   2 board 0  T2 sprint slalom                     18 kt sea 0.11 m gusts 0.00 shifts  0  reward   11.51  progress   1715 m in 357.1 s (4.80 m/s)  goal at 357.1 s  falls 2  manoeuvres 10
+  brain      ep   3 board 0  T1 training loop                     23 kt sea 0.11 m gusts 0.00 shifts  0  reward  -21.25  progress    470 m in 329.4 s (1.43 m/s)  stalled           falls 3  manoeuvres 9
+  brain      ep   4 board 0  T2 sprint slalom                     19 kt sea 0.11 m gusts 0.00 shifts  0  reward   12.62  progress   1686 m in 339.5 s (4.97 m/s)  goal at 339.5 s  falls 0  manoeuvres 9
+  brain      ep   5 board 0  T1 training loop                     23 kt sea 0.11 m gusts 0.00 shifts  0  reward  -26.32  progress    113 m in 404.1 s (0.28 m/s)  stalled           falls 6  manoeuvres 9
+  brain      ep   6 board 0  T1 training loop                     17 kt sea 0.11 m gusts 0.00 shifts  0  reward   16.65  progress   3009 m in 756.8 s (3.98 m/s)  goal at 756.8 s  falls 2  manoeuvres 16
+  brain      ep   7 board 0  T1 training loop                     17 kt sea 0.11 m gusts 0.00 shifts  0  reward   -3.97  progress   2148 m in 746.5 s (2.88 m/s)  stalled           falls 3  manoeuvres 19
+  brain      ep   8 board 0  T2 sprint slalom                     23 kt sea 0.11 m gusts 0.00 shifts  0  reward   12.02  progress   1701 m in 347.0 s (4.90 m/s)  goal at 347.0 s  falls 1  manoeuvres 11
+  brain      ep   9 board 0  T1 training loop                     20 kt sea 0.11 m gusts 0.00 shifts  0  reward  -23.55  progress    190 m in 395.3 s (0.48 m/s)  stalled           falls 2  manoeuvres 9
+  allrounder ep   0 board 0  T2 sprint slalom                     16 kt sea 0.11 m gusts 0.00 shifts  0  reward   15.56  progress   1693 m in 211.2 s (8.02 m/s)  goal at 211.2 s  falls 0  manoeuvres 3
+  allrounder ep   1 board 0  T1 training loop                     20 kt sea 0.11 m gusts 0.00 shifts  0  reward   24.80  progress   2974 m in 409.4 s (7.26 m/s)  goal at 409.4 s  falls 0  manoeuvres 5
+  allrounder ep   2 board 0  T2 sprint slalom                     18 kt sea 0.11 m gusts 0.00 shifts  0  reward   16.22  progress   1715 m in 189.1 s (9.07 m/s)  goal at 189.1 s  falls 0  manoeuvres 3
+  allrounder ep   3 board 0  T1 training loop                     23 kt sea 0.11 m gusts 0.00 shifts  0  reward   24.89  progress   2977 m in 403.9 s (7.37 m/s)  goal at 403.9 s  falls 0  manoeuvres 6
+  allrounder ep   4 board 0  T2 sprint slalom                     19 kt sea 0.11 m gusts 0.00 shifts  0  reward   16.11  progress   1686 m in 180.0 s (9.37 m/s)  goal at 180.0 s  falls 0  manoeuvres 3
+  allrounder ep   5 board 0  T1 training loop                     23 kt sea 0.11 m gusts 0.00 shifts  0  reward   24.96  progress   2968 m in 396.3 s (7.49 m/s)  goal at 396.3 s  falls 0  manoeuvres 6
+  allrounder ep   6 board 0  T1 training loop                     17 kt sea 0.11 m gusts 0.00 shifts  0  reward   23.48  progress   3009 m in 490.2 s (6.14 m/s)  goal at 490.2 s  falls 0  manoeuvres 6
+  allrounder ep   7 board 0  T1 training loop                     17 kt sea 0.11 m gusts 0.00 shifts  0  reward   23.25  progress   2985 m in 490.3 s (6.09 m/s)  goal at 490.3 s  falls 0  manoeuvres 6
+  allrounder ep   8 board 0  T2 sprint slalom                     23 kt sea 0.11 m gusts 0.00 shifts  0  reward   16.71  progress   1701 m in 157.6 s (10.79 m/s)  goal at 157.6 s  falls 0  manoeuvres 3
+  allrounder ep   9 board 0  T1 training loop                     20 kt sea 0.11 m gusts 0.00 shifts  0  reward   24.63  progress   2997 m in 427.0 s (7.02 m/s)  goal at 427.0 s  falls 0  manoeuvres 6
+brain: 10 episodes, mean reward 0.55, goal reached in 6 (60 %, mean 487.8 s), speed made good 3.27 m/s, 2.20 falls and 11.9 manoeuvres per episode
+allrounder: 10 episodes, mean reward 21.06, goal reached in 10 (100 %, mean 335.5 s), speed made good 7.36 m/s, 0.00 falls and 4.7 manoeuvres per episode
+The brain's speed made good is 44 % of the allrounder's on these drops.

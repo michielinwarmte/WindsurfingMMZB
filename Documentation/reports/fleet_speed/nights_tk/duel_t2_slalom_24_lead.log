@@ -1,0 +1,23 @@
+SCRIPT ERROR: Compile Error: Identifier not found: GameSettings
+          at: GDScript::reload (res://main.gd:82)
+SCRIPT ERROR: Compile Error: Failed to compile depended scripts.
+          at: GDScript::reload (res://race/race_runner.gd:0)
+SCRIPT ERROR: Compile Error: Failed to compile depended scripts.
+          at: GDScript::reload (res://dev/run_race.gd:0)
+ERROR: Failed to load script "res://dev/run_race.gd" with error "Compilation failed".
+   at: load (modules/gdscript/gdscript_resource_format.cpp:46)
+sheet All-rounder  hands 0.25 s 0.5 deg  push +0.00  beat +0.0 deg  run +0 deg  layline 10 m
+Race on T2 sprint slalom (Start-1-2-3-Finish, 1 lap, 5 steps): wind 24 kt from 232 deg, brain:tk_c2_best, allrounder, seed 1, pre-start 60 s, spawn line (seed 0), wind shadows, the rules
+1. All-rounder     2:30.8    +0:00.0  5/5 steps  splits 0:00.9 0:28.4 1:41.2 2:00.8 2:30.8  falls 0  tacks 1  gybes 4
+2. tk_c2 best      6:20.0    +3:49.2  5/5 steps  splits 0:32.8 2:16.2 3:44.0 5:58.1 6:20.0  falls 1  tacks 11  gybes 2
+Finished at race time 6:20.0; CSV files in /home/michieldz/Projects/Git/WindsurfingMMZB/.sim_output/review_lead/duel_t2_slalom_24
+Starts:
+  All-rounder      start   +0.9 s
+  longest start delay 0.9 s, 0 not started, 0 OCS, 0 outside the sailing area at the gun
+Penalties: 0
+WARNING: 40 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+ERROR: 36 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:822)
+ERROR: Pages in use exist at exit in PagedAllocator: N12VariantPools12BucketMediumE
+   at: ~PagedAllocator (./core/templates/paged_allocator.h:170)

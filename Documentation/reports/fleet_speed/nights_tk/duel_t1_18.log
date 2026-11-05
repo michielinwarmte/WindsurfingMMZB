@@ -1,0 +1,14 @@
+Race on T1 training loop (Start-1-4S/4P-1-4S-Finish, 1 lap, 6 steps): wind 18 kt from 270 deg, brain:tk_c2_best, allrounder, seed 1, pre-start 60 s, spawn line (seed 0), wind shadows, the rules
+1. All-rounder     7:46.7    +0:00.0  6/6 steps  splits 0:02.2 2:50.9 4:05.7 6:09.5 7:36.3 7:46.7  falls 0  tacks 5  gybes 3
+2. tk_c2 best     19:00.1   +11:13.4  6/6 steps  splits 1:07.2 8:38.4 10:04.7 16:54.3 18:48.9 19:00.1  falls 2  tacks 18  gybes 2
+Finished at race time 19:00.1; CSV files in /home/michieldz/Projects/Git/WindsurfingMMZB-train/.sim_output/review/duel_t1_18
+Starts:
+  All-rounder      start   +2.2 s
+  longest start delay 2.2 s, 0 not started, 0 OCS, 0 outside the sailing area at the gun
+Penalties: 0
+WARNING: 40 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+ERROR: 36 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:822)
+ERROR: Pages in use exist at exit in PagedAllocator: N12VariantPools12BucketMediumE
+   at: ~PagedAllocator (./core/templates/paged_allocator.h:170)
