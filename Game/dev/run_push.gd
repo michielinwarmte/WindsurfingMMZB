@@ -35,6 +35,9 @@ extends SceneTree
 ##      set once per case (e.g. --controller.legs_rate_gain=0: the planing technique off)
 ##   [--wave_scale=<f>] every wave's height (and steepness) times f: the sea at twice its height
 ##   [--hold_sheet=1] the player holds W (sheet in) all the time, over the auto-sheet
+##   [--point_from_ms=5] the speed from which the board sails the case's course; slower it sails
+##      70 to 100 degrees (getting going on a reach). 11 at 18 kt: planing across the wind first, then
+##      the bear-away to a broad reach (GP11: from rest a broad reach sits on the hump)
 ##   [--reaction_s=<s>] the sailor feels the apparent wind's strength this late: the controller
 ##      is handed the apparent wind speed of that long ago (only the controller; the physics sails
 ##      in the real wind). The autopilot otherwise answers a gust in the same tick
@@ -242,6 +245,7 @@ func _run_case(case: PushCase, falls: Array[String]) -> PushResult:
 	var pitch_square_sum: float = 0.0
 	var history: Array[Dictionary] = []
 	var pointing: bool = false
+	var pointing_speed_ms: float = _options.get("point_from_ms", str(POINTING_SPEED_MS)).to_float()
 	var previous_state: WindsurferSim.SailorState = sim.sailor_state
 	var reaction_ticks: int = int(round(_options.get("reaction_s", "0").to_float() / DT))
 	var felt_aws: PackedFloat64Array = PackedFloat64Array()
@@ -281,9 +285,9 @@ func _run_case(case: PushCase, falls: Array[String]) -> PushResult:
 		_add_pilot_overrides(controller, case.settings)
 		if easing:
 			_add_pilot_overrides(controller, ease_settings)
-		if t.speed_ms > POINTING_SPEED_MS:
+		if t.speed_ms > pointing_speed_ms:
 			pointing = true
-		elif t.speed_ms < POINTING_SPEED_MS - 1.5:
+		elif t.speed_ms < pointing_speed_ms - 1.5:
 			pointing = false
 		var wanted_twa: float = case.twa_deg if pointing else clampf(case.twa_deg, START_TWA_DEG, START_TWA_MAX_DEG)
 		hands.steer = LearnedSkipper.steer_toward_twa(t.twa_deg, 1.0, wanted_twa)

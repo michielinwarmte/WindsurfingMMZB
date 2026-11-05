@@ -13,12 +13,13 @@
 # still move the push slider, A/D steer. F1 shows the numbers (for tuning only; the strip shows none).
 #
 # The open water, 18 kt from the West with gusts (0.2 every 8 s) and the waves, beginner mode with the
-# auto-sheet, starting on starboard tack heading 135 (a broad reach at 135 degrees: where GP0 measured
-# the back foot worth 10 %), the push slider at 75 % (the game's start).
+# auto-sheet, starting on starboard tack heading 180 (a beam reach, where the board gets planing), the
+# push slider at 75 % (the game's start). Once planing, bear away (A, away from the wind) to a broad
+# reach, heading about 135: from rest the board does not get over the hump there (GP11).
 #
-#   tools/play_body.sh                          18 kt broad reach, the defaults
-#   tools/play_body.sh --wind=24                24 kt: too much back foot on a flat board catapults
-#   tools/play_body.sh --heading=180            a beam reach (another course: --heading=<deg>)
+#   tools/play_body.sh                          18 kt beam reach, the defaults
+#   tools/play_body.sh --wind=24                24 kt: too much back foot on a flat board bounces and falls
+#   tools/play_body.sh --heading=150            start on another course (compass degrees)
 #   tools/play_body.sh --level=2                the feet correct slowly: your hand holds the rail
 #   tools/play_body.sh --centre=spring          the mouse springs back to the middle (--spring=<s>)
 #   tools/play_body.sh --sideways=right         right is always more rail (default: the board rolls
@@ -38,7 +39,7 @@ source "$(dirname "$0")/common.sh"
 wind=18
 gusts=0.2
 push=75
-heading=135
+heading=180
 body=true
 level=1
 centre=0
