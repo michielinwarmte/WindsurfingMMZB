@@ -139,3 +139,20 @@ func test_the_slopes_are_capped_where_the_linear_beam_ends() -> void:
 	var cap: float = deg_to_rad(35.0)
 	assert_almost_eq(fin.up_share, sin(cap), 1e-9, "every strip at the cap")
 	assert_almost_eq(fin.side_share, cos(cap), 1e-9)
+	# The tip's movement stops where its angle does (PH43): the deflection at the load that
+	# brings the tip to the cap, not a tip drawn past the fin's own length on a load spike.
+	var lift_at_cap: float = cap / fin.tip_slope_per_n
+	assert_almost_eq(fin.bend_tip_m, lift_at_cap * fin.tip_deflection_per_n, 1e-9, "the movement at the cap's load")
+	assert_lt(fin.bend_tip_m, 0.5 * fin.config.span_m, "well inside the fin's length")
+	fin._bend(0.5 * lift_at_cap)
+	assert_almost_eq(fin.bend_tip_m, 0.5 * lift_at_cap * fin.tip_deflection_per_n, 1e-9, "below the cap the movement is linear in the load")
+
+
+func test_a_stiffer_fin_of_the_same_shape_bends_less() -> void:
+	# FinConfig.stiffness_factor (PH43): the flex test's stiffness scale times the factor, so the
+	# same load bends the fin that much less; 1 is the measured fin.
+	var measured: FinModel = FinModel.new(_default_config())
+	var stiffer: FinModel = _fin_with({"stiffness_factor": 2.0})
+	assert_almost_eq(stiffer.stiffness_scale, 2.0 * measured.stiffness_scale, 1e-6 * measured.stiffness_scale, "twice the S")
+	assert_almost_eq(stiffer.point_load_deflection_m(100.0, 0.8), 0.010, 1e-9, "the flex test's load moves the load point half as far")
+	assert_almost_eq(stiffer.tip_slope_per_n, 0.5 * measured.tip_slope_per_n, 1e-9 * measured.tip_slope_per_n, "the tip turns half as much per newton")

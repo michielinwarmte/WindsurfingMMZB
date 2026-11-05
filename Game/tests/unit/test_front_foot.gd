@@ -41,6 +41,9 @@ func test_the_rider_pulls_only_in_the_straps_planing_and_with_the_nose_below_the
 	sim.felt_trim_deg = sim._running_trim_target_deg(13.0) - 0.5 * sim.sailor_config.trim_press_band_deg
 	assert_almost_eq(sim._front_foot_couple_nm(true, 13.0), 0.5 * _held_nm(sim), 1e-6, "half a band below: half the pull")
 	sim.felt_trim_deg = 6.0
+	# The hull still settling after the reset has a small pitch rate; since PH43 a nose dropping
+	# gets a pull of its own (test_launch.gd), so this check holds the hull still.
+	sim.body.angular_velocity = Vector3.ZERO
 	assert_eq(sim._front_foot_couple_nm(true, 13.0), 0.0, "the nose above the aim: no pull")
 	sim.felt_trim_deg = -2.0
 	assert_eq(sim._front_foot_couple_nm(false, 13.0), 0.0, "below the hump (not trimming): no pull")

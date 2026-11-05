@@ -201,7 +201,11 @@ func _bend(lift: float) -> void:
 		up_share += strip_share[i] * sin(theta)
 	side_share = side
 	bend_tip_rad = minf(lift * tip_slope_per_n, cap)
-	bend_tip_m = lift * tip_deflection_per_n
+	# The tip's movement stops where its angle does: beyond the cap the linear beam is wrong, and
+	# a tip drawn further (a load spike in chop: 2 000 N would draw 220 mm, more than half the
+	# fin) is a rubber fin on screen (PH43; the force is unchanged, the movement is reported only).
+	var lift_at_cap: float = cap / tip_slope_per_n if tip_slope_per_n > 0.0 else lift
+	bend_tip_m = minf(lift, lift_at_cap) * tip_deflection_per_n
 
 
 ## Works out the beam once for this fin: the stiffness scale from the flex test, then each
@@ -233,7 +237,7 @@ func calibrated_stiffness_scale() -> float:
 	var moments: PackedFloat64Array = point_load_moments(span, config.flex_test_load_n, config.flex_test_position)
 	var slopes: PackedFloat64Array = beam_slopes(moments, edge_stiffness(span, root_chord, 1.0), step)
 	var deflection_with_s1: float = value_at(beam_deflections(slopes, step), config.flex_test_position)
-	return deflection_with_s1 / config.flex_test_deflection_m
+	return config.stiffness_factor * deflection_with_s1 / config.flex_test_deflection_m
 
 
 ## How far this fin's load point moves under `load_n` hung at span fraction `position` (m):

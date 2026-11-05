@@ -28,6 +28,9 @@ var wave_set_config: WaveSetConfig = null
 ## the default gear of Game/config/ (the AI fleet's boards). The sailing scene (main.gd) sets it
 ## from the player's settings before this node is ready.
 var gear: GearChoice = null
+## How much stiffer this board's fin is than the measured one (SettingsValues.fin_stiffness,
+## FinConfig.stiffness_factor; PH43). 1 = the fin's own numbers.
+var fin_stiffness: float = 1.0
 
 var sim: WindsurferSim
 var controls: SimControls = SimControls.new()
@@ -81,6 +84,9 @@ func _ready() -> void:
 	if gear != null:
 		# The same place, wind and sea on the chosen board, sail and fin (copies of their numbers).
 		sim = gear.sim_with(sim)
+	if not is_equal_approx(fin_stiffness, 1.0):
+		# The player's fin stiffer or softer than the measured one (Settings > Sailing, PH43).
+		sim.set_fin_stiffness(fin_stiffness)
 	if wind_config != null or wave_set_config != null:
 		set_sea(wind_config, wave_set_config)
 	controller.set_sail(sim.sail, sim.sailor_config, sim.air_density_kg_m3)
