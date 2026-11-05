@@ -12,6 +12,7 @@ extends Node
 ##           <- Water <- WaterLap    (low-pass: lapping), and the rumble and the splashes
 ##                    <- WaterHiss   (band-pass: the planing hiss)
 ##           <- Sail  <- SailFlutter (low-pass: the flapping), and the cracks and swooshes
+##           <- Signals: a race's start, the horn, the start watch's beep and the gun (SO3)
 ## The player's volume sliders (settings, Audio tab) set Master, Wind, Water and Sail.
 ##
 ## The players are plain (not 3D) AudioStreamPlayers: the mix itself makes the board's sounds
@@ -26,10 +27,13 @@ const WIND_WHISTLE_BUS: StringName = &"WindWhistle"
 const WATER_LAP_BUS: StringName = &"WaterLap"
 const WATER_HISS_BUS: StringName = &"WaterHiss"
 const SAIL_FLUTTER_BUS: StringName = &"SailFlutter"
+const SIGNALS_BUS: StringName = &"Signals"
 ## How many of each one-shot can sound at the same time.
 const SPLASH_PLAYERS: int = 3
 const CRACK_PLAYERS: int = 3
 const SWOOSH_PLAYERS: int = 2
+## The horn's tail may still sound under the next beep, and the last beep under the gun.
+const SIGNAL_PLAYERS: int = 2
 
 var mix: SoundMix = SoundMix.new()
 
@@ -44,6 +48,7 @@ var _loops: Array[LoopPlayer] = []
 var _splash_players: Array[AudioStreamPlayer] = []
 var _crack_players: Array[AudioStreamPlayer] = []
 var _swoosh_players: Array[AudioStreamPlayer] = []
+var _signal_players: Array[AudioStreamPlayer] = []
 
 
 ## A looping sound: the mix's voice, the player that plays it and the bus filter it moves.
@@ -84,6 +89,7 @@ func _ready() -> void:
 	_splash_players = _add_one_shot_players(SPLASH_PLAYERS, WATER_BUS)
 	_crack_players = _add_one_shot_players(CRACK_PLAYERS, SAIL_BUS)
 	_swoosh_players = _add_one_shot_players(SWOOSH_PLAYERS, SAIL_BUS)
+	_signal_players = _add_one_shot_players(SIGNAL_PLAYERS, SIGNALS_BUS)
 	apply_bus_volumes(GameSettings.values)
 	GameSettings.changed.connect(_on_settings_changed)
 
@@ -165,6 +171,29 @@ func _play_one_shot(shot: SoundMix.OneShot) -> void:
 			_start(_crack_players, _bank.cracks[shot.variant % _bank.cracks.size()], shot)
 		SoundMix.OneShotKind.SWOOSH:
 			_start(_swoosh_players, _bank.swoosh, shot)
+
+
+## A start signal of a race (SO3, RaceStartSignals): the start boat's long or short horn, the start
+## watch's beep or the gun, on the Signals bus at the mix's level for it. A far camera does not
+## make it quieter: it is the race's call.
+func play_race_signal(kind: RaceStartSignals.Kind) -> void:
+	if _bank == null:
+		return
+	_bank.make_start_sounds()  # made already when the race was set up; this only makes sure
+	var shot: SoundMix.OneShot = SoundMix.OneShot.new()
+	var stream: AudioStreamWAV = _bank.gun
+	shot.volume_db = mix.config.gun_db
+	match kind:
+		RaceStartSignals.Kind.LONG_HORN:
+			stream = _bank.horn_long
+			shot.volume_db = mix.config.horn_db
+		RaceStartSignals.Kind.SHORT_HORN:
+			stream = _bank.horn_short
+			shot.volume_db = mix.config.horn_db
+		RaceStartSignals.Kind.BEEP:
+			stream = _bank.beep
+			shot.volume_db = mix.config.beep_db
+	_start(_signal_players, stream, shot)
 
 
 ## Plays a one-shot on a free player of the pool (or on the one that started first).

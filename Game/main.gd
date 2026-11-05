@@ -685,17 +685,27 @@ func start_race(setup: RaceSetup) -> void:
 	_apply_command_line_options()
 
 
+## A start signal of the race (SO3): the horn, the start watch's beep or the gun, to the sounds.
+func _on_race_start_signal(kind: RaceStartSignals.Kind) -> void:
+	if _audio != null:
+		_audio.play_race_signal(kind)
+
+
 ## The race (RaceRunner), when one is asked for and its course is on the water.
 func _start_race_runner() -> void:
 	if _race_setup == null or _course == null or _race_runner != null:
 		return
+	# The start's horns, beeps and gun (SO3), made now with the rest of the race's setup.
+	SoundBank.shared().make_start_sounds()
 	if _net != null and Lan.is_guest():
 		# The guest shows the host's race (LAN multiplayer, D8).
 		if _net.mirror == null:
 			_net.start_mirror(_course, _race_setup, _hud)
+			_net.mirror.start_signal.connect(_on_race_start_signal)
 		return
 	_race_runner = RaceRunner.new()
 	_race_runner.name = "RaceRunner"
+	_race_runner.start_signal.connect(_on_race_start_signal)
 	if _net != null:
 		_race_runner.remote_players = _net.remote_players()
 		_race_runner.remote_names = _net.remote_names()

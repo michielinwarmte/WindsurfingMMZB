@@ -42,6 +42,9 @@ const FAR_DETAIL_M: float = 300.0
 
 ## A new start (restart()): LAN multiplayer's host sends it to the guests.
 signal restarted
+## A start signal is due (SO3): the start boat's horn, the start watch's beep or the gun. The sailing
+## scene hands it to its sounds (GameAudio.play_race_signal()).
+signal start_signal(kind: RaceStartSignals.Kind)
 
 var race: RaceSim = null
 var course: Course = null
@@ -68,6 +71,8 @@ var _shadows: Array[WindShadows] = []
 ## tick, so the player and the fleet sail in the same gusts. Taken from the player's field at each
 ## restart (its gusts are the ones drawn on the water), then read back after every tick.
 var wind_clock: RaceWindClock = null
+## The start's signals of this race (SO3), new with each start.
+var _start_signals: RaceStartSignals = null
 ## The racing rules' judge (RaceRules, F3), new with each race; null with the setup's rules off.
 var rules: RaceRules = null
 ## What the runner's own tick costs (the physics of all boards, side by side or not, and the
@@ -222,6 +227,7 @@ func restart() -> void:
 		_skippers[i].setup(opponents[i].sim, opponents[i].controller, opponents[i].hands, race, i + _first_ai)
 	_tell_the_race()
 	wind_clock = RaceWindClock.of(player.sim.wind)
+	_start_signals = RaceStartSignals.new(race.prestart_s)
 	race.start_in(setup.free_sail_s)
 	hud.reset()
 	if records != null:
@@ -332,6 +338,8 @@ func _physics_process(delta: float) -> void:
 	_pose_boards(player_stopped)
 	_tell_the_race()
 	race.step(delta)
+	for kind: RaceStartSignals.Kind in _start_signals.update(race.is_started(), race.clock_s()):
+		start_signal.emit(kind)
 	_judge(delta)
 	_us_physics += t1 - t0
 	_us_race += Time.get_ticks_usec() - t1
