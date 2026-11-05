@@ -243,17 +243,32 @@ void lake_shading_train(vec4 wave, float amplitude, float pixel_m, vec2 rest, in
 	}
 }
 
-// The lake's surface at a pixel: where the mesh shows a train as shape (near the camera, where the
-// board floats on it), its exact Gerstner tangents at the pixel's rest point, faded where a
-// wavelength covers too few pixels; elsewhere (farther out, from high up, on the far water) and for
-// the trains the physics does not ride, short-crested shading (lake_shading_train()), so few long
-// trains do not show as regular stripes from afar. The two are blended by the square roots of the
-// shape's share, which keeps the slopes' energy. The picture's short train (raised by the recent
-// wind) as shading too. `faded_slope2` gets the mean square slope of what was faded out.
+// How much of each train a pixel shades exactly (the rest short-crested): all of it within two
+// wavelengths of the camera, none from six on (counting the camera's height), smoothly, and none for
+// the trains the physics does not ride. That is the water round the board seen from the follow
+// camera, where the shading must match the shape the board pitches on. Farther out and from high up
+// a regular train shows as stripes far more than the same energy short-crested does, so there the
+// shading is short-crested (an edge of a wider exact zone showed as an arc on the water from 45 m up).
+vec4 lake_pixel_exact(vec2 rest) {
+	if (!lake_displace) {
+		return vec4(0.0);
+	}
+	float reach_m = max(length(rest - lake_lod_centre), lake_lod_height_m);
+	vec4 lengths = vec4(wave_a.w, wave_b.w, wave_c.w, wave_d.w);
+	return (vec4(1.0) - smoothstep(2.0 * lengths, 6.0 * lengths, vec4(reach_m))) * lake_shape_mask();
+}
+
+// The lake's surface at a pixel: near the camera, where the board floats on them, the exact Gerstner
+// tangents of the trains the physics rides at the pixel's rest point, faded where a wavelength
+// covers too few pixels; elsewhere (farther out, from high up, on the far water) and for the trains
+// the physics does not ride, short-crested shading (lake_shading_train()), so few long trains do not
+// show as regular stripes from afar. The two are blended by the square roots of the exact share
+// (lake_pixel_exact()), which keeps the slopes' energy. The picture's short train (raised by the
+// recent wind) as shading too. `faded_slope2` gets the mean square slope of what was faded out.
 void lake_pixel_surface(vec2 rest, float pixel_m, out vec3 tangent_x, out vec3 tangent_z, out float crest, out float total_steepness, out float faded_slope2) {
 	vec4 lengths = vec4(wave_a.w, wave_b.w, wave_c.w, wave_d.w);
 	vec4 shown = vec4(1.0) - smoothstep(lengths / 6.0, lengths / 3.0, vec4(pixel_m));
-	vec4 near_shape = lake_shape_weights(rest);
+	vec4 near_shape = lake_pixel_exact(rest);
 	vec3 displacement;
 	lake_wave_surface(rest, shown * sqrt(near_shape), displacement, tangent_x, tangent_z, crest, total_steepness);
 	vec4 amplitudes = lake_amplitudes(rest);
