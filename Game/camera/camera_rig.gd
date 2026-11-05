@@ -46,6 +46,10 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	camera = Camera3D.new()
 	camera.name = "Camera3D"
+	# This camera moves in _process (every rendered frame), not in physics ticks: no interpolation.
+	# With it on, Godot drew the camera between its places at the last two ticks while the board
+	# was drawn where it is now, and the board shook in the picture by up to 2.5 pixels a frame (GR9).
+	camera.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 	camera.current = true
 	# 35 km, so a map's far mountains are drawn (MAP_SILVAPLANA_PLAN.md, M2: the farthest visible
 	# land at Silvaplana is 32 km away). On open water the fog hides everything past 1.5 km anyway.
