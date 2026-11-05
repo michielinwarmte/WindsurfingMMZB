@@ -180,7 +180,7 @@ func test_the_lake_field_reads_the_grid_and_floats_on_it() -> void:
 	field.amplitudes_for(950.0, 0.0)
 	var expected: PackedFloat64Array = PackedFloat64Array()
 	field.lake.amplitudes_at(950.0, 0.0, expected)
-	assert_eq(field.count, 2, "the physics floats on the 8 m and 4 m trains (physics_trains)")
+	assert_eq(field.count, 4, "the physics floats on all four trains (physics_trains, 9.18)")
 	for band: int in field.count:
 		assert_eq(field.amplitude[band], expected[band], "the grid's amplitude")
 		assert_almost_eq(field.steepness[band], field.k[band] * expected[band], 1e-12, "the physical steepness")

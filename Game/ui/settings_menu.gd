@@ -207,6 +207,9 @@ func _build_wave_rows(s: SettingsValues) -> void:
 	# Its hint is short: a row's hint does not wrap, and a long one widens the whole page.
 	_add_switch(grid, "Lake waves", s.lake_waves, "Silvaplana: grown by its wind",
 		func(on: bool) -> void: s.lake_waves = on)
+	_add_slider(grid, "Lake wave height", SettingsValues.LAKE_WAVE_SCALE_MIN, SettingsValues.LAKE_WAVE_SCALE_MAX, 0.1, s.lake_wave_scale,
+		func(v: float) -> String: return "x%.1f of the growth law" % v,
+		func(v: float) -> void: s.lake_wave_scale = v)
 	# Every change, here or on another tab (the wind's speed and direction), updates the
 	# wave rows' texts and greys out the rows that do not count.
 	if not GameSettings.changed.is_connected(_update_wave_rows):

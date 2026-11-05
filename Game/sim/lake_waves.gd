@@ -36,6 +36,9 @@ const SHAPE_END: float = 12.0
 const PLANT_GROWTH: float = 0.04
 ## How much more wind the look train's growth with the wind is measured at (a 10 % step).
 const GROWTH_STEP: float = 1.1
+## The command line's wave-height multiplier (scale_from_arguments()), for the autopilot's training
+## on higher waves: --lake_wave_scale=1.5.
+const SCALE_ARGUMENT: String = "--lake_wave_scale="
 
 var config: LakeWavesConfig
 ## The wind the waves were built for: where it comes from (degrees) and its speed at 10 m (m/s),
@@ -72,6 +75,12 @@ var look_data: PackedFloat32Array = PackedFloat32Array()
 var look_response_s: float = 0.0
 ## The largest sum of the physics' trains' amplitudes anywhere: the highest crest possible.
 var max_total_amplitude_m: float = 0.0
+## The depth the trains travel in (omega^2 = g k tanh(k h), 9.18): LakeWavesConfig's, or when that
+## is 0 the median depth of the lake's nodes, m.
+var reference_depth_m: float = 0.0
+## How many nodes had a train held at the breaking steepness k a = pi/7 (only with a height scale
+## far above the growth law's; for the report).
+var held_at_breaking: int = 0
 
 ## The spectrum's shape added up from 0 (see _shape_up_to()), shared by every lake.
 static var _shape_table: PackedFloat64Array = PackedFloat64Array()
@@ -90,9 +99,10 @@ static func build(lake_config: LakeWavesConfig, depth_at: Callable, area: Rect2,
 	lake.config = lake_config
 	lake.from_deg = wind_from_deg
 	lake.wind_10m_ms = wind_ms
-	lake._set_up_bands()
 	lake.map = FetchMap.build(depth_at, area, lake_config.cell_m, wind_from_deg, speed_factor_at,
 		lake_config.ray_count, lake_config.ray_spacing_deg)
+	lake.reference_depth_m = lake_config.reference_depth_m if lake_config.reference_depth_m > 0.0 else lake.map.median_depth_m()
+	lake._set_up_bands()
 	lake._fill_nodes()
 	lake.look_response_s = lake.look_response_time_s(wind_ms)
 	return lake
@@ -158,12 +168,25 @@ func height_and_period(wind_ms: float, fetch_m: float) -> Vector2:
 
 ## The amplitude (m) of a train of length `length_m` (one octave of the spectrum around it) in a sea
 ## of significant height hs_m and peak period tp_s: the train's energy a² / 2 is its octave's share
-## of the spectrum's energy m0 = (Hs / 4)².
-static func band_amplitude_m(length_m: float, hs_m: float, tp_s: float, gamma: float = 3.3) -> float:
+## of the spectrum's energy m0 = (Hs / 4)². depth_m: the water the waves travel in (0: deep).
+static func band_amplitude_m(length_m: float, hs_m: float, tp_s: float, gamma: float = 3.3, depth_m: float = 0.0) -> float:
 	if hs_m <= 0.0 or tp_s <= 0.0:
 		return 0.0
-	var share: float = band_share(length_m / sqrt(2.0), length_m * sqrt(2.0), tp_s, gamma)
+	var share: float = band_share(length_m / sqrt(2.0), length_m * sqrt(2.0), tp_s, gamma, depth_m)
 	return hs_m * sqrt(share / 8.0)
+
+
+## The wave-height multiplier given on the command line (--lake_wave_scale=1.5), or -1 when none is.
+static func scale_from_arguments(arguments: PackedStringArray) -> float:
+	for argument: String in arguments:
+		if argument.begins_with(SCALE_ARGUMENT):
+			return argument.trim_prefix(SCALE_ARGUMENT).to_float()
+	return -1.0
+
+
+## This run's command-line multiplier (scale_from_arguments() of the Godot run's user arguments).
+static func command_line_scale() -> float:
+	return scale_from_arguments(OS.get_cmdline_user_args())
 
 
 ## The share of a JONSWAP spectrum's energy between two wavelengths (deep water), for a peak period.
@@ -171,11 +194,11 @@ static func band_amplitude_m(length_m: float, hs_m: float, tp_s: float, gamma: f
 ##   S(ω) = α g² ω⁻⁵ exp(−1.25 (ωp/ω)⁴) γ^r,  r = exp(−(ω − ωp)² / (2 σ² ωp²))
 ## With s = ω / ωp the shape is s⁻⁵ exp(−1.25 s⁻⁴) γ^r(s) times a constant; the share is the shape
 ## added up over the band divided by the whole. The wavelengths become frequencies by deep water's
-## ω² = g·k.
-static func band_share(short_m: float, long_m: float, tp_s: float, gamma: float = 3.3) -> float:
+## ω² = g·k·tanh(k·h) (deep water's ω² = g·k for depth_m 0).
+static func band_share(short_m: float, long_m: float, tp_s: float, gamma: float = 3.3, depth_m: float = 0.0) -> float:
 	var peak: float = TAU / tp_s
-	var low: float = sqrt(G * TAU / long_m) / peak
-	var high: float = sqrt(G * TAU / short_m) / peak
+	var low: float = WaveField.angular_frequency(TAU / long_m, depth_m) / peak
+	var high: float = WaveField.angular_frequency(TAU / short_m, depth_m) / peak
 	return (_shape_up_to(high, gamma) - _shape_up_to(low, gamma)) / _shape_up_to(INF, gamma)
 
 
@@ -193,15 +216,15 @@ func _set_up_bands() -> void:
 		wave_number.append(TAU / length)
 		dir_x.append(direction.x)
 		dir_z.append(direction.y)
-		phase0.append(_phase_of(i))
+	# The phases at the origin at time 0: random, from a fixed seed (the research's stage 1), so the
+	# crests do not all meet in one place, and every PC of a LAN game and every run gets the same
+	# sea. Godot's generator (PCG32) gives the same numbers for the same seed on every PC.
+	var phases: RandomNumberGenerator = RandomNumberGenerator.new()
+	phases.seed = config.phase_seed
+	for i: int in band_count:
+		phase0.append(phases.randf() * TAU)
 	look_dir = WaveField.direction_for_bearing(downwind_deg + config.look_offset_deg)
-	look_phase0 = _phase_of(band_count)
-
-
-## A fixed phase for train i at the origin at time 0, spread over the circle by the golden ratio,
-## so the trains' crests do not all meet at the lake's middle at the start. Any spread would do.
-static func _phase_of(i: int) -> float:
-	return TAU * fposmod(0.6180339887 * (i + 1), 1.0)
+	look_phase0 = phases.randf() * TAU
 
 
 ## Every node's waves (steps 2 to 4 of the top of this file).
@@ -228,12 +251,17 @@ func _fill_nodes() -> void:
 		var scale: float = depth_factor * config.height_scale
 		var total: float = 0.0
 		for band: int in band_count:
-			var amplitude: float = band_amplitude_m(wavelength_m[band], hs, tp, config.peak_enhancement) * scale
+			var amplitude: float = band_amplitude_m(wavelength_m[band], hs, tp, config.peak_enhancement, reference_depth_m) * scale
+			# A wave steeper than k·a = pi/7 breaks (H/L = 1/7: coastalwiki; Michell 1893): only a
+			# height scale far above the law's reaches it, and the train is held there.
+			if wave_number[band] * amplitude > MAX_STEEPNESS:
+				amplitude = MAX_STEEPNESS / wave_number[band]
+				held_at_breaking += 1
 			amplitudes[i * band_count + band] = amplitude
 			if band < physics_count:
 				total += amplitude
 		max_total_amplitude_m = maxf(max_total_amplitude_m, total)
-		var look: float = band_amplitude_m(config.look_wavelength_m, hs, tp, config.peak_enhancement) * scale
+		var look: float = band_amplitude_m(config.look_wavelength_m, hs, tp, config.peak_enhancement, reference_depth_m) * scale
 		look_data[4 * i] = look
 		look_data[4 * i + 1] = _look_growth(look, wind_10m_ms * map.wind_factor[i], fetch, depth)
 		look_data[4 * i + 2] = hs * scale
@@ -247,7 +275,7 @@ func _look_growth(look_m: float, wind_ms: float, fetch_m: float, depth_m: float)
 		return 0.0
 	var more: Vector2 = height_and_period(wind_ms * GROWTH_STEP, fetch_m)
 	var depth_factor: float = minf(1.0, config.depth_limited_height_ratio * depth_m / more.x) if more.x > 0.0 else 1.0
-	var look_more: float = band_amplitude_m(config.look_wavelength_m, more.x, more.y, config.peak_enhancement) * depth_factor * config.height_scale
+	var look_more: float = band_amplitude_m(config.look_wavelength_m, more.x, more.y, config.peak_enhancement, reference_depth_m) * depth_factor * config.height_scale
 	if look_more <= 0.0:
 		return 0.0
 	return log(look_more / look_m) / log(GROWTH_STEP)

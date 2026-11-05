@@ -97,8 +97,11 @@ func compute(body: SimRigidBody, surface: WaterSurface, time_s: float, rho_water
 		_clear()
 		return
 
-	# The flow the fin sees: its own motion (including the board's rotation) minus the water's.
-	var v_rel: Vector3 = body.point_velocity(cop_world) - surface.velocity_at(cop_world.x, cop_world.z, time_s)
+	# The flow the fin sees: its own motion (including the board's rotation) minus the water's, at
+	# the centre of pressure's depth: under waves the water's orbital motion fades with depth,
+	# e^(-k depth) per wave (PHYSICS_SPEC.md 9.18; on the wave set's sea the surface's, as before).
+	var cop_depth: float = root_depth + (root_world.y - cop_world.y)
+	var v_rel: Vector3 = body.point_velocity(cop_world) - surface.velocity_below(cop_world.x, cop_world.z, cop_depth, time_s)
 	var v_body: Vector3 = body.to_body(v_rel)
 	var v_plane: Vector3 = Vector3(v_body.x, 0.0, v_body.z)  # flow in the fin's plane
 	var speed: float = v_plane.length()

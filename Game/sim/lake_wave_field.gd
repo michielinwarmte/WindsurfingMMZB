@@ -6,7 +6,15 @@ extends WaveField
 ##   1. Each train's amplitude comes from the lake's grid, read at the asked point between the four
 ##      nearest nodes (bilinear), and its steepness is the physical one, k·A (at most pi/7). The
 ##      lengths, directions and phases are the same over the whole lake.
-##   2. Each train has its own phase at the origin (LakeWaves._phase_of()).
+##   2. Each train has its own phase at the origin (LakeWaves: seeded).
+##   3. The trains travel at the speed of the lake's depth, omega^2 = g k tanh(k h) with the lake's
+##      reference depth (9.18; deep water for these trains on Silvaplana).
+##   4. The water's motion fades below the surface, e^(-k depth) per train (velocity_below(), the
+##      fin; 9.18).
+##   5. A view of the lake can stand for the water a hull feels (set_footprint()): each train's
+##      height averaged over the hull's wet bottom (9.18), so a planing hull bridges the chop
+##      shorter than its wet length, as a real one does. The fin, the picture and the telemetry
+##      take the lake's own view (no footprint: every factor 1).
 ## The heights change slowly next to a wavelength (nodes 16 m apart), so within one query the
 ## amplitudes of the asked point are used for the whole solve for the rest point and for the
 ## answers: the rest point lies at most the sum of the amplitudes (about 0.1 m) away, where the
@@ -32,17 +40,22 @@ var _per_cell: float = 1.0
 var _grid: PackedFloat32Array = PackedFloat32Array()
 ## The grid holds every train's amplitude (LakeWaves.band_count a node); the physics reads its first.
 var _stride: int = 1
+## How much of each train the asker feels (set_footprint()): 1 for the lake's own view; for a
+## hull's view, the train's height averaged over its wet bottom.
+var footprint_factor: PackedFloat64Array = PackedFloat64Array()
 
 
 func _init(lake_waves: LakeWaves, water_config: WaterConfig = null) -> void:
 	super(null, water_config, 0.0)
 	lake = lake_waves
 	count = lake.physics_count
+	fades_with_depth = true
 	for i: int in count:
 		var wave_k: float = lake.wave_number[i]
+		var wave_omega: float = WaveField.angular_frequency(wave_k, lake.reference_depth_m)
 		k.append(wave_k)
-		c.append(sqrt(G / wave_k))
-		omega.append(sqrt(G * wave_k))
+		c.append(wave_omega / wave_k)
+		omega.append(wave_omega)
 		dir_x.append(lake.dir_x[i])
 		dir_z.append(lake.dir_z[i])
 		wavelength.append(lake.wavelength_m[i])
@@ -51,6 +64,8 @@ func _init(lake_waves: LakeWaves, water_config: WaterConfig = null) -> void:
 	amplitude.fill(0.0)
 	steepness.resize(count)
 	steepness.fill(0.0)
+	footprint_factor.resize(count)
+	footprint_factor.fill(1.0)
 	_columns = lake.map.columns
 	_rows = lake.map.rows
 	_x0_m = lake.map.x0_m
@@ -66,8 +81,26 @@ func set_wind_bearing(_wind_from_bearing_deg: float) -> void:
 	pass
 
 
+## Makes this view the water a hull feels: each train's height averaged over the hull's wet bottom,
+## length_m along its bow's direction `forward` (x, z) and beam_m across (9.18). The pressure of a
+## wave of wave number k under a flat bottom of length l is its mean over that length, which for a
+## sine wave is sin(k l / 2) / (k l / 2) (linear theory: the wave's pressure integrated over the
+## bottom); a bottom l long is taken as a Gaussian of the same spread, l^2 / 12, so the factor is
+## exp(-k^2 s^2 / 2) with s^2 = (l cos a)^2 / 12 + (b sin a)^2 / 12 for a train running at an angle
+## a to the bow, smooth and never negative. A wave longer than the bottom is felt nearly whole; a
+## wave shorter than it is bridged.
+func set_footprint(length_m: float, beam_m: float, forward: Vector2) -> void:
+	var length_spread: float = length_m * length_m / 12.0
+	var beam_spread: float = beam_m * beam_m / 12.0
+	for i: int in count:
+		var along: float = forward.x * dir_x[i] + forward.y * dir_z[i]
+		var across_squared: float = maxf(1.0 - along * along, 0.0)
+		var spread: float = along * along * length_spread + across_squared * beam_spread
+		footprint_factor[i] = exp(-0.5 * k[i] * k[i] * spread)
+
+
 ## Sets the trains' amplitudes and steepness to those at a game position (bilinear between the
-## grid's nodes; flat off the grid).
+## grid's nodes; flat off the grid), times the view's footprint factors.
 func amplitudes_for(x: float, z: float) -> void:
 	var fx: float = (x - _x0_m) * _per_cell
 	var fz: float = (z - _z0_m) * _per_cell
@@ -84,7 +117,7 @@ func amplitudes_for(x: float, z: float) -> void:
 	for i: int in count:
 		var top: float = lerpf(_grid[north + i], _grid[north + _stride + i], tx)
 		var bottom: float = lerpf(_grid[south + i], _grid[south + _stride + i], tx)
-		var wave_a: float = lerpf(top, bottom, tz)
+		var wave_a: float = lerpf(top, bottom, tz) * footprint_factor[i]
 		amplitude[i] = wave_a
 		steepness[i] = minf(k[i] * wave_a, LakeWaves.MAX_STEEPNESS)
 
@@ -114,6 +147,20 @@ func velocity_at(x: float, z: float, t: float) -> Vector3:
 func sample_at(x: float, z: float, time_s: float, samples: PackedFloat64Array, index: int) -> void:
 	amplitudes_for(x, z)
 	super(x, z, time_s, samples, index)
+
+
+func _phase_of_wave(i: int) -> float:
+	return phase[i]
+
+
+## The highest crest at a game position: the sum of the trains' amplitudes there (the AI's sea
+## height, RaceObservation.sea_height_m()).
+func crest_height_at(x: float, z: float) -> float:
+	amplitudes_for(x, z)
+	var total: float = 0.0
+	for i: int in count:
+		total += amplitude[i]
+	return total
 
 
 ## As WaveField.displacement_at, with each train's own phase.
@@ -224,6 +271,7 @@ func shader_parameters() -> Dictionary[String, Variant]:
 			parameters[names[slot]] = Vector4(0.0, -1.0, 0.0, 10.0)
 	parameters["wave_amplitudes"] = Vector4.ZERO
 	parameters["base_height_m"] = base_height_m
+	parameters["wave_depth_m"] = lake.reference_depth_m
 	parameters["lake_waves_on"] = true
 	parameters["lake_shape_trains"] = count
 	parameters["lake_grid"] = Vector4(_x0_m, _z0_m, _per_cell, 0.0)

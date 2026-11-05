@@ -103,8 +103,9 @@ func depth_grid() -> TerrainGrid:
 ## mean wind of that moment (9.17). With the map's wind: its direction and speed at the field's
 ## time of day, the local wind from its pattern and the lee's average; with one wind for the whole
 ## world (the map's wind off): that wind, the same everywhere. Every simulation asking at the same
-## wind gets the same LakeWaves, so the boards of a race sail on one sea.
-func lake_waves_for(wind: WindField, wind_config: WindConfig) -> LakeWaves:
+## wind gets the same LakeWaves, so the boards of a race sail on one sea. height_scale: every train's
+## height times this (the settings' or the command line's multiplier, 9.18).
+func lake_waves_for(wind: WindField, wind_config: WindConfig, height_scale: float = 1.0) -> LakeWaves:
 	if lake_waves == null or depth_grid() == null or wind_config == null:
 		return null
 	var from_deg: float = wind_config.from_bearing_deg
@@ -118,13 +119,17 @@ func lake_waves_for(wind: WindField, wind_config: WindConfig) -> LakeWaves:
 		var pattern_ms: float = map_wind.day.lake_speed_ms(time_s)
 		wind_10m_ms = pattern_ms * map_field.speed_at_height(10.0) / maxf(map_field.speed_at_height(map_field.pattern_height_m), 1e-6)
 		speed_factor_at = map_speed_factor.bind(map_wind, from_deg, pattern_ms / SimMath.KNOT_MS)
-	var key: String = "%.2f/%.3f" % [from_deg, wind_10m_ms]
+	var key: String = "%.2f/%.3f/%.3f" % [from_deg, wind_10m_ms, height_scale]
 	if _lake_waves_built.has(key):
 		return _lake_waves_built[key]
 	var grid: TerrainGrid = depth_grid()
 	var area: Rect2 = Rect2(grid.x0_m, grid.z0_m, (grid.columns - 1) * grid.cell_m, (grid.rows - 1) * grid.cell_m)
 	var depth_at: Callable = func(x: float, z: float) -> float: return ShoreCheck.depth_at(grid, Vector3(x, 0.0, z))
-	var built: LakeWaves = LakeWaves.build(lake_waves, depth_at, area, from_deg, wind_10m_ms, speed_factor_at)
+	var lake_config: LakeWavesConfig = lake_waves
+	if height_scale != 1.0:
+		lake_config = lake_waves.duplicate() as LakeWavesConfig
+		lake_config.height_scale *= height_scale
+	var built: LakeWaves = LakeWaves.build(lake_config, depth_at, area, from_deg, wind_10m_ms, speed_factor_at)
 	if _lake_waves_built.size() >= LAKE_WAVES_KEPT:
 		_lake_waves_built.erase(_lake_waves_built.keys()[0])
 	_lake_waves_built[key] = built

@@ -235,7 +235,7 @@ void lake_shading_train(vec4 wave, float amplitude, float pixel_m, vec2 rest, in
 		float length_m = wave.w * SHADING_STRETCH[j];
 		float k = 2.0 * PI / length_m;
 		float shown = 1.0 - smoothstep(length_m / 6.0, length_m / 3.0, pixel_m);
-		float phase = k * dot(d, rest) - sqrt(G * k) * water_time_s + wave.z + SHADING_PHASES[j];
+		float phase = k * dot(d, rest) - wave_omega(k) * water_time_s + wave.z + SHADING_PHASES[j];
 		float slope = part_a * k * cos(phase) * shown;
 		tangent_x.y += slope * d.x;
 		tangent_z.y += slope * d.y;
