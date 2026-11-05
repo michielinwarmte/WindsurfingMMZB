@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="LakeWavesConfig" load_steps=2 format=3]
+
+; Lake Silvaplana's own waves (PHYSICS_SPEC.md 9.17; PH44; the research,
+; Documentation/reports/waves/wave_system_research.md section 1). Where each number comes from:
+; - growth law SPM (Shore Protection Manual 1984, the JONSWAP fetch laws, as WindWaves uses them);
+;   CEM (2002) is the switch: the two agree on the height within 7 % and differ by 25 % on the period;
+; - four trains, 8, 4, 2 and 1 m (an octave each), and 0.5 m for the picture only: the research's
+;   recipe (1.7);
+; - the physics floats on the 8 m and 4 m trains only (physics_trains = 2); the 2 m and 1 m trains
+;   are drawn as shading: on a beam reach in 18 kt they halved the board's speed (10.7 against
+;   20.3 kt), the hull's limit on waves shorter than the board (PH9, PH10; lake_waves_config.gd);
+; - their directions 0, -7, +10, -14 and +18 degrees off downwind: an estimate, the size of the
+;   settings' default spread (0.25 x the open sea's -28, +40, -55), shorter waves spread more
+;   (Mitsuyasu et al. 1975);
+; - peak enhancement 3.3 (JONSWAP, Hasselmann et al. 1973);
+; - the fetch: the SPM's nine rays 6 degrees apart, cosine-weighted (the research, 1.2);
+; - cells of 16 m: the research's 8 to 16 m (an estimate);
+; - Hs at most 0.6 of the depth (the Coastal Engineering Manual's rule, WindWaves 9.16).
+
+[ext_resource type="Script" path="res://sim/config/lake_waves_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+growth_law = 0
+wavelengths_m = PackedFloat32Array(8, 4, 2, 1)
+offsets_deg = PackedFloat32Array(0, -7, 10, -14)
+physics_trains = 2
+look_wavelength_m = 0.5
+look_offset_deg = 18.0
+peak_enhancement = 3.3
+height_scale = 1.0
+cell_m = 16.0
+ray_count = 9
+ray_spacing_deg = 6.0
+depth_limited_height_ratio = 0.6

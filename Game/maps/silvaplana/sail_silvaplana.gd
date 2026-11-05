@@ -60,14 +60,24 @@ var _overview_at: Vector3 = Vector3.INF
 func _enter_tree() -> void:
 	_map_config = load(MAP_CONFIG_PATH)
 	var windsurfer: WindsurferNode = $Windsurfer
-	windsurfer.environment = load(ENVIRONMENT_PATH)
+	# This session's own copy of the lake's environment, starting at the session's time of day, so
+	# every board's wind and the lake's waves (built for the wind of that moment, PHYSICS_SPEC.md
+	# 9.17) are made at that time, the race's boards too (they share the player's environment).
+	var environment: EnvironmentConfig = (load(ENVIRONMENT_PATH) as EnvironmentConfig).duplicate()
+	var session_time_s: float = _session_time_of_day_s()
+	if session_time_s >= 0.0:
+		environment.start_hour = session_time_s / 3600.0
+	windsurfer.environment = environment
 	# Before main.gd's part, which moves the start behind a race course's start line (--course).
 	windsurfer.start_position = start_position()
 	super()
 
 
 func _ready() -> void:
-	shore_grid = TerrainGrid.load_from(GRID_PATH)
+	# The environment's depth grid (the lake's waves were built on it), or the file's.
+	shore_grid = _windsurfer.environment.depth_grid() if _windsurfer.environment != null else null
+	if shore_grid == null:
+		shore_grid = TerrainGrid.load_from(GRID_PATH)
 	_lake_area = LakeArea.from_grid(shore_grid, start_position(), LAKE_STEP_M)
 	# The far water covers the depth grid's area only (OceanNode.far_area_xz): where the land in
 	# it is higher than the lake the terrain hides it, and outside it there is no water at all.
@@ -151,6 +161,20 @@ func map_wind_field() -> MapWindField:
 	return _windsurfer.sim.wind as MapWindField
 
 
+## The time of day this session starts at, seconds since midnight: the LAN host's choice in a
+## network game, else --time=<hh:mm>; -1 for the environment's own (14:30).
+func _session_time_of_day_s() -> float:
+	var time_s: float = -1.0
+	if Lan.in_game:
+		time_s = Lan.game.lake_time_s
+	for arg: String in OS.get_cmdline_user_args():
+		if arg.begins_with("--time="):
+			var parts: PackedStringArray = arg.get_slice("=", 1).split(":")
+			var minutes: float = parts[1].to_float() if parts.size() > 1 else 0.0
+			time_s = parts[0].to_float() * 3600.0 + minutes * 60.0
+	return time_s
+
+
 ## The time of day the sailing starts at: 14:30, or --time=<hh:mm>.
 func _start_the_clock() -> void:
 	var field: MapWindField = map_wind_field()
@@ -183,6 +207,9 @@ func _add_gust_picture() -> void:
 func _put_gusts_on_water() -> void:
 	if _gust_picture == null:
 		return
+	# The lake's short wave train follows the wind of its last few seconds (PHYSICS_SPEC.md 9.17).
+	var lake_water: LakeWaveField = _windsurfer.sim.water as LakeWaveField
+	_gust_picture.set_recent_time(lake_water.lake.look_response_s if lake_water != null else 0.0)
 	_ocean.set_water_parameter("wind_ripple_map", _gust_picture.get_texture())
 	_ocean.set_water_parameter("wind_ripple_map_area", _gust_picture.area_vector())
 
@@ -231,8 +258,11 @@ func _check_gust_picture() -> void:
 	var area: Rect2 = _gust_picture.area_xz
 	var pixels: int = image.get_width()
 	var worst: float = 0.0
+	var worst_recent: float = 0.0
 	var lowest: float = INF
 	var highest: float = 0.0
+	var lake_water: LakeWaveField = _windsurfer.sim.water as LakeWaveField
+	var recent_s: float = lake_water.lake.look_response_s if lake_water != null else 0.0
 	for column: int in range(0, pixels, 8):
 		for row: int in range(0, pixels, 8):
 			var x: float = area.position.x + (column + 0.5) / pixels * area.size.x
@@ -241,9 +271,13 @@ func _check_gust_picture() -> void:
 			var expected: float = clampf(pow(wind_ms / now.lake_speed_ms, GUST_CONTRAST) / 2.0, 0.0, 1.0)
 			var drawn: float = image.get_pixel(column, row).r
 			worst = maxf(worst, absf(drawn - expected))
+			# Green: the wind of the last few seconds (the lake's short train, 9.17).
+			var expected_recent: float = clampf(WindRippleMap.recent_ratio(field.map_wind, now, x, z, recent_s) / 2.0, 0.0, 1.0)
+			worst_recent = maxf(worst_recent, absf(image.get_pixel(column, row).g - expected_recent))
 			if _lake_area.is_lake_at(x, z):
 				lowest = minf(lowest, 2.0 * drawn)
 				highest = maxf(highest, 2.0 * drawn)
 	print("Gust picture at %s: largest difference from MapWind %.4f (one 8-bit step is 0.0039); ripples on the lake x%.2f to x%.2f" % [
 		field.time_of_day_text(), worst, lowest, highest])
+	print("The wind of the last %.0f s (green): largest difference from MapWind %.4f" % [recent_s, worst_recent])
 	get_tree().quit()

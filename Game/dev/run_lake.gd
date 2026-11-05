@@ -13,6 +13,12 @@ extends SceneTree
 ##                               --from=<degrees> set another steady wind
 ##   --air=<kg/m3> --water=<kg/m3>  another air or water density (default: the lake's 0.98, 1000)
 ##   --waves=1                   the default wave set on the water (flat water otherwise)
+##   --lake_waves=1              the lake's own waves, grown by the wind over the fetch
+##                               (PHYSICS_SPEC.md 9.17), instead of the default set; with
+##                               --lake_bands=8,4 only those trains (m), all of them in the
+##                               physics, --lake_physics=<n> the physics on the n longest,
+##                               --lake_scale=<x> every train's height times x, --lake_law=cem
+##                               the CEM's growth law
 ##   --compare=1                 instead: the thin-air comparison (a straight beam reach on open
 ##                               water at sea level, in thin air, and on the lake)
 ##   --out_dir=<dir>             a CSV per case (the columns of tools/simulate.sh)
@@ -45,6 +51,7 @@ var _grid: TerrainGrid
 var _start: Vector3
 var _steady: bool = false
 var _waves: bool = false
+var _lake_waves: bool = false
 var _air: float = -1.0
 var _water: float = -1.0
 var _steady_kt: float = -1.0
@@ -124,6 +131,23 @@ func _initialize() -> void:
 	_start.y = 0.0
 	_steady = options.get("wind", "map") == "steady"
 	_waves = options.get("waves", "0") == "1"
+	_lake_waves = options.get("lake_waves", "0") == "1"
+	_waves = _waves or _lake_waves
+	if _lake_waves:
+		var lake_config: LakeWavesConfig = _environment.lake_waves.duplicate()
+		if options.has("lake_bands"):
+			var lengths: PackedFloat32Array = PackedFloat32Array()
+			for length_m: float in options["lake_bands"].split_floats(","):
+				lengths.append(length_m)
+			lake_config.wavelengths_m = lengths
+			lake_config.physics_trains = lengths.size()
+		if options.has("lake_physics"):
+			lake_config.physics_trains = options["lake_physics"].to_int()
+		lake_config.height_scale = options.get("lake_scale", "1").to_float()
+		if options.get("lake_law", "spm") == "cem":
+			lake_config.growth_law = LakeWavesConfig.GrowthLaw.CEM
+		_environment = _environment.duplicate()
+		_environment.lake_waves = lake_config
 	_air = options.get("air", "-1").to_float()
 	_water = options.get("water", "-1").to_float()
 	_steady_kt = options.get("kt", "-1").to_float()
@@ -141,7 +165,7 @@ func _initialize() -> void:
 		DirAccess.make_dir_recursive_absolute(out_dir)
 
 	print("Lake Silvaplana, %s wind, air %.3f kg/m3, water %.0f kg/m3%s" % [
-		"steady" if _steady else "the map's", _air_density(), _water_config().density_kg_m3, ", waves" if _waves else ", flat water"])
+		"steady" if _steady else "the map's", _air_density(), _water_config().density_kg_m3, (", the lake's own waves" if _lake_waves else ", waves") if _waves else ", flat water"])
 	print("%-10s %5s %-6s | %5s %4s | %-15s | %5s %5s | %5s %5s %5s | %3s %5s | %5s" % [
 		"case", "time", "spot", "10m", "from", "fall", "done", "top", "sail", "min", "max", "rev", "yaw", "mean"])
 	var falls: int = 0
@@ -177,6 +201,9 @@ func _make_sim(time_of_day_s: float) -> WindsurferSim:
 	if _steady:
 		sim.wind_config = _steady_wind(field)
 		sim.wind = WindField.new(sim.wind_config)
+	if _lake_waves:
+		sim.wave_set_config = sim.wave_set_config.duplicate(true)
+		sim.wave_set_config.place_waves = true
 	sim.set_waves(_waves)
 	return sim
 

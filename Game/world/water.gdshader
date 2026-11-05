@@ -96,6 +96,25 @@ uniform vec3 foam_color : source_color = vec3(0.93, 0.96, 0.98);
 // slope of the surface at a crest) is above this: real waves whitecap from a steepness of
 // about 0.3 and break at 0.44, so a gentle swell shows no foam at all.
 uniform float foam_threshold = 0.3;
+// A lake's own waves (PHYSICS_SPEC.md 9.17; lake_waves_on and the grid are in gerstner.gdshaderinc).
+// Only the trains the physics floats on (lake_shape_trains) move the surface, so the board floats on
+// exactly the shape you see. The near mesh shows such a train as shape where its cells are small
+// enough for it (OceanNode's lake mesh: 0.25 m cells near the camera, doubling outward): train i keeps
+// its full shape out to 0.45 x lake_lod_reach x its wavelength from lake_lod_centre (the camera's x
+// and z) and none from 0.85 x that on. Every pixel then draws every train's slope (its exact Gerstner
+// normal at the pixel's rest point; the shorter trains the physics does not ride as slope only),
+// faded out where a wavelength covers fewer than 3 to 6 pixels; the slopes faded out roughen the
+// mirror instead. The far plane (lake_displace off) shows them all as slope only.
+uniform bool lake_displace = true;
+uniform vec2 lake_lod_centre = vec2(0.0);
+uniform float lake_lod_height_m = 0.0;
+uniform float lake_lod_reach = 20.0;
+// The picture's own shorter train (the physics never sees it): (direction x, direction z, phase,
+// wavelength), and per node (texelFetch, as lake_envelope) R its amplitude, G how much it grows with
+// the wind (d ln A / d ln U at the node), B Hs and A Tp.
+uniform vec4 lake_look_band = vec4(0.0, -1.0, 0.0, 0.5);
+uniform sampler2D lake_look_data : filter_nearest, repeat_disable;
+
 // A faint grid in world coordinates so that speed and heading show on flat water.
 uniform vec3 line_color : source_color = vec3(0.6, 0.8, 0.9);
 uniform float grid_strength = 0.12;
@@ -106,15 +125,32 @@ uniform float grid_fade_distance_m = 120.0;
 varying vec3 world_position;
 varying float crest_factor;  // -1 in a trough to +1 on a crest
 varying float crest_steepness;  // the sum of steepness x sin(phase): the surface slope at a crest
+varying vec2 rest_xz;  // the rest point of what is drawn here (the lake's per-pixel slopes)
+
+// How much of each lake train the mesh shows as shape at a rest point (see lake_displace).
+vec4 lake_shape_weights(vec2 rest) {
+	if (!lake_displace) {
+		return vec4(0.0);
+	}
+	vec2 off = abs(rest - lake_lod_centre);
+	float reach_m = max(max(off.x, off.y), lake_lod_height_m);
+	vec4 lengths = vec4(wave_a.w, wave_b.w, wave_c.w, wave_d.w) * lake_lod_reach;
+	return (vec4(1.0) - smoothstep(0.45 * lengths, 0.85 * lengths, vec4(reach_m))) * lake_shape_mask();
+}
 
 void vertex() {
 	vec2 rest = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xz;
+	rest_xz = rest;
 	vec3 displacement;
 	vec3 tangent_x;
 	vec3 tangent_z;
 	float crest;
 	float total_steepness;
-	wave_surface(rest, displacement, tangent_x, tangent_z, crest, total_steepness);
+	if (lake_waves_on) {
+		lake_wave_surface(rest, lake_shape_weights(rest), displacement, tangent_x, tangent_z, crest, total_steepness);
+	} else {
+		wave_surface(rest, displacement, tangent_x, tangent_z, crest, total_steepness);
+	}
 	VERTEX = VERTEX + displacement;
 	NORMAL = normalize(cross(tangent_z, tangent_x));
 	// The ripples' normal map tilts this wave normal, so Godot needs the wave's own surface
@@ -165,6 +201,46 @@ float wind_ripple_factor(vec2 position) {
 	return 2.0 * texture(wind_ripple_map, uv).r;
 }
 
+// The wind here relative to the lake's mean, averaged over the last few tens of seconds (the gust
+// picture's green channel, WindRippleMap; 1 without one): what the short train answers to.
+float wind_recent_ratio(vec2 position) {
+	if (wind_ripple_map_area.z <= 0.0 || wind_ripple_map_area.w <= 0.0) {
+		return 1.0;
+	}
+	vec2 uv = (position - wind_ripple_map_area.xy) / wind_ripple_map_area.zw;
+	return 2.0 * texture(wind_ripple_map, uv).g;
+}
+
+// The lake's surface at a pixel: every train's exact Gerstner tangents at the pixel's rest point,
+// faded where its wavelength covers too few pixels, and the picture's short train as slope (raised
+// by the recent wind); `faded_slope2` gets the mean square slope of what was faded out.
+void lake_pixel_surface(vec2 rest, float pixel_m, out vec3 tangent_x, out vec3 tangent_z, out float crest, out float total_steepness, out float faded_slope2) {
+	vec4 lengths = vec4(wave_a.w, wave_b.w, wave_c.w, wave_d.w);
+	vec4 shown = vec4(1.0) - smoothstep(lengths / 6.0, lengths / 3.0, vec4(pixel_m));
+	vec3 displacement;
+	lake_wave_surface(rest, shown, displacement, tangent_x, tangent_z, crest, total_steepness);
+	vec4 amplitudes = lake_amplitudes(rest);
+	vec4 slopes = amplitudes * 2.0 * PI / lengths;
+	faded_slope2 = dot((vec4(1.0) - shown) * slopes * slopes, vec4(0.5));
+	// The short train: nodes as lake_envelope; its amplitude at the recent wind (9.17, the gusts).
+	vec2 f = (rest - lake_grid.xy) * lake_grid.z;
+	if (f.x < 0.0 || f.y < 0.0 || f.x >= float(lake_grid_size.x - 1) || f.y >= float(lake_grid_size.y - 1)) {
+		return;
+	}
+	ivec2 node = ivec2(f);
+	vec2 t = f - vec2(node);
+	vec4 look = mix(mix(texelFetch(lake_look_data, node, 0), texelFetch(lake_look_data, node + ivec2(1, 0), 0), t.x),
+		mix(texelFetch(lake_look_data, node + ivec2(0, 1), 0), texelFetch(lake_look_data, node + ivec2(1, 1), 0), t.x), t.y);
+	float k = 2.0 * PI / lake_look_band.w;
+	float a = look.r * pow(max(wind_recent_ratio(rest), 0.0), look.g);
+	float look_shown = 1.0 - smoothstep(lake_look_band.w / 6.0, lake_look_band.w / 3.0, pixel_m);
+	float phase = k * dot(lake_look_band.xy, rest) - sqrt(G * k) * water_time_s + lake_look_band.z;
+	float slope = a * k * cos(phase) * look_shown;
+	tangent_x.y += slope * lake_look_band.x;
+	tangent_z.y += slope * lake_look_band.y;
+	faded_slope2 += 0.5 * (1.0 - look_shown) * (a * k) * (a * k);
+}
+
 float grid_line(vec2 p, float cell, float width) {
 	vec2 to_line = abs(fract(p / cell - 0.5) - 0.5) * cell;
 	float d = min(to_line.x, to_line.y);
@@ -175,6 +251,24 @@ float grid_line(vec2 p, float cell, float width) {
 void fragment() {
 	float distance_m = length(VERTEX);
 	float near = clamp(1.0 - distance_m / ripple_fade_m, 0.0, 1.0);
+	// A lake's waves: the surface's normal and directions per pixel (see lake_displace).
+	float waves_faded_slope2 = 0.0;
+	float pixel_crest_factor = crest_factor;
+	float pixel_crest_steepness = crest_steepness;
+	if (lake_waves_on) {
+		vec2 footprint = fwidth(rest_xz);
+		vec3 tangent_x;
+		vec3 tangent_z;
+		float crest;
+		float total_steepness;
+		lake_pixel_surface(rest_xz, max(footprint.x, footprint.y), tangent_x, tangent_z, crest, total_steepness, waves_faded_slope2);
+		mat3 to_view = mat3(VIEW_MATRIX);
+		NORMAL = normalize(to_view * normalize(cross(tangent_z, tangent_x)));
+		TANGENT = normalize(to_view * normalize(tangent_x));
+		BINORMAL = normalize(to_view * -normalize(tangent_z));
+		pixel_crest_factor = total_steepness > 0.0 ? crest / total_steepness : -1.0;
+		pixel_crest_steepness = crest;
+	}
 	float wind = wind_ripple_factor(world_position.xz);
 	float gust = clamp((wind - 1.0) * gust_look_contrast, -1.0, 1.0);
 	float darker = 1.0 - gust_darkening * max(gust, 0.0);
@@ -210,13 +304,13 @@ void fragment() {
 	// comes out of the water: what lies under it seen through it, and the water's own colour.
 	float facing = clamp(dot(NORMAL, VIEW), 0.0, 1.0);
 	float mirrored = 0.02 + 0.98 * pow(1.0 - facing, 5.0);
-	vec3 own_color = mix(deep_color, shallow_color, clamp(0.5 + 0.5 * crest_factor, 0.0, 1.0) * crest_lightening);
+	vec3 own_color = mix(deep_color, shallow_color, clamp(0.5 + 0.5 * pixel_crest_factor, 0.0, 1.0) * crest_lightening);
 	float shore = (1.0 - smoothstep(0.0, shore_line_depth_m, world_position.y - bed.y)) * shore_line_strength;
 	vec3 albedo = mix(own_color * (vec3(1.0) - through), vec3(0.9), shore) * (1.0 - mirrored) * darker;
 	vec3 emission = bed_color * through * (1.0 - shore) * (1.0 - mirrored);
 
 	// 5. Foam on the steep crests covers the rest; the grid lines lie on top.
-	float foam = smoothstep(foam_threshold, foam_threshold + 0.15, crest_steepness) * 0.7;
+	float foam = smoothstep(foam_threshold, foam_threshold + 0.15, pixel_crest_steepness) * 0.7;
 	albedo = mix(albedo, foam_color, foam);
 	emission *= 1.0 - foam;
 	float distance_fade = clamp(1.0 - distance_m / grid_fade_distance_m, 0.0, 1.0);
@@ -228,6 +322,12 @@ void fragment() {
 	// A gust's rougher water mirrors the bright sky less and more diffusely: darker and matt;
 	// a lull's is glassier.
 	roughness = max(roughness * wind, gust_roughness * max(gust, 0.0));
+	// A lake's wave slopes too small for the pixels roughen the mirror instead (a GGX alpha of
+	// roughness squared, widened by their mean square slope).
+	if (lake_waves_on) {
+		float alpha = roughness * roughness;
+		roughness = sqrt(sqrt(alpha * alpha + waves_faded_slope2));
+	}
 	ROUGHNESS = clamp(mix(roughness, 0.5, foam), 0.0, 1.0);
 	METALLIC = 0.0;
 	// Godot's mirror strength: 0.25 gives water's 2 % reflection straight on; less in a gust,

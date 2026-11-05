@@ -18,7 +18,7 @@ void vertex() {
 	vec3 tangent_z;
 	float crest;
 	float total_steepness;
-	wave_surface(VERTEX.xz, displacement, tangent_x, tangent_z, crest, total_steepness);
+	water_surface(VERTEX.xz, displacement, tangent_x, tangent_z, crest, total_steepness);
 	VERTEX = vec3(VERTEX.x, base_height_m + lift_m, VERTEX.z) + displacement;
 }
 

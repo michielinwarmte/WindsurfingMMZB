@@ -195,12 +195,15 @@ func _build_wave_rows(s: SettingsValues) -> void:
 	_depth_row = _add_slider(grid, "Water depth", SettingsValues.DEPTH_MIN_M, SettingsValues.DEPTH_DEEP_M, 0.5, s.water_depth_m,
 		func(v: float) -> String: return "Deep water" if v >= SettingsValues.DEPTH_DEEP_M else "%.1f m deep: waves at most %.0f cm" % [v, 60.0 * v],
 		func(v: float) -> void: s.water_depth_m = v)
+	# Lake Silvaplana's own waves (PH44): grown by the lake's wind over the open water upwind.
+	_add_switch(grid, "Lake waves", s.lake_waves, "On: on Lake Silvaplana the waves grow with the wind over the open water upwind; off: the waves above",
+		func(on: bool) -> void: s.lake_waves = on)
 	# Every change, here or on another tab (the wind's speed and direction), updates the
 	# wave rows' texts and greys out the rows that do not count.
 	if not GameSettings.changed.is_connected(_update_wave_rows):
 		GameSettings.changed.connect(_update_wave_rows)
 	_update_wave_rows()
-	_add_note(grid, "The swell is long waves from far away; the chop is the short waves the wind makes here. Fetch and depth are for From the wind.")
+	_add_note(grid, "The swell is long waves from far away; the chop is the short waves the wind makes here. Fetch and depth are for From the wind. With Lake waves on, Lake Silvaplana makes its own: flat by the upwind shore, bigger downwind.")
 
 
 ## The texts that depend on other rows, and which rows can be changed: nothing without

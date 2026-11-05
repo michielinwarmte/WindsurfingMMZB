@@ -20,6 +20,10 @@ const MAX_WAVES: int = 4
 ## The waves, swell and chop together. Only the first four with an amplitude above zero
 ## are used (the shader has four slots), in this order.
 @export var waves: Array[GerstnerWaveConfig] = []
+## Where the place has its own waves (a lake's, grown by its wind over its fetch:
+## EnvironmentConfig.lake_waves, PHYSICS_SPEC.md 9.17), use those instead of this set. Off: this
+## set everywhere, as before. The open water has none, so this changes nothing there.
+@export var place_waves: bool = false
 
 @export_group("Swell")
 ## true: the swell travels downwind, turned by swell_offset_deg, and turns with the wind.

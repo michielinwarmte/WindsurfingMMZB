@@ -176,11 +176,20 @@ func test_the_lake_scene() -> void:
 		assert_eq(material.get_shader_parameter("wind_ripple_map_area"), gust_area, "the gust picture covers the grid")
 		assert_true(material.get_shader_parameter("wind_ripple_map") is ViewportTexture, "drawn by the graphics card")
 	assert_eq(scene.get_node("HUD").find_children("*", "MiniMap", true, false).size(), 1, "a small map of the lake")
+	# The lake's own waves (Lake waves, on by default; PHYSICS_SPEC.md 9.17): the physics floats on them,
+	# the near water draws them as shape and shading, the far water as shading only.
+	assert_true(windsurfer.sim.water is LakeWaveField, "the lake's own waves")
+	assert_true((near.material_override as ShaderMaterial).get_shader_parameter("lake_waves_on"))
+	assert_true((far.material_override as ShaderMaterial).get_shader_parameter("lake_waves_on"))
+	assert_false((far.material_override as ShaderMaterial).get_shader_parameter("lake_displace"), "the far water stays flat")
+	assert_almost_eq(far.global_position.y, -windsurfer.sim.water.total_amplitude_m() - 0.02, 1e-4, "under the lake's troughs")
 	# The settings' wind is the open water's: the lake keeps its own.
 	GameSettings.values.wind_from_deg = 90.0
 	scene.apply_settings_live()
 	assert_almost_eq(windsurfer.sim.wind.config.from_bearing_deg, 222.0, 1e-6)
-	# A restart builds the water again when the waves changed, and it keeps the lake's look.
+	# A restart builds the water again when the waves changed, and it keeps the lake's look. With Lake
+	# waves off, the settings' waves (here the strong chop), as before.
+	GameSettings.values.lake_waves = false
 	GameSettings.values.wave_preset = SettingsValues.WavePreset.STRONG_CHOP
 	scene.get_node("PauseMenu").restart_requested.emit()
 	near = scene.get_node("Ocean/NearWater")
@@ -189,6 +198,7 @@ func test_the_lake_scene() -> void:
 	assert_almost_eq(far.global_position.y, -0.182 - 0.02, 1e-4, "the strong chop's troughs")
 	assert_eq((near.material_override as ShaderMaterial).get_shader_parameter("wind_ripple_map_area"), gust_area, "the gusts again")
 	assert_true(windsurfer.sim.wind is MapWindField, "still the map's wind")
+	assert_false(windsurfer.sim.water is LakeWaveField, "Lake waves off: the settings' waves")
 
 
 func test_the_start_menu_offers_the_lake() -> void:
