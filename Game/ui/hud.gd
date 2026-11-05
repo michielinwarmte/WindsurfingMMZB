@@ -21,6 +21,7 @@ var _fall_watch: FallWatch = FallWatch.new()
 var _help: Label
 var _rose: WindRose
 var _push_gauge: PushGauge
+var _body_gauge: BodyGauge
 ## Only in a map scene (show_mini_map), or with a race course (show_course).
 var _mini_map: MiniMap = null
 var _message: Label
@@ -63,6 +64,14 @@ func _ready() -> void:
 	_push_gauge.offset_right = PushGauge.GAUGE_SIZE.x * 0.5
 	_push_gauge.offset_top = -PushGauge.GAUGE_SIZE.y - 30.0
 	_push_gauge.offset_bottom = -30.0
+	# The body on the mouse (package B, with the setting on) as a gauge just right of the push gauge.
+	_body_gauge = BodyGauge.new()
+	add_child(_body_gauge)
+	_body_gauge.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_body_gauge.offset_left = PushGauge.GAUGE_SIZE.x * 0.5 + 12.0
+	_body_gauge.offset_right = _body_gauge.offset_left + BodyGauge.GAUGE_SIZE.x
+	_body_gauge.offset_top = -BodyGauge.GAUGE_SIZE.y - 30.0
+	_body_gauge.offset_bottom = -30.0
 
 	_rose = WindRose.new()
 	add_child(_rose)
@@ -171,6 +180,8 @@ func update_from(t: Telemetry, controller: PlayerController, camera_name: String
 	var manoeuvre: String = controller.manoeuvre_name()
 	# The push slider's level (Up/Down) on the gauge, when the controller has one.
 	_push_gauge.set_level(NAN if use_autopilot else controller.push_level)
+	# The body on the mouse, when the player has it on.
+	_body_gauge.set_body(null if use_autopilot else controller.body, t)
 	var prefix: String = "%s   " % clock_text if clock_text != "" else ""
 	var rest: String = "%s, %s%s    %s    camera: %s" % [tack, state, ("  " + manoeuvre) if manoeuvre != "" else "", who, camera_name]
 	if sailor_view:

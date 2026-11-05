@@ -51,9 +51,9 @@ Esc > Settings > **Body** (also in the start menu's settings). Changes apply as 
 | Mouse left alone | **Stays where you put it** (and back to the middle at every tack, gybe and fall) | Springs back to the middle | GD7 (a), the lead's recommendation |
 | Spring-back time | 1.5 s (95 % of the way back) | 0.5 to 4 s | the design: 1 to 2 s |
 | Sideways | **The board rolls with the mouse** (as seen from behind the board: right puts the starboard rail down, so on starboard tack left is more rail, on port tack right is) | Right is always more rail | GD7 (b), the lead's recommendation |
-| Rail | up to +6° (8° in all at most) | 2 to 8° | the design's +6; GP0's 8 |
+| Rail | up to +9° (12° in all at most) | 2 to 12° | the design's +6 and GP0's 8 until 6 November; Max: more (section 11) |
 | Windward rail | Off (the other way ends at a flat board) | On: on to 4° of windward rail | the design: "the other way flat"; GP0's follow-up tried −4 |
-| Back foot | ±1.5° | 0.5 to 2° (±1° is the gentler one) | the design |
+| Back foot | ±2.5° (0 to 5° in all) | 0.5 to 4° | the design's ±1.5 until 6 November; Max: more (section 11) |
 | Mouse travel | 300 px end to end | 100 to 800 px | the design: about 300 px |
 | Level | **1: the feet hold the rail** (they correct a gust's heel within 0.4 s) | 2: you hold the rail (the feet correct in 2 s, so a gust heels the board past your angle) | GP2's two levels; GP0 measured level 2 at 2 s |
 
@@ -208,3 +208,11 @@ Start with `tools/play_body.sh` (or double-click `tools/play.sh` and switch the 
 - **CLAUDE.md's commands table** could list `tools/play_body.sh` beside `tools/play_push.sh` (left to the lead, to avoid a clash).
 - **For Michiel**: section 7 (the broad reach's rail, the chatter reflex in waves).
 - **For the lead**: the harness's `--push` sailed without the slider from 1 to 5 November (section 4).
+
+## 11. Changed on 6 November 2026 (Max's play-test)
+
+Max: "can you make a gauge for the mouse controls. i cannot see it on the board. maybe make the limits a bit more".
+
+- **The body gauge** (`ui/body_gauge.gd`, beside the push gauge at the bottom, only with "Mouse body" on): a pad with a dot where the mouse is (sideways the rail, down the back foot, the way the mouse moves), the half that gives more leeward rail on this tack tinted, what the body adds now (RAIL, BACK FOOT, in degrees), and the board's own heel and trim beside them. The corner says *works* only when the body reaches the board: planing in the straps and not in a tack or a gybe; otherwise *plane in the straps* or *in a turn*, and the dot dims. Test: `test_body_gauge.gd`.
+- **The limits, larger:** the rail up to +9° by default (was +6°) and 12° in all (was 8°, GP0's band); the back foot ±2.5° by default (was ±1.5°), the trim 0 to 5° in all (was 0.5 to 3.5°, GP0's band). The settings' sliders go to 12° and 4°. Past GP0's bands is on purpose now: more rail than 8° measured only slower, and a stronger back foot bounces and catapults sooner; the player finds the edge. The feet still hold only what they can (section 7).
+- **Not measured with the new limits:** the speeds in section 5 are with the old ones (+6°, ±1.5°).

@@ -19,8 +19,9 @@ extends RefCounted
 ## targets while planing in the straps and not turning, so the mouse does nothing below planing or in
 ## a manoeuvre.
 ##
-## The ranges stay inside what GP0 measured (Documentation/reports/gameplay/gp0_measure.md): the
-## rail 0 to 8 degrees (beyond 8 is only slower), the trim 0.5 to 3.5 degrees. Max's open choices
+## The ranges go a little past what GP0 measured (Documentation/reports/gameplay/gp0_measure.md: the
+## rail 0 to 8 degrees, beyond 8 only slower; the trim 0.5 to 3.5 degrees), because Max asked for
+## more on 6 November 2026: the rail to 12 degrees in all, the trim 0 to 5. Max's open choices
 ## (ROADMAP GD7, the design's "open choices") are settings, with the lead's recommendation as the
 ## default, so they can be switched while playing.
 
@@ -34,12 +35,14 @@ enum Centre { STAYS, SPRINGS_BACK }
 ## rail; on port tack right is. RIGHT_IS_MORE_RAIL: right is always more leeward rail.
 enum Sideways { AS_SEEN, RIGHT_IS_MORE_RAIL }
 
-## GP0's measured bands: the most rail worth having (beyond it only slower) and the trim from the
-## flattest to the most nose-up tried. The mouse never asks for more than these, so it cannot ask
-## for what the feet cannot hold.
-const RAIL_MAX_DEG: float = 8.0
-const TRIM_MIN_DEG: float = 0.5
-const TRIM_MAX_DEG: float = 3.5
+## The most the mouse may ask for in all: the rail, and the trim from the flattest to the most nose-up.
+## GP0's measured bands were 8 degrees of rail (beyond it only slower) and a trim of 0.5 to 3.5; Max
+## asked for "the limits a bit more" (6 November 2026), so past those bands is now the player's to
+## find out: more rail is slower, too much back foot bounces and catapults. The feet still hold only
+## what they can (the simulation's own reach).
+const RAIL_MAX_DEG: float = 12.0
+const TRIM_MIN_DEG: float = 0.0
+const TRIM_MAX_DEG: float = 5.0
 ## Level 2: the feet's own correction of the rail slowed to this (SailorConfig.lean_feel_time_s;
 ## GP0 measured level 2 with 2.0 s), so a gust heels the board past the angle and your hand holds it.
 const SLOW_FEEL_TIME_S: float = 2.0
@@ -57,11 +60,12 @@ var sideways: Sideways = Sideways.AS_SEEN
 ## everywhere once planing (GP0's follow-up), and the hull's heeled lift is still uncertain (PH27).
 var windward_rail: bool = false
 var windward_rail_deg: float = WINDWARD_RAIL_DEG
-## The most leeward rail the mouse adds to the technique's (the design: 0 to +6 degrees), never
-## past RAIL_MAX_DEG in all.
-var rail_more_deg: float = 6.0
-## The back foot: the trim the mouse adds or takes away, either way (the design: 1.5; 1.0 is gentler).
-var trim_range_deg: float = 1.5
+## The most leeward rail the mouse adds to the technique's (the design: 0 to +6 degrees; Max asked for
+## more, 6 November 2026: 9), never past RAIL_MAX_DEG in all.
+var rail_more_deg: float = 9.0
+## The back foot: the trim the mouse adds or takes away, either way (the design: 1.5; Max asked for
+## more, 6 November 2026: 2.5).
+var trim_range_deg: float = 2.5
 ## Mouse travel from one end of the range to the other, in pixels (the design: about 300).
 var travel_px: float = 300.0
 ## 1: the feet still correct the rail themselves within 0.4 s; 2: slowed to SLOW_FEEL_TIME_S.
@@ -84,6 +88,10 @@ var rail_deg: float = 0.0
 var trim_deg: float = 0.0
 var rail_total_deg: float = 0.0
 var trim_total_deg: float = 0.0
+## Whether the body added its numbers at the last update (false in a manoeuvre), and the tack it
+## last aimed on (+1 starboard, -1 port, 0 not yet): for the gauge (ui/body_gauge.gd).
+var working: bool = false
+var last_tack: float = 0.0
 
 
 ## The mouse moved (pixels, as Godot reports a captured mouse's motion: x to the right, y down,
@@ -124,6 +132,14 @@ func more_rail(tack: float) -> float:
 	return -side * signf(tack) if tack != 0.0 else 0.0
 
 
+## Which way the mouse goes for more leeward rail on the last tack aimed on: +1 right, -1 left,
+## 0 not known yet (the gauge marks that side).
+func rail_side() -> float:
+	if sideways == Sideways.RIGHT_IS_MORE_RAIL:
+		return 1.0
+	return -signf(last_tack)
+
+
 ## The rail the body adds, degrees, given the leeward rail the feet already aim for without it
 ## (the technique's on this course, the slider's and the sea's together). Toward more rail: up to
 ## rail_more_deg, never past RAIL_MAX_DEG in all. The other way: the whole travel takes the board to
@@ -154,10 +170,13 @@ func aim(rail_base_deg: float, trim_base_deg: float, tack: float) -> void:
 	trim_deg = trim_extra_deg(trim_base_deg)
 	rail_total_deg = rail_base_deg + rail_deg
 	trim_total_deg = trim_base_deg + trim_deg
+	working = true
+	last_tack = tack
 
 
 ## No body this tick (in a manoeuvre, out of the water): nothing added.
 func rest(rail_base_deg: float, trim_base_deg: float) -> void:
+	working = false
 	rail_deg = 0.0
 	trim_deg = 0.0
 	rail_total_deg = rail_base_deg
