@@ -73,3 +73,62 @@ func test_the_fleet_table_keeps_the_leaders_and_the_boards_around_you() -> void:
 	var last: Array[int] = RaceHud.fleet_rows(big, 0, 9)
 	assert_eq(last.back(), 0, "the last board's own line is the bottom one")
 	assert_eq(last.size(), 9)
+
+
+## A depth grid for the shore test: deep water west of a straight north-south shore, land east of it.
+class ShoreAtX:
+	extends TerrainGrid
+	var shore_x: float = 0.0
+
+	func _init(x: float) -> void:
+		shore_x = x
+
+	func contains(x: float, z: float) -> bool:
+		return absf(x) <= 5000.0 and absf(z) <= 5000.0
+
+	func height_at(x: float, z: float) -> float:
+		if not contains(x, z):
+			return NAN
+		return -5.0 if x < shore_x else 2.0
+
+
+## ROADMAP RA2: an AI board that runs onto the shore stops there, as the player's board does (the
+## scene's stop: its simulation no longer steps), and sails again after the next start.
+func test_an_ai_board_stops_at_the_shore_like_the_player() -> void:
+	var saved_values: SettingsValues = GameSettings.values
+	var saved_path: String = GameSettings.path
+	GameSettings.values = SettingsValues.new()
+	GameSettings.path = ""
+	RaceSetup.pending = RaceSetup.race("t1_loop", PackedStringArray(["allrounder"]))
+	var scene: SailingScene = (load("res://main.tscn") as PackedScene).instantiate()
+	add_child_autofree(scene)
+	var runner: RaceRunner = scene.get_node("RaceRunner")
+	var player: WindsurferNode = scene.get_node("Windsurfer")
+	var ai: WindsurferNode = runner.opponents[0]
+	# The AI board 300 m east of the player, the shore half way: it is on land, the player afloat.
+	var player_at: Vector3 = player.sim.body.origin_world()
+	ai.start_position = player_at + Vector3(300.0, 0.0, 0.0)
+	ai.reset()
+	scene.shore_grid = ShoreAtX.new(player_at.x + 150.0)
+	await wait_physics_frames(3)
+	assert_true(runner.is_aground(ai), "the AI board on land has run aground")
+	assert_false(runner.is_aground(player), "the player's board is the scene's to stop")
+	assert_false(scene.is_aground(), "the player is afloat")
+	var ai_time_s: float = ai.sim.time_s
+	var ai_at: Vector3 = ai.sim.body.origin_world()
+	var player_time_s: float = player.sim.time_s
+	await wait_physics_frames(5)
+	assert_eq(ai.sim.time_s, ai_time_s, "the AI board's simulation has stopped")
+	assert_eq(ai.sim.body.origin_world(), ai_at, "and it stays where it ran aground")
+	assert_gt(player.sim.time_s, player_time_s, "the player sails on")
+	assert_gt(runner.wind_clock.time_s, 0.0, "the race's wind clock goes on with the boards that sail")
+
+	# The next start (R): every board is afloat at its start spot and sails again.
+	scene.shore_grid = null
+	scene.get_node("PauseMenu").restart_requested.emit()
+	assert_false(runner.is_aground(ai), "afloat again after R")
+	await wait_physics_frames(3)
+	assert_gt(ai.sim.time_s, 0.0, "the AI board sails again")
+	GameSettings.values = saved_values
+	GameSettings.path = saved_path
+	get_tree().paused = false

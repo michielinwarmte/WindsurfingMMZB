@@ -97,6 +97,11 @@ var start_heading_deg: float = 0.0
 var choice: SpectateChoice = SpectateChoice.new()
 ## The race's number of the first AI board: 1 after the player's, 0 while spectating.
 var _first_ai: int = 1
+## The AI boards that ran aground on a map's shore (ROADMAP RA2): 1 for each such board, one per
+## board of _boards. They stop where they are, as the player's board does (the scene's stop,
+## main.gd's _check_shore()), and wait for the next start; the physics' own version is PH13. The
+## player's board is never marked here: the scene stops it.
+var _aground: PackedByteArray = PackedByteArray()
 
 
 func _ready() -> void:
@@ -225,6 +230,9 @@ func restart() -> void:
 		hud.set_time_trial(true, records.best_s(record_key), records.best_splits(record_key))
 	_record_checked = false
 	choice = SpectateChoice.new()
+	# Every board is afloat again at its start spot (RA2).
+	_aground.resize(_boards.size())
+	_aground.fill(0)
 	_running = true
 	restarted.emit()
 
@@ -295,29 +303,32 @@ func _place(node: WindsurferNode, spot: Vector2, heading_deg: float) -> void:
 ## the race), then every board's physics steps, side by side on worker threads when the setup says
 ## so (each simulation touches only its own objects; at most MAX_THREADS tasks pulling the
 ## boards), then the visuals (the far opponents' on alternate ticks), then the race is told where
-## everyone is. A board that has run aground (the scene stops it) is not stepped.
+## everyone is. A board that has run aground (the scene stops the player's, the shore check below
+## the AI boards') is not stepped.
 func _physics_process(delta: float) -> void:
 	if not _running:
 		return
 	var scene: SailingScene = get_parent() as SailingScene
 	var player_stopped: bool = not spectating and scene != null and scene.is_aground()
+	var stopped: PackedByteArray = _stopped_boards(player_stopped)
 	_hand_the_wind_clock()
-	for node: WindsurferNode in _boards:
-		if not (player_stopped and node == player):
-			node.sail(delta)
+	for i: int in _boards.size():
+		if stopped[i] == 0:
+			_boards[i].sail(delta)
 	_cast_shadows()
 	var t0: int = Time.get_ticks_usec()
 	if setup.threads > 0:
 		# One element per board, pulled by at most setup.threads worker tasks as each finishes its
 		# board (the pool hands out the elements one by one), so a task on a slow core takes fewer
 		# boards and the tick waits for nobody's fixed share.
-		var group: int = WorkerThreadPool.add_group_task(_step_board.bind(delta, player_stopped), _boards.size(), setup.threads, true, "race physics")
+		var group: int = WorkerThreadPool.add_group_task(_step_board.bind(delta, stopped), _boards.size(), setup.threads, true, "race physics")
 		WorkerThreadPool.wait_for_group_task_completion(group)
 	else:
 		for i: int in _boards.size():
-			_step_board(i, delta, player_stopped)
+			_step_board(i, delta, stopped)
 	var t1: int = Time.get_ticks_usec()
-	_read_the_wind_clock(player_stopped)
+	_read_the_wind_clock(stopped)
+	_check_the_shore()
 	_pose_boards(player_stopped)
 	_tell_the_race()
 	race.step(delta)
@@ -344,13 +355,48 @@ func _hand_the_wind_clock() -> void:
 
 
 ## The clock one tick on, read from the first board that stepped (every field that stepped shows
-## the same); unchanged if none did (the player alone and aground).
-func _read_the_wind_clock(player_stopped: bool) -> void:
-	for node: WindsurferNode in _boards:
-		if (player_stopped and node == player) or node.is_puppet:
+## the same); unchanged if none did (the player alone and aground, or every board aground).
+func _read_the_wind_clock(stopped: PackedByteArray) -> void:
+	for i: int in _boards.size():
+		if stopped[i] == 1 or _boards[i].is_puppet:
 			continue
-		wind_clock = RaceWindClock.of(node.sim.wind)
+		wind_clock = RaceWindClock.of(_boards[i].sim.wind)
 		return
+
+
+## Which boards are not stepped this tick, 1 for each (one per board of _boards): the player's board
+## when the scene has stopped it at the shore, and the AI boards that ran aground (RA2).
+func _stopped_boards(player_stopped: bool) -> PackedByteArray:
+	var stopped: PackedByteArray = _aground.duplicate()
+	stopped.resize(_boards.size())
+	if player_stopped and not _boards.is_empty():
+		stopped[0] = 1
+	return stopped
+
+
+## The lake's shore for the AI boards (ROADMAP RA2), the same check as the player's (main.gd's
+## _check_shore(), ShoreCheck): where the water under a board is shallower than its fin plus a
+## margin, or off the map, the board has run aground and stops where it is until the next start
+## (restart(): R, or the host's R in a LAN game). No collision physics: nothing pushes on the board.
+## On the open water (no shore grid) nothing is checked. The other players' boards (LAN) are
+## checked on their own PCs.
+func _check_the_shore() -> void:
+	var grid: TerrainGrid = _shore_grid()
+	if grid == null:
+		return
+	_aground.resize(_boards.size())
+	for i: int in range(_boards.size() - opponents.size(), _boards.size()):
+		if _aground[i] == 1:
+			continue
+		var sim: WindsurferSim = _boards[i].sim
+		if ShoreCheck.is_aground(grid, sim.body.origin_world(), sim.fin_config.span_m):
+			_aground[i] = 1
+
+
+## Whether an AI board has run aground and stopped (RA2).
+func is_aground(node: WindsurferNode) -> bool:
+	var i: int = _boards.find(node)
+	return i >= 0 and i < _aground.size() and _aground[i] == 1
 
 
 ## Every board's place and whether its sail is up, into every board's shadows (each its own copy),
@@ -409,9 +455,9 @@ func shadow_deficit(node: WindsurferNode) -> float:
 	return 1.0 - _shadows[i].factor_at(point, clear)
 
 
-## Board i's physics (a worker task's element, or the loop's).
-func _step_board(i: int, delta: float, player_stopped: bool) -> void:
-	if player_stopped and i == 0:
+## Board i's physics (a worker task's element, or the loop's); not for a stopped board.
+func _step_board(i: int, delta: float, stopped: PackedByteArray) -> void:
+	if stopped[i] == 1:
 		return
 	_boards[i].step_physics(delta)
 
