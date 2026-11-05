@@ -134,6 +134,46 @@ func test_in_a_race_a_new_sea_waits_for_the_restart() -> void:
 	assert_almost_eq((windsurfer.sim.water as WaveField).total_amplitude_m(), amplitude_before, 1e-6, "the fleet's sea stays until R")
 	scene.get_node("PauseMenu").restart_requested.emit()
 	assert_almost_eq((windsurfer.sim.water as WaveField).total_amplitude_m(), 0.08 + 0.04 + 0.015 + 0.006, 1e-5, "the medium chop after it")
+	var runner: RaceRunner = scene.get_node("RaceRunner")
+	assert_false(runner.opponents.is_empty())
+	for node: WindsurferNode in runner.opponents:
+		assert_almost_eq((node.sim.water as WaveField).total_amplitude_m(), 0.08 + 0.04 + 0.015 + 0.006, 1e-5, "%s sails the new chop too" % node.name)
+
+
+## ROADMAP RA24: in a race a wind changed in the pause menu waits for R, like the sea (the AI boards
+## sail their own copies of the wind, and the course is laid to it); at R every board takes it at
+## once, each its own copy, and a course laid for the wind is laid again for the new direction.
+func test_in_a_race_a_new_wind_waits_for_the_restart_and_then_blows_for_every_board() -> void:
+	RaceSetup.pending = RaceSetup.race("t1_loop", PackedStringArray(["allrounder", "rookie"]))
+	var scene: SailingScene = (load("res://main.tscn") as PackedScene).instantiate()
+	add_child_autofree(scene)
+	var runner: RaceRunner = scene.get_node("RaceRunner")
+	var pause_menu: PauseMenu = scene.get_node("PauseMenu")
+	var boards: Array[WindsurferNode] = [scene.get_node("Windsurfer") as WindsurferNode]
+	boards.append_array(runner.opponents)
+	assert_eq(boards.size(), 3, "the player and two AI boards")
+	assert_almost_eq(runner.course.axis_deg, 270.0, 1e-6, "T1 is laid for the settings' West wind")
+	GameSettings.values.wind_speed_kt = 24.0
+	GameSettings.values.wind_from_deg = 300.0
+	scene.apply_settings_live()
+	for node: WindsurferNode in boards:
+		assert_almost_eq(node.sim.wind.config.speed_kt, 18.0, 1e-6, "%s: the race's wind stays until R" % node.name)
+		assert_almost_eq(node.sim.wind.config.from_bearing_deg, 270.0, 1e-6)
+	assert_string_contains((pause_menu.get_node("%Note") as Label).text, "the new wind", "the pause menu says R brings it")
+
+	pause_menu.restart_requested.emit()
+	for node: WindsurferNode in boards:
+		assert_almost_eq(node.sim.wind.config.speed_kt, 24.0, 1e-6, "%s sails the new wind after R" % node.name)
+		assert_almost_eq(node.sim.wind.config.from_bearing_deg, 300.0, 1e-6)
+		assert_almost_eq(node.sim.wind.time_s, boards[0].sim.wind.time_s, 1e-9, "one wind clock (RA13)")
+	assert_ne(runner.opponents[0].sim.wind.config, boards[0].sim.wind.config, "each board its own copy (worker threads)")
+	assert_almost_eq(runner.course.axis_deg, 300.0, 1e-6, "the course is laid again for the new wind")
+	assert_eq(runner.race.course, runner.course, "the race is sailed on it")
+	assert_eq(runner.race.board_count(), 3)
+	assert_eq((pause_menu.get_node("%Note") as Label).text, "", "nothing waits any more")
+	assert_eq(scene.find_children("CourseOnWater", "CourseOnWater", false, false).size(), 1, "one course on the water")
+	# Free sailing is unchanged: there the new wind blows at once (test_the_wind_and_the_sea_change_live_while_sailing).
+	await wait_process_frames(1)  # the old course's buoys are freed at the end of the frame
 
 
 func test_the_start_menu_hands_the_board_to_the_player() -> void:
@@ -147,6 +187,59 @@ func test_the_start_menu_hands_the_board_to_the_player() -> void:
 	assert_false(windsurfer.use_autopilot, "the player sails")
 	assert_true(hud.visible)
 	assert_eq(GameSettings.values.last_play_option, 0, "the choice is remembered")
+
+
+## ROADMAP UI4: the start menu fits any window. While it is up Godot draws its pages as in a window
+## of MENU_SIZE_PX (sharp, at the window's own resolution), every page fits in that, and the game
+## gets the window's own scaling back (the HUD's sizes do not change).
+func test_the_start_menu_fits_any_window_and_gives_the_window_back_for_the_game() -> void:
+	var window: Window = get_window()
+	var mode_before: Window.ContentScaleMode = window.content_scale_mode
+	var size_before: Vector2i = window.content_scale_size
+	var menu: Node = (load("res://ui/start_menu.tscn") as PackedScene).instantiate()
+	add_child_autofree(menu)
+	var menu_size: Vector2i = (menu.get_script() as Script).get_script_constant_map()["MENU_SIZE_PX"]
+	assert_eq(window.content_scale_mode, Window.CONTENT_SCALE_MODE_CANVAS_ITEMS, "Godot scales the menu")
+	assert_eq(window.content_scale_aspect, Window.CONTENT_SCALE_ASPECT_EXPAND, "a wider or taller window gives more room")
+	assert_eq(window.content_scale_size, menu_size)
+	# The main page with its status line showing (it says "Loading..." while a map opens).
+	(menu.get_node("%Status") as Label).show()
+	var main_page: Control = menu.get_node("%MainPage")
+	assert_lte(main_page.get_combined_minimum_size().y, float(menu_size.y), "the main page fits, title and all")
+	for page_name: String in ["Race", "HowTo"]:
+		var page: Control = menu.get_node("%" + page_name).get_node("Center")
+		assert_lte(page.get_combined_minimum_size().y, float(menu_size.y), "the %s page fits" % page_name)
+	(menu.get_node("%OpenWaterButton") as Button).pressed.emit()
+	assert_eq(window.content_scale_mode, mode_before, "the game gets the window's own scaling back")
+	assert_eq(window.content_scale_size, size_before)
+
+
+## ROADMAP MA2: the start menu's Credits page names the open data's sources as the providers ask, and
+## carries the licence notices the shipped game must have (Godot's, its parts', GUT's and its fonts').
+func test_the_credits_page_names_the_data_sources_and_the_licences() -> void:
+	var menu: Node = (load("res://ui/start_menu.tscn") as PackedScene).instantiate()
+	add_child_autofree(menu)
+	(menu.get_node("%CreditsButton") as Button).pressed.emit()
+	var credits: CreditsPage = menu.get_node("%Credits")
+	assert_true(credits.visible, "the Credits button opens the page")
+	var text: String = credits.text()
+	assert_string_contains(text, "Terrain, aerial photos and lakebed: © swisstopo. Wind data: MeteoSwiss. Lake level: BAFU.", "the map plan's line")
+	assert_string_contains(text, "Federal Office of Topography swisstopo", "swisstopo's wording")
+	assert_string_contains(text, "TINITALY", "swissALTIRegio's own reference")
+	assert_string_contains(text, "Source: MeteoSwiss", "MeteoSwiss's wording")
+	assert_string_contains(text, "CC BY 4.0")
+	assert_string_contains(text, "This game uses Godot Engine, available under the following license:")
+	assert_string_contains(text, Engine.get_license_text().strip_edges().get_slice("\n", 0), "Godot's copyright, from the engine")
+	assert_string_contains(text, "FreeType", "the parts Godot is made of")
+	assert_string_contains(text, "Tom \"Butch\" Wesley", "GUT, shipped in the package")
+	assert_string_contains(text, "Lobster Two", "and its fonts")
+	for license_name: Variant in Engine.get_license_info():
+		assert_string_contains(text, "Licence text: %s" % license_name)
+	var panel: Control = credits.get_node("Panel")
+	var menu_size: Vector2i = (menu.get_script() as Script).get_script_constant_map()["MENU_SIZE_PX"]
+	assert_lte(panel.get_combined_minimum_size().y + 80.0, float(menu_size.y), "the page fits the menu's window, margins and all")
+	credits.close()
+	assert_true((menu.get_node("%MainPage") as Control).visible, "Back: the main page again")
 
 
 func test_every_settings_tab_can_be_walked_with_the_keyboard() -> void:

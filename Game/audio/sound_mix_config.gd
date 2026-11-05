@@ -157,6 +157,14 @@ extends Resource
 ## No second splash (except a fall) within this time of the last one.
 @export var splash_cooldown_s: float = 0.25
 
+@export_group("A race's start")
+## The start signals (SO3, RaceStartSignals), on the Signals bus: the start boat's horn (the long
+## one at the minutes, the short one at 30 s), the beep of the sailor's start watch in the last ten
+## seconds, and the gun. They are the race's call, so a far camera does not make them quieter.
+@export var horn_db: float = -4.0
+@export var beep_db: float = -14.0
+@export var gun_db: float = 0.0
+
 @export_group("Camera and menu")
 ## The sounds of the board (water and sail, not the wind in the ears) get quieter when
 ## the camera is further than camera_near_m from the board: camera_db_per_doubling for

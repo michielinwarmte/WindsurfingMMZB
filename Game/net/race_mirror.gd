@@ -9,6 +9,10 @@ extends Node
 ## It also gives the guest's board the other sails' wind shadows, from where every board is on this
 ## PC, as the host's RaceRunner does for its boards (before the board steps: process priority -5).
 
+## A start signal is due on the host's race clock (SO3, as RaceRunner.start_signal): the guest
+## hears the horns, the beeps and the gun too.
+signal start_signal(kind: RaceStartSignals.Kind)
+
 var race: RaceSim = null
 var rules: RaceRules = null
 var hud: RaceHud = null
@@ -21,6 +25,8 @@ var _net: NetBoards = null
 var _ids: Array[int] = []
 var _my_index: int = -1
 var _shadows: WindShadows = null
+## The start's signals of the host's current start (SO3).
+var _start_signals: RaceStartSignals = null
 
 
 func _init() -> void:
@@ -57,6 +63,7 @@ func restart(info: Dictionary) -> void:
 		# This PC's player is "You" on its own screen, as in a race alone.
 		race.add_board(RaceRunner.PLAYER_NAME if i == _my_index else names[i])
 	rules = RaceRules.new(race.board_count(), course.axis_deg) if bool(info.get("rules", race_setup.rules)) else null
+	_start_signals = RaceStartSignals.new(race.prestart_s)
 	hud.reset()
 
 
@@ -90,6 +97,8 @@ func _physics_process(delta: float) -> void:
 		if node != null:
 			race.update_board(i, RaceRunner.where_now(node))
 	race.mirror_step(delta)
+	for kind: RaceStartSignals.Kind in _start_signals.update(race.is_started(), race.clock_s()):
+		start_signal.emit(kind)
 	_cast_shadows_on_own_board()
 
 

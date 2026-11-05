@@ -31,6 +31,14 @@ extends RefCounted
 ##   -> flutter: a fast train of short noise bursts; crack: one sharp burst with a rebound.
 ## - In a tack the rig swings through the wind: a short rising and falling rush of air.
 ##   -> swoosh: noise through a band-pass that sweeps up and down, in a smooth swell.
+## - A race's start (SO3): the start boat's air horn at the minutes and at 30 s, the beep of the
+##   sailor's start watch in the last ten seconds, and the gun. An air horn is a reed set
+##   vibrating by the air: a loud, bright tone full of harmonics, which reaches its pitch as the
+##   pressure builds. A blank fired outdoors is a sharp crack and a low boom, and over a lake the
+##   bang comes back from the shore a moment later.
+##   -> horn: a sawtooth-like tone (every harmonic up to 5 kHz, each weaker by its number) with a
+##      second reed beating slowly against it and a breath of air; beep: a short square-ish tone;
+##      gun: a burst of noise, a deep tone sliding down, a rumble, and two duller echoes.
 
 const MIX_RATE_HZ: int = 44100
 ## The loops' lengths (seconds). Longer loops repeat less audibly but take longer to make.
@@ -55,6 +63,23 @@ const HUM_LOOP_S: float = 3.0
 const HUM_HZ: float = 420.0
 const CREAK_LOOP_S: float = 3.0
 const CREAK_RATE_HZ: float = 5.0
+## The start boat's air horn (SO3): its tone, the second reed's (a few hertz above it, so the two
+## beat slowly) and how loud that one is against the first, the highest harmonic in the tone, and
+## how long the long and the short horn blow.
+const HORN_HZ: float = 400.0
+const HORN_SECOND_REED_HZ: float = 403.0
+const HORN_SECOND_REED_SHARE: float = 0.3
+const HORN_TOP_HZ: float = 5000.0
+const HORN_LONG_S: float = 2.0
+const HORN_SHORT_S: float = 0.8
+## The start watch's beep: a small piezo speaker's tone, and how long one beep lasts.
+const BEEP_HZ: float = 2800.0
+const BEEP_S: float = 0.12
+## The gun with its echoes, seconds, and when the echoes come back from the shore.
+const GUN_S: float = 2.6
+const GUN_ECHO_S: PackedFloat32Array = [0.4, 1.1]
+## The samples in one cycle of a tone made from its harmonics (_tone_cycle()).
+const CYCLE_SAMPLES: int = 2048
 
 ## The sounds of one game run are made once and shared (see shared()).
 static var _shared: SoundBank = null
@@ -71,6 +96,13 @@ var creak: AudioStreamWAV
 var splashes: Array[AudioStreamWAV] = []
 var cracks: Array[AudioStreamWAV] = []
 var swoosh: AudioStreamWAV
+## A race's start (SO3): the start boat's long and short horn, the start watch's beep, the gun.
+## Made when a race is set up (make_start_sounds()), not with the rest: they take about a third of a
+## second (measured), which a game without a race need not wait for.
+var horn_long: AudioStreamWAV
+var horn_short: AudioStreamWAV
+var beep: AudioStreamWAV
+var gun: AudioStreamWAV
 
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var _seed: int = 0
@@ -270,6 +302,122 @@ func _make_swoosh() -> AudioStreamWAV:
 		var bell: float = sin(PI * phase)
 		samples[i] *= bell * bell
 	return _to_one_shot(samples)
+
+
+# --- A race's start (SO3) ---------------------------------------------------------------
+
+## Makes the start's sounds, once (the sailing scene asks when it sets up a race).
+func make_start_sounds() -> void:
+	if gun != null:
+		return
+	horn_long = _make_horn(HORN_LONG_S, 0)
+	horn_short = _make_horn(HORN_SHORT_S, 1)
+	beep = _make_beep()
+	gun = _make_gun()
+
+
+## The start boat's air horn: a bright, brassy tone (_tone_cycle()) and a second reed a few hertz
+## above it, so the blare beats slowly as a real horn's does. The pitch rises into tune over the
+## first tenth of a second while the air pressure builds, a breath of air hisses under it, it swells
+## in over 40 ms, wavers a little with the hand on the button, and dies away over 150 ms.
+func _make_horn(length_s: float, variant: int) -> AudioStreamWAV:
+	_start(40 + variant)
+	var count: int = int(length_s * MIX_RATE_HZ)
+	var cycle: PackedFloat32Array = _tone_cycle(HORN_HZ, HORN_TOP_HZ)
+	var breath: PackedFloat32Array = _white_noise(count)
+	_high_pass(breath, 1500.0)
+	_low_pass(breath, 5000.0)
+	var samples: PackedFloat32Array = _constant(count, 0.0)
+	var phase_a: float = 0.0
+	var phase_b: float = 0.0
+	for i: int in count:
+		var time_s: float = float(i) / MIX_RATE_HZ
+		# 6 % flat at the first moment, in tune after about 0.1 s.
+		var tune: float = 1.0 - 0.06 * exp(-time_s / 0.035)
+		phase_a = fposmod(phase_a + HORN_HZ * tune / MIX_RATE_HZ, 1.0)
+		phase_b = fposmod(phase_b + HORN_SECOND_REED_HZ * tune / MIX_RATE_HZ, 1.0)
+		var tone: float = _read_cycle(cycle, phase_a) + HORN_SECOND_REED_SHARE * _read_cycle(cycle, phase_b)
+		var swell: float = minf(time_s / 0.04, 1.0) * minf((length_s - time_s) / 0.15, 1.0)
+		var waver: float = 1.0 + 0.03 * sin(TAU * 5.0 * time_s)
+		samples[i] = (tone + 0.15 * breath[i]) * swell * waver
+	# The start boat is tens of metres away: the air takes a little of the very top.
+	_low_pass(samples, 6000.0)
+	return _to_one_shot(samples)
+
+
+## The start watch's beep: a small piezo speaker's square-ish tone (its third and fifth harmonics
+## too), short, with soft 4 ms edges so it does not click.
+func _make_beep() -> AudioStreamWAV:
+	var count: int = int(BEEP_S * MIX_RATE_HZ)
+	var samples: PackedFloat32Array = _constant(count, 0.0)
+	for i: int in count:
+		var time_s: float = float(i) / MIX_RATE_HZ
+		var angle: float = TAU * BEEP_HZ * time_s
+		var edge: float = minf(minf(time_s, BEEP_S - time_s) / 0.004, 1.0)
+		samples[i] = (sin(angle) + sin(3.0 * angle) / 3.0 + sin(5.0 * angle) / 5.0) * edge
+	return _to_one_shot(samples)
+
+
+## The start gun, a blank fired from the start boat: a sharp crack (the muzzle blast, a burst of
+## noise of a few milliseconds), the low boom of the pressure wave (a deep tone sliding down from
+## about 110 to 45 Hz), the rumble of the air after it, and the bang coming back from the shore,
+## duller each time (GUN_ECHO_S).
+func _make_gun() -> AudioStreamWAV:
+	_start(50)
+	var count: int = int(GUN_S * MIX_RATE_HZ)
+	var bang: PackedFloat32Array = _white_noise(count)
+	_high_pass(bang, 400.0)
+	var crack: PackedFloat32Array = _constant(count, 0.0)
+	_add_pulse(crack, 0.0, 0.0005, 120.0, 1.0)
+	_multiply(bang, crack)
+	var rumble: PackedFloat32Array = _brown_noise(count)
+	_low_pass(rumble, 700.0)
+	var rumble_envelope: PackedFloat32Array = _constant(count, 0.0)
+	_add_pulse(rumble_envelope, 0.0, 0.004, 3.5, 1.0)
+	_multiply(rumble, rumble_envelope)
+	_normalize(rumble, 0.35)
+	var phase: float = 0.0
+	for i: int in count:
+		var time_s: float = float(i) / MIX_RATE_HZ
+		var boom_hz: float = 45.0 + 65.0 * exp(-time_s / 0.06)
+		phase = fposmod(phase + TAU * boom_hz / MIX_RATE_HZ, TAU)
+		bang[i] += rumble[i] + 0.8 * sin(phase) * exp(-9.0 * time_s) * minf(time_s / 0.002, 1.0)
+	# The echoes: the bang as it was, duller (the far shore and the air soak up the highs).
+	var echo: PackedFloat32Array = bang.duplicate()
+	_low_pass(echo, 1500.0)
+	_add_delayed(bang, echo, GUN_ECHO_S[0], 0.28)
+	_low_pass(echo, 800.0)
+	_add_delayed(bang, echo, GUN_ECHO_S[1], 0.14)
+	return _to_one_shot(bang)
+
+
+## One cycle of a tone, CYCLE_SAMPLES long: every harmonic of fundamental_hz up to top_hz, each
+## weaker by its number (a sawtooth's recipe, the sound of a reed or a brass instrument). Made
+## once and read over and over (_read_cycle()), which is much quicker than adding the harmonics
+## for every sample.
+func _tone_cycle(fundamental_hz: float, top_hz: float) -> PackedFloat32Array:
+	var harmonics: int = maxi(1, floori(top_hz / fundamental_hz))
+	var cycle: PackedFloat32Array = _constant(CYCLE_SAMPLES, 0.0)
+	for i: int in CYCLE_SAMPLES:
+		var angle: float = TAU * float(i) / CYCLE_SAMPLES
+		for n: int in range(1, harmonics + 1):
+			cycle[i] += sin(n * angle) / n
+	return cycle
+
+
+## The value of a cycle at a phase (0 to 1), between its two nearest samples.
+func _read_cycle(cycle: PackedFloat32Array, phase: float) -> float:
+	var at: float = phase * cycle.size()
+	var first: int = mini(int(at), cycle.size() - 1)
+	var second: int = (first + 1) % cycle.size()
+	return lerpf(cycle[first], cycle[second], at - first)
+
+
+## Adds source to target, delay_s later and times gain (an echo).
+func _add_delayed(target: PackedFloat32Array, source: PackedFloat32Array, delay_s: float, gain: float) -> void:
+	var delay: int = int(delay_s * MIX_RATE_HZ)
+	for i: int in range(delay, target.size()):
+		target[i] += gain * source[i - delay]
 
 
 # --- Noise ----------------------------------------------------------------------------

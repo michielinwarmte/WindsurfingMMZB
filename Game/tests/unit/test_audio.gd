@@ -115,12 +115,102 @@ func test_the_same_seed_makes_the_same_sound() -> void:
 	assert_ne(bank.cracks[0].data, bank.cracks[1].data, "the versions differ")
 
 
+# --- A race's start (SO3) ---------------------------------------------------------------
+
+## How strong a tone of `hz` is in a stretch of a sound (one bin of a Fourier sum), 0 to about 0.5.
+func _tone_level(stream: AudioStreamWAV, hz: float, from_s: float, to_s: float) -> float:
+	var first: int = int(from_s * SoundBank.MIX_RATE_HZ)
+	var last: int = int(to_s * SoundBank.MIX_RATE_HZ)
+	var along: float = 0.0
+	var across: float = 0.0
+	for i: int in range(first, last):
+		var angle: float = TAU * hz * i / SoundBank.MIX_RATE_HZ
+		along += SoundBank.sample_at(stream, i) * cos(angle)
+		across += SoundBank.sample_at(stream, i) * sin(angle)
+	return sqrt(along * along + across * across) / (last - first)
+
+
+## The root-mean-square level of a stretch of a sound.
+func _level(stream: AudioStreamWAV, from_s: float, to_s: float) -> float:
+	var total: float = 0.0
+	var first: int = int(from_s * SoundBank.MIX_RATE_HZ)
+	var last: int = int(to_s * SoundBank.MIX_RATE_HZ)
+	for i: int in range(first, last):
+		total += SoundBank.sample_at(stream, i) ** 2
+	return sqrt(total / (last - first))
+
+
+func test_the_start_horns_are_a_400_hz_blare_long_and_short() -> void:
+	var bank: SoundBank = SoundBank.shared()
+	bank.make_start_sounds()
+	assert_eq(SoundBank.sample_count(bank.horn_long), int(SoundBank.HORN_LONG_S * SoundBank.MIX_RATE_HZ), "2 s")
+	assert_eq(SoundBank.sample_count(bank.horn_short), int(SoundBank.HORN_SHORT_S * SoundBank.MIX_RATE_HZ), "0.8 s")
+	for horn: AudioStreamWAV in [bank.horn_long, bank.horn_short]:
+		assert_eq(horn.loop_mode, AudioStreamWAV.LOOP_DISABLED)
+		assert_lt(absf(SoundBank.sample_at(horn, 0)), 0.01, "starts at zero, no click")
+		assert_lt(absf(SoundBank.sample_at(horn, SoundBank.sample_count(horn) - 1)), 0.01, "ends at zero")
+	var tone: float = _tone_level(bank.horn_long, SoundBank.HORN_HZ, 0.5, 1.0)
+	assert_gt(tone, 3.0 * _tone_level(bank.horn_long, 300.0, 0.5, 1.0), "the 400 Hz tone, not 300 Hz")
+	assert_gt(tone, 3.0 * _tone_level(bank.horn_long, 500.0, 0.5, 1.0), "nor 500 Hz")
+	assert_gt(_tone_level(bank.horn_long, 2.0 * SoundBank.HORN_HZ, 0.5, 1.0), 0.2 * tone, "bright: its harmonics are strong")
+	assert_lt(_level(bank.horn_long, 0.0, 0.01), 0.5 * _level(bank.horn_long, 0.5, 1.0), "it swells in")
+
+
+func test_the_start_watch_beeps_a_short_high_tone() -> void:
+	SoundBank.shared().make_start_sounds()
+	var beep: AudioStreamWAV = SoundBank.shared().beep
+	assert_eq(SoundBank.sample_count(beep), int(SoundBank.BEEP_S * SoundBank.MIX_RATE_HZ), "0.12 s")
+	var tone: float = _tone_level(beep, SoundBank.BEEP_HZ, 0.01, 0.11)
+	assert_gt(tone, 5.0 * _tone_level(beep, 2000.0, 0.01, 0.11), "2.8 kHz")
+	assert_gt(tone, 5.0 * _tone_level(beep, 400.0, 0.01, 0.11), "not the horn's tone")
+
+
+func test_the_gun_cracks_at_once_booms_and_echoes() -> void:
+	SoundBank.shared().make_start_sounds()
+	var gun: AudioStreamWAV = SoundBank.shared().gun
+	assert_eq(SoundBank.sample_count(gun), int(SoundBank.GUN_S * SoundBank.MIX_RATE_HZ))
+	var loudest_at: int = 0
+	for i: int in SoundBank.sample_count(gun):
+		if absf(SoundBank.sample_at(gun, i)) > absf(SoundBank.sample_at(gun, loudest_at)):
+			loudest_at = i
+	assert_lt(loudest_at, int(0.01 * SoundBank.MIX_RATE_HZ), "the loudest moment is in the first 10 ms: the crack")
+	assert_gt(_tone_level(gun, 60.0, 0.0, 0.15), _tone_level(gun, 1000.0, 0.0, 0.15), "a low boom under it")
+	var echo_s: float = SoundBank.GUN_ECHO_S[0]
+	assert_gt(_level(gun, echo_s, echo_s + 0.05), 1.5 * _level(gun, echo_s - 0.06, echo_s - 0.01), "the shore's echo comes back")
+	assert_lt(_level(gun, SoundBank.GUN_S - 0.2, SoundBank.GUN_S), 0.1 * _level(gun, 0.0, 0.2), "and it dies away")
+
+
+## The race in the sailing scene sounds its start: a 3 s countdown (its first moment is the 3 s
+## beep, so no horn starts it), the beeps at 2 and 1 s, and the gun, on the Signals bus.
+func test_a_race_in_the_scene_sounds_its_start_on_the_signals_bus() -> void:
+	var setup: RaceSetup = RaceSetup.race("t1_loop")
+	setup.prestart_s = 3.0  # shorter than the menu allows (5 s), so the test is quick
+	RaceSetup.pending = setup
+	var scene: SailingScene = (load("res://main.tscn") as PackedScene).instantiate()
+	add_child_autofree(scene)
+	var runner: RaceRunner = scene.get_node("RaceRunner")
+	var audio: GameAudio = scene.get_node("GameAudio")
+	var heard: Array[RaceStartSignals.Kind] = []
+	runner.start_signal.connect(func(kind: RaceStartSignals.Kind) -> void: heard.append(kind))
+	await wait_physics_frames(int(3.2 * 60.0))
+	assert_eq(heard, [RaceStartSignals.Kind.BEEP, RaceStartSignals.Kind.BEEP, RaceStartSignals.Kind.BEEP,
+		RaceStartSignals.Kind.GUN] as Array[RaceStartSignals.Kind], "three beeps, the gun")
+	var gun_playing: bool = false
+	for child: Node in audio.get_children():
+		var player: AudioStreamPlayer = child as AudioStreamPlayer
+		if player != null and player.stream == SoundBank.shared().gun:
+			gun_playing = player.playing
+			assert_eq(player.bus, GameAudio.SIGNALS_BUS, "on the Signals bus")
+			assert_almost_eq(player.volume_db, audio.mix.config.gun_db, 1e-4, "at the mix's level")
+	assert_true(gun_playing, "the gun is heard")
+
+
 # --- The buses --------------------------------------------------------------------------
 
 func test_the_buses_and_their_filters() -> void:
 	var expected: Dictionary[String, String] = {
 		"Wind": "Master", "Water": "Master", "Sail": "Master", "WindNoise": "Wind", "WindWhistle": "Wind",
-		"WaterLap": "Water", "WaterHiss": "Water", "SailFlutter": "Sail"}
+		"WaterLap": "Water", "WaterHiss": "Water", "SailFlutter": "Sail", "Signals": "Master"}
 	for bus_name: String in expected:
 		var bus: int = AudioServer.get_bus_index(bus_name)
 		assert_gt(bus, 0, "the %s bus exists" % bus_name)
@@ -130,6 +220,27 @@ func test_the_buses_and_their_filters() -> void:
 	assert_true(AudioServer.get_bus_effect(AudioServer.get_bus_index("WaterLap"), 0) is AudioEffectLowPassFilter)
 	assert_true(AudioServer.get_bus_effect(AudioServer.get_bus_index("WaterHiss"), 0) is AudioEffectBandPassFilter)
 	assert_true(AudioServer.get_bus_effect(AudioServer.get_bus_index("SailFlutter"), 0) is AudioEffectLowPassFilter)
+
+
+## ROADMAP TE1: the editor's Audio panel (it also runs inside a headless import) loads the bus layout
+## and saves it again 0.8 s later. The file must already be exactly what Godot's saver writes, or
+## that save shows up as a change in git. So: loaded and saved again, the text is the same, and the
+## file names its own uid (without one the editor makes one up and writes it in).
+func test_the_bus_layout_file_is_what_godot_itself_would_write() -> void:
+	var path: String = "res://default_bus_layout.tres"
+	var copy_path: String = "user://bus_layout_resaved.tres"
+	var layout: AudioBusLayout = ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_IGNORE) as AudioBusLayout
+	assert_not_null(layout, "the bus layout loads")
+	assert_eq(ResourceSaver.save(layout, copy_path), OK)
+	var committed: PackedStringArray = FileAccess.get_file_as_string(path).split("\n")
+	var resaved: PackedStringArray = FileAccess.get_file_as_string(copy_path).split("\n")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(copy_path))
+	assert_string_contains(committed[0], "uid=\"uid://", "the file's first line names its uid")
+	# The first line holds the uid, which belongs to the path; everything after it must match.
+	committed.remove_at(0)
+	resaved.remove_at(0)
+	assert_eq("\n".join(committed), "\n".join(resaved),
+		"default_bus_layout.tres differs from what Godot writes: change the buses in the editor's Audio tab, not by hand")
 
 
 func test_the_volume_sliders_set_the_buses() -> void:

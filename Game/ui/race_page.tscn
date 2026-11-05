@@ -42,7 +42,7 @@ theme_override_constants/v_separation = 6
 columns = 3
 
 [node name="WhoScroll" type="ScrollContainer" parent="Center/Panel/Layout"]
-custom_minimum_size = Vector2(1000, 150)
+custom_minimum_size = Vector2(1000, 110)
 layout_mode = 2
 horizontal_scroll_mode = 0
 

@@ -62,6 +62,12 @@ var _pause_page: String = ""
 ## The sea the water was built for (SettingsValues.sea_signature()); when the settings say
 ## otherwise the water is built again at the next restart.
 var _sea_signature: String = ""
+## The wind the boards sail in (_wind_signature_of()); in a race a new wind from the settings waits
+## for R while this differs from it (ROADMAP RA24).
+var _wind_signature: String = ""
+## Where the board starts without a course (the scene's usual start spot, game X and Z): a course
+## laid for the wind is placed from it, again when the wind turns (_lay_the_course_again()).
+var _usual_start: Vector2 = Vector2.ZERO
 ## The control settings last applied, so closing the settings menu only changes what the
 ## player changed there (and not a mode they picked with Tab while sailing).
 var _applied_mode: PlayerController.Mode = PlayerController.Mode.BEGINNER
@@ -95,8 +101,10 @@ func _enter_tree() -> void:
 	# With a course the board starts behind its start line (RaceCourses.pre_start_spot()), placed
 	# from the scene's usual start spot (a map scene sets it before this runs). The race comes
 	# first: it may bring its own wind (--wind).
-	_course = _course_from_options(Vector2(windsurfer.start_position.x, windsurfer.start_position.z))
+	_usual_start = Vector2(windsurfer.start_position.x, windsurfer.start_position.z)
+	_course = _course_from_options(_usual_start)
 	windsurfer.wind_config = _build_wind_config()
+	_wind_signature = _wind_signature_of(windsurfer.wind_config)
 	windsurfer.wave_set_config = settings.build_wave_set_config()
 	# The board, sail and fin chosen on the gear page (an unknown id sails the default).
 	windsurfer.gear = GearChoice.from_settings(settings)
@@ -226,8 +234,9 @@ func start_playing() -> void:
 ## a changed control mode or auto-sheet applies at once, and a new sea (the waves, or the wind
 ## direction they line up with) goes under the board at once too, so the waves never keep
 ## running with a wind you no longer sail in (Max, 2 November 2026). Behind the start menu the
-## run restarts instead; in a race the new sea waits for R, because the fleet's boards sail
-## their own copies of it.
+## run restarts instead. In a race the new wind and the new sea wait for R, and then every board
+## takes them at once, with the course laid again for a turned wind (ROADMAP RA24): a race is
+## sailed in the conditions it started in, the same for the whole fleet.
 func apply_settings_live() -> void:
 	var settings: SettingsValues = GameSettings.values
 	if _net != null:
@@ -254,6 +263,8 @@ func apply_settings_live() -> void:
 func _waiting_for_restart_text() -> String:
 	var settings: SettingsValues = GameSettings.values
 	var waiting: Array[String] = []
+	if _new_wind_waits():
+		waiting.append("the new wind")
 	if settings.sea_signature() != _sea_signature:
 		waiting.append("the new waves")
 	if not is_equal_approx(_start_heading_deg(), _windsurfer.start_heading_deg):
@@ -263,24 +274,67 @@ func _waiting_for_restart_text() -> String:
 	return "Restart (R) to sail with %s." % " and ".join(waiting)
 
 
-## Puts the board back at the start; builds the water again first if the waves changed.
+## Puts the board back at the start; builds the water again first if the waves changed. In a race
+## the wind and the waves that waited for R come now, for every board (RA24).
 func _restart_run() -> void:
 	var settings: SettingsValues = GameSettings.values
+	var new_sea: bool = settings.sea_signature() != _sea_signature or _new_wind_waits()
+	if new_sea and _race_runner != null:
+		_lay_the_course_again()
 	_windsurfer.start_heading_deg = _start_heading_deg()
-	if settings.sea_signature() != _sea_signature:
+	if new_sea:
 		_rebuild_sea()
 	_windsurfer.reset()
 	if _race_runner != null:
+		if new_sea:
+			# The AI boards take the player's new wind and waves (each its own copy, as at the start).
+			_race_runner.give_the_fleet_the_sea_of(_windsurfer)
 		_race_runner.restart()
 	_set_aground(false)
 	_pause_menu.set_note("")
 
 
+## Whether the settings' wind differs from the wind the boards sail in: in a race it waits for R
+## (outside a race it blows at once, so this is false there).
+func _new_wind_waits() -> bool:
+	return _race_runner != null and _wind_signature_of(_build_wind_config()) != _wind_signature
+
+
+## The numbers of a wind that the settings can change, as one text, to see whether it changed
+## (empty for a map's own wind: _build_wind_config() returns null there).
+static func _wind_signature_of(config: WindConfig) -> String:
+	if config == null:
+		return ""
+	return "%.2f kt from %.1f / gusts %s %.3f %.2f s / shifts %s %.2f deg %.2f s" % [config.speed_kt, config.from_bearing_deg,
+		config.gusts_enabled, config.gust_intensity, config.gust_period_s, config.shifts_enabled, config.max_shift_deg, config.shift_period_s]
+
+
+## A race's course laid again at R when the wind it was laid for has turned (RA24): the open water's
+## T1 and iQFOiL templates are placed for the settings' wind (_course_named()); a saved course, and
+## every course on the lake (whose wind is the map's), stays where it is.
+func _lay_the_course_again() -> void:
+	if _race_setup == null or _course == null:
+		return
+	var laid: Course = _course_named(_race_setup.course_name, _usual_start)
+	if laid == null or is_equal_approx(laid.axis_deg, _course.axis_deg):
+		return
+	_course = laid
+	if _course_on_water != null:
+		remove_child(_course_on_water)
+		_course_on_water.queue_free()
+		_course_on_water = null
+	_show_course()
+	_race_runner.lay_course(_course, shore_grid)
+
+
 ## A new wind and wave set from the settings, for the physics and for the water you see.
 func _rebuild_sea() -> void:
 	var settings: SettingsValues = GameSettings.values
-	_windsurfer.set_sea(_build_wind_config(), settings.build_wave_set_config())
+	var wind: WindConfig = _build_wind_config()
+	_windsurfer.set_sea(wind, settings.build_wave_set_config())
 	_sea_signature = settings.sea_signature()
+	if wind != null:
+		_wind_signature = _wind_signature_of(wind)
 	# OceanNode.setup() adds new water meshes, so the old ones go first. (They are plain
 	# meshes without scripts, so they can be freed at once.)
 	for child: Node in _ocean.get_children():
@@ -328,13 +382,18 @@ func _start_heading_deg() -> float:
 
 
 ## The settings' wind blows at once, with its gusts and shifts. A map scene keeps its own wind.
+## In a race it waits for R (_restart_run()): the AI boards sail their own copies of the wind, and
+## the course is laid to it, so the whole fleet and the course take a new wind together (RA24).
 func _apply_wind_settings_live() -> void:
+	if _race_runner != null:
+		return
 	if _race_setup != null and _race_setup.wind_kt > 0.0:
 		return  # the race's own wind (--wind) stays
 	var settings: SettingsValues = GameSettings.values
 	var wind: WindField = _windsurfer.sim.wind
 	settings.apply_wind_to(wind.config)
 	wind.set_wind(deg_to_rad(settings.wind_from_deg), settings.wind_speed_kt * SimMath.KNOT_MS)
+	_wind_signature = _wind_signature_of(_build_wind_config())
 
 
 ## The shore on a map (MD6): where the water under the board is shallower than the fin plus a
@@ -614,9 +673,11 @@ func start_race(setup: RaceSetup) -> void:
 		return
 	var spot: Vector2 = RaceCourses.pre_start_spot(_course)
 	_windsurfer.start_position = Vector3(spot.x, 0.0, spot.y)
+	_usual_start = usual
 	if setup.wind_kt > 0.0:
 		# The race's own wind (--wind); the opponents take the player's.
 		_windsurfer.set_sea(_build_wind_config(), null)
+	_wind_signature = _wind_signature_of(_build_wind_config())
 	_show_course()
 	start_playing()
 	_start_race_runner()
@@ -624,17 +685,27 @@ func start_race(setup: RaceSetup) -> void:
 	_apply_command_line_options()
 
 
+## A start signal of the race (SO3): the horn, the start watch's beep or the gun, to the sounds.
+func _on_race_start_signal(kind: RaceStartSignals.Kind) -> void:
+	if _audio != null:
+		_audio.play_race_signal(kind)
+
+
 ## The race (RaceRunner), when one is asked for and its course is on the water.
 func _start_race_runner() -> void:
 	if _race_setup == null or _course == null or _race_runner != null:
 		return
+	# The start's horns, beeps and gun (SO3), made now with the rest of the race's setup.
+	SoundBank.shared().make_start_sounds()
 	if _net != null and Lan.is_guest():
 		# The guest shows the host's race (LAN multiplayer, D8).
 		if _net.mirror == null:
 			_net.start_mirror(_course, _race_setup, _hud)
+			_net.mirror.start_signal.connect(_on_race_start_signal)
 		return
 	_race_runner = RaceRunner.new()
 	_race_runner.name = "RaceRunner"
+	_race_runner.start_signal.connect(_on_race_start_signal)
 	if _net != null:
 		_race_runner.remote_players = _net.remote_players()
 		_race_runner.remote_names = _net.remote_names()
