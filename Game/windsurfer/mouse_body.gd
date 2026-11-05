@@ -185,8 +185,11 @@ func configure(values: SettingsValues) -> void:
 ## One line for the F1 panel (the numbers are for tuning only; the strip shows nothing).
 func describe() -> String:
 	var how: String = "stays" if centre == Centre.STAYS else "springs back in %.1f s" % spring_back_s
-	return "mouse body (level %d, %s): rail %+.1f deg (aim %.1f)   back foot %+.1f deg (trim aim %.1f)   Esc frees the mouse, right button or C looks around" % [
-		level, how, rail_deg, rail_total_deg, trim_deg, trim_total_deg]
+	if scripted:
+		how = "held by script"
+	var keys: String = "" if scripted else "   Esc frees the mouse, right button or C looks around"
+	return "mouse body (level %d, %s) at side %+.2f back %+.2f: rail %+.1f deg (aim %.1f)   back foot %+.1f deg (trim aim %.1f)%s" % [
+		level, how, side, back, rail_deg, rail_total_deg, trim_deg, trim_total_deg, keys]
 
 
 ## The sailor's own leeward rail on this course, degrees, at a full hike in the straps: the same
