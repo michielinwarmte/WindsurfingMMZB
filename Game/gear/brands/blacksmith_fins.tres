@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="Brand" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://gear/brand.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/brands/blacksmith_fins/logo.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/brands/blacksmith_fins/wordmark.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/brands/blacksmith_fins/mark.png" id="4"]
+
+[resource]
+script = ExtResource("1")
+name = "Blacksmith Fins"
+slug = "blacksmith_fins"
+tagline = "Forged, not poured."
+makes_boards = false
+makes_sails = false
+makes_fins = true
+primary = Color(0.1451, 0.1529, 0.1686, 1)
+secondary = Color(0.6549, 0.6902, 0.7294, 1)
+accent = Color(1, 0.4196, 0.102, 1)
+logo = ExtResource("2")
+wordmark = ExtResource("3")
+mark = ExtResource("4")

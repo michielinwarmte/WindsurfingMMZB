@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draws the logos of the game's twelve gear brands (Documentation/reports/fleet_gear/brands.md).
+"""Draws the logos of the game's seventeen gear brands (Documentation/reports/fleet_gear/brands.md).
 
 Every brand gets three drawings in Game/assets/brands/<slug>/:
   mark.svg      the symbol alone (the menu card, the fin, the board's tail)
@@ -16,8 +16,13 @@ script, not to use its output.
 
 Run from the repo root (it needs Python with pycairo and PyGObject's Pango, rsvg-convert and, for the
 contact sheet, ImageMagick's magick):
-    python -I tools/brands/make_logos.py              all twelve brands, then the contact sheet
+    python -I tools/brands/make_logos.py              all seventeen brands, then the contact sheet
     python -I tools/brands/make_logos.py savanna      only these (and the sheet)
+On a computer without them (Max's Windows PCs) it falls back: the letters are read straight from the
+font's .ttf file (tools/brands/ttf_outlines.py; no kerning), the PNGs are drawn by Godot
+(tools/brands/svg_to_png.gd; set GODOT to the Godot executable, as for the tools/*.sh scripts) and the
+contact sheet is skipped. The five fin brands of 6 November 2026 were drawn that way, in Open Sans
+(Windows has it), so their letters come out the same on both kinds of computer.
 The contact sheet, .screenshots/brands.png, shows per brand: the logo on the menu's dark blue, the
 mark on white and on the menu's blue, the wordmark printed on the brand's cloth, and both small
 (a menu card's icon, a sail seen from far away).
@@ -28,15 +33,22 @@ import os
 import subprocess
 import sys
 
-import gi
-
-gi.require_version("Pango", "1.0")
-gi.require_version("PangoCairo", "1.0")
-gi.require_foreign("cairo")
-import cairo  # noqa: E402
-from gi.repository import Pango, PangoCairo  # noqa: E402
+import shutil
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(REPO, "tools", "brands"))
+try:
+    import gi
+
+    gi.require_version("Pango", "1.0")
+    gi.require_version("PangoCairo", "1.0")
+    gi.require_foreign("cairo")
+    import cairo  # noqa: E402
+    from gi.repository import Pango, PangoCairo  # noqa: E402
+    HAVE_PANGO = True
+except (ImportError, ValueError):
+    import ttf_outlines  # noqa: E402  (the fallback: the letters from the .ttf file)
+    HAVE_PANGO = False
 OUT_DIR = os.path.join(REPO, "Game", "assets", "brands")
 PNG_LONG_SIDE_PX = 1024
 # The logo's square plate, in drawing units.
@@ -252,7 +264,7 @@ def _run(points, flags):
 
 # --- Letters ---------------------------------------------------------------------------------------
 
-_FONT_MAP = PangoCairo.FontMap.get_default()
+_FONT_MAP = PangoCairo.FontMap.get_default() if HAVE_PANGO else None
 
 
 def _face(family, face_name):
@@ -266,7 +278,13 @@ def _face(family, face_name):
 
 def text_path(text, family, face_name, size, tracking_em=0.0):
     """The outline of a line of text with its baseline at y = 0, and its advance width.
-    Pango lays the letters out (with the font's kerning); cairo hands back the outlines."""
+    Pango lays the letters out (with the font's kerning); cairo hands back the outlines. Without
+    them, the outlines come from the font's file (ttf_outlines.py, no kerning)."""
+    if not HAVE_PANGO:
+        commands, advance = ttf_outlines.text_outline(text, family, face_name, size, tracking_em)
+        path = Path()
+        path.cmds = commands
+        return path, advance
     surface = cairo.RecordingSurface(cairo.CONTENT_COLOR_ALPHA, None)
     ctx = cairo.Context(surface)
     layout = PangoCairo.create_layout(ctx)
@@ -638,6 +656,125 @@ def montag():
     return mark, wordmark
 
 
+# --- The five fin brands (Max, 6 November 2026) -----------------------------------------------------
+# Each after a real fin maker (brands.md, "The fin brands"), with a look of its own: carbon and one
+# colour. The letters are Open Sans (SIL Open Font License), which Windows and Linux both have.
+
+FIN_FONT = "Open Sans"
+
+
+def _skewed_about_middle(path, degrees):
+    """Leans a mark's path to the right by degrees about the box's middle (y = 500)."""
+    lean = math.tan(math.radians(degrees))
+    return path.mapped(lambda p: (p[0] + lean * (500 - p[1]), p[1]))
+
+
+def _scaled_about_middle(path, factor):
+    """A mark's path made smaller (factor < 1) about the box's middle (500, 500)."""
+    return path.mapped(lambda p: (500 + (p[0] - 500) * factor, 500 + (p[1] - 500) * factor))
+
+
+def m_fins():
+    """A forward-leaning M in lime on a carbon disc: the letter as a speed mark."""
+    carbon, white, lime = "#15171A", "#F2F4F5", "#B6F01E"
+    m = polygon([(185, 770), (185, 230), (335, 230), (500, 470), (665, 230), (815, 230), (815, 770), (670, 770),
+                 (670, 470), (545, 650), (455, 650), (330, 470), (330, 770)])
+    mark = [
+        Shape(circle((500, 500), 440), lime),
+        Shape(circle((500, 500), 410), carbon),
+        Shape(_scaled_about_middle(_skewed_about_middle(m, 12), 0.84), lime),
+    ]
+    font = (FIN_FONT, "ExtraBold Italic")
+    wordmark, _ = word([("M", *font, lime, 0.04), (" FINS", *font, white, 0.04)], 200)
+    return mark, wordmark
+
+
+def start_fins():
+    """The start lights: two out, the last one green. Every race starts here."""
+    green, off_white, go = "#10372A", "#F4F1E6", "#2EE06E"
+    mark = [
+        Shape(rounded_rect(70, 330, 930, 670, 170), off_white),
+        Shape(rounded_rect(95, 355, 905, 645, 145), green),
+        Shape(circle((240, 500), 105), "#2C4A40"),
+        Shape(circle((500, 500), 105), "#2C4A40"),
+        Shape(circle((760, 500), 128), "#1D8F4A"),
+        Shape(circle((760, 500), 105), go),
+    ]
+    font = (FIN_FONT, "ExtraBold")
+    wordmark, _ = word([("START", *font, go, 0.05), (" FINS", *font, off_white, 0.05)], 200)
+    return mark, wordmark
+
+
+def blacksmith_fins():
+    """A fin glowing on the anvil: forged, not poured."""
+    iron, steel, ember = "#25272B", "#A7B0BA", "#FF6B1A"
+    anvil = Path().move((330, 560)).line((850, 560)).line((850, 640)).line((745, 640))
+    anvil.curve((700, 660), (680, 700), (690, 740))
+    anvil.line((790, 790)).line((800, 850)).line((330, 850)).line((340, 790)).line((450, 740))
+    anvil.curve((460, 700), (440, 665), (390, 645))
+    anvil.curve((300, 640), (190, 615), (120, 575))
+    anvil.curve((200, 562), (270, 560), (330, 560)).close()
+    fin = Path().move((470, 560)).line((700, 560))
+    fin.curve((690, 420), (720, 280), (800, 175))
+    fin.curve((812, 158), (795, 140), (775, 152))
+    fin.curve((640, 240), (510, 380), (470, 560)).close()
+    mark = [
+        Shape(circle((500, 500), 440), steel),
+        Shape(circle((500, 500), 412), iron),
+        Shape(_scaled_about_middle(anvil, 0.86), steel),
+        Shape(_scaled_about_middle(fin, 0.86), ember),
+    ]
+    font = (FIN_FONT, "ExtraBold")
+    wordmark, _ = word([("BLACKSMITH", *font, "#D5DBE1", 0.04), (" FINS", *font, ember, 0.04)], 200)
+    return mark, wordmark
+
+
+def _storm_arm(center, start_deg, sweep_deg, r_from, r_to, width_from, steps=60):
+    """One arm of the storm symbol: a band that spirals out from the eye's ring and thins to a
+    point (angles clockwise on screen from the right)."""
+    outer, inner = [], []
+    for i in range(steps + 1):
+        t = i / steps
+        a = math.radians(start_deg + sweep_deg * t)
+        r = r_from + (r_to - r_from) * t ** 1.4
+        half = 0.5 * width_from * (1.0 - t) ** 0.8
+        outer.append((center[0] + (r + half) * math.cos(a), center[1] + (r + half) * math.sin(a)))
+        inner.append((center[0] + (r - half) * math.cos(a), center[1] + (r - half) * math.sin(a)))
+    return polygon(outer + inner[::-1])
+
+
+def typhoon_fins():
+    """The weather map's storm: a ring round a red eye and two arms spiralling out."""
+    navy, white, red = "#0E1F44", "#FFFFFF", "#E8322B"
+    center = (500, 500)
+    mark = [
+        Shape(circle(center, 440), navy),
+        Shape(_storm_arm(center, 180, 150, 130, 330, 120), white),
+        Shape(_storm_arm(center, 0, 150, 130, 330, 120), white),
+        Shape(ring(center, 170, 95), white, evenodd=True),
+        Shape(circle(center, 70), red),
+    ]
+    font = (FIN_FONT, "ExtraBold Italic")
+    wordmark, _ = word([("TYPHOON", *font, white, 0.04), (" FINS", *font, red, 0.04)], 200)
+    return mark, wordmark
+
+
+def nt8():
+    """An 8 of two rings, leaning forward, on a black disc: infinity stood up."""
+    black, white, magenta = "#0B0B0C", "#EDEDED", "#FF2E88"
+    top = ring((500, 330), 150, 78)
+    bottom = ring((500, 632), 182, 104)
+    mark = [
+        Shape(circle((500, 500), 440), white),
+        Shape(circle((500, 500), 418), black),
+        Shape(_skewed_about_middle(bottom, 10), magenta, evenodd=True),
+        Shape(_skewed_about_middle(top, 10), magenta, evenodd=True),
+    ]
+    font = (FIN_FONT, "ExtraBold Italic")
+    wordmark, _ = word([("NT", *font, white, 0.03), ("8", *font, magenta, 0.03)], 200)
+    return mark, wordmark
+
+
 # slug: (name for the SVG title, drawing function, plate colour = the brand's primary)
 BRANDS = {
     "tripletone": ("Tripletone", tripletone, "#16191E"),
@@ -652,6 +789,11 @@ BRANDS = {
     "forbidden": ("Forbidden", forbidden, "#D7141A"),
     "gg_sails": ("GG Sails", gg_sails, "#5B2BD1"),
     "montag": ("Montag", montag, "#1E2329"),
+    "m_fins": ("M Fins", m_fins, "#15171A"),
+    "start_fins": ("Start Fins", start_fins, "#10372A"),
+    "blacksmith_fins": ("Blacksmith Fins", blacksmith_fins, "#25272B"),
+    "typhoon_fins": ("Typhoon Fins", typhoon_fins, "#0E1F44"),
+    "nt8": ("NT8", nt8, "#0B0B0C"),
 }
 
 
@@ -696,14 +838,29 @@ def write_brand(slug):
         "wordmark": svg_document(title, padded(bbox_of(wordmark), 0.04), [s.svg() for s in wordmark]),
         "logo": svg_document(title, (0, 0, PLATE, PLATE), [s.svg() for s in logo_shapes(mark, wordmark, plate_colour)]),
     }
+    pairs = []
     for name, text in files.items():
         svg_path = os.path.join(folder, name + ".svg")
         with open(svg_path, "w", encoding="utf-8") as handle:
             handle.write(text)
-        # The SVG's width and height already put the long side at 1024 px.
-        subprocess.run(["rsvg-convert", "--keep-aspect-ratio", "-o", os.path.join(folder, name + ".png"), svg_path],
-                       check=True)
+        pairs.append((svg_path, os.path.join(folder, name + ".png")))
+    # The SVG's width and height already put the long side at 1024 px.
+    if shutil.which("rsvg-convert"):
+        for svg_path, png_path in pairs:
+            subprocess.run(["rsvg-convert", "--keep-aspect-ratio", "-o", png_path, svg_path], check=True)
+    else:
+        _draw_with_godot(pairs)
     print(f"{slug}: mark, wordmark, logo")
+
+
+def _draw_with_godot(pairs):
+    """The PNGs drawn by Godot's own SVG renderer (svg_to_png.gd), where rsvg-convert is missing."""
+    godot = os.environ.get("GODOT", "")
+    if not godot:
+        raise SystemExit("No rsvg-convert: set GODOT to the Godot executable to draw the PNGs")
+    script = os.path.join(REPO, "tools", "brands", "svg_to_png.gd")
+    args = [path for pair in pairs for path in pair]
+    subprocess.run([godot, "--headless", "--no-header", "--script", script, "--", *args], check=True)
 
 
 MENU_BLUE = "#12263F"  # the menu panels' colour (Game/ui/theme.tres)
@@ -716,6 +873,9 @@ def _magick(*args):
 
 def contact_sheet():
     """One row per brand: what the team needs to judge the logos at a glance."""
+    if not shutil.which("magick"):
+        print("No ImageMagick (magick): the contact sheet is skipped")
+        return
     work = os.path.join(REPO, ".screenshots", "brands")
     os.makedirs(work, exist_ok=True)
     rows = []

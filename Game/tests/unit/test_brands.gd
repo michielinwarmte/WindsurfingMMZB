@@ -1,23 +1,26 @@
 extends GutTest
-## The game's gear brands (gear/brand.gd; Documentation/reports/fleet_gear/brands.md): the twelve
+## The game's gear brands (gear/brand.gd; Documentation/reports/fleet_gear/brands.md): the seventeen
 ## load with their three logos, each makes boards, sails or fins, and no real maker's name
 ## appears in a brand's name, its tagline or its drawings (the game may not use them: copyright).
 
-## The sport's real makers, lower case: none may appear in the game's brand files.
+## The sport's real makers, lower case: none may appear in the game's brand files. The second line
+## are the fin makers the five fin brands of 6 November 2026 are after (Max's list).
 const REAL_BRANDS: PackedStringArray = [
 	"duotone", "severne", "point-7", "point 7", "starboard", "neilpryde", "neil pryde", "jp australia",
 	"fmx", "north sails", "northsails", "s2maui", "tabou", "gaastra", "ga sails", "fanatic",
+	"z fins", "z-fins", "zfins", "finish fins", "finishfins", "carpenter", "hurricane", "np7",
 ]
 const SLUGS: PackedStringArray = [
 	"tripletone", "savanna", "point9", "moonboard", "nielstrots", "pj_new_sealand", "bmx_boards",
 	"southsails", "s3kauai", "forbidden", "gg_sails", "montag",
+	"m_fins", "start_fins", "blacksmith_fins", "typhoon_fins", "nt8",
 ]
 const DRAWINGS: PackedStringArray = ["logo.svg", "wordmark.svg", "mark.svg"]
 
 
-func test_the_twelve_brands_load() -> void:
+func test_the_seventeen_brands_load() -> void:
 	var brands: Array[Brand] = Brand.all()
-	assert_eq(brands.size(), SLUGS.size(), "twelve brands")
+	assert_eq(brands.size(), SLUGS.size(), "seventeen brands")
 	var names: Dictionary[String, bool] = {}
 	for i: int in brands.size():
 		var brand: Brand = brands[i]
@@ -60,7 +63,7 @@ func test_every_brand_makes_boards_sails_or_fins() -> void:
 		fin_makers += 1 if brand.makes_fins else 0
 	assert_eq(board_makers, 6, "six brands make boards (Michiel's table)")
 	assert_eq(sail_makers, 7, "seven brands make sails")
-	assert_eq(fin_makers, 1, "one brand makes fins (Montag, the lead's decision)")
+	assert_eq(fin_makers, 7, "seven brands make fins: Montag, the five fin makers and PJ New Sealand (the default fin)")
 
 
 func test_no_real_brand_in_a_name_or_a_tagline() -> void:

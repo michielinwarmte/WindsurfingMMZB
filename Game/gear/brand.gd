@@ -12,7 +12,8 @@ extends Resource
 ## One .tres per brand in Game/gear/brands/; Brand.all() lists them. The logos are drawn by
 ## tools/brands/make_logos.py (SVG and PNG in Game/assets/brands/<slug>/).
 
-## The twelve brands, in the order the gear page lists them.
+## The seventeen brands, in the order the gear page lists them: the board and sail brands, then the
+## fin brands (Montag, and the five of 6 November 2026: Max's "add more fins").
 const PATHS: PackedStringArray = [
 	"res://gear/brands/tripletone.tres",
 	"res://gear/brands/savanna.tres",
@@ -26,6 +27,11 @@ const PATHS: PackedStringArray = [
 	"res://gear/brands/forbidden.tres",
 	"res://gear/brands/gg_sails.tres",
 	"res://gear/brands/montag.tres",
+	"res://gear/brands/m_fins.tres",
+	"res://gear/brands/start_fins.tres",
+	"res://gear/brands/blacksmith_fins.tres",
+	"res://gear/brands/typhoon_fins.tres",
+	"res://gear/brands/nt8.tres",
 ]
 
 ## The brand's name as the game shows it: "Point.9".
@@ -36,7 +42,8 @@ const PATHS: PackedStringArray = [
 @export var tagline: String = ""
 @export var makes_boards: bool = false
 @export var makes_sails: bool = false
-## The fins' brand (Montag): none of the board and sail brands makes fins.
+## The fin brands: Montag and the five fin makers, and PJ New Sealand, whose fin is the game's default
+## fin (each has one slalom fin, any depth from 28 to 52 cm: GearCatalogue.fin_of()).
 @export var makes_fins: bool = false
 
 @export_group("Colours")
