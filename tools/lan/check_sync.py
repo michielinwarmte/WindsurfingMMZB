@@ -4,8 +4,9 @@ Reads the host's and the guest's logs. A TRACK line is a board as the PC that sa
 host tick; a SEEN line is a board as the other PC showed it for that same tick. For every SEEN line
 with a TRACK line of the same board and tick, the differences are measured: the place (m), the heading
 (degrees), the speed (m/s), the mast's direction, the sailor's lean, and whether the sailor was on the
-board on both; and (newer builds) the heel and the pitch and the rail and trim the sailor's feet aim for,
-which carry the body on the mouse (package B, GP2). Then the RESULT lines (each PC's finish list) are
+board on both; and (newer builds) the heel and the pitch, the rail and trim the sailor's feet aim for,
+and how the feet press (the toes' share of their roll moment, the weight's share on the back foot), which
+carry the body on the mouse (package B, GP2: the feet's press). Then the RESULT lines (each PC's finish list) are
 compared.
 
     python -I tools/lan/check_sync.py .logs/lan/host.log .logs/lan/guest.log
@@ -34,7 +35,7 @@ def read(path):
                 continue
             if parts[0] in ("TRACK", "SEEN") and len(parts) >= 12:
                 tick, board = int(parts[1]), int(parts[2])
-                numbers = [float(v) for v in parts[3:11]] + [int(parts[11])] + [float(v) for v in parts[12:16]]
+                numbers = [float(v) for v in parts[3:11]] + [int(parts[11])] + [float(v) for v in parts[12:18]]
                 (tracks if parts[0] == "TRACK" else seens)[(tick, board)] = numbers
             elif parts[0] == "JUDGED" and len(parts) >= 5:
                 judged[(int(parts[1]), int(parts[2]))] = (float(parts[3]), float(parts[4]))
@@ -48,9 +49,10 @@ def read(path):
 
 def compare(label, seens, tracks):
     worst = {"place": 0.0, "height": 0.0, "heading": 0.0, "speed": 0.0, "mast": 0.0, "lean": 0.0,
-             "heel": 0.0, "pitch": 0.0, "rail_aim": 0.0, "trim_aim": 0.0}
-    # The largest rail and trim aims a PC sent, to show what was compared (the body adds to them).
-    aims = {"rail": 0.0, "trim": 0.0}
+             "heel": 0.0, "pitch": 0.0, "rail_aim": 0.0, "trim_aim": 0.0, "toes": 0.0, "back_foot": 0.0}
+    # The largest rail and trim aims a PC sent, and the feet's largest press (the body's), to show what
+    # was compared.
+    aims = {"rail": 0.0, "trim": 0.0, "toes": 0.0, "back_foot": 0.0}
     state_mismatch = 0
     matched = 0
     boards = set()
@@ -74,6 +76,11 @@ def compare(label, seens, tracks):
                 worst[name] = max(worst[name], abs(seen[9 + i] - track[9 + i]))
             aims["rail"] = max(aims["rail"], abs(track[11]))
             aims["trim"] = max(aims["trim"], abs(track[12]))
+        if len(seen) >= 15 and len(track) >= 15:
+            for i, name in enumerate(("toes", "back_foot")):
+                worst[name] = max(worst[name], abs(seen[13 + i] - track[13 + i]))
+            aims["toes"] = max(aims["toes"], abs(track[13]))
+            aims["back_foot"] = max(aims["back_foot"], track[14])
     print("%s: %d moments of %d boards compared (of %d shown); worst: place %.4f m, height %.4f m, heading %.3f deg, "
           "speed %.4f m/s, mast %.5f, lean %.5f; sailor on/off the board differed %d times"
           % (label, matched, len(boards), len(seens), worst["place"], worst["height"], worst["heading"], worst["speed"],
@@ -81,6 +88,8 @@ def compare(label, seens, tracks):
     print("%s  heel %.4f deg, pitch %.4f deg, the bank the feet aim for %.4f deg (a turn's too) and their trim aim "
           "%.4f deg (the largest sent: bank %.2f deg, trim %.2f deg)"
           % (" " * len(label), worst["heel"], worst["pitch"], worst["rail_aim"], worst["trim_aim"], aims["rail"], aims["trim"]))
+    print("%s  the feet's press: toes %.4f, back foot %.4f (the largest sent: toes %.2f, weight on the back foot %.2f)"
+          % (" " * len(label), worst["toes"], worst["back_foot"], aims["toes"], aims["back_foot"]))
     return matched, worst
 
 

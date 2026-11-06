@@ -71,15 +71,13 @@ const FIN_STIFFNESS_MIN: float = 0.5
 const FIN_STIFFNESS_MAX: float = 4.0
 ## Frame-rate caps the menu offers; 0 means no cap.
 const FPS_CAPS: Array[int] = [0, 30, 60, 120, 144]
-## The body on the mouse (package B, MouseBody): the ranges of its sliders. The rail's range is the
-## leeward rail the mouse may add to the technique's (the design: 0 to +6; Max wanted more on
-## 6 November 2026: 9 by default, MouseBody.RAIL_MAX_DEG in all at most), the back foot's the trim
-## either way (the design: 1.5; Max's more: 2.5; MouseBody's band in all), the travel the mouse moves from one end to the other (the design: about 300 px), and the
-## spring's time back to the middle (the design: 1 to 2 s).
-const BODY_RAIL_MIN_DEG: float = 2.0
-const BODY_RAIL_MAX_DEG: float = 12.0
-const BODY_TRIM_MIN_DEG: float = 0.5
-const BODY_TRIM_MAX_DEG: float = 4.0
+## The body on the mouse (package B, MouseBody): the ranges of its sliders. The toes and heels: the
+## share of a full press the mouse asks at the end of its travel (a full press turns the board 10
+## degrees past the technique's bank); the back foot: the share of the weight it moves onto a strap (both up to all of it, Max's "more" of 6 November 2026,
+## and down to a quarter for a gentler mouse); the travel the mouse moves from one end to the other
+## (the design: about 300 px); the spring's time back to the middle (the design: 1 to 2 s).
+const BODY_SHARE_MIN: float = 0.25
+const BODY_SHARE_MAX: float = 1.0
 const BODY_TRAVEL_MIN_PX: float = 100.0
 const BODY_TRAVEL_MAX_PX: float = 800.0
 const BODY_SPRING_MIN_S: float = 0.5
@@ -149,10 +147,11 @@ var body_spring_s: float
 var body_sideways: int
 ## Whether the far side goes on past flat to the windward rail down.
 var body_windward_rail: bool
-## The ranges: the most leeward rail added, degrees; the back foot's trim either way, degrees; the
+## The ranges (the feet's press, GP2): the share of a full press of the toes or the heels at the end
+## of the travel; the share of the weight the back or the front foot takes there; the
 ## mouse travel from end to end, pixels.
-var body_rail_deg: float
-var body_trim_deg: float
+var body_toes_share: float
+var body_weight_share: float
 var body_travel_px: float
 ## 1: the feet still hold the rail for you; 2: they correct slowly and your hand holds it.
 var body_level: int
@@ -242,8 +241,8 @@ func reset_to_defaults() -> void:
 	body_spring_s = 1.5
 	body_sideways = MouseBody.Sideways.AS_SEEN
 	body_windward_rail = false
-	body_rail_deg = 9.0
-	body_trim_deg = 2.5
+	body_toes_share = 1.0
+	body_weight_share = 1.0
 	body_travel_px = 300.0
 	body_level = 1
 
@@ -425,8 +424,8 @@ func write_to(config: ConfigFile) -> void:
 	config.set_value("body", "spring_s", body_spring_s)
 	config.set_value("body", "sideways", body_sideways)
 	config.set_value("body", "windward_rail", body_windward_rail)
-	config.set_value("body", "rail_deg", body_rail_deg)
-	config.set_value("body", "trim_deg", body_trim_deg)
+	config.set_value("body", "toes_share", body_toes_share)
+	config.set_value("body", "weight_share", body_weight_share)
 	config.set_value("body", "travel_px", body_travel_px)
 	config.set_value("body", "level", body_level)
 
@@ -488,8 +487,10 @@ func read_from(config: ConfigFile) -> void:
 	body_spring_s = clampf(_float(config, "body", "spring_s", body_spring_s), BODY_SPRING_MIN_S, BODY_SPRING_MAX_S)
 	body_sideways = clampi(_int(config, "body", "sideways", body_sideways), 0, MouseBody.Sideways.size() - 1)
 	body_windward_rail = _bool(config, "body", "windward_rail", body_windward_rail)
-	body_rail_deg = clampf(_float(config, "body", "rail_deg", body_rail_deg), BODY_RAIL_MIN_DEG, BODY_RAIL_MAX_DEG)
-	body_trim_deg = clampf(_float(config, "body", "trim_deg", body_trim_deg), BODY_TRIM_MIN_DEG, BODY_TRIM_MAX_DEG)
+	# The feet's press (GP2) has its own keys: the degrees of the first build (rail_deg, trim_deg) meant
+	# something else and are left unread.
+	body_toes_share = clampf(_float(config, "body", "toes_share", body_toes_share), BODY_SHARE_MIN, BODY_SHARE_MAX)
+	body_weight_share = clampf(_float(config, "body", "weight_share", body_weight_share), BODY_SHARE_MIN, BODY_SHARE_MAX)
 	body_travel_px = clampf(_float(config, "body", "travel_px", body_travel_px), BODY_TRAVEL_MIN_PX, BODY_TRAVEL_MAX_PX)
 	body_level = clampi(_int(config, "body", "level", body_level), 1, 2)
 

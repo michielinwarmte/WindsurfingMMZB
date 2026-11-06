@@ -13,7 +13,7 @@
 # it the two boards sail straight on). --release=1 runs the exported game (tools/release.sh build).
 # --body=<side>,<back> puts both players' boards on the body on the mouse (package B, GP2), held there
 # by script (each -1 to 1: main.gd's --body); the check then also shows the rail and the trim the feet
-# aimed for, as each PC sent them and the other showed them.
+# aimed for and how they pressed (the feet's press), as each PC sent them and the other showed them.
 # The logs are in .logs/lan/host.log and .logs/lan/guest.log.
 set -euo pipefail
 source "$(dirname "$0")/common.sh"

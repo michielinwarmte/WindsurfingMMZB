@@ -1,8 +1,9 @@
 extends GutTest
 ## Package B, the body on the mouse (MouseBody, ROADMAP GP2; Documentation/reports/gameplay/
-## gp2_mouse_body.md). The mouse is set by values (no device): where the body goes, what it asks of
-## the feet (inside GP0's bands), Max's choices (GD7) as settings, the controller adding it to the
-## push slider, and the sailing scene switching it on and off.
+## gp2_mouse_body.md and gp2_feet_pressure.md). The mouse is set by values (no device): where the body
+## goes, what it asks of the feet (the toes against the heels, the back foot against the front foot),
+## Max's choices (GD7) as settings, the controller writing the feet's press, and the sailing scene
+## switching it on and off. What the simulation does with the press is test_feet_press.gd.
 
 const DT: float = 1.0 / 60.0
 
@@ -45,42 +46,40 @@ func test_the_mouse_moves_the_body_and_stops_at_the_ends() -> void:
 	assert_almost_eq(body.side, 0.5, 1e-6, "a longer travel: the same hand movement goes half as far")
 
 
-func test_left_in_the_middle_the_body_adds_nothing() -> void:
+func test_left_in_the_middle_the_body_presses_nothing() -> void:
 	var body: MouseBody = MouseBody.new()
-	for base: float in [0.0, 2.0, 5.0, 9.0]:
-		for tack: float in [1.0, -1.0]:
-			assert_eq(body.rail_extra_deg(base, tack), 0.0, "no rail added at base %.0f" % base)
-	for base: float in [0.0, 1.5, 2.0, 4.0]:
-		assert_eq(body.trim_extra_deg(base), 0.0, "no trim added at base %.1f" % base)
+	for tack: float in [1.0, -1.0]:
+		for heel_deg: float in [-3.0, 0.0, 2.0, 8.0]:
+			body.press(tack, heel_deg)
+			assert_eq(body.roll_press, 0.0, "no toes or heels at a heel of %.0f" % heel_deg)
+			assert_eq(body.pitch_press, 0.0, "no weight moved")
 
 
-func test_the_rail_goes_up_to_its_range_and_never_past_twelve_degrees() -> void:
+func test_toward_more_rail_the_toes_press_up_to_their_share() -> void:
 	var body: MouseBody = MouseBody.new()
 	body.sideways = MouseBody.Sideways.RIGHT_IS_MORE_RAIL
+	assert_eq(body.toes_share, 1.0, "all of the feet's roll moment at the end (Max's more, 6 November 2026)")
 	body.side = 1.0
-	assert_almost_eq(body.rail_extra_deg(2.0, 1.0), 9.0, 1e-6, "the technique's 2 plus the default 9: 11")
-	assert_almost_eq(body.rail_extra_deg(5.0, 1.0), 7.0, 1e-6, "upwind the technique has 5: only 7 more, 12 in all")
-	assert_eq(body.rail_extra_deg(13.0, 1.0), 0.0, "already past 12 (the slider and the sea): nothing more")
+	assert_eq(body.toes_press(1.0, 2.0), 1.0, "all the way: the toes press with all the feet have")
+	assert_eq(body.toes_press(1.0, 15.0), 1.0, "however far the board already heels: the toes are the player's")
 	body.side = 0.5
-	assert_almost_eq(body.rail_extra_deg(2.0, 1.0), 4.5, 1e-6, "half way, half the range")
-	body.rail_more_deg = 4.0
-	assert_almost_eq(body.rail_extra_deg(2.0, -1.0), 2.0, 1e-6, "a smaller range (a setting)")
+	assert_eq(body.toes_press(-1.0, 2.0), 0.5, "half way, half the press, on either tack")
+	body.toes_share = 0.6
+	assert_almost_eq(body.toes_press(1.0, 2.0), 0.3, 1e-6, "a gentler mouse (a setting)")
 
 
-func test_the_other_way_ends_at_a_flat_board_or_at_the_windward_rail() -> void:
+func test_the_other_way_the_heels_bring_the_board_flat_or_to_the_windward_rail() -> void:
 	var body: MouseBody = MouseBody.new()
 	body.sideways = MouseBody.Sideways.RIGHT_IS_MORE_RAIL
 	body.side = -1.0
-	assert_almost_eq(body.rail_extra_deg(2.0, 1.0), -2.0, 1e-6, "all the way: the technique's 2 degrees taken away, flat")
-	assert_almost_eq(body.rail_extra_deg(5.0, 1.0), -5.0, 1e-6, "flat from the upwind rail too")
-	assert_eq(body.rail_extra_deg(0.0, 1.0), 0.0, "already flat (a broad reach): nothing to take")
-	body.side = -0.5
-	assert_almost_eq(body.rail_extra_deg(2.0, 1.0), -1.0, 1e-6, "half way to flat")
+	assert_eq(body.toes_press(1.0, 5.0), -1.0, "heeled to leeward: all the heels")
+	assert_eq(body.toes_press(1.0, MouseBody.FAR_SIDE_EASE_DEG), -1.0, "still all of it this far from flat")
+	assert_almost_eq(body.toes_press(1.0, 0.5 * MouseBody.FAR_SIDE_EASE_DEG), -0.5, 1e-6, "easing off near flat")
+	assert_eq(body.toes_press(1.0, 0.0), 0.0, "flat: the heels rest (the far side ends at a flat board)")
+	assert_eq(body.toes_press(1.0, -2.0), 0.0, "never past flat")
 	body.windward_rail = true
-	body.side = -1.0
-	assert_almost_eq(2.0 + body.rail_extra_deg(2.0, 1.0), -MouseBody.WINDWARD_RAIL_DEG, 1e-6, "on to the windward rail down")
-	body.side = -0.5
-	assert_almost_eq(2.0 + body.rail_extra_deg(2.0, 1.0), -1.0, 1e-6, "half way from 2 to -4")
+	assert_eq(body.toes_press(1.0, 0.0), -1.0, "with the windward rail on: on past flat")
+	assert_eq(body.toes_press(1.0, -MouseBody.WINDWARD_RAIL_DEG), 0.0, "to the windward rail down, and no further")
 
 
 func test_as_seen_the_board_rolls_the_way_the_mouse_moves() -> void:
@@ -96,21 +95,22 @@ func test_as_seen_the_board_rolls_the_way_the_mouse_moves() -> void:
 	assert_eq(body.more_rail(-1.0), 1.0)
 
 
-func test_the_back_foot_stays_inside_its_band() -> void:
+func test_the_back_foot_moves_the_weight_up_to_its_share() -> void:
 	var body: MouseBody = MouseBody.new()
-	assert_eq(body.trim_range_deg, 2.5, "the default range (Max's more, 6 November 2026)")
+	assert_eq(body.weight_share, 1.0, "all the weight onto a strap at the end (Max's more, 6 November 2026)")
 	body.back = 1.0
-	assert_almost_eq(body.trim_extra_deg(2.0), 2.5, 1e-6, "2 + 2.5 = 4.5")
-	assert_almost_eq(body.trim_extra_deg(1.5), 2.5, 1e-6, "at speed the technique's 1.5 + 2.5 = 4")
-	assert_almost_eq(body.trim_extra_deg(3.0), 2.0, 1e-6, "with the slider's extra: held at 5, the top of the band")
-	assert_eq(body.trim_extra_deg(6.0), 0.0, "already above the band: the body adds nothing")
-	body.back = -1.0
-	assert_almost_eq(body.trim_extra_deg(2.0), -2.0, 1e-6, "weight forward: 0, the bottom of the band")
-	assert_almost_eq(body.trim_extra_deg(1.5), -1.5, 1e-6, "held at 0")
-	assert_almost_eq(body.trim_extra_deg(6.0), -2.5, 1e-6, "above the band, forward still takes the full range")
-	body.back = 0.5
-	body.trim_range_deg = 1.0
-	assert_almost_eq(body.trim_extra_deg(2.0), 0.5, 1e-6, "the gentler range (a setting)")
+	assert_eq(body.back_foot_press(), 1.0, "pulled all the way back: all the weight on the back foot")
+	body.back = -0.5
+	assert_eq(body.back_foot_press(), -0.5, "pushed half way forward: half way to the front foot")
+	body.weight_share = 0.4
+	body.back = 1.0
+	assert_almost_eq(body.back_foot_press(), 0.4, 1e-6, "a gentler mouse (a setting)")
+	body.press(1.0, 2.0)
+	assert_almost_eq(body.pitch_press, 0.4, 1e-6)
+	assert_true(body.working)
+	body.rest()
+	assert_eq(body.pitch_press, 0.0, "in a manoeuvre: nothing")
+	assert_false(body.working)
 
 
 func test_left_alone_it_stays_or_springs_back() -> void:
@@ -205,7 +205,7 @@ func _sailing(controller: PlayerController, controls: SimControls, seconds: floa
 	return sim
 
 
-func test_the_controller_adds_the_body_to_the_sliders_extras() -> void:
+func test_the_controller_writes_the_feet_press_and_leaves_the_slider_alone() -> void:
 	var controller: PlayerController = PlayerController.new()
 	controller.push_level = 1.0
 	var controls: SimControls = SimControls.new()
@@ -216,29 +216,28 @@ func test_the_controller_adds_the_body_to_the_sliders_extras() -> void:
 	var slider_trim: float = controls.trim_aim_extra_deg
 	assert_gt(slider_rail, 0.5, "the slider at the top asks for rail of its own")
 	assert_gt(slider_trim, 0.3, "and trim")
+	assert_eq(controls.feet_roll_press, 0.0, "no body: the feet press as the technique wants")
+	assert_eq(controls.feet_pitch_press, 0.0)
 	var body: MouseBody = MouseBody.new()
 	body.scripted = true
 	body.sideways = MouseBody.Sideways.RIGHT_IS_MORE_RAIL
 	body.side = 1.0
-	body.back = 1.0
+	body.back = 0.5
 	controller.body = body
 	controller.update(sim.telemetry, controls, DT)
-	assert_ne(body.rail_deg, 0.0, "the body asks for rail")
-	assert_almost_eq(controls.rail_bank_extra_deg, slider_rail + body.rail_deg, 1e-6, "added to the slider's")
-	assert_almost_eq(controls.trim_aim_extra_deg, slider_trim + body.trim_deg, 1e-6)
-	var technique_rail: float = MouseBody.technique_rail_deg(sim.sailor_config, sim.telemetry.twa_at_sail_deg)
-	var technique_trim: float = MouseBody.technique_trim_deg(sim.sailor_config, sim.telemetry.speed_ms)
-	assert_almost_eq(body.rail_total_deg, minf(technique_rail + slider_rail + body.rail_more_deg, MouseBody.RAIL_MAX_DEG), 1e-6, "the rail in all, at most 12")
-	assert_almost_eq(body.trim_total_deg, minf(technique_trim + slider_trim + body.trim_range_deg, MouseBody.TRIM_MAX_DEG), 1e-6, "the trim in all, at most 5")
-	assert_string_contains(controller.body_text(), "mouse body")
-	# In a manoeuvre the body adds nothing.
+	assert_eq(controls.feet_roll_press, 1.0, "the toes press")
+	assert_eq(controls.feet_pitch_press, 0.5, "half the weight to the back foot")
+	assert_almost_eq(controls.rail_bank_extra_deg, slider_rail, 1e-6, "the slider's rail is the slider's")
+	assert_almost_eq(controls.trim_aim_extra_deg, slider_trim, 1e-6, "and its trim")
+	assert_string_contains(controller.body_text(), "toes 100 %")
+	# In a manoeuvre the body presses nothing.
 	controller.manoeuvre = PlayerController.Manoeuvre.GYBE_BEARING_AWAY
 	controller.update(sim.telemetry, controls, DT)
-	assert_eq(body.rail_deg, 0.0, "nothing in a gybe")
-	assert_eq(body.trim_deg, 0.0)
+	assert_eq(controls.feet_roll_press, 0.0, "nothing in a gybe")
+	assert_eq(controls.feet_pitch_press, 0.0)
 
 
-func test_without_a_slider_the_body_alone_sets_the_extras_and_leaves_none_behind() -> void:
+func test_the_body_switched_off_leaves_no_press_behind() -> void:
 	var controller: PlayerController = PlayerController.new()
 	var controls: SimControls = SimControls.new()
 	var sim: WindsurferSim = _sailing(controller, controls, 2.0)
@@ -247,17 +246,21 @@ func test_without_a_slider_the_body_alone_sets_the_extras_and_leaves_none_behind
 	body.scripted = true
 	body.sideways = MouseBody.Sideways.RIGHT_IS_MORE_RAIL
 	body.side = 0.5
-	body.back = 0.5
+	body.back = -0.5
 	controller.body = body
 	for i: int in 3:
 		controller.update(sim.telemetry, controls, DT)
-	assert_almost_eq(controls.rail_bank_extra_deg, body.rail_deg, 1e-6, "written afresh every tick, not added up")
-	assert_almost_eq(controls.trim_aim_extra_deg, body.trim_deg, 1e-6)
-	assert_almost_eq(body.trim_deg, 1.25, 1e-6, "half of the 2.5 range")
+	assert_eq(controls.feet_roll_press, 0.5, "written afresh every tick, not added up")
+	assert_eq(controls.feet_pitch_press, -0.5)
+	assert_eq(controls.rail_bank_extra_deg, 0.0, "no aims moved")
+	assert_eq(controls.trim_aim_extra_deg, 0.0)
 	controller.body = null
 	controller.update(sim.telemetry, controls, DT)
-	assert_eq(controls.rail_bank_extra_deg, 0.0, "the body switched off: nothing left")
-	assert_eq(controls.trim_aim_extra_deg, 0.0)
+	assert_eq(controls.feet_roll_press, 0.0, "the body switched off: nothing left")
+	assert_eq(controls.feet_pitch_press, 0.0)
+	controls.feet_pitch_press = 0.3
+	controller.reset_controls(controls)
+	assert_eq(controls.feet_pitch_press, 0.0, "a restart starts from the technique")
 
 
 func test_the_body_comes_back_to_the_middle_at_a_tack_and_a_restart() -> void:
@@ -294,6 +297,8 @@ func test_without_a_body_the_controller_is_as_before() -> void:
 	assert_eq(sim_b.telemetry.position, sim_a.telemetry.position, "a body left in the middle sails bit for bit as no body")
 	assert_eq(controls_b.rail_bank_extra_deg, controls_a.rail_bank_extra_deg)
 	assert_eq(controls_b.trim_aim_extra_deg, controls_a.trim_aim_extra_deg)
+	assert_eq(controls_b.feet_roll_press, 0.0, "the body in the middle presses nothing")
+	assert_eq(controls_b.feet_pitch_press, 0.0)
 
 
 # --- The settings ---------------------------------------------------------------------
@@ -304,8 +309,8 @@ func test_the_settings_default_to_off_and_to_the_leads_recommendations() -> void
 	assert_eq(values.body_centre, MouseBody.Centre.STAYS)
 	assert_eq(values.body_sideways, MouseBody.Sideways.AS_SEEN)
 	assert_false(values.body_windward_rail, "the other way ends flat")
-	assert_eq(values.body_rail_deg, 9.0)
-	assert_eq(values.body_trim_deg, 2.5)
+	assert_eq(values.body_toes_share, 1.0)
+	assert_eq(values.body_weight_share, 1.0)
 	assert_eq(values.body_travel_px, 300.0)
 	assert_eq(values.body_spring_s, 1.5)
 	assert_eq(values.body_level, 1)
@@ -318,8 +323,8 @@ func test_the_body_settings_are_saved_read_and_clamped() -> void:
 	values.body_spring_s = 2.25
 	values.body_sideways = MouseBody.Sideways.RIGHT_IS_MORE_RAIL
 	values.body_windward_rail = true
-	values.body_rail_deg = 4.5
-	values.body_trim_deg = 1.0
+	values.body_toes_share = 0.5
+	values.body_weight_share = 0.75
 	values.body_travel_px = 450.0
 	values.body_level = 2
 	var file: ConfigFile = ConfigFile.new()
@@ -331,8 +336,8 @@ func test_the_body_settings_are_saved_read_and_clamped() -> void:
 	assert_eq(read.body_spring_s, 2.25)
 	assert_eq(read.body_sideways, MouseBody.Sideways.RIGHT_IS_MORE_RAIL)
 	assert_true(read.body_windward_rail)
-	assert_eq(read.body_rail_deg, 4.5)
-	assert_eq(read.body_trim_deg, 1.0)
+	assert_eq(read.body_toes_share, 0.5)
+	assert_eq(read.body_weight_share, 0.75)
 	assert_eq(read.body_travel_px, 450.0)
 	assert_eq(read.body_level, 2)
 	var body: MouseBody = MouseBody.new()
@@ -341,15 +346,17 @@ func test_the_body_settings_are_saved_read_and_clamped() -> void:
 	assert_eq(body.travel_px, 450.0)
 	assert_eq(body.level, 2)
 	assert_true(body.windward_rail)
+	assert_eq(body.toes_share, 0.5)
+	assert_eq(body.weight_share, 0.75)
 	# A hand-edited file cannot ask for more than the menu allows.
-	file.set_value("body", "rail_deg", 20.0)
-	file.set_value("body", "trim_deg", 5.0)
+	file.set_value("body", "toes_share", 20.0)
+	file.set_value("body", "weight_share", 0.0)
 	file.set_value("body", "travel_px", 10.0)
 	file.set_value("body", "level", 7)
 	file.set_value("body", "centre", 9)
 	read.read_from(file)
-	assert_eq(read.body_rail_deg, SettingsValues.BODY_RAIL_MAX_DEG)
-	assert_eq(read.body_trim_deg, SettingsValues.BODY_TRIM_MAX_DEG)
+	assert_eq(read.body_toes_share, SettingsValues.BODY_SHARE_MAX)
+	assert_eq(read.body_weight_share, SettingsValues.BODY_SHARE_MIN)
 	assert_eq(read.body_travel_px, SettingsValues.BODY_TRAVEL_MIN_PX)
 	assert_eq(read.body_level, 2)
 	assert_eq(read.body_centre, MouseBody.Centre.size() - 1)
@@ -416,7 +423,7 @@ func test_the_body_tab_has_the_switch_and_the_choices() -> void:
 	for child: Node in grid.get_children():
 		if child is Label and (child as Label).theme_type_variation != &"HintLabel" and (child as Label).text != "":
 			names.append((child as Label).text)
-	for wanted: String in ["Mouse body (experiment)", "Mouse left alone", "Spring-back time", "Sideways", "Rail", "Windward rail", "Back foot", "Mouse travel", "Level"]:
+	for wanted: String in ["Mouse body (experiment)", "Mouse left alone", "Spring-back time", "Sideways", "Toes and heels", "Windward rail", "Back foot", "Mouse travel", "Level"]:
 		assert_has(names, wanted, "the row %s" % wanted)
 	# The switch turns it on in the settings at once.
 	var switch: CheckButton = null

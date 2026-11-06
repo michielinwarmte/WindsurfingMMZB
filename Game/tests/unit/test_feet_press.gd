@@ -86,3 +86,134 @@ func _digits(values: PackedFloat64Array) -> String:
 	for value: float in values:
 		parts.append(var_to_str(value))
 	return ", ".join(parts)
+
+
+# --- What the press does -----------------------------------------------------------------------
+
+## A board planing on an 18 kt beam reach (TWA 100) on flat water in a steady wind, under the
+## player's controller with the auto-sheet, held on course by AiHands, for `seconds`. The feet's press
+## is then written on the controls by the test (no body: the controller leaves the presses alone).
+func _planing(controls: SimControls, seconds: float) -> Array:
+	var sim: WindsurferSim = WindsurferSim.create_for(EnvironmentConfig.new(), false, true)
+	sim.wind_config.speed_kt = 18.0
+	sim.wind_config.from_bearing_deg = 270.0
+	sim.wind_config.gusts_enabled = false
+	sim.wind_config.shifts_enabled = false
+	sim.wind = WindField.new(sim.wind_config)
+	var controller: PlayerController = PlayerController.new()
+	var hands: AiHands = AiHands.new()
+	controller.hands = hands
+	controller.set_sail(sim.sail, sim.sailor_config, sim.air_density_kg_m3)
+	controller.reset_controls(controls)
+	sim.reset(Vector3.ZERO, deg_to_rad(170.0))
+	var run: Array = [sim, controller, hands]
+	_sail(run, controls, seconds)
+	return run
+
+
+## Sails on for `seconds` with the controls' presses as they are; returns the means of the leeward
+## heel (degrees), the trim (degrees), the feet's roll press as a share of their most
+## (Telemetry.toes_share) and the weight's share on the back foot.
+func _sail(run: Array, controls: SimControls, seconds: float) -> Vector4:
+	var sim: WindsurferSim = run[0]
+	var controller: PlayerController = run[1]
+	var hands: AiHands = run[2]
+	var sums: Vector4 = Vector4.ZERO
+	var n: int = int(seconds / DT)
+	for i: int in n:
+		hands.steer = LearnedSkipper.steer_toward_twa(sim.telemetry.twa_deg, 1.0, 100.0)
+		var roll: float = controls.feet_roll_press
+		var pitch: float = controls.feet_pitch_press
+		controller.update(sim.telemetry, controls, DT)
+		controls.feet_roll_press = roll
+		controls.feet_pitch_press = pitch
+		sim.step(DT, controls)
+		var t: Telemetry = sim.telemetry
+		# Starboard tack: the leeward rail is the port one, a negative heel.
+		sums += Vector4(-t.heel_deg, t.trim_deg, t.toes_share, t.back_foot_share)
+	return sums / float(maxi(n, 1))
+
+
+func test_the_press_moves_at_the_pace_of_a_weight_shift() -> void:
+	var controls: SimControls = SimControls.new()
+	var run: Array = _planing(controls, 20.0)
+	var sim: WindsurferSim = run[0]
+	assert_true(sim.telemetry.is_planing, "planing on the 18 kt beam reach")
+	assert_almost_eq(sim.stance, 1.0, 1e-6, "in the straps")
+	assert_eq(sim.feet_pitch_press, 0.0, "nothing pressed yet")
+	var time_s: float = sim.sailor_config.feet_press_time_s
+	assert_almost_eq(time_s, 0.4, 1e-9, "the default: 0.4 s from the middle to an end")
+	controls.feet_pitch_press = 1.0
+	controls.feet_roll_press = -1.0
+	_sail(run, controls, 0.5 * time_s)
+	assert_almost_eq(sim.feet_pitch_press, 0.5, 0.03, "half way in half the time")
+	assert_almost_eq(sim.feet_roll_press, -0.5, 0.03)
+	_sail(run, controls, 0.6 * time_s)
+	assert_eq(sim.feet_pitch_press, 1.0, "all the way in feet_press_time_s")
+	assert_eq(sim.feet_roll_press, -1.0)
+	assert_eq(sim.telemetry.feet_pitch_press, 1.0, "the telemetry reports it")
+	controls.feet_pitch_press = 0.0
+	controls.feet_roll_press = 0.0
+	_sail(run, controls, 1.1 * time_s)
+	assert_eq(sim.feet_pitch_press, 0.0, "back to the technique at the same pace")
+	assert_eq(sim.feet_roll_press, 0.0)
+
+
+func test_the_back_foot_puts_the_weight_on_the_back_strap_and_lifts_the_nose() -> void:
+	var controls: SimControls = SimControls.new()
+	var run: Array = _planing(controls, 20.0)
+	var sim: WindsurferSim = run[0]
+	var middle: Vector4 = _sail(run, controls, 4.0)
+	controls.feet_pitch_press = 1.0
+	_sail(run, controls, 2.0)
+	var technique_press_m: float = sim.trim_press_m
+	var back: Vector4 = _sail(run, controls, 4.0)
+	assert_eq(sim.trim_press_m, technique_press_m, "pressed all the way, the technique's own search waits")
+	assert_gt(back.w, 0.98, "all the weight on the back foot (the back strap)")
+	assert_almost_eq(sim.feet_body.z, sim._back_strap_z_m, 1e-3, "the feet's pressure at the back strap")
+	controls.feet_pitch_press = -1.0
+	_sail(run, controls, 2.0)
+	var front: Vector4 = _sail(run, controls, 4.0)
+	assert_lt(front.w, 0.02, "all the weight on the front foot (the front strap)")
+	assert_gt(back.y, middle.y + 0.1, "the back foot lifts the nose: trim %.2f against %.2f in the middle" % [back.y, middle.y])
+	assert_lt(front.y, middle.y - 0.1, "the front foot puts it down: trim %.2f" % front.y)
+
+
+func test_the_toes_rail_the_board_and_the_heels_flatten_it() -> void:
+	var controls: SimControls = SimControls.new()
+	var run: Array = _planing(controls, 20.0)
+	var middle: Vector4 = _sail(run, controls, 4.0)
+	controls.feet_roll_press = 1.0
+	_sail(run, controls, 2.0)
+	var toes: Vector4 = _sail(run, controls, 4.0)
+	controls.feet_roll_press = -1.0
+	_sail(run, controls, 2.0)
+	var heels: Vector4 = _sail(run, controls, 4.0)
+	assert_gt(toes.x, middle.x + 4.0, "the toes put the leeward rail down: %.1f against %.1f degrees" % [toes.x, middle.x])
+	# (Across the wind the fin rails the board too: the feet need little more of their moment for it.)
+	assert_lt(heels.z, -0.8, "the heels press with nearly all the feet have: %.2f" % heels.z)
+	assert_lt(heels.x, middle.x - 1.0, "and bring the board flatter: %.1f degrees" % heels.x)
+
+
+func test_the_press_waits_below_planing_and_in_a_turn() -> void:
+	var sim: WindsurferSim = WindsurferSim.create_for(EnvironmentConfig.new(), false, true)
+	sim.reset(Vector3.ZERO, deg_to_rad(180.0))
+	var controls: SimControls = SimControls.new()
+	controls.sheet = 0.0
+	controls.feet_roll_press = 1.0
+	controls.feet_pitch_press = 1.0
+	for i: int in int(1.0 / DT):
+		sim.step(DT, controls)
+	assert_eq(sim.feet_roll_press, 0.0, "at rest, out of the straps: no press")
+	assert_eq(sim.feet_pitch_press, 0.0)
+	var planing: SimControls = SimControls.new()
+	var run: Array = _planing(planing, 20.0)
+	var board: WindsurferSim = run[0]
+	planing.feet_roll_press = 1.0
+	planing.feet_pitch_press = 1.0
+	planing.lean = 1.0
+	# The controller writes the lean every tick; held here for a step at a time.
+	for i: int in int(0.5 / DT):
+		board.step(DT, planing)
+	assert_eq(board.feet_roll_press, 0.0, "asking for a turn: the toes and heels are the turn's")
+	assert_gt(board.feet_pitch_press, 0.3, "the weight between the feet still moves (as far as the carving board still planes)")

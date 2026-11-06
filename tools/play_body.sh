@@ -2,10 +2,12 @@
 # Package B's playtest: the sailor's body on the mouse (an experiment, ROADMAP GP2; the report and the
 # checklist are in Documentation/reports/gameplay/gp2_mouse_body.md).
 #
-# The mouse is captured while you sail and is the sailor's body:
-#   - sideways: the rail (how far the leeward rail goes down; the other way, a flat board);
-#   - pull it back (toward you): weight on the back foot, the nose lifts (faster, until it bounces,
-#     and at 24 kt a catapult); push it forward: weight forward, the nose down.
+# The mouse is captured while you sail and is the sailor's body; the feet stay in the straps and the
+# mouse is how they press (the feet's press, 6 November 2026: gp2_feet_pressure.md):
+#   - sideways: the toes against the heels (the toes put the leeward rail down; the heels the other
+#     way bring the board flat);
+#   - pull it back (toward you): the weight onto the back foot, the nose lifts (faster, until it
+#     bounces, and at 24 kt a catapult); push it forward: the weight onto the front foot.
 # Leave it in the middle and the sailor sails with their own technique, as before. It works only
 # planing in the footstraps and not in a turn; it comes back to the middle at every tack, gybe and
 # fall. Esc frees the mouse (the pause menu), and Esc > Settings > Body switches Max's choices while
@@ -25,8 +27,9 @@
 #   tools/play_body.sh --sideways=right         right is always more rail (default: the board rolls
 #                                               with the mouse, as seen from behind)
 #   tools/play_body.sh --windward=1             the far side goes on to a windward rail
-#   tools/play_body.sh --trim=1                 a gentler back foot (+-1 degree; default 2.5)
-#   tools/play_body.sh --rail=4                 less rail (default up to +9 degrees)
+#   tools/play_body.sh --weight=0.5             a gentler back foot (half the weight at the end; default all)
+#   tools/play_body.sh --toes=0.5               gentler toes and heels (half the feet's roll moment at
+#                                               the end; default all of it)
 #   tools/play_body.sh --travel=500             a slower mouse (pixels from end to end; default 300)
 #   tools/play_body.sh --push=100 --gusts=0.3   the slider and the gusts as in tools/play_push.sh
 #   tools/play_body.sh --body=0                 the same water without the body, to compare
@@ -46,8 +49,8 @@ centre=0
 spring=1.5
 sideways=0
 windward=false
-trim=2.5
-rail=9.0
+toes=1.0
+weight=1.0
 travel=300
 for arg in "$@"; do
 	case "$arg" in
@@ -65,8 +68,8 @@ for arg in "$@"; do
 		--sideways=right) sideways=1 ;;
 		--windward=1) windward=true ;;
 		--windward=0) windward=false ;;
-		--trim=*) trim="${arg#--trim=}" ;;
-		--rail=*) rail="${arg#--rail=}" ;;
+		--weight=*) weight="${arg#--weight=}" ;;
+		--toes=*) toes="${arg#--toes=}" ;;
 		--travel=*) travel="${arg#--travel=}" ;;
 		*) echo "Unknown option $arg (see the header of $0)" >&2; exit 1 ;;
 	esac
@@ -98,8 +101,8 @@ centre=$centre
 spring_s=$spring
 sideways=$sideways
 windward_rail=$windward
-rail_deg=$rail
-trim_deg=$trim
+toes_share=$toes
+weight_share=$weight
 travel_px=$travel
 level=$level
 CFG
