@@ -33,7 +33,7 @@ uniform vec3 foam_color : source_color = vec3(0.92, 0.95, 0.97);
 uniform float rail_line_opacity = 0.42;
 uniform float churn_opacity = 0.9;
 // The bow wave's lines: faint (a low wave catching the light and a little foam at the bow).
-uniform float arm_opacity = 0.3;
+uniform float arm_opacity = 0.45;
 uniform float patch_opacity = 0.6;
 
 varying vec2 rest_position;
@@ -99,7 +99,9 @@ void fragment() {
 		float carve = COLOR.g * 2.0 - 1.0;
 		foam = broken(trail_foam(UV, age, strength, carve), rest_position, 1.0);
 	} else if (kind < 0.75) {
-		foam = broken(arm_foam(UV, age, COLOR.g, strength), rest_position * 1.7, 1.0);
+		// Faint lines are only dimmed by the noise, not cut into patches (which would leave nothing).
+		float noise = texture(foam_noise, rest_position * 1.7 / noise_size_m).r;
+		foam = arm_foam(UV, age, COLOR.g, strength) * mix(0.5, 1.2, noise);
 	} else {
 		// A patch thins into lace as it ages: finer noise, which breaks it up more as it fades.
 		foam = broken(patch_foam(UV, age, strength), rest_position * 2.2, 1.0);
