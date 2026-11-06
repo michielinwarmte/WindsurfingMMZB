@@ -79,3 +79,4 @@ When an agent reports: read its diff (every `Game/sim/` change in full, for Mich
 | spectating | `mp/spectate` | 0.35 M |
 
 All nine agents: about 5.3 M tokens; the lead (Fable) on top.
+- 21:58 Max: "pushed?" -> all ten branches of the day pushed to origin (play/6nov-evening 8099705 and the nine agent branches); main untouched.
