@@ -331,10 +331,14 @@ func _build_sailing_rows(s: SettingsValues) -> void:
 		func(index: int) -> void: s.start_camera = index as CameraRig.Mode)
 	_add_switch(grid, "Detail panel", s.show_hud_panel, "The forces and the key help (F1)",
 		func(on: bool) -> void: s.show_hud_panel = on)
-	_add_switch(grid, "Sailor's view", s.sailor_view, "No speed on the strip: read the water, the board and the sail (F1 shows everything)",
+	_add_switch(grid, "Sailor's view", s.sailor_view, "No speed on the screen: read the water, the board and the sail (F1 shows everything)",
 		func(on: bool) -> void: s.sailor_view = on)
 	_add_switch(grid, "Close camera", s.camera_close, "The follow camera low behind the board: the rail, the spray and the water ahead",
 		func(on: bool) -> void: s.camera_close = on)
+	# The small map's size (Max, 6 November 2026): it changes at once, also from the pause menu.
+	_add_slider(grid, "Mini-map size", MiniMap.SIZE_MIN_PERCENT, MiniMap.SIZE_MAX_PERCENT, 5.0, s.minimap_size_percent,
+		func(v: float) -> String: return "%.0f %% of the screen's height  (%s)" % [v, MiniMap.size_name(v)],
+		func(v: float) -> void: s.minimap_size_percent = v)
 	# The fin's stiffness against the measured fin's (PH43): Max cannot measure his, so he finds
 	# the one that feels like his here. Takes effect at the next start (R).
 	_add_slider(grid, "Fin stiffness", SettingsValues.FIN_STIFFNESS_MIN, SettingsValues.FIN_STIFFNESS_MAX, 0.25, s.fin_stiffness,

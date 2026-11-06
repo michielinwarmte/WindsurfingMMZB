@@ -1,148 +1,336 @@
 class_name Hud
 extends CanvasLayer
-## The telemetry on the screen: a one-line strip that is always there (speed, wind, mode),
-## a detail panel with the forces and the controls (F1), a wind rose and the key help.
-## On a map (sail_silvaplana.tscn) also a small map of the lake, and a message line for the
-## shore ("Aground ..."). With a race course (show_course()) a line with the course's name, and
-## the course on the small map (on the open water a small map of the course's water).
-## Everything is read from the simulation's Telemetry; nothing is computed here. The pause
-## menu (pause_menu.gd) is separate; the sailing scene (main.gd) hides this whole layer
-## behind the start menu.
+## The telemetry on the screen, spread over the whole window (Max, 6 November 2026: "in the ui
+## everything is in the left top corner, make it more over the whole screen"):
+## - bottom left: a card with the wind, the tack and the state, the mode and the camera (free
+##   sailing; a race shows its own card there, RaceHud);
+## - bottom middle: the push gauge, and the body gauge beside it with package B on;
+## - bottom right: on a map (sail_silvaplana.tscn) a small map of the lake, with a race course
+##   (show_course()) the course on it and its name above it (on the open water a small map of the
+##   course's water), as big as the setting "Mini-map size" says;
+## - along the bottom edge: the keys, each key in a small chip;
+## - top right: the compass rose (the heading, the wind and a race's next mark);
+## - top left: the detail panel with the forces and the controls (F1), for the team; a race
+##   director's panel (LAN) also comes up on the left;
+## - top middle: a message for the shore ("Aground ..."); in a race, RaceHud's race card.
+## The race's own parts (RaceHud: the race card at the top in the middle, the standings down the
+## right side under the compass) are added to this layer by RaceRunner.
+##
+## Any window size: every part is anchored to its corner or edge, laid out for a window 720 pixels
+## high, and the project's stretch (project.godot: "canvas_items", "expand") draws the whole layer
+## as much bigger as the window is taller, sharp at the window's own resolution (no Control.scale);
+## a wider window gives the parts more room across.
+##
+## Everything is read from the simulation's Telemetry; nothing is computed here. The pause menu
+## (pause_menu.gd) is separate; the sailing scene (main.gd) hides this whole layer behind the start
+## menu.
+
+## The room kept free along the window's edges, pixels (of the 720-high layout).
+const MARGIN: float = 16.0
+## The key hints' strip along the bottom edge: its height, and how far up from the edge it sits.
+const HINTS_HEIGHT: float = 26.0
+const HINTS_BOTTOM: float = 6.0
+## The bottom of the panels along the bottom (the cards, the gauges, the small map): above the keys.
+const BOTTOM_INSET: float = HINTS_BOTTOM + HINTS_HEIGHT + 8.0
+## The compass rose at the top right: its size and its gap to the window's top and right edge.
+const ROSE_SIZE: float = 130.0
+const ROSE_GAP: float = 20.0
+## Where the space under the compass starts (RaceHud's standings), from the top.
+const RIGHT_COLUMN_TOP: float = ROSE_GAP + ROSE_SIZE + 10.0
+## The keys' text size: the most, and the least when a narrow window needs smaller (fit_hints()).
+const HINTS_FONT_SIZE: int = 15
+const HINTS_MIN_FONT_SIZE: int = 10
+## The message in the middle (set_message()): from the top while sailing free, and in a race, under
+## the race card, the countdown and the race's warnings.
+const MESSAGE_TOP: float = 200.0
+const MESSAGE_TOP_IN_RACE: float = 380.0
+
+## The keys while sailing free, racing, spectating, and as the guest of a network game: each one the
+## key, and what it does.
+const FREE_KEYS: Array[Array] = [
+	["↑ ↓", "push"],
+	["W S", "sheet"],
+	["A D", "turn / weight"],
+	["Q E", "rake"],
+	["← →", "rig tilt"],
+	["Space", "tack / gybe"],
+	["T", "auto-sheet"],
+	["Tab", "mode"],
+	["1-4", "camera"],
+	["R", "reset"],
+	["Esc", "menu"],
+	["F1", "panel"],
+]
+const RACE_KEYS: Array[Array] = [
+	["↑ ↓", "push"],
+	["A D", "turn"],
+	["W S", "sheet"],
+	["Space", "tack / gybe"],
+	["1-4", "camera"],
+	["R", "race again"],
+	["Esc", "menu"],
+	["F1", "telemetry"],
+]
+const SPECTATE_KEYS: Array[Array] = [
+	["Tab", "next board"],
+	["Shift+Tab", "previous"],
+	["L", "follow the leader"],
+	["1-4", "camera"],
+	["R", "race again"],
+	["Esc", "menu"],
+	["F1", "telemetry"],
+]
+const GUEST_KEYS: Array[Array] = [
+	["↑ ↓", "push"],
+	["A D", "turn"],
+	["W S", "sheet"],
+	["Space", "tack / gybe"],
+	["1-4", "camera"],
+	["R", "after a fall: back on the board"],
+	["Esc", "menu"],
+	["F1", "telemetry"],
+]
 
 var detail_visible: bool = true
-## The sailor's view (UI1, GD6): the strip without the speed and the wind at the sail, so the
+## The sailor's view (UI1, GD6): the card without the speed and the wind at the sail, so the
 ## player reads the water, the board and the sail instead; F1's panel keeps every number.
 var sailor_view: bool = true
-var _strip: Label
+## The free-sailing card at the bottom left: a big line, a line, a small line (and a fourth without
+## the sailor's view).
+var _status_card: PanelContainer
+var _status_lines: Array[Label] = []
 var _panel: PanelContainer
 var _detail: Label
 ## What came before the last fall, frozen for the detail panel (GP0's playtest).
 var _fall_watch: FallWatch = FallWatch.new()
-var _help: Label
+## The keys along the bottom edge, and the keys shown (FREE_KEYS, ...).
+var _hints: HBoxContainer
+var _keys: Array[Array] = FREE_KEYS
 var _rose: WindRose
+## The gauges in a row at the bottom in the middle: the push, and the body beside it.
+var _gauges: HBoxContainer
 var _push_gauge: PushGauge
 var _body_gauge: BodyGauge
 ## Only in a map scene (show_mini_map), or with a race course (show_course).
 var _mini_map: MiniMap = null
-## Whether the small map shows the course's own water (the open water, no lake's map): it is framed
-## on the course, again when the course is laid anew (a turned wind at R, ROADMAP RA24).
+## Whether the small map shows the course's own water (the open water, no lake's map).
 var _mini_map_frames_course: bool = false
 var _message: Label
 ## The race course's name, above the small map (show_course).
 var _course_line: Label = null
-## On a map with its own day of wind: the time of day, at the start of the strip ("" = none).
+## On a map with its own day of wind: the time of day, on the card ("" = none).
 var clock_text: String = ""
-## A race is on: the strip is hidden and the help names the racing keys (set_race_mode).
+## A race is on: the free-sailing card is hidden and the keys are the racing keys (set_race_mode).
 var _race_mode: bool = false
+## Whether the card shows a fall now (its line in orange).
+var _fall_shown: bool = false
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	var font: SystemFont = SystemFont.new()
-	font.font_names = PackedStringArray(["DejaVu Sans Mono", "Liberation Mono", "monospace"])
+	_build_status_card()
 
-	_strip = _label(font, 18, Vector2(16.0, 10.0))
-	add_child(_strip)
-
+	# The detail panel (F1) at the top left, in the old monospace look: it is the team's. A little
+	# smaller than it was (15), since it now grows with the window like the rest.
+	var mono: SystemFont = SystemFont.new()
+	mono.font_names = PackedStringArray(["DejaVu Sans Mono", "Liberation Mono", "monospace"])
 	_panel = PanelContainer.new()
-	_panel.position = Vector2(16.0, 44.0)
+	_panel.position = Vector2(MARGIN, 12.0)
+	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_panel)
-	_detail = _label(font, 15, Vector2.ZERO)
+	_detail = _label(mono, 13)
 	_panel.add_child(_detail)
 
-	# The key help sits at the bottom and the wind rose at the top right of any window size
-	# (anchored to those corners), not only at the default 1280 x 720.
-	_help = _label(font, 12, Vector2.ZERO)
-	_help.text = "Up/Down push  W/S sheet  A/D turn (beginner) / weight (advanced)  Q/E rake  Left/Right rig tilt (adv.)  Space tack/gybe  T auto-sheet  Tab mode  1-4 camera  R reset  Esc menu  F1 panel"
-	add_child(_help)
-	_help.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 12)
-	_help.offset_left = 16.0
+	_hints = HBoxContainer.new()
+	_hints.name = "Keys"
+	_hints.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hints.alignment = BoxContainer.ALIGNMENT_CENTER
+	_hints.add_theme_constant_override("separation", 18)
+	add_child(_hints)
+	_hints.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	_hints.offset_left = MARGIN
+	_hints.offset_right = -MARGIN
+	_hints.offset_top = -HINTS_BOTTOM - HINTS_HEIGHT
+	_hints.offset_bottom = -HINTS_BOTTOM
+	_show_keys(FREE_KEYS)
 
-	# The push slider as a gauge, at the bottom in the middle above the key help (free sailing and
-	# racing alike, for the board on the screen).
+	# The push slider as a gauge, at the bottom in the middle (free sailing and racing alike, for the
+	# board on the screen), and the body on the mouse (package B, with the setting on) beside it.
+	_gauges = HBoxContainer.new()
+	_gauges.name = "Gauges"
+	_gauges.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_gauges.add_theme_constant_override("separation", 12)
+	add_child(_gauges)
 	_push_gauge = PushGauge.new()
-	add_child(_push_gauge)
-	_push_gauge.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	_push_gauge.offset_left = -PushGauge.GAUGE_SIZE.x * 0.5
-	_push_gauge.offset_right = PushGauge.GAUGE_SIZE.x * 0.5
-	_push_gauge.offset_top = -PushGauge.GAUGE_SIZE.y - 30.0
-	_push_gauge.offset_bottom = -30.0
-	# The body on the mouse (package B, with the setting on) as a gauge just right of the push gauge.
+	_gauges.add_child(_push_gauge)
 	_body_gauge = BodyGauge.new()
-	add_child(_body_gauge)
-	_body_gauge.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	_body_gauge.offset_left = PushGauge.GAUGE_SIZE.x * 0.5 + 12.0
-	_body_gauge.offset_right = _body_gauge.offset_left + BodyGauge.GAUGE_SIZE.x
-	_body_gauge.offset_top = -BodyGauge.GAUGE_SIZE.y - 30.0
-	_body_gauge.offset_bottom = -30.0
+	_gauges.add_child(_body_gauge)
+	_gauges.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_gauges.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_gauges.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	# A gauge shown or hidden changes the row's width: out of the small map's way again.
+	_gauges.minimum_size_changed.connect(_place_gauges)
+	_place_gauges()
 
 	_rose = WindRose.new()
 	add_child(_rose)
 	_rose.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	_rose.offset_left = -150.0
-	_rose.offset_right = -20.0
-	_rose.offset_top = 20.0
-	_rose.offset_bottom = 150.0
+	_rose.offset_left = -ROSE_GAP - ROSE_SIZE
+	_rose.offset_right = -ROSE_GAP
+	_rose.offset_top = ROSE_GAP
+	_rose.offset_bottom = ROSE_GAP + ROSE_SIZE
 
-	# A message across the middle of the screen, under the panels (set_message).
-	_message = _label(font, 22, Vector2.ZERO)
-	_message.add_theme_color_override("font_color", Color(1.0, 0.8, 0.4))
+	# A message across the middle of the screen (set_message).
+	_message = HudStyle.label(HudStyle.sans(700), 22, Color(1.0, 0.8, 0.4))
+	_message.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.8))
+	_message.add_theme_constant_override("outline_size", 5)
 	_message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	add_child(_message)
 	_message.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	_message.offset_left = -400.0
-	_message.offset_right = 400.0
-	_message.offset_top = 200.0
+	_message.offset_left = -450.0
+	_message.offset_right = 450.0
+	_place_message()
 	_message.hide()
 
+	get_viewport().size_changed.connect(_on_window_resized)
+	# The mini-map's size applies at once when it changes in the settings (also from the pause menu).
+	GameSettings.changed.connect(_on_settings_changed)
 
-## A small map of the lake in the bottom right corner, above the key help (map scenes only).
+
+## The card at the bottom left while sailing free, anchored to that corner, growing upward.
+func _build_status_card() -> void:
+	_status_card = PanelContainer.new()
+	_status_card.name = "StatusCard"
+	_status_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_status_card.add_theme_stylebox_override("panel", HudStyle.card())
+	add_child(_status_card)
+	var lines: VBoxContainer = VBoxContainer.new()
+	lines.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lines.add_theme_constant_override("separation", 1)
+	_status_card.add_child(lines)
+	for line: int in 4:
+		var label: Label = HudStyle.label(HudStyle.sans(700 if line == 0 else 500), 21 if line == 0 else (16 if line < 3 else 14),
+			HudStyle.TEXT_COLOR if line < 2 else HudStyle.DIM_COLOR)
+		lines.add_child(label)
+		_status_lines.append(label)
+	place_bottom_left(_status_card)
+
+
+## A card at the bottom left, above the keys, growing upward as its lines need (also RaceHud's).
+static func place_bottom_left(card: Control) -> void:
+	card.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	card.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	card.offset_left = MARGIN
+	card.offset_right = MARGIN
+	card.offset_top = -BOTTOM_INSET
+	card.offset_bottom = -BOTTOM_INSET
+
+
+## A small map of the lake in the bottom right corner, above the keys (map scenes only).
 ## Before show_course(), which then puts the course on it.
 func show_mini_map(area: LakeArea, start: Vector3) -> void:
-	_mini_map = MiniMap.new()
-	add_child(_mini_map)
+	_make_mini_map()
 	_mini_map.setup(area, start)
 	_place_mini_map()
 
 
 ## A race course (RACING_PLAN.md, 9A): its name in a line above the small map, and its marks,
 ## lines and legs on it. Without a lake's map (the open water) the small map shows the course's
-## water instead.
+## water instead. Again with a changed course (the LAN race director): the map shows it at once.
 func show_course(course: Course) -> void:
 	if _mini_map == null:
-		_mini_map = MiniMap.new()
-		add_child(_mini_map)
+		_make_mini_map()
 		_mini_map_frames_course = true
-	if _mini_map_frames_course:
 		_mini_map.setup_for_course(course)
-		_place_mini_map()
 	else:
 		_mini_map.show_course(course)
 	if _course_line == null:
-		_course_line = _label(_strip.get_theme_font("font"), 15, Vector2.ZERO)
+		_course_line = HudStyle.label(HudStyle.sans(600), 15)
 		_course_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		add_child(_course_line)
 		_course_line.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-		_course_line.offset_left = -420.0
-		_course_line.offset_right = -20.0
-	_course_line.offset_top = -_mini_map.size.y - 66.0
-	_course_line.offset_bottom = -_mini_map.size.y - 44.0
 	_course_line.text = "Course: " + course.name
+	_place_mini_map()
 
 
 func course_text() -> String:
 	return _course_line.text if _course_line != null else ""
 
 
+func _make_mini_map() -> void:
+	_mini_map = MiniMap.new()
+	_mini_map.size_px = _mini_map_size_px()
+	add_child(_mini_map)
+	# A course that grows past the map's edge (the open water) makes the map new: put it in its corner.
+	_mini_map.resized.connect(_place_mini_map)
+
+
+## The small map's longer side for the setting "Mini-map size" (a share of the window's height).
+func _mini_map_size_px() -> float:
+	return MiniMap.size_for(GameSettings.values.minimap_size_percent, _screen_size().y)
+
+
+## The small map in the bottom right corner, its course's name above it, and the gauges out of its way.
 func _place_mini_map() -> void:
+	if _mini_map == null:
+		return
+	var map_size: Vector2 = _mini_map.custom_minimum_size
 	_mini_map.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	_mini_map.offset_left = -_mini_map.size.x - 20.0
-	_mini_map.offset_right = -20.0
-	_mini_map.offset_top = -_mini_map.size.y - 40.0
-	_mini_map.offset_bottom = -40.0
+	_mini_map.offset_left = -MARGIN - map_size.x
+	_mini_map.offset_right = -MARGIN
+	_mini_map.offset_top = -BOTTOM_INSET - map_size.y
+	_mini_map.offset_bottom = -BOTTOM_INSET
+	if _course_line != null:
+		_course_line.offset_left = -MARGIN - maxf(map_size.x, 420.0)
+		_course_line.offset_right = -MARGIN
+		_course_line.offset_top = -BOTTOM_INSET - map_size.y - 26.0
+		_course_line.offset_bottom = -BOTTOM_INSET - map_size.y - 4.0
+	_place_gauges()
 
 
-## A short message in the middle of the screen; an empty text hides it.
+## The gauges in the middle at the bottom; when a big small map in a narrow window would cover them,
+## they move left out of its way.
+func _place_gauges() -> void:
+	var width: float = _gauges.get_combined_minimum_size().x
+	var shift: float = 0.0
+	if _mini_map != null:
+		var map_left: float = _screen_size().x - MARGIN - _mini_map.custom_minimum_size.x
+		shift = minf(0.0, map_left - 12.0 - (_screen_size().x + width) * 0.5)
+	_gauges.offset_left = shift
+	_gauges.offset_right = shift
+	_gauges.offset_top = -BOTTOM_INSET
+	_gauges.offset_bottom = -BOTTOM_INSET
+
+
+## How far down from the top the space under the compass reaches before the small map (and its
+## course's name) begins: RaceHud fits its standings in it. Pixels of the 720-high layout.
+func right_column_bottom() -> float:
+	var bottom: float = _screen_size().y - BOTTOM_INSET
+	if _mini_map != null:
+		bottom -= _mini_map.custom_minimum_size.y + (30.0 if _course_line != null else 4.0)
+	else:
+		bottom -= PushGauge.GAUGE_SIZE.y
+	return bottom - 8.0
+
+
+## The size of the screen the HUD is laid out on (the window, in the 720-high layout's pixels).
+func _screen_size() -> Vector2:
+	return get_viewport().get_visible_rect().size if is_inside_tree() else Vector2(1280.0, 720.0)
+
+
+func _on_window_resized() -> void:
+	_fit_hints()
+	if _mini_map != null:
+		_mini_map.size_px = _mini_map_size_px()
+	_place_mini_map()
+
+
+func _on_settings_changed() -> void:
+	if _mini_map != null and not is_equal_approx(_mini_map.size_px, _mini_map_size_px()):
+		_mini_map.size_px = _mini_map_size_px()
+		_place_mini_map()
+
+
 ## The gear the board sails, one line for the F1 panel (set by the scene from the board's
 ## simulation: the configs it was built from).
 var gear_text: String = ""
@@ -156,6 +344,7 @@ static func gear_line(sim: WindsurferSim) -> String:
 		"on" if sim.sailor_config.trim_feel_time_s > 0.0 else "off", sim.sailor_config.rig_pitch_follow_s]
 
 
+## A short message in the middle of the screen; an empty text hides it.
 func set_message(text: String) -> void:
 	_message.text = text
 	_message.visible = text != ""
@@ -169,32 +358,83 @@ func toggle_detail() -> void:
 	set_detail_visible(not detail_visible)
 
 
-## Shows or hides the detail panel and the key help line (F1).
+## Shows or hides the detail panel and, while sailing free, the keys (F1).
 func set_detail_visible(shown: bool) -> void:
 	detail_visible = shown
 	_panel.visible = shown
-	_help.visible = shown or _race_mode
+	_hints.visible = shown or _race_mode
+
+
+## The keys along the bottom, as one line of text (for tests): "↑ ↓ push   W S sheet ...".
+func help_text() -> String:
+	var parts: PackedStringArray = PackedStringArray()
+	for key: Array in _keys:
+		parts.append("%s %s" % [key[0], key[1]])
+	return "   ".join(parts)
+
+
+## The keys along the bottom edge: each key in a small chip, then what it does.
+func _show_keys(keys: Array[Array]) -> void:
+	if keys == _keys and _hints.get_child_count() > 0:
+		return
+	_keys = keys
+	_build_hints()
+	_fit_hints()
+
+
+## The keys at the biggest text size that fits across the window (a narrow window: smaller).
+func _fit_hints() -> void:
+	var room: float = _screen_size().x - 2.0 * MARGIN
+	var font_size: int = HINTS_FONT_SIZE
+	while true:
+		for pair: Node in _hints.get_children():
+			for label: Node in pair.get_children():
+				(label as Label).add_theme_font_size_override("font_size", font_size)
+		if font_size <= HINTS_MIN_FONT_SIZE or _hints.get_combined_minimum_size().x <= room:
+			return
+		font_size -= 1
+
+
+## A key in a small chip, then what it does, for every key; the old ones go.
+func _build_hints() -> void:
+	for child: Node in _hints.get_children():
+		_hints.remove_child(child)
+		child.free()
+	var chip: StyleBoxFlat = StyleBoxFlat.new()
+	chip.bg_color = Color(0.07, 0.15, 0.25, 0.85)
+	chip.border_color = Color(1.0, 1.0, 1.0, 0.35)
+	chip.set_border_width_all(1)
+	chip.set_corner_radius_all(4)
+	chip.content_margin_left = 6.0
+	chip.content_margin_right = 6.0
+	chip.content_margin_top = 0.0
+	chip.content_margin_bottom = 1.0
+	for key: Array in _keys:
+		var pair: HBoxContainer = HBoxContainer.new()
+		pair.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		pair.add_theme_constant_override("separation", 6)
+		var key_label: Label = HudStyle.label(HudStyle.sans(700), HINTS_FONT_SIZE)
+		key_label.add_theme_stylebox_override("normal", chip)
+		key_label.add_theme_constant_override("outline_size", 0)
+		key_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		key_label.text = str(key[0])
+		pair.add_child(key_label)
+		var what: Label = HudStyle.label(HudStyle.sans(500), HINTS_FONT_SIZE)
+		what.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.75))
+		what.add_theme_constant_override("outline_size", 4)
+		what.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		what.text = str(key[1])
+		pair.add_child(what)
+		_hints.add_child(pair)
 
 
 func update_from(t: Telemetry, controller: PlayerController, camera_name: String, use_autopilot: bool) -> void:
-	var tack: String = "starboard tack" if t.twa_deg >= 0.0 else "port tack"
-	var state: String = "planing" if t.is_planing else ("luffing" if t.is_luffing else "displacement")
-	if t.sailor_state == 1:
-		state = "%s!  waterstart in %d s (R: now)" % [t.fall_kind.to_upper(), ceili(t.waterstart_in_s)]
-	var who: String = "autopilot" if use_autopilot else controller.mode_name()
-	var manoeuvre: String = controller.manoeuvre_name()
 	# The push slider's level (Up/Down) on the gauge, when the controller has one.
 	_push_gauge.set_level(NAN if use_autopilot else controller.push_level)
 	# The body on the mouse, when the player has it on.
 	_body_gauge.set_body(null if use_autopilot else controller.body, t)
-	var prefix: String = "%s   " % clock_text if clock_text != "" else ""
-	var rest: String = "%s, %s%s    %s    camera: %s" % [tack, state, ("  " + manoeuvre) if manoeuvre != "" else "", who, camera_name]
-	if sailor_view:
-		# No speed and no wind at the sail: the forecast wind only (GD6).
-		_strip.text = prefix + "wind %.0f kt from %03.0f    %s" % [t.tws_10m_kt, t.wind_from_bearing_deg, rest]
-	else:
-		_strip.text = prefix + "%5.1f km/h  %4.1f kt    wind %4.1f kt at 10 m, %4.1f kt at the sail, from %03.0f    %s" % [
-			t.speed_kmh, t.speed_kt, t.tws_10m_kt, t.tws_at_sail_kt, t.wind_from_bearing_deg, rest]
+	if not _race_mode:
+		_fill_status_card(t, controller, camera_name, use_autopilot)
 	_rose.heading_deg = t.heading_deg
 	_rose.wind_from_deg = t.wind_from_bearing_deg
 	_rose.queue_redraw()
@@ -229,15 +469,56 @@ func update_from(t: Telemetry, controller: PlayerController, camera_name: String
 		+ "auto-sheet %s%s" % ["on" if controller.auto_sheet else "off", "   pilot set from the command line (--pilot.)" if not controller.pilot_overrides.is_empty() else ""]
 		# The push slider and what it asks of the sailor (PushDial.describe), with the legs' push.
 		+ ("\n%s\nnow: sea rail +%.1f deg (bounce %.0f deg/s)   back foot %+.2f" % [controller.push_text(), controller.auto_sheet_pilot.wave_rail_deg(), controller.auto_sheet_pilot.felt_bounce_dps(), t.back_foot_push] if controller.push_text() != "" else "")
-		# The body on the mouse (package B, an experiment): what it adds, for tuning only; the strip
+		# The body on the mouse (package B, an experiment): what it adds, for tuning only; the card
 		# never shows it (the player reads the board, the spray and the sound).
 		+ ("\n" + controller.body_text() if controller.body_text() != "" else "")
 		+ ("\n" + _fall_watch.last_fall_text if _fall_watch.last_fall_text != "" else ""))
 
 
-func _label(font: Font, size: int, at: Vector2) -> Label:
+## The free-sailing card: with the sailor's view (GD6) the forecast wind large and no speed; without
+## it the speed large and the wind at 10 m and at the sail. Then the tack and the state (a fall in
+## orange, with the waterstart's count), then the time of day, the mode and the camera.
+func _fill_status_card(t: Telemetry, controller: PlayerController, camera_name: String, use_autopilot: bool) -> void:
+	var tack: String = "starboard tack" if t.twa_deg >= 0.0 else "port tack"
+	var state: String = "planing" if t.is_planing else ("luffing" if t.is_luffing else "displacement")
+	var fallen: bool = t.sailor_state == 1
+	if fallen:
+		state = "%s!  waterstart in %d s (R: now)" % [t.fall_kind.to_upper(), ceili(t.waterstart_in_s)]
+	var manoeuvre: String = controller.manoeuvre_name()
+	var doing: String = "%s  ·  %s%s" % [tack, state, ("  ·  " + manoeuvre) if manoeuvre != "" else ""]
+	var who: String = "autopilot" if use_autopilot else controller.mode_name()
+	var small: String = "%s%s  ·  camera %s" % [(clock_text + "  ·  ") if clock_text != "" else "", who, camera_name]
+	var wind: String = "wind %.0f kt from %s (%03.0f°)" % [t.tws_10m_kt, SettingsValues.compass_name(t.wind_from_bearing_deg), t.wind_from_bearing_deg]
+	var lines: PackedStringArray
+	if sailor_view:
+		lines = PackedStringArray([wind, doing, small, ""])
+	else:
+		lines = PackedStringArray(["%.1f km/h  ·  %.1f kt" % [t.speed_kmh, t.speed_kt],
+			"wind %.1f kt at 10 m, %.1f kt at the sail, from %03.0f°" % [t.tws_10m_kt, t.tws_at_sail_kt, t.wind_from_bearing_deg],
+			doing, small])
+	for i: int in _status_lines.size():
+		_status_lines[i].text = lines[i]
+		_status_lines[i].visible = lines[i] != ""
+	if fallen != _fall_shown:
+		_fall_shown = fallen
+		for i: int in 3:
+			_status_lines[i].add_theme_color_override("font_color", HudStyle.TEXT_COLOR if i < 2 else HudStyle.DIM_COLOR)
+	if fallen:
+		(_status_lines[1] if sailor_view else _status_lines[2]).add_theme_color_override("font_color", HudStyle.HIGHLIGHT_COLOR)
+
+
+## The free-sailing card's lines as one text (for tests).
+func status_text() -> String:
+	var lines: PackedStringArray = PackedStringArray()
+	for label: Label in _status_lines:
+		if label.visible:
+			lines.append(label.text)
+	return "\n".join(lines)
+
+
+func _label(font: Font, size: int) -> Label:
 	var label: Label = Label.new()
-	label.position = at
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.add_theme_font_override("font", font)
 	label.add_theme_font_size_override("font_size", size)
 	label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.8))
@@ -254,12 +535,15 @@ class WindRose:
 	## The bearing of a race's next mark; NAN for none.
 	var mark_bearing_deg: float = NAN
 
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
 	func _draw() -> void:
 		var centre: Vector2 = size * 0.5
 		var radius: float = minf(size.x, size.y) * 0.45
 		draw_circle(centre, radius, Color(0.0, 0.0, 0.0, 0.35))
 		draw_arc(centre, radius, 0.0, TAU, 48, Color(1.0, 1.0, 1.0, 0.8), 2.0)
-		draw_string(ThemeDB.fallback_font, centre + Vector2(-5.0, -radius + 14.0), "N", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
+		draw_string(HudStyle.sans(700), centre + Vector2(-5.0, -radius + 15.0), "N", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
 		# Bearings are clockwise from North, screen y points down: bearing b is at (sin b, -cos b).
 		var heading: Vector2 = Vector2(sin(deg_to_rad(heading_deg)), -cos(deg_to_rad(heading_deg)))
 		var bow: Vector2 = centre + heading * radius * 0.8
@@ -268,7 +552,7 @@ class WindRose:
 		var from: Vector2 = Vector2(sin(deg_to_rad(wind_from_deg)), -cos(deg_to_rad(wind_from_deg)))
 		var tail: Vector2 = centre + from * radius * 0.95
 		var head: Vector2 = centre + from * radius * 0.35
-		draw_line(tail, head, Color(0.5, 0.85, 1.0), 3.0)
+		draw_line(tail, head, Color(0.5, 0.85, 1.0), 3.0, true)
 		var dir: Vector2 = (head - tail).normalized()
 		var wing: Vector2 = Vector2(-dir.y, dir.x) * 6.0
 		draw_colored_polygon(PackedVector2Array([head, head - dir * 10.0 + wing, head - dir * 10.0 - wing]), Color(0.5, 0.85, 1.0))
@@ -284,20 +568,31 @@ func set_other_boards(positions: PackedVector3Array) -> void:
 		_mini_map.other_boards = positions
 
 
-## A race (RaceRunner): the telemetry strip and the panel make way for the race's own block
-## (RaceHud); F1 still brings the panel back. The key help names the racing keys, or while
+## A race (RaceRunner): the free-sailing card and the panel make way for the race's own card and
+## standings (RaceHud); F1 still brings the panel back. The keys are the racing keys, or while
 ## spectating (the player's board parked) the keys that pick the board to watch.
 func set_race_mode(on: bool, spectating: bool = false) -> void:
 	_race_mode = on
-	_strip.visible = not on
+	_status_card.visible = not on
+	_place_message()
 	if on:
 		set_detail_visible(false)
-		_help.text = "Up/Down push   A/D turn   W/S sheet   Space tack/gybe   1-4 camera   R race again   Esc menu   F1 telemetry"
 		if spectating:
-			_help.text = "Tab next board   Shift+Tab previous   L follow the leader   1-4 camera   R race again   Esc menu   F1 telemetry"
+			_show_keys(SPECTATE_KEYS)
 		elif Lan.in_game and not Lan.is_host():
 			# The guest of a network game: only the host restarts the race (main.gd, _net_reset()).
-			_help.text = "Up/Down push   A/D turn   W/S sheet   Space tack/gybe   1-4 camera   R after a fall: back on the board   Esc menu   F1 telemetry"
+			_show_keys(GUEST_KEYS)
+		else:
+			_show_keys(RACE_KEYS)
+	else:
+		_show_keys(FREE_KEYS)
+
+
+## The message sits high while sailing free, and under the race card and its warnings in a race.
+func _place_message() -> void:
+	var top: float = MESSAGE_TOP_IN_RACE if _race_mode else MESSAGE_TOP
+	_message.offset_top = top
+	_message.offset_bottom = top + 34.0
 
 
 ## The bearing of a race's next mark, as a dot on the compass rose (NAN clears it).
