@@ -202,6 +202,19 @@ var feet_pitch_excess_nm: float = 0.0
 var _front_foot_hard_s: float = 0.0
 var _tipping_force_world: Vector3 = Vector3.ZERO
 var _tipping_for_s: float = 0.0
+## How long the heel has been past the catapult's limit and the windward tip past the fall
+## back's (SailorConfig.catapult_time_s, fall_back_time_s), seconds.
+var _over_catapult_s: float = 0.0
+var _over_fall_back_s: float = 0.0
+## How near the sailor is to falling, as their sense of balance feels it (for the autopilot's
+## recovery reflex; nothing in the physics reads them): the heel to leeward as a share of the
+## limit the fall check uses now (the catapult's while hanging on the sail, else the standing
+## one), the windward tip as a share of its limit (the fall back's, else the standing one), and
+## the force tipping the body off its feet as a share of what the hips hold (from 1 on, the tip
+## time runs). 0 = in balance, 1 = at the limit.
+var lee_fall_share: float = 0.0
+var windward_fall_share: float = 0.0
+var tipping_share: float = 0.0
 ## The hull's acceleration under the feet at the last substep (world): what the body's
 ## inertia pushes back with, and part of what the sense of balance feels. And the force
 ## that carries the body with the deck (the body's inertia force, reversed).
@@ -249,6 +262,10 @@ var _bank_rate_dps: float = 0.0
 var _carve_rate_dps: float = 0.0
 var _catapult_heel_deg: float = 0.0
 var _catapult_min_sail_force_n: float = 0.0
+var _catapult_pull_share: float = 0.0
+var _catapult_time_s: float = 0.0
+var _fall_back_time_s: float = 0.0
+var _front_foot_pull_brief_s: float = 0.0
 var _fall_back_heel_deg: float = 0.0
 var _fall_feel_time_s: float = 0.0
 var _feet_moment_max_nm: float = 0.0
@@ -591,7 +608,7 @@ func step(dt: float, controls: SimControls) -> void:
 			_ride_the_hull(sub_dt)
 		time_s += sub_dt
 		if sailing:
-			_check_balance()
+			_check_balance(sub_dt)
 		else:
 			fallen_for_s += sub_dt
 			if fallen_for_s >= _waterstart_time_s:
@@ -634,6 +651,10 @@ func _copy_configs() -> void:
 	_carve_rate_dps = sailor_config.carve_rate_dps
 	_catapult_heel_deg = sailor_config.catapult_heel_deg
 	_catapult_min_sail_force_n = sailor_config.catapult_min_sail_force_n
+	_catapult_pull_share = sailor_config.catapult_pull_share
+	_catapult_time_s = sailor_config.catapult_time_s
+	_fall_back_time_s = sailor_config.fall_back_time_s
+	_front_foot_pull_brief_s = sailor_config.front_foot_pull_brief_s
 	_fall_back_heel_deg = sailor_config.fall_back_heel_deg
 	_fall_feel_time_s = sailor_config.fall_feel_time_s
 	_feet_moment_max_nm = sailor_config.feet_moment_max_nm
@@ -741,8 +762,9 @@ func _set_hull_mass_properties() -> void:
 ## pull; the mast foot is a joint and passes no roll moment to the board. So when the board
 ## heels past what a standing person can recover, it is the sailor who goes, not the board:
 ## over the sail to leeward when overpowered (a catapult), backwards into the water to
-## windward when the pull vanished while hiked out.
-func _check_balance() -> void:
+## windward when the pull vanished while hiked out. dt is the substep, for the times a heel
+## past a limit has to last (catapult_time_s, fall_back_time_s).
+func _check_balance(dt: float) -> void:
 	var twa: float = body.wind_angle_rad(wind.from_direction())
 	var tack: float = 1.0 if twa >= 0.0 else -1.0
 	# Heel is positive with the starboard rail down; on starboard tack leeward is port.
@@ -763,6 +785,16 @@ func _check_balance() -> void:
 	var pull_on_hands: float = SimMath.horizontal(hand_force_world).length()
 	var held_by_the_sail: float = atan2(pull_on_hands, _sailor_mass_kg * _gravity_ms2)
 	var windward_tip: float = -leeward_heel - held_by_the_sail
+	# A catapult needs a pull the body cannot lean against (catapult_pull_share of the weight;
+	# 0: any pull a hanging sailor feels), and the heel past the limit for catapult_time_s; the
+	# fall back the tip past its limit for fall_back_time_s (0: at once).
+	var pulled_over: bool = hanging and pull_on_hands >= _catapult_pull_share * _sailor_mass_kg * _gravity_ms2
+	var catapult_limit: float = deg_to_rad(_catapult_heel_deg) + deliberate
+	var fall_back_limit: float = deg_to_rad(_fall_back_heel_deg)
+	_over_catapult_s = _over_catapult_s + dt if pulled_over and leeward_heel > catapult_limit else 0.0
+	_over_fall_back_s = _over_fall_back_s + dt if hanging and windward_tip > fall_back_limit else 0.0
+	lee_fall_share = maxf(leeward_heel, 0.0) / maxf(catapult_limit if hanging else standing_limit + deliberate, 1e-3)
+	windward_fall_share = maxf(windward_tip, 0.0) / maxf(fall_back_limit if hanging else standing_limit, 1e-3)
 	# The body itself: when the feet cannot pass the moment of the sail's pull or of the
 	# weight to the deck, the body tips off its posture, and past posture_sway_max_m it
 	# is gone: toward the sail (a catapult) or away from it (fell back).
@@ -776,9 +808,9 @@ func _check_balance() -> void:
 			_fall(int(-tack), "tipped over", tack)
 		else:
 			_fall(int(tack), "tipped back", tack)
-	elif hanging and leeward_heel > deg_to_rad(_catapult_heel_deg) + deliberate:
+	elif pulled_over and leeward_heel > catapult_limit and _over_catapult_s >= _catapult_time_s:
 		_fall(int(-tack), "catapult", tack)
-	elif hanging and windward_tip > deg_to_rad(_fall_back_heel_deg):
+	elif hanging and windward_tip > fall_back_limit and _over_fall_back_s >= _fall_back_time_s:
 		_fall(int(tack), "fell back", tack)
 	elif leeward_heel > standing_limit:
 		_fall(int(-tack), "fell off", tack)
@@ -886,6 +918,11 @@ func _clear_sailor_forces() -> void:
 	_front_foot_hard_s = 0.0
 	_tipping_for_s = 0.0
 	_tipping_force_world = Vector3.ZERO
+	_over_catapult_s = 0.0
+	_over_fall_back_s = 0.0
+	lee_fall_share = 0.0
+	windward_fall_share = 0.0
+	tipping_share = 0.0
 	_hull_acceleration_at_feet = Vector3.ZERO
 	_attachment_force_world = Vector3.ZERO
 	_offset_prev_valid = false
@@ -1450,7 +1487,7 @@ func _feet_pitch_within_straps(pitch_nm: float, legs_force: Vector3, dt: float) 
 		_front_foot_hard_s += dt
 	else:
 		_front_foot_hard_s = 0.0
-	var brief_extra: float = brief_nm - held_nm if _front_foot_hard_s <= _tip_time_s else 0.0
+	var brief_extra: float = brief_nm - held_nm if _front_foot_hard_s <= _front_foot_pull_brief_s else 0.0
 	return clampf(pitch_nm, -(nose_down_held + brief_extra), nose_up_held + brief_extra)
 
 
@@ -1887,6 +1924,7 @@ func _apply_leg_forces(dt: float) -> void:
 	var pitch_lever: float = maxf(1.0 - leg_dir.dot(across_axis) * leg_dir.dot(across_axis), 0.3)
 	_tipping_force_world += across_axis.cross(leg_dir) * (feet_pitch_excess_nm / (leg_length * pitch_lever))
 	var hip_max: float = _hip_force_max_n + _harness_hold_max_n * clampf(absf(lean), 0.0, 1.0)
+	tipping_share = _tipping_force_world.length() / maxf(hip_max, 1.0)
 	if _tipping_force_world.length() > hip_max:
 		_tipping_for_s += dt
 	else:
@@ -2173,6 +2211,9 @@ func _fill_telemetry(controls: SimControls) -> void:
 	t.feet_moment_roll_nm = body.to_body(feet_moment_world).z
 	t.hand_moment_roll_nm = hand_moment_body.z
 	t.feet_moment_excess_nm = feet_moment_excess_nm
+	t.lee_fall_share = lee_fall_share
+	t.windward_fall_share = windward_fall_share
+	t.tipping_share = tipping_share
 	_fill_feet_telemetry(t)
 	# What turns (yaw) and heels (roll) the hull, by source: the fin, the rig at the mast
 	# foot, the sailor through the feet, and the water on the hull (everything else).

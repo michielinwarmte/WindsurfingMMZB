@@ -3742,6 +3742,24 @@ of the hull taken by the legs. `test_sail.gd` pins the rig to the hull with
 
 **Left out, on purpose:** the rig's own pitch inertia about the mast foot in the air (the rig is weightless in motion, 7.5); the ground effect of the water surface under a flying bottom (more lift); the deck side's air; the kit's angular momentum when the rider is only half in the straps (the coupling is linear in the stance). **Tests:** `test_launch.gd` (the coupling by the carried share and the stance, the joined inertia is the whole kit's, 60 N·m turns the kit at under 60°/s² and the bare hull at hundreds, the front foot by the rate and off, the press holding in the air, the air's push up and nose-up and off with the option, small on the water). **Measured:** below, "What it does".
 
+### 7.7 The fall's bar and the sense of balance (6 November 2026, the stay-on-the-board work)
+
+**What was asked.** Max (6 November 2026): "The autopilot still crashes. The detection of what a crash would be is too strict. Move this bar and make the autopilot try harder to stay on the board." The measurements, the rounds and every number's reason are in `Documentation/reports/autopilot/stay_on_the_board.md`.
+
+**The rule (`WindsurferSim._check_balance(dt)`, now with the substep).** In this order:
+
+1. *Tipped over / tipped back*: the force tipping the body off its feet beyond what the hips (and the harness at full lean) hold, for longer than `tip_time_s` (7.5).
+2. *Catapult*: hanging on a pulling sail (side force over `catapult_min_sail_force_n`, not backing it), **with the pull on the hands across the water at least `catapult_pull_share` of the sailor's weight**, the heel the fall check feels to leeward past `catapult_heel_deg` plus the deliberate bank, **for at least `catapult_time_s`**.
+3. *Fell back*: hanging, the windward tip (the felt heel to windward less atan(pull / weight)) past `fall_back_heel_deg` **for at least `fall_back_time_s`**.
+4. *Fell off*: either way past `standing_fall_heel_deg`, at once.
+
+The bold parts are new. With `catapult_pull_share` 0 and both times 0 the rule is the one before, bit for bit (a pull is never negative, and a timer that has run one substep is never below 0). Each time counts up while its condition holds and starts again from 0 the substep it does not.
+
+**The front foot's brief pull keeps its own time.** `tip_time_s` was also how long the front foot keeps up its brief 400 N pull in its strap (`_feet_pitch_within_straps`, PH28); that is now `SailorConfig.front_foot_pull_brief_s` (0.3 s, as before), so the fall's tip time can move without changing the board's pitch.
+
+**The sense of balance (read only; nothing in the physics reads it).** `lee_fall_share`, `windward_fall_share` and `tipping_share` (on the simulation and in `Telemetry`, and at the end of the CSV's columns): how far the sailor is toward the limit the fall check uses at that moment, 0 in balance and 1 at the limit. To leeward the heel over the catapult's limit while hanging (else over the standing one), to windward the windward tip over the fall back's limit while hanging (else the standing one), and the tipping force over what the hips hold (from 1 on, the tip time runs). The autopilot's recovery reflex (`PlayerController.reflex_on`) reads them; a sailor feels how near the edge they are.
+
+
 ## 8. Wind field: base wind, gusts, shifts and height gradient
 
 ### Purpose
