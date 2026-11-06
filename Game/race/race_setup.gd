@@ -32,8 +32,9 @@ var prestart_s: float = DEFAULT_PRESTART_S
 ## Whether the opponents' boards get spray, wake and splashes (off: they cost frame time).
 var opponent_effects: bool = false
 ## How many worker-thread tasks step the boards' physics side by side, each a batch of boards
-## (eight by default, RaceRunner.MAX_THREADS); 0: one after the other on the main thread.
-var threads: int = RaceRunner.MAX_THREADS
+## (eight or more by default, RaceRunner.threads_for_this_pc()); 0: one after the other on the main
+## thread.
+var threads: int = RaceRunner.threads_for_this_pc()
 ## Where the AI boards appear (AI_FLEET_PLAN.md, F2): RANDOM, at random spots in the sailing area
 ## round the start line (SailingArea), sailing free until the countdown gathers them; LINE, spread
 ## along the start line behind it, as before. The player's board always starts behind the line.
@@ -86,9 +87,10 @@ static func spawn_named(spawn_name: String) -> Spawn:
 	return Spawn.LINE if spawn_name == "line" else Spawn.RANDOM
 
 
-## The thread count from a --threads=<n> option: empty keeps the usual eight, 0 one after the other.
+## The thread count from a --threads=<n> option: empty keeps the usual (RaceRunner.threads_for_this_pc()),
+## 0 one after the other.
 static func threads_from_option(text: String) -> int:
-	return RaceRunner.MAX_THREADS if text.is_empty() else maxi(text.to_int(), 0)
+	return RaceRunner.threads_for_this_pc() if text.is_empty() else maxi(text.to_int(), 0)
 
 
 ## A race on a course against these skippers.

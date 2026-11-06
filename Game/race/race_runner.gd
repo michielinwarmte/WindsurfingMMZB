@@ -25,15 +25,24 @@ const WAIT_M_PER_S: float = 1.0
 const NEAREST_M: float = 40.0
 const FARTHEST_M: float = 100.0
 const PLAYER_NAME: String = "You"
-## At most this many worker-thread tasks step the boards' physics side by side, each pulling the
+## At least this many worker-thread tasks step the boards' physics side by side, each pulling the
 ## next board from the pool as it finishes one (32 AI boards and the player: four or five per task,
-## fewer on a slow core). GDScript threads wait on a global engine lock, so more than about eight
-## threads make a fleet slower, not faster (Session 51: 14 threads ran 3 times slower than 1).
+## fewer on a slow core); more on a processor with more threads (threads_for_this_pc()).
+## GDScript threads wait on a global engine lock, so more than about eight threads made a fleet
+## slower, not faster (Session 51: 14 threads ran 3 times slower than 1).
 ## --threads=<n> sets another number, --threads=0 steps the boards one after the other on this
 ## thread. Measured 21 October 2026 (the release build, F1): fixed batches of boards per task
 ## collapsed at 20 AI boards (11 fps) where the pulled boards hold 177 fps, because a task on one
 ## of the laptop's slow cores held the whole tick.
 const MAX_THREADS: int = 8
+
+
+## The tasks for this processor: three quarters of its threads, never fewer than MAX_THREADS.
+## Measured 6 November 2026 (the release build, the T2 slalom on the lake's full waves, 20 boards,
+## a 16-thread Ryzen 7 5800X3D): 8 tasks 17 to 23 fps (the boards' physics 10.5 to 10.8 ms a tick,
+## too much for a 60 Hz frame with the rest of it), 12 tasks 57 fps (8.1 ms), 16 tasks 58 fps.
+static func threads_for_this_pc() -> int:
+	return maxi(MAX_THREADS, OS.get_processor_count() * 3 / 4)
 ## An opponent farther than this from the camera is drawn with less care (its name label is
 ## hidden at the same distance, WindsurferNode.set_name_label): its sailor, rig and sail are posed
 ## every other tick, and its fin's bend is not updated. At 300 m a sailor is a few pixels tall.
@@ -303,7 +312,7 @@ func _place(node: WindsurferNode, spot: Vector2, heading_deg: float) -> void:
 
 ## One tick of the race: every board's sailor sets its controls (on this thread: the skippers read
 ## the race), then every board's physics steps, side by side on worker threads when the setup says
-## so (each simulation touches only its own objects; at most MAX_THREADS tasks pulling the
+## so (each simulation touches only its own objects; at most setup.threads tasks pulling the
 ## boards), then the visuals (the far opponents' on alternate ticks), then the race is told where
 ## everyone is. A board that has run aground (the scene stops the player's, the shore check below
 ## the AI boards') is not stepped.
