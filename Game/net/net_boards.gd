@@ -33,6 +33,13 @@ extends Node
 ## a state names its epoch and is dropped unless the PC holds that keyframe. Players who join while
 ## the game runs get a puppet on every PC as soon as the lobby says so (_sync_players()); the host
 ## gives a late guest everything as it is now and starts nobody's race again for it.
+##
+## Spectating (Documentation/reports/multiplayer/spectate_6nov.md): a player whose board is off the
+## water (LanPlayer.parked: a spectator, a racer who retired or finished and watches until the next
+## start, a guest who joined while a race was on) sends no states of it, and every PC hides its puppet
+## until it is back (_set_puppet_parked()). The host's race leaves a spectator out from the next start
+## (racing_slots()) and marks a guest who retires (on_retire()). The camera of a PC whose board is
+## parked follows any racer (RaceRunner on the host, RaceMirror on a guest).
 
 const AI_ID_BASE: int = 100
 ## The AI boards' states go out every this many ticks (20 a second), each on its own tick of the
@@ -134,6 +141,18 @@ var _track_every: int = 0
 var _robot_name: String = ""
 ## The last race whose results were printed (its number; RaceRunner.race_number).
 var _results_printed_for: int = -1
+## The other players whose boards are off the water now (LanPlayer.parked): hidden, no state shown.
+var _parked: Dictionary[int, bool] = {}
+## The board the camera watches, by network number, as last printed (WATCH lines; -1 none).
+var _watched_id: int = -1
+## --lan_tab_every=<s>: while watching, Tab every this many seconds (tools/lan_test.sh); 0 none.
+## --lan_retire_at=<s>: this PC's player chooses Spectate at that race time (retiring); -1 never.
+## --lan_watch=<number>: while watching, the camera stays on that board when it is on the water (the
+## screenshots of a remote board); -1 none.
+var _tab_every_s: float = 0.0
+var _watch_wanted: int = -1
+var _tab_at_s: float = 0.0
+var _retire_at_s: float = -1.0
 
 
 ## The after-physics half of the tick (step 3 in the note at the top).
@@ -171,8 +190,17 @@ func setup(sailing: SailingScene, mine: WindsurferNode) -> void:
 	_quit_at_s = options.get("lan_quit", "-1").to_float()
 	_track_every = maxi(options.get("lan_track", "0").to_int(), 0)
 	_robot_name = options.get("lan_robot", "")
+	_tab_every_s = maxf(options.get("lan_tab_every", "0").to_float(), 0.0)
+	_tab_at_s = _tab_every_s
+	_retire_at_s = options.get("lan_retire_at", "-1").to_float()
+	_watch_wanted = options.get("lan_watch", "-1").to_int()
 	if not Lan.game.race:
 		_place_for_free_sailing()
+		if Lan.i_spectate():
+			# Free sailing has no race to watch: everyone sails.
+			Lan.set_watch_state(false, false)
+	elif Lan.i_spectate():
+		print("SPECTATOR %d %s" % [Lan.my_slot, Lan.my_name])
 	for player: LanPlayer in Lan.game.players:
 		if player.peer_id != 1 and player.slot != Lan.my_slot:
 			_initial_peers.append(player.peer_id)
@@ -204,17 +232,17 @@ func _sync_players() -> void:
 		if player.slot == Lan.my_slot:
 			continue
 		listed[player.slot] = true
-		if puppets.has(player.slot) and _owners.get(player.slot, -1) == player.peer_id:
-			continue
-		if puppets.has(player.slot):
-			_forget_puppet(player.slot)
-		var gear: GearChoice = player.gear()
-		if _gear_in.has(player.slot):
-			var ids: PackedStringArray = _gear_in[player.slot]
-			gear = GearChoice.from_ids(ids[0], ids[1], ids[2])
-		var puppet: WindsurferNode = _make_puppet(player.slot, gear, player.name, Color.TRANSPARENT, true)
-		_owners[player.slot] = player.peer_id
-		puppet.visible = false
+		if not (puppets.has(player.slot) and _owners.get(player.slot, -1) == player.peer_id):
+			if puppets.has(player.slot):
+				_forget_puppet(player.slot)
+			var gear: GearChoice = player.gear()
+			if _gear_in.has(player.slot):
+				var ids: PackedStringArray = _gear_in[player.slot]
+				gear = GearChoice.from_ids(ids[0], ids[1], ids[2])
+			var puppet: WindsurferNode = _make_puppet(player.slot, gear, player.name, Color.TRANSPARENT, true)
+			_owners[player.slot] = player.peer_id
+			puppet.visible = false
+		_set_puppet_parked(player.slot, player.parked and Lan.game.race)
 	for id: int in puppets.keys():
 		if id < AI_ID_BASE and not listed.has(id) and _owners.get(id, -1) != -2:
 			# Gone (the host also hears it as on_peer_left()).
@@ -223,10 +251,34 @@ func _sync_players() -> void:
 			_owners[id] = -2
 
 
+## Another player's board off the water (hidden, its states not shown) or back on it: it shows again
+## with the first state it sends from now on, not one from before it left the water.
+func _set_puppet_parked(slot: int, parked: bool) -> void:
+	if parked == _parked.has(slot) or not puppets.has(slot):
+		return
+	if parked:
+		_parked[slot] = true
+		puppets[slot].visible = false
+	else:
+		_parked.erase(slot)
+	_buffers[slot] = StateBuffer.new()
+	_applied.erase(slot)
+	_applied_tick.erase(slot)
+	_shown.erase(slot)
+
+
+## Whether this PC's own board is off the water (its player watches): no states of it go out.
+func own_parked() -> bool:
+	if runner != null:
+		return runner.player_parked
+	return mirror != null and mirror.own_parked
+
+
 ## A puppet taken away (its slot has a new player).
 func _forget_puppet(id: int) -> void:
 	var node: WindsurferNode = puppets[id]
 	puppets.erase(id)
+	_parked.erase(id)
 	_buffers.erase(id)
 	_applied.erase(id)
 	_applied_tick.erase(id)
@@ -284,17 +336,29 @@ func remote_slots() -> Array[int]:
 	return list
 
 
-## The other players' boards and names (for the host's RaceRunner), in slot order.
+## The other players who race (not the spectators), in slot order: the host's race takes them at
+## every start.
+func racing_slots() -> Array[int]:
+	var list: Array[int] = []
+	for slot: int in remote_slots():
+		var player: LanPlayer = Lan.game.player_in(slot)
+		if player != null and not player.spectator:
+			list.append(slot)
+	return list
+
+
+## The other players' boards and names (for the host's RaceRunner), in slot order; the spectators'
+## are not in the race.
 func remote_players() -> Array[WindsurferNode]:
 	var list: Array[WindsurferNode] = []
-	for slot: int in remote_slots():
+	for slot: int in racing_slots():
 		list.append(puppets[slot])
 	return list
 
 
 func remote_names() -> PackedStringArray:
 	var list: PackedStringArray = PackedStringArray()
-	for slot: int in remote_slots():
+	for slot: int in racing_slots():
 		list.append(Lan.game.player_in(slot).name)
 	return list
 
@@ -313,9 +377,11 @@ func attach_runner(race_runner: RaceRunner) -> void:
 	runner = race_runner
 	runner.restarted.connect(_on_runner_restarted)
 	runner.fleet_regeared.connect(_on_fleet_regeared)
-	# The players racing at each start: a guest who joined since is in it, one who left is not (R2).
+	runner.watch_changed.connect(_on_watch_changed)
+	# The players racing at each start: a guest who joined since is in it, one who left is not (R2),
+	# nor a spectator.
 	runner.remote_source = func() -> Array: return [remote_players(), remote_names()]
-	_put_robot_on_board(runner.race, 0, runner.rules, runner.sailing_area())
+	_put_robot_on_board(runner.race, runner.player_index(), runner.rules, runner.sailing_area())
 
 
 ## The AI boards that took other gear for the wind at a new start: their new keyframes to the guests.
@@ -328,8 +394,22 @@ func _on_fleet_regeared(indices: Array[int]) -> void:
 func start_mirror(course: Course, setup: RaceSetup, hud_layer: Hud) -> void:
 	mirror = RaceMirror.new()
 	mirror.name = "RaceMirror"
+	mirror.stays_spectator = Lan.i_spectate()
+	mirror.watch_changed.connect(_on_watch_changed)
 	scene.add_child(mirror)
 	mirror.setup(course, setup, hud_layer, own, self)
+
+
+## This PC's player went off the water or came back, or chose to stay a spectator or to race again:
+## the lobby's list on every PC (each hides a parked board).
+func _on_watch_changed() -> void:
+	var stays: bool = runner.stays_spectator if runner != null else (mirror.stays_spectator if mirror != null else false)
+	var parked: bool = own_parked()
+	var me: LanPlayer = Lan.me()
+	if me == null or me.spectator != stays or me.parked != parked:
+		Lan.set_watch_state(stays, parked)
+	if _report_every_s > 0.0 or _track_every > 0:
+		print("%s %d %s" % ["PARKED" if parked else "ON_THE_WATER", _host_tick_now(), "spectator" if stays else "racer"])
 
 
 # ---------------------------------------------------------------- step 1: the clocks and the puppets
@@ -350,6 +430,7 @@ func _physics_process(_delta: float) -> void:
 	_us_show += Time.get_ticks_usec() - t0
 	_ticks_costed += 1
 	_check_command_line_timers()
+	_check_spectate_options()
 
 
 ## The host's water clock: ticks since the scene began. Every board the host sails reads its water
@@ -414,7 +495,7 @@ func restore_pace() -> void:
 
 func _show_puppet(id: int, now_tick: int) -> void:
 	var buffer: StateBuffer = _buffers[id]
-	if buffer.is_empty():
+	if buffer.is_empty() or _parked.has(id):
 		return
 	var delay: float = AI_SHOW_DELAY_TICKS if id >= AI_ID_BASE else PLAYER_SHOW_DELAY_TICKS
 	var show_tick: float = float(now_tick) - delay
@@ -463,7 +544,8 @@ func _send_states_now() -> void:
 		if _ready_peers.is_empty():
 			return
 		_send_clock(my_tick)
-		_send_board(Lan.my_slot, own, my_tick)
+		if not own_parked():
+			_send_board(Lan.my_slot, own, my_tick)
 		if _track_every > 0 and my_tick % _track_every == 0 and runner != null:
 			# Where the judge has the other players now (the sync check compares it with their own PCs').
 			for slot: int in remote_slots():
@@ -480,7 +562,7 @@ func _send_states_now() -> void:
 				if director != null:
 					race_state["director"] = director.info()
 				Lan.send_race_state(race_state, runner.rules.to_state() if runner.rules != null else {})
-	elif _clock.is_known():
+	elif _clock.is_known() and not own_parked():
 		# The guest's states carry the host's tick they belong to.
 		_send_board(Lan.my_slot, own, _clock.host_tick_now(my_tick))
 
@@ -488,6 +570,11 @@ func _send_states_now() -> void:
 ## The clock at the start of this tick's step: the water's time the boards used and the wind's
 ## clock before it stepped (the next tick's start, less one tick).
 func _send_clock(tick: int) -> void:
+	if runner != null and runner.player_parked and runner.wind_clock != null:
+		# The host's board is off the water (not stepped): the race's clock, which the AI boards stepped.
+		var clock: RaceWindClock = runner.wind_clock
+		Lan.send_clock(tick + 1, host_water_time_s(tick + 1), clock.time_s, clock.travel_m, clock.time_of_day_s, Time.get_ticks_usec() / 1e6)
+		return
 	var wind: WindField = own.sim.wind
 	var map_field: MapWindField = wind as MapWindField
 	var day_s: float = map_field.time_of_day_s() if map_field != null else -1.0
@@ -709,7 +796,7 @@ func on_fleet(fleet: Array) -> void:
 
 ## The host's race starts again (on the host, from its RaceRunner): where each player waits.
 func _on_runner_restarted() -> void:
-	_put_robot_on_board(runner.race, 0, runner.rules, runner.sailing_area())
+	_put_robot_on_board(runner.race, runner.player_index(), runner.rules, runner.sailing_area())
 	if _ready_peers.is_empty():
 		return
 	Lan.send_race_restart(restart_info())
@@ -722,9 +809,13 @@ func restart_info() -> Dictionary:
 	var names: PackedStringArray = PackedStringArray()
 	for i: int in runner.race.board_count():
 		names.append(runner.race.board_name(i))
-	names[0] = Lan.my_name
-	var ids: Array = [Lan.my_slot]
-	var spots: Dictionary = {Lan.my_slot: runner.player_spot}
+	var ids: Array = []
+	var spots: Dictionary = {}
+	# The host's own board, unless the host spectates (then it is not in the race).
+	if not runner.spectating:
+		names[0] = Lan.my_name
+		ids.append(Lan.my_slot)
+		spots[Lan.my_slot] = runner.player_spot
 	# The other players in this race (a guest who joined during it races from the next start, R2).
 	for i: int in runner.remote_players.size():
 		var slot: int = puppets.find_key(runner.remote_players[i])
@@ -743,6 +834,12 @@ func restart_info() -> Dictionary:
 func on_race_restart(info: Dictionary) -> void:
 	var spots: Dictionary = info.get("spots", {})
 	var moved: bool = not bool(info.get("keep", false)) and not bool(info.get("late", false))
+	# A board that was off the water (its player watched) comes back at its spot, also in a race after
+	# a race.
+	if own_parked() and spots.has(Lan.my_slot):
+		moved = true
+	if bool(info.get("late", false)):
+		print("LAN: a race is under way: watching it until the next start")
 	if moved and spots.has(Lan.my_slot):
 		var spot: Vector2 = spots[Lan.my_slot]
 		own.start_position = Vector3(spot.x, 0.0, spot.y)
@@ -758,9 +855,24 @@ func on_race_state(race_state: Dictionary, rules_state: Dictionary) -> void:
 		mirror.take_state(race_state, rules_state)
 
 
+## A guest retires from the race under way (the host; its menu's Spectate): the race marks its board
+## retired, and every PC's results show it.
+func on_retire(peer: int) -> void:
+	if runner == null or runner.race == null or runner.race.phase() == RaceSim.Phase.FINISHED:
+		return
+	var slot: int = int(_owners.find_key(peer)) if _owners.values().has(peer) else -1
+	var at: int = runner.remote_players.find(puppets.get(slot, null)) if slot >= 0 else -1
+	if at < 0:
+		return
+	var index: int = at + (0 if runner.spectating else 1)
+	runner.race.retire(index)
+	print("LAN: %s retires from race %d" % [runner.race.board_name(index), runner.race_number])
+
+
 ## The other player left (the host): their board stays where it was, without its name, and the
-## HUD says so for a while.
+## HUD says so for a while; in a race under way it is retired.
 func on_peer_left(peer: int) -> void:
+	on_retire(peer)
 	for id: int in _owners:
 		if _owners[id] == peer and puppets.has(id):
 			puppets[id].set_name_label("(left)")
@@ -854,8 +966,79 @@ func _print_results_once() -> void:
 	_results_printed_for = number
 	for result: RaceResult in race.results():
 		var who: String = Lan.my_name if result.name == RaceRunner.PLAYER_NAME else result.name
-		print("RESULT %d %d %s %s %.2f %.1f %d/%d" % [number, result.place, who.replace(" ", "_"), "finished" if result.finished else "dnf",
+		print("RESULT %d %d %s %s %.2f %.1f %d/%d" % [number, result.place, who.replace(" ", "_"),
+			"finished" if result.finished else ("retired" if result.retired else "dnf"),
 			result.finish_time_s, result.penalty_s, result.steps_done, result.steps_total])
+
+
+## The host's tick now (the guest's estimate of it).
+func _host_tick_now() -> int:
+	var my_tick: int = Engine.get_physics_frames()
+	return my_tick if Lan.is_host() else _clock.host_tick_now(my_tick)
+
+
+## The spectating checks (tools/lan_test.sh): a WATCH line whenever the camera goes to another board
+## (its network number, name and place); --lan_tab_every presses Tab, --lan_retire_at chooses the
+## menu's Spectate once in the race.
+func _check_spectate_options() -> void:
+	var race: RaceSim = runner.race if runner != null else (mirror.race if mirror != null else null)
+	if race == null:
+		return
+	if _retire_at_s >= 0.0 and race.is_started() and race.clock_s() >= _retire_at_s and not own_parked():
+		_retire_at_s = -1.0
+		print("LAN: Spectate chosen at race time %.1f s (retiring)" % race.clock_s())
+		scene.spectate_or_race_again()
+	if _watch_wanted >= 0 and own_parked():
+		_watch_board(_watch_wanted)
+	if _tab_every_s > 0.0 and own_parked():
+		_tab_at_s -= _dt
+		if _tab_at_s <= 0.0:
+			_tab_at_s = _tab_every_s
+			scene.step_watched(1)
+	if _report_every_s <= 0.0 and _track_every <= 0:
+		return
+	var index: int = -1
+	var id: int = -1
+	if runner != null and runner.player_parked:
+		index = runner.followed_index()
+		id = _network_id(runner.board_node(index)) if index >= 0 else -1
+	elif mirror != null and mirror.own_parked:
+		index = mirror.followed_index()
+		id = mirror.board_id(index)
+	if id != _watched_id:
+		_watched_id = id
+		if id >= 0:
+			print("WATCH %d %d %s %s" % [_host_tick_now(), id, race.board_name(index).replace(" ", "_"), RaceHud.watch_place_text(race, index).replace(" ", "_")])
+
+
+## The camera on the board with this network number, if it is on the water (--lan_watch).
+func _watch_board(id: int) -> void:
+	var choice: SpectateChoice = null
+	var order: Array[int] = []
+	if runner != null:
+		choice = runner.choice
+		order = runner.watch_order()
+	elif mirror != null:
+		choice = mirror.choice
+		order = mirror.watch_order()
+	for index: int in order:
+		var board: int = _network_id(runner.board_node(index)) if runner != null else mirror.board_id(index)
+		if board == id:
+			choice.followed = index
+			choice.follows_leader = false
+			return
+
+
+## A board's network number (the host): its player's slot, or AI_ID_BASE and its place in the fleet.
+func _network_id(node: WindsurferNode) -> int:
+	if node == null:
+		return -1
+	if node == own:
+		return Lan.my_slot
+	if puppets.values().has(node):
+		return int(puppets.find_key(node))
+	var at: int = runner.opponents.find(node) if runner != null else -1
+	return AI_ID_BASE + at if at >= 0 else -1
 
 
 ## --lan_robot: a scripted skipper on this PC's board for the race just started (again at every

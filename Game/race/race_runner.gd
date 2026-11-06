@@ -19,10 +19,14 @@ extends Node
 ## host's NetBoards). update_course() puts the race director's changed course into the race as it
 ## runs (R6).
 ##
-## Spectating (RaceSetup.spectate, tools/gens.sh): the player's board does not race. It is parked
-## where it is, hidden and not stepped, and it is not in the race; the camera, the HUD's block and
-## the sounds follow one AI board instead, chosen by a SpectateChoice (the leader, or the board Tab
-## stepped to).
+## Spectating (RaceSetup.spectate, tools/gens.sh; in a LAN game the lobby's or the menu's Spectate,
+## Documentation/reports/multiplayer/spectate_6nov.md): the player's board does not race. It is
+## parked where it is, hidden and not stepped, and it is not in the race; the camera, the HUD's block
+## and the sounds follow another board instead, chosen by a SpectateChoice (the leader, or the board
+## Tab stepped to): an AI board, another PC's player or (LAN) any racer on the water. In a LAN game
+## the player's board is also parked mid-race when the player retires (spectate_now(): the race marks
+## it retired) or a few seconds after it finishes (watch_after_finish), and it comes back at its spot
+## behind the line at the next start, unless the player stays a spectator (stays_spectator).
 
 const WINDSURFER_SCENE: String = "res://windsurfer/windsurfer.tscn"
 ## How far back from the line the boards wait per second of countdown, and the nearest and the
@@ -56,9 +60,15 @@ static func threads_for_this_pc() -> int:
 ## The physics and the skipper are never leveled: only what is drawn. This is the Normal draw distance;
 ## Settings > Graphics > Draw distance moves it (DrawDistance.full_detail_m(), which the boards use).
 const FAR_DETAIL_M: float = 300.0
+## A LAN player who has finished watches the others this many seconds after crossing the line (first
+## the finish on the screen: the place and the time).
+const WATCH_AFTER_FINISH_S: float = 4.0
 
 ## A new start (restart()): LAN multiplayer's host sends it to the guests.
 signal restarted
+## The player's board went off the water (parked: spectating) or came back, or the player chose to
+## stay a spectator or to race again (LAN multiplayer's host tells the other PCs: NetBoards).
+signal watch_changed
 ## A start signal is due (SO3): the start boat's horn, the start watch's beep or the gun. The sailing
 ## scene hands it to its sounds (GameAudio.play_race_signal()).
 signal start_signal(kind: RaceStartSignals.Kind)
@@ -113,8 +123,17 @@ var race_number: int = 0
 var _report_at_s: float = -INF
 ## The skippers' polars are printed with the first report only.
 var _reported_polars: bool = false
-## Spectating (RaceSetup.spectate): the player's board is parked out of the race.
+## Spectating (RaceSetup.spectate): the player's board is not in this race (decided at every start
+## from stays_spectator).
 var spectating: bool = false
+## The player watches instead of racing, from the next start on (RaceSetup.spectate, or in a LAN game
+## the lobby's or the menu's Spectate; the menu's Race again turns it off).
+var stays_spectator: bool = false
+## The player's board is off the water: hidden and not stepped, the camera on the board chosen. True
+## while spectating, and in a LAN game after the player retired or finished, until the next start.
+var player_parked: bool = false
+## LAN multiplayer: a player who has finished watches the others until the next start.
+var watch_after_finish: bool = false
 ## LAN multiplayer: the other players' boards (puppets, in slot order) and their names, set before
 ## setup_race(); where each waits at the last start, and where this PC's player waits.
 var remote_players: Array[WindsurferNode] = []
@@ -131,7 +150,7 @@ var kept_places: bool = false
 ## On a lake: the shore as the AI skippers see it while they race (ShoreLookout; Max, 6 November 2026:
 ## the AI races every iQFOiL course on Silvaplana without going onto the shore). Null on the open water.
 var shore_lookout: ShoreLookout = null
-## Which AI board the camera follows while spectating.
+## Which board the camera follows while the player's board is parked.
 var choice: SpectateChoice = SpectateChoice.new()
 ## The race's number of the first AI board: 1 after the player's, 0 while spectating.
 var _first_ai: int = 1
@@ -157,7 +176,9 @@ func setup_race(race_course: Course, player_node: WindsurferNode, race_setup: Ra
 	hud = RaceHud.new()
 	hud.name = "RaceHud"
 	hud_layer.add_part(hud)
-	spectating = setup.spectate and remote_players.is_empty()
+	stays_spectator = stays_spectator or setup.spectate
+	spectating = stays_spectator
+	player_parked = spectating
 	_first_ai = 0 if spectating else 1
 	hud_layer.set_race_mode(true, spectating)
 	for arg: String in OS.get_cmdline_user_args():
@@ -220,6 +241,9 @@ func setup_race(race_course: Course, player_node: WindsurferNode, race_setup: Ra
 ## put back at a spot in the sailing area) and the countdown starts at once.
 func restart(keep_places: bool = false) -> void:
 	kept_places = keep_places
+	# A board that was off the water comes back at its spot behind the line, also in a race after a race.
+	var was_parked: bool = player_parked
+	spectating = stays_spectator
 	_gather_boards()
 	var regeared: Array[int] = _gear_the_fleet_for_the_wind()
 	race = RaceSim.new(course, setup.laps, setup.prestart_s)
@@ -239,10 +263,10 @@ func restart(keep_places: bool = false) -> void:
 	var behind_m: float = setup.wait_behind_m()
 	var spots: PackedVector2Array = pre_start_spots(course, race.steps()[0], opponents.size() + 1 + remote_players.size(), behind_m)
 	var heading_deg: float = RaceCourses.pre_start_heading_deg(course)
-	if spectating:
+	if spectating and remote_players.is_empty():
 		# The AI boards in their order along the line (no player's slot in the middle).
 		spots = PackedVector2Array([spots[0]]) + line_spots(course, race.steps()[0], opponents.size(), behind_m)
-	if not keep_places:
+	if not keep_places or (was_parked and not spectating):
 		_place(player, spots[0], heading_deg)
 	# The other players' spots beside this PC's player's (their PCs put them there: restart_info()).
 	player_spot = spots[0]
@@ -283,6 +307,7 @@ func restart(keep_places: bool = false) -> void:
 		hud.set_time_trial(true, records.best_s(record_key), records.best_splits(record_key))
 	_record_checked = false
 	choice = SpectateChoice.new()
+	_set_player_parked(spectating)
 	# Every board is afloat again at its start spot (RA2).
 	_aground.resize(_boards.size())
 	_aground.fill(0)
@@ -407,7 +432,7 @@ func _physics_process(delta: float) -> void:
 	if not _running:
 		return
 	var scene: SailingScene = get_parent() as SailingScene
-	var player_stopped: bool = not spectating and scene != null and scene.is_aground()
+	var player_stopped: bool = not spectating and (player_parked or (scene != null and scene.is_aground()))
 	var stopped: PackedByteArray = _stopped_boards(player_stopped)
 	_hand_the_wind_clock()
 	for i: int in _boards.size():
@@ -425,7 +450,7 @@ func _physics_process(delta: float) -> void:
 		for i: int in _boards.size():
 			_step_board(i, delta, stopped)
 	var t1: int = Time.get_ticks_usec()
-	_read_the_wind_clock(stopped)
+	_read_the_wind_clock(stopped, delta)
 	_check_the_shore(scene.shore_grid if scene != null else null)
 	_pose_boards(player_stopped)
 	_tell_the_race()
@@ -455,13 +480,18 @@ func _hand_the_wind_clock() -> void:
 
 
 ## The clock one tick on, read from the first board that stepped (every field that stepped shows
-## the same); unchanged if none did (the player alone and aground, or every board aground).
-func _read_the_wind_clock(stopped: PackedByteArray) -> void:
+## the same); unchanged if none did (the player alone and aground, or every board aground). A player
+## who watches a race of other PCs' boards only (no AI board steps here) keeps the clock going with
+## the parked board's own wind field, so the gusts still roll on every PC.
+func _read_the_wind_clock(stopped: PackedByteArray, delta: float) -> void:
 	for i: int in _boards.size():
 		if stopped[i] == 1 or _boards[i].is_puppet:
 			continue
 		wind_clock = RaceWindClock.of(_boards[i].sim.wind)
 		return
+	if player_parked and player != null:
+		player.sim.wind.step(delta)
+		wind_clock = RaceWindClock.of(player.sim.wind)
 
 
 ## Which boards are not stepped this tick, 1 for each (one per board of _boards): the player's board
@@ -566,7 +596,7 @@ func _step_board(i: int, delta: float, stopped: PackedByteArray) -> void:
 ## FAR_DETAIL_M from the camera is posed on alternate ticks (half of them on the even ticks, half
 ## on the odd, so the cost is even); its place on the water is set every tick.
 func _pose_boards(player_stopped: bool) -> void:
-	if not player_stopped and not spectating:
+	if not player_stopped and not spectating and not player_parked:
 		player.after_step()
 	# The other players' boards (LAN multiplayer) are posed by NetBoards as their states come in.
 	var camera: Camera3D = get_viewport().get_camera_3d()
@@ -631,63 +661,149 @@ static func worst(values: PackedFloat64Array) -> float:
 func _process(delta: float) -> void:
 	if not _running:
 		return
-	if spectating and not opponents.is_empty():
-		choice.update(race.race_order(), delta)
+	_watch_when_finished()
+	if player_parked:
+		choice.update(watch_order(), delta)
 	var index: int = followed_index()
+	if index < 0:
+		return  # nobody on the water to watch yet
 	var node: WindsurferNode = followed_node()
-	hud.set_watching(node.skipper.board_name() if spectating and node.skipper != null else "", choice.follows_leader)
+	hud.set_watching(race.board_name(index) if player_parked else "", choice.follows_leader, RaceHud.watch_place_text(race, index) if player_parked else "")
+	# While a player who finished watches the others, the finish list stays on the screen.
+	hud.results_wanted = player_parked and not spectating and race.is_finished(0)
 	hud.update_from(race, index, node.telemetry(), shadow_deficit(node), rules)
 	_check_record()
 	_hud_layer.set_next_mark_bearing(Course.bearing_deg(_where(node), race.next_target(index)))
 
 
-## The race's number of the board the camera follows: the player's (0), or while spectating the
-## AI board the SpectateChoice follows.
+## The race's number of the board the camera follows: the player's (0), or while the player's board
+## is parked the board the SpectateChoice follows; -1 while there is nobody on the water to watch.
 func followed_index() -> int:
-	if not spectating or opponents.is_empty():
+	if not player_parked:
 		return 0
-	return choice.followed if choice.followed >= 0 else 0
+	if race != null and choice.followed >= 0 and choice.followed < race.board_count():
+		return choice.followed
+	return -1
 
 
-## The board the camera, the HUD's block and the sounds follow (the player's when not spectating).
+## The board the camera, the HUD's block and the sounds follow (the player's when not watching, and
+## while there is nobody to watch).
 func followed_node() -> WindsurferNode:
-	if not spectating or opponents.is_empty():
+	var index: int = followed_index()
+	if not player_parked or index < 0:
 		return player
-	return opponents[followed_index() - _first_ai]
+	var node: WindsurferNode = board_node(index)
+	return node if node != null else player
 
 
-## Tab (+1) and Shift+Tab (-1) while spectating: the next or the previous board in race order.
+## The board with a race number: the player's (first, unless spectating), the other players' (LAN
+## multiplayer), the AI boards'; null for none.
+func board_node(index: int) -> WindsurferNode:
+	var at: int = index
+	if not spectating:
+		if at == 0:
+			return player
+		at -= 1
+	if at >= 0 and at < remote_players.size():
+		return remote_players[at] if is_instance_valid(remote_players[at]) else null
+	at -= remote_players.size()
+	if at >= 0 and at < opponents.size():
+		return opponents[at]
+	return null
+
+
+## The player's board's number in the race, -1 while spectating.
+func player_index() -> int:
+	return -1 if spectating else 0
+
+
+## The boards the camera may follow, in race order: every board on the water (a parked board, the
+## player's own or another PC's, is not; nor another PC's before its first state has come).
+func watch_order() -> Array[int]:
+	if race == null:
+		return []
+	return SpectateChoice.watchable(race.race_order(), func(index: int) -> bool:
+		var node: WindsurferNode = board_node(index)
+		return node != null and node.visible)
+
+
+## Tab (+1) and Shift+Tab (-1) while watching: the next or the previous board in race order.
 func step_followed(by: int) -> void:
-	if spectating and race != null:
-		choice.step(race.race_order(), by)
+	if player_parked and race != null:
+		choice.step(watch_order(), by)
 
 
-## L while spectating: follow the leader again.
+## L while watching: follow the leader again.
 func follow_leader() -> void:
-	if spectating and race != null:
-		choice.follow_leader(race.race_order())
+	if player_parked and race != null:
+		choice.follow_leader(watch_order())
+
+
+## The menu's Spectate (LAN multiplayer): the player stops racing and watches. A board in the race
+## under way retires from it (the results say so on every PC); the board leaves the water and comes
+## back at the next start, unless the player also chooses to stay a spectator.
+func spectate_now() -> void:
+	if race != null and not spectating and race.phase() != RaceSim.Phase.FINISHED and not race.is_finished(0):
+		race.retire(0)
+	_set_player_parked(true)
+
+
+## Whether the player watches from now on (true) or races again from the next start (false).
+func set_stays_spectator(stays: bool) -> void:
+	if stays == stays_spectator:
+		return
+	stays_spectator = stays
+	watch_changed.emit()
+
+
+## A LAN player who has finished: WATCH_AFTER_FINISH_S after the line (or when the race is over), the
+## board leaves the water and the camera goes to the others.
+func _watch_when_finished() -> void:
+	if not watch_after_finish or player_parked or spectating or race == null or not race.is_finished(0):
+		return
+	var splits: PackedFloat32Array = race.splits_s(0)
+	var crossed_s: float = splits[splits.size() - 1] if not splits.is_empty() else race.finish_time_s(0)
+	if race.phase() == RaceSim.Phase.FINISHED or race.race_time_s() - crossed_s >= WATCH_AFTER_FINISH_S:
+		_set_player_parked(true)
+
+
+## The player's board off the water (hidden, not stepped, out of the wind shadows and the judge's
+## view) or back on it; the HUD's keys follow.
+func _set_player_parked(parked: bool) -> void:
+	var changed: bool = parked != player_parked or player.visible == parked
+	player_parked = parked
+	player.visible = not parked
+	if not changed:
+		return
+	if not parked:
+		player.reset_physics_interpolation()
+	choice = SpectateChoice.new()
+	if _hud_layer != null:
+		_hud_layer.set_race_mode(true, parked)
+	watch_changed.emit()
 
 
 ## The race is told where every board is (the player first, unless spectating).
 func _tell_the_race() -> void:
 	if not spectating:
 		race.update_board(0, _where(player))
+	var first_remote: int = 0 if spectating else 1
 	for i: int in remote_players.size():
-		# Not before its first state has come (the puppet shows then): until then it is nowhere.
+		# Not before its first state has come (the puppet shows then): until then it is nowhere. Nor
+		# while it is off the water (that player watches).
 		if remote_players[i].visible:
-			race.update_board(1 + i, where_now(remote_players[i]))
+			race.update_board(first_remote + i, where_now(remote_players[i]))
 	for i: int in opponents.size():
 		race.update_board(i + _first_ai, _where(opponents[i]))
 
 
-## The other boards' places, for the small map (all but the one followed).
+## The other boards' places, for the small map: every board of the race on the water but the one
+## followed (which is the map's own dot).
 func other_positions() -> PackedVector3Array:
 	var positions: PackedVector3Array = PackedVector3Array()
 	var followed: WindsurferNode = followed_node()
-	for node: WindsurferNode in remote_players:
-		positions.append(node.sim.telemetry.position)
-	for node: WindsurferNode in opponents:
-		if node != followed:
+	for node: WindsurferNode in _boards:
+		if node != followed and is_instance_valid(node) and node.visible:
 			positions.append(node.sim.telemetry.position)
 	return positions
 

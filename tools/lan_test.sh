@@ -9,12 +9,19 @@
 #   tools/lan_test.sh [--seconds=40] [--mode=race|free] [--map=open|lake] [--skippers=allrounder,rookie|none] [--lake_wave_scale=1.5]
 #                     [--prestart=20] [--robot=allrounder] [--release=1] [--body=1,0.67]
 #                     [--guests=1] [--late=0] [--time_limit=0] [--director_gap=0] [--host_options="--x=1 --y=2"]
+#                     [--spectate=0] [--retire_at=-1]
 #
 # --guests=<n> joins that many guests (up to 7; RACE_DIRECTOR.md R1); --late=<s> lets the last of them
 # join that many seconds after the others, while the game runs (R2). --time_limit=<s> ends each race
 # that long after its gun and --director_gap=<s> starts the next countdown that long after a race
 # ends (R4: a race after a race); --host_options passes more options to the host only (the race
 # director's scripted changes, --director_move=...). The sync check runs for every pair of PCs.
+#
+# Spectating (Documentation/reports/multiplayer/spectate_6nov.md): --spectate=<n> lets the n-th guest
+# join as a spectator (no board in the race; its camera goes to the next racer every 3 s, as Tab);
+# the check then wants it to have seen every board and the others to have drawn none of it.
+# --retire_at=<s> lets the first guest choose Spectate at that race time (it retires: every PC's
+# finish list says "retired"). The host spectates with --host_options="--lan_spectate=1 --lan_tab_every=3".
 #
 # --robot=<skipper> lets a scripted skipper sail both players' boards (so a race can finish; without
 # it the two boards sail straight on). --release=1 runs the exported game (tools/release.sh build).
@@ -39,6 +46,8 @@ late=0
 time_limit=0
 director_gap=0
 host_options=""
+spectate=0
+retire_at=""
 for arg in "$@"; do
 	case "$arg" in
 		--seconds=*) seconds="${arg#*=}" ;;
@@ -55,6 +64,8 @@ for arg in "$@"; do
 		--time_limit=*) time_limit="${arg#*=}" ;;
 		--director_gap=*) director_gap="${arg#*=}" ;;
 		--host_options=*) host_options="${arg#*=}" ;;
+		--spectate=*) spectate="${arg#*=}" ;;
+		--retire_at=*) retire_at="${arg#*=}" ;;
 		*) echo "Unknown option $arg" >&2; exit 2 ;;
 	esac
 done
@@ -103,7 +114,10 @@ for ((g = 1; g <= guests; g++)); do
 		sleep "$late"
 		quit=$((seconds - late))
 	fi
-	"${run[@]}" -- "${common[@]}" --lan_join=127.0.0.1 --lan_name="$name" --lan_quit="$quit" > "$log" 2>&1 &
+	extra=()
+	if [[ $g -eq $spectate ]]; then extra+=(--lan_spectate=1 --lan_tab_every=3); fi
+	if [[ $g -eq 1 && -n "$retire_at" ]]; then extra+=(--lan_retire_at="$retire_at"); fi
+	"${run[@]}" -- "${common[@]}" --lan_join=127.0.0.1 --lan_name="$name" --lan_quit="$quit" "${extra[@]}" > "$log" 2>&1 &
 	guest_pids+=($!)
 	sleep 1
 done

@@ -1,8 +1,9 @@
 class_name PauseMenu
 extends CanvasLayer
 ## The pause menu of the sailing scene (Esc, or Start on a gamepad): Resume, Restart, Change gear
-## (between races: set_gear_choice()), Settings, Controls, How to sail, Back to the start menu, Quit
-## (pause_menu.tscn). It only
+## (between races: set_gear_choice()), in a LAN race Spectate / Stay a spectator / Race again
+## (set_spectate_choice(); made here, under Change gear), Settings, Controls, How to sail, Back to the
+## start menu, Quit (pause_menu.tscn). It only
 ## shows itself and its pages and says what was chosen; the sailing scene (main.gd) pauses
 ## the game, restarts the run and applies the settings.
 
@@ -12,6 +13,9 @@ signal settings_closed
 signal start_menu_requested
 ## The gear page closed (its choice is in the settings already; the scene sails it when it may).
 signal gear_closed
+## A LAN race's spectate entry was chosen (the scene knows what it means now: main.gd's
+## spectate_or_race_again()).
+signal spectate_requested
 
 @onready var _root: Control = %Root
 @onready var _list: Control = %List
@@ -30,6 +34,8 @@ signal gear_closed
 @onready var _howto: HowToPage = %HowTo
 @onready var _quit_confirm: ConfirmDialog = %QuitConfirm
 @onready var _gear: GearPage = %Gear
+## The LAN race's spectate entry (Documentation/reports/multiplayer/spectate_6nov.md), under Change gear.
+var _spectate_button: Button = null
 
 
 func _ready() -> void:
@@ -44,7 +50,13 @@ func _ready() -> void:
 	_quit_confirm.confirmed.connect(_on_quit_confirmed)
 	for page: MenuPage in [_settings, _controls, _howto, _quit_confirm, _gear]:
 		page.closed.connect(_on_page_closed.bind(page))
-	MenuFocus.setup_buttons([_resume_button, _restart_button, _gear_button, _settings_button, _controls_button,
+	_spectate_button = Button.new()
+	_spectate_button.name = "SpectateButton"
+	_spectate_button.text = "Spectate"
+	_spectate_button.visible = false
+	_spectate_button.pressed.connect(spectate_requested.emit)
+	_gear_button.add_sibling(_spectate_button)
+	MenuFocus.setup_buttons([_resume_button, _restart_button, _gear_button, _spectate_button, _settings_button, _controls_button,
 		_howto_button, _start_menu_button, _quit_button])
 
 
@@ -67,6 +79,17 @@ func set_gear_choice(shown: bool, allowed_now: bool) -> void:
 	_gear_button.visible = shown
 	_gear_button.disabled = not allowed_now
 	_gear_button.text = "Change gear" if allowed_now else "Change gear (after this race)"
+
+
+## A LAN race's spectate entry: shown or not, and its words for the moment ("Spectate (retire from
+## this race)", "Stay a spectator (also the next races)", "Race again at the next start").
+func set_spectate_choice(shown: bool, text: String) -> void:
+	_spectate_button.visible = shown
+	_spectate_button.text = text
+
+
+func spectate_choice_text() -> String:
+	return _spectate_button.text if _spectate_button.visible else ""
 
 
 func is_open() -> bool:

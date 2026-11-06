@@ -13,6 +13,12 @@ compared.
 
 Exits 1 when a shown board is more than PLACE_TOLERANCE_M from where its PC had it, or the finish
 lists differ.
+
+Spectating (Documentation/reports/multiplayer/spectate_6nov.md): a PC whose player spectates from the
+start prints SPECTATOR; it sends no board, so the other PC must show none of it (no SEEN of its slot),
+and it must have seen every board the other PC sails. Its WATCH lines (the board the camera went to:
+tick, network number, name, place) must name at least two boards, one of them a player's. PARKED and
+ON_THE_WATER lines (a board leaving the water to watch, and back at a start) are listed.
 """
 import math
 import sys
@@ -28,6 +34,7 @@ SHUTDOWN_NOISE = ("Unreferenced static string", "resources still in use at exit"
 def read(path):
     tracks, seens, results, errors = {}, {}, [], []
     judged = {}
+    extra = {"spectator": None, "watched": [], "moves": []}
     with open(path, encoding="utf-8", errors="replace") as log:
         for line in log:
             parts = line.split()
@@ -41,10 +48,44 @@ def read(path):
                 judged[(int(parts[1]), int(parts[2]))] = (float(parts[3]), float(parts[4]))
             elif parts[0] == "RESULT":
                 results.append(parts[1:])
+            elif parts[0] == "SPECTATOR" and len(parts) >= 2:
+                extra["spectator"] = int(parts[1])
+            elif parts[0] == "WATCH" and len(parts) >= 5:
+                extra["watched"].append((int(parts[1]), int(parts[2]), parts[3], parts[4]))
+            elif parts[0] in ("PARKED", "ON_THE_WATER") and len(parts) >= 3:
+                extra["moves"].append((parts[0], int(parts[1]), parts[2]))
             elif ("SCRIPT ERROR" in line or line.startswith("ERROR")) and not any(noise in line for noise in SHUTDOWN_NOISE):
                 errors.append(line.strip())
     read.judged = judged
+    read.extra = extra
     return tracks, seens, results, errors
+
+
+def check_spectator(label, spectator, own_seens, other_tracks, other_seens):
+    """A spectator (its slot) saw every board the other PC sails and was drawn by none; it watched at
+    least two boards, one a player's. Returns whether all holds."""
+    ok = True
+    seen_boards = {key[1] for key in own_seens if key in other_tracks}
+    sailed = {key[1] for key in other_tracks}
+    missing = sorted(sailed - seen_boards)
+    print("%s spectates (slot %d): it saw %d of the %d boards the other PC sails%s"
+          % (label, spectator["slot"], len(sailed & seen_boards), len(sailed), (", missing %s" % missing) if missing else ""))
+    if missing:
+        print("FAIL: the spectator did not see every board")
+        ok = False
+    drawn = [key for key in other_seens if key[1] == spectator["slot"]]
+    if drawn:
+        print("FAIL: the other PC drew the spectator's board %d times" % len(drawn))
+        ok = False
+    boards = []
+    for _tick, board, name, place in spectator["watched"]:
+        if board not in [b for b, _n, _p in boards]:
+            boards.append((board, name, place))
+    print("%s watched: %s" % (label, ", ".join("%d %s (%s)" % b for b in boards) or "nothing"))
+    if len(boards) < 2 or not any(b < 100 for b, _n, _p in boards):
+        print("FAIL: the spectator's camera did not go round the racers (Tab)")
+        ok = False
+    return ok
 
 
 def compare(label, seens, tracks):
@@ -105,7 +146,9 @@ def by_race(results):
 def main():
     host_tracks, host_seens, host_results, host_errors = read(sys.argv[1])
     host_judged = read.judged
+    first_extra = read.extra
     guest_tracks, guest_seens, guest_results, guest_errors = read(sys.argv[2])
+    second_extra = read.extra
     ok = True
     for who, errors in (("host", host_errors), ("guest", guest_errors)):
         for error in errors[:5]:
@@ -119,7 +162,19 @@ def main():
         judge_errors.sort()
         print("The host's judge has the guest's board, against the guest's own: median %.3f m, worst %.3f m (%d moments)"
               % (judge_errors[len(judge_errors) // 2], judge_errors[-1], len(judge_errors)))
-    if matched_g == 0 or matched_h == 0:
+    for who, extra in (("first", first_extra), ("second", second_extra)):
+        for kind, tick, role in extra["moves"]:
+            print("The %s PC's board: %s at tick %d (%s)" % (who, "off the water, watching" if kind == "PARKED" else "back on the water", tick, role))
+    # A spectator sends no board: nothing of it to compare, and that is right.
+    first_spectates = first_extra["spectator"] is not None
+    second_spectates = second_extra["spectator"] is not None
+    if first_spectates:
+        ok = check_spectator("The first PC", {"slot": first_extra["spectator"], "watched": first_extra["watched"]},
+                             host_seens, guest_tracks, guest_seens) and ok
+    if second_spectates:
+        ok = check_spectator("The second PC", {"slot": second_extra["spectator"], "watched": second_extra["watched"]},
+                             guest_seens, host_tracks, host_seens) and ok
+    if (matched_g == 0 and not first_spectates) or (matched_h == 0 and not second_spectates):
         print("FAIL: nothing to compare (did the two connect? see the logs)")
         ok = False
     for worst in (worst_g, worst_h):

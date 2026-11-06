@@ -11,12 +11,22 @@ extends Node
 ##
 ## The race director (RACE_DIRECTOR.md): the host's course changes come in as a course
 ## (update_course()); what the director decided (the next countdown, a note) comes with the race's
-## state and shows on the race card's two lines. A guest who joined while a race was on is not in it
-## (my_index() -1): it sails with the plain HUD and a notice (RaceNotice) says it races from the next start.
+## state and shows on the race card's two lines.
+##
+## Spectating (Documentation/reports/multiplayer/spectate_6nov.md): while this PC's player is not in
+## the race (a spectator, or a guest who joined while a race was on: my_index() -1) or has left the
+## water in it (finished a few seconds ago, or retired: spectate_now()), the guest's own board is
+## parked (hidden, not stepped, no states sent) and the camera, the race card and the sounds follow
+## the board a SpectateChoice picks: any racer on the water, the host's and the other guests' boards
+## and the AI's (Tab, Shift+Tab, L). At the next start the board comes back at its spot behind the
+## line, unless the player stays a spectator (stays_spectator: the host leaves them out of it).
 
 ## A start signal is due on the host's race clock (SO3, as RaceRunner.start_signal): the guest
 ## hears the horns, the beeps and the gun too.
 signal start_signal(kind: RaceStartSignals.Kind)
+## The own board went off the water or came back, or the player chose to stay a spectator or to race
+## again (NetBoards tells the host, which tells everyone through the lobby's list).
+signal watch_changed
 
 var race: RaceSim = null
 var rules: RaceRules = null
@@ -37,8 +47,12 @@ var director: Dictionary = {}
 ## The host's number of the race shown (RaceRunner.race_number).
 var race_number: int = 0
 var _notice: RaceNotice = null
-## Whether the race HUD is on the screen (off while this PC's player is not in the race).
-var _racing_hud: bool = true
+## The player watches instead of racing, from the next start on (the lobby's or the menu's Spectate).
+var stays_spectator: bool = false
+## This PC's board is off the water (parked): not in this race, retired, or finished and watching.
+var own_parked: bool = false
+## Which board the camera follows while the own board is parked.
+var choice: SpectateChoice = SpectateChoice.new()
 
 
 func _init() -> void:
@@ -62,6 +76,9 @@ func setup(race_course: Course, setup_of_race: RaceSetup, hud_layer: Hud, own: W
 		_shadows = WindShadows.make()
 	_notice = RaceNotice.new()
 	hud_layer.add_part(_notice)
+	if stays_spectator:
+		# A spectator from the lobby: no board on the water from the first moment.
+		_set_own_parked(true)
 
 
 ## The host's new start: its boards in its order, a new race and judge.
@@ -80,7 +97,10 @@ func restart(info: Dictionary) -> void:
 	rules = RaceRules.new(race.board_count(), course.axis_deg) if bool(info.get("rules", race_setup.rules)) else null
 	_start_signals = RaceStartSignals.new(race.prestart_s)
 	hud.reset()
-	_show_racing_hud(_my_index >= 0)
+	choice = SpectateChoice.new()
+	# In this race: the board back on the water (NetBoards has put it at its spot); not in it (a
+	# spectator, or joined while a race was on): off the water, watching.
+	_set_own_parked(_my_index < 0)
 
 
 ## The race director's changed course (R6): the race's steps take it (only the marks' places during a
@@ -89,16 +109,6 @@ func update_course(new_course: Course) -> void:
 	course = new_course
 	if race != null:
 		race.refresh_course(new_course)
-
-
-## The race HUD while this PC's player races; the plain HUD (speed, wind) while it waits for the next
-## start.
-func _show_racing_hud(on: bool) -> void:
-	if on == _racing_hud:
-		return
-	_racing_hud = on
-	hud.visible = on
-	_hud_layer.set_race_mode(on, false)
 
 
 ## This PC's board's number in the race (-1 before the host's first start).
@@ -118,10 +128,128 @@ func take_state(race_state: Dictionary, rules_state: Dictionary) -> void:
 
 ## The board with a race number: this PC's, or a puppet (null when it has not come yet).
 func _node_of(index: int) -> WindsurferNode:
+	if index < 0 or index >= _ids.size():
+		return null
 	var id: int = _ids[index]
 	if id == Lan.my_slot:
 		return _own
 	return _net.puppets.get(id, null)
+
+
+## The network number of the board with a race number (-1 for none).
+func board_id(index: int) -> int:
+	return _ids[index] if index >= 0 and index < _ids.size() else -1
+
+
+## The race number of the board with a network number (-1 when it is not in the race).
+func index_of(id: int) -> int:
+	return _ids.find(id)
+
+
+# ---------------------------------------------------------------- spectating
+
+## Whether the camera watches the others (this PC's board off the water).
+func watching() -> bool:
+	return own_parked
+
+
+## The boards the camera may follow, in race order: every racer on the water (the host's, the other
+## guests' and the AI boards; not a board parked off the water).
+func watch_order() -> Array[int]:
+	if race == null:
+		return []
+	return SpectateChoice.watchable(race.race_order(), func(index: int) -> bool:
+		var node: WindsurferNode = _node_of(index)
+		return node != null and node.visible)
+
+
+## The race's number of the board the camera follows: this PC's while it races, or the one the
+## SpectateChoice follows while watching; -1 for none (not in the race and nobody shown yet).
+func followed_index() -> int:
+	if not own_parked:
+		return _my_index
+	if race != null and choice.followed >= 0 and choice.followed < race.board_count():
+		return choice.followed
+	return -1
+
+
+## The board the camera, the HUD and the sounds follow (this PC's own when there is none to watch).
+func followed_node() -> WindsurferNode:
+	if not own_parked:
+		return _own
+	var node: WindsurferNode = _node_of(followed_index())
+	return node if node != null else _own
+
+
+## Tab (+1) and Shift+Tab (-1) while watching: the next or the previous board in race order.
+func step_followed(by: int) -> void:
+	if own_parked and race != null:
+		choice.step(watch_order(), by)
+
+
+## L while watching: follow the leader again.
+func follow_leader() -> void:
+	if own_parked and race != null:
+		choice.follow_leader(watch_order())
+
+
+## The other boards on the water for the small map (all but the one followed, its own dot).
+func other_positions() -> PackedVector3Array:
+	var positions: PackedVector3Array = PackedVector3Array()
+	var followed: WindsurferNode = followed_node()
+	if _own.visible and _own != followed:
+		positions.append(_own.sim.telemetry.position)
+	for id: int in _net.puppets:
+		var node: WindsurferNode = _net.puppets[id]
+		if node.visible and node != followed:
+			positions.append(node.sim.telemetry.position)
+	return positions
+
+
+## The menu's Spectate: this PC's player stops racing and watches. A board in the race under way
+## retires (the host marks it, and every PC's results show it); the board leaves the water and comes
+## back at the next start, unless the player also chooses to stay a spectator.
+func spectate_now() -> void:
+	if race != null and _my_index >= 0 and race.phase() != RaceSim.Phase.FINISHED and not race.is_finished(_my_index) \
+			and not race.is_retired(_my_index):
+		Lan.send_retire()
+	_set_own_parked(true)
+
+
+## Whether the player watches from now on (true) or races again from the next start (false).
+func set_stays_spectator(stays: bool) -> void:
+	if stays == stays_spectator:
+		return
+	stays_spectator = stays
+	watch_changed.emit()
+
+
+## This PC's player has finished: RaceRunner.WATCH_AFTER_FINISH_S after the line (or when the race is
+## over), the board leaves the water and the camera goes to the others.
+func _watch_when_finished() -> void:
+	if own_parked or race == null or _my_index < 0 or not race.is_finished(_my_index):
+		return
+	var splits: PackedFloat32Array = race.splits_s(_my_index)
+	var crossed_s: float = splits[splits.size() - 1] if not splits.is_empty() else race.finish_time_s(_my_index)
+	if race.phase() == RaceSim.Phase.FINISHED or race.race_time_s() - crossed_s >= RaceRunner.WATCH_AFTER_FINISH_S:
+		_set_own_parked(true)
+
+
+## This PC's board off the water (hidden, not stepped: its own tick steps nothing while a runner
+## would; NetBoards sends no states of it) or back on it; the HUD's keys follow.
+func _set_own_parked(parked: bool) -> void:
+	_own.stepped_by_runner = parked
+	_own.visible = not parked
+	if hud != null:
+		hud.visible = true
+		_hud_layer.set_race_mode(true, parked)
+	if parked == own_parked:
+		return
+	own_parked = parked
+	if not parked:
+		_own.reset_physics_interpolation()
+	choice = SpectateChoice.new()
+	watch_changed.emit()
 
 
 func _physics_process(delta: float) -> void:
@@ -164,16 +292,28 @@ func shadow_deficit() -> float:
 	return 1.0 - _shadows.factor_at(point, clear)
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if race == null:
 		return
-	if _my_index < 0:
-		# Not in this race (joined during it): the race card is hidden, the notice says when it races.
-		_notice.show_text(RaceDirector.notice_text(director, false, race))
+	_watch_when_finished()
+	if own_parked:
+		choice.update(watch_order(), delta)
+	var index: int = followed_index()
+	# The director's lines on the race card: the next start, and for a player not in this race that
+	# they race from the next one (a spectator who stays one is not told so).
+	var lines: PackedStringArray = RaceDirector.notice_lines(director, _my_index >= 0 or stays_spectator, race)
+	if index < 0:
+		# Nobody on the water to watch yet (the boards' first states are on their way).
+		_notice.show_text("\n".join(lines).strip_edges())
+		hud.visible = false
 		return
 	_notice.show_text("")
-	RaceDirector.show_on_card(hud, RaceDirector.notice_lines(director, true, race))
-	hud.set_watching("", true)
-	hud.update_from(race, _my_index, _own.telemetry(), shadow_deficit(), rules)
-	var here: Vector3 = _own.sim.telemetry.position
-	_hud_layer.set_next_mark_bearing(Course.bearing_deg(Vector2(here.x, here.z), race.next_target(_my_index)))
+	hud.visible = true
+	RaceDirector.show_on_card(hud, lines)
+	var node: WindsurferNode = followed_node()
+	hud.set_watching(race.board_name(index) if own_parked else "", choice.follows_leader, RaceHud.watch_place_text(race, index) if own_parked else "")
+	# While a player who finished watches the others, the finish list stays on the screen.
+	hud.results_wanted = own_parked and _my_index >= 0 and race.is_finished(_my_index)
+	hud.update_from(race, index, node.telemetry(), shadow_deficit() if node == _own else 0.0, rules)
+	var here: Vector3 = node.sim.telemetry.position
+	_hud_layer.set_next_mark_bearing(Course.bearing_deg(Vector2(here.x, here.z), race.next_target(index)))

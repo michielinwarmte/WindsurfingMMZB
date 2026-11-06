@@ -25,6 +25,10 @@ extends Node3D
 ## Watching a night's generations race (tools/gens.sh): --behind=<m> --wind=<kt> --blind=1
 ## --spectate=1 with the race (RaceSetup.read_options()); while spectating Tab and Shift+Tab pick
 ## the next or the previous board to watch and L follows the leader again (RaceRunner).
+## Spectating a LAN race (Documentation/reports/multiplayer/spectate_6nov.md): the lobby's Spectate,
+## the menu's Spectate (retire now) / Stay a spectator / Race again (spectate_or_race_again()), and a
+## player who finished or joined while a race was on: the camera, the HUD and the sounds follow the
+## board watched (_shown_board(): the host's RaceRunner or the guest's RaceMirror picks it).
 ##
 ## LAN multiplayer (Documentation/reports/multiplayer/PLAN.md): when the game is a network game
 ## (Lan.in_game) a NetBoards node shows the other PCs' boards and sends this one's; the host's
@@ -110,6 +114,9 @@ var _net_message_until_ms: int = -1
 ## run never captures the mouse.
 var _body_hold: Vector2 = Vector2(NAN, NAN)
 var _screenshot_run: bool = false
+## The board being watched whose floating name is hidden (the HUD's title names it; above the board
+## it would sit behind the race card at the top of the screen); null for none.
+var _unlabelled: WindsurferNode = null
 
 
 func _enter_tree() -> void:
@@ -161,6 +168,7 @@ func _ready() -> void:
 	_pause_menu.settings_closed.connect(apply_settings_live)
 	_pause_menu.start_menu_requested.connect(_go_to_start_menu)
 	_pause_menu.gear_closed.connect(_on_gear_closed)
+	_pause_menu.spectate_requested.connect(_on_spectate_requested)
 	if start_in_menu:
 		_enter_menu_mode()
 	_apply_command_line_options()
@@ -234,9 +242,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif _is_spectating() and event.is_action_pressed("toggle_mode"):
 		# Tab: the next board in race order; Shift+Tab the previous one.
 		var key: InputEventWithModifiers = event as InputEventWithModifiers
-		_race_runner.step_followed(-1 if key != null and key.shift_pressed else 1)
+		step_watched(-1 if key != null and key.shift_pressed else 1)
 	elif _is_spectating() and event is InputEventKey and event.is_pressed() and not event.is_echo() and (event as InputEventKey).physical_keycode == KEY_L:
-		_race_runner.follow_leader()
+		_watch_the_leader()
 	elif event.is_action_pressed("reset"):
 		if _windsurfer.is_fallen() and not _aground:
 			_windsurfer.waterstart_now()
@@ -273,8 +281,9 @@ func _process(delta: float) -> void:
 		_set_paused(true)
 		if _pause_page != "":
 			_pause_menu.open_page(_pause_page)
-	# The board on the screen: the player's, or while spectating the AI board being watched.
-	var shown: WindsurferNode = _race_runner.followed_node() if _race_runner != null else _windsurfer
+	# The board on the screen: the player's, or while spectating the board being watched.
+	var shown: WindsurferNode = _shown_board()
+	_hide_the_watched_boards_name(shown)
 	_camera_rig.set_target(shown)
 	if _audio != null:
 		_audio.follow(shown)
@@ -282,6 +291,8 @@ func _process(delta: float) -> void:
 	_follow_the_open_gusts(shown)
 	if _race_runner != null:
 		_hud.set_other_boards(_race_runner.other_positions())
+	elif _net != null and _net.mirror != null:
+		_hud.set_other_boards(_net.mirror.other_positions())
 	elif _net != null:
 		_hud.set_other_boards(_net.puppet_positions())
 	if _director != null:
@@ -293,9 +304,107 @@ func _process(delta: float) -> void:
 		_hud.set_message("")
 
 
-## Whether a race is on with the player's board parked (--spectate=1).
+## Whether the player watches: a race is on with the player's board parked off the water
+## (--spectate=1, or in a LAN race a spectator, a player who retired or finished, a late joiner).
 func _is_spectating() -> bool:
-	return _race_runner != null and _race_runner.spectating
+	if _race_runner != null:
+		return _race_runner.player_parked
+	return _net != null and _net.mirror != null and _net.mirror.watching()
+
+
+## The board on the screen: the player's, or while the player watches the board being watched.
+func _shown_board() -> WindsurferNode:
+	if _race_runner != null:
+		return _race_runner.followed_node()
+	if _net != null and _net.mirror != null:
+		return _net.mirror.followed_node()
+	return _windsurfer
+
+
+## The watched board's floating name hidden, the one watched before shown again.
+func _hide_the_watched_boards_name(shown: WindsurferNode) -> void:
+	var watched: WindsurferNode = shown if shown != _windsurfer else null
+	if watched == _unlabelled:
+		return
+	if _unlabelled != null and is_instance_valid(_unlabelled):
+		var old_label: Node3D = _unlabelled.get_node_or_null("NameLabel") as Node3D
+		if old_label != null:
+			old_label.visible = true
+	_unlabelled = watched
+	var label: Node3D = watched.get_node_or_null("NameLabel") as Node3D if watched != null else null
+	if label != null:
+		label.visible = false
+
+
+## Tab (+1) and Shift+Tab (-1) while watching: the next or the previous board in race order.
+func step_watched(by: int) -> void:
+	if _race_runner != null:
+		_race_runner.step_followed(by)
+	elif _net != null and _net.mirror != null:
+		_net.mirror.step_followed(by)
+
+
+## L while watching: the camera follows the leader again.
+func _watch_the_leader() -> void:
+	if _race_runner != null:
+		_race_runner.follow_leader()
+	elif _net != null and _net.mirror != null:
+		_net.mirror.follow_leader()
+
+
+## Whether the player has chosen to stay a spectator (the next starts leave them out).
+func _stays_spectator() -> bool:
+	if _race_runner != null:
+		return _race_runner.stays_spectator
+	return _net != null and _net.mirror != null and _net.mirror.stays_spectator
+
+
+## Whether this PC's player is in the race under way (from the countdown until they finish or retire).
+func _racing_now() -> bool:
+	if _race_runner != null:
+		var race: RaceSim = _race_runner.race
+		return race != null and not _race_runner.spectating and race.phase() != RaceSim.Phase.FINISHED \
+			and not race.is_finished(0) and not race.is_retired(0)
+	if _net != null and _net.mirror != null:
+		var mirror: RaceMirror = _net.mirror
+		var index: int = mirror.my_index()
+		return mirror.race != null and index >= 0 and mirror.race.phase() != RaceSim.Phase.FINISHED \
+			and not mirror.race.is_finished(index) and not mirror.race.is_retired(index)
+	return false
+
+
+## The LAN menu's spectate entry, as the moment has it: "Spectate" while sailing (retiring from the race
+## under way), "Stay a spectator" while watching (the next start would take the board back), "Race
+## again at the next start" for a player who stays one.
+func spectate_entry_text() -> String:
+	if not _is_spectating():
+		return "Spectate (retire from this race)" if _racing_now() else "Spectate"
+	if not _stays_spectator():
+		return "Stay a spectator (also the next races)"
+	return "Race again at the next start"
+
+
+## The menu's spectate entry, chosen: done, and back to the race.
+func _on_spectate_requested() -> void:
+	spectate_or_race_again()
+	_set_paused(false)
+
+
+## The menu's spectate entry chosen (spectate_6nov.md): spectate now (a board in the race under way
+## retires; it races again at the next start), stay a spectator, or race again from the next start.
+func spectate_or_race_again() -> void:
+	var watcher: Object = _race_runner if _race_runner != null else (_net.mirror if _net != null else null)
+	if watcher == null:
+		return
+	if not _is_spectating():
+		watcher.call("spectate_now")
+		show_net_message("Spectating: Tab another board, L the leader. You race again at the next start (Esc: stay a spectator).", 6.0)
+	elif not _stays_spectator():
+		watcher.call("set_stays_spectator", true)
+		show_net_message("You stay a spectator. Esc: Race again at the next start.", 5.0)
+	else:
+		watcher.call("set_stays_spectator", false)
+		show_net_message("You race again from the next start.", 5.0)
 
 
 ## The start menu's "Sail on open water": the board goes back to the start and the player
@@ -882,6 +991,9 @@ func _start_race_runner() -> void:
 	if _net != null:
 		_race_runner.remote_players = _net.remote_players()
 		_race_runner.remote_names = _net.remote_names()
+		# Spectating a LAN race: the lobby's choice, and a player who finished watches the others.
+		_race_runner.stays_spectator = Lan.i_spectate()
+		_race_runner.watch_after_finish = true
 	add_child(_race_runner)
 	_race_runner.setup_race(_course, _windsurfer, _race_setup, _hud)
 	if _net != null:
@@ -892,7 +1004,8 @@ func _start_race_runner() -> void:
 ## The race director for this race (RACE_DIRECTOR.md): the next race after this one, the live
 ## course; its line on the HUD.
 func _add_race_director() -> void:
-	if _race_runner.spectating or _director != null:
+	# Watching a night's generations (--spectate) has none; a LAN host who spectates still directs.
+	if (_race_runner.spectating and _net == null) or _director != null:
 		return
 	_director = RaceDirector.new()
 	add_child(_director)
@@ -1010,6 +1123,9 @@ func _set_net_menu_open(open: bool) -> void:
 	if open:
 		_pause_menu.open("A network game: the water goes on while this menu is open.")
 		_offer_gear_change()
+		# Spectating a LAN race (spectate_6nov.md): the entry says what it does now.
+		var offered: bool = _net != null and Lan.game.race and (_race_runner != null or _net.mirror != null)
+		_pause_menu.set_spectate_choice(offered, spectate_entry_text())
 	else:
 		_pause_menu.close()
 	_update_mouse_capture()
@@ -1138,7 +1254,9 @@ func _add_open_gusts() -> void:
 func _follow_the_open_gusts(shown: WindsurferNode) -> void:
 	if _open_gusts == null:
 		return
-	_open_gusts.follow(shown.sim.wind, shown.sim.telemetry.position)
+	# The gusts of this PC's own wind field, which keeps the race's clock also while its board is off
+	# the water (another PC's board shown here is never stepped: its field's clock stands still).
+	_open_gusts.follow(_windsurfer.sim.wind, shown.sim.telemetry.position)
 	_open_gusts.move_on_water(_ocean)
 
 

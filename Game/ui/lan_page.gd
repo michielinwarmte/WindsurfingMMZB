@@ -9,6 +9,7 @@ extends MenuPage
 ##   (course, AI fleet, who sails it, countdown, laps, level, rules, wind shadows), the lake's time of
 ##   day, and the wind and the waves (the Settings page). The guest sees the host's choice, picks its
 ##   own gear (the Gear page) and says it is Ready. The host's Start starts the game on both PCs.
+##   Anyone can choose Spectate: no board in the race, the camera on the racers (spectate_6nov.md).
 ## The connection itself is LanSession's (the autoload Lan).
 
 ## The host's "Wind and waves" and anyone's "Change gear": the start menu opens that page, and this
@@ -68,6 +69,7 @@ var _guest_summary: Label
 var _gear_label: Label
 var _conditions_label: Label
 var _wind_button: Button
+var _spectate_switch: CheckButton
 var _status: Label
 var _back_button: Button
 var _primary_button: Button
@@ -259,7 +261,13 @@ func _refresh_lobby() -> void:
 	var me: LanPlayer = Lan.player_in(Lan.my_slot)
 	if Lan.is_guest() and me != null:
 		_ready_now = me.ready  # the host's record is the one that counts
-	_gear_label.text = "Your gear: %s" % (me.gear_text() if me != null else GearChoice.from_settings(GameSettings.values).names_line())
+	var spectating: bool = me != null and me.spectator
+	_spectate_switch.set_pressed_no_signal(spectating)
+	_spectate_switch.text = "On: you watch the race, no board in it" if spectating else "Off: you race"
+	if spectating:
+		_gear_label.text = "Your gear: none needed while you watch (yours from the Gear page when you race again)"
+	else:
+		_gear_label.text = "Your gear: %s" % (me.gear_text() if me != null else GearChoice.from_settings(GameSettings.values).names_line())
 	_back_button.text = "Leave"
 	if Lan.is_host():
 		var addresses: String = ", ".join(LanSession.local_addresses())
@@ -502,6 +510,16 @@ func _build_lobby(layout: VBoxContainer) -> void:
 	_gear_label.custom_minimum_size = Vector2(760.0, 0.0)
 	_gear_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_button(gear_row, "Change gear", 220.0, func() -> void: gear_requested.emit())
+	var spectate_row: HBoxContainer = HBoxContainer.new()
+	spectate_row.add_theme_constant_override("separation", 12)
+	_lobby_box.add_child(spectate_row)
+	var spectate_name: Label = _label(spectate_row, "Spectate", &"")
+	spectate_name.custom_minimum_size = Vector2(CHOICE_NAME_WIDTH, 0.0)
+	_spectate_switch = CheckButton.new()
+	_spectate_switch.text = "Off: you race"
+	_spectate_switch.tooltip_text = "Watch the race instead of sailing in it: Tab picks the board, L the leader. Esc in the game: Race again at the next start."
+	_spectate_switch.toggled.connect(func(on: bool) -> void: Lan.set_watch_state(on, on))
+	spectate_row.add_child(_spectate_switch)
 
 
 func _label(parent: Control, text: String, variation: StringName) -> Label:
