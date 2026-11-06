@@ -136,7 +136,7 @@ Open water, from `res://dev/figure_view.tscn` (1280x720):
 
 ## 7. What I could not verify, and a play-test checklist
 
-Not verified: how it looks moving on Max's screen and monitor (only numbers and still pictures); the wide window; a full AI fleet's frame time with the new figure; the LAN puppet (it uses the same code); `tools/test.sh validation` (no physics changed).
+Verified: `tools/check.sh` 449 files, 0 failed; `tools/test.sh` 846 of 846 (3 new). Not verified: how it looks moving on Max's screen and monitor (only numbers and still pictures); the wide window; a full AI fleet's frame time with the new figure; the LAN puppet (it uses the same code); `tools/test.sh validation` (no physics changed).
 
 Play-test (`tools/play.sh lake`, and the mouse body on):
 
