@@ -332,6 +332,7 @@ func apply_settings_live() -> void:
 	if settings.control_mode != _applied_mode or settings.auto_sheet != _applied_auto_sheet:
 		_apply_control_settings()
 	_apply_body_settings()
+	_apply_manoeuvre_settings()
 	if _sun != null:
 		_sun.shadow_enabled = settings.shadow_quality > 0
 	if settings.sea_signature() != _sea_signature:
@@ -530,9 +531,19 @@ func _apply_control_settings() -> void:
 	# set_mode() also sets the auto-sheet to the mode's default, so the setting comes after.
 	_windsurfer.controller.set_mode(settings.control_mode)
 	_windsurfer.controller.auto_sheet = settings.auto_sheet
+	_apply_manoeuvre_settings()
 	_applied_mode = settings.control_mode
 	_applied_auto_sheet = settings.auto_sheet
 	_apply_body_settings()
+
+
+## The interactive tacks and gybes (Settings > Sailing; PlayerController): each part on or off.
+func _apply_manoeuvre_settings() -> void:
+	var settings: SettingsValues = GameSettings.values
+	var controller: PlayerController = _windsurfer.controller
+	controller.turn_follows_key = settings.manoeuvre_turn_with_keys
+	controller.body_in_manoeuvres = settings.manoeuvre_body_carves
+	controller.flip_on_cue = settings.manoeuvre_flip_on_cue
 
 
 ## Package B, the body on the mouse (MouseBody; Settings > Body, ROADMAP GP2): on or off, Max's

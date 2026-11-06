@@ -10,7 +10,8 @@ extends RefCounted
 ## back or forward, rig tilted toward the outside of the turn, weight on the inside rail,
 ## all together (see Helm). With no key pressed the loop holds the heading, as a sailor does
 ## without thinking (a board left alone rounds up into the wind). Balance is automatic.
-## Space tacks or gybes for you.
+## Space tacks or gybes for you; with A or D held the key chooses: toward the wind a tack, away
+## from it a gybe (turn_key_chooses).
 ## Advanced mode: Q/E rake the rig forward and back, Left/Right tilt it sideways and A/D
 ## move the sailor's weight to port and starboard, all raw, on top of the balance reflex.
 ## Space still helps with the tack.
@@ -96,6 +97,59 @@ var settle_speed_ms: float = 5.0
 var _settling: bool = false
 ## Space tacks from a beam reach and anything closer to the wind, gybes from further off.
 var tack_up_to_twa_deg: float = 100.0
+## The player's turn key chooses (Max, 6 November 2026: "downwind button (a/d) while pressing space
+## to gybe instead of heading. now sometimes it tacks when we want to gybe"): Space with A or D held,
+## or with A or D pressed within choose_grace_s after Space, turns the way the key says, toward the
+## wind a tack and away from it a gybe, from any course. With neither held the heading decides
+## (tack_up_to_twa_deg). Only the player's keys: an AI skipper's hands keep the heading's rule.
+var turn_key_chooses: bool = true
+var choose_grace_s: float = 0.3
+var _choose_grace_left_s: float = 0.0
+## The interactive tacks and gybes (Max, 6 November 2026: "more interactive gybes and tacks";
+## Documentation/reports/gameplay/gp_manoeuvres_6nov.md). Three parts, each a setting (Settings >
+## Sailing), on by default, and each only the player's: an AI skipper's hands sail the manoeuvres
+## exactly as before. A player who does nothing gets round exactly as before too.
+## 1. The turn follows the hand: in a tack or gybe the turn key held toward the turn asks for
+## key_gybe_rate_dps or key_tack_rate_dps instead of the manoeuvre's own rate (gybe_rate_dps,
+## tack_rate_dps; a gybe's exit, once the sail is across, always at its own rate); let go, the turn goes on at its own rate; the other key (after the choosing
+## window) eases the turn out and gives the manoeuvre up, the rig back to neutral as after the
+## timeout, and the key then steers as on a reach.
+var turn_follows_key: bool = true
+var key_gybe_rate_dps: float = 40.0
+var key_tack_rate_dps: float = 20.0
+## 2. The body carves (with the mouse body on): in a tack or gybe the mouse sideways toward the
+## inside of the turn (as seen from behind the board: the way the board turns; the rail that goes
+## down in the turn, the toes in a gybe and the heels in a tack) tightens the turn by up to
+## body_carve_share of its rate; toward the outside it flattens the board and widens the turn as
+## much. The rail follows the rate (the simulation banks the board for the turn asked, its own
+## rule). In a gybe forward and back press the feet as on a reach: the back foot lifts the nose
+## through it, the front foot puts it down (the simulation presses only planing in the straps). The body stays where it is through the manoeuvre and goes back to the middle at its end.
+## The turn is never asked faster than gybe_rate_max_dps or tack_rate_max_dps, key and body
+## together. The limits are measured (the manoeuvre matrix with waves at 12, 18 and 24 kt, three
+## wave timings, gp_manoeuvres_6nov.md): a gybe at 45 degrees a second fell 1 to 2 times in 45 (a
+## catapult bearing away from a beam reach at 24 kt), at 40 none; a tack's carve at 20 none, at
+## 22.5 to 30 it catapulted at 24 kt. The key and the body act only into the turn: a gybe until the sail is across, a tack
+## until the rig is; the way out goes at the manoeuvre's own rate.
+var body_in_manoeuvres: bool = true
+var body_carve_share: float = 0.33
+var gybe_rate_max_dps: float = 40.0
+var tack_rate_max_dps: float = 20.0
+## 3. The flip on your cue: in the window before the rig goes across by itself (a gybe: from
+## gybe_cue_from_twa_deg of true wind angle on; a tack: once the bow is tack_cue_through_deg
+## through the wind and the sail would fill on the new side; by itself at Autopilot.flip_twa_deg,
+## 25), a second Space puts it across now. Without a cue it goes across by itself,
+## as before. After a cue the rig is held on the new side (SimControls.hold_side) until the wind
+## keeps it there (at most cue_hold_max_s).
+var flip_on_cue: bool = true
+var gybe_cue_from_twa_deg: float = 175.0
+var tack_cue_through_deg: float = 18.0
+var cue_hold_max_s: float = 3.0
+var _cue_window_open: bool = false
+var _cue_given: bool = false
+var _cue_side: int = 0
+var _cue_hold_left_s: float = 0.0
+## The pilot's own flip angle while a tack's cue has lowered it (NaN otherwise).
+var _own_flip_twa_deg: float = NAN
 ## The angle of attack the sail is eased to through a gybe.
 var gybe_entry_alpha_deg: float = 8.0
 var helm_rate_per_s: float = 2.0
@@ -431,20 +485,26 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 				wanted_sheet = _scratch.sheet
 				wanted_across = _scratch.boom_across
 			controls.rake = clampf(helm_right * auto_sheet_pilot.tack, -1.0, 1.0)
-			# A new tack: the body comes back to the sailor's own technique (GD7 a).
-			if body != null:
+			# A new tack: the body comes back to the sailor's own technique (GD7 a); a body that
+			# carves the manoeuvre stays where it is until the manoeuvre's end.
+			if body != null and not (manoeuvre != Manoeuvre.NONE and _body_carves()):
 				body.recentre()
 		_last_sail_side = telemetry.sail_side
 	if _just_pressed("toggle_mode"):
 		set_mode(Mode.ADVANCED if mode == Mode.BEGINNER else Mode.BEGINNER)
 	if _just_pressed("toggle_autosheet"):
 		auto_sheet = not auto_sheet
-	if _just_pressed("tack") and manoeuvre == Manoeuvre.NONE:
+	_cue_window_open = _in_the_flip_window(telemetry)
+	var space: bool = _just_pressed("tack")
+	if space and manoeuvre == Manoeuvre.NONE:
 		if manoeuvre_wait_max_s > 0.0 and telemetry.speed_ms > settle_speed_ms:
 			_manoeuvre_wait_s = manoeuvre_wait_max_s
 		else:
 			_start_manoeuvre(telemetry)
+	elif space and _cue_window_open:
+		_give_the_cue(telemetry)
 	_wait_for_the_wave(telemetry, dt)
+	_choose_by_a_late_key(dt)
 
 	# Steering.
 	var steer_key: float = _axis("steer_right", "steer_left")  # +1 = turn right on the screen
@@ -470,14 +530,21 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 	if airborne_sheet_in_share > 0.0 and not pilot_overrides.has("sheet_in_share"):
 		auto_sheet_pilot.sheet_in_share = airborne_sheet_in_share if _resheet_for_s > 0.0 else _own_sheet_in_share
 	_turn_wanted = 0.0
+	var was_in_a_manoeuvre: bool = manoeuvre != Manoeuvre.NONE
+	if manoeuvre != Manoeuvre.NONE and _key_gives_up():
+		# The other key: the turn eases out and the key steers as on a reach (below).
+		manoeuvre = Manoeuvre.NONE
+		_heading_held = false
+		_settling = true
 	if manoeuvre != Manoeuvre.NONE:
 		var is_gybe: bool = manoeuvre == Manoeuvre.GYBE_BEARING_AWAY or manoeuvre == Manoeuvre.GYBE_HEADING_UP
 		var turn: float = _manoeuvre_turn(telemetry, dt)
 		_turn_wanted = turn
+		var rate_dps: float = turn * _manoeuvre_rate_dps(is_gybe)
 		if is_gybe:
-			_steer_at_rate(telemetry, controls, turn * gybe_rate_dps, true, dt)
+			_steer_at_rate(telemetry, controls, rate_dps, true, dt)
 		else:
-			_steer_tack(telemetry, controls, turn, dt)
+			_steer_tack(telemetry, controls, turn, rate_dps, dt)
 		if manoeuvre == Manoeuvre.NONE:
 			_settling = true
 	elif mode == Mode.BEGINNER:
@@ -491,6 +558,8 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		controls.back_foot_push = move_toward(controls.back_foot_push, auto_sheet_pilot.back_foot_bias, helm_rate_per_s * dt)
 		helm_right = 0.0
 		_heading_held = false
+	if was_in_a_manoeuvre and manoeuvre == Manoeuvre.NONE:
+		_manoeuvre_ended()
 	# Sheet: W pulls the boom in, S lets it out. With the auto-sheet on, the keys take over
 	# for a few seconds and then the automatic trim resumes.
 	var sheet_key: float = _axis("sheet_in", "sheet_out")
@@ -535,6 +604,8 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		ease = 0.0
 	controls.sheet = clampf(wanted_sheet - ease, 0.0, 1.0)
 	controls.boom_across = wanted_across if ease < 0.01 else 0.0
+	_hold_the_cued_side(telemetry, controls, dt)
+	# The recovery reflex last, so near a fall its ease wins over the cue's hold.
 	if reflex_on:
 		_recover_with_the_sheet(telemetry, controls, pilot_trimming, dt)
 		_step_forward_on_a_rising_nose(telemetry, controls, dt)
@@ -550,8 +621,9 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 ## Package B, the body on the mouse (MouseBody; ROADMAP GP2): the toes against the heels and the back
 ## foot against the front foot, written as the feet's press (SimControls.feet_roll_press and
 ## feet_pitch_press) every tick; the simulation presses with them, the feet staying in the straps.
-## Without a body nothing changes (the presses stay 0). In a manoeuvre the body presses nothing (the
-## turn's own bank and trim rule there). The push slider's extras are its own and are left alone:
+## Without a body nothing changes (the presses stay 0). In a manoeuvre the toes and heels press nothing
+## (the turn's own bank rules there; with body_in_manoeuvres they carve through the turn's rate) and
+## the back and front foot press only with body_in_manoeuvres. The push slider's extras are its own and are left alone:
 ## the simulation adds the toes' and heels' bank to the slider's rail, and the back or front foot's
 ## weight takes over the trim the technique and the slider search for, as far as it presses (how the
 ## two combine, measured: Documentation/reports/gameplay/gp2_push_on_mouse.md).
@@ -567,6 +639,12 @@ func _move_the_body(telemetry: Telemetry, controls: SimControls, dt: float) -> v
 	body.spring(dt)
 	if manoeuvre != Manoeuvre.NONE:
 		body.rest()
+		if _body_carves() and (manoeuvre == Manoeuvre.GYBE_BEARING_AWAY or manoeuvre == Manoeuvre.GYBE_HEADING_UP):
+			# The sideways press carves through the turn's rate (_manoeuvre_rate_dps()); in a gybe the
+			# back and the front foot press as on a reach. Not in a tack: the weight on the back foot
+			# while carving up into the wind catapulted the sailor at 18 and 24 kt in 12 of 18 tacks
+			# (the matrix), and the feet are off the straps at the mast anyway.
+			body.pitch_press = body.back_foot_press()
 	else:
 		var tack: float = tack_sign(telemetry)
 		# Starboard tack (+1): the leeward rail is the port one, a negative heel.
@@ -889,20 +967,21 @@ func is_holding_back() -> bool:
 ## tack the rig stays back as long as the sail is backwinded or luffing: a sail that cannot
 ## fill cannot drive the bow off the wind, but the wind on its wrong side, aft of the
 ## centre of mass, pushes the stern round (the way out of irons). Once it fills, full helm
-## away from the wind until the manoeuvre ends.
-func _steer_tack(telemetry: Telemetry, controls: SimControls, turn: float, dt: float) -> void:
+## away from the wind until the manoeuvre ends. rate_dps is the carve's rate (turn times
+## tack_rate_dps, or what the player's key and body make of it).
+func _steer_tack(telemetry: Telemetry, controls: SimControls, turn: float, rate_dps: float, dt: float) -> void:
 	var pivot: bool = Helm.pivoting(telemetry, controls, pivot_within_deg)
 	var on_new_tack: bool = tack_sign(telemetry) == -_tack_sign_at_start
 	var stuck: bool = on_new_tack and auto_sheet_pilot.is_backing()
 	if (not on_new_tack and pivot) or stuck:
 		helm_right = turn
-		wanted_rate_dps = turn * tack_rate_dps
+		wanted_rate_dps = rate_dps
 		controls.rake = move_toward(controls.rake, 1.0, helm_rate_per_s * dt)
 		controls.rig_tilt = move_toward(controls.rig_tilt, 0.0, helm_rate_per_s * dt)
 		controls.lean = move_toward(controls.lean, 0.0, helm_rate_per_s * dt)
 		controls.back_foot_push = move_toward(controls.back_foot_push, 0.0, helm_rate_per_s * dt)
 		return
-	_steer_at_rate(telemetry, controls, turn * tack_rate_dps, true, dt)
+	_steer_at_rate(telemetry, controls, rate_dps, true, dt)
 
 
 ## The turn-rate loop: the error against the measured yaw rate moves the helm now
@@ -1060,6 +1139,10 @@ func reset_controls(controls: SimControls) -> void:
 	ease = 0.0
 	manoeuvre = Manoeuvre.NONE
 	_manoeuvre_wait_s = 0.0
+	_choose_grace_left_s = 0.0
+	_cue_given = false
+	_cue_side = 0
+	_cue_window_open = false
 	_manual_sheet_timer_s = 0.0
 	_heading_held = false
 	_helm_trim_up = 0.0
@@ -1101,15 +1184,205 @@ func manoeuvre_name() -> String:
 	return ""
 
 
-## Space: a tack when sailing upwind of a beam reach, a gybe when sailing downwind of it.
+## Space: with A or D held, a tack when the key turns toward the wind and a gybe when it turns away
+## from it (turn_key_chooses); with neither, a tack when sailing upwind of a beam reach and a gybe
+## when sailing downwind of it, and A or D pressed within choose_grace_s still decides.
 func _start_manoeuvre(telemetry: Telemetry) -> void:
 	_tack_sign_at_start = tack_sign(telemetry)
 	_manoeuvre_timer_s = 0.0
-	if body != null:
+	_cue_given = false
+	_cue_side = 0
+	# A body that carves the manoeuvre keeps its place (it goes back to the middle at the end).
+	if body != null and not _body_carves():
 		body.recentre()
+	var key: float = _choosing_key()
+	if key != 0.0:
+		manoeuvre = manoeuvre_for_turn(key, _tack_sign_at_start)
+		_choose_grace_left_s = 0.0
+		return
 	# From a beam reach (and a little beyond) the quicker way onto the other tack is up
 	# through the wind; from a broad reach it is round through the gybe.
 	manoeuvre = Manoeuvre.TACK_HEADING_UP if absf(telemetry.twa_deg) <= tack_up_to_twa_deg else Manoeuvre.GYBE_BEARING_AWAY
+	_choose_grace_left_s = choose_grace_s if _player_chooses() else 0.0
+
+
+## The manoeuvre a turn asks for on this tack: turning toward the wind (a right turn on starboard
+## tack, +1, a left turn on port tack) is a tack; turning away from it is a gybe.
+static func manoeuvre_for_turn(turn_right: float, tack: float) -> Manoeuvre:
+	return Manoeuvre.TACK_HEADING_UP if turn_right * tack > 0.0 else Manoeuvre.GYBE_BEARING_AWAY
+
+
+## Whether the player's turn key may choose the manoeuvre: the setting, and never an AI's hands.
+func _player_chooses() -> bool:
+	return turn_key_chooses and hands == null
+
+
+## The turn key that chooses the manoeuvre, +1 D (right), -1 A (left), 0 neither or both.
+func _choosing_key() -> float:
+	return _axis("steer_right", "steer_left") if _player_chooses() else 0.0
+
+
+## A or D pressed just after Space (within choose_grace_s): the key decides after all, as long as
+## the turn has not yet gone through the wind.
+func _choose_by_a_late_key(dt: float) -> void:
+	if _choose_grace_left_s <= 0.0:
+		return
+	_choose_grace_left_s = maxf(_choose_grace_left_s - dt, 0.0)
+	var first_half: bool = manoeuvre == Manoeuvre.TACK_HEADING_UP or manoeuvre == Manoeuvre.GYBE_BEARING_AWAY
+	if not first_half or auto_sheet_pilot.tack != _tack_sign_at_start:
+		_choose_grace_left_s = 0.0
+		return
+	var key: float = _choosing_key()
+	if key != 0.0:
+		manoeuvre = manoeuvre_for_turn(key, _tack_sign_at_start)
+		_choose_grace_left_s = 0.0
+
+
+## Which way the manoeuvre turns, +1 right, -1 left, 0 none: a tack toward the wind of the tack it
+## started on, a gybe away from it (for the harnesses and the player's hands).
+func manoeuvre_turn_right() -> float:
+	match manoeuvre:
+		Manoeuvre.TACK_HEADING_UP, Manoeuvre.TACK_BEARING_AWAY:
+			return _tack_sign_at_start
+		Manoeuvre.GYBE_BEARING_AWAY, Manoeuvre.GYBE_HEADING_UP:
+			return -_tack_sign_at_start
+	return 0.0
+
+
+## How long the manoeuvre has been going, seconds.
+func manoeuvre_time_s() -> float:
+	return _manoeuvre_timer_s
+
+
+## The player's turn key along the manoeuvre's turn: +1 held toward the turn, -1 the other key, 0
+## neither (or the setting off, or an AI's hands).
+func _turn_key_along() -> float:
+	if not turn_follows_key or hands != null:
+		return 0.0
+	return _axis("steer_right", "steer_left") * manoeuvre_turn_right()
+
+
+## The other key, once the choosing window is over, gives the manoeuvre up.
+func _key_gives_up() -> bool:
+	return _choose_grace_left_s <= 0.0 and _turn_key_along() < 0.0
+
+
+## Whether the body on the mouse carves the manoeuvre (the setting; never an AI's hands).
+func _body_carves() -> bool:
+	return body != null and body_in_manoeuvres and hands == null
+
+
+## The body's press toward the inside of the turn, -1 (the outside: flatten) to +1 (carve harder),
+## as a share of the toes' and heels' range (MouseBody.toes_share). The inside rail of a right turn is
+## the starboard one; the mouse's "more rail" is the leeward rail of the tack the manoeuvre started on
+## (the port rail on starboard tack, +1).
+func body_carve() -> float:
+	if not _body_carves() or manoeuvre == Manoeuvre.NONE:
+		return 0.0
+	var starboard_rail_down: float = -body.more_rail(_tack_sign_at_start) * _tack_sign_at_start
+	return clampf(starboard_rail_down * manoeuvre_turn_right() * body.toes_share, -1.0, 1.0)
+
+
+## The manoeuvre's turn rate, degrees a second (positive; the turn's sign is applied by the caller):
+## its own rate (gybe_rate_dps, tack_rate_dps), or the key's when it is held toward the turn, times
+## what the body's carve adds or takes, never beyond gybe_rate_max_dps or tack_rate_max_dps; the way
+## out of the turn at its own rate.
+func _manoeuvre_rate_dps(is_gybe: bool) -> float:
+	var rate: float = gybe_rate_dps if is_gybe else tack_rate_dps
+	# Only into the turn: the gybe until the sail is across, the tack until the rig is across. Out of
+	# it (the board heading up onto the new reach after a gybe, bearing away after a tack) the turn
+	# goes at its own rate whatever the hands do: carried on faster the board rounded up past a gybe's
+	# exit at walking pace and the sailor fell, and a tack's quicker exit at 24 kt spun the board on
+	# into a catapult (the matrix, gp_manoeuvres_6nov.md).
+	if manoeuvre == Manoeuvre.GYBE_HEADING_UP or manoeuvre == Manoeuvre.TACK_BEARING_AWAY:
+		return rate
+	if _turn_key_along() > 0.0:
+		rate = key_gybe_rate_dps if is_gybe else key_tack_rate_dps
+	var carve: float = body_carve()
+	if carve != 0.0:
+		rate *= 1.0 + body_carve_share * carve
+	# A head-up at planing speed faster than about 20 degrees a second pulls the sailor over the sail
+	# (head_up_rate_min_dps; the matrix's tacks at 24 kt with the key and the body together).
+	return minf(rate, gybe_rate_max_dps if is_gybe else tack_rate_max_dps)
+
+
+## The manoeuvre is over (done, given up or timed out): the cue is forgotten, and a body that carved
+## it goes back to the middle, the sailor's own technique (GD7 a).
+func _manoeuvre_ended() -> void:
+	if not is_nan(_own_flip_twa_deg):
+		auto_sheet_pilot.flip_twa_deg = _own_flip_twa_deg
+		_own_flip_twa_deg = NAN
+	_cue_given = false
+	_cue_side = 0
+	_cue_window_open = false
+	if _body_carves():
+		body.recentre()
+
+
+## Whether the "flip now" window is open: the cue is the player's (the setting, no AI's hands), not
+## given yet, and the rig not yet across. A gybe: the bow within gybe_cue_from_twa_deg of dead
+## downwind, or past it. A tack: the bow tack_cue_through_deg through the wind (the true wind at the
+## sail), in the turn's first half.
+func _in_the_flip_window(telemetry: Telemetry) -> bool:
+	if not flip_on_cue or hands != null or _cue_given or auto_sheet_pilot.tack != _tack_sign_at_start:
+		return false
+	match manoeuvre:
+		Manoeuvre.GYBE_BEARING_AWAY:
+			var past_downwind: bool = telemetry.twa_deg * _tack_sign_at_start < 0.0
+			return past_downwind or absf(telemetry.twa_deg) >= gybe_cue_from_twa_deg
+		Manoeuvre.TACK_HEADING_UP:
+			# As the pilot's own flip (Autopilot.update()): only once the sail would fill on the new side
+			# (the apparent wind wider than the luff band there); flipped earlier it luffs and the fin
+			# turns the bow back.
+			var through: bool = telemetry.twa_at_sail_deg * _tack_sign_at_start <= -tack_cue_through_deg
+			var awa_own_side_deg: float = telemetry.awa_deg * -float(telemetry.sail_side)
+			var luff_band_deg: float = auto_sheet_pilot.sheet_angle_in_deg + auto_sheet_pilot.alpha_luff_deg
+			return through and -awa_own_side_deg >= luff_band_deg
+	return false
+
+
+## True while a second Space puts the rig across (for the HUD's "flip now" and the harnesses).
+func flip_cue_open() -> bool:
+	return _cue_window_open
+
+
+## The cue: the rig goes onto the new side now and is held there (_hold_the_cued_side()).
+func _give_the_cue(telemetry: Telemetry) -> void:
+	_cue_given = true
+	_cue_window_open = false
+	if manoeuvre == Manoeuvre.TACK_HEADING_UP:
+		# A tack: the pilot's own flip, now (Autopilot.flip_twa_deg lowered to where the bow is): it
+		# takes the boom back from across the centreline and sheets in on the new side in the same
+		# motion. Held on the new side by hand instead, the boom stayed pushed across and the tack
+		# took a second longer (the matrix).
+		_own_flip_twa_deg = auto_sheet_pilot.flip_twa_deg
+		auto_sheet_pilot.flip_twa_deg = minf(_own_flip_twa_deg, absf(telemetry.twa_at_sail_deg) - 0.1)
+		return
+	_cue_side = -telemetry.sail_side
+	_cue_hold_left_s = cue_hold_max_s
+
+
+## After a cue the sailor holds the rig on the new side until the wind keeps it there by itself (the
+## sail's own rule: the apparent wind on the new side's windward side, or within the side's
+## hysteresis of dead ahead or dead astern, SailModel.update_side()), or the manoeuvre is over.
+func _hold_the_cued_side(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
+	if _cue_side == 0:
+		return
+	_cue_hold_left_s -= dt
+	var across: bool = telemetry.sail_side == _cue_side
+	if manoeuvre == Manoeuvre.NONE or _cue_hold_left_s <= 0.0 or (across and _wind_keeps_the_side(telemetry, _cue_side)):
+		_cue_side = 0
+		return
+	controls.hold_side = _cue_side
+
+
+## Whether the apparent wind would leave the sail on this side by itself (SailModel.update_side()).
+func _wind_keeps_the_side(telemetry: Telemetry, side: int) -> bool:
+	var band_deg: float = _sail.config.side_hysteresis_deg if _sail != null else 15.0
+	var awa: float = absf(telemetry.awa_deg)
+	if awa < band_deg or awa > 180.0 - band_deg:
+		return true
+	return (-1 if telemetry.awa_deg > 0.0 else 1) == side
 
 
 ## A tack is one continuous turn toward the wind and through it (a right turn from

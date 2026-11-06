@@ -77,7 +77,7 @@ func test_the_panels_sit_in_their_places_and_do_not_overlap() -> void:
 	var keys: Rect2 = hud._hints.get_global_rect()
 	assert_gt(keys.position.y, panels["gauges"].end.y, "the keys under the gauges")
 	assert_lte(hud._hints.get_combined_minimum_size().x, screen.size.x - 2.0 * Hud.MARGIN, "the keys fit across")
-	assert_string_contains(hud.help_text(), "Space tack / gybe")
+	assert_string_contains(hud.help_text(), "Space + A/D tack toward the wind, gybe away")
 	assert_string_contains(hud.help_text(), "R race again")
 
 

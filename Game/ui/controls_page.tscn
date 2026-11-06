@@ -58,7 +58,7 @@ text = "Beginner mode"
 custom_minimum_size = Vector2(390, 0)
 layout_mode = 2
 theme_override_font_sizes/font_size = 17
-text = "A and D turn the board left and right on the screen, whichever way you sail; the sailor does the rest. The auto-sheet trims the sail for you (Up and Down take over for a moment)."
+text = "A and D turn the board left and right on the screen, whichever way you sail; the sailor does the rest. The auto-sheet trims the sail for you (Up and Down take over for a moment). In a tack or gybe, A or D toward the turn tightens it and the other key gives it up; Space again at \"flip now\" puts the rig across."
 autowrap_mode = 3
 
 [node name="AdvancedTitle" type="Label" parent="Center/Panel/Layout/Columns/Modes"]

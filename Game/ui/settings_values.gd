@@ -164,6 +164,12 @@ var camera_close: bool
 var minimap_size_percent: float
 ## How much stiffer the player's fin is than the measured one (PH43; FinConfig.stiffness_factor).
 var fin_stiffness: float
+## The interactive tacks and gybes (Max, 6 November 2026; PlayerController): the turn follows A and
+## D (turn_follows_key), the mouse body carves the turn (body_in_manoeuvres) and a second Space puts
+## the rig across (flip_on_cue). Each on by default, so Max can switch them off to compare.
+var manoeuvre_turn_with_keys: bool
+var manoeuvre_body_carves: bool
+var manoeuvre_flip_on_cue: bool
 
 # --- The body on the mouse (section "body"; package B, ROADMAP GP2, an experiment) ---
 ## The mouse is the sailor's body while sailing (MouseBody). Off by default: it is an experiment.
@@ -277,6 +283,9 @@ func reset_to_defaults() -> void:
 	camera_close = true
 	minimap_size_percent = MiniMap.SIZE_DEFAULT_PERCENT
 	fin_stiffness = 1.0
+	manoeuvre_turn_with_keys = true
+	manoeuvre_body_carves = true
+	manoeuvre_flip_on_cue = true
 
 	mouse_body = false
 	body_centre = MouseBody.Centre.STAYS
@@ -472,6 +481,9 @@ func write_to(config: ConfigFile) -> void:
 	config.set_value("sailing", "camera_close", camera_close)
 	config.set_value("sailing", "minimap_size_percent", minimap_size_percent)
 	config.set_value("sailing", "fin_stiffness", fin_stiffness)
+	config.set_value("sailing", "manoeuvre_turn_with_keys", manoeuvre_turn_with_keys)
+	config.set_value("sailing", "manoeuvre_body_carves", manoeuvre_body_carves)
+	config.set_value("sailing", "manoeuvre_flip_on_cue", manoeuvre_flip_on_cue)
 
 	config.set_value("body", "mouse_body", mouse_body)
 	config.set_value("body", "centre", body_centre)
@@ -543,6 +555,9 @@ func read_from(config: ConfigFile) -> void:
 	camera_close = _bool(config, "sailing", "camera_close", camera_close)
 	minimap_size_percent = clampf(_float(config, "sailing", "minimap_size_percent", minimap_size_percent), MiniMap.SIZE_MIN_PERCENT, MiniMap.SIZE_MAX_PERCENT)
 	fin_stiffness = clampf(_float(config, "sailing", "fin_stiffness", fin_stiffness), FIN_STIFFNESS_MIN, FIN_STIFFNESS_MAX)
+	manoeuvre_turn_with_keys = _bool(config, "sailing", "manoeuvre_turn_with_keys", manoeuvre_turn_with_keys)
+	manoeuvre_body_carves = _bool(config, "sailing", "manoeuvre_body_carves", manoeuvre_body_carves)
+	manoeuvre_flip_on_cue = _bool(config, "sailing", "manoeuvre_flip_on_cue", manoeuvre_flip_on_cue)
 
 	mouse_body = _bool(config, "body", "mouse_body", mouse_body)
 	body_centre = clampi(_int(config, "body", "centre", body_centre), 0, MouseBody.Centre.size() - 1)
