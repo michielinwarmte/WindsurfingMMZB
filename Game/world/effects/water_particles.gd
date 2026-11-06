@@ -25,9 +25,10 @@ const PLUME_LIFETIME_S: float = 0.8
 ## A splash: this many blobs at full strength, living this long.
 const SPLASH_AMOUNT: int = 220
 const SPLASH_LIFETIME_S: float = 1.3
-## A burst of spray torn off a breaking crest by the wind.
-const CREST_AMOUNT: int = 36
-const CREST_LIFETIME_S: float = 1.1
+## A burst of spray torn off a breaking crest by the wind: a streak a few metres long downwind
+## (Beaufort 7 and 8: foam and spray blown in streaks along the wind).
+const CREST_AMOUNT: int = 70
+const CREST_LIFETIME_S: float = 1.2
 ## Air slows the drops down (m/s per second).
 const AIR_DAMPING_MS2: float = 1.5
 ## The spray sheet is thrown out at this share of the board's speed (the slowest and the fastest
@@ -172,17 +173,17 @@ static func make_crest_spray() -> GPUParticles3D:
 	var process: ParticleProcessMaterial = ParticleProcessMaterial.new()
 	# Along a stretch of crest 1.6 m long (the burst is turned across the wind when it starts).
 	process.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
-	process.emission_box_extents = Vector3(0.8, 0.05, 0.15)
+	process.emission_box_extents = Vector3(1.0, 0.05, 0.3)
 	# Downwind (the emitter's +Z, turned along the wind when a burst starts) and up.
 	process.direction = Vector3(0.0, 0.5, 1.0).normalized()
 	process.spread = 20.0
 	process.damping_min = AIR_DAMPING_MS2
 	process.damping_max = AIR_DAMPING_MS2 * 2.0
 	process.particle_flag_align_y = true
-	process.scale_min = 0.08
-	process.scale_max = 0.22
-	process.scale_curve = _growing_curve(0.6, 2.4)
-	process.color_ramp = _fading_ramp(0.55)
+	process.scale_min = 0.15
+	process.scale_max = 0.35
+	process.scale_curve = _growing_curve(0.6, 3.0)
+	process.color_ramp = _fading_ramp(0.5)
 	var particles: GPUParticles3D = _make_emitter(process, CREST_AMOUNT, CREST_LIFETIME_S)
 	particles.name = "CrestSpray"
 	particles.local_coords = false

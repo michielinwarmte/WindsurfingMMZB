@@ -22,7 +22,8 @@ GROUPS = {
     "lake": [("lake_follow_12", "lake x0.66 (12 kt), follow"), ("lake_follow_18", "lake x1.0 (18 kt), follow"),
              ("lake_follow_24", "lake x1.32 (24 kt), follow"), ("lake_side_24", "lake x1.32 (24 kt), leeward side")],
     "moments": [("open_start_18", "start, 2.5 s from rest, 18 kt"), ("open_carve_24", "bear-away carve, 24 kt"),
-                ("open_fall_18", "catapult fall, 0.9 s in, 18 kt"), ("crest_30", "open 30 kt, follow (crest spray)")],
+                ("open_fall_18", "catapult fall, 0.9 s in, 18 kt"), ("crest_30", "open 30 kt, follow (crest spray)"),
+                ("open_start_12", "start, 5 s from rest, 12 kt (bow wave)"), ("crest_30_sailing", "open 30 kt at 6.7 s, follow")],
 }
 TITLES = {
     "open": "Open water (Swell sea state), the autopilot on a beam reach, 10 s after the start",

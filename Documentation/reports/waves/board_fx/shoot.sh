@@ -40,6 +40,10 @@ if [[ "$which" == "moments" || "$which" == "all" ]]; then
 	s="$(settings_for 18)"
 	# The start: 2.5 s after rest, at displacement speed, from the side.
 	shot res://main.tscn "$out/open_start_18.png" 150 --autopilot=1 --hud=0 --side_view=lee,15,7 --settings="$s"
+	# The start at 12 kt, 5 s after rest (the board has gone some metres at displacement speed: the bow
+	# wave's V), from behind and above.
+	s12="$(settings_for 12)"
+	shot res://main.tscn "$out/open_start_12.png" 300 --autopilot=1 --hud=0 --side_view=30,25,9 --settings="$s12"
 	# A bear-away carve at 24 kt: the beam reach to 150 degrees at 8 s, seen from behind and above.
 	s24="$(settings_for 24)"
 	shot res://main.tscn "$out/open_carve_24.png" 580 --autopilot=1 --hud=0 --side_view=0,20,9 --twa_at=8,150 --settings="$s24"
