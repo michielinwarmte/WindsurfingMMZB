@@ -17,7 +17,10 @@ instead, so they stay the game's default gear number for number (tests/unit/test
 cloth is white: its picture already has the brand's colours (white keeps them).
 
 The other files in those folders (the gear page's stand-in items) are deleted, except the default
-fin (pj_new_sealand_slalom_38.tres), which is not in the table: it stays as it is.
+fin (pj_new_sealand_slalom_38.tres) and the five fin brands' 38 cm fins of 6 November 2026
+(written by hand: Documentation/reports/fleet_gear/fin_brands.md), which are not in the table: they
+stay as they are. The game makes every fin brand's other depths from its 38 cm fin
+(GearCatalogue.fin_of()).
 """
 
 import json
@@ -38,7 +41,9 @@ LINES = {"slalom": 0, "freerace": 1}
 DEFAULT_CONFIGS = {"board": "board_default.tres", "sail": "sail_default.tres", "fin": "fin_default.tres"}
 CONFIG_SCRIPTS = {"board": "res://sim/config/board_config.gd", "sail": "res://sim/config/sail_config.gd",
                   "fin": "res://sim/config/fin_config.gd"}
-KEPT = {"pj_new_sealand_slalom_38.tres"}   # the default fin: not in the table, kept as it is
+# Not in the table, kept as they are: the default fin and the five fin brands' 38 cm fins.
+KEPT = {"pj_new_sealand_slalom_38.tres", "m_fins_slalom_38.tres", "start_fins_slalom_38.tres",
+        "blacksmith_fins_slalom_38.tres", "typhoon_fins_slalom_38.tres", "nt8_slalom_38.tres"}
 # The table's sail numbers that are SailConfig's (rig_mass_real_kg is the table's alone).
 SAIL_FIELDS = ["area_m2", "luff_m", "boom_m", "boom_height_m", "mast_m", "camber", "rig_mass_kg", "rig_com_height_m",
                "ce_height_fraction", "ce_boom_fraction"]

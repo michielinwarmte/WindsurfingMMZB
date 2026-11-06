@@ -33,10 +33,19 @@ import sys
 # --------------------------------------------------------------------------------------------
 
 # The Rhino Pro's area per depth, cm2 (section 1.4's table, and the research script's in-between
-# sizes).
-RACE_FIN_AREA_CM2 = {29: 216, 30: 226, 31: 236, 32: 247, 33: 257, 34: 267, 35: 278, 36: 286, 37: 296,
-                      38: 311, 39: 322, 40: 333, 41: 344, 42: 358, 43: 369, 44: 378, 45: 390, 46: 405,
-                      47: 416, 48: 428}
+# sizes). 28 and 49 to 52 cm (6 November 2026, the gear page's depth slider from 28 to 52 cm) come
+# from a power law fitted to Select's ten published sizes (30 to 48 cm): area = 2.1885 x
+# depth^1.3626, within 3 cm2 of each of them. The game keeps the same table in
+# Game/gear/fin_sizes.tres (FinSizes), where every fin brand's fin of any depth gets its area.
+RACE_FIN_AREA_CM2 = {28: 205, 29: 216, 30: 226, 31: 236, 32: 247, 33: 257, 34: 267, 35: 278, 36: 286,
+                      37: 296, 38: 311, 39: 322, 40: 333, 41: 344, 42: 358, 43: 369, 44: 378, 45: 390,
+                      46: 405, 47: 416, 48: 428, 49: 440, 50: 452, 51: 464, 52: 477}
+
+
+def race_fin_area_fit_cm2(span_cm: float) -> float:
+    """The power law the table's ends come from (fitted by least squares on the logarithms of
+    Select's ten sizes)."""
+    return 2.1885 * span_cm ** 1.3626
 FIN_SIZES_CM = [34, 38, 40, 42, 46]
 
 
@@ -61,7 +70,8 @@ def fin(span_cm: int) -> dict:
 def recommended_fin(width_m: float) -> str:
     """The fin a board of this width gets: the depth the brands recommend grows almost in a
     straight line with the width (section 1.4: span = 0.30 + 0.64 x (width - 0.60) m), rounded to
-    the nearest of the five fins."""
+    the nearest of the five fins. (In the game the player sets any depth from 28 to 52 cm with the
+    gear page's slider; FinSizes.recommended_depth_cm() is this rule to the whole centimetre.)"""
     span_cm = 100.0 * (0.30 + 0.64 * (width_m - 0.60))
     nearest = min(FIN_SIZES_CM, key=lambda size: (abs(size - span_cm), size))
     return f"{FIN_BRAND}_slalom_{nearest}"
