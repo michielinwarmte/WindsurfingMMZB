@@ -43,6 +43,10 @@ var _stride: int = 1
 ## How much of each train the asker feels (set_footprint()): 1 for the lake's own view; for a
 ## hull's view, the train's height averaged over its wet bottom.
 var footprint_factor: PackedFloat64Array = PackedFloat64Array()
+## Per train, for the time last asked (_thetas_at()): its phase at the origin less omega t, so a
+## query's passes and answers add only k (d . x) to it. Every sample of a substep asks at one time.
+var _theta: PackedFloat64Array = PackedFloat64Array()
+var _theta_time: float = NAN
 
 
 func _init(lake_waves: LakeWaves, water_config: WaterConfig = null) -> void:
@@ -66,6 +70,8 @@ func _init(lake_waves: LakeWaves, water_config: WaterConfig = null) -> void:
 	steepness.fill(0.0)
 	footprint_factor.resize(count)
 	footprint_factor.fill(1.0)
+	_theta.resize(count)
+	_theta.fill(0.0)
 	_columns = lake.map.columns
 	_rows = lake.map.rows
 	_x0_m = lake.map.x0_m
@@ -122,9 +128,14 @@ func amplitudes_for(x: float, z: float) -> void:
 		steepness[i] = minf(k[i] * wave_a, LakeWaves.MAX_STEEPNESS)
 
 
+# height_at, normal_at and velocity_at as WaveField's, with the amplitudes read once (WaveField's
+# would read them again through rest_point_at()).
 func height_at(x: float, z: float, t: float) -> float:
 	amplitudes_for(x, z)
-	return super(x, z, t)
+	if count == 0:
+		return base_height_m
+	var rest: Vector2 = rest_point_from(x, z, t, Vector2(x, z))
+	return base_height_m + displacement_at(rest.x, rest.y, t).y
 
 
 ## The rest point of the surface point at (x, z), with the amplitudes there (so the _rest functions
@@ -136,12 +147,18 @@ func rest_point_at(x: float, z: float, t: float) -> Vector2:
 
 func normal_at(x: float, z: float, t: float) -> Vector3:
 	amplitudes_for(x, z)
-	return super(x, z, t)
+	if count == 0:
+		return Vector3.UP
+	var rest: Vector2 = rest_point_from(x, z, t, Vector2(x, z))
+	return normal_at_rest(rest.x, rest.y, t)
 
 
 func velocity_at(x: float, z: float, t: float) -> Vector3:
 	amplitudes_for(x, z)
-	return super(x, z, t)
+	if count == 0:
+		return Vector3.ZERO
+	var rest: Vector2 = rest_point_from(x, z, t, Vector2(x, z))
+	return velocity_at_rest(rest.x, rest.y, t)
 
 
 func sample_at(x: float, z: float, time_s: float, samples: PackedFloat64Array, index: int) -> void:
@@ -151,6 +168,44 @@ func sample_at(x: float, z: float, time_s: float, samples: PackedFloat64Array, i
 
 func _phase_of_wave(i: int) -> float:
 	return phase[i]
+
+
+## Each train's phase at the origin less omega t, for time t (kept until another time is asked).
+func _thetas_at(t: float) -> void:
+	if t == _theta_time:
+		return
+	_theta_time = t
+	for i: int in count:
+		_theta[i] = phase[i] - omega[i] * t
+
+
+## WaveField.rest_point_from with the trains' times worked out once for all the passes.
+func rest_point_from(x: float, z: float, t: float, start: Vector2) -> Vector2:
+	if count == 0:
+		return Vector2(x, z)
+	_thetas_at(t)
+	var rest: Vector2 = start
+	for pass_index: int in SOLVE_MAX_ITERATIONS:
+		var sideways: Vector2 = _sideways_at_thetas(rest.x, rest.y)
+		var next: Vector2 = Vector2(x - sideways.x, z - sideways.y)
+		var moved: float = next.distance_to(rest)
+		rest = next
+		if moved < SOLVE_TOLERANCE_M:
+			break
+	return rest
+
+
+## The sideways displacement at a rest point, with the trains' times already in _theta.
+func _sideways_at_thetas(rest_x: float, rest_z: float) -> Vector2:
+	var sideways: Vector2 = Vector2.ZERO
+	for i: int in count:
+		var wave_k: float = k[i]
+		var wave_x: float = dir_x[i]
+		var wave_z: float = dir_z[i]
+		var horizontal: float = steepness[i] / wave_k * cos(wave_k * (wave_x * rest_x + wave_z * rest_z) + _theta[i])
+		sideways.x += wave_x * horizontal
+		sideways.y += wave_z * horizontal
+	return sideways
 
 
 ## The highest crest at a game position: the sum of the trains' amplitudes there (the AI's sea
@@ -165,9 +220,10 @@ func crest_height_at(x: float, z: float) -> float:
 
 ## As WaveField.displacement_at, with each train's own phase.
 func displacement_at(rest_x: float, rest_z: float, t: float) -> Vector3:
+	_thetas_at(t)
 	var displacement: Vector3 = Vector3.ZERO
 	for i: int in count:
-		var wave_phase: float = k[i] * (dir_x[i] * rest_x + dir_z[i] * rest_z) - omega[i] * t + phase[i]
+		var wave_phase: float = k[i] * (dir_x[i] * rest_x + dir_z[i] * rest_z) + _theta[i]
 		var horizontal: float = steepness[i] / k[i] * cos(wave_phase)
 		displacement.x += dir_x[i] * horizontal
 		displacement.z += dir_z[i] * horizontal
@@ -176,23 +232,16 @@ func displacement_at(rest_x: float, rest_z: float, t: float) -> Vector3:
 
 
 func _sideways_displacement_at(rest_x: float, rest_z: float, t: float) -> Vector2:
-	var sideways: Vector2 = Vector2.ZERO
-	for i: int in count:
-		var wave_k: float = k[i]
-		var wave_x: float = dir_x[i]
-		var wave_z: float = dir_z[i]
-		var wave_phase: float = wave_k * (wave_x * rest_x + wave_z * rest_z) - omega[i] * t + phase[i]
-		var horizontal: float = steepness[i] / wave_k * cos(wave_phase)
-		sideways.x += wave_x * horizontal
-		sideways.y += wave_z * horizontal
-	return sideways
+	_thetas_at(t)
+	return _sideways_at_thetas(rest_x, rest_z)
 
 
 func normal_at_rest(rest_x: float, rest_z: float, t: float) -> Vector3:
+	_thetas_at(t)
 	var tangent_x: Vector3 = Vector3(1.0, 0.0, 0.0)
 	var tangent_z: Vector3 = Vector3(0.0, 0.0, 1.0)
 	for i: int in count:
-		var wave_phase: float = k[i] * (dir_x[i] * rest_x + dir_z[i] * rest_z) - omega[i] * t + phase[i]
+		var wave_phase: float = k[i] * (dir_x[i] * rest_x + dir_z[i] * rest_z) + _theta[i]
 		var sin_phase: float = sin(wave_phase)
 		var cos_phase: float = cos(wave_phase)
 		tangent_x.x -= dir_x[i] * dir_x[i] * steepness[i] * sin_phase
@@ -205,9 +254,10 @@ func normal_at_rest(rest_x: float, rest_z: float, t: float) -> Vector3:
 
 
 func velocity_at_rest(rest_x: float, rest_z: float, t: float) -> Vector3:
+	_thetas_at(t)
 	var velocity: Vector3 = Vector3.ZERO
 	for i: int in count:
-		var wave_phase: float = k[i] * (dir_x[i] * rest_x + dir_z[i] * rest_z) - omega[i] * t + phase[i]
+		var wave_phase: float = k[i] * (dir_x[i] * rest_x + dir_z[i] * rest_z) + _theta[i]
 		var forward: float = steepness[i] * c[i] * sin(wave_phase)
 		velocity.x += dir_x[i] * forward
 		velocity.z += dir_z[i] * forward
@@ -217,6 +267,7 @@ func velocity_at_rest(rest_x: float, rest_z: float, t: float) -> Vector3:
 
 ## As WaveField._answers_at_rest, with each train's own phase.
 func _answers_at_rest(x: float, z: float, t: float, rest: Vector2, samples: PackedFloat64Array, index: int) -> void:
+	_thetas_at(t)
 	var rest_x: float = rest.x
 	var rest_z: float = rest.y
 	var displacement: Vector3 = Vector3.ZERO  # only its vertical part, the height, is needed
@@ -230,7 +281,7 @@ func _answers_at_rest(x: float, z: float, t: float, rest: Vector2, samples: Pack
 		var wave_a: float = amplitude[i]
 		var wave_s: float = steepness[i]
 		var wave_omega: float = omega[i]
-		var wave_phase: float = wave_k * (wave_x * rest_x + wave_z * rest_z) - wave_omega * t + phase[i]
+		var wave_phase: float = wave_k * (wave_x * rest_x + wave_z * rest_z) + _theta[i]
 		var sin_phase: float = sin(wave_phase)
 		var cos_phase: float = cos(wave_phase)
 		displacement.y += wave_a * sin_phase

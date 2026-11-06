@@ -218,7 +218,7 @@ func velocity_below(x: float, z: float, depth_m: float, t: float) -> Vector3:
 func _velocity_at_rest_below(rest_x: float, rest_z: float, t: float, depth_m: float) -> Vector3:
 	var velocity: Vector3 = Vector3.ZERO
 	for i: int in count:
-		var phase: float = k[i] * (dir_x[i] * rest_x + dir_z[i] * rest_z) - omega[i] * t + _phase_of_wave(i)
+		var phase: float = k[i] * (dir_x[i] * rest_x + dir_z[i] * rest_z) + (_phase_of_wave(i) - omega[i] * t)
 		var fade: float = exp(-k[i] * depth_m)
 		var forward: float = steepness[i] * c[i] * sin(phase) * fade
 		velocity.x += dir_x[i] * forward
