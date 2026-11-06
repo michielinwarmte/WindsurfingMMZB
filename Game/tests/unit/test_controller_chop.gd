@@ -206,3 +206,52 @@ func test_the_ease_in_the_air_only_in_strong_wind_when_gated() -> void:
 		var expected: float = 90.0 if wind_kt < 18.0 else (15.0 if wind_kt < 20.0 else 6.0)
 		assert_almost_eq(controller.auto_sheet_pilot.max_alpha_deg, expected, 0.01,
 			"%.0f kt at the sail: none below 18, halfway at 19 (24 to 6), the full ease from 20" % wind_kt)
+
+
+func test_the_ease_in_the_air_only_in_short_chop_when_gated() -> void:
+	for bounce_dps: float in [5.0, 20.0]:
+		var controller: PlayerController = PlayerController.new()
+		controller.airborne_alpha_deg = 6.0
+		controller.airborne_bounce_from_dps = 8.0
+		controller.airborne_bounce_full_dps = 12.0
+		var controls: SimControls = SimControls.new()
+		var t: Telemetry = _telemetry(12.0)
+		# The board pitching at bounce_dps (RMS) for 10 s, on the water.
+		for i: int in int(10.0 / DT):
+			t.time_s += DT
+			t.pitch_rate_dps = bounce_dps if i % 30 < 15 else -bounce_dps
+			controller.update(t, controls, DT)
+		t.buoyancy_n = 0.0
+		t.planing_lift_n = 0.0
+		_run(controller, t, controls, 0.1)
+		assert_eq(controller.auto_sheet_pilot.max_alpha_deg, 90.0 if bounce_dps < 8.0 else 6.0,
+			"light at a bounce of %.0f degrees a second: %s" % [bounce_dps, "no ease (the open sea)" if bounce_dps < 8.0 else "eased (chop)"])
+
+
+func test_a_small_turn_toward_the_wind_is_not_a_head_up_from_the_threshold() -> void:
+	var controller: PlayerController = PlayerController.new()
+	controller.head_up_alpha_deg = 9.0
+	controller.head_up_ease_from_dps = 10.0
+	var hands: AiHands = AiHands.new()
+	controller.hands = hands
+	var controls: SimControls = SimControls.new()
+	hands.steer = 0.2  # a stick nudged toward the wind (starboard tack: right)
+	_run(controller, _telemetry(12.0), controls, 0.5)
+	assert_eq(controller.auto_sheet_pilot.max_alpha_deg, 90.0, "a nudge (6 degrees a second) does not ease")
+	hands.steer = 1.0
+	_run(controller, _telemetry(12.0), controls, 0.5)
+	assert_eq(controller.auto_sheet_pilot.max_alpha_deg, 9.0, "a real head-up (12 degrees a second) does")
+
+
+func test_the_pilots_hands_on_the_sheet_are_the_controllers() -> void:
+	var controller: PlayerController = PlayerController.new()
+	controller.pilot_sheet_rate_per_s = 2.5
+	var controls: SimControls = SimControls.new()
+	_run(controller, _telemetry(12.0), controls, 0.1)
+	assert_eq(controller.auto_sheet_pilot.sheet_rate_per_s, 2.5, "set on the pilot")
+	controller.reset_controls(controls)
+	_run(controller, _telemetry(12.0), controls, 0.1)
+	assert_eq(controller.auto_sheet_pilot.sheet_rate_per_s, 2.5, "and on the new pilot after a reset")
+	controller.pilot_overrides["sheet_rate_per_s"] = 1.0
+	_run(controller, _telemetry(12.0), controls, 0.1)
+	assert_eq(controller.auto_sheet_pilot.sheet_rate_per_s, 1.0, "an override still wins")
