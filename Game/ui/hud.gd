@@ -90,6 +90,15 @@ const SPECTATE_KEYS: Array[Array] = [
 	["Esc", "menu"],
 	["F1", "telemetry"],
 ]
+## A guest of a LAN race who watches (only the host restarts a race).
+const GUEST_SPECTATE_KEYS: Array[Array] = [
+	["Tab", "next board"],
+	["Shift+Tab", "previous"],
+	["L", "follow the leader"],
+	["1-4", "camera"],
+	["Esc", "menu: race again"],
+	["F1", "telemetry"],
+]
 const GUEST_KEYS: Array[Array] = [
 	["W S", "push"],
 	["A D", "turn"],
@@ -691,7 +700,7 @@ func set_race_mode(on: bool, spectating: bool = false) -> void:
 	if on:
 		set_detail_visible(false)
 		if spectating:
-			_show_keys(SPECTATE_KEYS)
+			_show_keys(GUEST_SPECTATE_KEYS if Lan.in_game and not Lan.is_host() else SPECTATE_KEYS)
 		elif Lan.in_game and not Lan.is_host():
 			# The guest of a network game: only the host restarts the race (main.gd, _net_reset()).
 			_show_keys(GUEST_KEYS)

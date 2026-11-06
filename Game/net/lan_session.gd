@@ -28,6 +28,7 @@ extends Node
 ##   --lan_skippers=a,b|none      the host's AI fleet (the race page's default three without it)
 ##   --lan_prestart=<s>           the host's countdown
 ##   --lan_start=<s>              the host starts this long after a guest is ready (with --lan_host)
+##   --lan_spectate=1             join (or host) as a spectator: no board in the race, watching it
 ## And in the game (NetBoards): --lan_report=<s> prints every board's place that often, --lan_quit=<s>
 ## leaves and quits after that long.
 
@@ -45,8 +46,11 @@ const DISCOVERY_PORT: int = 47521
 ## The host and seven guests (Max, 6 November 2026; RACE_DIRECTOR.md R1).
 const MAX_PLAYERS: int = 8
 ## Raised when the messages change, so two different builds refuse each other politely (2: up to 8
-## players, joining late, a board's keyframe numbered by its gear's epoch, the live course).
-const PROTOCOL: int = 2
+## players, joining late, a board's keyframe numbered by its gear's epoch, the live course; 3:
+## spectating, the players' spectator and parked flags, a guest's retirement, a board's retired flag
+## in the race's state). The new messages' names come after _hello's in the alphabet, so an older
+## build's hello still reaches _hello and is refused politely.
+const PROTOCOL: int = 3
 ## The channels: 0 the lobby and the reliable game messages, 1 the boards' states (unreliable), 2
 ## the race's state (reliable, apart so it never waits behind the lobby).
 const CHANNELS: int = 3
@@ -136,6 +140,17 @@ func player_in(slot: int) -> LanPlayer:
 		if player.slot == slot:
 			return player
 	return null
+
+
+## This PC's player in the game's list (null before a guest is welcomed).
+func me() -> LanPlayer:
+	return game.player_in(my_slot) if in_game else player_in(my_slot)
+
+
+## Whether this PC's player chose to spectate (the lobby's Spectate, or the menu's in the game).
+func i_spectate() -> bool:
+	var player: LanPlayer = me()
+	return player != null and player.spectator
 
 
 ## The game's version, as the start menu shows it.
@@ -388,6 +403,51 @@ func _player_update(player_name: String, gear: Array, ready: bool) -> void:
 				_auto_start_in_s = _auto_start_after_s
 	_send_lobby()
 	lobby_changed.emit()
+
+
+## Spectating (Documentation/reports/multiplayer/spectate_6nov.md): whether this PC's player watches
+## instead of racing (spectator: from the next start on) and whether its board is off the water now
+## (parked). The host's list changes and goes to every PC (each hides a parked board); a guest's goes
+## to the host first. In the lobby both are the Spectate switch.
+func set_watch_state(spectator: bool, parked: bool) -> void:
+	for list: Array[LanPlayer] in [players, game.players]:
+		for player: LanPlayer in list:
+			if player.slot == my_slot:
+				player.spectator = spectator
+				player.parked = parked
+	if is_host():
+		_send_lobby()
+		lobby_changed.emit()
+	elif is_guest() and _peer != null:
+		_watch_state.rpc_id(1, spectator, parked)
+		lobby_changed.emit()
+
+
+@rpc("any_peer", "call_remote", "reliable", 0)
+func _watch_state(spectator: bool, parked: bool) -> void:
+	if not is_host():
+		return
+	var sender: int = multiplayer.get_remote_sender_id()
+	for list: Array[LanPlayer] in [players, game.players]:
+		for player: LanPlayer in list:
+			if player.peer_id == sender:
+				player.spectator = spectator
+				player.parked = parked
+	_send_lobby()
+	lobby_changed.emit()
+
+
+## A guest's player retires from the race under way (the menu's Spectate): to the host, whose race
+## marks the board retired (NetBoards.on_retire()); every PC's results show it from the race's state.
+func send_retire() -> void:
+	if is_guest() and _peer != null:
+		_retire.rpc_id(1)
+
+
+@rpc("any_peer", "call_remote", "reliable", 0)
+func _retire() -> void:
+	if is_host():
+		_deliver("on_retire", [multiplayer.get_remote_sender_id()])
 
 
 ## The host's new choice of game (the lobby's controls): the guest sees it at once.
@@ -677,6 +737,8 @@ func _start_from_command_line() -> void:
 		if options.has("lan_prestart"):
 			choice.prestart_s = maxf(options["lan_prestart"].to_float(), 5.0)
 		host_set_game(choice)
+		if options.get("lan_spectate", "0") == "1":
+			set_watch_state(true, true)
 		_auto_start_after_s = maxf(options.get("lan_start", "1").to_float(), 0.0)
 		print("LAN: hosting as %s on %s, port %d: %s" % [my_name, ", ".join(local_addresses()), GAME_PORT, game.summary()])
 	elif options.has("lan_join"):
@@ -688,6 +750,8 @@ func _start_from_command_line() -> void:
 
 
 func _ready_from_command_line() -> void:
+	if command_line_options().get("lan_spectate", "0") == "1":
+		set_watch_state(true, true)
 	update_me(true)
 
 

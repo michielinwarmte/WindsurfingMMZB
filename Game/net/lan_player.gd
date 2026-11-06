@@ -1,8 +1,9 @@
 class_name LanPlayer
 extends RefCounted
 ## One person in a LAN game (LAN multiplayer, Documentation/reports/multiplayer/PLAN.md, D2): their
-## connection, their place in the game (slot 0 is the host), their name, the gear they sail and
-## whether they are ready. Plain data, sent in the lobby and in the game's start message.
+## connection, their place in the game (slot 0 is the host), their name, the gear they sail,
+## whether they are ready, and whether they spectate (Documentation/reports/multiplayer/
+## spectate_6nov.md). Plain data, sent in the lobby and in the game's start message.
 
 ## The connection's number (Godot's peer id): 1 is always the host.
 var peer_id: int = 1
@@ -13,6 +14,12 @@ var gear_board: String = ""
 var gear_sail: String = ""
 var gear_fin: String = ""
 var ready: bool = false
+## They watch instead of racing: the host's race leaves them out from the next start on (the lobby's
+## or the in-game menu's Spectate; Race again turns it off).
+var spectator: bool = false
+## Their board is off the water now (a spectator, or a racer who retired or finished and watches the
+## others until the next start): every PC hides it, and their PC sends no states of it.
+var parked: bool = false
 
 
 ## The player's gear as the game sails and shows it (an unknown id sails that kind's default).
@@ -20,14 +27,17 @@ func gear() -> GearChoice:
 	return GearChoice.from_ids(gear_board, gear_sail, gear_fin)
 
 
-## The gear's names in one short line, for the lobby.
+## The gear's names in one short line, for the lobby (a spectator sails none).
 func gear_text() -> String:
+	if spectator:
+		return "spectating"
 	var choice: GearChoice = gear()
 	return "%s · %s" % [choice.board.full_name(), choice.sail.full_name()]
 
 
 func to_dict() -> Dictionary:
-	return {"peer": peer_id, "slot": slot, "name": name, "board": gear_board, "sail": gear_sail, "fin": gear_fin, "ready": ready}
+	return {"peer": peer_id, "slot": slot, "name": name, "board": gear_board, "sail": gear_sail, "fin": gear_fin, "ready": ready,
+		"spectator": spectator, "parked": parked}
 
 
 static func from_dict(data: Dictionary) -> LanPlayer:
@@ -39,6 +49,8 @@ static func from_dict(data: Dictionary) -> LanPlayer:
 	player.gear_sail = String(data.get("sail", ""))
 	player.gear_fin = String(data.get("fin", ""))
 	player.ready = bool(data.get("ready", false))
+	player.spectator = bool(data.get("spectator", false))
+	player.parked = bool(data.get("parked", false))
 	return player
 
 
