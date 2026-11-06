@@ -329,6 +329,55 @@ var _light_for_s: float = 0.0
 var _resheet_for_s: float = 0.0
 var _own_sheet_in_share: float = 0.5
 
+## The recovery reflex (Max, 6 November 2026: "make the autopilot try harder to stay on the board";
+## Documentation/reports/autopilot/stay_on_the_board.md). The sailor feels a fall coming before the
+## fall rule fires: the heel to leeward, the windward tip and the body's tipping as shares of the
+## limits the fall checks use now (Telemetry.lee_fall_share, windward_fall_share, tipping_share). From
+## reflex_from_share of the way the hands and the feet fight it, harder the nearer the limit (all of it
+## from reflex_full_share; the tipping from reflex_tip_from_share of what the hips hold):
+## - pulled over the sail (to leeward): the sheet eased fast toward reflex_alpha_deg of angle of attack
+##   (from reflex_last_share on reflex_last_alpha_deg, nearly let fly: the last chance), a bear-away of
+##   up to reflex_bear_away_dps asked of the steering (not in a tack or a gybe, and not past
+##   reflex_bear_away_max_twa_deg), and the heels pressed (reflex_heel_press) to flatten the board;
+## - falling back (to windward, the pull gone on a hike): the sheet in fast, toward at least
+##   reflex_catch_alpha_deg ("when in doubt, sheet in").
+## The hands move the sheet at reflex_sheet_rate_per_s (a quick release of the back hand), and the
+## danger felt fades over reflex_hold_s once it has passed; the pilot then sheets in again at its own
+## pace from where the reflex left the sail. With the push slider above reflex_push_fade_from the
+## reflex fades out, and at the top of the slider it is gone: the pushed dial keeps its risk.
+## reflex_on false: the controller as before 6 November 2026, bit for bit.
+var reflex_on: bool = true
+var reflex_from_share: float = 0.65
+var reflex_full_share: float = 0.9
+var reflex_alpha_deg: float = 6.0
+var reflex_last_share: float = 0.95
+var reflex_last_alpha_deg: float = 1.0
+var reflex_sheet_rate_per_s: float = 4.0
+var reflex_bear_away_dps: float = 8.0
+var reflex_bear_away_max_twa_deg: float = 130.0
+var reflex_heel_press: float = 1.0
+var reflex_catch_alpha_deg: float = 18.0
+var reflex_tip_from_share: float = 0.7
+var reflex_hold_s: float = 0.3
+var reflex_push_fade_from: float = 0.8
+## And at walking pace: a board whose nose rises while it hardly moves (below reflex_slow_ms; the tail
+## sinking under the sailor, a heavy sailor on a small board waiting for a start) gets the weight
+## forward: the sailor steps toward the mast (SimControls.step_forward) from reflex_nose_up_deg of
+## pitch, all the way from reflex_nose_up_full_deg. In the races of 6 November the nose of a 108 L
+## board rose from 17 to 80 degrees in 7 s at 1 to 3 km/h with the sailor standing by the mast foot
+## (the report, "the baseline").
+## Only once the nose has stayed up past reflex_nose_up_deg for reflex_nose_up_hold_s: a board turning
+## back at walking pace after being over the line early lifts its nose for a moment too, and a step
+## forward then kept two of the fleet test's sixteen boards from starting again (round 3).
+var reflex_slow_ms: float = 3.0
+var reflex_nose_up_deg: float = 10.0
+var reflex_nose_up_full_deg: float = 20.0
+var reflex_nose_up_hold_s: float = 1.0
+var _nose_up_for_s: float = 0.0
+## The danger felt now, 0 (none) to 1 (at the limit), toward the sail and away from it.
+var lee_danger: float = 0.0
+var windward_danger: float = 0.0
+
 var _sail: SailModel = null
 var _sailor: SailorConfig = null
 var _air_density_kg_m3: float = 1.225
@@ -359,6 +408,8 @@ func set_sail(sail: SailModel, sailor: SailorConfig = null, air_density_kg_m3: f
 func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 	_move_the_slider(telemetry, controls, dt)
 	auto_sheet_pilot.update_tack(telemetry)
+	if reflex_on:
+		_feel_the_fall(telemetry, dt)
 	if telemetry.sail_side != _last_sail_side:
 		if _last_sail_side != 0:
 			# The trim is kept as "heading up". A turn that goes through the wind keeps its
@@ -478,9 +529,16 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		ease = 0.0
 	controls.sheet = clampf(wanted_sheet - ease, 0.0, 1.0)
 	controls.boom_across = wanted_across if ease < 0.01 else 0.0
+	if reflex_on:
+		_recover_with_the_sheet(telemetry, controls, pilot_trimming, dt)
+		_step_forward_on_a_rising_nose(telemetry, controls, dt)
 
 	controls.balance_reflex = true
 	_move_the_body(telemetry, controls, dt)
+	if reflex_on and body == null:
+		# The heels against an over-railed board (planing in the straps; the sim sees to that). With
+		# the body on the mouse the player's feet are their own.
+		controls.feet_roll_press = -reflex_heel_press * lee_danger
 
 
 ## Package B, the body on the mouse (MouseBody; ROADMAP GP2): the toes against the heels and the back
@@ -748,6 +806,8 @@ func _steer_beginner(telemetry: Telemetry, controls: SimControls, turn_key: floa
 		var turn_right_deg: float = wrapf(_held_heading_deg - telemetry.heading_deg, -180.0, 180.0)
 		rate = clampf(hold_rate_per_deg * turn_right_deg, -hold_rate_limit_dps, hold_rate_limit_dps)
 	held_heading_deg = _held_heading_deg if _heading_held else -1.0
+	if reflex_on:
+		rate = _bear_away_from_the_fall(telemetry, rate)
 	# A key asks for a turn and gets the rail; the heading hold keeps the board flat and
 	# steers with the rig alone. A planing board carves hard on a few degrees of bank, and
 	# a hold that banked for every small correction would rock the board about its course.
@@ -866,9 +926,110 @@ func set_mode(new_mode: Mode) -> void:
 
 
 ## Forgets the sheet and the manoeuvre (after a reset or a waterstart).
+## The recovery reflex's sense of the fall coming (reflex_on): lee_danger and windward_danger from the
+## shares of the fall checks' limits, faded over reflex_hold_s once the danger has passed, and weaker
+## with the push slider near its top.
+func _feel_the_fall(telemetry: Telemetry, dt: float) -> void:
+	var span: float = maxf(reflex_full_share - reflex_from_share, 0.01)
+	var lee: float = clampf((telemetry.lee_fall_share - reflex_from_share) / span, 0.0, 1.0)
+	var windward: float = clampf((telemetry.windward_fall_share - reflex_from_share) / span, 0.0, 1.0)
+	# The body tipping off its feet: toward the sail or away from it (the excess is positive when the
+	# body is tipped to port, which is leeward on starboard tack, tack +1).
+	var tip: float = clampf((telemetry.tipping_share - reflex_tip_from_share) / maxf(1.0 - reflex_tip_from_share, 0.01), 0.0, 1.0)
+	if tip > 0.0:
+		if telemetry.feet_moment_excess_nm * tack_sign(telemetry) > 0.0:
+			lee = maxf(lee, tip)
+		else:
+			windward = maxf(windward, tip)
+	var strength: float = reflex_strength()
+	var fade: float = dt / maxf(reflex_hold_s, dt)
+	lee_danger = maxf(lee * strength, lee_danger - fade)
+	windward_danger = maxf(windward * strength, windward_danger - fade)
+
+
+## How much of the reflex the sailor uses at this push: all of it without a slider and up to
+## reflex_push_fade_from, none at the top of the slider (the pushed dial keeps its risk).
+func reflex_strength() -> float:
+	if is_nan(push_level):
+		return 1.0
+	return 1.0 - smoothstep(reflex_push_fade_from, 1.0, push_level)
+
+
+## The reflex on the sheet: pulled over, eased fast toward reflex_alpha_deg (the last chance:
+## reflex_last_alpha_deg); falling back, sheeted in fast toward reflex_catch_alpha_deg. Not while the
+## sail is backed in a tack (the pilot holds the rig then). The pilot carries on from where the reflex
+## left the sheet.
+func _recover_with_the_sheet(telemetry: Telemetry, controls: SimControls, pilot_trimming: bool, dt: float) -> void:
+	if lee_danger <= 0.0 and windward_danger <= 0.0:
+		return
+	if controls.hold_side != 0 or controls.boom_across > 0.0:
+		return
+	var awa_deg: float = absf(telemetry.awa_deg)
+	var step: float = reflex_sheet_rate_per_s * dt
+	if lee_danger > 0.0:
+		var alpha_cap_deg: float = lerpf(24.0, reflex_alpha_deg, lee_danger)
+		if telemetry.lee_fall_share >= reflex_last_share:
+			alpha_cap_deg = lerpf(alpha_cap_deg, reflex_last_alpha_deg, reflex_strength())
+		var cap_sheet: float = _sheet_for_alpha(awa_deg, alpha_cap_deg)
+		controls.sheet = minf(controls.sheet, maxf(cap_sheet, telemetry.sheet - step))
+	elif windward_danger > 0.0 and _sail_draws(telemetry):
+		var floor_sheet: float = lerpf(controls.sheet, _sheet_for_alpha(awa_deg, reflex_catch_alpha_deg), windward_danger)
+		if floor_sheet > controls.sheet:
+			controls.sheet = minf(floor_sheet, maxf(telemetry.sheet, controls.sheet) + step)
+	if pilot_trimming:
+		wanted_sheet = controls.sheet
+
+
+## True while sheeting in would bring the pull back: the wind on the sail's own side (not backed: in
+## irons a backed sail sheeted in pushes the sailor further over backwards; round 1 of the races, a fall
+## back at 40.7 s with the sheet at 0.99) and the board moving faster than walking pace.
+func _sail_draws(telemetry: Telemetry) -> bool:
+	return not telemetry.is_backwinded and telemetry.alpha_deg > 0.0 and telemetry.speed_ms > reflex_slow_ms
+
+
+## The reflex at walking pace: the weight forward when the nose rises on a board that hardly moves
+## (reflex_nose_up_deg). Not while the sail is backed in a tack, which steps round the mast already.
+func _step_forward_on_a_rising_nose(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
+	if controls.hold_side != 0 or telemetry.speed_ms > reflex_slow_ms or telemetry.pitch_deg <= reflex_nose_up_deg:
+		_nose_up_for_s = 0.0
+		return
+	_nose_up_for_s += dt
+	if _nose_up_for_s < reflex_nose_up_hold_s:
+		return
+	var span: float = maxf(reflex_nose_up_full_deg - reflex_nose_up_deg, 0.1)
+	var share: float = clampf((telemetry.pitch_deg - reflex_nose_up_deg) / span, 0.0, 1.0)
+	controls.step_forward = maxf(controls.step_forward, share)
+
+
+## The sheet (0 out, 1 in) that sets this angle of attack at this apparent wind angle, degrees.
+func _sheet_for_alpha(awa_deg: float, alpha_deg: float) -> float:
+	var sheet_in_deg: float = auto_sheet_pilot.sheet_angle_in_deg
+	var sheet_out_deg: float = auto_sheet_pilot.sheet_angle_out_deg
+	var boom_deg: float = clampf(awa_deg - alpha_deg, sheet_in_deg, sheet_out_deg)
+	return 1.0 - (boom_deg - sheet_in_deg) / (sheet_out_deg - sheet_in_deg)
+
+
+## The reflex on the steering: pulled over, a head-up asked for is taken back and the board borne away
+## at up to reflex_bear_away_dps (the push of a bear-away throws the sailor to windward, and the
+## apparent wind drops); rate_dps is the turn to the right the steering wants, degrees a second.
+func _bear_away_from_the_fall(telemetry: Telemetry, rate_dps: float) -> float:
+	if lee_danger <= 0.0 or reflex_bear_away_dps <= 0.0 or absf(telemetry.twa_deg) > reflex_bear_away_max_twa_deg:
+		return rate_dps
+	var tack: float = tack_sign(telemetry)
+	# Heading up is a right turn on starboard tack (+1).
+	var up_dps: float = rate_dps * tack
+	if up_dps > 0.0:
+		up_dps *= 1.0 - lee_danger
+	up_dps = minf(up_dps, -lee_danger * reflex_bear_away_dps)
+	return up_dps * tack
+
+
 func reset_controls(controls: SimControls) -> void:
 	_settling = false
 	_holding_back = false
+	lee_danger = 0.0
+	windward_danger = 0.0
+	_nose_up_for_s = 0.0
 	wanted_sheet = 0.0
 	ease = 0.0
 	manoeuvre = Manoeuvre.NONE

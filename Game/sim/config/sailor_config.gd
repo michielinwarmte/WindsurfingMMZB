@@ -272,9 +272,12 @@ extends Resource
 ## strap, for a nose-down moment, is taken as the same (an estimate). 0 = no pull.
 @export var front_foot_pull_held_n: float = 200.0
 ## The most the front foot pulls briefly: about 400 N (the same sources; Max: "correct"), for
-## at most tip_time_s at a time, as the hips hold a body tipped harder than hip_force_max_n
-## only that long.
+## at most front_foot_pull_brief_s at a time, as the hips hold a body tipped harder than
+## hip_force_max_n only that long.
 @export var front_foot_pull_brief_n: float = 400.0
+## How long the front foot keeps up that brief pull, seconds: tip_time_s's 0.3 until the falls
+## got their own time (6 November 2026), kept here so the pitch is unchanged when tip_time_s moves.
+@export var front_foot_pull_brief_s: float = 0.3
 ## The front foot pulls up at once when the nose starts dropping fast (a launch off a crest,
 ## PH43): the pull grows with the nose-down pitch rate and is the whole held pull from this
 ## rate on (degrees a second), on top of the pull for a board riding below its aim. 20 is an
@@ -341,6 +344,12 @@ extends Resource
 @export_group("Falling and getting back up")
 ## The board heels toward the sail only when the sailor can no longer balance the sail's
 ## pull. Past this leeward heel a standing person is pulled over the sail: a catapult.
+## The fall's bar (Max, 6 November 2026: "the detection of what a crash would be is too strict";
+## Documentation/reports/autopilot/stay_on_the_board.md, PHYSICS_SPEC.md 7.7): the game's sailor
+## (sailor_default.tres) has catapult_heel_deg 30, fall_back_heel_deg 32, standing_fall_heel_deg
+## 50, catapult_pull_share 0.2, catapult_time_s 0.2, fall_back_time_s 0.3 and tip_time_s 0.5;
+## the defaults here are the rule before it (20, 25, 40, 0, 0, 0, 0.3), so a fresh SailorConfig
+## falls as the game did until then.
 @export var catapult_heel_deg: float = 20.0
 ## Past this windward heel the sailor falls in backwards (the pull vanished while hiked out).
 @export var fall_back_heel_deg: float = 25.0
@@ -348,6 +357,17 @@ extends Resource
 ## hanging, and only falls off a board heeled past standing_fall_heel_deg either way.
 @export var catapult_min_sail_force_n: float = 120.0
 @export var standing_fall_heel_deg: float = 40.0
+## A catapult also needs the sail's pull on the hands (across the water) to be at least this share
+## of the sailor's weight: a sailor hooked in with bent knees rides out a heel that a wave, a slam
+## or a landing gave the board while the sail pulls little, and is pulled over the boom only when
+## the pull is more than the body can lean against. Below it only standing_fall_heel_deg throws
+## them. 0 = any pull above catapult_min_sail_force_n (the rule until 6 November 2026).
+@export var catapult_pull_share: float = 0.0
+## The heel past catapult_heel_deg, and the windward tip past fall_back_heel_deg, have to last this
+## long before the sailor goes: a jolt (a wave's roll, the pull gone for a moment over a crest) is
+## taken by the knees and the arms. 0 = at once (the rule until 6 November 2026).
+@export var catapult_time_s: float = 0.0
+@export var fall_back_time_s: float = 0.0
 ## Seconds in the water before the sailor is back on the board (a waterstart).
 @export var waterstart_time_s: float = 4.0
 ## Drag area (cd times area) of the rig in the water, pulling on the mast foot. A sail that

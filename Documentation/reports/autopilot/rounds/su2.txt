@@ -1,0 +1,2 @@
+# Round 2 of the stay-on-the-board work: the shipped defaults (the bar moved in sailor_default.tres, the reflex on), no overrides.
+final:
