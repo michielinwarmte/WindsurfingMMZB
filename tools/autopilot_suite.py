@@ -263,6 +263,15 @@ def main():
         jobs.extend(jobs_for(label, overrides, out_dir, parts, scale_args))
     print("=== %s: %d variants, %d jobs on %d cores (%s)" % (options["round"], len(variants), len(jobs), cores, ",".join(sorted(parts))), flush=True)
     run_pool(jobs, options["godot"], cores)
+    # A job whose scripts did not load (or an override that named no field) sails the defaults
+    # without saying so in its table: list them (the race's harness always prints a few lines about
+    # the game's autoloads, which are not this).
+    for job in jobs:
+        bad = [line for line in lines_of(job.out_path)
+               if "No field" in line or "Parse Error" in line or "JOB TIMED OUT" in line
+               or ("SCRIPT ERROR" in line and "run_race" not in job.script)]
+        if bad:
+            print("WARNING %s %s: %s" % (job.label, os.path.basename(job.out_path), bad[0].strip()), flush=True)
     for label, _overrides in variants:
         out_dir = os.path.join(round_dir, label)
         if "push" in parts:

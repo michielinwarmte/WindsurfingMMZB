@@ -267,6 +267,13 @@ var airborne_hold_s: float = 0.3
 ## of its speed.
 var airborne_after_s: float = 0.0
 var airborne_heel_from_deg: float = -90.0
+## Only in strong wind: the ease comes in as the true wind at the sail rises from
+## airborne_wind_from_kt to airborne_wind_full_kt (none below: the angle of attack is then left as
+## the pilot trims it). In the map's wind (up to about 18.5 kt at the sail) the lake's reaches never
+## fell in 40 runs and the ease cost them 3 to 4 kt; in a steady 24 kt (about 20 kt at the sail) the
+## beam reach catapulted in two of three runs without it. Both 0: at every wind.
+var airborne_wind_from_kt: float = 0.0
+var airborne_wind_full_kt: float = 0.0
 ## Back in on landing: the body stayed hiked out through the jump, so the sail may come back to where
 ## it was faster than the pilot's usual pace for sheeting in (Autopilot.sheet_in_share, which at 24 kt
 ## lets the angle of attack rise only 1 to 2 degrees a second: eased at every skip the sail never got
@@ -351,8 +358,12 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 	auto_sheet_pilot.max_alpha_deg = gybe_entry_alpha_deg if gybing else _hold_back_alpha_deg(telemetry, dt)
 	if _heading_up_at_speed(telemetry, controls):
 		auto_sheet_pilot.max_alpha_deg = minf(auto_sheet_pilot.max_alpha_deg, head_up_alpha_deg)
-	if _light_over_a_crest(telemetry, dt):
-		auto_sheet_pilot.max_alpha_deg = minf(auto_sheet_pilot.max_alpha_deg, airborne_alpha_deg)
+	var light: bool = _light_over_a_crest(telemetry, dt)
+	var strong: float = _airborne_wind_share(telemetry)
+	if light and strong > 0.0:
+		# The pilot never trims beyond 24 degrees of angle of attack: from there to the full ease.
+		var cap_deg: float = airborne_alpha_deg if strong >= 1.0 else lerpf(24.0, airborne_alpha_deg, strong)
+		auto_sheet_pilot.max_alpha_deg = minf(auto_sheet_pilot.max_alpha_deg, cap_deg)
 		_resheet_for_s = airborne_resheet_s
 	else:
 		_resheet_for_s = maxf(_resheet_for_s - dt, 0.0)
@@ -491,6 +502,14 @@ func _move_the_slider(telemetry: Telemetry, controls: SimControls, dt: float) ->
 	# The rail for the sea (Autopilot.wave_rail_deg): the sailor rails more when the board bounces.
 	auto_sheet_pilot.feel_the_sea(telemetry, dt)
 	controls.rail_bank_extra_deg += auto_sheet_pilot.wave_rail_deg()
+
+
+## How much of the ease in the air applies at this wind, 0 to 1 (airborne_wind_from_kt, _full_kt).
+func _airborne_wind_share(telemetry: Telemetry) -> float:
+	if airborne_wind_full_kt <= 0.0:
+		return 1.0
+	var span: float = maxf(airborne_wind_full_kt - airborne_wind_from_kt, 0.1)
+	return clampf((telemetry.tws_at_sail_kt - airborne_wind_from_kt) / span, 0.0, 1.0)
 
 
 ## True while the board is light over a crest, and for airborne_hold_s after (airborne_alpha_deg).

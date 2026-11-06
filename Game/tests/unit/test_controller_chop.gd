@@ -189,3 +189,20 @@ func test_the_heading_holds_corrections_ease_only_when_asked() -> void:
 		_run(controller, t, controls, 0.2)
 		assert_eq(controller.auto_sheet_pilot.max_alpha_deg, 9.0 if on_hold else 90.0,
 			"the hold's correction toward the wind eases the sheet only with head_up_ease_on_hold")
+
+
+func test_the_ease_in_the_air_only_in_strong_wind_when_gated() -> void:
+	for wind_kt: float in [15.0, 19.0, 21.0]:
+		var controller: PlayerController = PlayerController.new()
+		controller.airborne_alpha_deg = 6.0
+		controller.airborne_wind_from_kt = 18.0
+		controller.airborne_wind_full_kt = 20.0
+		var controls: SimControls = SimControls.new()
+		var t: Telemetry = _telemetry(12.0)
+		t.tws_at_sail_kt = wind_kt
+		t.buoyancy_n = 0.0
+		t.planing_lift_n = 0.0
+		_run(controller, t, controls, 0.1)
+		var expected: float = 90.0 if wind_kt < 18.0 else (15.0 if wind_kt < 20.0 else 6.0)
+		assert_almost_eq(controller.auto_sheet_pilot.max_alpha_deg, expected, 0.01,
+			"%.0f kt at the sail: none below 18, halfway at 19 (24 to 6), the full ease from 20" % wind_kt)
