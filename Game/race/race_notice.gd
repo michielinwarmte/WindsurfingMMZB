@@ -1,10 +1,9 @@
 class_name RaceNotice
 extends Label
-## The race director's line on every screen (Documentation/reports/multiplayer/RACE_DIRECTOR.md R4):
-## when the next countdown begins, a note from the director, and for a player who joined during a
-## race that they race from the next start. Centred near the top, under the race's own clock; empty
-## text hides it. The sailing scene adds it to the HUD (host and a race alone) and RaceMirror on a
-## guest's PC.
+## The race director's notice for a player not in the race under way (RACE_DIRECTOR.md R2, R4):
+## that they race from the next start, when the next countdown begins and a note from the director.
+## Centred near the top (the race card, which carries these lines for a player in the race, is
+## hidden then); empty text hides it. RaceMirror adds it on a guest's PC.
 
 const FONT_SIZE: int = 22
 ## From the top of the screen, pixels (the race's clock and countdown are above it).

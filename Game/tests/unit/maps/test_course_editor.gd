@@ -14,7 +14,15 @@ var _editor: CourseEditor
 var _camera: Camera3D
 
 
+## The window's scaling as the tests found it. They count in the test runner's own small window's
+## pixels (about 7 m each, below), so the project's stretch (project.godot: the HUD laid out for 720
+## pixels high) is off while they run; the wind viewer sets its own stretch in play anyway.
+var _scale_mode_before: Window.ContentScaleMode = Window.CONTENT_SCALE_MODE_DISABLED
+
+
 func before_each() -> void:
+	_scale_mode_before = get_window().content_scale_mode
+	get_window().content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED
 	var world: Node3D = Node3D.new()
 	add_child_autofree(world)
 	_camera = Camera3D.new()
@@ -40,6 +48,10 @@ func before_each() -> void:
 	_editor.place_template("LG2", Vector2.ZERO)
 	# One update, so the drawing knows the camera.
 	_editor._process(0.0)
+
+
+func after_each() -> void:
+	get_window().content_scale_mode = _scale_mode_before
 
 
 func after_all() -> void:

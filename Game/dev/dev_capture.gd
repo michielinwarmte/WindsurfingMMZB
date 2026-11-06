@@ -51,12 +51,20 @@ func _capture_after(frames: int, path: String, count: int, every: int) -> void:
 
 
 ## Draws the game at `size_text` (for example "3137x1263") whatever the window's size.
+## When the window already has that size (the screen is big enough) nothing changes, so the picture
+## is what a player sees: the HUD drawn as big as the game's own stretch makes it (project.godot,
+## "canvas_items"). In a smaller window the game is drawn at that size in a viewport and shown shrunk;
+## the HUD then keeps the pixel sizes it has in a 1280 x 720 window, not scaled up as in play (it says so).
 func _render_at(size_text: String) -> void:
 	var parts: PackedStringArray = size_text.split("x")
 	if parts.size() != 2:
 		push_warning("--render_size wants <width>x<height>, not %s." % size_text)
 		return
 	var window: Window = get_tree().root
+	var wanted: Vector2i = Vector2i(parts[0].to_int(), parts[1].to_int())
+	if window.size == wanted:
+		return
+	print("--render_size: the window is %s, not %s: drawn in a viewport, the HUD not scaled as in play." % [window.size, wanted])
 	window.content_scale_mode = Window.CONTENT_SCALE_MODE_VIEWPORT
 	window.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP
 	window.content_scale_size = Vector2i(parts[0].to_int(), parts[1].to_int())

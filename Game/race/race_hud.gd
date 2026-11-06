@@ -2,32 +2,49 @@ class_name RaceHud
 extends Control
 ## The race on the screen (RACING_PLAN.md, 9A), made for racing rather than for reading the
 ## physics, in the menus' look (HudStyle; Max, 3 November 2026: the old block looked like the
-## physics panel). At the top left a card with the place and the race clock large, the next mark
-## with its distance and which way to turn for it, and the speed and the wind small; under it the
-## fleet as a table (place, name, where each board is going, its gap to you at the last mark you
-## both rounded; the leaders and the boards around you when the fleet is big). The countdown large
-## in the middle; a split for a few seconds at every rounding; the warnings for over the line early
-## and the wrong side of a mark; and the results when you finish or the race is over. The push
-## slider is the HUD's gauge at the bottom (PushGauge, for the board on the screen). RaceRunner
-## updates this every frame from the race (RaceSim) and the player's telemetry; the HUD's own
-## telemetry strip and panel are hidden meanwhile (Hud.set_race_mode), F1 brings the panel back.
-## While spectating (set_watching) the card is about the board the camera follows, with its name
-## on a line above, and the fleet marks that board instead of "you".
+## physics panel), spread over the screen the way racing games and sailing apps do (Max, 6 November
+## 2026: "in the ui everything is in the left top corner, make it more over the whole screen"):
+## - top middle, the race card: the place and the race clock large (in the countdown "Start in"
+##   and the time to the gun), the next mark with its distance and which way to turn for it, and
+##   room for two more lines (set_card_line(): the LAN race director's next start and its news);
+## - under it the countdown large, a split for a few seconds at every rounding, the warnings for
+##   over the line early and the wrong side of a mark;
+## - down the right side, under the compass, the standings: place, name, where each board is going,
+##   its gap to you at the last mark you both rounded; as many lines as fit above the small map,
+##   the leaders and the boards around you when the fleet is bigger (fleet_rows());
+## - bottom left, the speed, the tack and the state, and the wind (the free-sailing card's place);
+## - the results in the middle when you finish or the race is over (in two columns for a big fleet).
+## The push slider is the HUD's gauge at the bottom (PushGauge, for the board on the screen).
+## RaceRunner updates this every frame from the race (RaceSim) and the player's telemetry; the HUD's
+## own card and panel are hidden meanwhile (Hud.set_race_mode), F1 brings the panel back.
+## While spectating (set_watching) the cards are about the board the camera follows, with its name
+## on a line above, and the standings mark that board instead of "you".
+## Laid out for a window 720 pixels high, like the HUD it is part of (hud.gd: any window size).
 
 const SPLIT_SHOWN_S: float = 4.0
 const GO_SHOWN_S: float = 2.0
 ## The fleet's lines and the results table are worked out a few times a second, not every frame.
 const FLEET_REFRESH_S: float = 0.25
-## The most lines the fleet table shows: with more boards, the leaders and the boards around you.
+## The fleet table's lines: as many as fit under the compass and above the small map, between these.
+## With more boards than lines, the leaders and the boards around you (fleet_rows()).
 const FLEET_ROWS: int = 9
-## The leaders always shown in a big fleet.
+const FLEET_MIN_ROWS: int = 4
+const FLEET_MAX_ROWS: int = 13
+## The leaders always shown in a big fleet (fewer when the table has fewer than seven lines).
 const FLEET_LEADERS: int = 3
-const CARD_WIDTH: float = 380.0
+const FLEET_FONT_SIZE: int = 15
+const CARD_WIDTH: float = 440.0
+## The race card's extra lines (set_card_line()).
+const CARD_LINES: int = 2
+## The results go into two columns from this many lines (a big fleet's table stays on the screen).
+const RESULTS_COLUMN_LINES: int = 18
 const COUNTDOWN_COLOR: Color = Color(1.0, 0.9, 0.5)
 const WARNING_COLOR: Color = Color(1.0, 0.35, 0.3)
 const TEXT_COLOR: Color = HudStyle.TEXT_COLOR
 const COMPASS_NAMES: PackedStringArray = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
 
+## The race card at the top in the middle.
+var _card: PanelContainer
 ## The name of the board watched while spectating, above the place (hidden otherwise).
 var _title: Label
 ## The card's big line: the place ("2nd", or "Start" in the countdown), "of 8", the clock.
@@ -36,18 +53,28 @@ var _of: Label
 var _clock: Label
 ## The next mark (or the line, or the finish), its distance and the turn to it.
 var _next: Label
-## Small: the speed, the tack and the state; the wind; the time trial's best.
+## The card's extra lines under the next mark (set_card_line()), hidden while empty.
+var _card_lines: Array[Label] = []
+## The card at the bottom left: the speed large, then the tack and the state, then the wind.
+var _speed_card: PanelContainer
+var _speed: Label
 var _status: Label
-## The fleet table: one row of four labels per line (place, name, going, gap).
+var _wind: Label
+## Whether the speed card shows a fall now (its line in orange).
+var _fall_shown: bool = false
+## The standings: one row of four labels per line (place, name, going, gap).
 var _fleet_card: PanelContainer
 var _fleet_cells: Array[Label] = []
 var _countdown: Label
 var _split: Label
 var _warning: Label
+## Where the countdown, the split and the warning sit, from the top: under the race card.
+var _centre_top: float = -1.0
 ## How long the penalty's reason is shown large after a breach, seconds (then the shorter line).
 const PENALTY_WARNING_S: float = 8.0
 var _results: PanelContainer
 var _results_text: Label
+var _results_text_2: Label
 ## The board watched while spectating ("" when racing yourself), and whether the camera follows the
 ## leader by itself.
 var _watching: String = ""
@@ -69,60 +96,13 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	# The top-left column: the race card, the fleet card under it.
-	var column: VBoxContainer = VBoxContainer.new()
-	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_theme_constant_override("separation", 8)
-	column.position = Vector2(16.0, 12.0)
-	add_child(column)
-	var card: PanelContainer = _card()
-	column.add_child(card)
-	var lines: VBoxContainer = VBoxContainer.new()
-	lines.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	lines.add_theme_constant_override("separation", 2)
-	card.add_child(lines)
-	_title = HudStyle.label(HudStyle.sans(700), 16, HudStyle.HIGHLIGHT_COLOR)
-	_title.hide()
-	lines.add_child(_title)
-	var top: HBoxContainer = HBoxContainer.new()
-	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	top.add_theme_constant_override("separation", 8)
-	lines.add_child(top)
-	_place = HudStyle.label(HudStyle.sans(800), 36)
-	top.add_child(_place)
-	_of = HudStyle.label(HudStyle.sans(500), 18, HudStyle.DIM_COLOR)
-	_of.size_flags_vertical = Control.SIZE_SHRINK_END
-	top.add_child(_of)
-	_clock = HudStyle.label(HudStyle.mono(700), 30)
-	_clock.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_clock.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_clock.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	top.add_child(_clock)
-	_next = HudStyle.label(HudStyle.sans(600), 19, HudStyle.ACCENT_COLOR)
-	lines.add_child(_next)
-	_status = HudStyle.label(HudStyle.sans(500), 15, HudStyle.DIM_COLOR)
-	lines.add_child(_status)
-	# The fleet table.
-	_fleet_card = _card()
-	column.add_child(_fleet_card)
-	var grid: GridContainer = GridContainer.new()
-	grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	grid.columns = 4
-	grid.add_theme_constant_override("h_separation", 14)
-	grid.add_theme_constant_override("v_separation", 1)
-	_fleet_card.add_child(grid)
-	for row: int in FLEET_ROWS:
-		for column_index: int in 4:
-			var cell: Label = HudStyle.label(HudStyle.mono(700) if column_index == 0 or column_index == 3 else HudStyle.sans(600 if column_index == 1 else 500), 15)
-			if column_index == 3:
-				cell.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-				cell.custom_minimum_size.x = 76.0
-			grid.add_child(cell)
-			_fleet_cells.append(cell)
-	# The middle of the screen.
-	_countdown = _centre_label(HudStyle.sans(800), 96, COUNTDOWN_COLOR, 150.0, 130.0)
-	_split = _centre_label(HudStyle.sans(700), 26, COUNTDOWN_COLOR, 290.0, 34.0)
-	_warning = _centre_label(HudStyle.sans(700), 26, WARNING_COLOR, 330.0, 34.0)
+	_build_race_card()
+	_build_speed_card()
+	_build_fleet_card()
+	# The middle of the screen, under the race card (_place_centre_labels()).
+	_countdown = _centre_label(HudStyle.sans(800), 96, COUNTDOWN_COLOR, 130.0)
+	_split = _centre_label(HudStyle.sans(700), 26, COUNTDOWN_COLOR, 34.0)
+	_warning = _centre_label(HudStyle.sans(700), 26, WARNING_COLOR, 34.0)
 	_results = PanelContainer.new()
 	_results.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_results.add_theme_stylebox_override("panel", HudStyle.card(16.0))
@@ -130,35 +110,164 @@ func _ready() -> void:
 	_results.set_anchors_preset(Control.PRESET_CENTER)
 	_results.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_results.grow_vertical = Control.GROW_DIRECTION_BOTH
+	var columns: HBoxContainer = HBoxContainer.new()
+	columns.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	columns.add_theme_constant_override("separation", 28)
+	_results.add_child(columns)
 	_results_text = HudStyle.label(HudStyle.mono(700), 17)
-	_results.add_child(_results_text)
+	columns.add_child(_results_text)
+	_results_text_2 = HudStyle.label(HudStyle.mono(700), 17)
+	columns.add_child(_results_text_2)
 	reset()
+	_place_centre_labels()
 
 
-func _card() -> PanelContainer:
+## The race card, anchored to the top's middle, growing downward as its lines need.
+func _build_race_card() -> void:
+	_card = _make_card()
+	_card.name = "RaceCard"
+	add_child(_card)
+	_card.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_card.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_card.offset_left = 0.0
+	_card.offset_right = 0.0
+	_card.offset_top = 10.0
+	_card.offset_bottom = 10.0
+	_card.custom_minimum_size.x = CARD_WIDTH
+	_card.resized.connect(_place_centre_labels)
+	var lines: VBoxContainer = _lines_box(_card)
+	_title = HudStyle.label(HudStyle.sans(700), 16, HudStyle.HIGHLIGHT_COLOR)
+	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_title.hide()
+	lines.add_child(_title)
+	var top: HBoxContainer = HBoxContainer.new()
+	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	top.add_theme_constant_override("separation", 8)
+	lines.add_child(top)
+	_place = HudStyle.label(HudStyle.sans(800), 38)
+	top.add_child(_place)
+	_of = HudStyle.label(HudStyle.sans(500), 18, HudStyle.DIM_COLOR)
+	_of.size_flags_vertical = Control.SIZE_SHRINK_END
+	top.add_child(_of)
+	_clock = HudStyle.label(HudStyle.mono(700), 34)
+	_clock.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_clock.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_clock.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	top.add_child(_clock)
+	_next = HudStyle.label(HudStyle.sans(600), 20, HudStyle.ACCENT_COLOR)
+	lines.add_child(_next)
+	# The LAN race director's lines go here (set_card_line()): its next start, a short message.
+	for i: int in CARD_LINES:
+		var line: Label = HudStyle.label(HudStyle.sans(600), 17, HudStyle.DIM_COLOR)
+		line.hide()
+		lines.add_child(line)
+		_card_lines.append(line)
+
+
+## The card at the bottom left: the speed, the tack and the state, the wind.
+func _build_speed_card() -> void:
+	_speed_card = _make_card()
+	_speed_card.name = "SpeedCard"
+	add_child(_speed_card)
+	Hud.place_bottom_left(_speed_card)
+	var lines: VBoxContainer = _lines_box(_speed_card)
+	_speed = HudStyle.label(HudStyle.sans(700), 22)
+	lines.add_child(_speed)
+	_status = HudStyle.label(HudStyle.sans(500), 16)
+	lines.add_child(_status)
+	_wind = HudStyle.label(HudStyle.sans(500), 15, HudStyle.DIM_COLOR)
+	lines.add_child(_wind)
+
+
+## The standings down the right side, under the compass (Hud.RIGHT_COLUMN_TOP).
+func _build_fleet_card() -> void:
+	_fleet_card = _make_card()
+	_fleet_card.name = "Standings"
+	add_child(_fleet_card)
+	_fleet_card.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_fleet_card.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_fleet_card.offset_left = -Hud.MARGIN
+	_fleet_card.offset_right = -Hud.MARGIN
+	_fleet_card.offset_top = Hud.RIGHT_COLUMN_TOP
+	_fleet_card.offset_bottom = Hud.RIGHT_COLUMN_TOP
+	var grid: GridContainer = GridContainer.new()
+	grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	grid.columns = 4
+	grid.add_theme_constant_override("h_separation", 14)
+	grid.add_theme_constant_override("v_separation", 1)
+	_fleet_card.add_child(grid)
+	for row: int in FLEET_MAX_ROWS:
+		for column_index: int in 4:
+			var cell: Label = HudStyle.label(HudStyle.mono(700) if column_index == 0 or column_index == 3 else HudStyle.sans(600 if column_index == 1 else 500), FLEET_FONT_SIZE)
+			if column_index == 3:
+				cell.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+				cell.custom_minimum_size.x = 76.0
+			grid.add_child(cell)
+			_fleet_cells.append(cell)
+
+
+func _make_card() -> PanelContainer:
 	var card: PanelContainer = PanelContainer.new()
 	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card.add_theme_stylebox_override("panel", HudStyle.card())
-	card.custom_minimum_size.x = CARD_WIDTH
 	return card
 
 
-## A centred label across the screen at `top` pixels from the top.
-func _centre_label(font: Font, size: int, colour: Color, top: float, height: float) -> Label:
+func _lines_box(card: PanelContainer) -> VBoxContainer:
+	var lines: VBoxContainer = VBoxContainer.new()
+	lines.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lines.add_theme_constant_override("separation", 2)
+	card.add_child(lines)
+	return lines
+
+
+## A centred label across the screen, `height` pixels high (placed by _place_centre_labels()).
+func _centre_label(font: Font, size: int, colour: Color, height: float) -> Label:
 	var label: Label = HudStyle.label(font, size, colour)
 	label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.7))
 	label.add_theme_constant_override("outline_size", 5)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	add_child(label)
 	label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	label.offset_left = -450.0
 	label.offset_right = 450.0
-	label.offset_top = top
-	label.offset_bottom = top + height
+	label.offset_bottom = height
 	return label
 
 
-## A new race: nothing shown yet.
+## The countdown, the split and the warning just under the race card (it grows with its lines).
+func _place_centre_labels() -> void:
+	if _countdown == null:
+		return
+	var top: float = _card.offset_top + _card.size.y + 8.0
+	if is_equal_approx(top, _centre_top):
+		return
+	_centre_top = top
+	for placed: Array in [[_countdown, 0.0, 130.0], [_split, 134.0, 34.0], [_warning, 170.0, 34.0]]:
+		var label: Label = placed[0]
+		label.offset_top = top + float(placed[1])
+		label.offset_bottom = label.offset_top + float(placed[2])
+
+
+## One of the race card's extra lines under the next mark (index 0 or 1): the LAN race director's
+## "Next start in 1:30" and its short news. An empty text hides the line. Cheap to call every frame:
+## nothing is laid out again when the text and the colour are the same.
+func set_card_line(index: int, text: String, colour: Color = HudStyle.DIM_COLOR) -> void:
+	var line: Label = _card_lines[index]
+	if line.text == text and line.visible == (text != "") and line.get_theme_color("font_color") == colour:
+		return
+	line.text = text
+	line.visible = text != ""
+	line.add_theme_color_override("font_color", colour)
+
+
+## The race card's extra line's text ("" when hidden).
+func card_line(index: int) -> String:
+	return _card_lines[index].text if _card_lines[index].visible else ""
+
+
+## A new race: nothing shown yet. (The race card's extra lines are the LAN race director's: they stay.)
 func reset() -> void:
 	_splits_seen = 0
 	_split_until_s = -1.0
@@ -171,7 +280,9 @@ func reset() -> void:
 	_of.text = ""
 	_clock.text = ""
 	_next.text = ""
+	_speed.text = ""
 	_status.text = ""
+	_wind.text = ""
 	for cell: Label in _fleet_cells:
 		cell.text = ""
 
@@ -197,15 +308,19 @@ func set_watching(board_name: String, follows_leader: bool) -> void:
 ## rules: the judge (RaceRules), for the penalty warning and the penalty carried; null for none.
 func update_from(race: RaceSim, index: int, t: Telemetry, shadow_deficit: float = 0.0, rules: RaceRules = null) -> void:
 	var state: String = "   ·   planing" if t.is_planing else ("   ·   luffing" if t.is_luffing else "")
-	if t.sailor_state == 1:
+	var fallen: bool = t.sailor_state == 1
+	if fallen:
 		state = "   ·   %s: waterstart in %d s (R: now)" % [t.fall_kind, ceili(t.waterstart_in_s)]
 	var here: Vector2 = Vector2(t.position.x, t.position.z)
 	var distance_m: float = race.distance_to_next_m(index)
 	var turn: String = turn_text(relative_bearing_deg(here, race.next_target(index), t.heading_deg)).replace(" deg ", "° ")
-	var status: PackedStringArray = PackedStringArray()
-	status.append("%.1f km/h   ·   %.1f kt   ·   %s tack%s" % [t.speed_kmh, t.speed_kt, "starboard" if t.twa_deg >= 0.0 else "port", state])
+	_speed.text = "%.1f km/h   ·   %.1f kt" % [t.speed_kmh, t.speed_kt]
+	_status.text = "%s tack%s" % ["starboard" if t.twa_deg >= 0.0 else "port", state]
+	if fallen != _fall_shown:
+		_fall_shown = fallen
+		_status.add_theme_color_override("font_color", HudStyle.HIGHLIGHT_COLOR if fallen else TEXT_COLOR)
 	var shadow: String = "   ·   in a wind shadow: %d %% less" % roundi(100.0 * shadow_deficit) if shadow_deficit >= 0.03 else ""
-	status.append("wind %.0f kt from %s%s" % [t.tws_10m_kt, compass_name(t.wind_from_bearing_deg), shadow])
+	_wind.text = "wind %.0f kt from %s%s" % [t.tws_10m_kt, compass_name(t.wind_from_bearing_deg), shadow]
 	if race.phase() == RaceSim.Phase.PRE_START:
 		var left: float = race.countdown_s()
 		_countdown.text = "%d" % ceili(left)
@@ -234,12 +349,10 @@ func update_from(race: RaceSim, index: int, t: Telemetry, shadow_deficit: float 
 			_clock.text = clock(time_s)
 			if _time_trial:
 				_place.text = "Time trial"
-				_of.text = ""
-				status.append(("best %s" % clock(_best_s)) if _best_s >= 0.0 else "no best yet")
+				_of.text = ("best %s" % clock(_best_s)) if _best_s >= 0.0 else "no best yet"
 			else:
 				_place.text = ordinal(race.place(index))
 				_of.text = "of %d" % race.board_count()
-	_status.text = "\n".join(status)
 	var refresh: bool = race.clock_s() >= _fleet_refresh_at_s
 	if refresh:
 		if not _time_trial:
@@ -263,18 +376,36 @@ func update_from(race: RaceSim, index: int, t: Telemetry, shadow_deficit: float 
 		_warning.hide()
 	if race.phase() == RaceSim.Phase.FINISHED or race.is_finished(index):
 		if refresh or not _results.visible:
-			_results_text.text = time_trial_table(race, index) if _time_trial else results_table(race)
+			_show_results(time_trial_table(race, index) if _time_trial else results_table(race))
 		_results.show()
+		# The results say all the standings say: one table in the middle, not two side by side.
+		_fleet_card.hide()
 	else:
 		_results.hide()
 
 
-## The fleet table: the rows fleet_rows() picks, the board followed (`player`) in orange with `mark`
-## in place of a gap.
+## The results in the middle: one column, or two for a big fleet (so 28 boards fit on the screen).
+func _show_results(text: String) -> void:
+	var lines: PackedStringArray = text.split("\n")
+	if lines.size() < RESULTS_COLUMN_LINES:
+		_results_text.text = text
+		_results_text_2.text = ""
+		_results_text_2.hide()
+		return
+	var half: int = ceili(lines.size() * 0.5)
+	_results_text.text = "\n".join(lines.slice(0, half))
+	# The second column starts level with the first one's first board.
+	_results_text_2.text = "\n\n" + "\n".join(lines.slice(half))
+	_results_text_2.show()
+
+
+## The standings: the rows fleet_rows() picks, as many as fit (fleet_room_rows()), the board followed
+## (`player`) in orange with `mark` in place of a gap.
 func _fill_fleet(race: RaceSim, player: int, mark: String) -> void:
-	var rows: Array[int] = fleet_rows(race.race_order(), player, FLEET_ROWS)
-	_fleet_card.visible = rows.size() > 1
-	for row: int in FLEET_ROWS:
+	var room: int = fleet_room_rows()
+	var rows: Array[int] = fleet_rows(race.race_order(), player, room)
+	_fleet_card.visible = rows.size() > 1 and not _results.visible
+	for row: int in FLEET_MAX_ROWS:
 		var cells: Array[Label] = _fleet_cells.slice(row * 4, row * 4 + 4)
 		var board: int = rows[row] if row < rows.size() else -2
 		var texts: PackedStringArray = PackedStringArray(["", "", "", ""])
@@ -291,18 +422,32 @@ func _fill_fleet(race: RaceSim, player: int, mark: String) -> void:
 			cells[i].add_theme_color_override("font_color", HudStyle.DIM_COLOR if i == 2 and board != player else colour)
 
 
+## How many lines of the standings fit between the compass and the small map (the HUD says where
+## the map begins: Hud.right_column_bottom()), from FLEET_MIN_ROWS to FLEET_MAX_ROWS.
+func fleet_room_rows() -> int:
+	var layer: Hud = get_parent() as Hud
+	if layer == null:
+		return FLEET_ROWS
+	var style: StyleBox = _fleet_card.get_theme_stylebox("panel")
+	var room: float = layer.right_column_bottom() - Hud.RIGHT_COLUMN_TOP - style.get_minimum_size().y
+	var row_px: float = HudStyle.sans(600).get_height(FLEET_FONT_SIZE) + 1.0
+	return clampi(floori(room / row_px), FLEET_MIN_ROWS, FLEET_MAX_ROWS)
+
+
 ## The boards the fleet table shows, in race order: all of them up to `rows`; in a bigger fleet the
-## leaders, then -1 for the boards left out, then the boards around `player` (or the first `rows`
-## when the player is among them).
+## leaders (FLEET_LEADERS; in a short table fewer, so at least three lines are about you), then -1
+## for the boards left out, then the boards around `player` (or the first `rows` when the player is
+## among them).
 static func fleet_rows(order: Array[int], player: int, rows: int) -> Array[int]:
 	if order.size() <= rows:
 		return order
 	var at: int = order.find(player)
 	if at < rows - 1:
 		return order.slice(0, rows)
-	var around: int = rows - FLEET_LEADERS - 1
-	var start: int = clampi(at - floori(around * 0.5), FLEET_LEADERS, order.size() - around)
-	var shown: Array[int] = order.slice(0, FLEET_LEADERS)
+	var leaders: int = clampi(rows - 4, 1, FLEET_LEADERS)
+	var around: int = rows - leaders - 1
+	var start: int = clampi(at - floori(around * 0.5), leaders, order.size() - around)
+	var shown: Array[int] = order.slice(0, leaders)
 	shown.append(-1)
 	shown.append_array(order.slice(start, start + around))
 	return shown

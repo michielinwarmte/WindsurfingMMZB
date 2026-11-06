@@ -101,8 +101,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	# the camera (main.gd hands the movement to the body otherwise).
 	if mode == Mode.ORBIT and event is InputEventMouseMotion and Input.is_action_pressed("camera_look"):
 		var motion: InputEventMouseMotion = event
-		orbit_azimuth_rad -= motion.relative.x * 0.005
-		orbit_elevation_rad = clampf(orbit_elevation_rad + motion.relative.y * 0.005, 0.05, 1.4)
+		# The mouse's own pixels (screen_relative), not the HUD's scaled ones: the camera turns as
+		# far for a hand's move in any window size (project.godot scales the HUD with the window).
+		orbit_azimuth_rad -= motion.screen_relative.x * 0.005
+		orbit_elevation_rad = clampf(orbit_elevation_rad + motion.screen_relative.y * 0.005, 0.05, 1.4)
 	if event is InputEventMouseButton:
 		var button: InputEventMouseButton = event
 		if button.pressed and button.button_index == MOUSE_BUTTON_WHEEL_UP:

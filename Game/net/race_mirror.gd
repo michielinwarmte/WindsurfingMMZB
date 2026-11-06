@@ -11,8 +11,8 @@ extends Node
 ##
 ## The race director (RACE_DIRECTOR.md): the host's course changes come in as a course
 ## (update_course()); what the director decided (the next countdown, a note) comes with the race's
-## state and shows on the RaceNotice line. A guest who joined while a race was on is not in it
-## (my_index() -1): it sails with the plain HUD and the line says it races from the next start.
+## state and shows on the race card's two lines. A guest who joined while a race was on is not in it
+## (my_index() -1): it sails with the plain HUD and a notice (RaceNotice) says it races from the next start.
 
 ## A start signal is due on the host's race clock (SO3, as RaceRunner.start_signal): the guest
 ## hears the horns, the beeps and the gun too.
@@ -167,9 +167,12 @@ func shadow_deficit() -> float:
 func _process(_delta: float) -> void:
 	if race == null:
 		return
-	_notice.show_text(RaceDirector.notice_text(director, _my_index >= 0, race))
 	if _my_index < 0:
+		# Not in this race (joined during it): the race card is hidden, the notice says when it races.
+		_notice.show_text(RaceDirector.notice_text(director, false, race))
 		return
+	_notice.show_text("")
+	RaceDirector.show_on_card(hud, RaceDirector.notice_lines(director, true, race))
 	hud.set_watching("", true)
 	hud.update_from(race, _my_index, _own.telemetry(), shadow_deficit(), rules)
 	var here: Vector3 = _own.sim.telemetry.position

@@ -44,15 +44,16 @@ func _ready() -> void:
 
 
 ## One physics tick: the buoy's spot on the water (with the wave height) and the true wind
-## (the direction it blows toward and its speed).
-func place(on_water: Vector3, downwind: Vector3, wind_speed_ms: float) -> void:
-	global_transform = Transform3D(Basis(Vector3.UP, yaw_toward(downwind)), on_water)
+## (the direction it blows toward and its speed). size: how many times bigger than drawn here (the
+## committee boat's mast and flag grow with the boat, course_on_water.gd); 1 for the flag at the start.
+func place(on_water: Vector3, downwind: Vector3, wind_speed_ms: float, size: float = 1.0) -> void:
+	global_transform = Transform3D(Basis(Vector3.UP, yaw_toward(downwind)).scaled(Vector3.ONE * size), on_water)
 	_cloth_material.set_shader_parameter("wind_speed_ms", wind_speed_ms)
 
 
 ## The direction the cloth points from the pole, in the world (for tests).
 func cloth_direction() -> Vector3:
-	return global_transform.basis.x
+	return global_transform.basis.x.normalized()
 
 
 func _add_part(part_name: String, part_mesh: Mesh, at: Vector3, color: Color) -> void:

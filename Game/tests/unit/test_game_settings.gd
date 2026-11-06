@@ -62,6 +62,7 @@ func test_round_trip_through_a_file() -> void:
 	saved.swell_height_scale = 2.5
 	saved.sailor_view = false
 	saved.camera_close = false
+	saved.minimap_size_percent = 50.0
 	saved.chop_offset_deg = -30.0
 	saved.chop_follows_wind = false
 	saved.chop_from_deg = 45.0
@@ -98,6 +99,7 @@ func test_round_trip_through_a_file() -> void:
 	assert_almost_eq(loaded.shift_period_s, 90.0, TOL)
 	assert_false(loaded.sailor_view, "the sailor's view switch is saved")
 	assert_false(loaded.camera_close, "the close camera switch is saved")
+	assert_almost_eq(loaded.minimap_size_percent, 50.0, TOL, "the mini-map's size is saved")
 	assert_eq(loaded.wave_preset, SettingsValues.WavePreset.STRONG_CHOP)
 	assert_almost_eq(loaded.wave_height_scale, 1.5, TOL)
 	assert_false(loaded.swell_follows_wind)
@@ -144,8 +146,10 @@ func test_a_broken_file_is_clamped_and_falls_back() -> void:
 	config.set_value("waves", "swell_from_deg", -45.0)
 	config.set_value("waves", "chop_from_deg", -90.0)
 	config.set_value("waves", "spread", 5.0)
+	config.set_value("sailing", "minimap_size_percent", 300.0)
 	var settings: SettingsValues = SettingsValues.new()
 	settings.read_from(config)
+	assert_almost_eq(settings.minimap_size_percent, MiniMap.SIZE_MAX_PERCENT, TOL, "the mini-map no bigger than the slider goes")
 	assert_almost_eq(settings.chop_from_deg, 270.0, TOL, "-90 is 270")
 	assert_almost_eq(settings.wave_spread, SettingsValues.WAVE_SPREAD_MAX, TOL, "clamped to the slider's range")
 	assert_almost_eq(settings.wind_speed_kt, SettingsValues.WIND_SPEED_MAX_KT, TOL, "clamped to the slider's range")

@@ -233,19 +233,32 @@ static func minutes(seconds: float) -> String:
 	return "%d:%02d" % [whole / 60, whole % 60]
 
 
-## The line under the race clock on every screen: the next countdown, or the director's note; for a
-## player not in this race (joined during it) that they race from the next start.
-static func notice_text(director: Dictionary, in_race: bool, race: RaceSim) -> String:
-	var lines: PackedStringArray = PackedStringArray()
+## The race director's two lines on every screen (on the race card, RaceHud.set_card_line()): [when
+## the next countdown begins (and, for a player not in this race, that they race from the next
+## start), the director's note]; "" for a line with nothing to say.
+static func notice_lines(director: Dictionary, in_race: bool, race: RaceSim) -> PackedStringArray:
+	var first: PackedStringArray = PackedStringArray()
 	var next_in: float = float(director.get("next_in", -1.0))
 	if next_in >= 0.0:
-		lines.append("Next race: the countdown begins in %s" % RaceDirector.minutes(next_in))
+		first.append("Next race: the countdown begins in %s" % RaceDirector.minutes(next_in))
 	if not in_race:
 		if race != null and race.phase() == RaceSim.Phase.FINISHED and next_in >= 0.0:
-			lines.append("You race in the next one.")
+			first.append("You race in the next one.")
 		else:
-			lines.append("A race is on: you join it at the next start.")
-	var said: String = String(director.get("note", ""))
-	if said != "":
-		lines.append(said)
+			first.append("A race is on: you join it at the next start.")
+	return PackedStringArray(["\n".join(first), String(director.get("note", ""))])
+
+
+## The same lines as one text (the notice of a player not in the race, RaceNotice).
+static func notice_text(director: Dictionary, in_race: bool, race: RaceSim) -> String:
+	var lines: PackedStringArray = PackedStringArray()
+	for line: String in notice_lines(director, in_race, race):
+		if line != "":
+			lines.append(line)
 	return "\n".join(lines)
+
+
+## The two lines onto a race card.
+static func show_on_card(card: RaceHud, lines: PackedStringArray) -> void:
+	card.set_card_line(0, lines[0])
+	card.set_card_line(1, lines[1], HudStyle.HIGHLIGHT_COLOR)

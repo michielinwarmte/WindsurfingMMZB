@@ -144,6 +144,9 @@ var show_hud_panel: bool
 var sailor_view: bool
 ## The follow camera low and close behind the board, the water ahead in view (GR4).
 var camera_close: bool
+## The small map's size (Max, 6 November 2026): its longer side as a share of the window's height,
+## percent (MiniMap.SIZE_MIN_PERCENT to SIZE_MAX_PERCENT). Applies at once, also while sailing.
+var minimap_size_percent: float
 ## How much stiffer the player's fin is than the measured one (PH43; FinConfig.stiffness_factor).
 var fin_stiffness: float
 
@@ -246,6 +249,7 @@ func reset_to_defaults() -> void:
 	show_hud_panel = true
 	sailor_view = true
 	camera_close = true
+	minimap_size_percent = MiniMap.SIZE_DEFAULT_PERCENT
 	fin_stiffness = 1.0
 
 	mouse_body = false
@@ -434,6 +438,7 @@ func write_to(config: ConfigFile) -> void:
 	config.set_value("sailing", "show_hud_panel", show_hud_panel)
 	config.set_value("sailing", "sailor_view", sailor_view)
 	config.set_value("sailing", "camera_close", camera_close)
+	config.set_value("sailing", "minimap_size_percent", minimap_size_percent)
 	config.set_value("sailing", "fin_stiffness", fin_stiffness)
 
 	config.set_value("body", "mouse_body", mouse_body)
@@ -499,6 +504,7 @@ func read_from(config: ConfigFile) -> void:
 	show_hud_panel = _bool(config, "sailing", "show_hud_panel", show_hud_panel)
 	sailor_view = _bool(config, "sailing", "sailor_view", sailor_view)
 	camera_close = _bool(config, "sailing", "camera_close", camera_close)
+	minimap_size_percent = clampf(_float(config, "sailing", "minimap_size_percent", minimap_size_percent), MiniMap.SIZE_MIN_PERCENT, MiniMap.SIZE_MAX_PERCENT)
 	fin_stiffness = clampf(_float(config, "sailing", "fin_stiffness", fin_stiffness), FIN_STIFFNESS_MIN, FIN_STIFFNESS_MAX)
 
 	mouse_body = _bool(config, "body", "mouse_body", mouse_body)

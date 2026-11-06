@@ -2,13 +2,16 @@ class_name CourseOnWater
 extends Node3D
 ## A race course on the water (RACING_PLAN.md, 9A), for the eye only (CLAUDE.md rule 2: nothing
 ## here feeds back into the physics):
-## - an orange inflatable buoy for every rounding mark, yellow for the two marks of a gate, with a
-##   small white flag carrying the mark's name;
+## - a buoy at every mark: a plain upright cylinder, 1.2 m high and 0.7 m wide, in a fluorescent
+##   colour that stands out on the water and against the mountains (Max, 6 November 2026: "a
+##   cylinder in a bright colour 1,2 m high and 0,7 m wide"): orange for a rounding mark, yellow for
+##   the two marks of a gate, each with a small white flag carrying the mark's name; the pin end of
+##   the start and the finish line is the same orange buoy, its flag in its line's colour;
 ## - the committee boat at the start line's boat end and the finish boat at the finish line's:
 ##   simple white hulls with a short mast and the wind flag of Phase 7 (wind_flag.gd) streaming in
 ##   the true wind, orange on the committee boat and blue on the finish boat, as the course maker
-##   draws them (Sailing Instructions 18.2 and 20); a small buoy at each pin end, with a flag in
-##   its line's colour;
+##   draws them (Sailing Instructions 18.2 and 20); drawn 1.4 times as big as a 6 m boat, mast and
+##   flag included, so they are easy to see (Max, 6 November 2026);
 ## - a faint line on the water between the two ends of the start line and of the finish line, off
 ##   by default (set_lines_visible; the mini-map always shows the lines).
 ## Everything floats: every physics tick it is put at the water's height at its spot and tilted
@@ -18,35 +21,40 @@ extends Node3D
 ## Cheap: every kind of part shares one mesh and one material between all the marks; no particles,
 ## no physics bodies, a few water heights per thing per tick.
 ##
+## The course can change while it is raced (the LAN race director moves, adds, removes and renames
+## marks): set_course() again with the changed course moves what moved, builds what is new and frees
+## what is gone, cheaply enough for ten calls a second while a mark is dragged.
+##
 ## This node stays at the world origin (the lines are drawn in world coordinates). The scene adds
 ## it, then builds it (main.gd, --course=<name>):
 ##   var on_water: CourseOnWater = CourseOnWater.new()
 ##   add_child(on_water)
 ##   on_water.build(course, height_at, clock, wind_at)
+## and later, for a changed course: on_water.set_course(course)
 
 enum Kind { BUOY, PIN, BOAT }
 
-## A rounding mark: an inflatable cylinder about 1.5 m tall on a float ring, metres.
-const BUOY_HEIGHT_M: float = 1.5
-const BUOY_RADIUS_M: float = 0.55
-## How deep it floats: the part under the water, metres.
-const BUOY_DRAFT_M: float = 0.2
-## A pin end: a smaller buoy.
-const PIN_HEIGHT_M: float = 0.8
-const PIN_RADIUS_M: float = 0.3
-const PIN_DRAFT_M: float = 0.15
+## Every buoy (a rounding mark, a gate's mark, a line's pin end): a plain cylinder this high and
+## this wide across (Max's numbers), metres.
+const BUOY_HEIGHT_M: float = 1.2
+const BUOY_RADIUS_M: float = 0.35
+## How deep it floats: the part of its height under the water, metres (1.1 m stands out of it).
+const BUOY_DRAFT_M: float = 0.1
 ## The flag on a buoy: on a pole this tall above the buoy's top, this big (along the wind, high).
 const FLAG_POLE_M: float = 0.9
 const FLAG_SIZE_M: Vector2 = Vector2(0.6, 0.4)
-## The boats: about 6 m long, with a cabin; the wind flag's pole (WindFlag.POLE_HEIGHT_M) is the
-## short mast, standing on the cabin roof. In the boat's frame: +X starboard, -Z the bow, the
-## origin on the waterline.
+## The boats: drawn as a 6 m boat with a cabin, then shown BOAT_SCALE times as big (Max, 6 November
+## 2026: "just a bit bigger so it's better to see": 8.4 m long), its mast and flag growing with it so
+## they stay in proportion. The wind flag's pole (WindFlag.POLE_HEIGHT_M) is the short mast, standing
+## on the cabin roof. In the boat's frame: +X starboard, -Z the bow, the origin on the waterline.
+const BOAT_SCALE: float = 1.4
 const BOAT_LENGTH_M: float = 6.0
 const CABIN_SIZE_M: Vector3 = Vector3(1.6, 0.9, 2.0)
 const CABIN_AT: Vector3 = Vector3(0.0, 1.05, 0.6)
 const MAST_FOOT: Vector3 = Vector3(0.0, 1.5, 0.6)
-## How far from its middle the water is read for a floating thing's tilt: across and along it, m.
-const BUOY_FOOTPRINT_M: Vector2 = Vector2(0.6, 0.6)
+## How far from its middle the water is read for a floating thing's tilt: across and along it, m
+## (a boat's as drawn; times BOAT_SCALE on the water).
+const BUOY_FOOTPRINT_M: Vector2 = Vector2(0.4, 0.4)
 const BOAT_FOOTPRINT_M: Vector2 = Vector2(1.1, 2.8)
 ## The lines on the water: a strip this wide, made of pieces this long, metres.
 const LINE_WIDTH_M: float = 0.25
@@ -54,9 +62,12 @@ const LINE_STEP_M: float = 1.0
 ## Below this wind (m/s) the boats keep the way they lie.
 const CALM_MS: float = 0.2
 
-const MARK_COLOR: Color = Color(1.0, 0.42, 0.05)
-const GATE_COLOR: Color = Color(1.0, 0.82, 0.1)
-const FLOAT_COLOR: Color = Color(0.16, 0.16, 0.18)
+## Fluorescent orange and yellow, the colours of real inflatable race marks.
+const MARK_COLOR: Color = Color(1.0, 0.36, 0.0)
+const GATE_COLOR: Color = Color(1.0, 0.9, 0.0)
+## Fluorescent paint gives back more light than it gets: the buoys glow a little, so they stay
+## bright on their shaded side and far away (the share of their own colour they give off).
+const BUOY_GLOW: float = 0.45
 const FLAG_COLOR: Color = Color(0.97, 0.97, 0.95)
 const HULL_COLOR: Color = Color(0.95, 0.95, 0.93)
 const CABIN_COLOR: Color = Color(0.72, 0.75, 0.78)
@@ -71,8 +82,17 @@ class Floater:
 	var at: Vector2
 	## How far from its middle the water is read for its tilt (across, along), metres.
 	var footprint_m: Vector2
+	## How many times as big as drawn it is shown (a boat: BOAT_SCALE; a buoy: 1).
+	var size: float = 1.0
 	## The wind flag on a boat's mast (null on a buoy).
 	var flag: WindFlag = null
+
+
+## A line on the water and the two ends it was drawn between (game X, Z).
+class Line:
+	var node: MeshInstance3D
+	var from: Vector2
+	var to: Vector2
 
 
 var course: Course
@@ -86,22 +106,21 @@ var _clock: Callable
 ## wind_at(point: Vector3) -> Vector3: the true wind at a point, the way it blows, m/s. Empty: the
 ## boats lie head to the course's axis and the flags hang in a calm.
 var _wind_at: Callable
+## Everything floating, in the course's order of marks.
 var _floaters: Array[Floater] = []
-var _lines: Array[MeshInstance3D] = []
+## The lines on the water, by the name of the boat at their end (CourseMark.START_BOAT, FINISH_BOAT).
+var _lines: Dictionary[String, Line] = {}
 ## The way into the wind (horizontal, one metre long), kept through a calm.
 var _into_wind: Vector3 = Vector3.FORWARD
 
 # The parts every mark shares.
 var _buoy_mesh: CylinderMesh
-var _pin_mesh: CylinderMesh
-var _float_mesh: TorusMesh
 var _pole_mesh: CylinderMesh
 var _flag_mesh: QuadMesh
 var _hull_mesh: ArrayMesh
 var _cabin_mesh: BoxMesh
 var _mark_material: StandardMaterial3D
 var _gate_material: StandardMaterial3D
-var _float_material: StandardMaterial3D
 var _pole_material: StandardMaterial3D
 var _flag_material: StandardMaterial3D
 var _start_flag_material: StandardMaterial3D
@@ -115,37 +134,66 @@ var _line_material: ShaderMaterial
 ## in the scene (the wind flags build their parts when they enter it). height_at, clock and wind_at
 ## are described with their variables above.
 func build(race_course: Course, height_at: Callable, clock: Callable, wind_at: Callable = Callable()) -> void:
-	course = race_course
 	_height_at = height_at
 	_clock = clock
 	_wind_at = wind_at
-	var axis: Vector2 = Course.direction_of(course.axis_deg)
+	var axis: Vector2 = Course.direction_of(race_course.axis_deg)
 	_into_wind = Vector3(axis.x, 0.0, axis.y)
 	# Like the windsurfer: it stops while the game is paused. And it runs after the windsurfer
 	# (priority 0) has stepped the simulation, so the water's clock is this tick's.
 	process_mode = Node.PROCESS_MODE_PAUSABLE
 	process_physics_priority = 1
 	_make_shared_parts()
+	set_course(race_course)
+
+
+## The course on the water again, changed or not (the LAN race director edits it while the fleet
+## races). Each mark is known by its name: a mark that moved is moved (its buoy or boat stays the
+## same node), a new name gets a new buoy or boat, a name that is gone has its pieces freed; a line
+## whose ends moved is drawn again. A renamed mark is a new one (its name is on its flag). The
+## course may be the same object changed in place, or a new one. Cheap: a few lookups and transforms
+## per mark, a new line strip only when an end of it moved. build() must have run first.
+func set_course(race_course: Course) -> void:
+	if _buoy_mesh == null:
+		push_error("CourseOnWater.set_course(): build() the course on the water first.")
+		return
+	course = race_course
+	var old: Dictionary[String, Floater] = {}
+	for floater: Floater in _floaters:
+		old[floater.mark_id] = floater
+	var placed: Array[Floater] = []
+	var jumped: Array[Floater] = []
 	for mark: CourseMark in course.marks:
-		if mark.is_boat():
-			_add_boat(mark)
-		elif mark.is_line_end():
-			_add_pin(mark)
+		var floater: Floater = null
+		if old.has(mark.id):
+			floater = old[mark.id]
+			old.erase(mark.id)
+			if floater.at != mark.position:
+				floater.at = mark.position
+				jumped.append(floater)
 		else:
-			_add_buoy(mark)
-	_add_line(CourseMark.START_BOAT, CourseMark.START_PIN)
-	_add_line(CourseMark.FINISH_BOAT, CourseMark.FINISH_PIN)
-	set_lines_visible(lines_visible)
+			floater = _add_mark(mark)
+			jumped.append(floater)
+		placed.append(floater)
+	for gone: Floater in old.values():
+		_free_floater(gone)
+	_floaters = placed
+	_update_line(CourseMark.START_BOAT, CourseMark.START_PIN)
+	_update_line(CourseMark.FINISH_BOAT, CourseMark.FINISH_PIN)
 	update_now()
-	# They were just put in place: no sliding in from the origin.
-	reset_physics_interpolation()
+	# New and moved pieces are put straight at their spot: no sliding in from the old one (or from
+	# the origin) over the next tick.
+	for floater: Floater in jumped:
+		floater.node.reset_physics_interpolation()
+		if floater.flag != null:
+			floater.flag.reset_physics_interpolation()
 
 
 ## Shows or hides the lines on the water.
 func set_lines_visible(shown: bool) -> void:
 	lines_visible = shown
-	for line: MeshInstance3D in _lines:
-		line.visible = shown
+	for line: Line in _lines.values():
+		line.node.visible = shown
 
 
 ## The waves the lines ride on: WaveField.shader_parameters() of the simulation's water (empty for
@@ -194,6 +242,11 @@ func line_count() -> int:
 	return _lines.size()
 
 
+## The line on the water that ends at this boat (CourseMark.START_BOAT or FINISH_BOAT; null if none).
+func line_at(boat_id: String) -> MeshInstance3D:
+	return _lines[boat_id].node if _lines.has(boat_id) else null
+
+
 func _physics_process(_delta: float) -> void:
 	if course != null:
 		update_now()
@@ -222,13 +275,13 @@ func _float(floater: Floater, time_s: float) -> void:
 		_into_wind = into_wind.normalized()
 	var turned: Basis = Basis.looking_at(_into_wind, Vector3.UP)
 	var tilt: Quaternion = Quaternion(Vector3.UP, _water_up(floater, turned, time_s))
-	floater.node.global_transform = Transform3D(Basis(tilt) * turned, on_water)
+	floater.node.global_transform = Transform3D((Basis(tilt) * turned).scaled_local(Vector3.ONE * floater.size), on_water)
 	if floater.flag != null:
 		var mast_foot: Vector3 = floater.node.global_transform * MAST_FOOT
 		var flag_wind_ms: Vector3 = Vector3.ZERO
 		if _wind_at.is_valid():
-			flag_wind_ms = _wind_at.call(mast_foot + Vector3.UP * WindFlag.POLE_HEIGHT_M)
-		floater.flag.place(mast_foot, -_into_wind, flag_wind_ms.length())
+			flag_wind_ms = _wind_at.call(mast_foot + Vector3.UP * WindFlag.POLE_HEIGHT_M * floater.size)
+		floater.flag.place(mast_foot, -_into_wind, flag_wind_ms.length(), floater.size)
 
 
 ## The way a floating thing's top leans: the water's normal, from the water's rise across it (its
@@ -249,11 +302,26 @@ func _height_at_point(point: Vector3, time_s: float) -> float:
 
 # ---------------------------------------------------------------- the parts
 
-func _add_buoy(mark: CourseMark) -> void:
-	var node: Node3D = _add_floater(Kind.BUOY, mark, "Mark " + mark.id, BUOY_FOOTPRINT_M).node
+## The buoy or the boat for a mark, by its kind.
+func _add_mark(mark: CourseMark) -> Floater:
+	if mark.is_boat():
+		return _add_boat(mark)
+	if mark.is_line_end():
+		return _add_pin(mark)
+	return _add_buoy(mark)
+
+
+## A mark's pieces go: out of the scene now, freed at the end of the frame (a boat's wind flag with it).
+func _free_floater(floater: Floater) -> void:
+	remove_child(floater.node)
+	floater.node.queue_free()
+
+
+func _add_buoy(mark: CourseMark) -> Floater:
+	var buoy: Floater = _add_floater(Kind.BUOY, mark, "Mark " + mark.id, BUOY_FOOTPRINT_M)
+	var node: Node3D = buoy.node
 	_add_part(node, "Body", _buoy_mesh, _gate_material if mark.is_gate_mark() else _mark_material,
 		Vector3(0.0, BUOY_HEIGHT_M * 0.5 - BUOY_DRAFT_M, 0.0))
-	_add_part(node, "Float", _float_mesh, _float_material, Vector3(0.0, 0.02, 0.0))
 	var top_m: float = BUOY_HEIGHT_M - BUOY_DRAFT_M
 	_add_flag(node, top_m, _flag_material)
 	# The name on both sides of the flag, each a little in front of its side.
@@ -271,18 +339,24 @@ func _add_buoy(mark: CourseMark) -> void:
 		# A label faces +Z; turned a quarter round it faces the side it sits on.
 		label.rotation = Vector3(0.0, side * PI * 0.5, 0.0)
 		node.add_child(label)
+	return buoy
 
 
-func _add_pin(mark: CourseMark) -> void:
-	var node: Node3D = _add_floater(Kind.PIN, mark, "Pin " + mark.id, BUOY_FOOTPRINT_M).node
-	_add_part(node, "Body", _pin_mesh, _mark_material, Vector3(0.0, PIN_HEIGHT_M * 0.5 - PIN_DRAFT_M, 0.0))
+## A line's pin end: the rounding marks' orange buoy (one look for everything you sail to or round),
+## with a flag in its line's colour, as the boat at the line's other end flies (orange: the start,
+## blue: the finish). It was a small buoy, the hardest thing to see at the start.
+func _add_pin(mark: CourseMark) -> Floater:
+	var pin: Floater = _add_floater(Kind.PIN, mark, "Pin " + mark.id, BUOY_FOOTPRINT_M)
+	_add_part(pin.node, "Body", _buoy_mesh, _mark_material, Vector3(0.0, BUOY_HEIGHT_M * 0.5 - BUOY_DRAFT_M, 0.0))
 	var finish: bool = mark.id == CourseMark.FINISH_PIN
-	_add_flag(node, PIN_HEIGHT_M - PIN_DRAFT_M, _finish_flag_material if finish else _start_flag_material)
+	_add_flag(pin.node, BUOY_HEIGHT_M - BUOY_DRAFT_M, _finish_flag_material if finish else _start_flag_material)
+	return pin
 
 
-func _add_boat(mark: CourseMark) -> void:
+func _add_boat(mark: CourseMark) -> Floater:
 	var finish: bool = mark.id == CourseMark.FINISH_BOAT
-	var boat: Floater = _add_floater(Kind.BOAT, mark, "Finish boat" if finish else "Committee boat", BOAT_FOOTPRINT_M)
+	var boat: Floater = _add_floater(Kind.BOAT, mark, "Finish boat" if finish else "Committee boat", BOAT_FOOTPRINT_M * BOAT_SCALE)
+	boat.size = BOAT_SCALE
 	var node: Node3D = boat.node
 	_add_part(node, "Hull", _hull_mesh, _hull_material, Vector3.ZERO)
 	_add_part(node, "Cabin", _cabin_mesh, _cabin_material, CABIN_AT)
@@ -298,8 +372,10 @@ func _add_boat(mark: CourseMark) -> void:
 		var color: Color = CourseOverlay.FINISH_FLAG if finish else CourseOverlay.START_FLAG
 		(cloth.material_override as ShaderMaterial).set_shader_parameter("cloth_color", color)
 	boat.flag = flag
+	return boat
 
 
+## A new floating thing for a mark, in the scene (set_course() keeps the list).
 func _add_floater(kind: Kind, mark: CourseMark, node_name: String, footprint_m: Vector2) -> Floater:
 	var floater: Floater = Floater.new()
 	floater.kind = kind
@@ -309,7 +385,6 @@ func _add_floater(kind: Kind, mark: CourseMark, node_name: String, footprint_m: 
 	floater.node = Node3D.new()
 	floater.node.name = node_name
 	add_child(floater.node)
-	_floaters.append(floater)
 	return floater
 
 
@@ -332,33 +407,40 @@ func _add_part(node: Node3D, part_name: String, mesh: Mesh, material: Material, 
 	return part
 
 
-## A faint strip on the water between a line's two ends (none if the course has no such line).
-func _add_line(boat_id: String, pin_id: String) -> void:
+## The faint strip on the water between a line's two ends, as the course has them now: made when the
+## course gets the line, drawn again when an end moved, freed when the course loses an end.
+func _update_line(boat_id: String, pin_id: String) -> void:
 	var boat: CourseMark = course.mark(boat_id)
 	var pin: CourseMark = course.mark(pin_id)
+	var line: Line = _lines[boat_id] if _lines.has(boat_id) else null
 	if boat == null or pin == null:
+		if line != null:
+			remove_child(line.node)
+			line.node.queue_free()
+			_lines.erase(boat_id)
 		return
-	var line: MeshInstance3D = MeshInstance3D.new()
-	line.name = "Line " + boat_id.get_slice(" ", 0)
-	line.mesh = _strip_mesh(boat.position, pin.position)
-	line.material_override = _line_material
-	line.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	# The shader lifts it onto the waves: let the culling know.
-	line.extra_cull_margin = 3.0
-	add_child(line)
-	_lines.append(line)
+	if line == null:
+		line = Line.new()
+		line.node = MeshInstance3D.new()
+		line.node.name = "Line " + boat_id.get_slice(" ", 0)
+		line.node.material_override = _line_material
+		line.node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		# The shader lifts it onto the waves: let the culling know.
+		line.node.extra_cull_margin = 3.0
+		line.node.visible = lines_visible
+		add_child(line.node)
+		_lines[boat_id] = line
+	elif line.from == boat.position and line.to == pin.position:
+		return
+	line.from = boat.position
+	line.to = pin.position
+	line.node.mesh = _strip_mesh(boat.position, pin.position)
 
 
 # ---------------------------------------------------------------- the shared meshes
 
 func _make_shared_parts() -> void:
-	_buoy_mesh = _cylinder(BUOY_RADIUS_M * 0.85, BUOY_RADIUS_M, BUOY_HEIGHT_M, 24)
-	_pin_mesh = _cylinder(PIN_RADIUS_M * 0.85, PIN_RADIUS_M, PIN_HEIGHT_M, 16)
-	_float_mesh = TorusMesh.new()
-	_float_mesh.inner_radius = BUOY_RADIUS_M * 0.9
-	_float_mesh.outer_radius = BUOY_RADIUS_M * 1.3
-	_float_mesh.rings = 24
-	_float_mesh.ring_segments = 8
+	_buoy_mesh = _cylinder(BUOY_RADIUS_M, BUOY_RADIUS_M, BUOY_HEIGHT_M, 24)
 	_pole_mesh = _cylinder(0.02, 0.02, FLAG_POLE_M, 6)
 	_flag_mesh = QuadMesh.new()
 	_flag_mesh.size = FLAG_SIZE_M
@@ -367,9 +449,8 @@ func _make_shared_parts() -> void:
 	_hull_mesh = _hull()
 	_cabin_mesh = BoxMesh.new()
 	_cabin_mesh.size = CABIN_SIZE_M
-	_mark_material = VisualMath.plain_material(MARK_COLOR)
-	_gate_material = VisualMath.plain_material(GATE_COLOR)
-	_float_material = VisualMath.plain_material(FLOAT_COLOR)
+	_mark_material = _fluorescent(MARK_COLOR)
+	_gate_material = _fluorescent(GATE_COLOR)
 	_pole_material = VisualMath.plain_material(Color(0.85, 0.85, 0.82))
 	_flag_material = _two_sided(FLAG_COLOR)
 	_start_flag_material = _two_sided(CourseOverlay.START_FLAG)
@@ -389,6 +470,16 @@ static func _cylinder(top_radius: float, bottom_radius: float, height: float, se
 	cylinder.radial_segments = segments
 	cylinder.rings = 1
 	return cylinder
+
+
+## A buoy's skin: the colour, a little glossy, glowing with BUOY_GLOW of its own colour.
+static func _fluorescent(color: Color) -> StandardMaterial3D:
+	var material: StandardMaterial3D = VisualMath.plain_material(color)
+	material.roughness = 0.45
+	material.emission_enabled = true
+	material.emission = color
+	material.emission_energy_multiplier = BUOY_GLOW
+	return material
 
 
 static func _two_sided(color: Color) -> StandardMaterial3D:

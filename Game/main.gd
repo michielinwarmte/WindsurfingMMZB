@@ -34,8 +34,8 @@ extends Node3D
 ##
 ## The race director (Documentation/reports/multiplayer/RACE_DIRECTOR.md): in a race the host (or
 ## the player of a race alone) has a RaceDirector: races follow one another without reloading, and
-## the course can change while everyone sails (apply_course(), on every PC). Its line (RaceNotice)
-## says when the next countdown begins.
+## the course can change while everyone sails (apply_course(), on every PC). Its lines on the race
+## card say when the next countdown begins.
 ##
 ## A map scene sails with this script too (maps/silvaplana/sail_silvaplana.gd extends it): the
 ## map brings its own sun and sky (so Sun is optional), its own wind and start (it overrides
@@ -96,11 +96,10 @@ var _audio: GameAudio = null
 ## LAN multiplayer: the other PCs' boards (null when the game is not a network game); whether the
 ## menu is open (the game does not pause), and until when a message from the network stays.
 var _net: NetBoards = null
-## The race director (the host of a race, or the player of a race alone) and its line on the screen.
+## The race director (the host of a race, or the player of a race alone).
 var _director: RaceDirector = null
 ## Gear chosen in the menu during a race, waiting for the race's end (R3).
 var _gear_waiting: bool = false
-var _race_notice: RaceNotice = null
 ## The race director's view (M; RACE_DIRECTOR.md R5), built the first time it opens.
 var _director_view: RaceDirectorView = null
 var _net_menu_open: bool = false
@@ -255,7 +254,7 @@ func _process(delta: float) -> void:
 	elif _net != null:
 		_hud.set_other_boards(_net.puppet_positions())
 	if _director != null:
-		_race_notice.show_text(RaceDirector.notice_text(_director.info(), true, _race_runner.race))
+		RaceDirector.show_on_card(_race_runner.hud, RaceDirector.notice_lines(_director.info(), true, _race_runner.race))
 	if _gear_waiting:
 		_take_chosen_gear_when_allowed()
 	if _net_message_until_ms >= 0 and Time.get_ticks_msec() > _net_message_until_ms:
@@ -829,8 +828,6 @@ func _add_race_director() -> void:
 	add_child(_director)
 	_director.setup(_race_runner, self)
 	_director.course_published.connect(_on_course_published)
-	_race_notice = RaceNotice.new()
-	_hud.add_child(_race_notice)
 	if _net != null:
 		_net.director = _director
 
