@@ -364,6 +364,13 @@ func _build_sailing_rows(s: SettingsValues) -> void:
 	_add_slider(grid, "Fin stiffness", SettingsValues.FIN_STIFFNESS_MIN, SettingsValues.FIN_STIFFNESS_MAX, 0.25, s.fin_stiffness,
 		func(v: float) -> String: return "%.2f x  (1 = the measured carbon slalom fin; at the next start)" % v,
 		func(v: float) -> void: s.fin_stiffness = v)
+	# The interactive tacks and gybes (Max, 6 November 2026): each part on or off, to compare.
+	_add_switch(grid, "Turn with A/D", s.manoeuvre_turn_with_keys, "In a tack or gybe: toward the turn tighter, the other key gives it up",
+		func(on: bool) -> void: s.manoeuvre_turn_with_keys = on)
+	_add_switch(grid, "Body carves", s.manoeuvre_body_carves, "Mouse body: toward the turn carves harder, away flattens it",
+		func(on: bool) -> void: s.manoeuvre_body_carves = on)
+	_add_switch(grid, "Flip on your cue", s.manoeuvre_flip_on_cue, "Space again at \"flip now\": the rig goes across (none: by itself)",
+		func(on: bool) -> void: s.manoeuvre_flip_on_cue = on)
 
 
 ## Package B, the body on the mouse (an experiment, ROADMAP GP2; MouseBody). The switch turns it on;

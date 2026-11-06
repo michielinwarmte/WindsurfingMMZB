@@ -72,6 +72,9 @@ const RACE_KEYS: Array[Array] = [
 	["Esc", "menu"],
 	["F1", "telemetry"],
 ]
+## The "flip now" chip, first along the bottom while a second Space puts the rig across in a tack or
+## a gybe (the interactive manoeuvres, Max, 6 November 2026).
+const FLIP_KEY: Array = ["Space", "flip now"]
 const SPECTATE_KEYS: Array[Array] = [
 	["Tab", "next board"],
 	["Shift+Tab", "previous"],
@@ -111,6 +114,9 @@ var _keys: Array[Array] = FREE_KEYS
 ## the mouse they were shown with (MouseBody.PushOnMouse; -1: no body on the mouse).
 var _base_keys: Array[Array] = FREE_KEYS
 var _mouse_push: int = -1
+## Whether the "flip now" hint is shown (the window of a tack or gybe where a second Space puts the
+## rig across: PlayerController.flip_cue_open()).
+var _flip_hint: bool = false
 var _rose: WindRose
 ## The gauges in a row at the bottom in the middle: the push, and the body beside it.
 var _gauges: HBoxContainer
@@ -382,6 +388,11 @@ func help_text() -> String:
 func _show_keys(keys: Array[Array]) -> void:
 	_base_keys = keys
 	var shown: Array[Array] = with_mouse_keys(keys, _mouse_push)
+	if _flip_hint:
+		# The "flip now" window of a tack or gybe (PlayerController.flip_cue_open()): first in the row.
+		var with_flip: Array[Array] = [FLIP_KEY]
+		with_flip.append_array(shown)
+		shown = with_flip
 	if shown == _keys and _hints.get_child_count() > 0:
 		return
 	_keys = shown
@@ -415,6 +426,14 @@ func _show_mouse_keys(mouse_push: int) -> void:
 	if mouse_push == _mouse_push:
 		return
 	_mouse_push = mouse_push
+	_show_keys(_base_keys)
+
+
+## The "flip now" hint along the bottom while a second Space puts the rig across (on), or not.
+func _show_flip_hint(on: bool) -> void:
+	if on == _flip_hint:
+		return
+	_flip_hint = on
 	_show_keys(_base_keys)
 
 
@@ -472,6 +491,7 @@ func update_from(t: Telemetry, controller: PlayerController, camera_name: String
 	# The body on the mouse, when the player has it on, and its keys along the bottom.
 	_body_gauge.set_body(null if use_autopilot else controller.body, t)
 	_show_mouse_keys(-1 if use_autopilot or controller.body == null else controller.body.push_on_mouse)
+	_show_flip_hint(not use_autopilot and controller.flip_cue_open())
 	if not _race_mode:
 		_fill_status_card(t, controller, camera_name, use_autopilot)
 	_rose.heading_deg = t.heading_deg

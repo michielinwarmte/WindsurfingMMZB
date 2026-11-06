@@ -452,3 +452,211 @@ func test_ai_hands_keep_the_headings_rule_for_space() -> void:
 	assert_eq(controller.manoeuvre, PlayerController.Manoeuvre.TACK_HEADING_UP, "the hands' stick does not choose")
 	_run(controller, beam, controls, 0.1)
 	assert_eq(controller.manoeuvre, PlayerController.Manoeuvre.TACK_HEADING_UP, "nor just after")
+
+
+## Starts a manoeuvre on this course with this key held at Space (the key stays held; "" none).
+func _start(controller: PlayerController, controls: SimControls, telemetry: Telemetry, key: String) -> void:
+	controller.update(telemetry, controls, DT)
+	if key != "":
+		Input.action_press(key)
+	Input.action_press("tack")
+	controller.update(telemetry, controls, DT)
+	Input.action_release("tack")
+
+
+## The interactive tacks and gybes (Max, 6 November 2026), part 1: the turn key held toward the turn
+## tightens it, let go the turn goes on at its own rate, on both kinds of manoeuvre.
+func test_the_turn_key_toward_the_turn_tightens_it() -> void:
+	var controller: PlayerController = PlayerController.new()
+	var controls: SimControls = SimControls.new()
+	var broad: Telemetry = _telemetry(140.0)  # starboard tack: A turns away from the wind
+	_start(controller, controls, broad, "steer_left")
+	assert_eq(controller.manoeuvre, PlayerController.Manoeuvre.GYBE_BEARING_AWAY)
+	_run(controller, broad, controls, 0.3)
+	assert_almost_eq(controller.wanted_rate_dps, -controller.key_gybe_rate_dps, 0.01, "A held: the gybe at the key's rate, to the left")
+	Input.action_release("steer_left")
+	_run(controller, broad, controls, 0.1)
+	assert_almost_eq(controller.wanted_rate_dps, -controller.gybe_rate_dps, 0.01, "let go: the gybe's own rate")
+
+	var tacking: PlayerController = PlayerController.new()
+	var close: Telemetry = _telemetry(60.0)
+	_start(tacking, controls, close, "steer_right")
+	assert_eq(tacking.manoeuvre, PlayerController.Manoeuvre.TACK_HEADING_UP)
+	_run(tacking, close, controls, 0.3)
+	assert_almost_eq(tacking.wanted_rate_dps, tacking.key_tack_rate_dps, 0.01, "D held: the tack's carve at the key's rate")
+	Input.action_release("steer_right")
+	_run(tacking, close, controls, 0.1)
+	assert_almost_eq(tacking.wanted_rate_dps, tacking.tack_rate_dps, 0.01, "let go: the tack's own rate")
+
+	var off: PlayerController = PlayerController.new()
+	off.turn_follows_key = false
+	_start(off, controls, broad, "steer_left")
+	_run(off, broad, controls, 0.3)
+	assert_almost_eq(off.wanted_rate_dps, -off.gybe_rate_dps, 0.01, "the setting off: the key changes nothing")
+
+
+## Part 1: the other key, after the choosing window, gives the manoeuvre up and steers as on a reach.
+func test_the_other_key_gives_the_manoeuvre_up() -> void:
+	var controller: PlayerController = PlayerController.new()
+	var controls: SimControls = SimControls.new()
+	var broad: Telemetry = _telemetry(140.0)
+	_start(controller, controls, broad, "steer_left")
+	Input.action_release("steer_left")
+	_run(controller, broad, controls, 0.5)
+	assert_eq(controller.manoeuvre, PlayerController.Manoeuvre.GYBE_BEARING_AWAY)
+	Input.action_press("steer_right")  # toward the wind: against the gybe
+	_run(controller, broad, controls, 0.3)
+	assert_eq(controller.manoeuvre, PlayerController.Manoeuvre.NONE, "the gybe is given up")
+	assert_gt(controller.wanted_rate_dps, 5.0, "and D turns the board right, back toward the wind")
+	Input.action_release("steer_right")
+
+	var off: PlayerController = PlayerController.new()
+	off.turn_follows_key = false
+	_start(off, controls, broad, "steer_left")
+	Input.action_release("steer_left")
+	_run(off, broad, controls, 0.5)
+	Input.action_press("steer_right")
+	_run(off, broad, controls, 0.3)
+	assert_eq(off.manoeuvre, PlayerController.Manoeuvre.GYBE_BEARING_AWAY, "the setting off: the gybe goes on")
+
+
+## Part 2: the mouse body toward the inside of the turn carves harder, toward the outside flattens,
+## and the back foot presses through the turn; the body keeps its place until the manoeuvre's end.
+func test_the_body_carves_the_manoeuvre() -> void:
+	# [the mouse sideways, the carve: +1 harder, -1 flatter]. A gybe from starboard tack turns left:
+	# as seen from behind, the mouse to the left puts the inside (port) rail down.
+	for c: Array in [[-1.0, 1.0], [0.0, 0.0], [1.0, -1.0]]:
+		var controller: PlayerController = PlayerController.new()
+		var controls: SimControls = SimControls.new()
+		controller.body = MouseBody.new()
+		controller.body.side = c[0]
+		controller.body.back = 1.0
+		var broad: Telemetry = _telemetry(140.0)
+		_start(controller, controls, broad, "")
+		assert_eq(controller.manoeuvre, PlayerController.Manoeuvre.GYBE_BEARING_AWAY)
+		_run(controller, broad, controls, 0.3)
+		assert_almost_eq(controller.wanted_rate_dps, -minf(controller.gybe_rate_dps * (1.0 + controller.body_carve_share * c[1]), controller.gybe_rate_max_dps), 0.01, "mouse at %+.0f" % c[0])
+		assert_almost_eq(controls.feet_pitch_press, 1.0, 1e-6, "the back foot presses in the gybe")
+		assert_almost_eq(controller.body.side, c[0], 1e-6, "the body keeps its place through the gybe")
+		# Round onto port tack: the way out at the gybe's own rate, then the body goes back to the middle.
+		_run(controller, _telemetry(-150.0), controls, 0.1)
+		assert_almost_eq(controller.wanted_rate_dps, -controller.gybe_rate_dps, 0.01, "the exit at its own rate")
+		_run(controller, _telemetry(-110.0), controls, 0.1)
+		assert_eq(controller.manoeuvre, PlayerController.Manoeuvre.NONE)
+		assert_almost_eq(controller.body.side, 0.0, 1e-6, "back to the middle at the gybe's end")
+	# A tack from starboard tack turns right: the mouse to the right carves it (the heels).
+	var tacking: PlayerController = PlayerController.new()
+	var tack_controls: SimControls = SimControls.new()
+	tacking.body = MouseBody.new()
+	tacking.body.side = 1.0
+	tacking.body.back = 1.0
+	_start(tacking, tack_controls, _telemetry(60.0), "")
+	_run(tacking, _telemetry(60.0), tack_controls, 0.3)
+	assert_almost_eq(tacking.wanted_rate_dps, minf(tacking.tack_rate_dps * (1.0 + tacking.body_carve_share), tacking.tack_rate_max_dps), 0.01, "the tack carved harder, up to its limit")
+	assert_gt(tacking.wanted_rate_dps, tacking.tack_rate_dps, "harder than on its own")
+	assert_eq(tack_controls.feet_pitch_press, 0.0, "no back foot in a tack")
+	# The setting off: the body rests in the turn, as before.
+	var off: PlayerController = PlayerController.new()
+	var off_controls: SimControls = SimControls.new()
+	off.body_in_manoeuvres = false
+	off.body = MouseBody.new()
+	off.body.side = -1.0
+	off.body.back = 1.0
+	_start(off, off_controls, _telemetry(140.0), "")
+	assert_almost_eq(off.body.side, 0.0, 1e-6, "back to the middle at Space, as before")
+	_run(off, _telemetry(140.0), off_controls, 0.3)
+	assert_almost_eq(off.wanted_rate_dps, -off.gybe_rate_dps, 0.01)
+	assert_eq(off_controls.feet_pitch_press, 0.0)
+
+
+## Part 3: in the window before the rig goes across by itself a second Space puts it across now; the
+## window opens near dead downwind in a gybe and once the bow is through the wind in a tack.
+func test_a_second_space_flips_the_rig_on_cue() -> void:
+	var controller: PlayerController = PlayerController.new()
+	var controls: SimControls = SimControls.new()
+	_start(controller, controls, _telemetry(140.0), "")
+	_run(controller, _telemetry(140.0), controls, 0.5)
+	assert_false(controller.flip_cue_open(), "a broad reach: too early")
+	var near_downwind: Telemetry = _telemetry(177.0)
+	_run(controller, near_downwind, controls, 0.1)
+	assert_true(controller.flip_cue_open(), "near dead downwind: flip now")
+	assert_eq(controls.hold_side, 0, "no cue yet: the wind decides, as before")
+	Input.action_press("tack")
+	controller.update(near_downwind, controls, DT)
+	Input.action_release("tack")
+	assert_eq(controls.hold_side, 1, "the cue: the rig held on the new (starboard) side")
+	assert_false(controller.flip_cue_open(), "one cue a manoeuvre")
+	# The sail across and the wind behind it on the new side: the hold lets go.
+	var across: Telemetry = _telemetry(-170.0)
+	_run(controller, across, controls, 0.1)
+	assert_eq(controls.hold_side, 0, "across and kept there by the wind")
+
+	var tacking: PlayerController = PlayerController.new()
+	var tack_controls: SimControls = SimControls.new()
+	_start(tacking, tack_controls, _telemetry(60.0), "")
+	var through: Telemetry = _telemetry(60.0)
+	through.awa_deg = -30.0  # the apparent wind on the new side, wide enough for the sail to fill there
+	through.twa_at_sail_deg = -10.0  # the bow 10 degrees through the wind: too early
+	tacking.update(through, tack_controls, DT)
+	assert_false(tacking.flip_cue_open(), "10 degrees through: not yet")
+	through.twa_at_sail_deg = -20.0  # 20 degrees through, the rig still on the old side
+	tacking.update(through, tack_controls, DT)
+	assert_true(tacking.flip_cue_open(), "the bow through the wind: flip now")
+	through.awa_deg = -8.0
+	tacking.update(through, tack_controls, DT)
+	assert_false(tacking.flip_cue_open(), "the sail would luff on the new side: not yet")
+	through.awa_deg = -30.0
+	tacking.update(through, tack_controls, DT)
+	Input.action_press("tack")
+	tacking.update(through, tack_controls, DT)
+	Input.action_release("tack")
+	assert_lt(tacking.auto_sheet_pilot.flip_twa_deg, 20.0, "the cue: the pilot flips the rig now, where the bow is")
+	# Round onto the new tack and out of it: the pilot's own flip angle comes back.
+	_run(tacking, _telemetry(-30.0), tack_controls, 0.1)
+	_run(tacking, _telemetry(-70.0), tack_controls, 0.1)
+	assert_eq(tacking.manoeuvre, PlayerController.Manoeuvre.NONE)
+	assert_almost_eq(tacking.auto_sheet_pilot.flip_twa_deg, 25.0, 1e-6, "the pilot's own flip angle again")
+
+	var off: PlayerController = PlayerController.new()
+	off.flip_on_cue = false
+	_start(off, controls, _telemetry(140.0), "")
+	_run(off, near_downwind, controls, 0.1)
+	assert_false(off.flip_cue_open(), "the setting off: no window")
+
+
+## An AI skipper's hands sail the manoeuvres as before: the stick does not tighten or give up the
+## turn, and there is no flip window.
+func test_ai_hands_sail_the_manoeuvres_as_before() -> void:
+	var controller: PlayerController = PlayerController.new()
+	var hands: AiHands = AiHands.new()
+	controller.hands = hands
+	var controls: SimControls = SimControls.new()
+	var broad: Telemetry = _telemetry(140.0)
+	controller.update(broad, controls, DT)
+	hands.tack = true
+	controller.update(broad, controls, DT)
+	assert_eq(controller.manoeuvre, PlayerController.Manoeuvre.GYBE_BEARING_AWAY)
+	hands.steer = -1.0  # along the gybe's turn
+	_run(controller, broad, controls, 0.3)
+	assert_almost_eq(controller.wanted_rate_dps, -controller.gybe_rate_dps, 0.01, "the gybe's own rate")
+	hands.steer = 1.0  # against it
+	_run(controller, broad, controls, 0.6)
+	assert_eq(controller.manoeuvre, PlayerController.Manoeuvre.GYBE_BEARING_AWAY, "not given up")
+	_run(controller, _telemetry(177.0), controls, 0.1)
+	assert_false(controller.flip_cue_open(), "no flip window for the AI")
+
+
+## The HUD shows "flip now" first along the bottom while the window is open.
+func test_the_hud_shows_flip_now_in_the_window() -> void:
+	var hud: Hud = Hud.new()
+	add_child_autofree(hud)
+	var controller: PlayerController = PlayerController.new()
+	var controls: SimControls = SimControls.new()
+	_start(controller, controls, _telemetry(140.0), "")
+	hud.update_from(Telemetry.new(), controller, "stern", false)
+	assert_false(hud.help_text().begins_with("Space flip now"), "not before the window")
+	_run(controller, _telemetry(177.0), controls, 0.1)
+	hud.update_from(Telemetry.new(), controller, "stern", false)
+	assert_true(hud.help_text().begins_with("Space flip now"), hud.help_text())
+	hud.update_from(Telemetry.new(), controller, "stern", true)
+	assert_false(hud.help_text().begins_with("Space flip now"), "not behind the autopilot")
