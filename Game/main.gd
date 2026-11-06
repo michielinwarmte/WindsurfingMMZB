@@ -165,6 +165,7 @@ func _ready() -> void:
 	_pause_menu.settings_closed.connect(apply_settings_live)
 	_pause_menu.start_menu_requested.connect(_go_to_start_menu)
 	_pause_menu.gear_closed.connect(_on_gear_closed)
+	_pause_menu.spectate_requested.connect(_on_spectate_requested)
 	if start_in_menu:
 		_enter_menu_mode()
 	_apply_command_line_options()
@@ -362,6 +363,12 @@ func spectate_entry_text() -> String:
 	if not _stays_spectator():
 		return "Stay a spectator (also the next races)"
 	return "Race again at the next start"
+
+
+## The menu's spectate entry, chosen: done, and back to the race.
+func _on_spectate_requested() -> void:
+	spectate_or_race_again()
+	_set_paused(false)
 
 
 ## The menu's spectate entry chosen (spectate_6nov.md): spectate now (a board in the race under way
@@ -1086,6 +1093,9 @@ func _set_net_menu_open(open: bool) -> void:
 	if open:
 		_pause_menu.open("A network game: the water goes on while this menu is open.")
 		_offer_gear_change()
+		# Spectating a LAN race (spectate_6nov.md): the entry says what it does now.
+		var offered: bool = Lan.game.race and (_race_runner != null or _net.mirror != null)
+		_pause_menu.set_spectate_choice(offered, spectate_entry_text())
 	else:
 		_pause_menu.close()
 	_update_mouse_capture()
