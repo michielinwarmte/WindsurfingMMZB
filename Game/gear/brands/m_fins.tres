@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="Brand" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://gear/brand.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/brands/m_fins/logo.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/brands/m_fins/wordmark.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/brands/m_fins/mark.png" id="4"]
+
+[resource]
+script = ExtResource("1")
+name = "M Fins"
+slug = "m_fins"
+tagline = "Made to measure."
+makes_boards = false
+makes_sails = false
+makes_fins = true
+primary = Color(0.0824, 0.0902, 0.102, 1)
+secondary = Color(0.949, 0.9569, 0.9608, 1)
+accent = Color(0.7137, 0.9412, 0.1176, 1)
+logo = ExtResource("2")
+wordmark = ExtResource("3")
+mark = ExtResource("4")

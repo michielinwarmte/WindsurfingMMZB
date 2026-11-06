@@ -52,6 +52,8 @@ Part 5 of [the fleet's training and the gear](PLAN.md), by the builder agent on 
    - a fin's depth in centimetres (`pj_new_sealand_slalom_42.tres`).
 
    A test fails if the file's name is not the id, or if two items share an id.
+
+   **A fin is different (6 November 2026, [fin_brands.md](fin_brands.md)).** A fin brand has one file, its fin at 38 cm (`<brand slug>_slalom_38.tres`), and the player sets any depth from 28 to 52 cm with the Fin tab's slider. The game makes the other depths from the 38 cm file when they are first asked for (`GearCatalogue.fin_of()`): the same fin with that depth's `span_m`, the area of a race fin of that depth (`Game/gear/fin_sizes.tres`, times the 38 cm file's own share of the race fin's area: 1 unless its area is not a race fin's), that depth's wind range and card line, and the 38 cm file's model stretched to the depth and the chord. So a **new fin brand** is: the brand (its `.tres` in `Game/gear/brands/` with `makes_fins = true`, its logos, its path in `Brand.PATHS`), and one fin file at 38 cm, copied from `m_fins_slalom_38.tres` with the brand, the `model_name` and the looks changed (`fin_colour`: the body, fully transparent for the model's carbon; `fin_tip_colour` and `fin_tip_share`: the coloured tip). Montag's five sizes (34, 38, 40, 42, 46) keep their own files and models; a file at another depth would be used in place of the made one (keep its numbers those of `fin_sizes.tres`, or the slider jumps there).
 2. **Fill in the fields:**
 
    | Field | What |
@@ -68,11 +70,12 @@ Part 5 of [the fleet's training and the gear](PLAN.md), by the builder agent on 
    | `deck`, `bottom` | a board's pictures in the hull's UV, like `board_deck.png` and `board_bottom.png` (null: the default pictures) |
    | `panels` | a sail's panel picture in the sail's UV, with the alpha code of `sail_panels.png` (null: the default picture) |
    | `cloth` | a sail's cloth colour. It replaces the red cloth (alpha 1) of the panel picture. Leave it fully transparent for the brand's primary colour; white keeps the picture's own colours |
+   | `fin_colour`, `fin_tip_colour`, `fin_tip_share` | a fin's body colour (fully transparent: the model's own), its tip's colour (fully transparent: none) and how much of the depth the tip's colour covers, from the tip up |
 
 3. **The models.** Put them in `Game/assets/models/gear/<brand slug>/` (a suggestion; any path works). Build them the way `tools/blender/build_rig_models.py` builds the defaults, with the same node and material names, origins and axes:
    - A **board**: a mesh called `Hull` with the materials `board_deck` and `board_bottom`. Its origin is the board's centre at mid-thickness, and the bow points to -Z.
    - A **sail**: a mesh called `SailCloth` with the surfaces `sail_cloth`, `sail_window` and `sail_sleeve`. It needs the UV and UV2 the cloth shader reads (u along a batten, v up the luff, UV2.x the chord in metres). Its origin is the mast foot, with the luff up +Y and the clew at `(boom_m, boom_height_m, 0)` of its own config.
-   - A **fin**: hanging down from its root at the origin, with the leading edge to -Z. It is stretched to `span_m` like the default fin.
+   - A **fin**: hanging down from its root at the origin, with the leading edge to -Z. It is stretched to `span_m` like the default fin, and along the board by its mean chord (`RigVisuals.fin_stretch()`: a fin made from a 38 cm file wears that file's model, built for the 38 cm fin).
 
    An item with its own model is drawn at its own size, not stretched. The mast and the boom are always the default models, stretched to the sail's `mast_m` and `boom_m`.
 4. **Look at it.** Run `tools/screenshot.sh res://ui/start_menu.tscn .screenshots/gear_page.png 120 --page=gear/sail`, or look at the model from eleven cameras with `tools/screenshot.sh res://dev/rig_view.tscn .screenshots/rig/view.png 600 --gear_sail=<id>` (the pictures get `_gear` in their names). Then run `tools/check.sh` and `tools/test.sh unit -gselect=gear`.

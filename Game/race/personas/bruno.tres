@@ -26,3 +26,4 @@ light_wind = 0.1
 strong_wind = 1.0
 sail_brand = "s3kauai"
 board_brand = "bmx_boards"
+fin_brand = "m_fins"

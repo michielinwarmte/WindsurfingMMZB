@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="Brand" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://gear/brand.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/brands/typhoon_fins/logo.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/brands/typhoon_fins/wordmark.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/brands/typhoon_fins/mark.png" id="4"]
+
+[resource]
+script = ExtResource("1")
+name = "Typhoon Fins"
+slug = "typhoon_fins"
+tagline = "Calm in the eye of the storm."
+makes_boards = false
+makes_sails = false
+makes_fins = true
+primary = Color(0.0549, 0.1216, 0.2667, 1)
+secondary = Color(1, 1, 1, 1)
+accent = Color(0.9098, 0.1961, 0.1686, 1)
+logo = ExtResource("2")
+wordmark = ExtResource("3")
+mark = ExtResource("4")

@@ -26,3 +26,4 @@ light_wind = 0.6
 strong_wind = 0.5
 sail_brand = "gg_sails"
 board_brand = "tripletone"
+fin_brand = "start_fins"

@@ -12,6 +12,10 @@ extends SceneTree
 ## [--sail.<field>=<number>]: try another value of a tuning field without editing code
 ## (the pilot is the controller's auto-sheet pilot; sailor and sail are the config
 ## resources, changed for the whole run).
+## [--gear_board=<id>] [--gear_sail=<id>] [--gear_fin=<id>]: sail a gear page item instead of the
+## default (Game/gear/; a fin of any depth, "nt8_slalom_28"; an id not given keeps the default),
+## built as the game builds it (GearChoice.sim_with()). The fin's depth, area and stiffness are
+## printed first.
 ##
 ## The per-case CSV files have the same columns as tools/simulate.sh, so .scratch/trace.py
 ## works on them.
@@ -27,6 +31,8 @@ const WINDOW_LENGTH_S: float = 12.0
 var _overrides: Dictionary[String, String] = {}
 var _waves: bool = false
 var _wave_scale: float = 1.0
+## The gear sailed (--gear_board, --gear_sail, --gear_fin); null: the default.
+var _gear: GearChoice = null
 
 
 ## One run: who starts where, which key is held when, and when Space is pressed.
@@ -113,6 +119,10 @@ func _initialize() -> void:
 		print("overrides: %s" % str(_overrides))
 	if out_dir != "":
 		DirAccess.make_dir_recursive_absolute(out_dir)
+	if options.has("gear_board") or options.has("gear_sail") or options.has("gear_fin"):
+		_gear = GearChoice.from_ids(options.get("gear_board", ""), options.get("gear_sail", ""), options.get("gear_fin", ""))
+		print("gear: " + _gear.names_line())
+		print(fin_line(_gear.fin_config()))
 
 	var cases: Array[Case] = []
 	for template: Case in _templates():
@@ -143,6 +153,8 @@ func _run_case(c: Case, every: int, out_dir: String) -> Result:
 	for action: String in ["steer_left", "steer_right", "tack", "sheet_in", "sheet_out", "rake_back", "rake_forward"]:
 		Input.action_release(action)
 	var sim: WindsurferSim = WindsurferSim.create_default()
+	if _gear != null:
+		sim = _gear.sim_with(sim)
 	sim.wind_config = sim.wind_config.duplicate()
 	sim.wind_config.speed_kt = c.wind_kt
 	sim.wind = WindField.new(sim.wind_config)
@@ -279,6 +291,19 @@ func _run_case(c: Case, every: int, out_dir: String) -> Result:
 
 
 ## Scales every wave's amplitude and steepness (--wave_scale), in the shared resource.
+## A fin's numbers in one line: its depth, area and root chord, and its stiffness as the flex test
+## sees it (FinModel.point_load_deflection_m(): the test's load at the test's place on this fin) and
+## as the beam's bending stiffness at the root (EI, N m²).
+static func fin_line(fin_config: FinConfig) -> String:
+	var fin: FinModel = FinModel.new(fin_config)
+	var load_n: float = fin_config.flex_test_load_n
+	var position: float = fin_config.flex_test_position
+	var root_ei: float = fin.stiffness_scale * pow(fin_config.root_chord_m(), 4.0)
+	return "fin: %.0f cm deep, %.0f cm², root chord %.1f cm; %.0f N at %.0f %% of its depth bends it %.1f mm (the test fin: %.1f mm); root EI %.0f N m²" % [
+		fin_config.span_m * 100.0, fin_config.area_m2 * 10000.0, fin_config.root_chord_m() * 100.0, load_n, position * 100.0,
+		fin.point_load_deflection_m(load_n, position) * 1000.0, fin_config.flex_test_deflection_m * 1000.0, root_ei]
+
+
 static func scale_waves(wave_set: WaveSetConfig, factor: float) -> void:
 	for wave: GerstnerWaveConfig in wave_set.waves:
 		wave.amplitude_m *= factor

@@ -10,6 +10,11 @@ extends MenuPage
 ## Board tab the board alone, standing on its tail as boards stand in a shop, and on the Fin tab
 ## the board upside down with the fin up, turning about the fin.
 ##
+## The Fin tab (Max, 6 November 2026): each fin brand has one slalom fin, and a slider sets its depth
+## from 28 to 52 cm (FinSizes); the depth recommended for the chosen board's width is marked under
+## the slider in orange. Moving the slider chooses that brand's fin of that depth at once (saved as
+## "<brand>_slalom_<cm>"), and the preview's fin follows.
+##
 ## Keys: the arrows (or the gamepad's stick and d-pad) move between the cards, Enter (or A)
 ## chooses, Ctrl+Tab and Ctrl+Shift+Tab (or the shoulder buttons) change the tab, Esc (or B) goes
 ## back. For screenshots: --page=gear or --page=gear/sail (start_menu.gd).
@@ -39,6 +44,12 @@ const RIG_TAB: int = 1
 ## The line at the bottom of the page; on the Sail tab with PH14's warning.
 const NOTE: String = "Kept at once and sailed from the next start. Each model sails its own real-world size."
 const PH14_NOTE: String = " The sail sizes are not tuned yet (PH14): how each size sails may still change."
+const FIN_TAB: int = 2
+const FIN_NOTE: String = " The fin brands differ in their look: at the same depth their fins sail alike (PJ New Sealand's is wider)."
+## The mark under the depth slider at the depth recommended for the chosen board (the theme's orange).
+const RECOMMENDED_MARK: Color = Color(1.0, 0.62, 0.2)
+## The depth slider's width, px.
+const FIN_SLIDER_WIDTH: float = 420.0
 
 @onready var _tabs: TabContainer = %Tabs
 @onready var _sailing: Label = %Sailing
@@ -51,6 +62,11 @@ const PH14_NOTE: String = " The sail sizes are not tuned yet (PH14): how each si
 var _shown_brand: Dictionary[int, Brand] = {}
 ## Each tab's part under the brands: the brand's header and its model cards.
 var _brand_parts: Dictionary[int, VBoxContainer] = {}
+## The Fin tab's depth slider, the label with the depth and the area, and the place of the fin's
+## card (built again when the depth changes).
+var _fin_slider: HSlider = null
+var _fin_value: Label = null
+var _fin_card_place: HFlowContainer = null
 var _camera: Camera3D
 var _pivot: Node3D
 var _rig: RigVisuals = null
@@ -102,6 +118,9 @@ func choose(item: GearItem) -> void:
 			GameSettings.values.gear_board = item.id()
 	GameSettings.save()
 	_show_choice()
+	# The Fin tab's orange mark is the new board's depth.
+	if item.kind == GearItem.Kind.BOARD and _brand_parts.has(GearItem.Kind.FIN):
+		_fill_brand_part(GearItem.Kind.FIN)
 
 
 func _process(delta: float) -> void:
@@ -174,6 +193,9 @@ func _fill_brand_part(kind: GearItem.Kind) -> void:
 	if brand == null:
 		return
 	part.add_child(_brand_header(brand))
+	if kind == GearItem.Kind.FIN:
+		_fill_fin_part(part, brand)
+		return
 	var items: HFlowContainer = _flow()
 	var group: ButtonGroup = ButtonGroup.new()
 	var chosen_id: String = chosen().item(kind).id()
@@ -186,6 +208,94 @@ func _fill_brand_part(kind: GearItem.Kind) -> void:
 		card.pressed.connect(choose.bind(item))
 		items.add_child(card)
 	part.add_child(items)
+
+
+## The Fin tab's brand part under its header: the depth slider with the depth and the area, the
+## depth recommended for the chosen board marked under it, and the brand's fin of that depth as a
+## card (lit when it is the chosen fin; pressing it chooses it). The slider comes first, so it shows
+## without scrolling in a 1280 x 720 window.
+func _fill_fin_part(part: VBoxContainer, brand: Brand) -> void:
+	var sizes: FinSizes = GearCatalogue.FIN_SIZES
+	var depth: int = sizes.clamp_depth(roundi(chosen().fin.size))
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 16)
+	var title: Label = Label.new()
+	title.text = "Depth"
+	title.theme_type_variation = &"CardTitleLabel"
+	row.add_child(title)
+	_fin_slider = HSlider.new()
+	_fin_slider.name = "FinDepth"
+	_fin_slider.min_value = sizes.min_depth_cm
+	_fin_slider.max_value = sizes.max_depth_cm
+	_fin_slider.step = 1.0
+	_fin_slider.value = depth
+	_fin_slider.tick_count = sizes.max_depth_cm - sizes.min_depth_cm + 1
+	_fin_slider.custom_minimum_size = Vector2(FIN_SLIDER_WIDTH, 30.0)
+	_fin_slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_fin_slider.mouse_entered.connect(_fin_slider.grab_focus)
+	var board_width_m: float = (chosen().board.config as BoardConfig).width_m
+	var recommended: int = sizes.recommended_depth_cm(board_width_m)
+	_fin_slider.draw.connect(_draw_recommended_mark.bind(_fin_slider, recommended))
+	row.add_child(_fin_slider)
+	_fin_value = Label.new()
+	_fin_value.name = "FinDepthValue"
+	_fin_value.theme_type_variation = &"CardTitleLabel"
+	row.add_child(_fin_value)
+	part.add_child(row)
+	var hint: Label = Label.new()
+	hint.name = "FinHint"
+	hint.text = "Orange mark: %d cm, for your %d cm wide board. Deeper for light wind, shorter for strong wind." % [
+		recommended, roundi(board_width_m * 100.0)]
+	hint.theme_type_variation = &"HintLabel"
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	part.add_child(hint)
+	_fin_card_place = _flow()
+	part.add_child(_fin_card_place)
+	_show_fin_card(brand, depth)
+	_fin_slider.value_changed.connect(_on_fin_depth_changed.bind(brand))
+
+
+## The slider moved: the brand's fin of the new depth is chosen at once.
+func _on_fin_depth_changed(value: float, brand: Brand) -> void:
+	var fin: GearItem = GearCatalogue.fin_of(brand.slug, roundi(value))
+	if fin == null:
+		return
+	choose(fin)
+	_show_fin_card(brand, roundi(value))
+
+
+## The brand's fin of this depth as a card (lit when it is the chosen fin), and its depth and area
+## beside the slider: "38 cm  ·  311 cm²".
+func _show_fin_card(brand: Brand, depth: int) -> void:
+	var fin: GearItem = GearCatalogue.fin_of(brand.slug, depth)
+	if fin == null:
+		return
+	for child: Node in _fin_card_place.get_children():
+		_fin_card_place.remove_child(child)
+		child.queue_free()
+	var details: String = "%s  ·  %s" % [fin.line_name(), fin.wind_text()]
+	var card: Button = _make_card(fin.title(), details, fin.description, null, brand, ITEM_CARD_SIZE)
+	card.name = "Item_" + fin.id()
+	card.button_pressed = fin.id() == chosen().fin.id()
+	card.pressed.connect(func() -> void:
+		var wanted: GearItem = GearCatalogue.fin_of(brand.slug, roundi(_fin_slider.value))
+		if wanted != null:
+			choose(wanted)
+			_show_fin_card(brand, roundi(_fin_slider.value)))
+	_fin_card_place.add_child(card)
+	_fin_value.text = "%d cm  ·  %d cm²" % [depth, roundi((fin.config as FinConfig).area_m2 * 10000.0)]
+
+
+## A small orange triangle under the slider's track at the recommended depth (drawn on the slider,
+## where its grabber's middle would be at that value).
+func _draw_recommended_mark(slider: HSlider, depth: int) -> void:
+	var fraction: float = (depth - slider.min_value) / (slider.max_value - slider.min_value)
+	var grabber: Texture2D = slider.get_theme_icon("grabber")
+	var half: float = grabber.get_width() / 2.0 if grabber != null else 0.0
+	var x: float = half + fraction * (slider.size.x - 2.0 * half)
+	var y: float = slider.size.y
+	slider.draw_colored_polygon(PackedVector2Array([Vector2(x, y - 6.0), Vector2(x - 7.0, y + 5.0), Vector2(x + 7.0, y + 5.0)]),
+		RECOMMENDED_MARK)
 
 
 ## The brand's logo (on a thin light frame, so a navy plate shows on the menu's dark blue), its
@@ -333,7 +443,7 @@ static func _tab_of_kind(kind: GearItem.Kind) -> int:
 func _on_tab_changed(tab: int) -> void:
 	_aim_camera(tab)
 	_show_preview_name()
-	_note.text = NOTE + (PH14_NOTE if tab == RIG_TAB else "")
+	_note.text = NOTE + (PH14_NOTE if tab == RIG_TAB else (FIN_NOTE if tab == FIN_TAB else ""))
 
 
 # ---------------------------------------------------------------- the choice and the preview

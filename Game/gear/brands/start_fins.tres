@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="Brand" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://gear/brand.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/brands/start_fins/logo.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/brands/start_fins/wordmark.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/brands/start_fins/mark.png" id="4"]
+
+[resource]
+script = ExtResource("1")
+name = "Start Fins"
+slug = "start_fins"
+tagline = "First off the line."
+makes_boards = false
+makes_sails = false
+makes_fins = true
+primary = Color(0.0627, 0.2157, 0.1647, 1)
+secondary = Color(0.9569, 0.9451, 0.902, 1)
+accent = Color(0.1804, 0.8784, 0.4314, 1)
+logo = ExtResource("2")
+wordmark = ExtResource("3")
+mark = ExtResource("4")

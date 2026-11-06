@@ -26,3 +26,4 @@ light_wind = 0.8
 strong_wind = 0.8
 sail_brand = "point9"
 board_brand = "forbidden"
+fin_brand = "typhoon_fins"

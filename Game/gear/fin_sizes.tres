@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="FinSizes" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://gear/fin_sizes.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+min_depth_cm = 28
+max_depth_cm = 52
+area_cm2 = PackedFloat64Array(205, 216, 226, 236, 247, 257, 267, 278, 286, 296, 311, 322, 333, 344, 358, 369, 378, 390, 405, 416, 428, 440, 452, 464, 477)
+recommend_depth_m = 0.3
+recommend_width_m = 0.6
+recommend_per_width = 0.64
+wind_from_at_zero_kt = 52.0
+wind_from_per_cm_kt = 0.95
+wind_span_kt = 11.0
+lightest_wind_kt = 6.0
