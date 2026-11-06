@@ -29,7 +29,7 @@ CLAUDE.md's rule: at most three Opus agents at a time, so 1, 2+3 and 5 run first
 |---|---|---|---|---|
 | wind look + multiplier | `gr/wind-on-water` | 15:46 | | |
 | autopilot | `autopilot/stay-up` | 15:46 | | |
-| push on the mouse | `gp2/push-mouse` | 15:47 | | |
+| push on the mouse | `gp2/push-mouse` | 15:47 | 16:38 | 0.31 M (883/883 unit, check 460/0; LAN test not run: a live game held the port) |
 | fin brands | `gear/fin-brands` | | | |
 | board fx | `gr/board-fx` | | | |
 
@@ -41,3 +41,4 @@ When an agent reports: read its diff (every `Game/sim/` change in full, for Mich
 
 - 15:44 the three branches made from f72f565 in the three free worktrees (their old branches `ph44/swan`, `ui/race-screen`, `gr/sailor-polish` are merged and kept).
 - 15:46 three agents launched.
+- 16:38 push on the mouse merged (c9efc5e, a49686a). The agent's LAN test joined the live play-test game on this PC for 40 s (the port is fixed, 47520): no LAN tests while wsim.exe runs; the other agents told. Fins agent started in WindsurfingMMZB-gp2 on gear/fin-brands.
