@@ -276,6 +276,9 @@ func _run_case(c: Case, out_dir: String) -> Result:
 			file.store_line(Telemetry.csv_header())
 
 	var r: Result = Result.new()
+	# Every fall with the 2 s before it, for tools/fall_detail.py (the stay-on-the-board work).
+	var wind_text: String = ("steady%.0f" % _steady_kt if _steady_kt > 0.0 else "steady") if _steady else "map"
+	var fall_log: FallLog = FallLog.new("lake", c.name, _clock_text(c.time_of_day_s), wind_text)
 	r.lake_10m_kt = sim.wind.speed_at_height(10.0) / SimMath.KNOT_MS
 	r.lake_from_deg = lake_from_deg
 	var start_s: float = c.space_at_s if c.space_at_s >= 0.0 else c.press_from_s
@@ -298,6 +301,9 @@ func _run_case(c: Case, out_dir: String) -> Result:
 			Input.action_release("tack")
 		controller.update(sim.telemetry, controls, DT)
 		sim.step(DT, controls)
+		var fall_line: String = fall_log.watch(sim)
+		if fall_line != "":
+			print(fall_line)
 		var t: Telemetry = sim.telemetry
 		if file != null and i % 2 == 0:
 			file.store_line(t.to_csv_row())

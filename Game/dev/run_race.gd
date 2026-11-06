@@ -72,6 +72,9 @@ extends SceneTree
 ##   [--pilot.<field>=<n>] [--controller.<field>=<n>] a tuning number of every skipper's beginner
 ##                         controller (PlayerController) or its auto-sheet pilot (Autopilot, through
 ##                         the controller's pilot_overrides), for the autopilot's suite
+##   [--trace=<board name>] that board's whole telemetry, a row every 0.05 s, to <out_dir>/trace_<name>.csv
+##   [--sailor.<field>=<n>] a number of every skipper's sailor (SailorConfig, on its own gear too):
+##                         the fall rule's, for the stay-on-the-board work
 ##   [--out_dir=<folder>: a CSV per board: race time, x, z, heading, speed, its next step, and what
 ##                         its skipper is doing]
 ## After the results it prints each skipper's start: how long after the gun it crossed the start
@@ -115,6 +118,8 @@ static var _lake: EnvironmentConfig = null
 static var _lake_time_s: float = 14.5 * 3600.0
 ## --pilot.<field> and --controller.<field> for every skipper's controller.
 static var _controller_overrides: Dictionary[String, float] = {}
+## --sailor.<field> for every skipper's sailor.
+static var _sailor_overrides: Dictionary[String, float] = {}
 static var _overrides_read: bool = false
 
 
@@ -143,6 +148,10 @@ class Entry:
 	## The other sails' wind shadows on this board's wind (--shadows=1), or null.
 	var shadows: WindShadows = null
 	var file: FileAccess = null
+	## Every fall with the 2 s before it (FallLog; null: not watched).
+	var fall_log: FallLog = null
+	## The whole telemetry, a row every 3 ticks (--trace=<board name>), or null.
+	var trace_file: FileAccess = null
 
 
 func _initialize() -> void:
@@ -186,6 +195,8 @@ func _initialize() -> void:
 	for key: String in options:
 		if key.begins_with("pilot.") or key.begins_with("controller."):
 			_controller_overrides[key] = options[key].to_float()
+		elif key.begins_with("sailor."):
+			_sailor_overrides[key.trim_prefix("sailor.")] = options[key].to_float()
 
 	var course_name: String = options.get("course", "test")
 	var course: Course = course_named(course_name)
@@ -251,6 +262,14 @@ func _initialize() -> void:
 		entry.file = FileAccess.open(out_dir.path_join(file_name + ".csv"), FileAccess.WRITE)
 		if entry.file != null:
 			entry.file.store_line("race_time_s,x_m,z_m,heading_deg,speed_ms,next_step,doing")
+		# Every fall with the 2 s before it and what the skipper was doing (FALL_DETAIL lines, for
+		# tools/fall_detail.py).
+		var clock_text: String = options.get("time", "14:30") if _lake != null else "-"
+		entry.fall_log = FallLog.new("race", entry.name.replace(",", ";"), clock_text, "lake" if _lake != null else "open%.0f" % wind_kt)
+		if options.get("trace", "") == entry.name:
+			entry.trace_file = FileAccess.open(out_dir.path_join("trace_%s.csv" % file_name), FileAccess.WRITE)
+			if entry.trace_file != null:
+				entry.trace_file.store_line(Telemetry.csv_header())
 	race.start_in(free_sail_s)
 
 	var outside_at_gun: PackedStringArray = PackedStringArray()
@@ -664,6 +683,11 @@ static func _make_skipper_board(skipper_name: String, race: RaceSim, course: Cou
 		# controller is given the sail, so that it trims this one.
 		entry.sim = own_gear.sim_with(entry.sim)
 		print("%s sails %s" % [entry.name, own_gear.names_line()])
+	for field: String in _sailor_overrides:
+		if field in entry.sim.sailor_config:
+			entry.sim.sailor_config.set(field, _sailor_overrides[field])
+		else:
+			push_error("No field 'sailor.%s' to override." % field)
 	entry.controller = PlayerController.new()
 	entry.controller.set_sail(entry.sim.sail, entry.sim.sailor_config, entry.sim.air_density_kg_m3)
 	_apply_controller_overrides(entry.controller)
@@ -731,6 +755,13 @@ static func _sail(entry: Entry, counting: bool = true) -> void:
 	elif sailing:
 		entry.pilot.update(entry.sim.telemetry, entry.controls, DT)
 	entry.sim.step(DT, entry.controls)
+	if entry.trace_file != null and roundi(entry.sim.time_s / DT) % 3 == 0:
+		entry.trace_file.store_line(entry.sim.telemetry.to_csv_row())
+	if entry.fall_log != null and counting:
+		var fall_line: String = entry.fall_log.watch(entry.sim)
+		if fall_line != "":
+			var doing: String = entry.skipper.note if entry.skipper != null else "autopilot"
+			print(fall_line + "," + doing.replace(",", ";"))
 	var fallen: bool = entry.sim.sailor_state == WindsurferSim.SailorState.FALLEN
 	if fallen and not entry.was_fallen and counting:
 		entry.falls += 1

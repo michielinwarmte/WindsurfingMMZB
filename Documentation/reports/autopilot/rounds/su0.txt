@@ -1,0 +1,2 @@
+# The stay-on-the-board baseline (6 November 2026): the game as it came, f72f565.
+base:

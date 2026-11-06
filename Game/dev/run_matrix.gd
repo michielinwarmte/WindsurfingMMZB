@@ -164,6 +164,8 @@ func _run_case(c: Case, every: int, out_dir: String) -> Result:
 			file.store_line(Telemetry.csv_header())
 
 	var r: Result = Result.new()
+	# Every fall with the 2 s before it, for tools/fall_detail.py (the stay-on-the-board work).
+	var fall_log: FallLog = FallLog.new("matrix", c.name, "-", "open%.0f%s" % [c.wind_kt, "w" if _waves else ""])
 	var start_s: float = c.space_at_s if c.space_at_s >= 0.0 else c.press_from_s
 	var tack_before: float = 0.0
 	var heading_at_start: float = 0.0
@@ -190,6 +192,9 @@ func _run_case(c: Case, every: int, out_dir: String) -> Result:
 			Input.action_release("tack")
 		controller.update(sim.telemetry, controls, DT)
 		sim.step(DT, controls)
+		var fall_line: String = fall_log.watch(sim)
+		if fall_line != "":
+			print(fall_line)
 		var t: Telemetry = sim.telemetry
 		if file != null and i % every == 0:
 			file.store_line(t.to_csv_row())

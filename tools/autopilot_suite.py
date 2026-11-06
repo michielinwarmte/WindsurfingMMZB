@@ -6,6 +6,10 @@
     tools/autopilot_suite.sh --round=lc9 --variants=... --only=lake --lake_wave_scale=1.5
     tools/autopilot_suite.sh ... --matrix_times=12:00,13:15,14:30,15:45,17:00   (more lake patterns)
     tools/autopilot_suite.sh ... --race_times=13:00,15:00 --push2_twas=60,135 --push2_gust=9.5   (other samples)
+    tools/autopilot_suite.sh ... --race_course=iq_o2 --race_skippers=persona:hana,persona:lena --race_seconds=1500
+                                 (another course and fleet for the race part; --race_seconds caps the race)
+    tools/autopilot_suite.sh ... --project=<copy of Game/>   (sail a frozen copy of the project, so the code
+                                 can be edited while a round runs; the outputs still land here)
 
 Every variant (a line "<label>: <overrides>" of the variants file) is scored by the parts in --only
 (default reach,push,pushed,matrix,lake; race on request):
@@ -45,6 +49,10 @@ MATRIX_TIMES = ["12:00", "14:30", "17:00"]
 STEADY_KTS = ["18", "24"]
 RACE_TIMES = ["14:30", "16:00"]
 RACE_SKIPPERS = "allrounder,cautious,gambler,rookie"
+RACE_COURSE = "t2_slalom"
+# --afternoons=0 leaves the ten afternoon reaches out of the lake part (another set of hours only).
+AFTERNOONS = True
+RACE_SECONDS = ""
 # The open water's second sample (push2, pushed2): two courses at 18 and 24 kt, gusts this far apart.
 PUSH2_TWAS = "75,120"
 PUSH2_GUST = "6.5"
@@ -55,7 +63,7 @@ GROUPS = {
     "push": ("pilot", "sailor", "sail", "board", "controller"),
     "matrix": ("pilot", "sailor", "sail", "controller"),
     "lake": ("pilot", "sailor", "sail", "controller"),
-    "race": ("pilot", "controller"),
+    "race": ("pilot", "controller", "sailor"),
 }
 JOB_TIMEOUT_S = 2400
 
@@ -144,7 +152,7 @@ def jobs_for(label, overrides, out_dir, parts, scale_args):
         lake_dir = os.path.join(out_dir, "lake")
         os.makedirs(lake_dir, exist_ok=True)
         lake_over = only_groups(overrides, "lake")
-        for t in AFTERNOON_TIMES:
+        for t in (AFTERNOON_TIMES if AFTERNOONS else []):
             jobs.append(Job(label, "res://dev/run_lake.gd",
                             ["--lake_waves=1", "--times=" + t, "--only=straight,broad"] + scale_args + lake_over,
                             os.path.join(lake_dir, "afternoons_%s.txt" % t.replace(":", "")), 125))
@@ -161,9 +169,10 @@ def jobs_for(label, overrides, out_dir, parts, scale_args):
         for i, t in enumerate(RACE_TIMES):
             race_dir = os.path.join(out_dir, "race_%s" % t.replace(":", ""))
             os.makedirs(race_dir, exist_ok=True)
+            seconds = ["--seconds=" + RACE_SECONDS] if RACE_SECONDS else []
             jobs.append(Job(label, "res://dev/run_race.gd",
-                            ["--course=t2_slalom", "--skippers=" + RACE_SKIPPERS, "--map=lake", "--time=" + t,
-                             "--seed=%d" % (i + 1), "--finish_window=600", "--out_dir=" + race_dir] + scale_args + race_over,
+                            ["--course=" + RACE_COURSE, "--skippers=" + RACE_SKIPPERS, "--map=lake", "--time=" + t,
+                             "--seed=%d" % (i + 1), "--finish_window=600", "--out_dir=" + race_dir] + seconds + scale_args + race_over,
                             os.path.join(out_dir, "race_%s.txt" % t.replace(":", "")), 2400))
     return jobs
 
@@ -253,8 +262,17 @@ def merge_lake(lake_dir, out_dir):
 
 
 def main():
-    global MATRIX_TIMES, RACE_TIMES, PUSH2_TWAS, PUSH2_GUST
+    global MATRIX_TIMES, RACE_TIMES, PUSH2_TWAS, PUSH2_GUST, RACE_COURSE, RACE_SKIPPERS, RACE_SECONDS, PROJECT, AFTERNOONS
     options = parse_args(sys.argv[1:])
+    AFTERNOONS = options.get("afternoons", "1") != "0"
+    if options.get("project"):
+        PROJECT = os.path.abspath(options["project"])
+    if options.get("race_course"):
+        RACE_COURSE = options["race_course"]
+    if options.get("race_skippers"):
+        RACE_SKIPPERS = options["race_skippers"]
+    if options.get("race_seconds"):
+        RACE_SECONDS = options["race_seconds"]
     if options.get("race_times"):
         RACE_TIMES = options["race_times"].split(",")
     if options.get("push2_twas"):
