@@ -7,7 +7,7 @@ extends SceneTree
 ##
 ## Arguments after "--":
 ##   --times=12:00,14:30,17:00   the times of day (the day's cycle makes them different winds)
-##   --only=<part of a case name>
+##   --only=<part of a case name>  (several, comma-separated: --only=straight,broad)
 ##   --wind=map|steady           steady: the lake's mean of that time everywhere, no gusts (to
 ##                               see what the gusts and the place do); --kt=<at 10 m> and
 ##                               --from=<degrees> set another steady wind
@@ -22,6 +22,14 @@ extends SceneTree
 ##   --compare=1                 instead: the thin-air comparison (a straight beam reach on open
 ##                               water at sea level, in thin air, and on the lake)
 ##   --out_dir=<dir>             a CSV per case (the columns of tools/simulate.sh)
+##   --pilot.<field>=<n> --controller.<field>=<n> --sailor.<field>=<n> --sail.<field>=<n>
+##                               a tuning number set by name, as in run_matrix.gd: the pilot is the
+##                               controller's auto-sheet pilot (through its pilot_overrides, so it
+##                               survives the controller's resets), the controller the beginner's
+##                               PlayerController, sailor and sail the config resources (for the
+##                               whole run). The autopilot's suite scores its variants with them
+##                               (tools/autopilot_suite.sh --only=lake).
+##   --lake_wave_scale=<x>       every lake wave train's height times x (WindsurferSim reads it)
 ##
 ## The cases start where the lake scene starts (off the camping beach, sail_silvaplana.gd) when
 ## their course leads out over the lake; the port-tack starts and the run would reach the shore
@@ -56,6 +64,8 @@ var _air: float = -1.0
 var _water: float = -1.0
 var _steady_kt: float = -1.0
 var _steady_from_deg: float = -1.0
+## The --pilot., --controller., --sailor. and --sail. settings ("group.field" -> the text).
+var _overrides: Dictionary[String, String] = {}
 
 
 ## One run, as in run_matrix.gd: the start heading (for a wind from 270), which key is held
@@ -163,7 +173,12 @@ func _initialize() -> void:
 	var times: Array[float] = []
 	for text: String in options.get("times", "12:00,14:30,17:00").split(","):
 		times.append(_seconds_of(text))
-	var only: String = options.get("only", "")
+	var only: PackedStringArray = options.get("only", "").split(",", false)
+	for key: String in options:
+		if key.contains("."):
+			_overrides[key] = options[key]
+	if not _overrides.is_empty():
+		print("overrides: %s" % str(_overrides))
 	var out_dir: String = options.get("out_dir", "")
 	if out_dir != "":
 		DirAccess.make_dir_recursive_absolute(out_dir)
@@ -177,7 +192,7 @@ func _initialize() -> void:
 	var problems: int = 0
 	for time_s: float in times:
 		for template: Case in _templates():
-			if only != "" and not template.name.contains(only):
+			if not _wanted(template.name, only):
 				continue
 			var c: Case = template.at(time_s)
 			var r: Result = _run_case(c, out_dir)
@@ -245,6 +260,7 @@ func _run_case(c: Case, out_dir: String) -> Result:
 	var sim: WindsurferSim = _make_sim(c.time_of_day_s)
 	var controller: PlayerController = PlayerController.new()
 	controller.set_sail(sim.sail, sim.sailor_config, sim.air_density_kg_m3)
+	_apply_overrides(sim, controller)
 	var controls: SimControls = SimControls.new()
 	# The start heading is turned to the lake's mean wind of the moment (also with a steady wind
 	# from elsewhere, --from: then the board starts on the same course in another wind).
@@ -317,6 +333,46 @@ func _run_case(c: Case, out_dir: String) -> Result:
 		r.window_speed_kt /= float(r.window_count)
 	r.end_twa_deg = sim.telemetry.twa_deg
 	return r
+
+
+## True when the case's name contains one of the --only parts (or there are none).
+func _wanted(case_name: String, only: PackedStringArray) -> bool:
+	if only.is_empty():
+		return true
+	for part: String in only:
+		if case_name.contains(part):
+			return true
+	return false
+
+
+## The --pilot.x=, --controller.x=, --sailor.x= and --sail.x= settings, by name. The pilot's go
+## through the controller's pilot_overrides (applied at every update, so a new pilot after a
+## reset gets them too); the configs are the sim's (shared for the whole run).
+func _apply_overrides(sim: WindsurferSim, controller: PlayerController) -> void:
+	for key: String in _overrides:
+		var parts: PackedStringArray = key.split(".", true, 1)
+		if parts.size() != 2:
+			continue
+		var value: float = _overrides[key].to_float()
+		var target: Object = null
+		match parts[0]:
+			"pilot":
+				if parts[1] in controller.auto_sheet_pilot:
+					controller.pilot_overrides[parts[1]] = value
+				else:
+					push_error("No field '%s' to override." % key)
+				continue
+			"controller":
+				target = controller
+			"sailor":
+				target = sim.sailor_config
+			"sail":
+				target = sim.sail_config
+		if target == null or not (parts[1] in target):
+			push_error("No field '%s' to override." % key)
+			continue
+		var current: Variant = target.get(parts[1])
+		target.set(parts[1], (value != 0.0) if current is bool else (int(value) if current is int else value))
 
 
 ## The milestones of run_matrix.gd: through the wind and onto the new tack, or turned 60 degrees,

@@ -80,8 +80,11 @@ func test_overpowered_beginner_eases_the_sheet() -> void:
 
 func test_beginner_turn_key_moves_the_whole_helm_the_right_way_on_both_tacks() -> void:
 	# Starboard tack: a right turn is heading up, so D means rig back, rig tilted to port
-	# (the outside of the turn) and weight to starboard (the inside rail).
+	# (the outside of the turn) and weight to starboard (the inside rail). The telemetry is a board at
+	# rest, and the rail fades in with speed since the lake's training (PlayerController.rail_from_ms,
+	# rail_full_ms): this test of the directions has the rail at every speed (rail_full_ms 0).
 	var controller: PlayerController = PlayerController.new()
+	controller.rail_full_ms = 0.0
 	var controls: SimControls = SimControls.new()
 	Input.action_press("steer_right")
 	_run(controller, _telemetry(90.0), controls, 0.6)
@@ -91,6 +94,7 @@ func test_beginner_turn_key_moves_the_whole_helm_the_right_way_on_both_tacks() -
 	Input.action_release("steer_right")
 	# Port tack: a right turn is bearing away, so the rig goes forward; tilt and weight as before.
 	var port: PlayerController = PlayerController.new()
+	port.rail_full_ms = 0.0
 	var port_controls: SimControls = SimControls.new()
 	Input.action_press("steer_right")
 	_run(port, _telemetry(-90.0), port_controls, 0.6)
@@ -100,6 +104,7 @@ func test_beginner_turn_key_moves_the_whole_helm_the_right_way_on_both_tacks() -
 	Input.action_release("steer_right")
 	# A left turn mirrors all three.
 	var left: PlayerController = PlayerController.new()
+	left.rail_full_ms = 0.0
 	var left_controls: SimControls = SimControls.new()
 	Input.action_press("steer_left")
 	_run(left, _telemetry(90.0), left_controls, 0.6)

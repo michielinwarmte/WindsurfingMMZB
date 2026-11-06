@@ -1,0 +1,55 @@
+# Lake chop round 2 (6 November 2026): the board in the air, the helm in chop, the timing.
+# The steady 24 kt beam reach's catapult (round 0) came after the board left the water three times
+# in 1.5 s over the crests: in the air nothing holds it against the sail's side force, the felt heel
+# went from 9 to 34 degrees in 0.3 s. New controller settings (off by default): airborne_alpha_deg
+# (the sheet eased while the water carries less than airborne_support_share of the weight, and
+# airborne_hold_s after), manoeuvre_wait_max_s (a tack or gybe starts as the bow drops off a crest).
+# Also the helm's calm (round 1b's list): the board yawed 20 to 45 degrees a second each way on the
+# waves and the turn-rate loop answered every kick with the rig.
+air6: --controller.airborne_alpha_deg=6
+# air3 (left out: an ease this strong only costs more speed): --controller.airborne_alpha_deg=3
+# air9 (left out after round 1, to keep the round short): --controller.airborne_alpha_deg=9
+# air6s5 (left out: more eases, more speed lost): --controller.airborne_alpha_deg=6 --controller.airborne_support_share=0.5
+# air6h6 (left out: more eases, more speed lost): --controller.airborne_alpha_deg=6 --controller.airborne_hold_s=0.6
+wait08: --controller.manoeuvre_wait_max_s=0.8
+rategain005: --controller.rate_gain=0.005
+# rateint001 (left out to keep the round short): --controller.rate_integral_gain=0.01
+holdrate05: --controller.hold_rate_per_deg=0.5
+helmrate1: --controller.helm_rate_per_s=1.0
+# holdlimit10 (left out): --controller.hold_rate_limit_dps=10
+legs0: --controller.legs_rate_gain=0
+trimfeel04: --pilot.trim_feel_time_s=0.4
+# ankle06 (left out after round 1, to keep the round short): --pilot.ankle_share=0.6
+# catch2 (left out): --pilot.catch_alpha_max_deg=2
+gybealpha6: --controller.gybe_entry_alpha_deg=6
+# hike095 (left out after round 1, to keep the round short): --pilot.hike_share=0.95
+# sheetin03 (left out): --pilot.sheet_in_share=0.3
+# Added before the round started: the ease in the air costs speed at 24 kt (a quick look with the
+# three fixes together: the steady 24 kt beam reach at 12:00 16.7 kt against 21.2 without them), so
+# lighter eases too.
+# air12 (left out after round 1, to keep the round short): --controller.airborne_alpha_deg=12
+air9s15: --controller.airborne_alpha_deg=9 --controller.airborne_support_share=0.15
+# air6h1 (left out for the combinations below): --controller.airborne_alpha_deg=6 --controller.airborne_hold_s=0.1
+air6s15h1: --controller.airborne_alpha_deg=6 --controller.airborne_support_share=0.15 --controller.airborne_hold_s=0.1
+# And (airborne_after_s, airborne_heel_from_deg added before the round): the ease only after the board
+# has been light 0.1 s; with the sheet coming back in twice as fast on landing (the pilot's
+# sheet_in_share 1.0). An ease only while the felt heel is already 5 or 8 degrees to leeward was
+# tried on the steady 24 kt reach at three times and catapulted in 2 of 3 runs (too late): left out.
+air6a01: --controller.airborne_alpha_deg=6 --controller.airborne_after_s=0.1
+# air9a01h1 (left out for the combinations below): --controller.airborne_alpha_deg=9 --controller.airborne_after_s=0.1 --controller.airborne_hold_s=0.1
+# air6sin1 (left out after round 1, to keep the round short): --controller.airborne_alpha_deg=6 --pilot.sheet_in_share=1.0
+# And (airborne_sheet_in_share added before the round): back in faster on landing. A first look on the
+# steady 24 kt reach at three times: 3.0 no fall, 17.9 to 19.6 kt (the ease alone 16.7 to 17.0);
+# 10.0 one catapult in three.
+air6rs3: --controller.airborne_alpha_deg=6 --controller.airborne_sheet_in_share=3
+# air6rs2 (left out after round 1, to keep the round short): --controller.airborne_alpha_deg=6 --controller.airborne_sheet_in_share=2
+# And (head_up_ease_on_hold added before the round): the head-up ease only for a key held or a tack,
+# not for the heading hold's own corrections, which in chop come all the time.
+hu9key: --controller.head_up_alpha_deg=9 --controller.head_up_ease_on_hold=0
+# hu12key (left out after round 1, to keep the round short): --controller.head_up_alpha_deg=12 --controller.head_up_ease_on_hold=0
+# And (airborne_wind_from_kt / _full_kt added before the round): the three fixes together cost the
+# map's afternoon reaches 3 to 4 kt (a quick look at 12:00, 14:30 and 17:00: 0 falls in 30 against 6,
+# but the beam reach 16.4 to 19.0 kt against 20.4 to 23.1): the ease in the air is needed only in
+# strong wind (the map's reaches never fell), so it comes in from 18 to 20 kt at the sail.
+air6rs3g: --controller.airborne_alpha_deg=6 --controller.airborne_sheet_in_share=3 --controller.airborne_wind_from_kt=18 --controller.airborne_wind_full_kt=20
+c1: --controller.head_up_alpha_deg=9 --controller.head_up_ease_on_hold=0 --controller.rail_from_ms=2 --controller.rail_full_ms=5 --controller.airborne_alpha_deg=6 --controller.airborne_sheet_in_share=3 --controller.airborne_wind_from_kt=18 --controller.airborne_wind_full_kt=20

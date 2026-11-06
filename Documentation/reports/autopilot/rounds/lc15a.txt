@@ -1,0 +1,14 @@
+# Lake chop at 1.5x, round A (6 November 2026): the lake's waves 1.5 times higher
+# (--lake_wave_scale=1.5; Max: "try but if it fails much skip it", "if that fails stop it in time").
+# The controller as it was ("before", the chop technique off) and the shipped defaults ("final"), and
+# on top of the defaults the levers with more margin: a stronger ease in the air, the ease in the air
+# from less wind, less pull held in chop, the carve-up ease at 6, the pilot's faster hands, less pull.
+# Run with --lake_wave_scale=1.5 --only=lake.
+before: --controller.head_up_alpha_deg=90 --controller.rail_full_ms=0 --controller.airborne_alpha_deg=90
+final:
+f_air4: --controller.airborne_alpha_deg=4
+f_wind1517: --controller.airborne_wind_from_kt=15 --controller.airborne_wind_full_kt=17
+f_chop15: --controller.chop_hike_drop=0.15
+f_hu6: --controller.head_up_alpha_deg=6
+f_s25: --controller.pilot_sheet_rate_per_s=2.5
+f_hike10: --pilot.hike_share=1.0

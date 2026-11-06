@@ -60,6 +60,12 @@ func _run(wind_kt: float, twa_deg: float, push: float, seconds: float) -> Packed
 	sim.wind_config.shifts_enabled = false
 	sim.wind = WindField.new(sim.wind_config)
 	var controller: PlayerController = PlayerController.new()
+	# The controller as it sailed before the lake's chop technique (its defaults since the autopilot's
+	# training of 6 November 2026, Documentation/reports/autopilot/lake_chop_training.md): this test
+	# is about the feet's press left in the middle, and its numbers are from before that training.
+	controller.head_up_alpha_deg = 90.0
+	controller.rail_full_ms = 0.0
+	controller.airborne_alpha_deg = 90.0
 	controller.push_level = push
 	var hands: AiHands = AiHands.new()
 	hands.push = push

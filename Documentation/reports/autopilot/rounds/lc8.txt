@@ -1,0 +1,8 @@
+# Lake chop round 8 (6 November 2026, 1x): can the ease in the air come in from less wind (the 1.5x
+# round A's finding: from 15 to 17 kt at the sail, 9 falls in 130 at 1.5x against 21) without hurting
+# the realistic waves and the open water? The standard set: the lake at 12:00, 14:30 and 17:00 with
+# the afternoon reaches, the push check neutral and pushed, the open water's second sample, the
+# matrix. Against round 7s's final.
+w1517: --controller.airborne_wind_from_kt=15 --controller.airborne_wind_full_kt=17
+w1618: --controller.airborne_wind_from_kt=16 --controller.airborne_wind_full_kt=18
+w1517b1014: --controller.airborne_wind_from_kt=15 --controller.airborne_wind_full_kt=17 --controller.airborne_bounce_from_dps=10 --controller.airborne_bounce_full_dps=14

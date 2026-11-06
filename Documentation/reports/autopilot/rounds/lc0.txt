@@ -1,0 +1,2 @@
+# Lake chop round 0: the baseline on night2/combined 6530c14 (the autopilot as it is).
+base:

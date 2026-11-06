@@ -1,0 +1,2 @@
+# Lake chop round 7s: the shipped defaults (final, no overrides) on the whole standard set: the push check neutral and pushed, the open water's second sample, the matrix, the lake at 12:00, 14:30 and 17:00 with the afternoon reaches, the T2 race at 14:30 and 16:00. The after column.
+final:

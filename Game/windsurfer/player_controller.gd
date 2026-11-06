@@ -216,14 +216,116 @@ var _tack_sign_at_start: float = 0.0
 var _was_down: Dictionary[String, bool] = {}
 
 
+## Sailing in chop (Documentation/reports/autopilot/lake_chop_training.md). The defaults are the lake
+## training's choice (6 November 2026, round 4's c2hu10, with the rail's fade lowered for the fleet's
+## start): the ease while carving up at speed (for a key or a tack), no rail at walking pace, the ease
+## in the air in strong wind and short chop with the sail back in fast on landing. On Lake Silvaplana's waves it fell in none of the 130 cases the rounds tuned
+## on (the controller before: 26) and in 6 of 180 on six other hours (before: 29), with the afternoon
+## reaches and the open water's push check as fast as before. Less pull in chop (chop_hike_drop) and
+## waiting for the wave (manoeuvre_wait_max_s) are built and off: the rounds found no gain in them.
+## The rail at low speed: the weight goes on the inside rail for a turn only as the board has speed,
+## faded in from rail_from_ms to rail_full_ms. A board at walking pace does not carve, and in chop a
+## sailor standing on the windward rail of a slow board with a luffing sail is tipped off it (the
+## lake matrix's out-of-irons case: the board rolled to 50 degrees at 2 km/h and the sailor fell
+## off). Faded in from 2 to 5 m/s it also slowed the AI's turns while holding back before a start (a
+## rookie over the line in the fleet's validation test); from 0.3 to 1 m/s it still keeps the board out
+## of irons upright (18 lake cases, no fall) and the fleet's start is as before. Both 0: the rail at
+## every speed.
+var rail_from_ms: float = 0.3
+var rail_full_ms: float = 1.0
+## Heading up on purpose at speed (a tack's carve up to the wind, or a key held toward the wind):
+## the auto-sheet trims no closer than head_up_alpha_deg of angle of attack, from head_up_ease_from_ms
+## on. The turn's push is felt as heel to leeward (atan(v w / g): 15 degrees at 15 degrees per second
+## and 11 m/s), and in chop the board's roll adds as much again, so a fully trimmed sail catapults
+## the sailor out of the carve; a sailor carving up into a tack in chop eases a little. 90: no ease.
+var head_up_alpha_deg: float = 9.0
+var head_up_ease_from_ms: float = 7.0
+## Whether the heading hold's own corrections toward the wind count as heading up (true), or only a
+## key held (or a tack) does (false). In chop the hold corrects all the time (the waves yaw the board
+## 20 to 45 degrees a second), so with true the ease also comes on in straight sailing.
+var head_up_ease_on_hold: bool = false
+## The turn toward the wind that counts as heading up on purpose, degrees a second. An AI skipper's
+## hands steer with a stick all the time (AiHands), so small corrections toward the wind would ease
+## the sheet too; a real head-up asks for more.
+var head_up_ease_from_dps: float = 10.0
+## The turn key held at this update (beginner mode), +1 right, -1 left, 0 none.
+var _turn_key: float = 0.0
+## The pull held in chop: the pilot's hike_share times (1 - chop_hike_drop) when the board bounces
+## (the pitch rate's RMS that Autopilot.feel_the_sea() feels) at chop_bounce_full_dps or more, none
+## at chop_bounce_from_dps or less, straight between: more margin when it gets wild, the full pull on
+## flat water. 0: no drop.
+var chop_hike_drop: float = 0.0
+var chop_bounce_from_dps: float = 4.0
+var chop_bounce_full_dps: float = 12.0
+## The auto-sheet pilot's hands on the sheet (Autopilot.sheet_rate_per_s, the share of the sheet's
+## whole range moved in a second), set on the pilot at every update (before the slider and the
+## --pilot. overrides, which win). The pilot's own 1.5 moves the boom across its range in two thirds of
+## a second; in chop the eases the pilot asks for (the felt heel, a gust, a wave's roll) came too late:
+## at 2.5 the lake's 130 cases fell 8 times against 26, the map's 30 cases not at all, and the
+## afternoons' reaches lost nothing (round 1 of the lake's training).
+var pilot_sheet_rate_per_s: float = 1.5
+## Timing a tack or gybe on the waves: at speed, Space starts the turn as the bow drops off a crest
+## (the pitch rate nose-down beyond manoeuvre_wait_pitch_dps), waiting at most manoeuvre_wait_max_s.
+## 0: at once, as before.
+var manoeuvre_wait_max_s: float = 0.0
+var manoeuvre_wait_pitch_dps: float = 5.0
+var _manoeuvre_wait_s: float = 0.0
+## Light over a crest: when the water carries less than airborne_support_share of the board's whole
+## weight (its buoyancy and planing lift: the board is leaving the water), and for airborne_hold_s
+## after it lands again, the auto-sheet trims no closer than airborne_alpha_deg. In the air nothing
+## holds the board against the sail's side force, so it is pulled sideways and rolled to leeward and
+## the sailor, falling with it, is pulled over the sail: the steady 24 kt beam reach on the lake left
+## the water three times in 1.5 s and the third catapulted (the felt heel from 9 to 34 degrees in
+## 0.3 s). A sailor sheets out on a jump. 90: no ease.
+var airborne_alpha_deg: float = 6.0
+var airborne_support_share: float = 0.3
+var airborne_hold_s: float = 0.3
+## The ease only for a real jump, not every skip off a crest: once the board has been light for
+## airborne_after_s, and only while the felt heel to leeward is beyond airborne_heel_from_deg (-90:
+## whatever the heel). The ease costs drive: eased at every skip the steady 24 kt reach lost a fifth
+## of its speed.
+var airborne_after_s: float = 0.0
+var airborne_heel_from_deg: float = -90.0
+## Only in strong wind: the ease comes in as the true wind at the sail rises from
+## airborne_wind_from_kt to airborne_wind_full_kt (none below: the angle of attack is then left as
+## the pilot trims it). In the map's wind (up to about 18.5 kt at the sail) the lake's reaches never
+## fell in 40 runs and the ease cost them 3 to 4 kt; in a steady 24 kt (about 20 kt at the sail) the
+## beam reach catapulted in two of three runs without it. Both 0: at every wind.
+var airborne_wind_from_kt: float = 18.0
+var airborne_wind_full_kt: float = 20.0
+## And only in short, steep chop: the ease comes in as the bounce felt (the pitch rate's RMS,
+## Autopilot.felt_bounce_dps()) rises from airborne_bounce_from_dps to airborne_bounce_full_dps. The
+## open sea's longer waves set the planing board pitching at 3.5 to 9 degrees a second (the push
+## check's nine cases) and it does not fall there; the lake's chop at 10 to 17 (its telemetry). On
+## the open sea the ease cost the 24 kt reaches up to 10 % of their speed made good for nothing. Both
+## 0: in any sea.
+var airborne_bounce_from_dps: float = 8.0
+var airborne_bounce_full_dps: float = 12.0
+## Back in on landing: the body stayed hiked out through the jump, so the sail may come back to where
+## it was faster than the pilot's usual pace for sheeting in (Autopilot.sheet_in_share, which at 24 kt
+## lets the angle of attack rise only 1 to 2 degrees a second: eased at every skip the sail never got
+## back). While eased and for airborne_resheet_s after, the pilot's sheet_in_share is
+## airborne_sheet_in_share. 0: the pilot's own pace.
+var airborne_sheet_in_share: float = 3.0
+var airborne_resheet_s: float = 1.0
+var _airborne_for_s: float = 0.0
+var _light_for_s: float = 0.0
+var _resheet_for_s: float = 0.0
+var _own_sheet_in_share: float = 0.5
+
 var _sail: SailModel = null
 var _sailor: SailorConfig = null
 var _air_density_kg_m3: float = 1.225
+## The pull a fresh pilot holds (its own hike_share), for the chop's drop when no slider or override
+## sets it.
+var _own_hike_share: float = 1.1
 
 
 func _init() -> void:
 	auto_sheet_pilot.hold_course = false
 	auto_sheet_pilot.trim_sheet = true
+	_own_hike_share = auto_sheet_pilot.hike_share
+	_own_sheet_in_share = auto_sheet_pilot.sheet_in_share
 
 
 ## Gives the controller the simulation's sail, so the auto-sheet trims for the most drive,
@@ -265,17 +367,35 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 	if _just_pressed("toggle_autosheet"):
 		auto_sheet = not auto_sheet
 	if _just_pressed("tack") and manoeuvre == Manoeuvre.NONE:
-		_start_manoeuvre(telemetry)
+		if manoeuvre_wait_max_s > 0.0 and telemetry.speed_ms > settle_speed_ms:
+			_manoeuvre_wait_s = manoeuvre_wait_max_s
+		else:
+			_start_manoeuvre(telemetry)
+	_wait_for_the_wave(telemetry, dt)
 
 	# Steering.
 	var steer_key: float = _axis("steer_right", "steer_left")  # +1 = turn right on the screen
 	var tilt_key: float = _axis("tilt_right", "tilt_left")  # +1 = mast top toward starboard
+	_turn_key = clampf(steer_key + tilt_key, -1.0, 1.0) if mode == Mode.BEGINNER else 0.0
 	var rake_key: float = _axis("rake_back", "rake_forward")  # +1 = rig back
 	# Through a gybe the sailor keeps the sail eased: with the rig laid forward and the body
 	# inside the turn, a fully powered sail would pull them over it. The bank does the
 	# turning; afterwards the pilot sheets back in at the pace the body can lean out.
 	var gybing: bool = manoeuvre == Manoeuvre.GYBE_BEARING_AWAY or manoeuvre == Manoeuvre.GYBE_HEADING_UP
 	auto_sheet_pilot.max_alpha_deg = gybe_entry_alpha_deg if gybing else _hold_back_alpha_deg(telemetry, dt)
+	if _heading_up_at_speed(telemetry, controls):
+		auto_sheet_pilot.max_alpha_deg = minf(auto_sheet_pilot.max_alpha_deg, head_up_alpha_deg)
+	var light: bool = _light_over_a_crest(telemetry, dt)
+	var strong: float = _airborne_wind_share(telemetry, dt)
+	if light and strong > 0.0:
+		# The pilot never trims beyond 24 degrees of angle of attack: from there to the full ease.
+		var cap_deg: float = airborne_alpha_deg if strong >= 1.0 else lerpf(24.0, airborne_alpha_deg, strong)
+		auto_sheet_pilot.max_alpha_deg = minf(auto_sheet_pilot.max_alpha_deg, cap_deg)
+		_resheet_for_s = airborne_resheet_s
+	else:
+		_resheet_for_s = maxf(_resheet_for_s - dt, 0.0)
+	if airborne_sheet_in_share > 0.0 and not pilot_overrides.has("sheet_in_share"):
+		auto_sheet_pilot.sheet_in_share = airborne_sheet_in_share if _resheet_for_s > 0.0 else _own_sheet_in_share
 	_turn_wanted = 0.0
 	if manoeuvre != Manoeuvre.NONE:
 		var is_gybe: bool = manoeuvre == Manoeuvre.GYBE_BEARING_AWAY or manoeuvre == Manoeuvre.GYBE_HEADING_UP
@@ -381,6 +501,7 @@ func body_text() -> String:
 ## controls; pilot_overrides then win field by field (before the sea's rail is read from the
 ## pilot, so an override of it counts). Without a level only the overrides are applied.
 func _move_the_slider(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
+	auto_sheet_pilot.sheet_rate_per_s = pilot_sheet_rate_per_s
 	if hands != null:
 		if not is_nan(hands.push):
 			push_level = clampf(hands.push, 0.0, 1.0)
@@ -398,11 +519,103 @@ func _move_the_slider(telemetry: Telemetry, controls: SimControls, dt: float) ->
 	# --pilot. options, the harnesses).
 	for field: String in pilot_overrides:
 		auto_sheet_pilot.set(field, pilot_overrides[field])
+	_keep_a_margin_in_chop(telemetry, dt)
 	if is_nan(push_level):
+		# Without a slider the rail for the sea is the pilot's own wave rail, when it has one (0 by
+		# default: then nothing changes).
+		if auto_sheet_pilot.wave_rail_max_deg > 0.0:
+			auto_sheet_pilot.feel_the_sea(telemetry, dt)
+			controls.rail_bank_extra_deg = auto_sheet_pilot.wave_rail_deg()
 		return
 	# The rail for the sea (Autopilot.wave_rail_deg): the sailor rails more when the board bounces.
 	auto_sheet_pilot.feel_the_sea(telemetry, dt)
 	controls.rail_bank_extra_deg += auto_sheet_pilot.wave_rail_deg()
+
+
+## How much of the ease in the air applies in this wind and this sea, 0 to 1: the wind's share
+## (airborne_wind_from_kt, _full_kt) times the chop's (airborne_bounce_from_dps, _full_dps).
+func _airborne_wind_share(telemetry: Telemetry, dt: float) -> float:
+	var share: float = 1.0
+	if airborne_wind_full_kt > 0.0:
+		var span: float = maxf(airborne_wind_full_kt - airborne_wind_from_kt, 0.1)
+		share = clampf((telemetry.tws_at_sail_kt - airborne_wind_from_kt) / span, 0.0, 1.0)
+	if airborne_bounce_full_dps > 0.0:
+		auto_sheet_pilot.feel_the_sea(telemetry, dt)
+		var bounce_span: float = maxf(airborne_bounce_full_dps - airborne_bounce_from_dps, 0.1)
+		share *= clampf((auto_sheet_pilot.felt_bounce_dps() - airborne_bounce_from_dps) / bounce_span, 0.0, 1.0)
+	return share
+
+
+## True while the board is light over a crest, and for airborne_hold_s after (airborne_alpha_deg).
+func _light_over_a_crest(telemetry: Telemetry, dt: float) -> bool:
+	if airborne_alpha_deg >= 90.0 or telemetry.total_mass_kg <= 0.0:
+		return false
+	var support_n: float = telemetry.buoyancy_n + telemetry.planing_lift_n
+	if support_n < airborne_support_share * telemetry.total_mass_kg * 9.81:
+		_light_for_s += dt
+		# The felt heel to leeward: on starboard tack (+1) the leeward rail is the port one, negative.
+		var felt_leeward_deg: float = -telemetry.felt_heel_deg * tack_sign(telemetry)
+		if _light_for_s >= airborne_after_s and felt_leeward_deg >= airborne_heel_from_deg:
+			_airborne_for_s = airborne_hold_s
+			return true
+	else:
+		_light_for_s = 0.0
+	_airborne_for_s = maxf(_airborne_for_s - dt, 0.0)
+	return _airborne_for_s > 0.0
+
+
+## A tack or gybe asked for at speed waits for the bow to drop off a crest (manoeuvre_wait_max_s).
+func _wait_for_the_wave(telemetry: Telemetry, dt: float) -> void:
+	if _manoeuvre_wait_s <= 0.0:
+		return
+	if manoeuvre != Manoeuvre.NONE:
+		_manoeuvre_wait_s = 0.0
+		return
+	_manoeuvre_wait_s -= dt
+	if telemetry.pitch_rate_dps < -manoeuvre_wait_pitch_dps or _manoeuvre_wait_s <= 0.0:
+		_manoeuvre_wait_s = 0.0
+		_start_manoeuvre(telemetry)
+
+
+## The pull held in chop (chop_hike_drop): the pilot's hike_share lowered by the bounce felt. The
+## slider and the overrides set hike_share afresh every update; without them it is the pilot's own.
+func _keep_a_margin_in_chop(telemetry: Telemetry, dt: float) -> void:
+	if chop_hike_drop <= 0.0:
+		return
+	auto_sheet_pilot.feel_the_sea(telemetry, dt)
+	var set_this_update: bool = not is_nan(push_level) or pilot_overrides.has("hike_share")
+	var base: float = auto_sheet_pilot.hike_share if set_this_update else _own_hike_share
+	auto_sheet_pilot.hike_share = base * (1.0 - chop_hike_drop * chop_share())
+
+
+## How much chop the sailor feels, 0 (flat water) to 1 (wild): the bounce (the pitch rate's RMS)
+## between chop_bounce_from_dps and chop_bounce_full_dps.
+func chop_share() -> float:
+	var span: float = maxf(chop_bounce_full_dps - chop_bounce_from_dps, 0.1)
+	return clampf((auto_sheet_pilot.felt_bounce_dps() - chop_bounce_from_dps) / span, 0.0, 1.0)
+
+
+## True while the sailor heads up on purpose at speed: a tack's carve up to the wind (before the
+## pivot), or the beginner's wanted rate toward the wind (the last update's), above
+## head_up_ease_from_ms. Off (false) while head_up_alpha_deg is 90.
+func _heading_up_at_speed(telemetry: Telemetry, controls: SimControls) -> bool:
+	if head_up_alpha_deg >= 90.0 or telemetry.speed_ms < head_up_ease_from_ms:
+		return false
+	if manoeuvre == Manoeuvre.TACK_HEADING_UP:
+		return not Helm.pivoting(telemetry, controls, pivot_within_deg)
+	if manoeuvre != Manoeuvre.NONE:
+		return false
+	# Heading up is a right turn on starboard tack (tack +1) and a left turn on port tack.
+	if not head_up_ease_on_hold and _turn_key * tack_sign(telemetry) <= 0.0:
+		return false
+	return wanted_rate_dps * tack_sign(telemetry) > head_up_ease_from_dps
+
+
+## The share of the rail a turn gets at this speed (rail_from_ms, rail_full_ms): 1 when off.
+func _rail_by_speed(telemetry: Telemetry) -> float:
+	if rail_full_ms <= 0.0:
+		return 1.0
+	return smoothstep(rail_from_ms, maxf(rail_full_ms, rail_from_ms + 0.01), telemetry.speed_ms)
 
 
 ## The hands let go of the slider (AiHands.push back to NaN): no level, and the pilot's margin and
@@ -567,7 +780,7 @@ func _steer_at_rate(telemetry: Telemetry, controls: SimControls, rate_dps: float
 	# The rig closes the loop. The rail is not in the loop: weight goes on the inside rail
 	# in proportion to the wanted rate (the sim banks the board for a coordinated turn at
 	# that rate), and none while pivoting through the wind, where a board on its rail skids.
-	var rail: float = 0.0 if (pivot or not rail_on) else clampf(wanted_rate_dps / carve_rate_dps, -1.0, 1.0)
+	var rail: float = 0.0 if (pivot or not rail_on) else clampf(wanted_rate_dps / carve_rate_dps, -1.0, 1.0) * _rail_by_speed(telemetry)
 	var lean_before: float = controls.lean
 	# The legs (PH35): the back foot carries legs_share of the helm, and the slider's push on top;
 	# none while pivoting, where the feet are out of the straps. Planing in the straps they also
@@ -606,6 +819,7 @@ func reset_controls(controls: SimControls) -> void:
 	wanted_sheet = 0.0
 	ease = 0.0
 	manoeuvre = Manoeuvre.NONE
+	_manoeuvre_wait_s = 0.0
 	_manual_sheet_timer_s = 0.0
 	_heading_held = false
 	_helm_trim_up = 0.0
