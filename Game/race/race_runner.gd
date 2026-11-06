@@ -53,7 +53,8 @@ static func threads_for_this_pc() -> int:
 ## An opponent farther than this from the camera is drawn with less care (its name label is
 ## hidden at the same distance, WindsurferNode.set_name_label): its sailor, rig and sail are posed
 ## every other tick, and its fin's bend is not updated. At 300 m a sailor is a few pixels tall.
-## The physics and the skipper are never leveled: only what is drawn.
+## The physics and the skipper are never leveled: only what is drawn. This is the Normal draw distance;
+## Settings > Graphics > Draw distance moves it (DrawDistance.full_detail_m(), which the boards use).
 const FAR_DETAIL_M: float = 300.0
 
 ## A new start (restart()): LAN multiplayer's host sends it to the guests.
@@ -155,7 +156,7 @@ func setup_race(race_course: Course, player_node: WindsurferNode, race_setup: Ra
 	_hud_layer = hud_layer
 	hud = RaceHud.new()
 	hud.name = "RaceHud"
-	hud_layer.add_child(hud)
+	hud_layer.add_part(hud)
 	spectating = setup.spectate and remote_players.is_empty()
 	_first_ai = 0 if spectating else 1
 	hud_layer.set_race_mode(true, spectating)
@@ -572,7 +573,7 @@ func _pose_boards(player_stopped: bool) -> void:
 	var eye: Vector3 = camera.global_position if camera != null else player.global_position
 	for i: int in opponents.size():
 		var node: WindsurferNode = opponents[i]
-		var far: bool = node.global_position.distance_to(eye) > FAR_DETAIL_M
+		var far: bool = node.global_position.distance_to(eye) > DrawDistance.full_detail_m()
 		node.set_far_away(far)
 		node.after_step(not far or (_tick + i) % 2 == 0)
 
@@ -605,7 +606,7 @@ func opponents_cost_text() -> String:
 		if node.is_far_away():
 			far += 1
 	return "%d, %d of them beyond %d m: physics median %.2f, worst %.2f; sailor median %.2f, worst %.2f; visuals median %.2f, worst %.2f ms per tick" % [
-		opponents.size(), far, roundi(FAR_DETAIL_M), median(physics), worst(physics), median(sailor), worst(sailor), median(visuals), worst(visuals)]
+		opponents.size(), far, roundi(DrawDistance.full_detail_m()), median(physics), worst(physics), median(sailor), worst(sailor), median(visuals), worst(visuals)]
 
 
 ## The middle value (the mean of the two middle ones for an even count); 0 for none.

@@ -196,6 +196,12 @@ var auto_sheet_pilot: Autopilot = Autopilot.new()
 ## An AI skipper's hands on the controls (RACING_PLAN.md, RD1). While set, the controller
 ## reads steer, sheet and tack from here and ignores the keyboard.
 var hands: AiHands = null
+## The player's board also gets hands for a while: a network game's menu (still hands), the race
+## director's view (an all-rounder sails), the LAN test's robot. The slider level the board had when
+## hands took it is kept here and put back when they let go (_slider_back_after_hands()), so the
+## gauge, W, S and the wheel work again (Max, 6 November 2026: "push slider is gone").
+var _level_before_hands: float = NAN
+var _had_hands: bool = false
 ## The hold-back skill (AiHands.hold_speed_ms; AI_FLEET_PLAN.md, D1): the auto-sheet is let
 ## trim no closer than an angle of attack that a speed loop sets (Autopilot.max_alpha_deg, the
 ## sailor easing on purpose). The sail eases by hold_back_gain_deg_per_ms degrees for every m/s
@@ -579,6 +585,7 @@ func body_text() -> String:
 ## pilot, so an override of it counts). Without a level only the overrides are applied.
 func _move_the_slider(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 	auto_sheet_pilot.sheet_rate_per_s = pilot_sheet_rate_per_s
+	_slider_back_after_hands(controls)
 	if hands != null:
 		if not is_nan(hands.push):
 			push_level = clampf(hands.push, 0.0, 1.0)
@@ -611,6 +618,25 @@ func _move_the_slider(telemetry: Telemetry, controls: SimControls, dt: float) ->
 	# The rail for the sea (Autopilot.wave_rail_deg): the sailor rails more when the board bounces.
 	auto_sheet_pilot.feel_the_sea(telemetry, dt)
 	controls.rail_bank_extra_deg += auto_sheet_pilot.wave_rail_deg()
+
+
+## Hands taking the board remember the slider's level; hands letting go put it back: the player's
+## own level after a menu or the race director's view, or no slider again on a board that had none.
+func _slider_back_after_hands(controls: SimControls) -> void:
+	if hands != null and not _had_hands:
+		_had_hands = true
+		_level_before_hands = push_level
+	elif hands == null and _had_hands:
+		_had_hands = false
+		if is_nan(_level_before_hands):
+			if not is_nan(push_level):
+				_release_the_slider(controls)
+		else:
+			push_level = _level_before_hands
+		# The sailor at the level at once (as at the first level), with no burst left over.
+		push_now = NAN
+		_in_burst = false
+		_level_before_hands = NAN
 
 
 ## The level the sailor is at (push_now): push_level, or 100 % while the body's burst is held,

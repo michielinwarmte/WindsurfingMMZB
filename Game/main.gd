@@ -146,7 +146,7 @@ func _ready() -> void:
 	# The lake scene has no sun of its own here (the map brings it), hence the null check.
 	if _sun != null:
 		_sun.rotation_degrees = Vector3(-59.0, -45.0, 0.0)
-	_ocean.setup(_windsurfer.sim, _camera_rig.camera)
+	_build_the_water()
 	_add_open_gusts()
 	# Which gear the player's board sails, on the F1 panel and in the terminal: the names chosen on
 	# the gear page, then the numbers the simulation sails.
@@ -321,6 +321,7 @@ func start_playing() -> void:
 ## sailed in the conditions it started in, the same for the whole fleet.
 func apply_settings_live() -> void:
 	var settings: SettingsValues = GameSettings.values
+	_keep_the_water_at_the_draw_distance()
 	if _net != null:
 		# A network game sails the host's wind and waves to the end (LAN multiplayer, D11).
 		_apply_control_settings()
@@ -418,14 +419,34 @@ func _rebuild_sea() -> void:
 	_sea_signature = settings.sea_signature()
 	if wind != null:
 		_wind_signature = _wind_signature_of(wind)
-	# OceanNode.setup() adds new water meshes, so the old ones go first. (They are plain
-	# meshes without scripts, so they can be freed at once.)
-	for child: Node in _ocean.get_children():
-		child.free()
-	_ocean.setup(_windsurfer.sim, _camera_rig.camera)
+	_water_again()
+
+
+## The water you see built again (new waves, or another draw distance), with the course's lines and
+## the gust patches on it again.
+func _water_again() -> void:
+	_build_the_water()
 	_put_course_lines_on_the_waves()
 	if _open_gusts != null:
 		_open_gusts.put_on_water(_ocean)
+
+
+## The water you see, for the board's sea; on the open water its wave mesh as wide as the draw
+## distance says (Settings > Graphics; DrawDistance.open_waves_m(): 400 m at Normal, as before). The
+## lake's mesh is its own (OceanNode.LAKE_RINGS). OceanNode.setup() adds new water meshes, so the old
+## ones go first. (They are plain meshes without scripts, so they can be freed at once.)
+func _build_the_water() -> void:
+	for child: Node in _ocean.get_children():
+		child.free()
+	_ocean.near_size_m = DrawDistance.open_waves_m()
+	_ocean.setup(_windsurfer.sim, _camera_rig.camera)
+
+
+## Settings > Graphics > Draw distance changed while sailing on the open water: the waves' mesh again.
+func _keep_the_water_at_the_draw_distance() -> void:
+	if _windsurfer.sim.water is LakeWaveField or is_equal_approx(_ocean.near_size_m, DrawDistance.open_waves_m()):
+		return
+	_water_again()
 
 
 ## The settings that set up a run: the controls, the camera, the HUD panel, the shadows.

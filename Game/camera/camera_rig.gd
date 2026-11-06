@@ -51,11 +51,19 @@ func _ready() -> void:
 	# was drawn where it is now, and the board shook in the picture by up to 2.5 pixels a frame (GR9).
 	camera.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 	camera.current = true
-	# 35 km, so a map's far mountains are drawn (MAP_SILVAPLANA_PLAN.md, M2: the farthest visible
-	# land at Silvaplana is 32 km away). On open water the fog hides everything past 1.5 km anyway.
-	camera.far = 35000.0
+	# 35 km at the Normal draw distance, so a map's far mountains are drawn (MAP_SILVAPLANA_PLAN.md,
+	# M2: the farthest visible land at Silvaplana is 32 km away). On open water the fog hides everything
+	# past 1.5 km anyway. Settings > Graphics > Draw distance moves it (DrawDistance, _keep_far_plane()).
+	camera.far = DrawDistance.camera_far_m()
 	add_child(camera)
 	_target = get_node_or_null(target_path) as Node3D
+
+
+## The far plane at the draw distance's step, also when it changes in the settings while sailing.
+func _keep_far_plane() -> void:
+	var far_m: float = DrawDistance.camera_far_m()
+	if camera.far != far_m:
+		camera.far = far_m
 
 
 ## Another board to follow (a race's spectator moves the camera from board to board); the follow
@@ -116,6 +124,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _process(delta: float) -> void:
+	_keep_far_plane()
 	if _target == null:
 		return
 	var board: Transform3D = _target.get_global_transform_interpolated()

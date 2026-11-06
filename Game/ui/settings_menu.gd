@@ -428,6 +428,16 @@ func _build_graphics_rows(s: SettingsValues) -> void:
 		caps.append("No cap" if fps == 0 else "%d fps" % fps)
 	_add_list(grid, "Frame-rate cap", caps, maxi(SettingsValues.FPS_CAPS.find(s.max_fps), 0), "",
 		func(index: int) -> void: s.max_fps = SettingsValues.FPS_CAPS[index])
+	# How far the game draws in full (DrawDistance): the hint says what the step chosen does.
+	var steps: Array[String] = []
+	steps.assign(DrawDistance.NAMES)
+	var distance_row: Row = _add_list(grid, "Draw distance", steps, s.draw_distance, DrawDistance.describe(s.draw_distance),
+		func(index: int) -> void: s.draw_distance = index)
+	(distance_row.control as OptionButton).item_selected.connect(
+		func(index: int) -> void: distance_row.value_label.text = DrawDistance.describe(index))
+	_add_slider(grid, "UI scale", SettingsValues.UI_SCALE_MIN, SettingsValues.UI_SCALE_MAX, 0.05, s.ui_scale,
+		func(v: float) -> String: return "%.0f %%  (the in-game screen; as much as fits the window)" % (v * 100.0),
+		func(v: float) -> void: s.ui_scale = v)
 
 
 func _build_audio_rows(s: SettingsValues) -> void:

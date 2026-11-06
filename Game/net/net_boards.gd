@@ -420,7 +420,7 @@ func _show_puppet(id: int, now_tick: int) -> void:
 	var show_tick: float = float(now_tick) - delay
 	var node: WindsurferNode = puppets[id]
 	var camera: Camera3D = get_viewport().get_camera_3d()
-	var far: bool = camera != null and node.global_position.distance_to(camera.global_position) > RaceRunner.FAR_DETAIL_M
+	var far: bool = camera != null and node.global_position.distance_to(camera.global_position) > DrawDistance.full_detail_m()
 	node.set_far_away(far)
 	var newest_due: int = buffer.tick_at_or_before(show_tick)
 	if newest_due < 0:

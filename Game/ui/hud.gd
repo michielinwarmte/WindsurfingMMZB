@@ -20,6 +20,11 @@ extends CanvasLayer
 ## high, and the project's stretch (project.godot: "canvas_items", "expand") draws the whole layer
 ## as much bigger as the window is taller, sharp at the window's own resolution (no Control.scale);
 ## a wider window gives the parts more room across.
+## On top of that, Settings > Graphics > UI scale (SettingsValues.ui_scale, 75 % to 150 %) makes the
+## whole in-game screen bigger or smaller (Max, 6 November 2026: "a resolution based ui?"): every part
+## sits in one control (_screen) as big as the window divided by the scale, and the layer draws it
+## that much bigger, so the parts keep their places at the window's edges and corners. Parts from
+## elsewhere (the race's RaceHud and RaceNotice) come in through add_part().
 ##
 ## Everything is read from the simulation's Telemetry; nothing is computed here. The pause menu
 ## (pause_menu.gd) is separate; the sailing scene (main.gd) hides this whole layer behind the start
@@ -37,6 +42,10 @@ const ROSE_SIZE: float = 130.0
 const ROSE_GAP: float = 20.0
 ## Where the space under the compass starts (RaceHud's standings), from the top.
 const RIGHT_COLUMN_TOP: float = ROSE_GAP + ROSE_SIZE + 10.0
+## The smallest screen, in its own pixels, the HUD's parts fit on side by side (the bottom row: the
+## speed card, the push and body gauges, the mini-map; the right column: the compass, four lines of
+## standings, the mini-map): a UI scale above 100 % stops where the screen would get smaller.
+const SMALLEST_SCREEN: Vector2 = Vector2(1180.0, 560.0)
 ## The keys' text size: the most, and the least when a narrow window needs smaller (fit_hints()).
 const HINTS_FONT_SIZE: int = 15
 const HINTS_MIN_FONT_SIZE: int = 10
@@ -129,10 +138,18 @@ var clock_text: String = ""
 var _race_mode: bool = false
 ## Whether the card shows a fall now (its line in orange).
 var _fall_shown: bool = false
+## The UI scale in use (Settings > Graphics), and the control every part of the screen sits in.
+var ui_scale: float = 1.0
+var _screen: Control
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	_screen = Control.new()
+	_screen.name = "Screen"
+	_screen.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_screen)
+	_apply_ui_scale()
 	_build_status_card()
 
 	# The detail panel (F1) at the top left, in the old monospace look: it is the team's. A little
@@ -142,7 +159,7 @@ func _ready() -> void:
 	_panel = PanelContainer.new()
 	_panel.position = Vector2(MARGIN, 12.0)
 	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_panel)
+	_screen.add_child(_panel)
 	_detail = _label(mono, 13)
 	_panel.add_child(_detail)
 
@@ -151,7 +168,7 @@ func _ready() -> void:
 	_hints.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_hints.alignment = BoxContainer.ALIGNMENT_CENTER
 	_hints.add_theme_constant_override("separation", 18)
-	add_child(_hints)
+	_screen.add_child(_hints)
 	_hints.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	_hints.offset_left = MARGIN
 	_hints.offset_right = -MARGIN
@@ -165,7 +182,7 @@ func _ready() -> void:
 	_gauges.name = "Gauges"
 	_gauges.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_gauges.add_theme_constant_override("separation", 12)
-	add_child(_gauges)
+	_screen.add_child(_gauges)
 	_push_gauge = PushGauge.new()
 	_gauges.add_child(_push_gauge)
 	_body_gauge = BodyGauge.new()
@@ -178,7 +195,7 @@ func _ready() -> void:
 	_place_gauges()
 
 	_rose = WindRose.new()
-	add_child(_rose)
+	_screen.add_child(_rose)
 	_rose.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	_rose.offset_left = -ROSE_GAP - ROSE_SIZE
 	_rose.offset_right = -ROSE_GAP
@@ -190,7 +207,7 @@ func _ready() -> void:
 	_message.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.8))
 	_message.add_theme_constant_override("outline_size", 5)
 	_message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	add_child(_message)
+	_screen.add_child(_message)
 	_message.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	_message.offset_left = -450.0
 	_message.offset_right = 450.0
@@ -208,7 +225,7 @@ func _build_status_card() -> void:
 	_status_card.name = "StatusCard"
 	_status_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_status_card.add_theme_stylebox_override("panel", HudStyle.card())
-	add_child(_status_card)
+	_screen.add_child(_status_card)
 	var lines: VBoxContainer = VBoxContainer.new()
 	lines.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	lines.add_theme_constant_override("separation", 1)
@@ -252,7 +269,7 @@ func show_course(course: Course) -> void:
 	if _course_line == null:
 		_course_line = HudStyle.label(HudStyle.sans(600), 15)
 		_course_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		add_child(_course_line)
+		_screen.add_child(_course_line)
 		_course_line.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	_course_line.text = "Course: " + course.name
 	_place_mini_map()
@@ -265,7 +282,7 @@ func course_text() -> String:
 func _make_mini_map() -> void:
 	_mini_map = MiniMap.new()
 	_mini_map.size_px = _mini_map_size_px()
-	add_child(_mini_map)
+	_screen.add_child(_mini_map)
 	# A course that grows past the map's edge (the open water) makes the map new: put it in its corner.
 	_mini_map.resized.connect(_place_mini_map)
 
@@ -318,12 +335,66 @@ func right_column_bottom() -> float:
 	return bottom - 8.0
 
 
-## The size of the screen the HUD is laid out on (the window, in the 720-high layout's pixels).
+## The size of the screen the HUD's parts are laid out on (RaceHud places its results with it).
+func screen_size() -> Vector2:
+	return _screen_size()
+
+
+## How far down from the top the space in the middle reaches before the gauges at the bottom begin
+## (RaceHud's results end above them). Pixels of the 720-high layout.
+func bottom_middle_top() -> float:
+	return _screen_size().y - BOTTOM_INSET - PushGauge.GAUGE_SIZE.y
+
+
+## The small map's width in the bottom right corner (0 without one).
+func mini_map_width() -> float:
+	return _mini_map.custom_minimum_size.x if _mini_map != null else 0.0
+
+
+## The size of the screen the HUD is laid out on (the window, in the 720-high layout's pixels, divided
+## by the UI scale).
 func _screen_size() -> Vector2:
+	if _screen != null and _screen.is_inside_tree():
+		return _screen.size
 	return get_viewport().get_visible_rect().size if is_inside_tree() else Vector2(1280.0, 720.0)
 
 
+## A part of the screen made elsewhere (RaceHud, RaceNotice): into the screen with the HUD's own parts,
+## so it is laid out and scaled with them.
+func add_part(part: Control) -> void:
+	_screen.add_child(part)
+
+
+## The UI scale from the settings: the layer drawn that much bigger, the screen inside it that much
+## smaller than the window, so it fills the window exactly. Above 100 % only as much as fits: the
+## screen keeps at least SMALLEST_SCREEN of its own pixels, so the speed card, the gauges, the mini-map
+## and the keys never run into each other (at 1280 x 720 that is about 108 %; on Max's 3137 x 1263
+## window about 129 %). Returns whether it changed.
+func _apply_ui_scale() -> bool:
+	var window: Vector2 = get_viewport().get_visible_rect().size if is_inside_tree() else Vector2(1280.0, 720.0)
+	var wanted: float = ui_scale_for(GameSettings.values.ui_scale, window)
+	var screen_size: Vector2 = window / wanted
+	if is_equal_approx(wanted, ui_scale) and _screen.size.is_equal_approx(screen_size):
+		return false
+	ui_scale = wanted
+	scale = Vector2(wanted, wanted)
+	_screen.position = Vector2.ZERO
+	_screen.size = screen_size
+	return true
+
+
+## The UI scale used for a setting in a window (in the 720-high layout's pixels): the setting, but
+## above 100 % no more than fits (SMALLEST_SCREEN).
+static func ui_scale_for(setting: float, window: Vector2) -> float:
+	var wanted: float = clampf(setting, SettingsValues.UI_SCALE_MIN, SettingsValues.UI_SCALE_MAX)
+	if wanted <= 1.0:
+		return wanted
+	var fits: float = minf(window.x / SMALLEST_SCREEN.x, window.y / SMALLEST_SCREEN.y)
+	return maxf(1.0, minf(wanted, fits))
+
+
 func _on_window_resized() -> void:
+	_apply_ui_scale()
 	_fit_hints()
 	if _mini_map != null:
 		_mini_map.size_px = _mini_map_size_px()
@@ -331,6 +402,9 @@ func _on_window_resized() -> void:
 
 
 func _on_settings_changed() -> void:
+	if _apply_ui_scale():
+		_on_window_resized()
+		return
 	if _mini_map != null and not is_equal_approx(_mini_map.size_px, _mini_map_size_px()):
 		_mini_map.size_px = _mini_map_size_px()
 		_place_mini_map()

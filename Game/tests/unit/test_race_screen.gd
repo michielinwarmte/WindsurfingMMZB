@@ -172,21 +172,44 @@ func test_the_race_card_has_two_lines_for_the_race_director() -> void:
 	assert_false(race_hud._card_lines[1].visible)
 
 
-## A big fleet's results (8 players and 20 AI boards on a LAN race) go into two columns, so they fit.
-func test_a_big_fleet_s_results_go_into_two_columns() -> void:
-	var race_hud: RaceHud = RaceHud.new()
-	add_child_autofree(race_hud)
-	var lines: PackedStringArray = PackedStringArray(["  Results", ""])
-	for i: int in 28:
-		lines.append("  %d. %-14s 12:34.5   +1:02.3" % [i + 1, "Board %d" % (i + 1)])
-	lines.append_array(["", "  R: race again     Esc: menu"])
-	race_hud._show_results("\n".join(lines))
-	assert_true(race_hud._results_text_2.visible, "two columns")
-	assert_string_contains(race_hud._results_text.text, "1. Board 1 ")
-	assert_string_contains(race_hud._results_text_2.text, "28. Board 28")
-	assert_lt(race_hud._results.get_combined_minimum_size().y, 520.0, "fits under the race card in a 720-high window")
-	race_hud._show_results("  Results\n\n  1. You  4:01.2")
-	assert_false(race_hud._results_text_2.visible, "a small fleet: one column")
+## A big fleet's results (8 players and 20 AI boards on a LAN race) fit in the window: under the race
+## card, above the gauges, clear of the small map, in columns and a smaller text as they need (Max,
+## 6 November 2026: "ui of the finishing leaderboard is out of frame": the table was centred on the
+## window's top left corner). Also with penalties and long names, and in a wide window.
+func test_a_big_fleet_s_results_stay_inside_the_window() -> void:
+	for window: Vector2i in [Vector2i(1280, 720), Vector2i(1788, 720), Vector2i(1280, 960)]:
+		get_window().size = window
+		var made: Array = _racing_hud()
+		var hud: Hud = made[0]
+		var race_hud: RaceHud = made[1]
+		await wait_process_frames(2)
+		for long_names: bool in [false, true]:
+			var lines: PackedStringArray = PackedStringArray(["  Results", ""])
+			for i: int in 28:
+				var who: String = ("A Long Player Name %d" % (i + 1)) if long_names else ("Board %d" % (i + 1))
+				lines.append("  %d. %-14s 12:34.5   +1:02.3%s" % [i + 1, who, "   (30 s penalty)" if i % 4 == 3 else ""])
+			lines.append_array(["", "  R: race again     Esc: menu"])
+			race_hud._show_results("\n".join(lines))
+			race_hud._results.show()
+			await wait_process_frames(2)
+			var screen: Rect2 = _screen()
+			var table: Rect2 = race_hud._results.get_global_rect()
+			var at: String = "%s, long names %s: %s" % [window, long_names, table]
+			assert_true(screen.encloses(table), "the results inside the window, " + at)
+			assert_gt(table.position.y, race_hud._card.get_global_rect().end.y, "under the race card, " + at)
+			assert_lt(table.end.y, hud._gauges.get_global_rect().position.y, "above the gauges, " + at)
+			assert_false(table.intersects(hud._mini_map.get_global_rect()), "clear of the small map, " + at)
+			assert_almost_eq(table.get_center().x, screen.size.x * 0.5, 1.0, "in the middle, " + at)
+			var shown: String = "\n".join(race_hud.results_columns())
+			assert_string_contains(shown, "1. ")
+			assert_string_contains(shown, "28. ", "every board is on it, " + at)
+		race_hud._show_results("  Results\n\n  1. You  4:01.2\n\n  R: race again     Esc: menu")
+		await wait_process_frames(1)
+		assert_eq(race_hud.results_columns().size(), 1, "a small fleet: one column")
+		var small: Rect2 = race_hud._results.get_global_rect()
+		assert_lt(small.size.x, 400.0, "and the panel as small as its text again")
+		hud.queue_free()
+		await wait_process_frames(1)
 
 
 ## A short standings table (a big small map) keeps the leader, a gap, you and your neighbours.
