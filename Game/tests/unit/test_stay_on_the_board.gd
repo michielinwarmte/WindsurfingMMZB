@@ -324,12 +324,14 @@ func test_at_walking_pace_a_rising_nose_brings_the_weight_forward() -> void:
 	t.speed_ms = 1.0
 	t.pitch_deg = 15.0
 	var controls: SimControls = SimControls.new()
-	controller._step_forward_on_a_rising_nose(t, controls)
-	assert_almost_eq(controls.step_forward, 0.5, 1e-6, "15 degrees nose-up at walking pace: half way toward the mast")
+	controller._step_forward_on_a_rising_nose(t, controls, 0.5)
+	assert_eq(controls.step_forward, 0.0, "a nose up for half a second: not yet (reflex_nose_up_hold_s)")
+	controller._step_forward_on_a_rising_nose(t, controls, 0.6)
+	assert_almost_eq(controls.step_forward, 0.5, 1e-6, "15 degrees nose-up at walking pace for a second: half way toward the mast")
 	t.pitch_deg = 25.0
-	controller._step_forward_on_a_rising_nose(t, controls)
+	controller._step_forward_on_a_rising_nose(t, controls, DT)
 	assert_almost_eq(controls.step_forward, 1.0, 1e-6, "from 20 degrees: all the way")
 	t.speed_ms = 6.0
 	controls.step_forward = 0.0
-	controller._step_forward_on_a_rising_nose(t, controls)
+	controller._step_forward_on_a_rising_nose(t, controls, DT)
 	assert_eq(controls.step_forward, 0.0, "at speed the trim is the feet's, not this")

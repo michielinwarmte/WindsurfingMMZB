@@ -350,9 +350,14 @@ var reflex_push_fade_from: float = 0.8
 ## pitch, all the way from reflex_nose_up_full_deg. In the races of 6 November the nose of a 108 L
 ## board rose from 17 to 80 degrees in 7 s at 1 to 3 km/h with the sailor standing by the mast foot
 ## (the report, "the baseline").
+## Only once the nose has stayed up past reflex_nose_up_deg for reflex_nose_up_hold_s: a board turning
+## back at walking pace after being over the line early lifts its nose for a moment too, and a step
+## forward then kept two of the fleet test's sixteen boards from starting again (round 3).
 var reflex_slow_ms: float = 3.0
 var reflex_nose_up_deg: float = 10.0
 var reflex_nose_up_full_deg: float = 20.0
+var reflex_nose_up_hold_s: float = 1.0
+var _nose_up_for_s: float = 0.0
 ## The danger felt now, 0 (none) to 1 (at the limit), toward the sail and away from it.
 var lee_danger: float = 0.0
 var windward_danger: float = 0.0
@@ -510,7 +515,7 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 	controls.boom_across = wanted_across if ease < 0.01 else 0.0
 	if reflex_on:
 		_recover_with_the_sheet(telemetry, controls, pilot_trimming, dt)
-		_step_forward_on_a_rising_nose(telemetry, controls)
+		_step_forward_on_a_rising_nose(telemetry, controls, dt)
 
 	controls.balance_reflex = true
 	_move_the_body(telemetry, controls, dt)
@@ -931,8 +936,12 @@ func _sail_draws(telemetry: Telemetry) -> bool:
 
 ## The reflex at walking pace: the weight forward when the nose rises on a board that hardly moves
 ## (reflex_nose_up_deg). Not while the sail is backed in a tack, which steps round the mast already.
-func _step_forward_on_a_rising_nose(telemetry: Telemetry, controls: SimControls) -> void:
-	if controls.hold_side != 0 or telemetry.speed_ms > reflex_slow_ms:
+func _step_forward_on_a_rising_nose(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
+	if controls.hold_side != 0 or telemetry.speed_ms > reflex_slow_ms or telemetry.pitch_deg <= reflex_nose_up_deg:
+		_nose_up_for_s = 0.0
+		return
+	_nose_up_for_s += dt
+	if _nose_up_for_s < reflex_nose_up_hold_s:
 		return
 	var span: float = maxf(reflex_nose_up_full_deg - reflex_nose_up_deg, 0.1)
 	var share: float = clampf((telemetry.pitch_deg - reflex_nose_up_deg) / span, 0.0, 1.0)
@@ -967,6 +976,7 @@ func reset_controls(controls: SimControls) -> void:
 	_holding_back = false
 	lee_danger = 0.0
 	windward_danger = 0.0
+	_nose_up_for_s = 0.0
 	wanted_sheet = 0.0
 	ease = 0.0
 	manoeuvre = Manoeuvre.NONE

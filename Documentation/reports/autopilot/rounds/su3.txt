@@ -1,0 +1,2 @@
+# Round 3 of the stay-on-the-board work: the step forward at walking pace from 15 to 30 degrees of pitch (10 to 20 kept two OCS boards of the fleet test from starting again).
+step1530: --controller.reflex_nose_up_deg=15 --controller.reflex_nose_up_full_deg=30
