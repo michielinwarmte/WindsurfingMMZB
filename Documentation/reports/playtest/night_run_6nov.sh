@@ -14,8 +14,9 @@ cd "$(dirname "$0")/../../.."
 export GODOT="${GODOT:-/c/Users/Max de Dikke/AppData/Local/Programs/Godot/4.7.2-stable/Godot_v4.7.2-stable_win64_console.exe}"
 log=".logs/night_6nov"
 mkdir -p "$log"
-only="${1#--only=}"
-[[ "$only" == "$1" ]] && only="A,B,C,D,E,F"
+only="${1:-}"
+only="${only#--only=}"
+[[ -z "$only" ]] && only="A,B,C,D,E,F"
 wanted() { [[ ",$only," == *",$1,"* ]]; }
 note() { echo "$(date '+%H:%M:%S') $*" | tee -a "$log/00_progress.txt"; }
 note "night run starts on $(git rev-parse --short HEAD) ($(git branch --show-current)); parts: $only"
