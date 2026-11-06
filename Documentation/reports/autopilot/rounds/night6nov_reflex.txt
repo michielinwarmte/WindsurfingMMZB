@@ -1,0 +1,13 @@
+# The night run of 6 to 7 November 2026, part B (Documentation/reports/playtest/night_run_6nov.md):
+# the autopilot's recovery reflex of stay_on_the_board.md swept one number at a time. The base is
+# the shipped reflex (PlayerController.reflex_*: from 65 % of the way to a fall limit, the sheet
+# eased toward 6 degrees, the last chance at 95 % toward 1 degree, 8 deg/s of bear-away, the heels
+# fully, the tip reflex from 70 %). A variant is better only if it falls less at the same speed.
+base:
+reflex_off: --controller.reflex_from_share=2.0 --controller.reflex_tip_from_share=2.0
+reflex_earlier: --controller.reflex_from_share=0.55
+reflex_later: --controller.reflex_from_share=0.75
+reflex_deeper_ease: --controller.reflex_alpha_deg=4.0
+reflex_last_chance_later: --controller.reflex_last_share=0.98
+reflex_more_bear_away: --controller.reflex_bear_away_dps=12.0
+reflex_tip_earlier: --controller.reflex_tip_from_share=0.6
