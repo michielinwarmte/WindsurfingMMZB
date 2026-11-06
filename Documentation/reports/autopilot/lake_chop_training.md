@@ -36,7 +36,7 @@ waves: *"try but if it fails much skip it"*.
   matrix the same one fall (a 24 kt tack on flat water); validation 38 pass, 8 fail, 2 pending, the
   same eight known reds; unit tests 835 of 835; `tools/check.sh` 442 files, 0 failed;
   `tools/lan_test.sh --map=lake` SYNC CHECK: PASS.
-- **The 1.5x waves:** two rounds ran (12 variants, 130 lake cases each); it did not fail much, so it was not
+- **The 1.5x waves:** three rounds ran (16 variants, 130 lake cases each); it did not fail much, so it was not
   stopped. The shipped defaults fall in 21 of 130 cases where the controller before fell in 28, with
   the afternoons' beam reach 13.3 kt against 12.5. The ease in the air from less wind (15 to 17 kt at
   the sail) brings it down to 9, but on the realistic waves it costs the afternoons' beam reach 0.9 kt
@@ -386,7 +386,7 @@ if it also helps or does not hurt 1x). It stays a setting for a rough day.
 ## The 1.5x waves (lc15a, lc15b)
 
 `--lake_wave_scale=1.5`, the lake only (130 cases a variant: the 40 afternoon reaches and the three
-sets of 30), two rounds, 12 variants. It did not fail much, so it was not stopped early.
+sets of 30), three rounds, 16 variants. It did not fail much, so it was not stopped early.
 
 | Variant | Falls (of 130) | Afternoons beam / broad / mid | Map / 18 kt / 24 kt sets | What it is |
 |---|---|---|---|---|
@@ -404,6 +404,11 @@ the higher crests, so the ease in the air pays from less wind there; the steady 
 (`Documentation/reports/waves/lake_waves_full.md`) called 1.5x "a rough day"; the autopilot gets
 through it with a quarter fewer falls than before, and with the lower gate with two thirds fewer.
 
+Round C (`rounds/lc15c.txt`, the last 15 minutes of the 1.5x window): could the low gate's gain
+come cheaper? A lighter ease (8 degrees) 13 falls, a shorter hold (0.15 s) 12, the sail back in
+faster (5) 12, a higher chop gate (12 to 16 degrees a second) 18; `f_wind1517`'s 9 stays the best.
+The ease has to be the full one, from less wind, to pay at 1.5x.
+
 ## The checks on the final code
 
 - `tools/test.sh validation`: 48 tests, 38 pass, 8 fail, 2 pending, the same eight known reds (the
@@ -419,7 +424,7 @@ through it with a quarter fewer falls than before, and with the lower gate with 
 
 `Documentation/reports/autopilot/rounds/`: `lc0.txt` (the baseline), `lc1.txt`, `lc1b.txt` (merged
 into lc2, not run on its own), `lc2.txt`, `lc3.txt`, `lc4.txt`, `lc5.txt`, `lc5d.txt`, `lc6.txt`,
-`lc7.txt`, `lc7s.txt`, `lc8.txt`, `lc15a.txt`, `lc15b.txt`. Each round's outputs:
+`lc7.txt`, `lc7s.txt`, `lc8.txt`, `lc15a.txt`, `lc15b.txt`, `lc15c.txt`. Each round's outputs:
 `.sim_output/autopilot/<round>/<variant>/` (not committed); `python -I tools/autopilot_summary.py
 <round> --table` prints them. Two rounds were stopped a minute or three in and started again with
 better settings (`lc3_stopped`, `lc7_stopped`, kept, not used). The rounds ran from 02:43 to 07:30

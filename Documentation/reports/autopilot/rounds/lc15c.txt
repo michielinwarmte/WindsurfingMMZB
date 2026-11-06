@@ -1,0 +1,8 @@
+# Lake chop at 1.5x, round C (6 November 2026, the last 15 minutes of the 1.5x window): can the low
+# wind gate's gain at 1.5x come with less cost at 1x? A lighter ease (8 degrees), a shorter hold, a
+# higher chop gate (12 to 16 degrees a second: the realistic map's wind sets 10 to 11). Run with
+# --lake_wave_scale=1.5 --only=lake.
+w1517a8: --controller.airborne_wind_from_kt=15 --controller.airborne_wind_full_kt=17 --controller.airborne_alpha_deg=8
+w1517h15: --controller.airborne_wind_from_kt=15 --controller.airborne_wind_full_kt=17 --controller.airborne_hold_s=0.15
+w1517b1216: --controller.airborne_wind_from_kt=15 --controller.airborne_wind_full_kt=17 --controller.airborne_bounce_from_dps=12 --controller.airborne_bounce_full_dps=16
+w1517rs5: --controller.airborne_wind_from_kt=15 --controller.airborne_wind_full_kt=17 --controller.airborne_sheet_in_share=5
