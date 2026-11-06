@@ -51,6 +51,19 @@ const BELT_HEIGHT_M: float = 0.11
 ## The bar across the shoulders, between the two shoulder balls: its radius, m.
 const SHOULDER_BAR_RADIUS_M: float = 0.062
 
+## After a waterstart the figure gets up out of the water over this long (the physics is already
+## sailing): from lying back in the water on the windward side of the board, where it swam to
+## after the fall, up onto the board (windsurfer.gd passes how far it has got).
+const RISE_S: float = 0.9
+## Waiting in the water to waterstart: on the windward side of the board, the body lying back this
+## far from upright (radians), this far down and out from where the feet stood.
+const READY_TILT_RAD: float = 1.2
+const READY_DROP_M: float = 0.55
+const READY_OUT_M: float = 0.35
+## Getting up, the body's parts go from how they lay in the water to the standing pose over this
+## share of the rise, not in one tick.
+const UNFOLD_SHARE: float = 0.5
+
 ## The skeleton the figure is posed from (public so the tests can measure it).
 var skeleton: FigureSkeleton
 
@@ -76,6 +89,14 @@ var _hands: Array[MeshInstance3D] = []
 
 # Where the feet were at the last sailing tick: the pivot of a fall.
 var _last_feet: Vector3 = Vector3(0.0, 0.06, 0.15)
+# Where the figure was in the water at the last fallen tick: where it gets up from.
+var _fallen_root: Transform3D = Transform3D.IDENTITY
+# The body's parts (the root's children), and how they lay in the water when the waterstart came:
+# they unfold from there to the standing pose while the figure gets up.
+var _parts: Array[Node3D] = []
+var _lying_parts: Array[Transform3D] = []
+var _was_fallen: bool = false
+var _unfolding: bool = false
 
 
 ## Builds the figure's parts for a sailor of this height.
@@ -109,16 +130,29 @@ func build(sailor_config: SailorConfig) -> void:
 		_hands.append(_add_sphere("Hand" + label, 0.045, SKIN))
 		var line: MeshInstance3D = VisualMath.add_limb(_root, "HarnessLine" + label, 0.007, LINE)
 		_harness_lines.append(line)
+	for child: Node in _root.get_children():
+		if child is Node3D:
+			_parts.append(child as Node3D)
 
 
-## The figure while sailing, from the simulation's sailor body. `boom_dir` is the boom's
-## direction from the mast in the board's axes (a unit vector); `grip_offset` moves the
-## hands from the boom's centre line onto the windward arm of the wishbone (zero without a rig).
-func pose_sailing(sim: WindsurferSim, boom_dir: Vector3, grip_offset: Vector3 = Vector3.ZERO) -> void:
-	_root.transform = Transform3D.IDENTITY
+## The figure while sailing, from the simulation's sailor body. `boom_dir` and `mast_dir` are the
+## boom's and the mast's directions in the board's axes as the rig is drawn (DrawnRig; a zero
+## mast_dir takes the simulation's own), `rig_flipping` whether the drawn boom is swinging across;
+## `grip_offset` moves the hands from the boom's centre line onto the windward arm of the wishbone
+## (zero without a rig). `raised` is how far the figure has got up after a waterstart (1: standing).
+func pose_sailing(sim: WindsurferSim, boom_dir: Vector3, grip_offset: Vector3 = Vector3.ZERO, mast_dir: Vector3 = Vector3.ZERO,
+		rig_flipping: bool = false, raised: float = 1.0) -> void:
+	# Getting up out of the water: from where it lay to standing, the body solved as standing.
+	_root.transform = Transform3D.IDENTITY if raised >= 1.0 else _fallen_root.interpolate_with(Transform3D.IDENTITY, smoothstep(0.0, 1.0, raised))
+	if _was_fallen:
+		_was_fallen = false
+		_unfolding = raised < 1.0
+		_lying_parts.clear()
+		for part: Node3D in _parts:
+			_lying_parts.append(part.transform)
 	var s: FigureSkeleton = skeleton
 	s.grip_offset_body = grip_offset
-	s.solve(sim, boom_dir)
+	s.solve(sim, boom_dir, mast_dir, rig_flipping)
 
 	# The pelvis lies across the hips; the torso follows the spine up to the shoulders.
 	_place_between(_pelvis, s.hips[FigureSkeleton.LEFT], s.hips[FigureSkeleton.RIGHT])
@@ -145,13 +179,28 @@ func pose_sailing(sim: WindsurferSim, boom_dir: Vector3, grip_offset: Vector3 = 
 		if s.hooked:
 			VisualMath.lay_segment(_harness_lines[side], s.hook, s.harness_line_ends[side])
 	_last_feet = s.feet_centre
+	if _unfolding:
+		_unfold(raised)
+
+
+## Getting up after a waterstart: each part goes from how it lay in the water toward the standing
+## pose just worked out, over the first UNFOLD_SHARE of the rise.
+func _unfold(raised: float) -> void:
+	var share: float = smoothstep(0.0, 1.0, raised / UNFOLD_SHARE)
+	if share >= 1.0 or raised >= 1.0:
+		_unfolding = false
+		return
+	for i: int in _parts.size():
+		_parts[i].transform = _lying_parts[i].interpolate_with(_parts[i].transform, share)
 
 
 ## The fall on screen: the figure keeps its last pose and goes over as one, pivoting about
 ## its feet onto its side, carried toward the landing with a little arc: over the sail in
 ## a catapult (landing beyond the mast top), or backwards beside the board when falling to
-## windward. `eased` runs from 0 to 1 as the fall progresses.
-func pose_fallen(sim: WindsurferSim, eased: float) -> void:
+## windward. `eased` runs from 0 to 1 as the fall progresses. Then `swim` (0 to 1) brings it from
+## where it landed to the windward side of the board, lying back in the water ready to waterstart
+## (it gets up from there: pose_sailing's `raised`).
+func pose_fallen(sim: WindsurferSim, eased: float, swim: float = 0.0) -> void:
 	var side: float = float(sim.fall_side)
 	var over: bool = sim.fall_kind == "catapult" or sim.fall_kind == "tipped over"
 	var reach: float = sim.sail_config.mast_m + 1.0 if over else 1.8
@@ -160,9 +209,23 @@ func pose_fallen(sim: WindsurferSim, eased: float) -> void:
 	var pivot: Vector3 = _last_feet
 	var tip: Basis = Basis(Vector3.BACK, -side * eased * 0.5 * PI)
 	var carried: Vector3 = landing * eased + Vector3(0.0, arc, 0.0)
-	_root.transform = Transform3D(tip, pivot - tip * pivot + carried)
+	var fallen: Transform3D = Transform3D(tip, pivot - tip * pivot + carried)
+	if swim > 0.0:
+		fallen = fallen.interpolate_with(_ready_in_water(), smoothstep(0.0, 1.0, swim))
+	_root.transform = fallen
+	_fallen_root = fallen
+	_was_fallen = true
 	_harness_lines[0].visible = false
 	_harness_lines[1].visible = false
+
+
+## Waiting in the water to waterstart: lying back on the windward side of the board, the feet
+## toward where they stood.
+func _ready_in_water() -> Transform3D:
+	var windward: float = skeleton.windward_side()
+	var tip: Basis = Basis(Vector3.BACK, -windward * READY_TILT_RAD)
+	var pivot: Vector3 = _last_feet
+	return Transform3D(tip, pivot - tip * pivot + Vector3(windward * READY_OUT_M, -READY_DROP_M, 0.0))
 
 
 ## The torso's pieces, each laid from station to station on the spine's curve and turned

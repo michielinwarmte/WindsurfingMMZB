@@ -15,6 +15,15 @@ Template for new entries:
 
 ---
 
+## 6 November 2026 - Sailor polish (Max's PC): the figure moves like a sailor, feet in the straps
+**Phase:** version 0.2, on `gr/sailor-polish` from `night2/look` (707888e), worktree `WindsurfingMMZB-gp2`. Claude Opus 5.5, no agents. The report: [reports/sailor/sailor_polish_6nov.md](reports/sailor/sailor_polish_6nov.md).
+**Done:** Max's play-test: the figure glitched (body shake, hands jumping, tacks and gybes, feet sliding) and stood in the middle of the board while planing. Measured joint by joint (`Game/dev/figure_motion.gd`); fixed in the drawing only: feet planted or stepping and in the windward straps while planing (`figure_feet.gd`), hands that hold, slide and regrip (`figure_hands.gd`), the rig drawn through a spring and swung round the mast at a flip (`drawn_rig.gd`), hips and neck steadied in the board's level frame, a felt yaw rate for the crouch and the look, the waterstart's swim and rise. No `Game/sim/` change.
+**Verified:** `tools/check.sh` 449 files, 0 failed; the figure and rig tests green (9 and 24; 3 new); the full `tools/test.sh` see the report; the before/after measurement in the report. Not verified: how it looks moving on Max's screen, the wide window, a full fleet's frame time.
+**Decisions:** none taken; three physics observations for Michiel in the report's section 8 (the back foot at 100 % stalls a broad reach on the lake; a 30 Hz wobble of the sailor's centre of mass; the rig's one-tick rake and side flips).
+**Next:** Max's play-test (the report's checklist); the report's next steps.
+
+---
+
 ## 5 November 2026 - Session 71 (Max's PC): everything since 0.1.0 merged into main
 **Phase:** version 0.2; the chain of branches merged into `main` (the overview for the team: the Claude Doc "WindsurfingMMZB branches and what to merge"). Claude Opus 5.5, no agents.
 **Done:** (1) Max relayed the answers: Michiel's OK covers pull request #5 (no separate play by Tarpie needed); Michiel approved the two wave files of `gp/sea-follows-wind` (`wave_set_config.gd`, `wave_field.gd`) and PH43's physics (spec 7.6 and the fin); Max: the waves are right now in a North and a South wind (GR8); the LAN test on two PCs works (MP1, with the 0.2.0-beta.3 build of `mp/lan` made on this PC in `../WindsurfingMMZB-lan-speelversie-5nov2026/`); the laptop has no unpushed work left. (2) `ph43/airtime-fin` committed (fca68b5) and pushed. (3) On `merge/to-main` (worktree `../WindsurfingMMZB-merge`) from `mp/lan` (5825627): `gear/lead`'s last three commits merged (the second night's brains; only the documentation clashed: sessions 67 to 69 kept, Michiel's updated Session 66 entries taken), then `ph43/airtime-fin` (only this log clashed). (4) `main` moved forward to it, a fast-forward from 4b9297f, so pull request #5 is in it.

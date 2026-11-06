@@ -48,6 +48,26 @@ static func add_limb(parent: Node3D, node_name: String, radius: float, color: Co
 	return instance
 
 
+## A critically damped spring, one step of `dt` seconds: the value follows `target` like a weight
+## on a spring with just enough damping not to overshoot, `omega` (radians a second) setting how
+## fast (it closes most of a sudden gap in about 4 / omega seconds). Its speed changes smoothly, so
+## a target that jumps or jitters comes out as an easy movement, never a jump. Exact for any time
+## step (the closed form of x'' = -omega^2 x - 2 omega x'). Returns (the value, its speed).
+static func spring_float(value: float, speed: float, target: float, omega: float, dt: float) -> Vector2:
+	var offset: float = value - target
+	var decay: float = exp(-omega * dt)
+	var j: float = speed + omega * offset
+	return Vector2(target + (offset + j * dt) * decay, (speed - omega * j * dt) * decay)
+
+
+## The same spring for a point: returns [the point, its velocity].
+static func spring_vector(value: Vector3, velocity: Vector3, target: Vector3, omega: float, dt: float) -> PackedVector3Array:
+	var offset: Vector3 = value - target
+	var decay: float = exp(-omega * dt)
+	var j: Vector3 = velocity + omega * offset
+	return PackedVector3Array([target + (offset + j * dt) * decay, (velocity - omega * j * dt) * decay])
+
+
 ## A plain, slightly rough material in one colour.
 static func plain_material(color: Color) -> StandardMaterial3D:
 	var material: StandardMaterial3D = StandardMaterial3D.new()

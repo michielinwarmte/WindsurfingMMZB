@@ -83,12 +83,22 @@ var _ticks_counted: int = 0
 
 ## The fall takes this long on screen (the physics has already let go).
 const FALL_DURATION_S: float = 0.9
+## The sailor reaches the windward side of the board, ready to waterstart, this long before the
+## physics waterstarts (SailorConfig.waterstart_time_s).
+const SWIM_READY_BEFORE_S: float = 0.3
 
 var _previous_state: WindsurferSim.SailorState = WindsurferSim.SailorState.SAILING
 
 var _rig: RigVisuals
 var _figure: SailorFigure
 var _effects: WindsurferEffects
+## The rig as it is drawn: the physics' mast and boom, smoothed, and swung across round the mast
+## when the sail changes sides (DrawnRig). The sailor's hands hold this rig.
+var _drawn_rig: DrawnRig = DrawnRig.new()
+var _drawn_time_s: float = -1.0
+## When the last waterstart was (simulation time; -1: none to show): the sailor and the rig get up
+## from the water over SailorFigure.RISE_S after it.
+var _rise_start_s: float = -1.0
 
 
 func _ready() -> void:
@@ -127,6 +137,8 @@ func reset() -> void:
 	sim.reset(start_position, deg_to_rad(start_heading_deg))
 	_previous_state = sim.sailor_state
 	autopilot.target_twa_deg = autopilot_twa_deg
+	_drawn_rig.snap()
+	_rise_start_s = -1.0
 	_copy_state_to_visuals()
 	reset_physics_interpolation()
 
@@ -275,6 +287,7 @@ func is_far_away() -> bool:
 func _after_waterstart() -> void:
 	controller.reset_controls(controls)
 	_previous_state = sim.sailor_state
+	_rise_start_s = sim.time_s
 	_copy_state_to_visuals()
 	reset_physics_interpolation()
 
@@ -300,12 +313,16 @@ func _copy_state_to_visuals() -> void:
 	_copy_place_to_visuals()
 	var body: SimRigidBody = sim.body
 	if sim.sailor_state == WindsurferSim.SailorState.FALLEN:
-		# A fall picks up speed: the progress is squared.
+		# A fall picks up speed: the progress is squared. Then the sailor swims to the windward
+		# side of the board and pulls the rig round there, ready to waterstart.
 		var progress: float = clampf(sim.fallen_for_s / FALL_DURATION_S, 0.0, 1.0)
 		var eased: float = progress * progress
-		_rig.pose_fallen(eased, float(sim.fall_side))
+		var swim_time_s: float = maxf(sim.sailor_config.waterstart_time_s - FALL_DURATION_S - SWIM_READY_BEFORE_S, 0.3)
+		var swim: float = clampf((sim.fallen_for_s - FALL_DURATION_S) / swim_time_s, 0.0, 1.0)
+		_rig.pose_fallen(eased, float(sim.fall_side), swim, _figure.skeleton.windward_side())
 		_rig.rotation_degrees = Vector3.ZERO
-		_figure.pose_fallen(sim, eased)
+		_figure.pose_fallen(sim, eased, swim)
+		_drawn_rig.snap()
 		return
 
 	# The rig: the mast direction and the boom direction. The simulation holds the rig in
@@ -316,14 +333,28 @@ func _copy_state_to_visuals() -> void:
 	# The boom as the simulation has it: level at the sail's angle, or square to the raked mast
 	# (SailConfig.boom_square_to_mast), so the hands stay on it.
 	var boom_dir: Vector3 = rig_to_board * sim.sail.boom_direction_local
-	_rig.pose_sailing(mast_dir, boom_dir)
+	# Drawn smoothed, and swung across round the mast when the sail changes sides (DrawnRig).
+	_drawn_rig.update(mast_dir, boom_dir, body.basis, sim.time_s - _drawn_time_s if _drawn_time_s >= 0.0 else -1.0)
+	_drawn_time_s = sim.time_s
+	mast_dir = _drawn_rig.mast_dir
+	boom_dir = _drawn_rig.boom_dir
+	# Getting up after a waterstart: the rig rises from the water as the sailor does.
+	var raised: float = 1.0
+	if _rise_start_s >= 0.0:
+		raised = clampf((sim.time_s - _rise_start_s) / SailorFigure.RISE_S, 0.0, 1.0)
+		if raised >= 1.0:
+			_rise_start_s = -1.0
+	if raised < 1.0:
+		_rig.pose_rising(mast_dir, boom_dir, raised)
+	else:
+		_rig.pose_sailing(mast_dir, boom_dir)
 	_rig.shape_sail(sim.sail, sim.time_s)
 	# The chatter at the fin's limit (GR1): a shiver of the board and the rig, for the eye only;
 	# the node the cameras follow does not move with it.
 	var chatter: Vector2 = WindsurferEffects.chatter_deg(sim.telemetry.fin_load_share, sim.telemetry.fin_stalled, sim.time_s)
 	_rig.rotation_degrees = Vector3(chatter.x, 0.0, chatter.y)
 	# The sailor holds the windward arm of the wishbone boom, not the boom's centre line.
-	_figure.pose_sailing(sim, boom_dir, _rig.windward_arm_offset())
+	_figure.pose_sailing(sim, boom_dir, _rig.windward_arm_offset(), mast_dir, _drawn_rig.flipping, raised)
 
 
 func _build_visuals() -> void:
