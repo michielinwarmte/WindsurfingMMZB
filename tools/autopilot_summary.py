@@ -2,6 +2,13 @@
 """One compact table per variant of an autopilot suite round (tools/autopilot_suite.sh).
 
     python3 -I tools/autopilot_summary.py <round> [<label> ...]
+    python3 -I tools/autopilot_summary.py <round> --table [<label> ...]   one line per variant
+    python3 -I tools/autopilot_summary.py <round>,<round2> --table          several rounds in one table
+
+The lake (tools/autopilot_suite.sh --only=lake): lake_afternoons.txt (the reaches at ten times of
+day), lake_map.txt (the lake matrix in the map's wind), lake_steady18.txt and lake_steady24.txt
+(every manoeuvre in a steady wind at three times); per group the falls, the manoeuvres not
+completed and the mean speed in the window (kt). The race on T2 on the lake: race_*.txt.
 
 Reads .sim_output/autopilot/<round>/<label>/: reach.txt and reach/*.csv (the rake, the rig's lean,
 the sheet and the angle of attack over the measured window), push_neutral.txt, push_pushed.txt (the
@@ -97,6 +104,72 @@ def matrix_line(path):
     return last or "(matrix: no summary line)"
 
 
+LAKE_GROUPS = ("afternoons", "map", "steady18", "steady24")
+
+
+def lake_rows(path):
+    """The lines of a lake file: name, time, fall text, done, window mean speed (kt) or None."""
+    rows = []
+    if not os.path.exists(path):
+        return rows
+    for line in open(path, encoding="utf-8", errors="replace"):
+        if "|" not in line:
+            continue
+        cells = [c.strip() for c in line.rstrip("\n").split("|")]
+        if len(cells) < 6:
+            continue
+        head = cells[0].split()
+        if len(head) < 2:
+            continue
+        window = cells[5].split()
+        mean = None
+        if len(window) == 3 and window[2] != "-":
+            try:
+                mean = float(window[2])
+            except ValueError:
+                mean = None
+        done = cells[3].split()[0] if cells[3].split() else "-"
+        rows.append({"name": head[0], "time": head[1], "fall": cells[2], "done": done, "mean": mean})
+    return rows
+
+
+def lake_kind(name):
+    if name in ("straight", "broad", "broad_mid"):
+        return "straight"
+    return name.split("_")[0]
+
+
+def lake_stats(rows):
+    falls = sum(1 for r in rows if r["fall"] not in ("-", ""))
+    unfinished = sum(1 for r in rows if lake_kind(r["name"]) != "straight" and r["done"] == "-")
+    catapults = sum(1 for r in rows if "catapult" in r["fall"])
+    by_name = {}
+    for r in rows:
+        if r["mean"] is not None:
+            by_name.setdefault(r["name"], []).append(r["mean"])
+    means = {k: sum(v) / len(v) for k, v in by_name.items()}
+    manoeuvres = [r["mean"] for r in rows if lake_kind(r["name"]) != "straight" and r["mean"] is not None]
+    return {"n": len(rows), "falls": falls, "unfinished": unfinished, "catapults": catapults, "means": means,
+            "manoeuvre_mean": sum(manoeuvres) / len(manoeuvres) if manoeuvres else 0.0}
+
+
+def race_rows(path):
+    import re
+    rows = []
+    if not os.path.exists(path):
+        return rows
+    for line in open(path, encoding="utf-8", errors="replace"):
+        m = re.match(r"\s*(\d+)\. (.+?)\s+(DNF|\d+:\d\d\.\d)\s+.*falls (\d+)\s+tacks (\d+)\s+gybes (\d+)", line)
+        if not m:
+            continue
+        t = None
+        if m.group(3) != "DNF":
+            mins, secs = m.group(3).split(":")
+            t = int(mins) * 60 + float(secs)
+        rows.append({"name": m.group(2).strip(), "time": t, "falls": int(m.group(4)), "tacks": int(m.group(5)), "gybes": int(m.group(6))})
+    return rows
+
+
 def mark(ok):
     return "ok " if ok else "NO "
 
@@ -139,18 +212,86 @@ def summarise(round_name, label):
         else:
             print("%-24s (no rows)" % title)
     print("matrix  %s" % matrix_line(os.path.join(base, "matrix.txt")))
+    for group in LAKE_GROUPS:
+        rows = lake_rows(os.path.join(base, "lake_%s.txt" % group))
+        if not rows:
+            continue
+        st = lake_stats(rows)
+        means = "  ".join("%s %.1f" % (k, v) for k, v in sorted(st["means"].items()))
+        print("lake %-10s %2d cases: falls %d (catapults %d), not completed %d | %s" % (
+            group, st["n"], st["falls"], st["catapults"], st["unfinished"], means))
+        for r in rows:
+            if r["fall"] not in ("-", "") or (lake_kind(r["name"]) != "straight" and r["done"] == "-"):
+                print("      %-10s %s  fall %-15s done %s" % (r["name"], r["time"], r["fall"], r["done"]))
+    for name in sorted(os.listdir(base)) if os.path.isdir(base) else []:
+        if name.startswith("race_") and name.endswith(".txt"):
+            rows = race_rows(os.path.join(base, name))
+            cells = ["%s %s F%d" % (r["name"].split()[0][:8], ("%.0f s" % r["time"]) if r["time"] is not None else "DNF", r["falls"]) for r in rows]
+            print("%-24s %s" % (name[:-4], "  ".join(cells) if cells else "(no results)"))
     print()
+
+
+def table_line(round_name, label):
+    """One line per variant: the open water, then the lake."""
+    base = os.path.join(ROOT, ".sim_output", "autopilot", round_name, label)
+    cells = []
+    rows = reach_rows(os.path.join(base, "reach.txt"))
+    if rows:
+        met = sum(1 for r in rows if (r["wind"], r["twa"]) in GOAL_CASES and 0.6 <= r["front"] <= 1.0 and 1.0 <= r["trim"] <= 2.5 and r["sd"] < 0.3)
+        steady = sum(1 for r in rows if r["sd"] < 0.3 and r["fell"] == "ok")
+        mean_v = sum(r["speed"] for r in rows) / len(rows)
+        cells.append("reach %d/4 %d/9 %5.2f" % (met, steady, mean_v))
+    else:
+        cells.append("reach %-12s" % "-")
+    for name in ("push_neutral.txt", "push_pushed.txt"):
+        prow = push_rows(os.path.join(base, name))
+        if prow:
+            cells.append("F%d %5.2f" % (sum(r["falls"] for r in prow), sum(r["made"] for r in prow) / len(prow)))
+        else:
+            cells.append("%-8s" % "-")
+    import re
+    m = re.match(r"(\d+) cases: (\d+) with a fall, (\d+) with NaN, (\d+) manoeuvres", matrix_line(os.path.join(base, "matrix.txt")))
+    cells.append("mx F%s U%s" % (m.group(2), m.group(4)) if m else "mx -    ")
+    for group in LAKE_GROUPS:
+        rows = lake_rows(os.path.join(base, "lake_%s.txt" % group))
+        if not rows:
+            cells.append("%-17s" % (group[:3] + " -"))
+            continue
+        st = lake_stats(rows)
+        if group == "afternoons":
+            cells.append("aft F%d %4.1f %4.1f %4.1f" % (st["falls"], st["means"].get("straight", 0), st["means"].get("broad", 0), st["means"].get("broad_mid", 0)))
+        else:
+            cells.append("%s F%2d C%d U%d %4.1f %4.1f" % ({"map": "map", "steady18": "s18", "steady24": "s24"}[group], st["falls"], st["catapults"], st["unfinished"],
+                                                st["means"].get("straight", 0), st["manoeuvre_mean"]))
+    races = []
+    for name in sorted(os.listdir(base)) if os.path.isdir(base) else []:
+        if name.startswith("race_") and name.endswith(".txt"):
+            rr = race_rows(os.path.join(base, name))
+            if rr:
+                fin = [r["time"] for r in rr if r["time"] is not None]
+                races.append("%d/%d %s F%d" % (len(fin), len(rr), ("%.0f" % (sum(fin) / len(fin))) if fin else "-", sum(r["falls"] for r in rr)))
+    if races:
+        cells.append("race " + " ".join(races))
+    return "%-22s %s" % (label[:22], " | ".join(cells))
 
 
 def main():
     if len(sys.argv) < 2:
         print(__doc__)
         sys.exit(2)
-    round_name = sys.argv[1]
-    root = os.path.join(ROOT, ".sim_output", "autopilot", round_name)
-    labels = sys.argv[2:] or sorted(d for d in os.listdir(root) if os.path.isdir(os.path.join(root, d)))
-    for label in labels:
-        summarise(round_name, label)
+    args = sys.argv[1:]
+    table = "--table" in args
+    args = [a for a in args if a != "--table"]
+    for round_name in args[0].split(","):
+        root = os.path.join(ROOT, ".sim_output", "autopilot", round_name)
+        labels = args[1:] or sorted(d for d in os.listdir(root) if os.path.isdir(os.path.join(root, d)))
+        if table:
+            print("== %s: reach met/steady/mean m/s | push neutral falls, made good | pushed | matrix falls, not done | lake afternoons falls, beam/broad/mid kt | map, steady 18, steady 24: falls, catapults, not done, beam kt, after-manoeuvre kt" % round_name)
+        for label in labels:
+            if table:
+                print(table_line(round_name, label))
+            else:
+                summarise(round_name, label)
 
 
 if __name__ == "__main__":

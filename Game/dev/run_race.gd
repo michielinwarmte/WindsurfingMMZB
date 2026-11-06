@@ -59,6 +59,15 @@ extends SceneTree
 ##   [--polar=<file.tres>] the scripted skippers sail with another polar (SkipperPolar; a res:// path or a
 ##                         path from the repository's folder) instead of Game/config/skipper_polar.tres
 ##   [--stop_after_gun=<s>] stop the race this long after the gun (to look at the start only)
+##   [--map=lake]          the boards sail on Lake Silvaplana as the game sails it there: the lake's
+##                         air and water, the map's wind of the hour (its gusts, lulls, shifts and lee)
+##                         and the lake's own waves (PHYSICS_SPEC.md 9.17, 9.18), at --time=14:30 (any
+##                         hh:mm); --wind_kt is then the lake's mean wind of that hour. With a course
+##                         on the lake (t2_slalom). --lake_wave_scale=<x> sets the waves' height.
+##                         Without it every board sails the open water (below)
+##   [--pilot.<field>=<n>] [--controller.<field>=<n>] a tuning number of every skipper's beginner
+##                         controller (PlayerController) or its auto-sheet pilot (Autopilot, through
+##                         the controller's pilot_overrides), for the autopilot's suite
 ##   [--out_dir=<folder>: a CSV per board: race time, x, z, heading, speed, its next step, and what
 ##                         its skipper is doing]
 ## After the results it prints each skipper's start: how long after the gun it crossed the start
@@ -95,6 +104,13 @@ const STEADY_REACTION_S: float = 0.25
 const STEADY_NOISE_DEG: float = 0.5
 ## A CSV row every this many ticks (0.1 s).
 const CSV_EVERY: int = 6
+const LAKE_ENVIRONMENT_PATH: String = "res://maps/silvaplana/environment_silvaplana.tres"
+
+## --map=lake: the lake's environment and the hour of its wind (null: the open water).
+static var _lake: EnvironmentConfig = null
+static var _lake_time_s: float = 14.5 * 3600.0
+## --pilot.<field> and --controller.<field> for every skipper's controller.
+static var _controller_overrides: Dictionary[String, float] = {}
 
 
 ## One board in the race: its simulation, who sails it, and what is counted about it.
@@ -152,6 +168,16 @@ func _initialize() -> void:
 	var skipper_push: bool = options.get("skipper_push", "1") != "0"
 	var steady_hands: bool = options.get("steady_hands", "0") == "1"
 	var polar_path: String = options.get("polar", "")
+	if options.get("map", "open") == "lake":
+		_lake = load(LAKE_ENVIRONMENT_PATH)
+		var clock: PackedStringArray = options.get("time", "14:30").split(":")
+		_lake_time_s = clock[0].to_float() * 3600.0 + (clock[1].to_float() * 60.0 if clock.size() > 1 else 0.0)
+		wind_kt = _lake.map_wind().moment(_lake_time_s).lake_speed_ms / SimMath.KNOT_MS
+		print("On Lake Silvaplana at %s: the lake's mean wind %.1f kt from %.0f deg, its own waves" % [
+			options.get("time", "14:30"), wind_kt, _lake.map_wind().lake_from_deg(_lake_time_s)])
+	for key: String in options:
+		if key.begins_with("pilot.") or key.begins_with("controller."):
+			_controller_overrides[key] = options[key].to_float()
 
 	var course_name: String = options.get("course", "test")
 	var course: Course = course_named(course_name)
@@ -518,6 +544,8 @@ static func _test_course(axis_deg: float) -> Course:
 ## test_skipper.gd) would otherwise all read the same objects, and that slowed each of them down
 ## several times over. The numbers are the same.
 static func _make_sim(wind_from_deg: float, wind_kt: float) -> WindsurferSim:
+	if _lake != null:
+		return _make_lake_sim()
 	var environment: EnvironmentConfig = EnvironmentConfig.new()
 	var wind_config: WindConfig = environment.wind_or_default().duplicate(true)
 	wind_config.speed_kt = wind_kt
@@ -534,6 +562,36 @@ static func _make_sim(wind_from_deg: float, wind_kt: float) -> WindsurferSim:
 	sim.air_density_kg_m3 = environment.air_density_kg_m3
 	sim.set_waves(true)
 	return sim
+
+
+## A board on Lake Silvaplana (--map=lake), as the AI's training builds one there (RaceEnv with the
+## lake's environment): its own copies of every config, the map's wind at the hour, and the menu's
+## default sea with the lake's own waves on (TrainingDrops.lake_sea()).
+static func _make_lake_sim() -> WindsurferSim:
+	var sim: WindsurferSim = WindsurferSim.create_for(_lake, true, true)
+	var map_field: MapWindField = sim.wind as MapWindField
+	if map_field != null:
+		map_field.set_time_of_day(_lake_time_s)
+	sim.wave_set_config = TrainingDrops.lake_sea()
+	sim.set_waves(true)
+	return sim
+
+
+## The --pilot. and --controller. settings on a skipper's controller.
+static func _apply_controller_overrides(controller: PlayerController) -> void:
+	for key: String in _controller_overrides:
+		var parts: PackedStringArray = key.split(".", true, 1)
+		if parts[0] == "pilot":
+			if parts[1] in controller.auto_sheet_pilot:
+				controller.pilot_overrides[parts[1]] = _controller_overrides[key]
+			else:
+				push_error("No field '%s' to override." % key)
+		elif parts[1] in controller:
+			var current: Variant = controller.get(parts[1])
+			var value: float = _controller_overrides[key]
+			controller.set(parts[1], (value != 0.0) if current is bool else (int(value) if current is int else value))
+		else:
+			push_error("No field '%s' to override." % key)
 
 
 ## A skipper's board: at the pre-start spot (brought nearer the line for a short countdown), at
@@ -557,6 +615,7 @@ static func _make_skipper_board(skipper_name: String, race: RaceSim, course: Cou
 		print("%s sails %s" % [entry.name, own_gear.names_line()])
 	entry.controller = PlayerController.new()
 	entry.controller.set_sail(entry.sim.sail, entry.sim.sailor_config, entry.sim.air_density_kg_m3)
+	_apply_controller_overrides(entry.controller)
 	entry.hands = AiHands.new()
 	entry.controller.hands = entry.hands
 	entry.controls = _fresh_controls()
