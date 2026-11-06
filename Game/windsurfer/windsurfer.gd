@@ -195,6 +195,10 @@ func change_gear(new_gear: GearChoice) -> void:
 	if _sail_colour != Color.TRANSPARENT:
 		_rig.tint_sail(_sail_colour)
 	_rig.set_process(not _far_away)
+	# The drawn rig (DrawnRig) starts where the new rig is, as at a reset, not swinging in from the old.
+	_drawn_rig.snap()
+	_drawn_time_s = -1.0
+	_rise_start_s = -1.0
 	_copy_state_to_visuals()
 	reset_physics_interpolation()
 
