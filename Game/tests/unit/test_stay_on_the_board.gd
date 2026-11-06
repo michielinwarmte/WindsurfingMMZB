@@ -335,3 +335,24 @@ func test_at_walking_pace_a_rising_nose_brings_the_weight_forward() -> void:
 	controls.step_forward = 0.0
 	controller._step_forward_on_a_rising_nose(t, controls, DT)
 	assert_eq(controls.step_forward, 0.0, "at speed the trim is the feet's, not this")
+
+
+# --- The reflex fades away at low speed (Max, the night of 6 November 2026) -------------------------
+
+func test_the_reflex_fades_away_at_low_speed() -> void:
+	var controller: PlayerController = _reflex()
+	var t: Telemetry = _telemetry()
+	t.lee_fall_share = 0.9
+	t.speed_ms = 2.0
+	controller._feel_the_fall(t, DT)
+	assert_eq(controller.lee_danger, 0.0, "at walking pace the reflex does nothing: the sailor stays calm")
+	t.speed_ms = 4.5
+	controller._feel_the_fall(t, DT)
+	assert_between(controller.lee_danger, 0.2, 0.8, "half way between walking pace and planing: part of it")
+	t.speed_ms = 7.0
+	controller._feel_the_fall(t, DT)
+	assert_almost_eq(controller.lee_danger, 1.0, 1e-6, "at speed all of it, as before")
+
+
+func test_the_step_forward_is_off_unless_asked_for() -> void:
+	assert_false(PlayerController.new().reflex_step_forward, "the step toward the mast at walking pace is off: it kept the board off the plane")

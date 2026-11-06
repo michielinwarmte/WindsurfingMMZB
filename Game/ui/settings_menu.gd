@@ -371,6 +371,8 @@ func _build_sailing_rows(s: SettingsValues) -> void:
 		func(on: bool) -> void: s.manoeuvre_body_carves = on)
 	_add_switch(grid, "Flip on your cue", s.manoeuvre_flip_on_cue, "Space again at \"flip now\": the rig goes across (none: by itself)",
 		func(on: bool) -> void: s.manoeuvre_flip_on_cue = on)
+	_add_switch(grid, "Recovery reflex", s.recovery_reflex, "Near a fall your sailor eases, bears away and flattens by itself (off: as before 6 November)",
+		func(on: bool) -> void: s.recovery_reflex = on)
 
 
 ## Package B, the body on the mouse (an experiment, ROADMAP GP2; MouseBody). The switch turns it on;

@@ -420,6 +420,13 @@ var reflex_catch_alpha_deg: float = 18.0
 var reflex_tip_from_share: float = 0.7
 var reflex_hold_s: float = 0.3
 var reflex_push_fade_from: float = 0.8
+## And the reflex fades away at low speed (Max, 6 November 2026, the night's play-test: "in low speeds
+## the autopilot is moving a lot; these reflexes must fade away at low speeds"): nothing at and below
+## reflex_fade_below_ms (walking pace), all of it from reflex_full_from_ms (about planing). A board at
+## displacement speed is sailed calmly, as before the reflex.
+var reflex_fade_below_ms: float = 3.0
+var reflex_full_from_ms: float = 6.0
+var _reflex_speed_share: float = 1.0
 ## And at walking pace: a board whose nose rises while it hardly moves (below reflex_slow_ms; the tail
 ## sinking under the sailor, a heavy sailor on a small board waiting for a start) gets the weight
 ## forward: the sailor steps toward the mast (SimControls.step_forward) from reflex_nose_up_deg of
@@ -433,6 +440,10 @@ var reflex_slow_ms: float = 3.0
 var reflex_nose_up_deg: float = 10.0
 var reflex_nose_up_full_deg: float = 20.0
 var reflex_nose_up_hold_s: float = 1.0
+## The step forward only when asked for: off since the night of 6 November 2026, because it acts at
+## walking pace, where Max wants the sailor calm. The AI's tail-stand at walking pace that it was built
+## for is a buoyancy question for Michiel (stay_on_the_board.md, open question 2).
+var reflex_step_forward: bool = false
 var _nose_up_for_s: float = 0.0
 ## The danger felt now, 0 (none) to 1 (at the limit), toward the sail and away from it.
 var lee_danger: float = 0.0
@@ -608,7 +619,8 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 	# The recovery reflex last, so near a fall its ease wins over the cue's hold.
 	if reflex_on:
 		_recover_with_the_sheet(telemetry, controls, pilot_trimming, dt)
-		_step_forward_on_a_rising_nose(telemetry, controls, dt)
+		if reflex_step_forward:
+			_step_forward_on_a_rising_nose(telemetry, controls, dt)
 
 	controls.balance_reflex = true
 	_move_the_body(telemetry, controls, dt)
@@ -1046,18 +1058,20 @@ func _feel_the_fall(telemetry: Telemetry, dt: float) -> void:
 			lee = maxf(lee, tip)
 		else:
 			windward = maxf(windward, tip)
+	_reflex_speed_share = smoothstep(reflex_fade_below_ms, reflex_full_from_ms, telemetry.speed_ms)
 	var strength: float = reflex_strength()
 	var fade: float = dt / maxf(reflex_hold_s, dt)
 	lee_danger = maxf(lee * strength, lee_danger - fade)
 	windward_danger = maxf(windward * strength, windward_danger - fade)
 
 
-## How much of the reflex the sailor uses at this push: all of it without a slider and up to
-## reflex_push_fade_from, none at the top of the slider (the pushed dial keeps its risk).
+## How much of the reflex the sailor uses: all of it at speed (from reflex_full_from_ms) and none at
+## walking pace (_reflex_speed_share, set as the fall is felt); and by the push: all of it without a
+## slider and up to reflex_push_fade_from, none at the top of the slider (the pushed dial keeps its risk).
 func reflex_strength() -> float:
 	if is_nan(push_level):
-		return 1.0
-	return 1.0 - smoothstep(reflex_push_fade_from, 1.0, push_level)
+		return _reflex_speed_share
+	return _reflex_speed_share * (1.0 - smoothstep(reflex_push_fade_from, 1.0, push_level))
 
 
 ## The reflex on the sheet: pulled over, eased fast toward reflex_alpha_deg (the last chance:
