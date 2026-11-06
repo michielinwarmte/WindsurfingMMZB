@@ -22,8 +22,10 @@ const float G = 9.81;
 uniform float wave_depth_m = 0.0;
 
 // A wave's angular frequency from its wave number, in the water's depth (WaveField.angular_frequency()).
+// tanh's argument is held at 10 (tanh(10) = 1 - 4e-9): a graphics card may work tanh out from
+// exponentials, which overflow to infinity / infinity for a short wave in deep water.
 float wave_omega(float k) {
-	return wave_depth_m > 0.0 ? sqrt(G * k * tanh(k * wave_depth_m)) : sqrt(G * k);
+	return wave_depth_m > 0.0 ? sqrt(G * k * tanh(min(k * wave_depth_m, 10.0))) : sqrt(G * k);
 }
 
 // Accumulates one wave: the displacement of 9.4, the tangent vectors of 9.6a and the
