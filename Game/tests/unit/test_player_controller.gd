@@ -371,3 +371,84 @@ func _key_of(action: String) -> Key:
 	assert_eq(events.size(), 1, action)
 	var key: InputEventKey = events[0] as InputEventKey if not events.is_empty() else null
 	return key.physical_keycode if key != null else KEY_NONE
+
+
+## Max, 6 November 2026: "downwind button (a/d) while pressing space to gybe instead of heading".
+## Space with A or D held: toward the wind a tack, away from it a gybe, on both tacks and from
+## either side of the beam reach (where the heading alone picks the other one).
+func test_space_with_a_turn_key_tacks_toward_the_wind_and_gybes_away_from_it() -> void:
+	# [true wind angle, key, the manoeuvre]. Starboard tack (+): D (right) heads up; port tack (-): A.
+	var cases: Array[Array] = [
+		[90.0, "steer_right", PlayerController.Manoeuvre.TACK_HEADING_UP],
+		[90.0, "steer_left", PlayerController.Manoeuvre.GYBE_BEARING_AWAY],
+		[-90.0, "steer_left", PlayerController.Manoeuvre.TACK_HEADING_UP],
+		[-90.0, "steer_right", PlayerController.Manoeuvre.GYBE_BEARING_AWAY],
+		# Near the beam reach the heading alone would tack at 95 and gybe at 105.
+		[95.0, "steer_left", PlayerController.Manoeuvre.GYBE_BEARING_AWAY],
+		[-95.0, "steer_right", PlayerController.Manoeuvre.GYBE_BEARING_AWAY],
+		[105.0, "steer_right", PlayerController.Manoeuvre.TACK_HEADING_UP],
+		[-105.0, "steer_left", PlayerController.Manoeuvre.TACK_HEADING_UP],
+		# From any course: a gybe from close-hauled, a tack from a broad reach.
+		[50.0, "steer_left", PlayerController.Manoeuvre.GYBE_BEARING_AWAY],
+		[-150.0, "steer_left", PlayerController.Manoeuvre.TACK_HEADING_UP],
+	]
+	for c: Array in cases:
+		var controller: PlayerController = PlayerController.new()
+		var controls: SimControls = SimControls.new()
+		var telemetry: Telemetry = _telemetry(c[0])
+		controller.update(telemetry, controls, DT)  # the tack is known before Space
+		Input.action_press(c[1])
+		Input.action_press("tack")
+		controller.update(telemetry, controls, DT)
+		Input.action_release("tack")
+		Input.action_release(c[1])
+		assert_eq(controller.manoeuvre, c[2], "TWA %.0f with %s" % [c[0], c[1]])
+	assert_eq(PlayerController.manoeuvre_for_turn(1.0, 1.0), PlayerController.Manoeuvre.TACK_HEADING_UP, "right on starboard: toward the wind")
+	assert_eq(PlayerController.manoeuvre_for_turn(1.0, -1.0), PlayerController.Manoeuvre.GYBE_BEARING_AWAY, "right on port: away from it")
+
+
+## Space alone keeps the heading's rule, and A or D pressed within the grace window after it still
+## decides; a key pressed later does not turn the manoeuvre into the other one.
+func test_a_turn_key_just_after_space_still_chooses() -> void:
+	var controller: PlayerController = PlayerController.new()
+	var controls: SimControls = SimControls.new()
+	var beam: Telemetry = _telemetry(90.0)
+	controller.update(beam, controls, DT)
+	Input.action_press("tack")
+	controller.update(beam, controls, DT)
+	Input.action_release("tack")
+	assert_eq(controller.manoeuvre, PlayerController.Manoeuvre.TACK_HEADING_UP, "Space alone at a beam reach: the heading's rule, a tack")
+	_run(controller, beam, controls, 0.2)
+	Input.action_press("steer_left")  # away from the wind on starboard tack, 0.2 s after Space
+	controller.update(beam, controls, DT)
+	assert_eq(controller.manoeuvre, PlayerController.Manoeuvre.GYBE_BEARING_AWAY, "A within the grace window: a gybe")
+	Input.action_release("steer_left")
+
+	var late: PlayerController = PlayerController.new()
+	var broad: Telemetry = _telemetry(-140.0)
+	late.update(broad, controls, DT)
+	Input.action_press("tack")
+	late.update(broad, controls, DT)
+	Input.action_release("tack")
+	assert_eq(late.manoeuvre, PlayerController.Manoeuvre.GYBE_BEARING_AWAY, "Space alone at a broad reach: a gybe")
+	_run(late, broad, controls, 0.5)
+	Input.action_press("steer_left")  # toward the wind on port tack, but 0.5 s after Space
+	late.update(broad, controls, DT)
+	assert_ne(late.manoeuvre, PlayerController.Manoeuvre.TACK_HEADING_UP, "too late to turn the gybe into a tack")
+
+
+## An AI skipper's hands keep the heading's rule whatever the stick does: the fleet's manoeuvres
+## stay as they were.
+func test_ai_hands_keep_the_headings_rule_for_space() -> void:
+	var controller: PlayerController = PlayerController.new()
+	var hands: AiHands = AiHands.new()
+	controller.hands = hands
+	var controls: SimControls = SimControls.new()
+	var beam: Telemetry = _telemetry(90.0)
+	controller.update(beam, controls, DT)
+	hands.steer = -1.0  # away from the wind on starboard tack
+	hands.tack = true
+	controller.update(beam, controls, DT)
+	assert_eq(controller.manoeuvre, PlayerController.Manoeuvre.TACK_HEADING_UP, "the hands' stick does not choose")
+	_run(controller, beam, controls, 0.1)
+	assert_eq(controller.manoeuvre, PlayerController.Manoeuvre.TACK_HEADING_UP, "nor just after")

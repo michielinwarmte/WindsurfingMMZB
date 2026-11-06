@@ -10,7 +10,8 @@ extends RefCounted
 ## back or forward, rig tilted toward the outside of the turn, weight on the inside rail,
 ## all together (see Helm). With no key pressed the loop holds the heading, as a sailor does
 ## without thinking (a board left alone rounds up into the wind). Balance is automatic.
-## Space tacks or gybes for you.
+## Space tacks or gybes for you; with A or D held the key chooses: toward the wind a tack, away
+## from it a gybe (turn_key_chooses).
 ## Advanced mode: Q/E rake the rig forward and back, Left/Right tilt it sideways and A/D
 ## move the sailor's weight to port and starboard, all raw, on top of the balance reflex.
 ## Space still helps with the tack.
@@ -96,6 +97,14 @@ var settle_speed_ms: float = 5.0
 var _settling: bool = false
 ## Space tacks from a beam reach and anything closer to the wind, gybes from further off.
 var tack_up_to_twa_deg: float = 100.0
+## The player's turn key chooses (Max, 6 November 2026: "downwind button (a/d) while pressing space
+## to gybe instead of heading. now sometimes it tacks when we want to gybe"): Space with A or D held,
+## or with A or D pressed within choose_grace_s after Space, turns the way the key says, toward the
+## wind a tack and away from it a gybe, from any course. With neither held the heading decides
+## (tack_up_to_twa_deg). Only the player's keys: an AI skipper's hands keep the heading's rule.
+var turn_key_chooses: bool = true
+var choose_grace_s: float = 0.3
+var _choose_grace_left_s: float = 0.0
 ## The angle of attack the sail is eased to through a gybe.
 var gybe_entry_alpha_deg: float = 8.0
 var helm_rate_per_s: float = 2.0
@@ -388,6 +397,7 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		else:
 			_start_manoeuvre(telemetry)
 	_wait_for_the_wave(telemetry, dt)
+	_choose_by_a_late_key(dt)
 
 	# Steering.
 	var steer_key: float = _axis("steer_right", "steer_left")  # +1 = turn right on the screen
@@ -873,6 +883,7 @@ func reset_controls(controls: SimControls) -> void:
 	ease = 0.0
 	manoeuvre = Manoeuvre.NONE
 	_manoeuvre_wait_s = 0.0
+	_choose_grace_left_s = 0.0
 	_manual_sheet_timer_s = 0.0
 	_heading_held = false
 	_helm_trim_up = 0.0
@@ -914,15 +925,55 @@ func manoeuvre_name() -> String:
 	return ""
 
 
-## Space: a tack when sailing upwind of a beam reach, a gybe when sailing downwind of it.
+## Space: with A or D held, a tack when the key turns toward the wind and a gybe when it turns away
+## from it (turn_key_chooses); with neither, a tack when sailing upwind of a beam reach and a gybe
+## when sailing downwind of it, and A or D pressed within choose_grace_s still decides.
 func _start_manoeuvre(telemetry: Telemetry) -> void:
 	_tack_sign_at_start = tack_sign(telemetry)
 	_manoeuvre_timer_s = 0.0
 	if body != null:
 		body.recentre()
+	var key: float = _choosing_key()
+	if key != 0.0:
+		manoeuvre = manoeuvre_for_turn(key, _tack_sign_at_start)
+		_choose_grace_left_s = 0.0
+		return
 	# From a beam reach (and a little beyond) the quicker way onto the other tack is up
 	# through the wind; from a broad reach it is round through the gybe.
 	manoeuvre = Manoeuvre.TACK_HEADING_UP if absf(telemetry.twa_deg) <= tack_up_to_twa_deg else Manoeuvre.GYBE_BEARING_AWAY
+	_choose_grace_left_s = choose_grace_s if _player_chooses() else 0.0
+
+
+## The manoeuvre a turn asks for on this tack: turning toward the wind (a right turn on starboard
+## tack, +1, a left turn on port tack) is a tack; turning away from it is a gybe.
+static func manoeuvre_for_turn(turn_right: float, tack: float) -> Manoeuvre:
+	return Manoeuvre.TACK_HEADING_UP if turn_right * tack > 0.0 else Manoeuvre.GYBE_BEARING_AWAY
+
+
+## Whether the player's turn key may choose the manoeuvre: the setting, and never an AI's hands.
+func _player_chooses() -> bool:
+	return turn_key_chooses and hands == null
+
+
+## The turn key that chooses the manoeuvre, +1 D (right), -1 A (left), 0 neither or both.
+func _choosing_key() -> float:
+	return _axis("steer_right", "steer_left") if _player_chooses() else 0.0
+
+
+## A or D pressed just after Space (within choose_grace_s): the key decides after all, as long as
+## the turn has not yet gone through the wind.
+func _choose_by_a_late_key(dt: float) -> void:
+	if _choose_grace_left_s <= 0.0:
+		return
+	_choose_grace_left_s = maxf(_choose_grace_left_s - dt, 0.0)
+	var first_half: bool = manoeuvre == Manoeuvre.TACK_HEADING_UP or manoeuvre == Manoeuvre.GYBE_BEARING_AWAY
+	if not first_half or auto_sheet_pilot.tack != _tack_sign_at_start:
+		_choose_grace_left_s = 0.0
+		return
+	var key: float = _choosing_key()
+	if key != 0.0:
+		manoeuvre = manoeuvre_for_turn(key, _tack_sign_at_start)
+		_choose_grace_left_s = 0.0
 
 
 ## A tack is one continuous turn toward the wind and through it (a right turn from
