@@ -221,6 +221,7 @@ var _net_torque_world: Vector3 = Vector3.ZERO
 ## see the note at the top). The sailor's are named as in SailorConfig.
 var _gravity_ms2: float = 9.81
 var _board_length_m: float = 0.0
+var _board_width_m: float = 0.0
 var _board_thickness_m: float = 0.0
 var _board_residuary_peak_froude: float = 0.0
 var _mast_foot_local: Vector3 = Vector3.ZERO
@@ -434,8 +435,9 @@ func _update_hull_footprint(wet_length_m: float, wet_beam_m: float) -> void:
 	if lake_view == null:
 		return
 	if wet_length_m < 0.1 or wet_beam_m < 0.05:
-		wet_length_m = board_config.length_m
-		wet_beam_m = board_config.width_m
+		# The copies of the tick (_copy_configs()): no engine lock on a worker thread.
+		wet_length_m = _board_length_m
+		wet_beam_m = _board_width_m
 	var forward: Vector3 = SimMath.horizontal(-body.aft_axis())
 	var bow: Vector2 = Vector2(forward.x, forward.z)
 	bow = bow.normalized() if bow.length() > 1e-6 else Vector2(0.0, -1.0)
@@ -593,6 +595,7 @@ func _copy_configs() -> void:
 	wind.copy_config()
 	_gravity_ms2 = sim_config.gravity_ms2
 	_board_length_m = board_config.length_m
+	_board_width_m = board_config.width_m
 	_board_thickness_m = board_config.thickness_m
 	_board_residuary_peak_froude = board_config.residuary_peak_froude
 	_back_strap_z_m = 0.5 * board_config.length_m - board_config.back_strap_from_tail_m if board_config.back_strap_from_tail_m > 0.0 else INF
