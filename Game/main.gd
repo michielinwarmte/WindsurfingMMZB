@@ -604,7 +604,7 @@ func _apply_command_line_options() -> void:
 ## The push slider from the command line (Documentation/reports/push_slider/PLAN.md;
 ## tools/play_push.sh):
 ##   --push=<level>  0 to 1, a percentage, or eased / neutral / pushed (PushDial.level_of): the
-##     player's slider starts there (Up and Down move it; without the option it starts at
+##     player's slider starts there (W and S move it; without the option it starts at
 ##     DEFAULT_PUSH_LEVEL), and with --autopilot=1 the board's own autopilot sails at it;
 ##   --pilot.<field>=<n>  one of the auto-sheet pilot's numbers (Autopilot), on top of the slider.
 ## The slider's line is printed and the F1 panel shows it live.

@@ -5,7 +5,8 @@ extends MenuPage
 
 ## The table: the keys of each row, and what they do.
 const KEY_ROWS: Array[Array] = [
-	[["W", "S"], "Sheet in / out (the arrows Up / Down too)"],
+	[["W", "S"], "Push: more / less (the gauge at the bottom)"],
+	[["↑", "↓"], "Sheet in / out"],
 	[["A", "D"], "Turn left / right (advanced: move your weight)"],
 	[["Q", "E"], "Rake the rig forward / back"],
 	[["←", "→"], "Tilt the rig sideways (advanced)"],

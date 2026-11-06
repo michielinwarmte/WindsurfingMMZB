@@ -14,11 +14,11 @@ extends RefCounted
 ## Advanced mode: Q/E rake the rig forward and back, Left/Right tilt it sideways and A/D
 ## move the sailor's weight to port and starboard, all raw, on top of the balance reflex.
 ## Space still helps with the tack.
-## W/S sheet in and out in both modes; T toggles an automatic sheet, which is on by default
-## in beginner mode (W/S then override it for a few seconds). In beginner mode the sailor
+## Up/Down sheet in and out in both modes; T toggles an automatic sheet, which is on by default
+## in beginner mode (Up/Down then override it for a few seconds). In beginner mode the sailor
 ## also eases the sheet by themselves when the pull is more than they can hold, which is
 ## what every sailor does before a catapult. Tab switches modes.
-## Up/Down move the push slider (push_level): how hard the sailor commits, from standing still
+## W/S move the push slider (push_level): how hard the sailor commits, from standing still
 ## with the sail let fly to the most speed with a crash likely (PushDial, the ladder in
 ## PushCurveConfig; Documentation/reports/push_slider/PLAN.md).
 ## The mouse can be the sailor's body (package B, an experiment, the setting "Mouse body"):
@@ -129,7 +129,7 @@ var pilot_overrides: Dictionary[String, float] = {}
 ## (standing still, the sail let fly) to 1 (the most speed, a crash likely), turned into the
 ## pilot's margin and the sailor's technique every update through PushDial and the ladder in
 ## push_curve (the default curve when null). NaN = no slider: the pilot's own numbers, as before
-## (the AI boards and the tests until the fleet adopts it). Up and Down move it at
+## (the AI boards and the tests until the fleet adopts it). W and S move it at
 ## push_rate_per_s (a full range in 2.5 s); an AI skipper's hands set it (AiHands.push). It keeps
 ## its level through resets and waterstarts. Hands that set NaN again let go of it: the pilot's own
 ## numbers come back (_release_the_slider()), so a skipper can push where it pays and sail the

@@ -48,8 +48,8 @@ const MESSAGE_TOP_IN_RACE: float = 380.0
 ## The keys while sailing free, racing, spectating, and as the guest of a network game: each one the
 ## key, and what it does.
 const FREE_KEYS: Array[Array] = [
-	["↑ ↓", "push"],
-	["W S", "sheet"],
+	["W S", "push"],
+	["↑ ↓", "sheet"],
 	["A D", "turn / weight"],
 	["Q E", "rake"],
 	["← →", "rig tilt"],
@@ -62,9 +62,9 @@ const FREE_KEYS: Array[Array] = [
 	["F1", "panel"],
 ]
 const RACE_KEYS: Array[Array] = [
-	["↑ ↓", "push"],
+	["W S", "push"],
 	["A D", "turn"],
-	["W S", "sheet"],
+	["↑ ↓", "sheet"],
 	["Space", "tack / gybe"],
 	["1-4", "camera"],
 	["R", "race again"],
@@ -82,9 +82,9 @@ const SPECTATE_KEYS: Array[Array] = [
 	["F1", "telemetry"],
 ]
 const GUEST_KEYS: Array[Array] = [
-	["↑ ↓", "push"],
+	["W S", "push"],
 	["A D", "turn"],
-	["W S", "sheet"],
+	["↑ ↓", "sheet"],
 	["Space", "tack / gybe"],
 	["1-4", "camera"],
 	["R", "after a fall: back on the board"],
@@ -366,7 +366,7 @@ func set_detail_visible(shown: bool) -> void:
 	_hints.visible = shown or _race_mode
 
 
-## The keys along the bottom, as one line of text (for tests): "↑ ↓ push   W S sheet ...".
+## The keys along the bottom, as one line of text (for tests): "W S push   ↑ ↓ sheet ...".
 func help_text() -> String:
 	var parts: PackedStringArray = PackedStringArray()
 	for key: Array in _keys:
@@ -430,7 +430,7 @@ func _build_hints() -> void:
 
 
 func update_from(t: Telemetry, controller: PlayerController, camera_name: String, use_autopilot: bool) -> void:
-	# The push slider's level (Up/Down) on the gauge, when the controller has one.
+	# The push slider's level (W/S) on the gauge, when the controller has one.
 	_push_gauge.set_level(NAN if use_autopilot else controller.push_level)
 	# The body on the mouse, when the player has it on.
 	_body_gauge.set_body(null if use_autopilot else controller.body, t)

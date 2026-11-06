@@ -11,7 +11,7 @@ extends RefCounted
 ## +1 turns right on the screen, -1 left, on either tack (the controller sorts out the rake).
 var steer: float = 0.0
 ## +1 sheets in, -1 eases. With the auto-sheet on this overrides it for a few seconds, as the
-## player's W and S keys do.
+## player's Up and Down keys do.
 var sheet: float = 0.0
 ## A tack or gybe asked for (the player's Space). The controller takes it on its next update
 ## and clears it, so one request is one manoeuvre.

@@ -58,7 +58,7 @@ text = "Beginner mode"
 custom_minimum_size = Vector2(390, 0)
 layout_mode = 2
 theme_override_font_sizes/font_size = 17
-text = "A and D turn the board left and right on the screen, whichever way you sail; the sailor does the rest. The auto-sheet trims the sail for you (W and S take over for a moment)."
+text = "A and D turn the board left and right on the screen, whichever way you sail; the sailor does the rest. The auto-sheet trims the sail for you (Up and Down take over for a moment)."
 autowrap_mode = 3
 
 [node name="AdvancedTitle" type="Label" parent="Center/Panel/Layout/Columns/Modes"]
@@ -70,7 +70,7 @@ text = "Advanced mode"
 custom_minimum_size = Vector2(390, 0)
 layout_mode = 2
 theme_override_font_sizes/font_size = 17
-text = "Steer like a real windsurfer: Q and E rake the rig forward and back (forward bears away, back heads up), Left and Right tilt it sideways, A and D move your weight, W and S sheet in and out."
+text = "Steer like a real windsurfer: Q and E rake the rig forward and back (forward bears away, back heads up), Left and Right tilt it sideways, A and D move your weight, Up and Down sheet in and out."
 autowrap_mode = 3
 
 [node name="GamepadTitle" type="Label" parent="Center/Panel/Layout/Columns/Modes"]

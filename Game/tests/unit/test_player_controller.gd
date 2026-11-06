@@ -348,3 +348,26 @@ func test_planing_in_the_straps_the_legs_push_the_turn_first() -> void:
 	Input.action_press("steer_right")
 	_run(slow, s, slow_controls, 0.6)
 	assert_eq(slow_controls.back_foot_push, 0.0, "below the plane the rig and the rail steer, as before")
+
+
+## The push on W and S, the sheet on the arrows Up and Down (the evening play-test of 6 November
+## 2026), in the input map and on the screen's key line, sailing free and racing.
+func test_the_push_is_on_w_and_s_and_the_sheet_on_the_arrows() -> void:
+	assert_eq(_key_of("push_more"), KEY_W)
+	assert_eq(_key_of("push_less"), KEY_S)
+	assert_eq(_key_of("sheet_in"), KEY_UP)
+	assert_eq(_key_of("sheet_out"), KEY_DOWN)
+	var hud: Hud = Hud.new()
+	add_child_autofree(hud)
+	for racing: bool in [false, true]:
+		hud.set_race_mode(racing)
+		assert_string_contains(hud.help_text(), "W S push")
+		assert_string_contains(hud.help_text(), "↑ ↓ sheet")
+
+
+## The one key an action has in the input map (project.godot).
+func _key_of(action: String) -> Key:
+	var events: Array[InputEvent] = InputMap.action_get_events(action)
+	assert_eq(events.size(), 1, action)
+	var key: InputEventKey = events[0] as InputEventKey if not events.is_empty() else null
+	return key.physical_keycode if key != null else KEY_NONE
