@@ -757,11 +757,29 @@ func _true_wind_at(at: Vector3) -> Vector3:
 ## high enough to see all of it. "start": up high behind the start line, on the side where the
 ## board waits, looking across the line at the course. A mark's name (start_boat for "start
 ## boat"): beside that mark, across the wind, so its flag is seen side on (a boat a little from
-## behind, to see its deck).
+## behind, to see its deck). "<view>@<m>" (start@50, start_pin@20, 1@50): from that far away at a
+## sailor's eye height (2 m above the water), as a sailor sees it coming.
 func _look_at_the_course(view: String) -> void:
 	var camera: Camera3D = _camera_rig.camera
 	var across: Vector2 = Course.direction_of(_course.axis_deg + 90.0)
 	var downwind: Vector2 = -Course.direction_of(_course.axis_deg)
+	var away_m: float = view.get_slice("@", 1).to_float() if view.contains("@") else 0.0
+	view = view.get_slice("@", 0)
+	if away_m > 0.0:
+		var looked_at: Vector2 = _course.start_middle()
+		var from_side: Vector2 = (RaceCourses.pre_start_spot(_course) - looked_at).normalized()
+		if view != "start":
+			var target: CourseMark = _course.mark(view.replace("_", " "))
+			if target == null:
+				push_warning("--course_view: the course has no mark called \"%s\"." % view)
+				return
+			looked_at = target.position
+			from_side = downwind.rotated(deg_to_rad(35.0))
+		var sailor_eye: Vector2 = looked_at + from_side * away_m
+		camera.global_position = Vector3(sailor_eye.x, 2.0, sailor_eye.y)
+		camera.look_at(Vector3(looked_at.x, 1.2, looked_at.y), Vector3.UP)
+		_camera_rig.set_process(false)
+		return
 	if view == "all":
 		var box: Rect2 = _course.bounds().grow(80.0)
 		var window: Vector2 = get_viewport().get_visible_rect().size

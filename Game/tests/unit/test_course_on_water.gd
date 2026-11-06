@@ -134,20 +134,21 @@ func test_the_hud_names_the_course_and_maps_it_on_the_open_water() -> void:
 	assert_almost_eq(top_left.y, 200.0 * pixels_per_metre, 0.5, "and north of it")
 
 
-## Max, 6 November 2026: every buoy a plain cylinder 1.2 m high and 0.7 m wide in a bright colour;
-## the pins the same buoy; the boats a bit bigger, mast and flag with them.
-func test_the_buoys_are_max_s_cylinders_and_the_boats_are_bigger() -> void:
+## Max, 6 November 2026: every buoy a plain cylinder in a bright colour (1.2 by 0.7 m in the morning,
+## "in general marks bigger" in the evening: 1.8 by 1.1 m); the boats a bit bigger, mast and flag
+## with them.
+func test_the_buoys_are_big_cylinders_and_the_boats_are_bigger() -> void:
 	var flat: Callable = func(_x: float, _z: float, _t: float) -> float: return 0.0
 	var course: Course = RaceCourses.t1_loop(270.0, Vector2.ZERO)
 	var on_water: CourseOnWater = _built(course, flat)
 	var body: MeshInstance3D = on_water.part_at("1").get_node("Body")
 	var cylinder: CylinderMesh = body.mesh as CylinderMesh
-	assert_almost_eq(cylinder.height, 1.2, 1e-6, "1.2 m high")
-	assert_almost_eq(cylinder.top_radius * 2.0, 0.7, 1e-6, "0.7 m wide")
+	assert_gte(cylinder.height, 1.6, "at least 1.6 m high")
+	assert_gte(cylinder.top_radius * 2.0, 1.0, "at least 1.0 m wide")
 	assert_eq(cylinder.top_radius, cylinder.bottom_radius, "straight up, not tapered")
 	var box: AABB = body.global_transform * cylinder.get_aabb()
-	assert_almost_eq(box.end.y, 1.2 - CourseOnWater.BUOY_DRAFT_M, 1e-4, "its top above the water")
-	assert_same(on_water.part_at(CourseMark.START_PIN).get_node("Body").mesh, cylinder, "the pins are the same buoy")
+	assert_almost_eq(box.end.y, CourseOnWater.BUOY_HEIGHT_M - CourseOnWater.BUOY_DRAFT_M, 1e-4, "its top above the water")
+	assert_same(on_water.part_at("4P").get_node("Body").mesh, cylinder, "a gate's marks are the same buoy")
 	var material: StandardMaterial3D = body.material_override as StandardMaterial3D
 	assert_true(material.emission_enabled, "fluorescent: it glows a little")
 	var gate: StandardMaterial3D = on_water.part_at("4S").get_node("Body").material_override as StandardMaterial3D
@@ -160,6 +161,35 @@ func test_the_buoys_are_max_s_cylinders_and_the_boats_are_bigger() -> void:
 	var flag: WindFlag = on_water.flag_at(CourseMark.START_BOAT)
 	assert_almost_eq(flag.global_position.y, CourseOnWater.MAST_FOOT.y * CourseOnWater.BOAT_SCALE, 1e-4, "the mast on the bigger cabin's roof")
 	assert_almost_eq(flag.global_transform.basis.y.length(), CourseOnWater.BOAT_SCALE, 1e-4, "mast and flag as much bigger")
+
+
+## Max, 6 November 2026: "start bouys are different than rounding marks". The pins are tall striped
+## pillars, taller than the buoys, in a colour no buoy has (pink at the start, blue at the finish),
+## with white stripes; the start pin and the finish pin are told apart too.
+func test_the_pins_look_different_from_the_marks_you_round() -> void:
+	var flat: Callable = func(_x: float, _z: float, _t: float) -> float: return 0.0
+	var course: Course = RaceCourses.t1_loop(270.0, Vector2.ZERO)
+	var on_water: CourseOnWater = _built(course, flat)
+	var pin: Node3D = on_water.part_at(CourseMark.START_PIN)
+	assert_null(pin.get_node_or_null("Body"), "no round buoy at the pin")
+	var top_m: float = -INF
+	var colours: Array[Color] = []
+	for child: Node in pin.get_children():
+		var part: MeshInstance3D = child as MeshInstance3D
+		if part == null or not child.name.begins_with("Band"):
+			continue
+		top_m = maxf(top_m, (part.global_transform * part.mesh.get_aabb()).end.y)
+		colours.append((part.material_override as StandardMaterial3D).albedo_color)
+	assert_eq(colours.size(), CourseOnWater.PIN_BANDS, "striped in bands")
+	assert_gt(top_m, CourseOnWater.BUOY_HEIGHT_M + 0.8, "the pin stands well above the buoys")
+	assert_ne(colours[0], colours[1], "the stripes alternate")
+	assert_eq(colours[0], CourseOnWater.START_PIN_COLOR, "pink at the start")
+	for buoy_colour: Color in [CourseOnWater.MARK_COLOR, CourseOnWater.GATE_COLOR]:
+		assert_gt(absf(colours[0].b - buoy_colour.b) + absf(colours[0].g - buoy_colour.g), 0.4, "not the colour of a buoy")
+	var foot: CylinderMesh = (pin.get_node("Band 1") as MeshInstance3D).mesh as CylinderMesh
+	assert_gt(foot.bottom_radius, foot.top_radius, "tapered")
+	var finish_band: MeshInstance3D = on_water.part_at(CourseMark.FINISH_PIN).get_node("Band 1")
+	assert_eq((finish_band.material_override as StandardMaterial3D).albedo_color, CourseOnWater.FINISH_PIN_COLOR, "blue at the finish")
 
 
 # ---------------------------------------------------------------- the course changed while raced
