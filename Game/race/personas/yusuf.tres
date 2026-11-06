@@ -26,3 +26,4 @@ light_wind = 0.4
 strong_wind = 0.7
 sail_brand = "southsails"
 board_brand = "pj_new_sealand"
+fin_brand = "nt8"

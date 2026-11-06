@@ -208,10 +208,28 @@ func test_a_persona_picks_its_gear_for_the_wind_from_the_catalogue() -> void:
 	assert_eq(Persona.pick_for_wind(sails, 18.0, 1.0).size, 8.5)
 	# A wind beyond every range: the nearest one.
 	assert_eq(Persona.pick_for_wind(sails, 40.0, 0.5).size, 5.5)
+	# Its fin is of its fin brand, as deep as its board and the wind call for.
+	for wind_kt: float in [12.0, 18.0, 24.0]:
+		var gear: GearChoice = liv.gear_for(wind_kt)
+		assert_eq(gear.fin.brand.slug, liv.fin_brand, "Liv's fin is of her brand")
+		var depths: Vector2i = GearCatalogue.FIN_SIZES.depths_for_wind(wind_kt)
+		assert_between(roundi(gear.fin.size), depths.x, depths.y, "a fin for %d kt" % wind_kt)
+	assert_true(liv.gear_for(12.0).fin.size > liv.gear_for(24.0).fin.size, "a deeper fin in a light wind")
 	# A brand without a slalom board: its free race board (Pia's beginner board).
 	var pia: GearChoice = Skippers.load_persona("pia").gear_for(12.0)
 	assert_eq(pia.board.brand.slug, "savanna")
 	assert_eq(pia.board.line, GearItem.Line.FREERACE)
+
+
+func test_the_fleet_sails_every_fin_brand() -> void:
+	var brands: Dictionary[String, bool] = {}
+	for file: String in ResourceLoader.list_directory("res://race/personas"):
+		if file.get_extension() != "tres":
+			continue
+		var persona: Persona = Skippers.load_persona(file.get_basename())
+		assert_not_null(GearCatalogue.fin_template(persona.fin_brand), persona.name + "'s fin brand makes fins")
+		brands[persona.gear_for(18.0).fin.brand.slug] = true
+	assert_eq(brands.size(), GearCatalogue.fin_brands().size(), "every fin brand in the fleet: %s" % str(brands.keys()))
 
 
 func test_with_the_gear_on_a_persona_sails_its_own_gear_and_a_character_the_default() -> void:

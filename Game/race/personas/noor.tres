@@ -26,3 +26,4 @@ light_wind = 0.5
 strong_wind = 0.6
 sail_brand = "southsails"
 board_brand = "tripletone"
+fin_brand = "typhoon_fins"

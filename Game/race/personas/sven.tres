@@ -26,3 +26,4 @@ light_wind = 0.2
 strong_wind = 0.85
 sail_brand = "s3kauai"
 board_brand = "forbidden"
+fin_brand = "start_fins"

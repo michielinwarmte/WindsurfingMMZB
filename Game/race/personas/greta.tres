@@ -26,3 +26,4 @@ light_wind = 0.65
 strong_wind = 0.35
 sail_brand = "gg_sails"
 board_brand = "forbidden"
+fin_brand = "blacksmith_fins"

@@ -68,6 +68,9 @@ extends Resource
 ## are part of the character. A brand that makes no such item gives the default item.
 @export var sail_brand: String = "savanna"
 @export var board_brand: String = "pj_new_sealand"
+## The fin brand it sails (the slug of a fin brand: GearCatalogue.fin_brands()); its fin's depth is
+## for its board and the wind (fin_depth_for()). Empty: the default fin's brand, PJ New Sealand.
+@export var fin_brand: String = ""
 
 ## The wander of a skill from race to race at consistency 0 (one standard deviation).
 const WANDER_AT_ZERO: float = 0.25
@@ -106,6 +109,11 @@ const PUSH_DEAD_ZONE: float = 0.02
 const RIG_POWER_MIDDLE: float = 0.75
 const RIG_FROM_WIND_SKILLS: float = 0.5
 const RIG_FROM_RISK: float = 0.4
+## Its fin: the depth recommended for its board's width (FinSizes), deeper by up to this much in
+## all for a sailor who rigs big (rig_power() 1 against the middle's RIG_POWER_MIDDLE: about 1 cm
+## deeper) and shorter for one who rigs small (power 0: 3 cm shorter), cm; then kept within the
+## depths whose wind range holds the wind.
+const FIN_FROM_POWER_CM: float = 4.0
 
 
 ## The character sheet for one race: the skills, each moved by its form in this wind (wind_form())
@@ -210,22 +218,36 @@ func rig_power() -> float:
 
 ## The gear it sails in a wind (knots), from the gear catalogue (GE5): its sail brand's sail and its
 ## board brand's board whose wind ranges (the catalogue's own) cover the wind, from the slalom line
-## (a brand without one, its free race line: a beginner's wider board), and a slalom fin of any
-## maker, each of a size by its rig_power(). The race tool and the race scene build its board's
-## simulation and its look on this gear (GearChoice.sim_with()) when the race's gear is on.
+## (a brand without one, its free race line: a beginner's wider board), each of a size by its
+## rig_power(), and its fin brand's fin, as deep as fin_depth_for() says (GE8). The race tool and
+## the race scene build its board's simulation and its look on this gear (GearChoice.sim_with())
+## when the race's gear is on.
 func gear_for(wind_kt: float) -> GearChoice:
 	var power: float = rig_power()
 	var choice: GearChoice = GearChoice.defaults()
 	var board: GearItem = pick_for_wind(brand_items(GearItem.Kind.BOARD, board_brand), wind_kt, power)
 	var sail: GearItem = pick_for_wind(brand_items(GearItem.Kind.SAIL, sail_brand), wind_kt, power)
-	var fin: GearItem = pick_for_wind(brand_items(GearItem.Kind.FIN, ""), wind_kt, power)
 	if board != null:
 		choice.board = board
 	if sail != null:
 		choice.sail = sail
+	var brand: String = fin_brand if not fin_brand.is_empty() else choice.fin.brand.slug
+	var fin: GearItem = GearCatalogue.fin_of(brand, fin_depth_for(wind_kt, choice.board))
 	if fin != null:
 		choice.fin = fin
 	return choice
+
+
+## The depth of the fin it sails on a board in a wind (knots), whole cm: what the board's width
+## calls for (the brands' rule, FinSizes.recommended_depth_cm()), a little deeper for a sailor who
+## rigs big and shorter for one who rigs small (FIN_FROM_POWER_CM), within the depths whose wind
+## range holds the wind (deeper for a light wind, shorter for a strong one).
+func fin_depth_for(wind_kt: float, board: GearItem) -> int:
+	var sizes: FinSizes = GearCatalogue.FIN_SIZES
+	var width_m: float = (board.config as BoardConfig).width_m
+	var wanted: float = sizes.recommended_depth_cm(width_m) + (rig_power() - RIG_POWER_MIDDLE) * FIN_FROM_POWER_CM
+	var window: Vector2i = sizes.depths_for_wind(wind_kt)
+	return clampi(roundi(wanted), window.x, window.y)
 
 
 ## Of some items, the one for a wind (knots): among those whose wind range covers the wind (or, if

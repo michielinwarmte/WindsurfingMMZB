@@ -26,3 +26,4 @@ light_wind = 1.0
 strong_wind = 0.1
 sail_brand = "nielstrots"
 board_brand = "moonboard"
+fin_brand = "start_fins"
