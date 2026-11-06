@@ -241,6 +241,8 @@ def table_line(round_name, label):
         steady = sum(1 for r in rows if r["sd"] < 0.3 and r["fell"] == "ok")
         mean_v = sum(r["speed"] for r in rows) / len(rows)
         cells.append("reach %d/4 %d/9 %5.2f" % (met, steady, mean_v))
+    elif os.path.exists(os.path.join(base, "reach_as_base.txt")):
+        cells.append("reach %-12s" % "= defaults")
     else:
         cells.append("reach %-12s" % "-")
     for name in ("push_neutral.txt", "push_pushed.txt"):

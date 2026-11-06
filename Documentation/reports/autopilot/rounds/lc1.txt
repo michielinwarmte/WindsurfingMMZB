@@ -1,0 +1,24 @@
+# Lake chop round 1 (6 November 2026): the levers one at a time, on the lake (1x) first.
+# The baseline's lake falls: the carve up into a tack (and a key held toward the wind) catapults at
+# planing speed; out of irons the slow board is tipped off its windward rail. New controller settings
+# (PlayerController, off by default): head_up_alpha_deg (ease while carving up at speed), rail_from_ms /
+# rail_full_ms (no rail at walking pace), chop_hike_drop (less pull held when the board bounces); the
+# pilot's wave rail without the slider.
+base:
+tackrate12: --controller.tack_rate_dps=12
+tackrate10: --controller.tack_rate_dps=10
+humin9: --controller.head_up_rate_min_dps=9
+hualpha12: --controller.head_up_alpha_deg=12
+hualpha9: --controller.head_up_alpha_deg=9
+hualpha6: --controller.head_up_alpha_deg=6
+railfade25: --controller.rail_from_ms=2 --controller.rail_full_ms=5
+railfade37: --controller.rail_from_ms=3 --controller.rail_full_ms=7
+chophike15: --controller.chop_hike_drop=0.15
+chophike30: --controller.chop_hike_drop=0.3
+hike10: --pilot.hike_share=1.0
+waverail3: --pilot.wave_rail_max_deg=3
+depallow3: --pilot.depower_heel_allowance_deg=3
+depurgent4: --pilot.depower_urgent_rate_per_s=4
+sheetrate25: --pilot.sheet_rate_per_s=2.5
+slider75: --controller.push_level=0.75
+combo1: --controller.head_up_alpha_deg=9 --controller.rail_from_ms=2 --controller.rail_full_ms=5 --controller.chop_hike_drop=0.15

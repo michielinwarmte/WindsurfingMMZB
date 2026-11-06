@@ -1,0 +1,18 @@
+# NOT RUN on its own: these variants were merged into round 2 (lc2.txt), which ran them with the airborne ease.
+# Lake chop round 1b (6 November 2026): the helm in chop. The steady 24 kt beam reach's catapult came
+# after the board yawed 20 to 45 degrees a second each way on the waves while the beginner's turn-rate
+# loop answered every kick with the rig (on flat water the same reach yaws under 1 degree a second).
+# A calmer helm: the loop's gains, the hold's rate, the hands' speed; and the pilot's trim feel, the
+# ankles' share, the catch and the gybe's ease.
+rategain005: --controller.rate_gain=0.005
+rateint001: --controller.rate_integral_gain=0.01
+holdrate05: --controller.hold_rate_per_deg=0.5
+helmrate1: --controller.helm_rate_per_s=1.0
+holdlimit10: --controller.hold_rate_limit_dps=10
+legs0: --controller.legs_rate_gain=0
+trimfeel04: --pilot.trim_feel_time_s=0.4
+ankle06: --pilot.ankle_share=0.6
+catch2: --pilot.catch_alpha_max_deg=2
+gybealpha6: --controller.gybe_entry_alpha_deg=6
+hike095: --pilot.hike_share=0.95
+sheetin03: --pilot.sheet_in_share=0.3

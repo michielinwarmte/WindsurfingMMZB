@@ -4,6 +4,7 @@
     tools/autopilot_suite.sh --round=lc1 --variants=Documentation/reports/autopilot/rounds/lc1.txt
     tools/autopilot_suite.sh --round=lc1 --variants=... --only=lake --cores=14
     tools/autopilot_suite.sh --round=lc9 --variants=... --only=lake --lake_wave_scale=1.5
+    tools/autopilot_suite.sh ... --matrix_times=12:00,13:15,14:30,15:45,17:00   (more lake patterns)
 
 Every variant (a line "<label>: <overrides>" of the variants file) is scored by the parts in --only
 (default reach,push,pushed,matrix,lake; race on request):
@@ -100,10 +101,15 @@ def only_groups(overrides, part):
 
 def jobs_for(label, overrides, out_dir, parts, scale_args):
     jobs = []
-    if "reach" in parts:
+    reach_over = only_groups(overrides, "reach")
+    if "reach" in parts and not reach_over and label != "base":
+        # The reach check sails the Autopilot itself: a variant of only --controller. settings sails it
+        # exactly as the defaults do, so it is not run again (the summary says so).
+        open(os.path.join(out_dir, "reach_as_base.txt"), "w", encoding="utf-8").write("the reach check is the defaults' (no setting reaches it)" + chr(10))
+    elif "reach" in parts:
         os.makedirs(os.path.join(out_dir, "reach"), exist_ok=True)
         jobs.append(Job(label, "res://dev/run_reach.gd",
-                        ["--seconds=90", "--from=60", "--out_dir=" + os.path.join(out_dir, "reach")] + only_groups(overrides, "reach"),
+                        ["--seconds=90", "--from=60", "--out_dir=" + os.path.join(out_dir, "reach")] + reach_over,
                         os.path.join(out_dir, "reach.txt"), 810))
     for part, winds, cases, extra in (("push", "12,18,24", 9, []), ("pushed", "18,24", 6, ["--pilot.hike_share=1.6"])):
         if part not in parts:
@@ -147,7 +153,7 @@ def jobs_for(label, overrides, out_dir, parts, scale_args):
             os.makedirs(race_dir, exist_ok=True)
             jobs.append(Job(label, "res://dev/run_race.gd",
                             ["--course=t2_slalom", "--skippers=" + RACE_SKIPPERS, "--map=lake", "--time=" + t,
-                             "--seed=%d" % (i + 1), "--out_dir=" + race_dir] + scale_args + race_over,
+                             "--seed=%d" % (i + 1), "--finish_window=600", "--out_dir=" + race_dir] + scale_args + race_over,
                             os.path.join(out_dir, "race_%s.txt" % t.replace(":", "")), 2400))
     return jobs
 
@@ -237,7 +243,11 @@ def merge_lake(lake_dir, out_dir):
 
 
 def main():
+    global MATRIX_TIMES
     options = parse_args(sys.argv[1:])
+    if options.get("matrix_times"):
+        # More times of day for the lake's matrix and the steady winds: more wave and gust patterns.
+        MATRIX_TIMES = options["matrix_times"].split(",")
     parts = set(options["only"].split(","))
     cores = max(int(options["cores"]), 1)
     scale_args = ["--lake_wave_scale=" + options["lake_wave_scale"]] if options["lake_wave_scale"] else []
