@@ -6,7 +6,7 @@
 # heading, speed, mast and lean each PC shows of a board against what the PC that sails it had at that
 # same tick, and the two finish lists.
 #
-#   tools/lan_test.sh [--seconds=40] [--mode=race|free] [--map=open|lake] [--skippers=allrounder,rookie|none]
+#   tools/lan_test.sh [--seconds=40] [--mode=race|free] [--map=open|lake] [--skippers=allrounder,rookie|none] [--lake_wave_scale=1.5]
 #                     [--prestart=20] [--robot=allrounder] [--release=1]
 #
 # --robot=<skipper> lets a scripted skipper sail both players' boards (so a race can finish; without
@@ -22,6 +22,7 @@ skippers="allrounder,rookie"
 prestart=20
 robot=""
 release=0
+lake_wave_scale=""
 for arg in "$@"; do
 	case "$arg" in
 		--seconds=*) seconds="${arg#*=}" ;;
@@ -31,6 +32,7 @@ for arg in "$@"; do
 		--prestart=*) prestart="${arg#*=}" ;;
 		--robot=*) robot="${arg#*=}" ;;
 		--release=*) release="${arg#*=}" ;;
+		--lake_wave_scale=*) lake_wave_scale="${arg#*=}" ;;
 		*) echo "Unknown option $arg" >&2; exit 2 ;;
 	esac
 done
@@ -49,6 +51,8 @@ else
 fi
 common=(--settings=defaults --lan_report=10 --lan_track=30)
 if [[ -n "$robot" ]]; then common+=(--lan_robot="$robot"); fi
+# Both PCs sail the lake's waves at the same height (PHYSICS_SPEC.md 9.18).
+if [[ -n "$lake_wave_scale" ]]; then common+=(--lake_wave_scale="$lake_wave_scale"); fi
 
 host_quit=$((seconds + 4))
 "${run[@]}" -- "${common[@]}" --lan_host=Host --lan_mode="$mode" --lan_map="$map" --lan_skippers="$skippers" \

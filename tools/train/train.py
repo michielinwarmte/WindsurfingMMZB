@@ -64,6 +64,8 @@ Options (the defaults in brackets):
   --own_conditions=0    1: in the blind stages that set boards down at once (S1 to S4, C1, C2) each
                         board sails its own conditions (its own wind, and in S1 to S4 its own sea,
                         gusts and shifts) instead of its race's (TrainingDrops.weather_for())
+  --lake_wave_scale=1.5 Lake Silvaplana's own waves (from S4 on, 30 % of the races) this many times
+                        the growth law's height (PHYSICS_SPEC.md 9.18); handed to every worker
 
 To stop a run cleanly (the model and a brain saved, the workers closed, the nights not going on to
 the next stage): create the file .sim_output/train/STOP (touch .sim_output/train/STOP), or press
@@ -153,8 +155,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--manoeuvre_gap_s", default="auto")
     parser.add_argument("--manoeuvre_cost_m", default="auto")
     parser.add_argument("--own_conditions", type=int, default=0)
+    parser.add_argument("--lake_wave_scale", default="")
     parser.add_argument("--recent", type=int, default=RECENT_EPISODES)
     args = parser.parse_args()
+    global LAKE_WAVE_SCALE
+    LAKE_WAVE_SCALE = args.lake_wave_scale
     args.stage = args.stage.upper()
     if not args.run:
         args.run = args.stage.lower()
@@ -198,7 +203,17 @@ def worker_args(args: argparse.Namespace) -> list[str]:
             extra.append(f"--{name}={float(value)}")
     if getattr(args, "own_conditions", 0):
         extra.append("--own_conditions=1")
-    return extra
+    return extra + lake_wave_args()
+
+
+# The lake's wave-height multiplier (PHYSICS_SPEC.md 9.18): --lake_wave_scale=1.5 trains on waves
+# 1.5 times the growth law's on Lake Silvaplana. Handed to every Godot this trainer starts.
+LAKE_WAVE_SCALE = ""
+
+
+def lake_wave_args() -> list[str]:
+    """The Godot option for the lake's wave height, when one was given."""
+    return [f"--lake_wave_scale={float(LAKE_WAVE_SCALE)}"] if LAKE_WAVE_SCALE else []
 
 
 def push_start_output(choice: str, hello: dict) -> float:
@@ -253,6 +268,7 @@ def run_evaluation(brain: str, stage: str, episodes: int, reference: str | None,
                  f"--evaluate={brain}", f"--stage={stage}", f"--episodes={episodes}", "--boards=1", f"--seed={seed}"]
     if reference:
         arguments.append(f"--reference={reference}")
+    arguments += lake_wave_args()
     return subprocess.Popen(arguments, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, cwd=str(GAME_DIR))
 
 

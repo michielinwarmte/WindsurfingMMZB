@@ -21,10 +21,10 @@ func update(sim: WindsurferSim, dt: float) -> void:
 	var body: SimRigidBody = sim.body
 	var g: float = sim.sim_config.gravity_ms2
 	body.clear_forces()
-	sim.buoyancy.apply(body, sim.water, sim.time_s, g)
+	sim.buoyancy.apply(body, sim.hull_water, sim.time_s, g)
 	var tau_b: Vector3 = body._torque_sum
 	body.clear_forces()
-	sim.hull.compute(body, sim.buoyancy, sim.water, sim.time_s, g, body.mass_kg)
+	sim.hull.compute(body, sim.buoyancy, sim.hull_water, sim.time_s, g, body.mass_kg)
 	var tau_h: Vector3 = body._torque_sum
 	var f_h: Vector3 = body._force_sum
 	body.clear_forces()

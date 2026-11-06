@@ -406,14 +406,20 @@ func set_fin_stiffness(factor: float) -> void:
 
 
 func set_waves(enabled: bool) -> void:
-	if enabled and wave_set_config != null and wave_set_config.enable_waves:
+	# A place's own waves (Lake Silvaplana's) follow their own switch, place_waves, whatever the
+	# open water's sea is set to (9.18: the lake's waves are the standard there).
+	var lake_on: bool = wave_set_config != null and wave_set_config.place_waves
+	if enabled and wave_set_config != null and (wave_set_config.enable_waves or lake_on):
 		var lake: LakeWaves = _place_lake_waves()
 		if lake != null:
 			water = LakeWaveField.new(lake, water_config)
 			hull_water = LakeWaveField.new(lake, water_config)
 			_update_hull_footprint(board_config.length_m, board_config.width_m)
 			return
-		water = WaveField.new(wave_set_config, water_config, wind_config.from_bearing_deg)
+		if wave_set_config.enable_waves:
+			water = WaveField.new(wave_set_config, water_config, wind_config.from_bearing_deg)
+		else:
+			water = FlatWater.new(water_config)
 	else:
 		water = FlatWater.new(water_config)
 	hull_water = water

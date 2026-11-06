@@ -133,10 +133,10 @@ func _step_taken_apart(sim: WindsurferSim, dt: float, controls: SimControls) -> 
 			sim.sailor.add_force(Vector3(0.0, -sim._gravity_ms2 * sim.sailor.mass_kg, 0.0))
 		marks.append(body.torque_sum())
 		force_marks.append(body._force_sum)
-		sim.buoyancy.apply(body, sim.water, sim.time_s, sim._gravity_ms2, sub_dt)
+		sim.buoyancy.apply(body, sim.hull_water, sim.time_s, sim._gravity_ms2, sub_dt)
 		marks.append(body.torque_sum())
 		force_marks.append(body._force_sum)
-		sim.hull.compute(body, sim.buoyancy, sim.water, sim.time_s, sim._gravity_ms2, sim.mass_model.total_mass_kg, sub_dt)
+		sim.hull.compute(body, sim.buoyancy, sim.hull_water, sim.time_s, sim._gravity_ms2, sim.mass_model.total_mass_kg, sub_dt)
 		marks.append(body.torque_sum())
 		force_marks.append(body._force_sum)
 		var heave_added_mass_kg: float = sim.hull.heave_added_mass_kg

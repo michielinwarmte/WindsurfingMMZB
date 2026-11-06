@@ -354,6 +354,13 @@ static func make_env(stage: Stage, seed: int, boards: int = 0) -> RaceEnv:
 		options.wind = null
 		options.gusts = wind_default.gusts_enabled
 		options.shifts = wind_default.shifts_enabled
+	if on_lake:
+		# Lake Silvaplana sails on its own waves, grown by the map's wind over the fetch, as the
+		# game sails it (PHYSICS_SPEC.md 9.17, 9.18): the open water's drawn sea does not apply
+		# there. The menu's default settings have the lake's waves on, at the growth law's height
+		# (or the command line's --lake_wave_scale, WindsurferSim._place_lake_waves()).
+		options.waves = true
+		options.sea = lake_sea()
 	options.blind = stage.blind
 	options.shadows = stage.shadows
 	options.rules = stage.rules
@@ -583,6 +590,13 @@ static func _course_for(stage: Stage, rng: RandomNumberGenerator, wind_kt: float
 		if not _steps_of_kind(RaceSim.new(course, 1, 0.0).steps(), course.axis_deg, stage.kind).is_empty():
 			return course
 	return RandomCourses.windward_leeward(rng, rules, rng.randi_range(8, 24), rng.randf_range(0.0, 360.0))
+
+
+## The sea of a race on Lake Silvaplana: the menu's default wave set with the lake's own waves on.
+static func lake_sea() -> WaveSetConfig:
+	var menu: SettingsValues = SettingsValues.new()
+	menu.lake_waves = true
+	return menu.build_wave_set_config()
 
 
 ## True when the lake's data is there (the map's big files come with Git LFS).

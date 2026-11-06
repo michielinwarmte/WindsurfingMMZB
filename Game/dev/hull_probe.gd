@@ -98,8 +98,8 @@ func _place_and_compute(trim_deg: float, heel_deg: float, height_m: float) -> vo
 	body.angular_velocity = Vector3.ZERO
 	body.internal_velocity = Vector3.ZERO
 	body.clear_forces()
-	_sim.buoyancy.apply(body, _sim.water, 0.0, _sim.sim_config.gravity_ms2)
-	_sim.hull.compute(body, _sim.buoyancy, _sim.water, 0.0, _sim.sim_config.gravity_ms2, _sim.mass_model.total_mass_kg)
+	_sim.buoyancy.apply(body, _sim.hull_water, 0.0, _sim.sim_config.gravity_ms2)
+	_sim.hull.compute(body, _sim.buoyancy, _sim.hull_water, 0.0, _sim.sim_config.gravity_ms2, _sim.mass_model.total_mass_kg)
 
 
 ## The board origin's height at which the hull model's wet length is the one asked for.

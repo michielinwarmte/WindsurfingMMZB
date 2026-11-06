@@ -236,3 +236,21 @@ func test_the_ais_sea_height_on_the_lake_is_the_lakes() -> void:
 		crest += a
 	assert_gt(crest, 0.03, "waves at the start")
 	assert_almost_eq(RaceObservation.sea_height_m(sim), crest, 1e-9, "the highest crest where the board sails")
+
+
+# ---------------------------------------------------------------- the training's races on the lake
+
+func test_the_trainings_lake_races_sail_on_the_lakes_own_waves() -> void:
+	if not TrainingDrops.lake_available():
+		pass_test("the lake's data is not here (Git LFS)")
+		return
+	var stage: TrainingDrops.Stage = TrainingDrops.stage_named("S4")
+	stage.lake_share = 1.0
+	var env: RaceEnv = TrainingDrops.make_env(stage, 3, 1)
+	var sim: WindsurferSim = env.board(0).sim
+	if sim.environment == null:
+		pass_test("no course fitted on the lake for this seed")
+		return
+	assert_true(sim.water is LakeWaveField, "the lake's own waves, whatever sea the stage drew")
+	assert_true(sim.hull_water is LakeWaveField, "the hull's own view of them")
+	assert_almost_eq(env.board(0).sea_height_m, RaceObservation.sea_height_m(sim), 1e-9, "the AI's sea height is the lake's where it starts")
