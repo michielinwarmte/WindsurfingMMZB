@@ -154,12 +154,13 @@ const WIND_MEMORY_S: float = 90.0
 const START_RUN_IN_TWA_DEG: float = 60.0
 ## A slalom's start (_slalom_start_heading()): it waits within SLALOM_PARK_RADIUS_M of its spot upwind
 ## of the committee boat, slows down from SLALOM_SLOW_FROM_M before it, and goes when it has no more
-## than SLALOM_GO_SPARE_S to spare: the time left less the time it needs to its crossing. (Going at
-## 0 s to spare, 11 personas on iq_pd3 in 15 kt started 0.8 to 15.4 s after the gun, none early: the
-## navigation's estimate is on the long side, and the luff near the line keeps an early board back.)
+## than SLALOM_GO_SPARE_S to spare: the time left less the time it needs to sail straight to its
+## crossing (_time_to_cross_s()). The reach down is sailed straight between these wind angles.
 const SLALOM_PARK_RADIUS_M: float = 20.0
 const SLALOM_SLOW_FROM_M: float = 60.0
-const SLALOM_GO_SPARE_S: float = 1.5
+const SLALOM_GO_SPARE_S: float = 1.0
+const SLALOM_DIVE_CLOSEST_TWA_DEG: float = 60.0
+const SLALOM_DIVE_DEEPEST_TWA_DEG: float = 160.0
 ## The run in is this much wider than the angle the board beats at (the polar's, for the wind and its
 ## character), and no wider than START_RUN_IN_WIDEST_TWA_DEG, degrees: its track, with the leeway, must
 ## lay the spot. 60 was 15 above the old beat of 45; at the polar's 55 to 59 a run in at 60 could not be
@@ -1610,15 +1611,21 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 ## cross before the gun, it holds back hard and luffs up: on a line along the wind that runs it up
 ## along the line, not over it. On the course side before the gun, or over at the gun, the usual
 ## way back (_start_heading()).
-func _slalom_start_heading(telemetry: Telemetry, step: RaceStep, behind_m: float, spare_s: float) -> float:
+##
+## The reach down is sailed straight, as a broad reach on its tack (_slalom_dive_deg()), and timed as
+## one (_time_to_cross_s()): steered by the navigation it was a run (deeper than the polar's best
+## downwind angle in 17 kt), sailed off on the wrong gybe, and on T2 the fleet started 19 to 119 s late.
+func _slalom_start_heading(telemetry: Telemetry, step: RaceStep, behind_m: float, _spare_s: float) -> float:
 	var position: Vector2 = _position(telemetry)
 	var wind_deg: float = telemetry.wind_from_bearing_deg
 	var spot: Vector2 = _start_spot(step)
 	var before_gun: bool = _race.clock_s() < 0.0
+	var spare_s: float = -_race.clock_s() + config.start_timing_error_s - _time_to_cross_s(telemetry, spot)
+	start_spare_s = spare_s
 	if spare_s <= SLALOM_GO_SPARE_S or not before_gun:
 		_going = true
 	if _going:
-		var go_deg: float = _course_to(telemetry, _through(position, spot))
+		var go_deg: float = _slalom_dive_deg(telemetry, spot)
 		note = "start: slalom, reaching down onto the line"
 		if before_gun:
 			if _too_early_at_the_line(telemetry, step, behind_m):
@@ -1636,12 +1643,35 @@ func _slalom_start_heading(telemetry: Telemetry, step: RaceStep, behind_m: float
 		if to_slot_m < SLALOM_SLOW_FROM_M:
 			_hands.hold_speed_ms = clampf(to_slot_m / 6.0, _controller.hold_back_steerage_ms + 1.0, maxf(config.hold_speed_ms, 4.0))
 	else:
-		# Waiting: luffed up on the tack it is on, as slow as it steers.
+		# Waiting: luffed up, as slow as it steers, on the tack of its reach down (so that going is a
+		# bear-away, not a gybe at a crawl: waiting on the other tack, Greta gybed late, ran off on
+		# the wrong gybe and started 17 s late on iq_pd3).
 		_hands.hold_speed_ms = _controller.hold_back_steerage_ms
 		heading_deg = wind_deg - _tack() * (HOLD_LUFF_TWA_DEG + 2.0 * config.steering_noise_deg) + _keep_clear_deg(telemetry, _tack())
 		note = "start: waiting upwind of the boat"
+		var dive_tack: float = signf(Navigation.wind_angle_deg(position, spot, wind_deg))
+		if dive_tack != 0.0 and _tack() != dive_tack and behind_m > START_WALL_M:
+			_ask_for_manoeuvre(true)
+			note += ", onto the tack of its reach down"
 	_keep_behind_the_line(telemetry, step, behind_m)
 	return heading_deg
+
+
+## The heading of a slalom's reach down onto the line: straight through its crossing when that is
+## a reach on its present tack (between SLALOM_DIVE_CLOSEST_TWA_DEG and SLALOM_DIVE_DEEPEST_TWA_DEG
+## from the wind), so that the navigation does not sail it as a run with gybes; on the other tack it
+## turns onto the reach's tack at once; a beat or a run is sailed the navigation's way.
+func _slalom_dive_deg(telemetry: Telemetry, spot: Vector2) -> float:
+	var position: Vector2 = _position(telemetry)
+	var through: Vector2 = _through(position, spot)
+	var needed_twa: float = Navigation.wind_angle_deg(position, through, telemetry.wind_from_bearing_deg)
+	if absf(needed_twa) >= SLALOM_DIVE_CLOSEST_TWA_DEG and absf(needed_twa) <= SLALOM_DIVE_DEEPEST_TWA_DEG:
+		if signf(needed_twa) == _tack():
+			return Course.bearing_deg(position, through) + _keep_clear_deg(telemetry, _tack())
+		# On the other tack: it turns onto the reach's tack now, not later on a run's layline.
+		_ask_for_manoeuvre(true)
+		return telemetry.wind_from_bearing_deg - _tack() * absf(telemetry.twa_deg)
+	return _course_to(telemetry, through)
 
 
 ## Its spot in a slalom's waiting row upwind of the committee boat, inside the sailing area.
