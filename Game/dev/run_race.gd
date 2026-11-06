@@ -64,6 +64,10 @@ extends SceneTree
 ##                         and the lake's own waves (PHYSICS_SPEC.md 9.17, 9.18), at --time=14:30 (any
 ##                         hh:mm); --wind_kt is then the lake's mean wind of that hour. With a course
 ##                         on the lake (t2_slalom). --lake_wave_scale=<x> sets the waves' height.
+##                         On the lake a board whose fin touches the bottom has run aground: it stops
+##                         where it is (as in the game, RaceRunner) and an AGROUND line says where and
+##                         what its skipper was doing; the count is printed at the end. The skippers
+##                         look out for the shore (ShoreLookout); --shore_guard=0 races without.
 ##                         Without it every board sails the open water (below)
 ##   [--pilot.<field>=<n>] [--controller.<field>=<n>] a tuning number of every skipper's beginner
 ##                         controller (PlayerController) or its auto-sheet pilot (Autopilot, through
@@ -130,6 +134,8 @@ class Entry:
 	var set_off_s: float = -INF
 	var falls: int = 0
 	var was_fallen: bool = false
+	## On the lake: it ran aground and has stopped (_check_the_bottom()).
+	var aground: bool = false
 	## The tacks and gybes the controller started.
 	var tacks: int = 0
 	var gybes: int = 0
@@ -166,6 +172,7 @@ func _initialize() -> void:
 	var shadows: bool = options.get("shadows", "1") != "0"
 	var with_rules: bool = options.get("rules", "1") != "0"
 	var with_gear: bool = options.get("gear", "1") != "0"
+	var shore_guard: bool = options.get("shore_guard", "1") != "0"
 	var skipper_push: bool = options.get("skipper_push", "1") != "0"
 	var steady_hands: bool = options.get("steady_hands", "0") == "1"
 	var polar_path: String = options.get("polar", "")
@@ -216,6 +223,17 @@ func _initialize() -> void:
 				learned.closest_twa_deg = clampf(options["closest_twa_deg"].to_float(), 0.0, 90.0)
 	if shadows:
 		give_shadows(entries)
+	# The lake's bottom: where a board runs aground, and what the skippers see of the shore.
+	var bottom: TerrainGrid = null
+	if _lake != null:
+		bottom = _lake.depth_grid()
+		if bottom == null:
+			bottom = TerrainGrid.load_from(SHORE_GRID_PATH)
+		if shore_guard:
+			var lookout: ShoreLookout = ShoreLookout.for_lake(bottom, course.start_middle())
+			for entry: Entry in entries:
+				if entry.skipper != null:
+					entry.skipper.shore = lookout
 	var rules: RaceRules = give_rules(entries, race, course) if with_rules else null
 	if steady_hands:
 		steady_the_hands(entries)
@@ -238,8 +256,11 @@ func _initialize() -> void:
 	var outside_at_gun: PackedStringArray = PackedStringArray()
 	var gun_seen: bool = false
 	var ticks: int = roundi((free_sail_s + prestart_s + seconds) / DT)
+	var aground_count: int = 0
 	for tick: int in ticks:
 		step_race(race, entries, blind, rules)
+		if bottom != null:
+			aground_count += _check_the_bottom(bottom, race, entries)
 		if tick % CSV_EVERY == 0:
 			for i: int in entries.size():
 				_write_row(entries[i], race, i)
@@ -267,7 +288,27 @@ func _initialize() -> void:
 	print(start_report(race, entries, outside_at_gun))
 	if rules != null:
 		print(penalty_report(rules, entries))
+	if bottom != null:
+		print("Aground: %d of %d boards%s" % [aground_count, entries.size(), " (the skippers look out for the shore)" if shore_guard else " (no shore lookout)"])
 	quit(0)
+
+
+## The boards whose fin has touched the lake's bottom this tick (ShoreCheck, as the game's): stopped
+## where they are, each with an AGROUND line. How many ran aground now.
+static func _check_the_bottom(bottom: TerrainGrid, race: RaceSim, entries: Array[Entry]) -> int:
+	var count: int = 0
+	for i: int in entries.size():
+		var entry: Entry = entries[i]
+		if entry.aground or race.is_finished(i) and race.phase() == RaceSim.Phase.FINISHED:
+			continue
+		if ShoreCheck.is_aground(bottom, entry.sim.body.origin_world(), entry.sim.fin_config.span_m):
+			entry.aground = true
+			count += 1
+			var at: Vector2 = _where(entry)
+			print("AGROUND %s at race time %.1f s, (%.0f, %.0f), heading %.0f deg, %.1f m/s, sailing to %s: %s" % [
+				entry.name.replace(" ", "_"), race.clock_s(), at.x, at.y, entry.sim.telemetry.heading_deg, entry.sim.telemetry.speed_ms,
+				race.next_step_name(i), entry.skipper.note if entry.skipper != null else "autopilot"])
+	return count
 
 
 ## The start of every skipper's board, one line each: how long after the gun it crossed the start
@@ -480,7 +521,7 @@ static func step_race(race: RaceSim, entries: Array[Entry], blind: bool = false,
 	for i: int in entries.size():
 		if entries[i].skipper != null and entries.size() > 1 and not blind:
 			_tell_others(entries, i)
-		if race.clock_s() >= entries[i].set_off_s:
+		if race.clock_s() >= entries[i].set_off_s and not entries[i].aground:
 			_sail(entries[i], not race.is_finished(i))
 		race.update_board(i, _where(entries[i]))
 	race.step(DT)

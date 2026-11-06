@@ -223,6 +223,7 @@ func _set_up_the_pilot() -> void:
 	_pilot.random_seed = 11
 	_pilot.sailing_area = runner.sailing_area()
 	_pilot.rules = runner.rules
+	_pilot.shore = runner.shore_lookout
 	_pilot.setup(_own.sim, _own.controller, _own.hands, runner.race, 0)
 
 

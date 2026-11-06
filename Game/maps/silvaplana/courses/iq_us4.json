@@ -1,0 +1,60 @@
+{
+	"about": "A race course for the course maker (MAP_SILVAPLANA_PLAN.md, W4a). Positions are Swiss LV95 metres; sides are the side each mark is left on.",
+	"name": "iQFOiL Upwind sprint, 4 marks (US4)",
+	"map": "Lake Silvaplana",
+	"template": "US4",
+	"sequence": "Start-1-2-3-4-Finish",
+	"axis_deg": 217.0,
+	"size_percent": 50.0,
+	"boards": 12,
+	"marks": [
+		{
+			"id": "start boat",
+			"side": "",
+			"east": 2780741.21,
+			"north": 1147310.26
+		},
+		{
+			"id": "start pin",
+			"side": "",
+			"east": 2780804.46,
+			"north": 1147262.6
+		},
+		{
+			"id": "1",
+			"side": "port",
+			"east": 2780471.93,
+			"north": 1146887.11
+		},
+		{
+			"id": "2",
+			"side": "port",
+			"east": 2781043.52,
+			"north": 1146706.81
+		},
+		{
+			"id": "3",
+			"side": "starboard",
+			"east": 2781250.16,
+			"north": 1146989.35
+		},
+		{
+			"id": "4",
+			"side": "port",
+			"east": 2781588.07,
+			"north": 1146947.58
+		},
+		{
+			"id": "finish boat",
+			"side": "",
+			"east": 2781253.28,
+			"north": 1147341.43
+		},
+		{
+			"id": "finish pin",
+			"side": "",
+			"east": 2781280.7,
+			"north": 1147363.19
+		}
+	]
+}

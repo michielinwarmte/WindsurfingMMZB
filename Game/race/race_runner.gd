@@ -127,6 +127,9 @@ var start_heading_deg: float = 0.0
 var remote_source: Callable = Callable()
 ## Whether the last start left every board where it was (restart(true), a race after a race).
 var kept_places: bool = false
+## On a lake: the shore as the AI skippers see it while they race (ShoreLookout; Max, 6 November 2026:
+## the AI races every iQFOiL course on Silvaplana without going onto the shore). Null on the open water.
+var shore_lookout: ShoreLookout = null
 ## Which AI board the camera follows while spectating.
 var choice: SpectateChoice = SpectateChoice.new()
 ## The race's number of the first AI board: 1 after the player's, 0 while spectating.
@@ -169,6 +172,8 @@ func setup_race(race_course: Course, player_node: WindsurferNode, race_setup: Ra
 	# The sailing area round the start line, kept off the shore on a map (the scene's shore grid).
 	var sailing_scene: SailingScene = player.get_parent() as SailingScene
 	_area = SailingArea.for_course(course, sailing_scene.shore_grid if sailing_scene != null else null)
+	if sailing_scene != null and sailing_scene.shore_grid != null:
+		shore_lookout = ShoreLookout.for_lake(sailing_scene.shore_grid, course.start_middle())
 	var scene: PackedScene = load(WINDSURFER_SCENE)
 	for skipper: RaceSkipper in Skippers.make_fleet(setup.skippers):
 		var node: WindsurferNode = scene.instantiate()
@@ -264,6 +269,7 @@ func restart(keep_places: bool = false) -> void:
 		_skippers[i].level_spread = setup.level_spread
 		_skippers[i].sailing_area = _area
 		_skippers[i].rules = rules
+		_skippers[i].shore = shore_lookout
 		_skippers[i].setup(opponents[i].sim, opponents[i].controller, opponents[i].hands, race, i + _first_ai)
 	_tell_the_race()
 	wind_clock = RaceWindClock.of(player.sim.wind)

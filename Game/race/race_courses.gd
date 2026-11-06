@@ -86,6 +86,16 @@ static func load_named(course_name: String, config: MapConfig) -> Course:
 	return Course.load_from(path, config)
 
 
+## A saved course's title for the menus: the name it was saved under ("iQFOiL Trapezoid, outer loop
+## (O2)"), or its file name when the file has none.
+static func saved_title(course_name: String) -> String:
+	var path: String = SAVED_FOLDER.path_join(course_name + ".json")
+	var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(path)) if FileAccess.file_exists(path) else null
+	if data is Dictionary and String((data as Dictionary).get("name", "")) != "":
+		return String((data as Dictionary)["name"])
+	return course_name
+
+
 ## The names (file names without .json) of every course the course maker saved, in order.
 static func saved_names() -> PackedStringArray:
 	var names: PackedStringArray = PackedStringArray()

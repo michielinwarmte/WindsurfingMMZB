@@ -15,6 +15,10 @@ extends SceneTree
 ## Arguments after "--":
 ##   --time=<hh:mm>   another time of day for the wind (the course then has that wind's axis)
 ##   --save=0         don't write t2_slalom.json (to try something out)
+##   --all=1          also every iQFOiL template (CourseTemplates.ALL) fitted the same way and saved as
+##                    the team's course iq_<template>.json ("iQFOiL O2 ..."), for ALL_BOARDS boards, so
+##                    every iQFOiL course can be raced on the lake (Max, 6 November 2026; the AI races
+##                    them without going onto the shore, RACE_DIRECTOR.md)
 ##   --mark_margin=<m> --leg_margin=<m> --min_size=<percent>   another rule than CourseFitter's
 ##                    (200 m, 50 m, 40 %), to see what it would give; then also add --save=0
 
@@ -27,6 +31,10 @@ const T2_NAME: String = "T2 sprint slalom"
 ## The lake scene's start (SilvaplanaSailing.START_LV95: 40 m off the camping beach), LV95 metres.
 const START_LV95: Vector2 = Vector2(2780880.0, 1147510.0)
 const BOARDS: int = 4
+## The iQFOiL courses for the lake (--all=1) are laid for this many boards: the start line's length
+## (the LAN game's up to 8 players and the AI fleet).
+const ALL_BOARDS: int = 12
+const COURSES_FOLDER: String = "res://maps/silvaplana/courses"
 
 
 func _initialize() -> void:
@@ -85,6 +93,21 @@ func _initialize() -> void:
 	else:
 		print("The check, not saved:")
 		_print_course(lg2, fitter, grid, axis_deg)
+	if options.get("all", "0") == "1":
+		for id: String in CourseTemplates.ALL:
+			var fitted: Course = fitter.fit_template(id, rules, wind_kt, axis_deg, preferred, ALL_BOARDS)
+			print("")
+			if fitted == null:
+				print("%s: %s" % [id, fitter.last_reason])
+				failed = true
+				continue
+			fitted.name = "iQFOiL %s" % CourseTemplates.title(id)
+			_print_course(fitted, fitter, grid, axis_deg)
+			if options.get("save", "1") != "0":
+				var path: String = COURSES_FOLDER.path_join("iq_%s.json" % id.to_lower())
+				var error: Error = fitted.save(path, config)
+				print("  saved as %s%s" % [path, "" if error == OK else ": FAILED, " + error_string(error)])
+				failed = failed or error != OK
 	quit(1 if failed else 0)
 
 

@@ -104,7 +104,7 @@ static func course_choices(lake: bool) -> Array[PackedStringArray]:
 		for saved: String in RaceCourses.saved_names():
 			if saved != RaceCourses.T2_NAME:
 				names.append(saved)
-				titles.append(saved)
+				titles.append(RaceCourses.saved_title(saved))
 	else:
 		names.append(RaceCourses.T1_NAME)
 		titles.append("T1 training loop")

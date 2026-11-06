@@ -22,6 +22,9 @@ var sailing_area: SailingArea = null
 ## The racing rules' judge of the race it sails in (RaceRules, F3), given by whoever sets up the
 ## race; null: no rules (a scripted skipper then bears away from any board close by, as before).
 var rules: RaceRules = null
+## The lake's shore as the skipper sees it while racing (ShoreLookout), given by whoever sets up a
+## race on a lake; null on the open water. A scripted skipper tacks, gybes or turns away before it.
+var shore: ShoreLookout = null
 
 
 ## The board's own name in a fleet where a character sails more than once ("Rookie 2", set by

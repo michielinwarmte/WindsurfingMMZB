@@ -43,6 +43,12 @@
 
 ## Progress log (newest first)
 
+### 6 November 2026, afternoon: the AI and the lake's shore (Max: "be sure that the ai can race all the iq courses on silvaplana without going onto the shore")
+- **Every iQFOiL course on the lake:** `tools/fit_courses.sh --all=1` lays each template of `CourseTemplates.ALL` (LG2, LR2, O2, I2, US3, US4, PD3, SD3, PM1, SM1) square to the lake's mean wind at 14:30 (222°) for 12 boards and fits it to the water (CourseFitter: every mark 200 m and every leg 50 m from the shore; LG2 and LR2 at full size, the trapezoids at 40 %). Saved as the team's courses `Game/maps/silvaplana/courses/iq_*.json`, so the Race page and the LAN lobby offer them on the lake (under their names, `RaceCourses.saved_title()`), and the race director can load them in the course maker.
+- **The AI's lookout** (`Game/race/shore_lookout.gd`, `Skipper._keep_off_the_shore()`): before every decision a scripted skipper looks along the heading it wants as far as it sails in 14 s (70 to 160 m); open water is at least 2 m deep and 40 m from the land. A tack or gybe that would point it at the shore sooner is not made; the shore ahead on a beat or a run makes it tack or gybe now; on a reach it turns away on the same tack toward the most water. The game's RaceRunner gives every AI skipper the lookout on the lake (and the race director's autopilot).
+- **The measurement:** `tools/lake_courses_check.sh` races the four characters on every iq course on the lake (`Game/dev/run_race.gd --map=lake`, which now stops a board whose fin touches the bottom, as the game does, with an AGROUND line); `--shore_guard=0` races without the lookout. Results below.
+- Commit b0b21c2 holds S1 to S3 (the LAN work); this part follows.
+
 ### 6 November 2026, midday: the plan
 The plan above, from reading `Game/net/`, `Game/race/race_runner.gd`, `race_sim.gd`, `skipper.gd`, `Game/maps/course/course_editor.gd`, `Game/maps/silvaplana/wind_viewer.gd` and `main.gd`. Facts it rests on: the AI reads its next mark's place from `RaceSim.next_step()` every time it thinks, so marks moved in the race's steps reach it at once; `RaceSim` copies the marks' places into its steps when it is built, so it needs `refresh_course()`; `GearChoice.sim_with()` builds a board's simulation on new gear in the same place, wind and sea, so a board can change gear without a new scene; Godot's `SceneMultiplayer.server_relay` passes a guest's messages to the other guests.
 

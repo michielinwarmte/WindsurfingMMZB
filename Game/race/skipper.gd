@@ -110,6 +110,15 @@ const THINK_INTERVAL_S: float = 0.5
 ## A tack or gybe asked for this soon after the last one ended is not asked for: the board needs
 ## time to get going again.
 const MIN_TACK_INTERVAL_S: float = 8.0
+## The shore (_keep_off_the_shore()): how far ahead it looks, as seconds of sailing at its speed, and
+## at least and at most (metres); between these wind angles a board is reaching (it turns away rather
+## than tacks or gybes); how far it tries turning at a time, degrees.
+const SHORE_LOOK_S: float = 14.0
+const SHORE_LOOK_MIN_M: float = 70.0
+const SHORE_LOOK_MAX_M: float = 160.0
+const SHORE_REACH_FROM_DEG: float = 70.0
+const SHORE_REACH_TO_DEG: float = 125.0
+const SHORE_TURN_STEP_DEG: float = 10.0
 ## The leeway and the speed it expects are smoothed over this long, seconds; the leeway is measured
 ## above MEASURE_LEEWAY_FROM_MS.
 const MEASURE_SMOOTH_S: float = 3.0
@@ -611,13 +620,61 @@ func _think(telemetry: Telemetry) -> void:
 		_penalty_phase = PENALTY_EASING
 		_penalty_from_s = _time_s
 		_penalty_pressed_s = -INF
-	var decided_deg: float = _decide(telemetry)
+	var decided_deg: float = _keep_off_the_shore(telemetry, _decide(telemetry))
 	if _keeping_clear:
 		note += ", keeping clear"
 	_last_wanted_deg = decided_deg
 	_delay_times.append(_time_s)
 	_delay_headings.append(decided_deg)
 	_remember_others()
+
+
+## The shore (a race on a lake: shore, a ShoreLookout; Max, 6 November 2026): the board never sails
+## out of the open water. Before every decision it looks along the heading it wants as far as it
+## sails in SHORE_LOOK_S (SHORE_LOOK_MIN_M to SHORE_LOOK_MAX_M):
+## - a tack or a gybe it asked for that would point it at the shore sooner than its heading now does
+##   is not made (a layline or a lift that lies over the land);
+## - the shore ahead on a beat or a run: it tacks or gybes now (as a sailor does at the edge of the
+##   water), if the other tack has more water ahead;
+## - the shore ahead on a reach (or on both tacks): it turns, on the same tack, to the heading with the
+##   most water ahead (no closer to the wind than it can sail).
+## A penalty's circle is left alone: it is turned on the spot.
+func _keep_off_the_shore(telemetry: Telemetry, heading_deg: float) -> float:
+	if shore == null or _penalty_phase > 0:
+		return heading_deg
+	var position: Vector2 = _position(telemetry)
+	var look_m: float = clampf(telemetry.speed_ms * SHORE_LOOK_S, SHORE_LOOK_MIN_M, SHORE_LOOK_MAX_M)
+	var wind_deg: float = telemetry.wind_from_bearing_deg
+	var here_m: float = shore.water_ahead_m(position, heading_deg, look_m)
+	# The same angle to the wind on the other tack.
+	var other_deg: float = 2.0 * wind_deg - heading_deg
+	if _tack_due_s >= 0.0:
+		var there_m: float = shore.water_ahead_m(position, other_deg, look_m)
+		if there_m < look_m and there_m < here_m:
+			_tack_due_s = -1.0
+			note += ", not toward the shore"
+		return heading_deg
+	if _controller.manoeuvre != PlayerController.Manoeuvre.NONE or here_m >= look_m:
+		return heading_deg
+	note += ", the shore %.0f m ahead" % here_m
+	var twa_deg: float = absf(wrapf(wind_deg - heading_deg, -180.0, 180.0))
+	if (twa_deg < SHORE_REACH_FROM_DEG or twa_deg > SHORE_REACH_TO_DEG) and shore.water_ahead_m(position, other_deg, look_m) > here_m:
+		_ask_for_manoeuvre(true, true)
+		return heading_deg
+	# Turn away on this tack: the heading with the most water ahead, from as close to the wind as it
+	# sails to almost dead downwind.
+	var tack: float = 1.0 if wrapf(wind_deg - heading_deg, -180.0, 180.0) >= 0.0 else -1.0
+	var best_deg: float = heading_deg
+	var best_m: float = here_m
+	for step: int in range(1, 9):
+		for way: float in [1.0, -1.0]:
+			var twa_try: float = clampf(twa_deg + way * SHORE_TURN_STEP_DEG * step, _upwind_twa_deg(), 170.0)
+			var try_deg: float = wind_deg - tack * twa_try
+			var water_m: float = shore.water_ahead_m(position, try_deg, look_m)
+			if water_m > best_m + 1.0:
+				best_m = water_m
+				best_deg = try_deg
+	return best_deg
 
 
 ## When within each THINK_INTERVAL_S this skipper thinks, seconds: spread over the interval by the

@@ -1,0 +1,54 @@
+{
+	"about": "A race course for the course maker (MAP_SILVAPLANA_PLAN.md, W4a). Positions are Swiss LV95 metres; sides are the side each mark is left on.",
+	"name": "iQFOiL Medal race MR1, finish left (SM1)",
+	"map": "Lake Silvaplana",
+	"template": "SM1",
+	"sequence": "Start-1-2S/2P-1-2S-Finish",
+	"axis_deg": 217.0,
+	"size_percent": 80.0,
+	"boards": 12,
+	"marks": [
+		{
+			"id": "start boat",
+			"side": "",
+			"east": 2780445.69,
+			"north": 1146860.98
+		},
+		{
+			"id": "start pin",
+			"side": "",
+			"east": 2780496.25,
+			"north": 1146928.06
+		},
+		{
+			"id": "1",
+			"side": "port",
+			"east": 2780874.54,
+			"north": 1146632.48
+		},
+		{
+			"id": "2S",
+			"side": "starboard",
+			"east": 2781305.73,
+			"north": 1147142.38
+		},
+		{
+			"id": "2P",
+			"side": "port",
+			"east": 2781245.83,
+			"north": 1147187.52
+		},
+		{
+			"id": "finish boat",
+			"side": "",
+			"east": 2781595.76,
+			"north": 1146941.28
+		},
+		{
+			"id": "finish pin",
+			"side": "",
+			"east": 2781614.31,
+			"north": 1146970.96
+		}
+	]
+}
