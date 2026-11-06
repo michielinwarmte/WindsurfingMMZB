@@ -67,3 +67,15 @@ When an agent reports: read its diff (every `Game/sim/` change in full, for Mich
 - 19:50 gp/manoeuvres merged (aaebb76, f58c1a8, ad39b7e, 5d01578; 0.45 M; 927/927 unit, check 0 failed). One conflict in player_controller.gd with the autopilot's reflex: resolved by keeping both, the cue's hold first and the reflex last so its ease wins near a fall. Open for Max: should a flip without a cue come a little late so a good cue pays (changes the hands-off manoeuvre); the sheet keys as a cue; everything at once falls 5 in 45 at 24 kt.
 - 20:55 mp/spectate merged (19f2f64..d0facca; 0.35 M; 955/955 unit, check 484/0, LAN PASS x3 with a spectator; PROTOCOL 2 -> 3). The two agents had been cut off by the Opus 5-hour limit at ~20:20 (reset 20:40) and were resumed by message. Open for Max: the camera after a finish (the leader?), a 'Sail now' between races, spectating alone with the AI or in free sailing.
 - 21:20 race/types-start-marks merged (e926f04..506ccae; 0.9 M; 943/943 unit, check 479/0, LAN PASS with the type travelling). Two conflicts with spectating (race_mirror.gd, race_runner.gd): resolved by keeping both: the free-sailing screen first, then the spectating logic; the racing HUD on whenever the course is raced (a watcher sees the race card too); the branch's _show_racing_hud() and its flag, which the auto-merge had dropped, put back by hand. Its AI slalom-start measurement was stopped on Max's word (21:00): it is part A of the night run (night_run_6nov.md). Open for Max: PM1/SM1 as slalom starts?; keep the new slalom start while it is tuned?; the row's 35 m and 140 degrees; the pins' pink.
+- 21:50 final play folder WindsurfingMMZB-play-6nov2026-night3 (+ .zip) from 2c94d6e (the code of 599d2eb; the later commits are documents): all fourteen asks; checked with a 3137x1263 PD3 slalom screenshot from the folder's own exe (.screenshots/play_night3_check_3137.png): the fleet by the committee boat, both gauges, the Space + A/D strip. Final tree: unit tests all green, check 485/0; validation 38/8/2 on the tree before the last three merges (the names: the night run's part E). The night run started detached at the session's end (night_run_6nov.sh; .logs/night_6nov/00_progress.txt).
+
+## Token ledger, the second list
+
+| Agent | Branch | Tokens |
+|---|---|---|
+| push gauge, finish list, UI scale, draw distance | `fix/push-and-leaderboard` | 0.6 M |
+| manoeuvres | `gp/manoeuvres` | 0.45 M |
+| race types, slalom start, marks | `race/types-start-marks` | 0.9 M |
+| spectating | `mp/spectate` | 0.35 M |
+
+All nine agents: about 5.3 M tokens; the lead (Fable) on top.
