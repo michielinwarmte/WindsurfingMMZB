@@ -27,7 +27,7 @@ CLAUDE.md's rule: at most three Opus agents at a time, so 1, 2+3 and 5 run first
 
 | Agent | Branch | Launched | Done | Tokens (agent's own count) |
 |---|---|---|---|---|
-| wind look + multiplier | `gr/wind-on-water` | 15:46 | | |
+| wind look + multiplier | `gr/wind-on-water` | 15:46 | 17:05 | 0.61 M (0.5 + 0.11 research helper; 886/886 unit, check 461/0, validation 38/8/2 same reds; crest spray not built) |
 | autopilot | `autopilot/stay-up` | 15:46 | | |
 | push on the mouse | `gp2/push-mouse` | 15:47 | 16:38 | 0.31 M (883/883 unit, check 460/0; LAN test not run: a live game held the port) |
 | fin brands | `gear/fin-brands` | | | |
@@ -42,3 +42,4 @@ When an agent reports: read its diff (every `Game/sim/` change in full, for Mich
 - 15:44 the three branches made from f72f565 in the three free worktrees (their old branches `ph44/swan`, `ui/race-screen`, `gr/sailor-polish` are merged and kept).
 - 15:46 three agents launched.
 - 16:38 push on the mouse merged (c9efc5e, a49686a). The agent's LAN test joined the live play-test game on this PC for 40 s (the port is fixed, 47520): no LAN tests while wsim.exe runs; the other agents told. Fins agent started in WindsurfingMMZB-gp2 on gear/fin-brands.
+- 17:08 wind on the water + lake wind multiplier merged (ce63b35, b1c568f, 5a0acaa; merge 3e8e938). Contact sheets looked at: 8 to 30 kt clearly different, no stripes. Left over: spray off crests above 25 kt, handed to the board-fx agent. Board-fx agent started in WindsurfingMMZB-shading on gr/board-fx.
