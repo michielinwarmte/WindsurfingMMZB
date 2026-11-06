@@ -31,7 +31,7 @@ CLAUDE.md's rule: at most three Opus agents at a time, so 1, 2+3 and 5 run first
 | autopilot | `autopilot/stay-up` | 15:46 | | |
 | push on the mouse | `gp2/push-mouse` | 15:47 | 16:38 | 0.31 M (883/883 unit, check 460/0; LAN test not run: a live game held the port) |
 | fin brands | `gear/fin-brands` | 16:40 | 17:38 | 0.40 M (891/891 unit, check 472/0; matrix at 28 and 52 cm, no NaN; stiffness question for Michiel) |
-| board fx | `gr/board-fx` | | | |
+| board fx | `gr/board-fx` | 17:10 | 18:30 | 0.98 M (0.9 + 0.08 helper; 910/910 unit, check 464/0; no measurable frame cost) |
 
 ## Merging and the play folder
 
@@ -60,3 +60,4 @@ When an agent reports: read its diff (every `Game/sim/` change in full, for Mich
 | 14 | Draw distance increase option | `fix/push-and-leaderboard` | the same |
 
 - 18:12 fix/push-and-leaderboard agent launched (asks 8, 9, 14).
+- 18:32 board fx merged (285301a..47ae38b). Open for Max: the crest bursts at 30 kt maybe too many (CREST_AMOUNT 35), the bow wave's V, the fall's splash. Disk: 7.7 GB free (99 %): no new worktrees; ask Max before any cleanup. Manoeuvres agent started in WindsurfingMMZB-shading on gp/manoeuvres.
