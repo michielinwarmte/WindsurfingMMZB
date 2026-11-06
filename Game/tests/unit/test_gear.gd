@@ -458,6 +458,13 @@ func test_the_fin_tabs_slider_chooses_the_depth() -> void:
 	if montag_card != null:
 		montag_card.pressed.emit()
 	assert_eq(GameSettings.values.gear_fin, "montag_slalom_44")
+	# A narrower board (63 cm): the Fin tab's mark and its line follow its width.
+	page.choose(GearCatalogue.find("tripletone_slalom_98"))
+	await wait_process_frames(1)
+	var hint: Label = page.find_child("FinHint", true, false) as Label
+	assert_not_null(hint, "the line about the orange mark")
+	if hint != null:
+		assert_true(hint.text.begins_with("Orange mark: 32 cm, for your 63 cm wide board."), hint.text)
 	page.close()
 
 

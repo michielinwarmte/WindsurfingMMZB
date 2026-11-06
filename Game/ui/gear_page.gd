@@ -118,6 +118,9 @@ func choose(item: GearItem) -> void:
 			GameSettings.values.gear_board = item.id()
 	GameSettings.save()
 	_show_choice()
+	# The Fin tab's orange mark is the new board's depth.
+	if item.kind == GearItem.Kind.BOARD and _brand_parts.has(GearItem.Kind.FIN):
+		_fill_brand_part(GearItem.Kind.FIN)
 
 
 func _process(delta: float) -> void:
@@ -240,6 +243,7 @@ func _fill_fin_part(part: VBoxContainer, brand: Brand) -> void:
 	row.add_child(_fin_value)
 	part.add_child(row)
 	var hint: Label = Label.new()
+	hint.name = "FinHint"
 	hint.text = "Orange mark: %d cm, for your %d cm wide board. Deeper for light wind, shorter for strong wind." % [
 		recommended, roundi(board_width_m * 100.0)]
 	hint.theme_type_variation = &"HintLabel"
