@@ -216,30 +216,35 @@ var _tack_sign_at_start: float = 0.0
 var _was_down: Dictionary[String, bool] = {}
 
 
-## Sailing in chop (Documentation/reports/autopilot/lake_chop_training.md). Each of these is off at
-## its default, and the controller is then exactly as before.
+## Sailing in chop (Documentation/reports/autopilot/lake_chop_training.md). The defaults are the lake
+## training's choice (6 November 2026, round 4's c2hu10): the ease while carving up at speed (for a key
+## or a tack), no rail at walking pace, the ease in the air in strong wind and short chop with the sail
+## back in fast on landing. On Lake Silvaplana's waves it fell in none of the 130 cases the rounds tuned
+## on (the controller before: 26) and in 6 of 180 on six other hours (before: 29), with the afternoon
+## reaches and the open water's push check as fast as before. Less pull in chop (chop_hike_drop) and
+## waiting for the wave (manoeuvre_wait_max_s) are built and off: the rounds found no gain in them.
 ## The rail at low speed: the weight goes on the inside rail for a turn only as the board has speed,
 ## faded in from rail_from_ms to rail_full_ms. A board at walking pace does not carve, and in chop a
 ## sailor standing on the windward rail of a slow board with a luffing sail is tipped off it (the
 ## lake matrix's out-of-irons case: the board rolled to 50 degrees at 2 km/h and the sailor fell
 ## off). Both 0: the rail at every speed, as before.
-var rail_from_ms: float = 0.0
-var rail_full_ms: float = 0.0
+var rail_from_ms: float = 2.0
+var rail_full_ms: float = 5.0
 ## Heading up on purpose at speed (a tack's carve up to the wind, or a key held toward the wind):
 ## the auto-sheet trims no closer than head_up_alpha_deg of angle of attack, from head_up_ease_from_ms
 ## on. The turn's push is felt as heel to leeward (atan(v w / g): 15 degrees at 15 degrees per second
 ## and 11 m/s), and in chop the board's roll adds as much again, so a fully trimmed sail catapults
 ## the sailor out of the carve; a sailor carving up into a tack in chop eases a little. 90: no ease.
-var head_up_alpha_deg: float = 90.0
+var head_up_alpha_deg: float = 9.0
 var head_up_ease_from_ms: float = 7.0
 ## Whether the heading hold's own corrections toward the wind count as heading up (true), or only a
 ## key held (or a tack) does (false). In chop the hold corrects all the time (the waves yaw the board
 ## 20 to 45 degrees a second), so with true the ease also comes on in straight sailing.
-var head_up_ease_on_hold: bool = true
+var head_up_ease_on_hold: bool = false
 ## The turn toward the wind that counts as heading up on purpose, degrees a second. An AI skipper's
 ## hands steer with a stick all the time (AiHands), so small corrections toward the wind would ease
 ## the sheet too; a real head-up asks for more.
-var head_up_ease_from_dps: float = 5.0
+var head_up_ease_from_dps: float = 10.0
 ## The turn key held at this update (beginner mode), +1 right, -1 left, 0 none.
 var _turn_key: float = 0.0
 ## The pull held in chop: the pilot's hike_share times (1 - chop_hike_drop) when the board bounces
@@ -269,7 +274,7 @@ var _manoeuvre_wait_s: float = 0.0
 ## the sailor, falling with it, is pulled over the sail: the steady 24 kt beam reach on the lake left
 ## the water three times in 1.5 s and the third catapulted (the felt heel from 9 to 34 degrees in
 ## 0.3 s). A sailor sheets out on a jump. 90: no ease.
-var airborne_alpha_deg: float = 90.0
+var airborne_alpha_deg: float = 6.0
 var airborne_support_share: float = 0.3
 var airborne_hold_s: float = 0.3
 ## The ease only for a real jump, not every skip off a crest: once the board has been light for
@@ -283,22 +288,22 @@ var airborne_heel_from_deg: float = -90.0
 ## the pilot trims it). In the map's wind (up to about 18.5 kt at the sail) the lake's reaches never
 ## fell in 40 runs and the ease cost them 3 to 4 kt; in a steady 24 kt (about 20 kt at the sail) the
 ## beam reach catapulted in two of three runs without it. Both 0: at every wind.
-var airborne_wind_from_kt: float = 0.0
-var airborne_wind_full_kt: float = 0.0
+var airborne_wind_from_kt: float = 18.0
+var airborne_wind_full_kt: float = 20.0
 ## And only in short, steep chop: the ease comes in as the bounce felt (the pitch rate's RMS,
 ## Autopilot.felt_bounce_dps()) rises from airborne_bounce_from_dps to airborne_bounce_full_dps. The
 ## open sea's longer waves set the planing board pitching at 3.5 to 9 degrees a second (the push
 ## check's nine cases) and it does not fall there; the lake's chop at 10 to 17 (its telemetry). On
 ## the open sea the ease cost the 24 kt reaches up to 10 % of their speed made good for nothing. Both
 ## 0: in any sea.
-var airborne_bounce_from_dps: float = 0.0
-var airborne_bounce_full_dps: float = 0.0
+var airborne_bounce_from_dps: float = 8.0
+var airborne_bounce_full_dps: float = 12.0
 ## Back in on landing: the body stayed hiked out through the jump, so the sail may come back to where
 ## it was faster than the pilot's usual pace for sheeting in (Autopilot.sheet_in_share, which at 24 kt
 ## lets the angle of attack rise only 1 to 2 degrees a second: eased at every skip the sail never got
 ## back). While eased and for airborne_resheet_s after, the pilot's sheet_in_share is
 ## airborne_sheet_in_share. 0: the pilot's own pace.
-var airborne_sheet_in_share: float = 0.0
+var airborne_sheet_in_share: float = 3.0
 var airborne_resheet_s: float = 1.0
 var _airborne_for_s: float = 0.0
 var _light_for_s: float = 0.0

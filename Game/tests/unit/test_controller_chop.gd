@@ -29,6 +29,12 @@ func _telemetry(speed_ms: float, twa_deg: float = 90.0) -> Telemetry:
 	return t
 
 
+## The ease in the air at any wind and in any sea (its gates off), for the tests of the ease itself.
+func _without_gates(controller: PlayerController) -> void:
+	controller.airborne_wind_full_kt = 0.0
+	controller.airborne_bounce_full_dps = 0.0
+
+
 func _run(controller: PlayerController, telemetry: Telemetry, controls: SimControls, seconds: float) -> void:
 	for i: int in int(seconds / DT):
 		telemetry.time_s += DT
@@ -93,6 +99,7 @@ func test_the_sheet_is_eased_while_the_board_is_light_over_a_crest() -> void:
 	var controller: PlayerController = PlayerController.new()
 	controller.airborne_alpha_deg = 6.0
 	controller.airborne_hold_s = 0.3
+	_without_gates(controller)
 	var controls: SimControls = SimControls.new()
 	var t: Telemetry = _telemetry(12.0)
 	_run(controller, t, controls, 0.2)
@@ -157,6 +164,7 @@ func test_the_sail_comes_back_in_faster_after_a_jump() -> void:
 	controller.airborne_hold_s = 0.3
 	controller.airborne_sheet_in_share = 3.0
 	controller.airborne_resheet_s = 1.0
+	_without_gates(controller)
 	var own: float = Autopilot.new().sheet_in_share
 	var controls: SimControls = SimControls.new()
 	var t: Telemetry = _telemetry(12.0)
@@ -179,6 +187,7 @@ func test_the_heading_holds_corrections_ease_only_when_asked() -> void:
 		var controller: PlayerController = PlayerController.new()
 		controller.head_up_alpha_deg = 9.0
 		controller.head_up_ease_on_hold = on_hold
+		controller.head_up_ease_from_dps = 5.0
 		var controls: SimControls = SimControls.new()
 		var t: Telemetry = _telemetry(12.0)
 		t.heading_deg = 180.0
@@ -197,6 +206,7 @@ func test_the_ease_in_the_air_only_in_strong_wind_when_gated() -> void:
 		controller.airborne_alpha_deg = 6.0
 		controller.airborne_wind_from_kt = 18.0
 		controller.airborne_wind_full_kt = 20.0
+		controller.airborne_bounce_full_dps = 0.0
 		var controls: SimControls = SimControls.new()
 		var t: Telemetry = _telemetry(12.0)
 		t.tws_at_sail_kt = wind_kt
@@ -214,6 +224,7 @@ func test_the_ease_in_the_air_only_in_short_chop_when_gated() -> void:
 		controller.airborne_alpha_deg = 6.0
 		controller.airborne_bounce_from_dps = 8.0
 		controller.airborne_bounce_full_dps = 12.0
+		controller.airborne_wind_full_kt = 0.0
 		var controls: SimControls = SimControls.new()
 		var t: Telemetry = _telemetry(12.0)
 		# The board pitching at bounce_dps (RMS) for 10 s, on the water.
@@ -255,3 +266,24 @@ func test_the_pilots_hands_on_the_sheet_are_the_controllers() -> void:
 	controller.pilot_overrides["sheet_rate_per_s"] = 1.0
 	_run(controller, _telemetry(12.0), controls, 0.1)
 	assert_eq(controller.auto_sheet_pilot.sheet_rate_per_s, 1.0, "an override still wins")
+
+
+func test_the_defaults_are_the_lake_trainings_choice() -> void:
+	# Documentation/reports/autopilot/lake_chop_training.md: round 4's c2hu10, shipped. On the lake's
+	# 130 cases of rounds 1 to 3 it fell in none (the controller before: 26), on six other hours in 6 of
+	# 180 (before: 29), the open water's push check and matrix as before.
+	var controller: PlayerController = PlayerController.new()
+	assert_eq(controller.head_up_alpha_deg, 9.0, "the ease while carving up at speed")
+	assert_false(controller.head_up_ease_on_hold, "for a key or a tack, not the hold's corrections")
+	assert_eq(controller.head_up_ease_from_dps, 10.0, "from a real head-up")
+	assert_eq(controller.rail_from_ms, 2.0, "no rail at walking pace")
+	assert_eq(controller.rail_full_ms, 5.0)
+	assert_eq(controller.airborne_alpha_deg, 6.0, "the ease in the air")
+	assert_eq(controller.airborne_sheet_in_share, 3.0, "back in faster on landing")
+	assert_eq(controller.airborne_wind_from_kt, 18.0, "only in strong wind")
+	assert_eq(controller.airborne_wind_full_kt, 20.0)
+	assert_eq(controller.airborne_bounce_from_dps, 8.0, "and in short chop")
+	assert_eq(controller.airborne_bounce_full_dps, 12.0)
+	assert_eq(controller.chop_hike_drop, 0.0, "less pull in chop: not used (it cost the afternoons 2.6 kt)")
+	assert_eq(controller.manoeuvre_wait_max_s, 0.0, "waiting for the wave: not used (it changed nothing)")
+	assert_eq(controller.pilot_sheet_rate_per_s, 1.5, "the pilot's own hands (faster cost the pushed broad reach at 24 kt)")

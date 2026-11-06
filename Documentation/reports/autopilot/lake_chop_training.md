@@ -164,3 +164,25 @@ catapult in the air (the eased sail still pulls 200 N, and a slam that knocks th
 on landing tips the sailor over in 0.2 s). The race on the lake: every board finished in every race;
 at 16:00 (a lull at the start) the candidates' fleets were three to four minutes quicker on average
 (one race each: partly chance).
+
+## Round 5 (lc5, lc5d): four more hours, a third open-water sample, two more races
+
+`rounds/lc5.txt`: the lake at 12:30, 13:30, 15:30 and 16:30 (120 manoeuvre cases and the 40
+afternoon reaches), the push check at 60 and 135 degrees with the gusts 9.5 s apart, the race at
+13:00 and 15:00. `rounds/lc5d.txt`: `c2s20hu10` on round 3's standard set.
+
+| Variant | Lake falls (of 120) | Push3 neutral / pushed | Race 13:00 | Race 15:00 |
+|---|---|---|---|---|
+| baseline | 14 (12 at 24 kt) | 10.35 / 10.48 | 4 of 4, 5:05, 0 falls | 4 of 4, 5:12, 4 falls |
+| **`c2hu10`** | **2** (a catapult in a tack at 24 kt, one on the 24 kt beam reach) | 10.27 / 10.48 | 4 of 4, 5:06, 0 | 4 of 4, **3:39**, 1 |
+| `c2s20hu10` | 5 (one catapult on the 24 kt reach, in five cases) | 10.39 / 10.18 | 4 of 4, 5:34, 1 | 4 of 4, 5:02, 2 |
+| `c2s25hu10` | 9 | 10.12 / 10.16 | 4 of 4, 4:54, 0 | 4 of 4, 3:40, 1 |
+
+`c2s20hu10` on the standard set: 1 fall in 130, the matrix without a fall, the push check 9.10 /
+10.73 (its pushed 24 kt broad reach 13.17 against 14.21: the faster sheet costs that case in every
+sample). **Chosen: `c2hu10`.** It falls least on every set of patterns (0 of 130, 6 of 180, 2 of
+120; the baseline 26, 29, 14), it is as fast as the baseline on the afternoon reaches and on all
+three open-water samples (within 1 %), its AI fleet finished every race with fewer falls (2 against
+6 in the four races at 13:00, 14:30, 15:00 and 16:00), and it changes nothing on flat water or in light wind. The faster sheet would
+also take the last open-water matrix fall, but costs the pushed 24 kt broad reach 7 to 8 % in every
+sample: left as a setting (`pilot_sheet_rate_per_s`), not a default.

@@ -1,0 +1,10 @@
+# Lake chop round 6 (6 November 2026): the shipped defaults with no overrides at all (round 4's
+# c2hu10, now PlayerController's defaults: it must sail exactly as c2hu10 did), measured on the whole
+# standard set (the reach check, the push check neutral and pushed, the open water's second sample,
+# the matrix, the lake at 12:00, 14:30 and 17:00 with the 40 afternoon reaches, and the T2 race at
+# 14:30 and 16:00): the "after" column. And the last refinements on top of it: more pull for speed
+# (hike_share 1.15), a stronger ease in the air (5 degrees), the head-up ease at 7 degrees.
+final:
+f_hike115: --pilot.hike_share=1.15
+f_air5: --controller.airborne_alpha_deg=5
+f_hu7: --controller.head_up_alpha_deg=7
