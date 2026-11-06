@@ -19,6 +19,12 @@ extends Node
 ## host's NetBoards). update_course() puts the race director's changed course into the race as it
 ## runs (R6).
 ##
+## Free sailing (Course.RaceType.FREE; Max, 6 November 2026): every board is placed as for a start,
+## but no countdown starts, so there is no race and no result; the AI boards sail free round the start
+## line (Skipper's FREE_SAILING) and the course's marks stay on the water. The race card is hidden and
+## the HUD shows the plain sailing screen. The race director switches between free sailing and a race
+## by the course's race type (RaceDirector).
+##
 ## Spectating (RaceSetup.spectate, tools/gens.sh; in a LAN game the lobby's or the menu's Spectate,
 ## Documentation/reports/multiplayer/spectate_6nov.md): the player's board does not race. It is
 ## parked where it is, hidden and not stepped, and it is not in the race; the camera, the HUD's block
@@ -262,6 +268,10 @@ func restart(keep_places: bool = false) -> void:
 	rules = RaceRules.new(race.board_count(), course.axis_deg) if setup.rules else null
 	var behind_m: float = setup.wait_behind_m()
 	var spots: PackedVector2Array = pre_start_spots(course, race.steps()[0], opponents.size() + 1 + remote_players.size(), behind_m)
+	if course.starts_upwind_of_the_boat():
+		# A slalom's row upwind of the boat, kept inside the sailing area (off a lake's shore).
+		for i: int in spots.size():
+			spots[i] = inside_area(_area, spots[i])
 	var heading_deg: float = RaceCourses.pre_start_heading_deg(course)
 	if spectating and remote_players.is_empty():
 		# The AI boards in their order along the line (no player's slot in the middle).
@@ -299,8 +309,10 @@ func restart(keep_places: bool = false) -> void:
 	_tell_the_race()
 	wind_clock = RaceWindClock.of(player.sim.wind)
 	_start_signals = RaceStartSignals.new(race.prestart_s)
-	race.start_in(0.0 if keep_places else setup.free_sail_s)
+	if course.is_raced():
+		race.start_in(0.0 if keep_places else setup.free_sail_s)
 	hud.reset()
+	_show_race_card(course.is_raced())
 	if records != null:
 		# The key again: R may bring a new wind (RA24), and the best is kept per wind.
 		record_key = _record_key()
@@ -388,8 +400,12 @@ func sailing_area() -> SailingArea:
 
 
 ## Where the boards wait: `behind_m` behind the start line, spread evenly along it, the player (the
-## first spot) nearest the middle. The line runs from the step's first point to its second.
+## first spot) nearest the middle. The line runs from the step's first point to its second. On a
+## slalom (Course.RaceType.SLALOM) in a row upwind of the committee boat instead, the player in the
+## middle of it (RaceCourses.wait_spots(); Max, 6 November 2026).
 static func pre_start_spots(race_course: Course, start: RaceStep, count: int, behind_m: float) -> PackedVector2Array:
+	if race_course.starts_upwind_of_the_boat():
+		return RaceCourses.wait_spots(race_course, count, behind_m)
 	var spots: PackedVector2Array = PackedVector2Array()
 	var along: Vector2 = start.points[0] - start.points[1]
 	var middle: Vector2 = RaceCourses.pre_start_spot(race_course) + start.in_dir * (RaceCourses.PRE_START_BEHIND_M - behind_m)
@@ -405,10 +421,26 @@ static func pre_start_spots(race_course: Course, start: RaceStep, count: int, be
 	return spots
 
 
+## A point moved inside a sailing area, at least 10 m from its sides (as the skippers keep their
+## points: Skipper._inside_area()).
+static func inside_area(area: SailingArea, point: Vector2) -> Vector2:
+	if area == null:
+		return point
+	var here: Vector2 = area.local(point)
+	var across_m: float = maxf(area.half_across_m - 10.0, 0.0)
+	var up_m: float = maxf(area.half_up_m - 10.0, 0.0)
+	return area.point_at(clampf(here.x, -across_m, across_m), clampf(here.y, -up_m, up_m))
+
+
 ## Where `count` boards wait `behind_m` behind the start line, spread evenly along it in their
-## order, from the line's second point to its first (as the race tool puts them).
+## order, from the line's second point to its first (as the race tool puts them); on a slalom in the
+## row upwind of the committee boat, from its far end in.
 static func line_spots(race_course: Course, start: RaceStep, count: int, behind_m: float) -> PackedVector2Array:
 	var spots: PackedVector2Array = PackedVector2Array()
+	if race_course.starts_upwind_of_the_boat():
+		for i: int in count:
+			spots.append(RaceCourses.slalom_slot(race_course, float(i + 1) / float(count + 1)))
+		return spots
 	var along: Vector2 = start.points[0] - start.points[1]
 	var middle: Vector2 = RaceCourses.pre_start_spot(race_course) + start.in_dir * (RaceCourses.PRE_START_BEHIND_M - behind_m)
 	for i: int in count:
@@ -659,7 +691,7 @@ static func worst(values: PackedFloat64Array) -> float:
 
 
 func _process(delta: float) -> void:
-	if not _running:
+	if not _running or not course.is_raced():
 		return
 	_watch_when_finished()
 	if player_parked:
@@ -674,6 +706,18 @@ func _process(delta: float) -> void:
 	hud.update_from(race, index, node.telemetry(), shadow_deficit(node), rules)
 	_check_record()
 	_hud_layer.set_next_mark_bearing(Course.bearing_deg(_where(node), race.next_target(index)))
+
+
+## The race card and the race's keys while racing; the plain sailing screen while sailing free
+## (Course.RaceType.FREE).
+func _show_race_card(racing: bool) -> void:
+	hud.visible = racing
+	_hud_layer.set_race_mode(racing, spectating)
+
+
+## Whether the boards are sailing free on the course (its race type FREE): no countdown, no race.
+func is_free_sailing() -> bool:
+	return course != null and not course.is_raced()
 
 
 ## The race's number of the board the camera follows: the player's (0), or while the player's board

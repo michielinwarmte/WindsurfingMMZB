@@ -59,6 +59,8 @@ extends SceneTree
 ##   [--polar=<file.tres>] the scripted skippers sail with another polar (SkipperPolar; a res:// path or a
 ##                         path from the repository's folder) instead of Game/config/skipper_polar.tres
 ##   [--stop_after_gun=<s>] stop the race this long after the gun (to look at the start only)
+##   [--race_type=<type>]  race the course as slalom, course or hybrid (Course.RaceType; a slalom's
+##                         boards wait upwind of the committee boat); without it the course's own type
 ##   [--map=lake]          the boards sail on Lake Silvaplana as the game sails it there: the lake's
 ##                         air and water, the map's wind of the hour (its gusts, lulls, shifts and lee)
 ##                         and the lake's own waves (PHYSICS_SPEC.md 9.17, 9.18), at --time=14:30 (any
@@ -204,6 +206,9 @@ func _initialize() -> void:
 	if course == null:
 		quit(2)
 		return
+	if options.has("race_type"):
+		# --race_type=slalom|course|hybrid|free: the course raced as that type (Course.RaceType).
+		course.race_type = Course.race_type_from_name(options["race_type"])
 	var race: RaceSim = RaceSim.new(course, laps, prestart_s)
 	race.finish_window_s = finish_window_s
 	# The race's own time limit for its course and wind, as the game sets it; --seconds raises it.
@@ -703,6 +708,9 @@ static func _make_skipper_board(skipper_name: String, race: RaceSim, course: Cou
 	var behind: float = behind_m if behind_m > 0.0 else wait_behind_m(race.prestart_s)
 	var along: Vector2 = start.points[0] - start.points[1]
 	var at: Vector2 = RaceCourses.pre_start_spot(course) + start.in_dir * (RaceCourses.PRE_START_BEHIND_M - behind) + along * (share - 0.5)
+	if course.starts_upwind_of_the_boat():
+		# A slalom: in the row upwind of the committee boat (RaceCourses.slalom_slot()).
+		at = RaceCourses.slalom_slot(course, share)
 	entry.sim.reset(Vector3(at.x, 0.0, at.y), deg_to_rad(RaceCourses.pre_start_heading_deg(course)))
 	entry.controller.reset_controls(entry.controls)
 	return entry

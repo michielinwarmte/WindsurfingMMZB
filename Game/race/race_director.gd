@@ -13,6 +13,9 @@ extends Node
 ## - The director can start the countdown now, move it a minute either way, change the gap, the
 ##   countdown's length and the laps (for the next race), abandon the race under way, or put every
 ##   board back behind the line with a new countdown (the old R).
+## - The race type (Course.RaceType, the course maker's selector): a course set to free sailing
+##   stops the race (everyone sails on where they are, no countdown, no result) until the director
+##   picks a race type again; then the next countdown is planned gap_s later (or started at once).
 ## - The course: publish_course() takes the course maker's course (RaceDirectorView). During a race
 ##   only the marks' places may change (RaceSim.has_same_steps_as()); a change of shape is refused
 ##   then. A taken course goes onto this PC's water, minimap and race at once and to the guests at
@@ -133,6 +136,9 @@ func is_counting_down() -> bool:
 func start_countdown_now() -> void:
 	if runner == null:
 		return
+	if runner.is_free_sailing():
+		say("Free sailing: pick a race type for the course first.")
+		return
 	next_countdown_in_s = -1.0
 	runner.restart(true)
 	say("The countdown has begun: %s to the start." % RaceDirector.minutes(runner.race.prestart_s))
@@ -219,8 +225,25 @@ func publish_course(course: Course) -> bool:
 func _send(course: Course) -> void:
 	_pending = null
 	_publish_wait_s = PUBLISH_EVERY_S
+	var was_free: bool = runner != null and runner.is_free_sailing()
 	scene.apply_course(course)
 	course_published.emit(course)
+	_follow_the_race_type(was_free, course)
+
+
+## A course switched to free sailing stops the race at once (no countdown, no result: restart(true)
+## places nobody and starts nothing); switched back to a race type, the next countdown is planned
+## gap_s later.
+func _follow_the_race_type(was_free: bool, course: Course) -> void:
+	if runner == null:
+		return
+	if not course.is_raced() and not was_free:
+		next_countdown_in_s = -1.0
+		runner.restart(true)
+		say("Free sailing: no races until the race director picks a race type.")
+	elif course.is_raced() and was_free:
+		next_countdown_in_s = gap_s
+		say("%s: the countdown begins in %s." % [Course.race_type_title(course.race_type), RaceDirector.minutes(gap_s)])
 
 
 # ---------------------------------------------------------------- text for the screens

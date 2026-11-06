@@ -38,7 +38,9 @@ const LEG_COLOR: Color = Color(0.05, 0.05, 0.05, 0.45)
 const LEG_HALO: Color = Color(1.0, 1.0, 1.0, 0.3)
 const LINE_COLOR: Color = Color(1.0, 1.0, 1.0, 0.95)
 const MARK_FONT_SIZE: int = 12
-const MARK_RADIUS_PX: float = 4.0
+const MARK_RADIUS_PX: float = 5.0
+## The pins and the boats at the ends of the lines: half as wide as this, pixels.
+const PIN_ICON_PX: float = 6.0
 const OTHER_BOARD_RADIUS_PX: float = 3.5
 const BOARD_RADIUS_PX: float = 5.0
 ## On the open water a course's map is framed anew when a mark comes this near its edge, metres.
@@ -169,13 +171,35 @@ func _draw_course() -> void:
 			draw_line(a, b, Color(0.0, 0.0, 0.0, 0.5), 3.0, true)
 			draw_line(a, b, LINE_COLOR, 1.5, true)
 	for mark: CourseMark in course.marks:
+		if mark.is_boat():
+			_draw_boat_icon(_map_point_xz(mark.position), mark.id == CourseMark.FINISH_BOAT)
+			continue
 		if mark.is_line_end():
+			_draw_pin_icon(_map_point_xz(mark.position), mark.id == CourseMark.FINISH_PIN)
 			continue
 		var at: Vector2 = _map_point_xz(mark.position)
 		var color: Color = CourseOnWater.GATE_COLOR if mark.is_gate_mark() else CourseOnWater.MARK_COLOR
 		draw_circle(at, MARK_RADIUS_PX, color)
 		draw_circle(at, MARK_RADIUS_PX, Color(0.0, 0.0, 0.0, 0.6), false, 1.0, true)
 		_label(at + Vector2(MARK_RADIUS_PX + 2.0, -MARK_RADIUS_PX), mark.id)
+
+
+## A line's pin end as on the water (CourseOnWater): not a round mark but a diamond in the pin's
+## stripe colour (pink at the start, blue at the finish), with a white edge for its white stripes.
+func _draw_pin_icon(at: Vector2, finish: bool) -> void:
+	var r: float = PIN_ICON_PX
+	var diamond: PackedVector2Array = PackedVector2Array([at + Vector2(0.0, -r), at + Vector2(r, 0.0), at + Vector2(0.0, r), at + Vector2(-r, 0.0)])
+	draw_colored_polygon(diamond, CourseOnWater.FINISH_PIN_COLOR if finish else CourseOnWater.START_PIN_COLOR)
+	diamond.append(diamond[0])
+	draw_polyline(diamond, Color.WHITE, 1.5, true)
+
+
+## The committee boat (or the finish boat): a small white square with its flag's colour in it.
+func _draw_boat_icon(at: Vector2, finish: bool) -> void:
+	var r: float = PIN_ICON_PX - 1.0
+	draw_rect(Rect2(at - Vector2(r, r), Vector2(r, r) * 2.0), Color.WHITE)
+	draw_rect(Rect2(at - Vector2(r, r) * 0.5, Vector2(r, r)), CourseOverlay.FINISH_FLAG if finish else CourseOverlay.START_FLAG)
+	draw_rect(Rect2(at - Vector2(r, r), Vector2(r, r) * 2.0), Color(0.0, 0.0, 0.0, 0.6), false, 1.0)
 
 
 ## A leg: a faint dark line with a light halo, a little to the right of the way it is sailed, with

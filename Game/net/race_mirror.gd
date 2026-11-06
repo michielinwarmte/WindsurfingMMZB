@@ -53,6 +53,8 @@ var stays_spectator: bool = false
 var own_parked: bool = false
 ## Which board the camera follows while the own board is parked.
 var choice: SpectateChoice = SpectateChoice.new()
+## Whether the racing HUD is on (off while the course is sailed free, Course.RaceType.FREE).
+var _racing_hud: bool = true
 
 
 func _init() -> void:
@@ -101,12 +103,17 @@ func restart(info: Dictionary) -> void:
 	# In this race: the board back on the water (NetBoards has put it at its spot); not in it (a
 	# spectator, or joined while a race was on): off the water, watching.
 	_set_own_parked(_my_index < 0)
+	# Free sailing: the plain screen (race_types_6nov.md); a race: the race card, also for a watcher.
+	_show_racing_hud(course.is_raced())
 
 
 ## The race director's changed course (R6): the race's steps take it (only the marks' places during a
 ## race; RaceSim.refresh_course()), and the next start is built on it.
 func update_course(new_course: Course) -> void:
 	course = new_course
+	if not course.is_raced():
+		# Free sailing (Course.RaceType.FREE): no race card.
+		_show_racing_hud(false)
 	if race != null:
 		race.refresh_course(new_course)
 
@@ -237,6 +244,15 @@ func _watch_when_finished() -> void:
 
 ## This PC's board off the water (hidden, not stepped: its own tick steps nothing while a runner
 ## would; NetBoards sends no states of it) or back on it; the HUD's keys follow.
+## The race card and the race's keys on (a race) or off (free sailing: the plain sailing screen).
+func _show_racing_hud(on: bool) -> void:
+	if on == _racing_hud:
+		return
+	_racing_hud = on
+	hud.visible = on
+	_hud_layer.set_race_mode(on, false)
+
+
 func _set_own_parked(parked: bool) -> void:
 	_own.stepped_by_runner = parked
 	_own.visible = not parked
@@ -294,6 +310,10 @@ func shadow_deficit() -> float:
 
 func _process(delta: float) -> void:
 	if race == null:
+		return
+	if not course.is_raced():
+		# Free sailing: the plain screen, and what the director says.
+		_notice.show_text(RaceDirector.notice_text(director, true, race))
 		return
 	_watch_when_finished()
 	if own_parked:

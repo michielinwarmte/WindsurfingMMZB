@@ -110,6 +110,7 @@ static func trapezoid(rng: RandomNumberGenerator, rules: CourseRules, boards: in
 static func slalom(rng: RandomNumberGenerator, rules: CourseRules, boards: int, axis_deg: float) -> Course:
 	var course: Course = _start(rules, boards, true, rng)
 	course.template = "random slalom"
+	course.race_type = Course.RaceType.SLALOM
 	var mirror: float = 1.0 if rng.randf() < 0.5 else -1.0
 	var ids: PackedStringArray = PackedStringArray()
 	var mark1: Vector2 = course.mark(CourseMark.START_PIN).position + Vector2(mirror * rng.randf_range(300.0, 600.0), rng.randf_range(-30.0, 30.0))

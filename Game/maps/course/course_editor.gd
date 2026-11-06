@@ -108,6 +108,7 @@ func setup(layer: CanvasLayer, panels: Control, config: MapConfig, height_at: Ca
 	_panel.offset_top = 92.0
 	_panel.template_chosen.connect(_on_template_chosen)
 	_panel.boards_changed.connect(_on_boards_changed)
+	_panel.race_type_chosen.connect(set_race_type)
 	_panel.size_changed.connect(_on_size_changed)
 	_panel.axis_changed.connect(_on_axis_changed)
 	_panel.square_to_wind_pressed.connect(_on_square_to_wind)
@@ -404,6 +405,15 @@ func _on_template_chosen(id: String) -> void:
 	_panel.show_message("")
 
 
+## The course's race type (Course.RaceType): how it is started and raced, or free sailing.
+func set_race_type(type: Course.RaceType) -> void:
+	if course == null or course.race_type == type:
+		return
+	_remember()
+	course.race_type = type
+	_changed()
+
+
 func _on_boards_changed(boards: int) -> void:
 	if course == null:
 		return
@@ -674,8 +684,8 @@ func _update_panel() -> void:
 			"%03.0f°" % leg.bearing_deg(),
 			"%s %.0f°" % [kind, to_wind]]))
 	var off_axis: float = Course.turn_deg(course.axis_deg, wind.x)
-	var summary: String = "%s, %.1f km\nWind now %.1f kt from %03.0f°, %.0f° %s of the axis (%03.0f°)" % [
-		course.template, total_m / 1000.0, wind.y, wind.x, absf(off_axis),
+	var summary: String = "%s, %s, %.1f km\nWind now %.1f kt from %03.0f°, %.0f° %s of the axis (%03.0f°)" % [
+		course.template, Course.race_type_title(course.race_type), total_m / 1000.0, wind.y, wind.x, absf(off_axis),
 		"right" if off_axis >= 0.0 else "left", course.axis_deg]
 	var warnings: PackedStringArray = course.problems(_height_at)
 	var lone: PackedStringArray = course.marks_not_in_order()

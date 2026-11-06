@@ -6,7 +6,8 @@ extends Control
 ##   comes in from the leg to the mark, goes round the mark's far side (anticlockwise for port,
 ##   clockwise for starboard, seen from above) and leaves along the next leg. So at a gate the boats
 ##   come down between the two marks and turn outwards, back upwind, as on the diagrams;
-## - the committee and finish boats in green, with their orange and blue flags, and the pins;
+## - the committee and finish boats in green, with their orange and blue flags, and the pins as
+##   diamonds in their stripe colours (pink at the start, blue at the finish), as on the water;
 ## - the start and finish lines dashed;
 ## - the legs in black with an arrow, in the order they are sailed. Each leg is drawn a few pixels
 ##   to the right of its line (looking along it), so a beat and the run back down the same line
@@ -100,8 +101,7 @@ func _draw() -> void:
 			_draw_boat(at, START_FLAG if mark.id == CourseMark.START_BOAT else FINISH_FLAG,
 				"Start" if mark.id == CourseMark.START_BOAT else "Finish")
 		elif mark.is_line_end():
-			draw_circle(at, PIN_RADIUS_PX, MARK_COLOR)
-			draw_circle(at, PIN_RADIUS_PX, MARK_EDGE, false, 1.5, true)
+			_draw_pin(at, mark.id == CourseMark.FINISH_PIN)
 		else:
 			_draw_mark(at, mark)
 		if mark in marks_with_problems:
@@ -110,6 +110,16 @@ func _draw() -> void:
 			draw_circle(at, (RING_RADIUS_PX + 3.0), SELECTED_COLOR, false, 3.0, true)
 		elif mark == hovered:
 			draw_circle(at, (RING_RADIUS_PX + 3.0), LINE_COLOR, false, 2.0, true)
+
+
+## A line's pin end as it looks on the water (CourseOnWater): a diamond in its stripe colour (pink at
+## the start, blue at the finish) with a white edge, not a round mark you go round.
+func _draw_pin(at: Vector2, finish: bool) -> void:
+	var r: float = PIN_RADIUS_PX + 2.0
+	var diamond: PackedVector2Array = PackedVector2Array([at + Vector2(0.0, -r), at + Vector2(r, 0.0), at + Vector2(0.0, r), at + Vector2(-r, 0.0)])
+	draw_colored_polygon(diamond, CourseOnWater.FINISH_PIN_COLOR if finish else CourseOnWater.START_PIN_COLOR)
+	diamond.append(diamond[0])
+	draw_polyline(diamond, LINE_COLOR, 1.5, true)
 
 
 ## A leg: a black line with a white halo, shifted to the right of the way it is sailed, with an

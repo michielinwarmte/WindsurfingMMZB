@@ -21,7 +21,8 @@ extends Node3D
 ## water, placed for the settings' wind; a map scene has its own, see _course_named()), starts the
 ## board 150 m behind its start line and puts it on the HUD and the mini-map; --lines=1 draws its
 ## start and finish lines on the water; --course_view=all puts a fixed camera above the whole
-## course, --course_view=<mark> (1, 4S, start_boat, ...) one beside that mark (for screenshots).
+## course, --course_view=<mark> (1, 4S, start_boat, ...) one beside that mark (for screenshots);
+## --race_type=slalom|course|hybrid|free races the course as that type (Course.RaceType).
 ## Watching a night's generations race (tools/gens.sh): --behind=<m> --wind=<kt> --blind=1
 ## --spectate=1 with the race (RaceSetup.read_options()); while spectating Tab and Shift+Tab pick
 ## the next or the previous board to watch and L follows the leader again (RaceRunner).
@@ -835,6 +836,9 @@ func _course_from_options(usual_start: Vector2) -> Course:
 	if found == null:
 		push_warning("No course called \"%s\" in this scene. The open water has %s; Lake Silvaplana has %s and the courses saved in %s." % [
 			course_name, RaceCourses.T1_NAME, RaceCourses.T2_NAME, RaceCourses.SAVED_FOLDER])
+	elif not _user_option("race_type").is_empty():
+		# --race_type=slalom|course|hybrid|free: the course raced as that type (Course.RaceType).
+		found.race_type = Course.race_type_from_name(_user_option("race_type"))
 	return found
 
 
@@ -898,13 +902,38 @@ func _true_wind_at(at: Vector3) -> Vector3:
 ## high enough to see all of it. "start": up high behind the start line, on the side where the
 ## board waits, looking across the line at the course. A mark's name (start_boat for "start
 ## boat"): beside that mark, across the wind, so its flag is seen side on (a boat a little from
-## behind, to see its deck).
+## behind, to see its deck). "<view>@<m>" (start@50, start_pin@20, 1@50): from that far away at a
+## sailor's eye height (2 m above the water), as a sailor sees it coming. "start_top": straight above
+## the start line and where the boards wait before it (on a slalom the row upwind of the boat).
 func _look_at_the_course(view: String) -> void:
 	var camera: Camera3D = _camera_rig.camera
 	var across: Vector2 = Course.direction_of(_course.axis_deg + 90.0)
 	var downwind: Vector2 = -Course.direction_of(_course.axis_deg)
-	if view == "all":
+	var away_m: float = view.get_slice("@", 1).to_float() if view.contains("@") else 0.0
+	view = view.get_slice("@", 0)
+	if away_m > 0.0:
+		var looked_at: Vector2 = _course.start_middle()
+		var from_side: Vector2 = (RaceCourses.pre_start_spot(_course) - looked_at).normalized()
+		if view != "start":
+			var target: CourseMark = _course.mark(view.replace("_", " "))
+			if target == null:
+				push_warning("--course_view: the course has no mark called \"%s\"." % view)
+				return
+			looked_at = target.position
+			from_side = downwind.rotated(deg_to_rad(35.0))
+		var sailor_eye: Vector2 = looked_at + from_side * away_m
+		camera.global_position = Vector3(sailor_eye.x, 2.0, sailor_eye.y)
+		camera.look_at(Vector3(looked_at.x, 1.2, looked_at.y), Vector3.UP)
+		_camera_rig.set_process(false)
+		return
+	if view == "all" or view == "start_top":
 		var box: Rect2 = _course.bounds().grow(80.0)
+		if view == "start_top":
+			# Straight above the start: its line and where the boards wait (RaceCourses.wait_spot()).
+			box = Rect2(_course.mark(CourseMark.START_BOAT).position, Vector2.ZERO).expand(_course.mark(CourseMark.START_PIN).position)
+			for share: float in [0.0, 1.0]:
+				box = box.expand(RaceCourses.wait_spot(_course, share, RaceSetup.new().wait_behind_m()))
+			box = box.grow(40.0)
 		var window: Vector2 = get_viewport().get_visible_rect().size
 		# The camera's fov is from the top of the picture to the bottom; across it sees more.
 		var half_view: float = tan(deg_to_rad(camera.fov * 0.5))
@@ -1078,11 +1107,11 @@ func apply_course(new_course: Course) -> void:
 	if _net != null and _net.mirror != null:
 		_net.mirror.update_course(new_course)
 	if _user_option("lan_report") != "":
-		# For the LAN check (tools/lan_test.sh): where every mark is now, on this PC.
+		# For the LAN check (tools/lan_test.sh): the race type and where every mark is now, on this PC.
 		var marks: PackedStringArray = PackedStringArray()
 		for mark: CourseMark in new_course.marks:
 			marks.append("%s %.2f %.2f" % [mark.id.replace(" ", "_"), mark.position.x, mark.position.y])
-		print("COURSE %s" % ", ".join(marks))
+		print("COURSE type=%s, %s" % [Course.race_type_name(new_course.race_type), ", ".join(marks)])
 
 
 # ---------------------------------------------------------------- LAN multiplayer

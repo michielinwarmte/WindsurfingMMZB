@@ -2,11 +2,16 @@ class_name CourseOnWater
 extends Node3D
 ## A race course on the water (RACING_PLAN.md, 9A), for the eye only (CLAUDE.md rule 2: nothing
 ## here feeds back into the physics):
-## - a buoy at every mark: a plain upright cylinder, 1.2 m high and 0.7 m wide, in a fluorescent
-##   colour that stands out on the water and against the mountains (Max, 6 November 2026: "a
-##   cylinder in a bright colour 1,2 m high and 0,7 m wide"): orange for a rounding mark, yellow for
-##   the two marks of a gate, each with a small white flag carrying the mark's name; the pin end of
-##   the start and the finish line is the same orange buoy, its flag in its line's colour;
+## - a buoy at every mark you round: a plain upright cylinder, 1.8 m high and 1.1 m wide, in a
+##   fluorescent colour that stands out on the water and against the mountains: orange for a
+##   rounding mark, yellow for the two marks of a gate (both the same), each with a white flag
+##   carrying the mark's name. Max asked for a 1.2 by 0.7 m cylinder in the morning of 6 November
+##   2026 and for "in general marks bigger" in the evening, so they grew by half;
+## - the pin end of the start line and of the finish line is not a buoy you round, and it looks
+##   different (Max, 6 November 2026: "start bouys are different than rounding marks"): a tall
+##   tapered pillar, 3.0 m high, striped across in white and its line's colour (fluorescent pink at
+##   the start, blue at the finish), with its line's flag on top (orange at the start, blue at the
+##   finish, as the boat at the line's other end flies);
 ## - the committee boat at the start line's boat end and the finish boat at the finish line's:
 ##   simple white hulls with a short mast and the wind flag of Phase 7 (wind_flag.gd) streaming in
 ##   the true wind, orange on the committee boat and blue on the finish boat, as the course maker
@@ -34,15 +39,21 @@ extends Node3D
 
 enum Kind { BUOY, PIN, BOAT }
 
-## Every buoy (a rounding mark, a gate's mark, a line's pin end): a plain cylinder this high and
-## this wide across (Max's numbers), metres.
-const BUOY_HEIGHT_M: float = 1.2
-const BUOY_RADIUS_M: float = 0.35
-## How deep it floats: the part of its height under the water, metres (1.1 m stands out of it).
+## Every buoy you round (a rounding mark, a gate's mark): a plain cylinder this high and this wide
+## across, metres (1.2 by 0.7 m until Max asked for bigger marks).
+const BUOY_HEIGHT_M: float = 1.8
+const BUOY_RADIUS_M: float = 0.55
+## How deep it floats: the part of its height under the water, metres (1.7 m stands out of it).
 const BUOY_DRAFT_M: float = 0.1
-## The flag on a buoy: on a pole this tall above the buoy's top, this big (along the wind, high).
-const FLAG_POLE_M: float = 0.9
-const FLAG_SIZE_M: Vector2 = Vector2(0.6, 0.4)
+## A line's pin end: a tapered pillar this high, this wide at its foot and at its top, metres,
+## striped across in PIN_BANDS bands (its line's colour at the foot and the top, white between).
+const PIN_HEIGHT_M: float = 3.0
+const PIN_FOOT_RADIUS_M: float = 0.6
+const PIN_TOP_RADIUS_M: float = 0.28
+const PIN_BANDS: int = 5
+## The flag on a buoy or a pin: on a pole this tall above its top, this big (along the wind, high).
+const FLAG_POLE_M: float = 1.2
+const FLAG_SIZE_M: Vector2 = Vector2(0.85, 0.55)
 ## The boats: drawn as a 6 m boat with a cabin, then shown BOAT_SCALE times as big (Max, 6 November
 ## 2026: "just a bit bigger so it's better to see": 8.4 m long), its mast and flag growing with it so
 ## they stay in proportion. The wind flag's pole (WindFlag.POLE_HEIGHT_M) is the short mast, standing
@@ -54,7 +65,7 @@ const CABIN_AT: Vector3 = Vector3(0.0, 1.05, 0.6)
 const MAST_FOOT: Vector3 = Vector3(0.0, 1.5, 0.6)
 ## How far from its middle the water is read for a floating thing's tilt: across and along it, m
 ## (a boat's as drawn; times BOAT_SCALE on the water).
-const BUOY_FOOTPRINT_M: Vector2 = Vector2(0.4, 0.4)
+const BUOY_FOOTPRINT_M: Vector2 = Vector2(0.6, 0.6)
 const BOAT_FOOTPRINT_M: Vector2 = Vector2(1.1, 2.8)
 ## The lines on the water: a strip this wide, made of pieces this long, metres.
 const LINE_WIDTH_M: float = 0.25
@@ -65,6 +76,11 @@ const CALM_MS: float = 0.2
 ## Fluorescent orange and yellow, the colours of real inflatable race marks.
 const MARK_COLOR: Color = Color(1.0, 0.36, 0.0)
 const GATE_COLOR: Color = Color(1.0, 0.9, 0.0)
+## The pins' stripes: fluorescent pink at the start (a colour no mark you round has), blue at the
+## finish (the finish boat's flag), with white between.
+const START_PIN_COLOR: Color = Color(1.0, 0.1, 0.55)
+const FINISH_PIN_COLOR: Color = Color(0.12, 0.42, 1.0)
+const PIN_WHITE: Color = Color(0.97, 0.97, 0.95)
 ## Fluorescent paint gives back more light than it gets: the buoys glow a little, so they stay
 ## bright on their shaded side and far away (the share of their own colour they give off).
 const BUOY_GLOW: float = 0.45
@@ -115,12 +131,17 @@ var _into_wind: Vector3 = Vector3.FORWARD
 
 # The parts every mark shares.
 var _buoy_mesh: CylinderMesh
+## The pin's stripes from the foot up, one tapered piece each.
+var _pin_band_meshes: Array[CylinderMesh] = []
 var _pole_mesh: CylinderMesh
 var _flag_mesh: QuadMesh
 var _hull_mesh: ArrayMesh
 var _cabin_mesh: BoxMesh
 var _mark_material: StandardMaterial3D
 var _gate_material: StandardMaterial3D
+var _start_pin_material: StandardMaterial3D
+var _finish_pin_material: StandardMaterial3D
+var _pin_white_material: StandardMaterial3D
 var _pole_material: StandardMaterial3D
 var _flag_material: StandardMaterial3D
 var _start_flag_material: StandardMaterial3D
@@ -331,7 +352,7 @@ func _add_buoy(mark: CourseMark) -> Floater:
 		label.name = "Name left" if side < 0.0 else "Name right"
 		label.text = mark.id
 		label.font_size = 72
-		label.pixel_size = 0.004
+		label.pixel_size = 0.0055
 		label.outline_size = 0
 		label.modulate = Color(0.05, 0.05, 0.05)
 		label.double_sided = false
@@ -342,14 +363,21 @@ func _add_buoy(mark: CourseMark) -> Floater:
 	return buoy
 
 
-## A line's pin end: the rounding marks' orange buoy (one look for everything you sail to or round),
-## with a flag in its line's colour, as the boat at the line's other end flies (orange: the start,
-## blue: the finish). It was a small buoy, the hardest thing to see at the start.
+## A line's pin end: a tall tapered pillar striped across in its line's colour and white (pink at the
+## start, blue at the finish), with a flag in its line's colour, as the boat at the line's other end
+## flies (orange: the start, blue: the finish). Its shape and stripes tell it from the buoys you
+## round at a glance (Max, 6 November 2026), and it is the tallest mark: the pin is what you aim at.
 func _add_pin(mark: CourseMark) -> Floater:
 	var pin: Floater = _add_floater(Kind.PIN, mark, "Pin " + mark.id, BUOY_FOOTPRINT_M)
-	_add_part(pin.node, "Body", _buoy_mesh, _mark_material, Vector3(0.0, BUOY_HEIGHT_M * 0.5 - BUOY_DRAFT_M, 0.0))
 	var finish: bool = mark.id == CourseMark.FINISH_PIN
-	_add_flag(pin.node, BUOY_HEIGHT_M - BUOY_DRAFT_M, _finish_flag_material if finish else _start_flag_material)
+	var colour: StandardMaterial3D = _finish_pin_material if finish else _start_pin_material
+	var band_m: float = PIN_HEIGHT_M / PIN_BANDS
+	for i: int in PIN_BANDS:
+		# The line's colour at the foot and the top, white between: every other band.
+		var material: StandardMaterial3D = colour if i % 2 == 0 else _pin_white_material
+		_add_part(pin.node, "Band %d" % (i + 1), _pin_band_meshes[i], material,
+			Vector3(0.0, band_m * (i + 0.5) - BUOY_DRAFT_M, 0.0))
+	_add_flag(pin.node, PIN_HEIGHT_M - BUOY_DRAFT_M, _finish_flag_material if finish else _start_flag_material)
 	return pin
 
 
@@ -441,7 +469,12 @@ func _update_line(boat_id: String, pin_id: String) -> void:
 
 func _make_shared_parts() -> void:
 	_buoy_mesh = _cylinder(BUOY_RADIUS_M, BUOY_RADIUS_M, BUOY_HEIGHT_M, 24)
-	_pole_mesh = _cylinder(0.02, 0.02, FLAG_POLE_M, 6)
+	_pin_band_meshes.clear()
+	for i: int in PIN_BANDS:
+		var foot: float = lerpf(PIN_FOOT_RADIUS_M, PIN_TOP_RADIUS_M, float(i) / PIN_BANDS)
+		var top: float = lerpf(PIN_FOOT_RADIUS_M, PIN_TOP_RADIUS_M, float(i + 1) / PIN_BANDS)
+		_pin_band_meshes.append(_cylinder(top, foot, PIN_HEIGHT_M / PIN_BANDS, 24))
+	_pole_mesh = _cylinder(0.025, 0.025, FLAG_POLE_M, 6)
 	_flag_mesh = QuadMesh.new()
 	_flag_mesh.size = FLAG_SIZE_M
 	# The pole edge at x = 0 and the top edge at y = 0, as on the wind flag.
@@ -451,10 +484,19 @@ func _make_shared_parts() -> void:
 	_cabin_mesh.size = CABIN_SIZE_M
 	_mark_material = _fluorescent(MARK_COLOR)
 	_gate_material = _fluorescent(GATE_COLOR)
+	_start_pin_material = _fluorescent(START_PIN_COLOR)
+	_finish_pin_material = _fluorescent(FINISH_PIN_COLOR)
+	_pin_white_material = VisualMath.plain_material(PIN_WHITE)
+	_pin_white_material.roughness = 0.45
 	_pole_material = VisualMath.plain_material(Color(0.85, 0.85, 0.82))
 	_flag_material = _two_sided(FLAG_COLOR)
 	_start_flag_material = _two_sided(CourseOverlay.START_FLAG)
 	_finish_flag_material = _two_sided(CourseOverlay.FINISH_FLAG)
+	# The pins' flags glow a little, as the buoys do: lit from behind, a plain orange flag turned brown.
+	for line_flag: StandardMaterial3D in [_start_flag_material, _finish_flag_material]:
+		line_flag.emission_enabled = true
+		line_flag.emission = line_flag.albedo_color
+		line_flag.emission_energy_multiplier = BUOY_GLOW
 	_hull_material = VisualMath.plain_material(HULL_COLOR)
 	_cabin_material = VisualMath.plain_material(CABIN_COLOR)
 	_line_material = ShaderMaterial.new()
