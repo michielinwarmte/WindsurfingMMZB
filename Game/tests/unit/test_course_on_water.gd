@@ -117,7 +117,7 @@ func test_the_hud_names_the_course_and_maps_it_on_the_open_water() -> void:
 	var course: Course = RaceCourses.t1_loop(270.0, Vector2(0.0, -150.0))
 	hud.show_course(course)
 	assert_eq(hud.course_text(), "Course: T1 training loop")
-	var maps: Array[Node] = hud.find_children("*", "MiniMap", false, false)
+	var maps: Array[Node] = hud.find_children("*", "MiniMap", true, false)  # in the HUD's screen (Hud.ui_scale)
 	assert_eq(maps.size(), 1, "One small map")
 	if maps.is_empty():
 		return

@@ -8,6 +8,9 @@ extends Node
 ## Options after "--" on the command line:
 ##   --settings=<file.cfg>   read (and save) this file instead of user://settings.cfg
 ##   --settings=defaults     ignore the file and use the defaults; nothing is saved
+##   --draw_distance=near|normal|far|very_far (or 0 to 3)   Settings > Graphics > Draw distance for
+##                           this run (DrawDistance), whatever the file says
+##   --ui_scale=<0.75 to 1.5>   Settings > Graphics > UI scale for this run (Hud.ui_scale)
 ## A screenshot run (tools/screenshot.sh) uses the defaults unless --settings is given, so
 ## screenshots do not depend on what the team last chose in the menu, and it never changes
 ## the window mode, vsync or the frame-rate cap.
@@ -43,6 +46,11 @@ func _init() -> void:
 		path = ""
 	if path != "":
 		values.load_file(path)
+	if options.has("draw_distance"):
+		values.draw_distance = DrawDistance.level_of(options["draw_distance"])
+	if options.has("ui_scale"):
+		values.ui_scale = clampf(options["ui_scale"].to_float(), SettingsValues.UI_SCALE_MIN, SettingsValues.UI_SCALE_MAX)
+	DrawDistance.level = DrawDistance.clamp_level(values.draw_distance)
 
 
 func _ready() -> void:
@@ -78,9 +86,12 @@ func reset_to_defaults() -> void:
 ## step made the menu stutter (Session 67).
 func apply_display() -> void:
 	_apply_audio()
+	# The draw distance's step, for the camera, the water and the race runner to read (DrawDistance).
+	DrawDistance.level = DrawDistance.clamp_level(values.draw_distance)
 	if DisplayServer.get_name() == "headless":
 		return
-	var wanted: String = "%d/%.2f/%d/%s/%s/%d" % [values.msaa, values.render_scale, values.shadow_quality, values.fullscreen, values.vsync, values.max_fps]
+	var wanted: String = "%d/%.2f/%d/%s/%s/%d/%d" % [values.msaa, values.render_scale, values.shadow_quality, values.fullscreen, values.vsync, values.max_fps,
+		values.draw_distance]
 	if wanted == _applied_display:
 		return
 	_applied_display = wanted
@@ -90,6 +101,8 @@ func apply_display() -> void:
 	# Below 1 the 3D picture is drawn smaller and stretched to the window: faster, softer.
 	root.scaling_3d_scale = values.render_scale
 	_apply_shadow_quality()
+	# The far meshes' detail (the terrain's and the gear's automatic LODs): DrawDistance's step.
+	root.mesh_lod_threshold = DrawDistance.lod_threshold_px()
 	if _screenshot_run:
 		return
 	var mode: DisplayServer.WindowMode = window_mode_to_set(DisplayServer.window_get_mode(), values.fullscreen, _maximized_before_fullscreen)

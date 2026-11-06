@@ -278,6 +278,7 @@ func show_state(state: BoardSnapshot, age_s: float) -> void:
 ## A race's opponent far from the camera (RaceRunner.FAR_DETAIL_M): its fin's bend is not
 ## updated every frame (the fin is under water, and a few pixels long that far away).
 func set_far_away(far: bool) -> void:
+	_keep_label_range()
 	if far == _far_away:
 		return
 	_far_away = far
@@ -384,7 +385,7 @@ func set_sail_colour(colour: Color) -> void:
 	_rig.tint_sail(colour)
 
 
-## A name above the mast head, seen from up to 300 m (an opponent in a race).
+## A name above the mast head, seen from up to 300 m at the Normal draw distance (an opponent in a race).
 func set_name_label(text: String) -> void:
 	if _name_label == null:
 		_name_label = Label3D.new()
@@ -395,9 +396,16 @@ func set_name_label(text: String) -> void:
 		_name_label.pixel_size = 0.008
 		_name_label.outline_size = 12
 		_name_label.position = Vector3(0.0, 5.8, 0.0)
-		_name_label.visibility_range_end = 300.0
+		_name_label.visibility_range_end = DrawDistance.full_detail_m()
 		add_child(_name_label)
 	_name_label.text = text
+
+
+## The name is seen as far as the board is drawn with full care (the draw distance, which may change
+## in the settings while sailing).
+func _keep_label_range() -> void:
+	if _name_label != null and _name_label.visibility_range_end != DrawDistance.full_detail_m():
+		_name_label.visibility_range_end = DrawDistance.full_detail_m()
 
 
 ## The name above the mast head ("" without one): the race director's map writes it by the board.

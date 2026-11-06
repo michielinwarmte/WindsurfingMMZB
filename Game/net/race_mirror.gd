@@ -55,13 +55,13 @@ func setup(race_course: Course, setup_of_race: RaceSetup, hud_layer: Hud, own: W
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	hud = RaceHud.new()
 	hud.name = "RaceHud"
-	hud_layer.add_child(hud)
+	hud_layer.add_part(hud)
 	hud_layer.set_race_mode(true, false)
 	hud_layer.set_detail_visible(false)
 	if race_setup.shadows:
 		_shadows = WindShadows.make()
 	_notice = RaceNotice.new()
-	hud_layer.add_child(_notice)
+	hud_layer.add_part(_notice)
 
 
 ## The host's new start: its boards in its order, a new race and judge.

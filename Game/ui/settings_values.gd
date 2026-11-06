@@ -29,6 +29,9 @@ const STRONG_CHOP_AMPLITUDES_M: Array[float] = [0.06, 0.03, 0.012]
 const STRONG_CHOP_STEEPNESS: Array[float] = [0.054, 0.054, 0.042]
 
 ## The ranges the menu's sliders allow (a hand-edited file is clamped to them too).
+## The in-game screen's size (ui_scale): from three quarters to one and a half of its own.
+const UI_SCALE_MIN: float = 0.75
+const UI_SCALE_MAX: float = 1.5
 const WIND_SPEED_MIN_KT: float = 4.0
 const WIND_SPEED_MAX_KT: float = 35.0
 const GUST_INTENSITY_MIN: float = 0.05
@@ -197,6 +200,11 @@ var render_scale: float
 var shadow_quality: int
 ## Frames per second at most, 0 = no cap.
 var max_fps: int
+## How far the game draws things in full (DrawDistance.Level: 0 near, 1 normal, 2 far, 3 very far).
+var draw_distance: int
+## The in-game screen's size on top of the window's own scaling (Hud.ui_scale: the race screen, the
+## gauges, the mini-map and the keys), UI_SCALE_MIN to UI_SCALE_MAX; 1 = as laid out.
+var ui_scale: float
 
 # --- Audio (section "audio") ---
 ## Master volume, 0 (silent) to 1 (full).
@@ -288,6 +296,8 @@ func reset_to_defaults() -> void:
 	render_scale = 1.0
 	shadow_quality = 2
 	max_fps = 0
+	draw_distance = DrawDistance.Level.NORMAL
+	ui_scale = 1.0
 
 	master_volume = 1.0
 	wind_volume = 1.0
@@ -481,6 +491,8 @@ func write_to(config: ConfigFile) -> void:
 	config.set_value("graphics", "render_scale", render_scale)
 	config.set_value("graphics", "shadow_quality", shadow_quality)
 	config.set_value("graphics", "max_fps", max_fps)
+	config.set_value("graphics", "draw_distance", draw_distance)
+	config.set_value("graphics", "ui_scale", ui_scale)
 
 	config.set_value("audio", "master_volume", master_volume)
 	config.set_value("audio", "wind_volume", wind_volume)
@@ -552,6 +564,8 @@ func read_from(config: ConfigFile) -> void:
 	render_scale = clampf(_float(config, "graphics", "render_scale", render_scale), RENDER_SCALE_MIN, RENDER_SCALE_MAX)
 	shadow_quality = clampi(_int(config, "graphics", "shadow_quality", shadow_quality), 0, 3)
 	max_fps = maxi(_int(config, "graphics", "max_fps", max_fps), 0)
+	draw_distance = DrawDistance.clamp_level(_int(config, "graphics", "draw_distance", draw_distance))
+	ui_scale = clampf(_float(config, "graphics", "ui_scale", ui_scale), UI_SCALE_MIN, UI_SCALE_MAX)
 
 	master_volume = clampf(_float(config, "audio", "master_volume", master_volume), 0.0, 1.0)
 	wind_volume = clampf(_float(config, "audio", "wind_volume", wind_volume), 0.0, 1.0)
