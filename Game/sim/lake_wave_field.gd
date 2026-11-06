@@ -161,9 +161,36 @@ func velocity_at(x: float, z: float, t: float) -> Vector3:
 	return velocity_at_rest(rest.x, rest.y, t)
 
 
+## WaveField.sample_at with the solve written out here (the same sums in the same order, so the
+## same answers to the last bit): the hull asks this about fifty times a substep, and every function
+## call costs GDScript about as much as a train's arithmetic.
 func sample_at(x: float, z: float, time_s: float, samples: PackedFloat64Array, index: int) -> void:
 	amplitudes_for(x, z)
-	super(x, z, time_s, samples, index)
+	var at: int = index * SAMPLE_SIZE
+	var rest: Vector2 = Vector2(x, z)
+	if samples[at + SAMPLE_IS_SET] > 0.5:
+		var sideways_x: float = samples[at + SAMPLE_X] - samples[at + SAMPLE_REST_X]
+		var sideways_z: float = samples[at + SAMPLE_Z] - samples[at + SAMPLE_REST_Z]
+		rest = Vector2(x - sideways_x, z - sideways_z)
+	if count == 0:
+		write_sample(samples, index, x, z, time_s, rest, base_height_m, Vector3.UP, Vector3.ZERO)
+		return
+	_thetas_at(time_s)
+	for pass_index: int in SOLVE_MAX_ITERATIONS:
+		var sideways: Vector2 = Vector2.ZERO
+		for i: int in count:
+			var wave_k: float = k[i]
+			var wave_x: float = dir_x[i]
+			var wave_z: float = dir_z[i]
+			var horizontal: float = steepness[i] / wave_k * cos(wave_k * (wave_x * rest.x + wave_z * rest.y) + _theta[i])
+			sideways.x += wave_x * horizontal
+			sideways.y += wave_z * horizontal
+		var next: Vector2 = Vector2(x - sideways.x, z - sideways.y)
+		var moved: float = next.distance_to(rest)
+		rest = next
+		if moved < SOLVE_TOLERANCE_M:
+			break
+	_answers_at_rest(x, z, time_s, rest, samples, index)
 
 
 func _phase_of_wave(i: int) -> float:
