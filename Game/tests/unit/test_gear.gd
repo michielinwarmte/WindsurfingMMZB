@@ -2,7 +2,8 @@ extends GutTest
 ## The gear page's plumbing (Game/gear/; Documentation/reports/fleet_gear/gear_page.md): the
 ## catalogue's items, the default gear that the game sailed before the page, the choice kept in
 ## the settings, the simulation and the 3D rig built from the chosen gear, and no real maker's
-## name on any item.
+## name on any item. The fins of any depth from 28 to 52 cm (GearCatalogue.fin_of(), the Fin tab's
+## slider; Max, 6 November 2026).
 
 ## The real makers' names, the same list the brands' test checks.
 const BrandsTest: GDScript = preload("res://tests/unit/test_brands.gd")
@@ -104,6 +105,99 @@ func test_no_real_maker_in_a_model_name_or_a_description() -> void:
 		var text: String = (item.model_name + " | " + item.description).to_lower()
 		for real: String in BrandsTest.REAL_BRANDS:
 			assert_false(text.contains(real), "%s does not say '%s'" % [item.id(), real])
+
+
+# --- The fins of any depth -----------------------------------------------------------------------
+
+func test_every_fin_brand_has_a_fin_of_every_depth() -> void:
+	var sizes: FinSizes = GearCatalogue.FIN_SIZES
+	var brands: Array[Brand] = GearCatalogue.fin_brands()
+	assert_eq(brands.size(), 7, "seven fin brands: PJ New Sealand (the default fin), Montag and the five fin makers")
+	for brand: Brand in brands:
+		assert_true(brand.makes_fins, brand.name + " makes fins")
+		# PJ New Sealand's fin is the default fin: 365 cm² at 38 cm, where a race fin has 311.
+		var share: float = 0.0365 / 0.0311 if brand.slug == "pj_new_sealand" else 1.0
+		for depth: int in range(28, 53):
+			var fin: GearItem = GearCatalogue.fin_of(brand.slug, depth)
+			var id: String = "%s_slalom_%d" % [brand.slug, depth]
+			assert_not_null(fin, id)
+			if fin == null:
+				continue
+			var config: FinConfig = fin.config as FinConfig
+			assert_eq(fin.id(), id, id + ": its id")
+			assert_eq(fin.kind, GearItem.Kind.FIN, id + " is a fin")
+			assert_eq(fin.brand, brand, id + ": its brand")
+			assert_eq(fin.size_text(), "%d cm" % depth, id + ": its size")
+			assert_almost_eq(config.span_m, depth / 100.0, 1e-9, id + ": its depth")
+			assert_almost_eq(config.area_m2, sizes.area_m2(depth) * share, 1e-7, id + ": a race fin's area")
+			if fin.resource_path.is_empty():
+				assert_eq(fin.wind_from_kt, sizes.wind_from_kt(depth), id + ": the wind of its depth")
+			assert_lt(fin.wind_from_kt, fin.wind_to_kt, id + ": a wind range")
+			assert_eq(GearCatalogue.find(id), fin, id + ": find() finds the same fin")
+			for real: String in BrandsTest.REAL_BRANDS:
+				assert_false((fin.model_name + " | " + fin.description).to_lower().contains(real), "%s does not say '%s'" % [id, real])
+	assert_eq((GearCatalogue.find("nt8_slalom_28").config as FinConfig).area_m2, 0.0205, "28 cm: 205 cm²")
+	assert_eq((GearCatalogue.find("nt8_slalom_52").config as FinConfig).area_m2, 0.0477, "52 cm: 477 cm²")
+
+
+func test_the_fins_of_before_keep_their_numbers() -> void:
+	# The ids today's settings name load their own files, as before.
+	var depths: Dictionary[int, Array] = {34: [0.0267, 20.0, 31.0], 38: [0.0311, 16.0, 27.0], 40: [0.0333, 14.0, 25.0],
+		42: [0.0358, 12.0, 23.0], 46: [0.0405, 8.0, 19.0]}
+	for depth: int in depths:
+		var id: String = "montag_slalom_%d" % depth
+		var fin: GearItem = GearCatalogue.find(id)
+		assert_eq(fin.resource_path, "res://gear/fins/%s.tres" % id, id + ": its own file")
+		assert_eq((fin.config as FinConfig).area_m2, depths[depth][0], id + ": its area")
+		assert_eq(fin.wind_from_kt, depths[depth][1], id + ": its wind")
+		assert_eq(fin.wind_to_kt, depths[depth][2], id + ": its wind")
+		assert_eq(fin.model.resource_path, "res://assets/models/gear/montag/%s.glb" % id, id + ": its own model")
+		# Made from the 38 cm fin, the same depth comes out with the same numbers.
+		var made: GearItem = GearCatalogue.make_fin(GearCatalogue.fin_template("montag"), depth)
+		_assert_same_numbers(made.config, fin.config, id + " made from the 38")
+		assert_eq(made.description, fin.description, id + ": the same card")
+		assert_eq([made.wind_from_kt, made.wind_to_kt], [fin.wind_from_kt, fin.wind_to_kt], id + ": the same wind")
+	var default_fin: GearItem = GearCatalogue.find(GearCatalogue.DEFAULT_FIN_ID)
+	assert_eq(default_fin.resource_path, "res://gear/fins/pj_new_sealand_slalom_38.tres", "the default fin's own file")
+	_assert_same_numbers(default_fin.config, load("res://config/fin_default.tres"), "the default fin")
+
+
+func test_a_fin_outside_the_range_or_of_another_brand_is_none() -> void:
+	assert_null(GearCatalogue.fin_of("montag", 27), "27 cm: below the slider")
+	assert_null(GearCatalogue.fin_of("montag", 53), "53 cm: above it")
+	assert_null(GearCatalogue.fin_of("savanna", 38), "a sail brand makes no fin")
+	assert_null(GearCatalogue.find("nt8_slalom_053"), "an id that is not a fin's")
+	assert_null(GearCatalogue.find("forbidden_slalom_40"), "a board brand's 'fin'")
+	assert_eq(GearChoice.from_ids("", "", "nt8_slalom_60").fin, GearCatalogue.default_fin(), "an unknown fin: the default")
+	assert_eq(GearCatalogue.find_or_default("nt8_slalom_44", GearItem.Kind.BOARD), GearCatalogue.default_board(), "a fin is no board")
+
+
+func test_the_fin_sizes() -> void:
+	var sizes: FinSizes = GearCatalogue.FIN_SIZES
+	assert_eq(sizes.area_cm2.size(), 25, "a value per centimetre, 28 to 52")
+	assert_eq(sizes.recommended_depth_cm(0.72), 38, "the default board's 72 cm: 38 cm")
+	assert_eq(sizes.recommended_depth_cm(0.60), 30, "a 60 cm board: 30 cm")
+	assert_eq(sizes.recommended_depth_cm(1.20), 52, "never more than 52")
+	assert_eq([sizes.wind_from_kt(38), sizes.wind_to_kt(38)], [16.0, 27.0], "38 cm: 16 to 27 kt")
+	assert_eq([sizes.wind_from_kt(52), sizes.wind_to_kt(52)], [6.0, 14.0], "52 cm: from the lightest wind")
+	assert_eq(sizes.depths_for_wind(18.0), Vector2i(36, 47), "the depths for 18 kt")
+	assert_eq(sizes.depths_for_wind(50.0), Vector2i(28, 28), "a gale: the smallest")
+	assert_eq(sizes.depths_for_wind(2.0), Vector2i(52, 52), "a calm: the biggest")
+	for depth: int in range(29, 53):
+		assert_gt(sizes.area_m2(depth), sizes.area_m2(depth - 1), "the area grows with the depth (%d cm)" % depth)
+
+
+func test_a_fin_of_any_depth_sails() -> void:
+	for id: String in ["blacksmith_fins_slalom_28", "typhoon_fins_slalom_52"]:
+		var base: WindsurferSim = WindsurferSim.create_for(EnvironmentConfig.new(), false, true)
+		var choice: GearChoice = GearChoice.from_ids("", "", id)
+		var sim: WindsurferSim = choice.sim_with(base)
+		assert_eq(sim.fin_config.span_m, (choice.fin.config as FinConfig).span_m, id + ": sailed")
+		assert_ne(sim.fin_config, choice.fin.config, id + ": on a copy")
+		var controls: SimControls = SimControls.new()
+		for i: int in 60:
+			sim.step(1.0 / 60.0, controls)
+		assert_true(sim.body.origin_world().is_finite(), id + " sails")
 
 
 # --- The defaults ----------------------------------------------------------------------------
@@ -244,6 +338,32 @@ func test_a_sail_without_its_own_colour_takes_the_brands() -> void:
 		assert_eq(item.cloth_colour(), Color.WHITE, item.id() + " keeps its picture's own colours")
 
 
+func test_a_fin_of_any_depth_wears_its_brands_model_and_colours() -> void:
+	var choice: GearChoice = GearChoice.from_ids("", "", "blacksmith_fins_slalom_28")
+	var fin: GearItem = choice.fin
+	var rig: RigVisuals = RigVisuals.new()
+	add_child_autofree(rig)
+	rig.build(choice.board_config(), choice.sail_config(), choice.fin_config(), choice)
+	var node: Node3D = rig.get_node("Fin") as Node3D
+	assert_almost_eq(node.scale.y * rig.fin_mesh().get_aabb().position.y, -0.28, 0.002, "the 38 cm model down to 28 cm")
+	var template: FinConfig = GearCatalogue.fin_template("blacksmith_fins").config as FinConfig
+	var chord: float = (0.0205 / 0.28) / (template.area_m2 / template.span_m)
+	assert_almost_eq(node.scale.z, chord, 1e-6, "along the board by its chord")
+	assert_eq(node.scale.x, 1.0, "not across: the bend stays the simulation's")
+	var material: ShaderMaterial = rig.fin_mesh().material_override as ShaderMaterial
+	assert_eq(material.get_shader_parameter("albedo"), fin.fin_colour, "the brand's colour")
+	assert_eq(material.get_shader_parameter("tip_colour"), fin.fin_tip_colour, "the brand's tip")
+	assert_almost_eq(float(material.get_shader_parameter("tip_from")), 1.0 - fin.fin_tip_share, 1e-6)
+	# A fin of the old files keeps its own model, unstretched and unpainted.
+	var old: GearChoice = GearChoice.from_ids("", "", "montag_slalom_46")
+	var old_rig: RigVisuals = RigVisuals.new()
+	add_child_autofree(old_rig)
+	old_rig.build(old.board_config(), old.sail_config(), old.fin_config(), old)
+	assert_almost_eq((old_rig.get_node("Fin") as Node3D).scale.z, 1.0, 1e-6, "Montag's 46 is its own model")
+	var old_material: ShaderMaterial = old_rig.fin_mesh().material_override as ShaderMaterial
+	assert_eq((old_material.get_shader_parameter("tip_colour") as Color).a, 0.0, "no colour at its tip")
+
+
 func test_the_default_models_are_stretched_to_a_smaller_sail() -> void:
 	var sail: SailConfig = load("res://config/sail_6_5.tres")
 	var model: SailConfig = RigVisuals.MODEL_SAIL
@@ -287,7 +407,7 @@ func test_the_page_shows_the_brands_and_keeps_a_choice_at_once() -> void:
 	add_child_autofree(page)
 	page.open()
 	page.show_tab("sail")
-	assert_eq(page.find_children("Brand_*", "Button", true, false).size(), 6 + 7 + 2, "the brands of every tab")
+	assert_eq(page.find_children("Brand_*", "Button", true, false).size(), 6 + 7 + 7, "the brands of every tab")
 	var chosen_card: Button = page.find_child("Item_" + GearCatalogue.DEFAULT_SAIL_ID, true, false) as Button
 	assert_not_null(chosen_card, "the chosen sail's brand is shown")
 	assert_true(chosen_card.button_pressed, "the chosen sail is lit")
@@ -302,6 +422,42 @@ func test_the_page_shows_the_brands_and_keeps_a_choice_at_once() -> void:
 	assert_not_null(rig, "a preview")
 	var cloth: ShaderMaterial = rig.sail_cloth().get_surface_override_material(0) as ShaderMaterial
 	assert_eq(cloth.get_shader_parameter("sail_tint"), GearCatalogue.find(SAIL_6_8_ID).cloth_colour(), "the preview in the item's cloth")
+	page.close()
+
+
+func test_the_fin_tabs_slider_chooses_the_depth() -> void:
+	var page: GearPage = (load("res://ui/gear_page.tscn") as PackedScene).instantiate()
+	add_child_autofree(page)
+	page.open()
+	page.show_tab("fin")
+	var slider: HSlider = page.find_child("FinDepth", true, false) as HSlider
+	assert_not_null(slider, "the depth slider")
+	assert_eq([slider.min_value, slider.max_value, slider.value], [28.0, 52.0, 38.0], "28 to 52 cm, at the chosen fin's 38")
+	assert_not_null(page.find_child("Item_" + GearCatalogue.DEFAULT_FIN_ID, true, false), "the chosen fin's card")
+	# Another brand, then a depth: chosen at once.
+	(page.find_child("Brand_nt8", true, false) as Button).pressed.emit()
+	await wait_process_frames(1)
+	slider = page.find_child("FinDepth", true, false) as HSlider
+	slider.value = 44.0
+	assert_eq(GameSettings.values.gear_fin, "nt8_slalom_44", "kept in the settings at once")
+	assert_eq((page.find_child("FinDepthValue", true, false) as Label).text, "44 cm  ·  378 cm²", "the depth and the area")
+	var card: Button = page.find_child("Item_nt8_slalom_44", true, false) as Button
+	assert_not_null(card, "the fin's card follows the slider")
+	if card != null:
+		assert_true(card.button_pressed, "lit: it is the chosen fin")
+	var rig: RigVisuals = page.preview_rig()
+	var tip_y: float = (rig.get_node("Fin") as Node3D).scale.y * rig.fin_mesh().get_aabb().position.y
+	assert_almost_eq(tip_y, -0.44, 0.002, "the preview's fin is 44 cm deep")
+	# Back to Montag: its card chooses its fin at the slider's depth.
+	(page.find_child("Brand_montag", true, false) as Button).pressed.emit()
+	await wait_process_frames(1)
+	slider = page.find_child("FinDepth", true, false) as HSlider
+	assert_eq(slider.value, 44.0, "the slider stays at the chosen depth")
+	var montag_card: Button = page.find_child("Item_montag_slalom_44", true, false) as Button
+	assert_not_null(montag_card, "Montag's fin at the slider's depth")
+	if montag_card != null:
+		montag_card.pressed.emit()
+	assert_eq(GameSettings.values.gear_fin, "montag_slalom_44")
 	page.close()
 
 

@@ -44,6 +44,8 @@ const FIN_BEND_SHADER: Shader = preload("res://windsurfer/fin_bend.gdshader")
 ## files). The mast and the boom models are the 8.0's too.
 const MODEL_BOARD: BoardConfig = preload("res://config/board_default.tres")
 const MODEL_SAIL: SailConfig = preload("res://config/sail_default.tres")
+## The fin fin.glb was built for (the default fin).
+const MODEL_FIN: FinConfig = preload("res://config/fin_default.tres")
 
 ## The sail's head sits this far below the mast top (TOP_Y in build_rig_models.py), m.
 const SAIL_HEAD_BELOW_MAST_TOP_M: float = 0.02
@@ -137,7 +139,8 @@ func build(board_config: BoardConfig, sail_config: SailConfig, fin_config: FinCo
 	_set_up_board(_deck_of(board_item), _bottom_of(board_item))
 	_fin = _add_model(_model_of(fin_item, FIN_MODEL), "Fin", self)
 	_fin.position = fin_config.root_local
-	_set_up_fin(fin_config)
+	_set_up_fin(fin_config, _fin_built_for(fin_item))
+	_paint_fin(fin_item)
 	_fit_rig(sail_config, _sail_built_for(sail_item))
 	_mast = _add_model(MAST_MODEL, "Mast", self)
 	_sail = _add_model(_model_of(sail_item, SAIL_MODEL), "Sail", self)
@@ -207,6 +210,24 @@ static func _board_built_for(item: GearItem) -> BoardConfig:
 
 static func _sail_built_for(item: GearItem) -> SailConfig:
 	return item.config as SailConfig if item != null and item.model != null else MODEL_SAIL
+
+
+## The fin a fin's model was built for: a made fin's template (GearItem.model_built_for), the
+## item's own numbers when it brings its own model, else the default fin (fin.glb's).
+static func _fin_built_for(item: GearItem) -> FinConfig:
+	if item != null and item.model_built_for != null:
+		return item.model_built_for
+	return item.config as FinConfig if item != null and item.model != null else MODEL_FIN
+
+
+## How a fin's model (built for the fin `built_for`) is stretched to the fin sailed: down to its
+## depth (y, from the model's own depth, model_span_m) and along the board by its mean chord (z:
+## the area over the depth, as the planform is the same), so a 28 cm and a 52 cm fin made from one
+## 38 cm model have their own chords. Not across (x): the shader bends the fin across by the
+## simulation's tip deflection, which a stretch there would change. (1, 1, 1) for its own fin.
+static func fin_stretch(fin: FinConfig, built_for: FinConfig, model_span_m: float) -> Vector3:
+	var chord: float = (fin.area_m2 / fin.span_m) / (built_for.area_m2 / built_for.span_m)
+	return Vector3(1.0, fin.span_m / model_span_m, chord)
 
 
 static func _deck_of(item: GearItem) -> Texture2D:
@@ -446,13 +467,13 @@ func _set_up_cloth(sail_config: SailConfig, panels: Texture2D) -> void:
 
 
 ## Gives the fin the shader that bends it (fin_bend.gdshader), with the model's own colour and
-## shine. The model was built for the default fin; another span (a 44 cm fin from the command
-## line) stretches it down to that span, so the bend is drawn on a fin of the right length.
-## Its chord stays the model's (2.6 % wider at the root than a 44 cm fin's chord law).
-func _set_up_fin(fin_config: FinConfig) -> void:
+## shine. The model was built for the fin `built_for`; another fin (a 44 cm fin from the command
+## line, a fin of the gear page's slider) stretches it to its depth and chord (fin_stretch()), so
+## the bend is drawn on a fin of the right length.
+func _set_up_fin(fin_config: FinConfig, built_for: FinConfig) -> void:
 	_fin_mesh = _fin.find_children("*", "MeshInstance3D", true, false)[0] as MeshInstance3D
 	var model_span_m: float = -_fin_mesh.get_aabb().position.y
-	_fin.scale = Vector3(1.0, fin_config.span_m / model_span_m, 1.0)
+	_fin.scale = fin_stretch(fin_config, built_for, model_span_m)
 	_fin_material = ShaderMaterial.new()
 	_fin_material.shader = FIN_BEND_SHADER
 	_fin_material.set_shader_parameter("span_m", model_span_m)
@@ -466,10 +487,23 @@ func _set_up_fin(fin_config: FinConfig) -> void:
 		_fin_material.set_shader_parameter("roughness_value", imported.roughness)
 		_fin_material.set_shader_parameter("metallic_value", imported.metallic)
 		_fin_material.set_shader_parameter("specular_value", imported.metallic_specular)
+	_fin_material.set_shader_parameter("tip_colour", Color(0.0, 0.0, 0.0, 0.0))
+	_fin_material.set_shader_parameter("tip_from", 1.0)
 	_fin_mesh.material_override = _fin_material
 	# The shader moves the tip up to about 0.15 m sideways (a 44 cm fin under a hard push):
 	# widen the box the engine uses to decide whether the fin is on screen.
 	_fin_mesh.extra_cull_margin = 0.2
+
+
+## A fin item's own colours on its fin (GearItem.fin_colour, fin_tip_colour): the brand's look.
+## The model's own colour stays where the item has none.
+func _paint_fin(item: GearItem) -> void:
+	if item == null:
+		return
+	if item.fin_colour.a > 0.0:
+		_fin_material.set_shader_parameter("albedo", item.fin_colour)
+	_fin_material.set_shader_parameter("tip_colour", item.fin_tip_colour)
+	_fin_material.set_shader_parameter("tip_from", 1.0 - item.fin_tip_share)
 
 
 ## Gives the mast's carbon tube the shader that bends it (the extension below stays straight).

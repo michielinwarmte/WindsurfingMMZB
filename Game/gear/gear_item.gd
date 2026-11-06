@@ -14,6 +14,9 @@ extends Resource
 ## - a sail: its area in square metres (7.8; SailConfig.area_m2);
 ## - a fin: its depth in centimetres (38 for a 38 cm fin; FinConfig.span_m x 100).
 ## The size is what the page shows and what the id is made of; the simulation sails `config`.
+##
+## A fin of a depth without a file is made by the catalogue from its brand's 38 cm fin
+## (GearCatalogue.fin_of()): such an item has no file of its own (resource_path is empty).
 
 enum Kind { BOARD, SAIL, FIN }
 ## The gear's family. Slalom gear is built for top speed on a reach; free race gear is a little
@@ -53,6 +56,20 @@ enum Line { SLALOM, FREERACE }
 ## A sail's cloth colour: it takes the place of the panel picture's red cloth. Leave it fully
 ## transparent (the default) for the brand's primary colour; white keeps the picture's own colours.
 @export var cloth: Color = Color(0.0, 0.0, 0.0, 0.0)
+## A fin's colour, which takes the place of its model's own (fully transparent, the default: the
+## model's carbon).
+@export var fin_colour: Color = Color(0.0, 0.0, 0.0, 0.0)
+## The colour of a fin's tip, painted from the tip up over `fin_tip_share` of its depth: the
+## brand's mark on the water (fully transparent, the default: no colour at the tip).
+@export var fin_tip_colour: Color = Color(0.0, 0.0, 0.0, 0.0)
+@export_range(0.0, 1.0) var fin_tip_share: float = 0.2
+
+## The fin a fin's model was built for, when that is not this item's own config: a fin the
+## catalogue made for another depth wears its brand's 38 cm model, built for the 38 cm fin
+## (GearCatalogue.make_fin()), and RigVisuals stretches it from that fin to this one. Null: the
+## model was built for `config` (an item with its own model) or is the default fin.glb. Not kept in
+## a file.
+var model_built_for: FinConfig = null
 
 
 ## The id the settings keep: the brand's slug, the line and the size, "pj_new_sealand_slalom_117"
