@@ -13,7 +13,8 @@ extends Control
 ##   its gap to you at the last mark you both rounded; as many lines as fit above the small map,
 ##   the leaders and the boards around you when the fleet is bigger (fleet_rows());
 ## - bottom left, the speed, the tack and the state, and the wind (the free-sailing card's place);
-## - the results in the middle when you finish or the race is over (in two columns for a big fleet).
+## - the results when you finish or the race is over, between the race card and the gauges, in as
+##   many columns and as small a text as they need to stay inside the window (_fit_results()).
 ## The push slider is the HUD's gauge at the bottom (PushGauge, for the board on the screen).
 ## RaceRunner updates this every frame from the race (RaceSim) and the player's telemetry; the HUD's
 ## own card and panel are hidden meanwhile (Hud.set_race_mode), F1 brings the panel back.
@@ -36,8 +37,15 @@ const FLEET_FONT_SIZE: int = 15
 const CARD_WIDTH: float = 440.0
 ## The race card's extra lines (set_card_line()).
 const CARD_LINES: int = 2
-## The results go into two columns from this many lines (a big fleet's table stays on the screen).
-const RESULTS_COLUMN_LINES: int = 18
+## The results' text sizes, tried from the biggest down until the table fits (_fit_results()), and
+## how many columns at most; the gap between the columns.
+const RESULTS_FONT_SIZES: PackedInt32Array = [17, 15, 13, 11]
+const RESULTS_MAX_COLUMNS: int = 3
+const RESULTS_COLUMN_GAP: float = 28.0
+## The results' table as last laid out, and the room it was laid out for (laid out again only when
+## either changes).
+var _results_lines: PackedStringArray = PackedStringArray()
+var _results_room: Rect2 = Rect2()
 const COUNTDOWN_COLOR: Color = Color(1.0, 0.9, 0.5)
 const WARNING_COLOR: Color = Color(1.0, 0.35, 0.3)
 const TEXT_COLOR: Color = HudStyle.TEXT_COLOR
@@ -73,8 +81,9 @@ var _centre_top: float = -1.0
 ## How long the penalty's reason is shown large after a breach, seconds (then the shorter line).
 const PENALTY_WARNING_S: float = 8.0
 var _results: PanelContainer
-var _results_text: Label
-var _results_text_2: Label
+var _results_columns: HBoxContainer
+## The results' columns (as many as RESULTS_MAX_COLUMNS; the first holds the title).
+var _results_texts: Array[Label] = []
 ## The board watched while spectating ("" when racing yourself), and whether the camera follows the
 ## leader by itself.
 var _watching: String = ""
@@ -103,21 +112,26 @@ func _ready() -> void:
 	_countdown = _centre_label(HudStyle.sans(800), 96, COUNTDOWN_COLOR, 130.0)
 	_split = _centre_label(HudStyle.sans(700), 26, COUNTDOWN_COLOR, 34.0)
 	_warning = _centre_label(HudStyle.sans(700), 26, WARNING_COLOR, 34.0)
+	# The results: across the middle at the top, under the race card (_fit_results() places them). The
+	# offsets are set with the anchors: set_anchors_preset() alone kept the panel's corner where it was
+	# made, the window's top left corner, and the table grew around it out of the window (Max,
+	# 6 November 2026: "ui of the finishing leaderboard is out of frame").
 	_results = PanelContainer.new()
+	_results.name = "Results"
 	_results.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_results.add_theme_stylebox_override("panel", HudStyle.card(16.0))
 	add_child(_results)
-	_results.set_anchors_preset(Control.PRESET_CENTER)
+	_results.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	_results.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_results.grow_vertical = Control.GROW_DIRECTION_BOTH
-	var columns: HBoxContainer = HBoxContainer.new()
-	columns.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	columns.add_theme_constant_override("separation", 28)
-	_results.add_child(columns)
-	_results_text = HudStyle.label(HudStyle.mono(700), 17)
-	columns.add_child(_results_text)
-	_results_text_2 = HudStyle.label(HudStyle.mono(700), 17)
-	columns.add_child(_results_text_2)
+	_results.grow_vertical = Control.GROW_DIRECTION_END
+	_results_columns = HBoxContainer.new()
+	_results_columns.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_results_columns.add_theme_constant_override("separation", roundi(RESULTS_COLUMN_GAP))
+	_results.add_child(_results_columns)
+	for i: int in RESULTS_MAX_COLUMNS:
+		var column: Label = HudStyle.label(HudStyle.mono(700), RESULTS_FONT_SIZES[0])
+		_results_columns.add_child(column)
+		_results_texts.append(column)
 	reset()
 	_place_centre_labels()
 
@@ -276,6 +290,7 @@ func reset() -> void:
 	_split.hide()
 	_warning.hide()
 	_results.hide()
+	_results_lines = PackedStringArray()
 	_place.text = ""
 	_of.text = ""
 	_clock.text = ""
@@ -378,25 +393,93 @@ func update_from(race: RaceSim, index: int, t: Telemetry, shadow_deficit: float 
 		if refresh or not _results.visible:
 			_show_results(time_trial_table(race, index) if _time_trial else results_table(race))
 		_results.show()
-		# The results say all the standings say: one table in the middle, not two side by side.
+		# The results say all the standings say: one table, not two side by side; and the finish time
+		# is on it and on the race card, so the split and the countdown give it the room.
 		_fleet_card.hide()
+		_split.hide()
+		_countdown.hide()
 	else:
 		_results.hide()
 
 
-## The results in the middle: one column, or two for a big fleet (so 28 boards fit on the screen).
+## The results (the table's lines, its title first): laid out to fit the room under the race card
+## (_fit_results()), again when the table or the room changes.
 func _show_results(text: String) -> void:
 	var lines: PackedStringArray = text.split("\n")
-	if lines.size() < RESULTS_COLUMN_LINES:
-		_results_text.text = text
-		_results_text_2.text = ""
-		_results_text_2.hide()
+	var room: Rect2 = results_room()
+	if lines == _results_lines and room.is_equal_approx(_results_room):
 		return
-	var half: int = ceili(lines.size() * 0.5)
-	_results_text.text = "\n".join(lines.slice(0, half))
-	# The second column starts level with the first one's first board.
-	_results_text_2.text = "\n\n" + "\n".join(lines.slice(half))
-	_results_text_2.show()
+	_results_lines = lines
+	_results_room = room
+	_fit_results(lines, room)
+
+
+## The space the results may fill, in the HUD's pixels: across the middle from under the race card down
+## to the gauges at the bottom, as wide as the window less its margins and, where it reaches down past
+## the top of the small map in the corner, less the small map on either side.
+## (Its height and width: room.size; room.position.y is its top.)
+func results_room() -> Rect2:
+	var layer: Hud = _layer()
+	var screen: Vector2 = size if layer == null else layer.screen_size()
+	var top: float = _card.offset_top + _card.get_combined_minimum_size().y + 10.0
+	var bottom: float = screen.y - 180.0 if layer == null else layer.bottom_middle_top() - 10.0
+	return Rect2(Hud.MARGIN, top, screen.x - 2.0 * Hud.MARGIN, maxf(bottom - top, 100.0))
+
+
+## The biggest text, in the fewest columns, that keeps the table inside results_room(): first as wide
+## as the room where it ends above the small map, else narrow enough to pass beside it. The smallest
+## text in the most columns when nothing fits (a fleet far beyond the LAN's 8 players and 20 AI boards).
+func _fit_results(lines: PackedStringArray, room: Rect2) -> void:
+	var layer: Hud = _layer()
+	var map_top: float = room.end.y if layer == null else layer.right_column_bottom()
+	var beside_map: float = room.size.x if layer == null else room.size.x - 2.0 * (layer.mini_map_width() + 12.0)
+	for font_size: int in RESULTS_FONT_SIZES:
+		for columns: int in RESULTS_MAX_COLUMNS:
+			_lay_out_results(lines, columns + 1, font_size)
+			var table: Vector2 = _results.get_combined_minimum_size()
+			var fits_above_map: bool = table.x <= room.size.x and room.position.y + table.y <= map_top
+			var fits_beside_map: bool = table.x <= beside_map and table.y <= room.size.y
+			if fits_above_map or fits_beside_map:
+				_place_results(room, table)
+				return
+	_place_results(room, _results.get_combined_minimum_size())
+
+
+## The table's lines in `columns` columns at `font_size`: the first column has the title, the others
+## start level with its first board (the title's two lines left blank).
+func _lay_out_results(lines: PackedStringArray, columns: int, font_size: int) -> void:
+	var title: int = mini(2, lines.size())
+	var rows: int = ceili(float(lines.size() - title) / float(columns))
+	for i: int in RESULTS_MAX_COLUMNS:
+		var column: Label = _results_texts[i]
+		column.add_theme_font_size_override("font_size", font_size)
+		var from: int = title + i * rows
+		column.visible = i < columns and (i == 0 or from < lines.size())
+		if not column.visible:
+			column.text = ""
+			continue
+		var part: PackedStringArray = lines.slice(from, mini(from + rows, lines.size()))
+		column.text = "\n".join(lines.slice(0, title) + part) if i == 0 else "\n".repeat(title) + "\n".join(part)
+	# The panel takes its new size at once (it does not shrink by itself when the text gets smaller).
+	_results.reset_size()
+
+
+## The table centred across the room, in the middle of its height.
+func _place_results(room: Rect2, table: Vector2) -> void:
+	var top: float = room.position.y + maxf((room.size.y - table.y) * 0.5, 0.0)
+	_results.offset_left = 0.0
+	_results.offset_right = 0.0
+	_results.offset_top = top
+	_results.offset_bottom = top
+
+
+## The results' lines as laid out now, column after column (for the tests).
+func results_columns() -> PackedStringArray:
+	var shown: PackedStringArray = PackedStringArray()
+	for column: Label in _results_texts:
+		if column.visible:
+			shown.append(column.text)
+	return shown
 
 
 ## The standings: the rows fleet_rows() picks, as many as fit (fleet_room_rows()), the board followed
@@ -425,13 +508,22 @@ func _fill_fleet(race: RaceSim, player: int, mark: String) -> void:
 ## How many lines of the standings fit between the compass and the small map (the HUD says where
 ## the map begins: Hud.right_column_bottom()), from FLEET_MIN_ROWS to FLEET_MAX_ROWS.
 func fleet_room_rows() -> int:
-	var layer: Hud = get_parent() as Hud
+	var layer: Hud = _layer()
 	if layer == null:
 		return FLEET_ROWS
 	var style: StyleBox = _fleet_card.get_theme_stylebox("panel")
 	var room: float = layer.right_column_bottom() - Hud.RIGHT_COLUMN_TOP - style.get_minimum_size().y
 	var row_px: float = HudStyle.sans(600).get_height(FLEET_FONT_SIZE) + 1.0
 	return clampi(floori(room / row_px), FLEET_MIN_ROWS, FLEET_MAX_ROWS)
+
+
+## The HUD this is part of: its parent, or its parent's parent (Hud.add_part() puts it in the HUD's
+## scaled screen); null outside a HUD.
+func _layer() -> Hud:
+	var parent: Node = get_parent()
+	if parent is Hud:
+		return parent as Hud
+	return parent.get_parent() as Hud if parent != null else null
 
 
 ## The boards the fleet table shows, in race order: all of them up to `rows`; in a bigger fleet the

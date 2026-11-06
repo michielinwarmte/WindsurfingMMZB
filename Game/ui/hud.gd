@@ -318,6 +318,22 @@ func right_column_bottom() -> float:
 	return bottom - 8.0
 
 
+## The size of the screen the HUD's parts are laid out on (RaceHud places its results with it).
+func screen_size() -> Vector2:
+	return _screen_size()
+
+
+## How far down from the top the space in the middle reaches before the gauges at the bottom begin
+## (RaceHud's results end above them). Pixels of the 720-high layout.
+func bottom_middle_top() -> float:
+	return _screen_size().y - BOTTOM_INSET - PushGauge.GAUGE_SIZE.y
+
+
+## The small map's width in the bottom right corner (0 without one).
+func mini_map_width() -> float:
+	return _mini_map.custom_minimum_size.x if _mini_map != null else 0.0
+
+
 ## The size of the screen the HUD is laid out on (the window, in the 720-high layout's pixels).
 func _screen_size() -> Vector2:
 	return get_viewport().get_visible_rect().size if is_inside_tree() else Vector2(1280.0, 720.0)
