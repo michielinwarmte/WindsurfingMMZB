@@ -12,7 +12,8 @@ This folder is the plan from today to version 1.0, cut into chunks the team and 
 | [QUESTIONS.md](QUESTIONS.md) | The open questions with a number each (Q1, Q2...), the lead's recommendation and the team's answer | Max and Michiel answer; the session that reads the answer moves it into 1.0.md and the epics |
 | [BOARD.md](BOARD.md) | **Where we stand**: the audit of today, the current sprint (Now / Next / Blocked / Done this sprint), what waits on whom | Every session, at its start and its end |
 | [epics/](epics/) | One file per epic: the goal, done-when, the stories with their tasks | The session that works on a story |
-| `tools/backlog.py` | Prints the progress per epic and checks the files' layout (`python -I tools/backlog.py`) | Nobody; run it |
+| `tools/backlog.py` | Prints the progress per epic and checks the files' layout (`python -I tools/backlog.py`); with `--html` it writes the dashboard | Nobody; run it |
+| [dashboard.html](dashboard.html) | **The dashboard**: one page generated from the files above: the headline bars, who is waited on, the sprint, the milestones, the epics (click one for its stories), every story with filters and its tasks. Open it from the folder, or use the team's private page https://claude.ai/artifact/FyYHMiY9LKMN1pfxg4HX1V, which the lead republishes after each session | Generated: never edit it; `python -I tools/backlog.py --html` |
 | [../../ROADMAP.md](../../ROADMAP.md) | The detailed item ledger (GP1, PH6, RA27...): every measurement and decision behind an item. It stays. A story names the roadmap items it covers | As before (CLAUDE.md) |
 
 **The layout of a story** (the script reads these lines; keep them exactly like this):
@@ -42,6 +43,8 @@ Notes: anything worth keeping (measurements, decisions, links to reports).
 3. Finish: set `review` (if a person has to look or OK it) or `done`; write one line under "Done this sprint" in BOARD.md; update the ROADMAP.md rows and the progress log as CLAUDE.md asks.
 4. A new wish from the team becomes a story in the right epic with `Status: todo`, never a loose note. A new big promise becomes a new epic (next free number) and a line in 1.0.md.
 5. Never delete a story, a task or a note. Move, mark, strike through.
-6. Run `python -I tools/backlog.py` before you commit: it prints the counts and complains about a line it cannot read.
+6. Run `python -I tools/backlog.py` before you commit: it prints the counts and complains about a line it cannot read. Then `python -I tools/backlog.py --html` so the dashboard matches the files, and commit it with them; an AI session also republishes the private page.
+
+**How the dashboard stays true.** The files in this folder are the only source: a status or a tick changes here, never on the page. The page is rebuilt from them by one command, so it can never disagree with the files for longer than a session. If the team wants to change a status from the page itself, that is a later step (a page that writes back, or a sync into Taskdash); say so and it gets a story.
 
 **The rhythm (proposed, Q38).** A sprint is one week, from one LAN play-test evening to the next. At the evening: play the build, answer the questions, choose Next. Between: the lead and the agents build; Michiel reviews the physics commits in one batch; Max play-tests the folder of the day.
