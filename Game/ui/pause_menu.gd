@@ -1,7 +1,8 @@
 class_name PauseMenu
 extends CanvasLayer
-## The pause menu of the sailing scene (Esc, or Start on a gamepad): Resume, Restart,
-## Settings, Controls, How to sail, Back to the start menu, Quit (pause_menu.tscn). It only
+## The pause menu of the sailing scene (Esc, or Start on a gamepad): Resume, Restart, Change gear
+## (between races: set_gear_choice()), Settings, Controls, How to sail, Back to the start menu, Quit
+## (pause_menu.tscn). It only
 ## shows itself and its pages and says what was chosen; the sailing scene (main.gd) pauses
 ## the game, restarts the run and applies the settings.
 
@@ -9,6 +10,8 @@ signal resume_requested
 signal restart_requested
 signal settings_closed
 signal start_menu_requested
+## The gear page closed (its choice is in the settings already; the scene sails it when it may).
+signal gear_closed
 
 @onready var _root: Control = %Root
 @onready var _list: Control = %List
@@ -16,6 +19,7 @@ signal start_menu_requested
 @onready var _note: Label = %Note
 @onready var _resume_button: Button = %ResumeButton
 @onready var _restart_button: Button = %RestartButton
+@onready var _gear_button: Button = %GearButton
 @onready var _settings_button: Button = %SettingsButton
 @onready var _controls_button: Button = %ControlsButton
 @onready var _howto_button: Button = %HowToButton
@@ -25,20 +29,22 @@ signal start_menu_requested
 @onready var _controls: ControlsPage = %Controls
 @onready var _howto: HowToPage = %HowTo
 @onready var _quit_confirm: ConfirmDialog = %QuitConfirm
+@onready var _gear: GearPage = %Gear
 
 
 func _ready() -> void:
 	_resume_button.pressed.connect(resume_requested.emit)
 	_restart_button.pressed.connect(restart_requested.emit)
+	_gear_button.pressed.connect(_open_page.bind(_gear))
 	_settings_button.pressed.connect(_open_page.bind(_settings))
 	_controls_button.pressed.connect(_open_page.bind(_controls))
 	_howto_button.pressed.connect(_open_page.bind(_howto))
 	_start_menu_button.pressed.connect(start_menu_requested.emit)
 	_quit_button.pressed.connect(_open_page.bind(_quit_confirm))
 	_quit_confirm.confirmed.connect(_on_quit_confirmed)
-	for page: MenuPage in [_settings, _controls, _howto, _quit_confirm]:
+	for page: MenuPage in [_settings, _controls, _howto, _quit_confirm, _gear]:
 		page.closed.connect(_on_page_closed.bind(page))
-	MenuFocus.setup_buttons([_resume_button, _restart_button, _settings_button, _controls_button,
+	MenuFocus.setup_buttons([_resume_button, _restart_button, _gear_button, _settings_button, _controls_button,
 		_howto_button, _start_menu_button, _quit_button])
 
 
@@ -51,8 +57,16 @@ func open(note: String) -> void:
 
 func close() -> void:
 	_root.hide()
-	for page: MenuPage in [_settings, _controls, _howto, _quit_confirm]:
+	for page: MenuPage in [_settings, _controls, _howto, _quit_confirm, _gear]:
 		page.hide()
+
+
+## Change gear (LAN multiplayer's race director, RACE_DIRECTOR.md R3: gear changes between starts):
+## shown or not, and whether it may be chosen now (not while a race is under way: the button says so).
+func set_gear_choice(shown: bool, allowed_now: bool) -> void:
+	_gear_button.visible = shown
+	_gear_button.disabled = not allowed_now
+	_gear_button.text = "Change gear" if allowed_now else "Change gear (after this race)"
 
 
 func is_open() -> bool:
@@ -84,6 +98,8 @@ func open_page(page_name: String) -> void:
 			_open_page(_controls)
 		"howto":
 			_open_page(_howto)
+		"gear":
+			_open_page(_gear)
 		"quit":
 			_open_page(_quit_confirm)
 
@@ -115,7 +131,10 @@ func _on_quit_confirmed() -> void:
 func _on_page_closed(page: MenuPage) -> void:
 	if page == _settings:
 		settings_closed.emit()
+	if page == _gear:
+		gear_closed.emit()
 	# Back on the list, with the focus on the button that opened the page.
 	var buttons: Dictionary[MenuPage, Button] = {
-		_settings: _settings_button, _controls: _controls_button, _howto: _howto_button, _quit_confirm: _quit_button}
+		_settings: _settings_button, _controls: _controls_button, _howto: _howto_button, _quit_confirm: _quit_button,
+		_gear: _gear_button}
 	_show_list(buttons[page])

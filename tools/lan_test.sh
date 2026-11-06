@@ -8,6 +8,13 @@
 #
 #   tools/lan_test.sh [--seconds=40] [--mode=race|free] [--map=open|lake] [--skippers=allrounder,rookie|none] [--lake_wave_scale=1.5]
 #                     [--prestart=20] [--robot=allrounder] [--release=1] [--body=1,0.67]
+#                     [--guests=1] [--late=0] [--time_limit=0] [--director_gap=0] [--host_options="--x=1 --y=2"]
+#
+# --guests=<n> joins that many guests (up to 7; RACE_DIRECTOR.md R1); --late=<s> lets the last of them
+# join that many seconds after the others, while the game runs (R2). --time_limit=<s> ends each race
+# that long after its gun and --director_gap=<s> starts the next countdown that long after a race
+# ends (R4: a race after a race); --host_options passes more options to the host only (the race
+# director's scripted changes, --director_move=...). The sync check runs for every pair of PCs.
 #
 # --robot=<skipper> lets a scripted skipper sail both players' boards (so a race can finish; without
 # it the two boards sail straight on). --release=1 runs the exported game (tools/release.sh build).
@@ -27,6 +34,11 @@ robot=""
 release=0
 body=""
 lake_wave_scale=""
+guests=1
+late=0
+time_limit=0
+director_gap=0
+host_options=""
 for arg in "$@"; do
 	case "$arg" in
 		--seconds=*) seconds="${arg#*=}" ;;
@@ -38,6 +50,11 @@ for arg in "$@"; do
 		--release=*) release="${arg#*=}" ;;
 		--body=*) body="${arg#*=}" ;;
 		--lake_wave_scale=*) lake_wave_scale="${arg#*=}" ;;
+		--guests=*) guests="${arg#*=}" ;;
+		--late=*) late="${arg#*=}" ;;
+		--time_limit=*) time_limit="${arg#*=}" ;;
+		--director_gap=*) director_gap="${arg#*=}" ;;
+		--host_options=*) host_options="${arg#*=}" ;;
 		*) echo "Unknown option $arg" >&2; exit 2 ;;
 	esac
 done
@@ -61,10 +78,46 @@ if [[ -n "$body" ]]; then common+=(--body="$body"); fi
 if [[ -n "$lake_wave_scale" ]]; then common+=(--lake_wave_scale="$lake_wave_scale"); fi
 
 host_quit=$((seconds + 4))
+host_extra=()
+if [[ "$time_limit" != "0" ]]; then host_extra+=(--time_limit="$time_limit"); fi
+if [[ "$director_gap" != "0" ]]; then host_extra+=(--director_gap="$director_gap"); fi
+if [[ -n "$host_options" ]]; then read -r -a more <<< "$host_options"; host_extra+=("${more[@]}"); fi
+# With several guests the host waits a little longer after the last one is ready, so the guests that
+# do not join late are all in the game from its start.
+if [[ $guests -gt 1 ]]; then host_extra+=(--lan_start=5); fi
 "${run[@]}" -- "${common[@]}" --lan_host=Host --lan_mode="$mode" --lan_map="$map" --lan_skippers="$skippers" \
-	--lan_prestart="$prestart" --lan_quit="$host_quit" > "$logs/host.log" 2>&1 &
+	--lan_prestart="$prestart" --lan_quit="$host_quit" "${host_extra[@]}" > "$logs/host.log" 2>&1 &
 host_pid=$!
 sleep 3
-"${run[@]}" -- "${common[@]}" --lan_join=127.0.0.1 --lan_name=Guest --lan_quit="$seconds" > "$logs/guest.log" 2>&1 || true
+# The guests: guest.log for the first (as before), guest2.log ... for the others; the last of several
+# joins --late seconds after the others, while the game runs.
+guest_pids=()
+guest_logs=()
+for ((g = 1; g <= guests; g++)); do
+	log="$logs/guest.log"
+	name="Guest"
+	if [[ $g -gt 1 ]]; then log="$logs/guest$g.log"; name="Guest$g"; fi
+	guest_logs+=("$log")
+	quit="$seconds"
+	if [[ $g -eq $guests && $guests -gt 1 && "$late" != "0" ]]; then
+		sleep "$late"
+		quit=$((seconds - late))
+	fi
+	"${run[@]}" -- "${common[@]}" --lan_join=127.0.0.1 --lan_name="$name" --lan_quit="$quit" > "$log" 2>&1 &
+	guest_pids+=($!)
+	sleep 1
+done
+for pid in "${guest_pids[@]}"; do wait "$pid" || true; done
 wait "$host_pid" || true
-python -I "$repo/tools/lan/check_sync.py" "$logs/host.log" "$logs/guest.log"
+status=0
+for log in "${guest_logs[@]}"; do
+	echo "=== host and $(basename "$log" .log)"
+	python -I "$repo/tools/lan/check_sync.py" "$logs/host.log" "$log" || status=1
+done
+for ((a = 0; a < ${#guest_logs[@]}; a++)); do
+	for ((b = a + 1; b < ${#guest_logs[@]}; b++)); do
+		echo "=== $(basename "${guest_logs[$a]}" .log) and $(basename "${guest_logs[$b]}" .log)"
+		python -I "$repo/tools/lan/check_sync.py" "${guest_logs[$a]}" "${guest_logs[$b]}" || status=1
+	done
+done
+exit $status

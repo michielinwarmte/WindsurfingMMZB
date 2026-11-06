@@ -12,6 +12,13 @@ extends Node
 ## shadows like any board, but not stepped here (their PCs sail them) and judged where they are now
 ## (where_now()). restarted tells the host's NetBoards to send the new start to the guests.
 ##
+## A race after a race (LAN multiplayer's race director, Documentation/reports/multiplayer/
+## RACE_DIRECTOR.md R4; RaceDirector): restart(true) builds a new race with every board where it is,
+## the countdown at once; the other players who joined since (remote_source) are in it, and every AI
+## board takes the gear its persona chooses for the wind of the moment (R3; fleet_regeared tells the
+## host's NetBoards). update_course() puts the race director's changed course into the race as it
+## runs (R6).
+##
 ## Spectating (RaceSetup.spectate, tools/gens.sh): the player's board does not race. It is parked
 ## where it is, hidden and not stepped, and it is not in the race; the camera, the HUD's block and
 ## the sounds follow one AI board instead, chosen by a SpectateChoice (the leader, or the board Tab
@@ -54,6 +61,8 @@ signal restarted
 ## A start signal is due (SO3): the start boat's horn, the start watch's beep or the gun. The sailing
 ## scene hands it to its sounds (GameAudio.play_race_signal()).
 signal start_signal(kind: RaceStartSignals.Kind)
+## These AI boards (their places in `opponents`) took other gear at the new start (R3).
+signal fleet_regeared(indices: Array[int])
 
 var race: RaceSim = null
 var course: Course = null
@@ -95,6 +104,11 @@ var _tick: int = 0
 ## (what its skipper is doing, its hands, its speed and heading): to see what the fleet does in an
 ## exported game, which shows no scene tree. 0: none.
 var _report_every_s: float = 0.0
+## --time_limit=<s>: every race ends that long after its gun (the race director's test of a race
+## after a race, tools/lan_test.sh --time_limit); 0: the limit for the course and the wind.
+var _time_limit_s: float = 0.0
+## How many races this runner has started (the first is 1): the LAN results name it (tools/lan_test.sh).
+var race_number: int = 0
 var _report_at_s: float = -INF
 ## The skippers' polars are printed with the first report only.
 var _reported_polars: bool = false
@@ -107,6 +121,12 @@ var remote_names: PackedStringArray = PackedStringArray()
 var remote_spots: PackedVector2Array = PackedVector2Array()
 var player_spot: Vector2 = Vector2.ZERO
 var start_heading_deg: float = 0.0
+## LAN multiplayer: called at every start for the other players racing now, [their boards, their
+## names] (NetBoards: a guest who joined since is in the next race, one who left is not). Not set:
+## remote_players and remote_names stay as they were set.
+var remote_source: Callable = Callable()
+## Whether the last start left every board where it was (restart(true), a race after a race).
+var kept_places: bool = false
 ## Which AI board the camera follows while spectating.
 var choice: SpectateChoice = SpectateChoice.new()
 ## The race's number of the first AI board: 1 after the player's, 0 while spectating.
@@ -137,18 +157,14 @@ func setup_race(race_course: Course, player_node: WindsurferNode, race_setup: Ra
 	_first_ai = 0 if spectating else 1
 	hud_layer.set_race_mode(true, spectating)
 	for arg: String in OS.get_cmdline_user_args():
+		if arg.begins_with("--time_limit="):
+			_time_limit_s = maxf(arg.get_slice("=", 1).to_float(), 0.0)
 		if arg.begins_with("--race_report="):
 			_report_every_s = arg.get_slice("=", 1).to_float()
 	# The runner steps the player's board with the others (its own _physics_process steps nothing).
 	player.stepped_by_runner = true
-	_boards = [player]
-	for node: WindsurferNode in remote_players:
-		node.stepped_by_runner = true
-		_boards.append(node)
-	_first_ai = (0 if spectating else 1) + remote_players.size()
 	if spectating:
 		# Parked: hidden, not stepped (stepped_by_runner, and not among the boards), not in the race.
-		_boards = []
 		player.visible = false
 	# The sailing area round the start line, kept off the shore on a map (the scene's shore grid).
 	var sailing_scene: SailingScene = player.get_parent() as SailingScene
@@ -181,7 +197,6 @@ func setup_race(race_course: Course, player_node: WindsurferNode, race_setup: Ra
 		node.set_sail_colour(skipper.sail_colour())
 		node.set_name_label(skipper.board_name())
 		opponents.append(node)
-		_boards.append(node)
 		_skippers.append(skipper)
 	# A race of one is a time trial: the player's time against the best kept for this course.
 	if remote_players.is_empty() and (setup.time_trial or (opponents.is_empty() and not spectating)):
@@ -195,11 +210,19 @@ func setup_race(race_course: Course, player_node: WindsurferNode, race_setup: Ra
 ## Everyone back to the start and a new countdown (the first start, and R): the player behind the
 ## line, the AI boards at their random spots in the sailing area (or behind the line too, with the
 ## setup's spawn LINE). The countdown starts at once, or after the setup's free sailing.
-func restart() -> void:
+## keep_places (a race after a race, R4): every board stays where it is (an AI board aground is
+## put back at a spot in the sailing area) and the countdown starts at once.
+func restart(keep_places: bool = false) -> void:
+	kept_places = keep_places
+	_gather_boards()
+	var regeared: Array[int] = _gear_the_fleet_for_the_wind()
 	race = RaceSim.new(course, setup.laps, setup.prestart_s)
 	# The time limit fits the course, its laps and the wind (RaceTimeLimit): a fixed 20 minutes ended a
 	# 12 kt race on T1 before a slow board in a crowd had finished.
 	race.time_limit_s = RaceTimeLimit.for_race(race, player.sim.telemetry.wind_from_bearing_deg, player.sim.telemetry.tws_10m_kt)
+	if _time_limit_s > 0.0:
+		race.time_limit_s = _time_limit_s
+	race_number += 1
 	if not spectating:
 		race.add_board(PLAYER_NAME)
 	for i: int in remote_players.size():
@@ -213,7 +236,8 @@ func restart() -> void:
 	if spectating:
 		# The AI boards in their order along the line (no player's slot in the middle).
 		spots = PackedVector2Array([spots[0]]) + line_spots(course, race.steps()[0], opponents.size(), behind_m)
-	_place(player, spots[0], heading_deg)
+	if not keep_places:
+		_place(player, spots[0], heading_deg)
 	# The other players' spots beside this PC's player's (their PCs put them there: restart_info()).
 	player_spot = spots[0]
 	start_heading_deg = heading_deg
@@ -221,7 +245,13 @@ func restart() -> void:
 	spots = PackedVector2Array([spots[0]]) + spots.slice(1 + remote_players.size())
 	# New dice at every start unless the setup fixes them (--seed): each skipper's day and the spots.
 	var dice: int = setup.race_seed if setup.race_seed >= 0 else randi_range(1, 999999)
-	if setup.spawn == RaceSetup.Spawn.RANDOM:
+	if keep_places:
+		# Only a board that ran aground leaves where it is: back to a spot in the sailing area.
+		var aground_places: Array[Vector3] = _area.spawn_places(opponents.size(), dice, spots[0])
+		for i: int in opponents.size():
+			if is_aground(opponents[i]):
+				_place(opponents[i], Vector2(aground_places[i].x, aground_places[i].y), aground_places[i].z)
+	elif setup.spawn == RaceSetup.Spawn.RANDOM:
 		var places: Array[Vector3] = _area.spawn_places(opponents.size(), setup.spawn_seed if setup.spawn_seed >= 0 else dice, spots[0])
 		for i: int in opponents.size():
 			_place(opponents[i], Vector2(places[i].x, places[i].y), places[i].z)
@@ -238,7 +268,7 @@ func restart() -> void:
 	_tell_the_race()
 	wind_clock = RaceWindClock.of(player.sim.wind)
 	_start_signals = RaceStartSignals.new(race.prestart_s)
-	race.start_in(setup.free_sail_s)
+	race.start_in(0.0 if keep_places else setup.free_sail_s)
 	hud.reset()
 	if records != null:
 		# The key again: R may bring a new wind (RA24), and the best is kept per wind.
@@ -251,6 +281,56 @@ func restart() -> void:
 	_aground.fill(0)
 	_running = true
 	restarted.emit()
+	if not regeared.is_empty():
+		fleet_regeared.emit(regeared)
+
+
+## Every board of the race in its order: this PC's player's (unless spectating), the other players'
+## (LAN multiplayer, as remote_source has them now), the AI boards'.
+func _gather_boards() -> void:
+	if remote_source.is_valid():
+		var now: Array = remote_source.call()
+		remote_players.assign(now[0])
+		remote_names = now[1]
+	_boards.clear()
+	if not spectating:
+		_boards.append(player)
+	for node: WindsurferNode in remote_players:
+		node.stepped_by_runner = true
+		_boards.append(node)
+	_first_ai = (0 if spectating else 1) + remote_players.size()
+	_boards.append_array(opponents)
+
+
+## Each AI board on the gear its persona chooses for the wind of the moment (R3: gear changes
+## between starts, the AI's too), where it is. The places in `opponents` of those that changed.
+func _gear_the_fleet_for_the_wind() -> Array[int]:
+	var changed: Array[int] = []
+	if not setup.gear:
+		return changed
+	var wind_kt: float = player.sim.telemetry.tws_10m_kt
+	for i: int in opponents.size():
+		var wanted: GearChoice = Skippers.gear_for(_skippers[i], wind_kt)
+		if wanted == null:
+			continue
+		var node: WindsurferNode = opponents[i]
+		var sailed: GearChoice = node.gear if node.gear != null else GearChoice.defaults()
+		if wanted.board.id() != sailed.board.id() or wanted.sail.id() != sailed.sail.id() or wanted.fin.id() != sailed.fin.id():
+			node.change_gear(wanted)
+			changed.append(i)
+	return changed
+
+
+## The race director's changed course (R6), into the race as it runs: the sailing area round its
+## start line, the skippers' too, and the race's steps (RaceSim.refresh_course(): during a race
+## only the marks' places change). The next start is built on it.
+func update_course(new_course: Course, shore: TerrainGrid) -> void:
+	course = new_course
+	_area = SailingArea.for_course(course, shore)
+	for skipper: RaceSkipper in _skippers:
+		skipper.sailing_area = _area
+	if race != null:
+		race.refresh_course(new_course)
 
 
 ## A new wind and sea for the race, at R (ROADMAP RA24): every AI board takes the wind and the waves

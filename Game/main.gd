@@ -32,6 +32,11 @@ extends Node3D
 ## back on the board (and the host's R restarts the race for everyone), and the wind and the waves
 ## are the host's for the whole game.
 ##
+## The race director (Documentation/reports/multiplayer/RACE_DIRECTOR.md): in a race the host (or
+## the player of a race alone) has a RaceDirector: races follow one another without reloading, and
+## the course can change while everyone sails (apply_course(), on every PC). Its line (RaceNotice)
+## says when the next countdown begins.
+##
 ## A map scene sails with this script too (maps/silvaplana/sail_silvaplana.gd extends it): the
 ## map brings its own sun and sky (so Sun is optional), its own wind and start (it overrides
 ## _build_wind_config() and _start_heading_deg()), and a depth grid for the shore (shore_grid).
@@ -91,6 +96,13 @@ var _audio: GameAudio = null
 ## LAN multiplayer: the other PCs' boards (null when the game is not a network game); whether the
 ## menu is open (the game does not pause), and until when a message from the network stays.
 var _net: NetBoards = null
+## The race director (the host of a race, or the player of a race alone) and its line on the screen.
+var _director: RaceDirector = null
+## Gear chosen in the menu during a race, waiting for the race's end (R3).
+var _gear_waiting: bool = false
+var _race_notice: RaceNotice = null
+## The race director's view (M; RACE_DIRECTOR.md R5), built the first time it opens.
+var _director_view: RaceDirectorView = null
 var _net_menu_open: bool = false
 var _net_message_until_ms: int = -1
 ## Package B, the body on the mouse (MouseBody; Settings > Body): --body=<side>,<back> holds the
@@ -148,6 +160,7 @@ func _ready() -> void:
 	_pause_menu.restart_requested.connect(_on_restart_requested)
 	_pause_menu.settings_closed.connect(apply_settings_live)
 	_pause_menu.start_menu_requested.connect(_go_to_start_menu)
+	_pause_menu.gear_closed.connect(_on_gear_closed)
 	if start_in_menu:
 		_enter_menu_mode()
 	_apply_command_line_options()
@@ -179,7 +192,14 @@ func _unhandled_input(event: InputEvent) -> void:
 	# Behind the start menu, and while paused, the menus have the keys.
 	if _in_menu or get_tree().paused or _net_menu_open:
 		return
-	if event.is_action_pressed("pause"):
+	if _director_view != null and _director_view.is_open:
+		# The race director's view has the keys and the mouse (M or Esc closes it).
+		_director_view.handle_input(event)
+		return
+	var pressed_key: InputEventKey = event as InputEventKey
+	if pressed_key != null and pressed_key.pressed and not pressed_key.echo and pressed_key.physical_keycode == KEY_M:
+		open_race_director()
+	elif event.is_action_pressed("pause"):
 		_set_paused(true)
 	elif _is_spectating() and event.is_action_pressed("toggle_mode"):
 		# Tab: the next board in race order; Shift+Tab the previous one.
@@ -234,6 +254,10 @@ func _process(delta: float) -> void:
 		_hud.set_other_boards(_race_runner.other_positions())
 	elif _net != null:
 		_hud.set_other_boards(_net.puppet_positions())
+	if _director != null:
+		_race_notice.show_text(RaceDirector.notice_text(_director.info(), true, _race_runner.race))
+	if _gear_waiting:
+		_take_chosen_gear_when_allowed()
 	if _net_message_until_ms >= 0 and Time.get_ticks_msec() > _net_message_until_ms:
 		_net_message_until_ms = -1
 		_hud.set_message("")
@@ -486,7 +510,8 @@ func _apply_body_settings() -> void:
 ## behind the autopilot, for a body held by script, and in headless and screenshot runs.
 func _update_mouse_capture() -> void:
 	var body: MouseBody = _windsurfer.controller.body
-	var wanted: bool = body != null and not body.scripted and not _in_menu and not get_tree().paused 		and not _net_menu_open and not _is_spectating() and not _windsurfer.use_autopilot 		and not _screenshot_run and DisplayServer.get_name() != "headless"
+	var director_open: bool = _director_view != null and _director_view.is_open
+	var wanted: bool = body != null and not body.scripted and not _in_menu and not get_tree().paused and not director_open 		and not _net_menu_open and not _is_spectating() and not _windsurfer.use_autopilot 		and not _screenshot_run and DisplayServer.get_name() != "headless"
 	var captured: bool = Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
 	if wanted and not captured:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -513,6 +538,7 @@ func _set_paused(paused: bool) -> void:
 	get_tree().paused = paused
 	if paused:
 		_pause_menu.open(_waiting_for_restart_text())
+		_offer_gear_change()
 	else:
 		_pause_menu.close()
 	_update_mouse_capture()
@@ -520,7 +546,11 @@ func _set_paused(paused: bool) -> void:
 
 func _on_restart_requested() -> void:
 	if _net != null and _race_runner != null:
-		_race_runner.restart()  # the host's restart: a new start for everyone
+		# The host's restart: a new start for everyone.
+		if _director != null:
+			_director.everyone_to_the_line()
+		else:
+			_race_runner.restart()
 		_set_aground(false)
 	else:
 		_restart_run()
@@ -542,6 +572,9 @@ func _apply_command_line_options() -> void:
 			options[parts[0]] = parts[1]
 	if _in_menu:
 		return
+	if options.has("director"):
+		# --director=<s>: the race director's view opens that many seconds in (screenshots, checks).
+		get_tree().create_timer(maxf(options["director"].to_float(), 0.0)).timeout.connect(open_race_director)
 	if options.has("camera"):
 		var index: int = clampi(options["camera"].to_int() - 1, 0, 3)
 		_camera_rig.set_mode(index as CameraRig.Mode)
@@ -784,6 +817,92 @@ func _start_race_runner() -> void:
 	_race_runner.setup_race(_course, _windsurfer, _race_setup, _hud)
 	if _net != null:
 		_net.attach_runner(_race_runner)
+	_add_race_director()
+
+
+## The race director for this race (RACE_DIRECTOR.md): the next race after this one, the live
+## course; its line on the HUD.
+func _add_race_director() -> void:
+	if _race_runner.spectating or _director != null:
+		return
+	_director = RaceDirector.new()
+	add_child(_director)
+	_director.setup(_race_runner, self)
+	_director.course_published.connect(_on_course_published)
+	_race_notice = RaceNotice.new()
+	_hud.add_child(_race_notice)
+	if _net != null:
+		_net.director = _director
+
+
+## M: the race director's view (the host of a race, or a race alone; RACE_DIRECTOR.md R5). The
+## board races on the autopilot meanwhile; M or Esc closes it.
+func open_race_director() -> void:
+	if _director == null:
+		if _net != null and _net.mirror != null:
+			show_net_message("The host is the race director.", 3.0)
+		return
+	if _director_view == null:
+		_director_view = RaceDirectorView.new()
+		add_child(_director_view)
+		_director_view.setup(_director, self, _windsurfer)
+	_director_view.open()
+	_hud.visible = false
+	_update_mouse_capture()
+
+
+func close_race_director() -> void:
+	if _director_view == null or not _director_view.is_open:
+		return
+	_director_view.close()
+	_hud.visible = true
+	_update_mouse_capture()
+
+
+## The map's configuration (Swiss coordinates; null on the open water). The lake overrides it.
+func map_config() -> MapConfig:
+	return null
+
+
+## The map's wind field of the simulation (null on the open water). The lake overrides it.
+func map_wind_field() -> MapWindField:
+	return null
+
+
+## The race director's course went into this PC's race: to the guests too.
+func _on_course_published(course: Course) -> void:
+	if _net != null:
+		_net.send_course(course)
+
+
+## The course as the race director has it now (null without a course).
+func live_course() -> Course:
+	return _course
+
+
+## A changed course (the race director's, on any PC; R6): on the water, on the minimap and in the
+## race (only the marks' places during a race). Keeps the course object it is given.
+func apply_course(new_course: Course) -> void:
+	_course = new_course
+	if _course_on_water != null and _course_on_water.has_method("set_course"):
+		_course_on_water.call("set_course", new_course)
+	else:
+		if _course_on_water != null:
+			remove_child(_course_on_water)
+			_course_on_water.queue_free()
+			_course_on_water = null
+		_show_course()
+	_hud.show_course(new_course)
+	if _race_runner != null:
+		_race_runner.update_course(new_course, shore_grid)
+	if _net != null and _net.mirror != null:
+		_net.mirror.update_course(new_course)
+	if _user_option("lan_report") != "":
+		# For the LAN check (tools/lan_test.sh): where every mark is now, on this PC.
+		var marks: PackedStringArray = PackedStringArray()
+		for mark: CourseMark in new_course.marks:
+			marks.append("%s %.2f %.2f" % [mark.id.replace(" ", "_"), mark.position.x, mark.position.y])
+		print("COURSE %s" % ", ".join(marks))
 
 
 # ---------------------------------------------------------------- LAN multiplayer
@@ -804,7 +923,10 @@ func _net_reset() -> void:
 	if not Lan.game.race:
 		_restart_run()
 	elif _race_runner != null:
-		_race_runner.restart()
+		if _director != null:
+			_director.everyone_to_the_line()
+		else:
+			_race_runner.restart()
 		_set_aground(false)
 	elif _aground:
 		_windsurfer.reset()
@@ -820,9 +942,62 @@ func _set_net_menu_open(open: bool) -> void:
 	_windsurfer.controller.hands = AiHands.new() if open else null
 	if open:
 		_pause_menu.open("A network game: the water goes on while this menu is open.")
+		_offer_gear_change()
 	else:
 		_pause_menu.close()
 	_update_mouse_capture()
+
+
+# ---------------------------------------------------------------- gear between starts (RACE_DIRECTOR.md R3)
+
+## Whether this PC's board may change gear now: not while a race it sails in is under way (from the
+## gun to the race's end); free sailing, the countdown and the time between races are fine.
+func _gear_change_allowed() -> bool:
+	if _race_runner != null:
+		return _race_runner.race == null or _race_runner.race.phase() != RaceSim.Phase.RACING or _race_runner.spectating
+	if _net != null and _net.mirror != null:
+		var mirror: RaceMirror = _net.mirror
+		return mirror.race == null or mirror.my_index() < 0 or mirror.race.phase() != RaceSim.Phase.RACING
+	return true
+
+
+## The menu's Change gear, shown in a network game and in a race (elsewhere the start menu's Gear
+## page chooses the gear for the next run), and whether it may be chosen now.
+func _offer_gear_change() -> void:
+	var shown: bool = _net != null or _race_runner != null
+	_pause_menu.set_gear_choice(shown, _gear_change_allowed())
+
+
+## The gear page closed: the board takes the chosen gear now, or when the race under way is over.
+func _on_gear_closed() -> void:
+	_gear_waiting = _wanted_gear_differs()
+	_take_chosen_gear_when_allowed()
+
+
+func _wanted_gear_differs() -> bool:
+	var wanted: GearChoice = GearChoice.from_settings(GameSettings.values)
+	var sailed: GearChoice = _windsurfer.gear if _windsurfer.gear != null else GearChoice.defaults()
+	return wanted.board.id() != sailed.board.id() or wanted.sail.id() != sailed.sail.id() or wanted.fin.id() != sailed.fin.id()
+
+
+## The chosen gear onto this PC's board where it is (WindsurferNode.change_gear()), and to the other
+## PCs (a new keyframe; the lobby's list), once no race it sails in is under way.
+func _take_chosen_gear_when_allowed() -> void:
+	if not _gear_waiting:
+		return
+	if not _gear_change_allowed():
+		show_net_message("Your new gear comes when this race is over.", 4.0)
+		return
+	_gear_waiting = false
+	_windsurfer.fin_stiffness = GameSettings.values.fin_stiffness
+	_windsurfer.change_gear(GearChoice.from_settings(GameSettings.values))
+	_hud.gear_text = _windsurfer.gear.names_line() + "\n" + Hud.gear_line(_windsurfer.sim)
+	_apply_body_settings()
+	if _net != null:
+		_net.own_gear_changed()
+		Lan.update_me(true)
+	show_net_message("Now sailing: %s" % _windsurfer.gear.names_line(), 4.0)
+	print("Gear changed: %s" % _windsurfer.gear.names_line())
 
 
 ## A line on the HUD from the network (the other player left, ...) for a few seconds.

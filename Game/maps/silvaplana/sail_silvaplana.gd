@@ -162,6 +162,11 @@ func apply_settings_live() -> void:
 	_map_sun.shadow_enabled = GameSettings.values.shadow_quality > 0
 
 
+## The lake's map configuration (Swiss coordinates), for the race director's course maker.
+func map_config() -> MapConfig:
+	return _map_config
+
+
 ## The map's wind field of the simulation (null when the environment has the map's wind off).
 func map_wind_field() -> MapWindField:
 	return _windsurfer.sim.wind as MapWindField

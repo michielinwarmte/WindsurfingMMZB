@@ -8,6 +8,11 @@ extends Node
 ##
 ## It also gives the guest's board the other sails' wind shadows, from where every board is on this
 ## PC, as the host's RaceRunner does for its boards (before the board steps: process priority -5).
+##
+## The race director (RACE_DIRECTOR.md): the host's course changes come in as a course
+## (update_course()); what the director decided (the next countdown, a note) comes with the race's
+## state and shows on the RaceNotice line. A guest who joined while a race was on is not in it
+## (my_index() -1): it sails with the plain HUD and the line says it races from the next start.
 
 ## A start signal is due on the host's race clock (SO3, as RaceRunner.start_signal): the guest
 ## hears the horns, the beeps and the gun too.
@@ -27,6 +32,13 @@ var _my_index: int = -1
 var _shadows: WindShadows = null
 ## The start's signals of the host's current start (SO3).
 var _start_signals: RaceStartSignals = null
+## What the host's race director decided (RaceDirector.info()), and its line on the screen.
+var director: Dictionary = {}
+## The host's number of the race shown (RaceRunner.race_number).
+var race_number: int = 0
+var _notice: RaceNotice = null
+## Whether the race HUD is on the screen (off while this PC's player is not in the race).
+var _racing_hud: bool = true
 
 
 func _init() -> void:
@@ -48,11 +60,14 @@ func setup(race_course: Course, setup_of_race: RaceSetup, hud_layer: Hud, own: W
 	hud_layer.set_detail_visible(false)
 	if race_setup.shadows:
 		_shadows = WindShadows.make()
+	_notice = RaceNotice.new()
+	hud_layer.add_child(_notice)
 
 
 ## The host's new start: its boards in its order, a new race and judge.
 func restart(info: Dictionary) -> void:
 	race = RaceSim.new(course, int(info.get("laps", race_setup.laps)), float(info.get("prestart_s", race_setup.prestart_s)))
+	race_number = int(info.get("race_no", 0))
 	race.time_limit_s = float(info.get("time_limit_s", race.time_limit_s))
 	var names: PackedStringArray = PackedStringArray(info.get("names", PackedStringArray()))
 	_ids.clear()
@@ -65,6 +80,25 @@ func restart(info: Dictionary) -> void:
 	rules = RaceRules.new(race.board_count(), course.axis_deg) if bool(info.get("rules", race_setup.rules)) else null
 	_start_signals = RaceStartSignals.new(race.prestart_s)
 	hud.reset()
+	_show_racing_hud(_my_index >= 0)
+
+
+## The race director's changed course (R6): the race's steps take it (only the marks' places during a
+## race; RaceSim.refresh_course()), and the next start is built on it.
+func update_course(new_course: Course) -> void:
+	course = new_course
+	if race != null:
+		race.refresh_course(new_course)
+
+
+## The race HUD while this PC's player races; the plain HUD (speed, wind) while it waits for the next
+## start.
+func _show_racing_hud(on: bool) -> void:
+	if on == _racing_hud:
+		return
+	_racing_hud = on
+	hud.visible = on
+	_hud_layer.set_race_mode(on, false)
 
 
 ## This PC's board's number in the race (-1 before the host's first start).
@@ -79,6 +113,7 @@ func take_state(race_state: Dictionary, rules_state: Dictionary) -> void:
 	race.apply_state(race_state)
 	if rules != null and not rules_state.is_empty():
 		rules.apply_state(rules_state)
+	director = race_state.get("director", director)
 
 
 ## The board with a race number: this PC's, or a puppet (null when it has not come yet).
@@ -130,7 +165,10 @@ func shadow_deficit() -> float:
 
 
 func _process(_delta: float) -> void:
-	if race == null or _my_index < 0:
+	if race == null:
+		return
+	_notice.show_text(RaceDirector.notice_text(director, _my_index >= 0, race))
+	if _my_index < 0:
 		return
 	hud.set_watching("", true)
 	hud.update_from(race, _my_index, _own.telemetry(), shadow_deficit(), rules)

@@ -117,6 +117,14 @@ func start_in(delay_s: float) -> void:
 		_start_in_s = delay_s
 
 
+## The race director abandons the race (RACE_DIRECTOR.md R4): it is over now; a board that has not
+## finished stays unfinished.
+func end_now() -> void:
+	_started = true
+	_start_in_s = -1.0
+	_phase = Phase.FINISHED
+
+
 ## Seconds until the countdown starts by itself (start_in()); 0 once it has started or when it is
 ## not waiting.
 func seconds_to_countdown() -> float:
@@ -449,6 +457,52 @@ func _is_ahead(a: int, b: int, distances: PackedFloat64Array) -> bool:
 
 
 # ---------------------------------------------------------------- the steps
+
+## The race director's changed course (LAN multiplayer, Documentation/reports/multiplayer/
+## RACE_DIRECTOR.md R6). When it has the race's steps (the same marks in the same order: only their
+## places changed) the steps take the new places, directions and sides where they are, and every
+## board keeps its progress; the skippers read the steps every time they think, so they sail to the
+## mark where it is now. A course of another shape is taken only until the gun (the countdown, or
+## before it); a race under way keeps its own steps then. True when the race took the course.
+func refresh_course(new_course: Course) -> bool:
+	var old_course: Course = course
+	course = new_course
+	var new_steps: Array[RaceStep] = _make_steps()
+	if _same_ids(new_steps):
+		for i: int in new_steps.size():
+			_steps[i].points = new_steps[i].points
+			_steps[i].in_dir = new_steps[i].in_dir
+			_steps[i].out_dir = new_steps[i].out_dir
+			_steps[i].side = new_steps[i].side
+		_order_stale = true
+		return true
+	if _phase == Phase.PRE_START and not new_steps.is_empty():
+		_steps = new_steps
+		for board: Board in _boards:
+			# Before the gun every board is still on its way to the start.
+			board.next_step = 0
+			board.splits.clear()
+		_order_stale = true
+		return true
+	course = old_course
+	return false
+
+
+## Whether a course would give this race the same steps (the same marks in the same order), so it
+## can be taken while the race is under way (refresh_course()).
+func has_same_steps_as(other_course: Course) -> bool:
+	var other: RaceSim = RaceSim.new(other_course, laps, prestart_s)
+	return _same_ids(other.steps())
+
+
+func _same_ids(other_steps: Array[RaceStep]) -> bool:
+	if other_steps.size() != _steps.size():
+		return false
+	for i: int in _steps.size():
+		if other_steps[i].id != _steps[i].id:
+			return false
+	return true
+
 
 ## The race's steps from the course: the lines with their ends, the gates with their two marks, the
 ## marks with their sides, and the directions of the legs in and out of each.

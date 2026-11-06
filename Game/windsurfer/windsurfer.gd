@@ -70,6 +70,8 @@ var state_age_s: float = 0.0
 ## level 2 slowed it; -1 until use_body_level() first runs.
 var _own_lean_feel_time_s: float = -1.0
 var _name_label: Label3D = null
+## The sail's colour from set_sail_colour() (TRANSPARENT: the sail's own), kept for change_gear().
+var _sail_colour: Color = Color.TRANSPARENT
 ## Far from the camera in a race (set_far_away).
 var _far_away: bool = false
 ## What a tick costs, microseconds summed since the last cost_text(): the skipper and the
@@ -144,6 +146,45 @@ func set_sea(wind: WindConfig, waves: WaveSetConfig) -> void:
 		wave_set_config = waves
 		sim.wave_set_config = waves
 	sim.set_waves(true)
+
+
+## Other gear for this board where it is (LAN multiplayer's gear between starts, and the AI's gear
+## for the wind at each new countdown: Documentation/reports/multiplayer/RACE_DIRECTOR.md, R3): a
+## new simulation on the new board, sail and fin in the same place, wind and sea
+## (GearChoice.sim_with()), at rest where the board is, heading the same way, on the same water
+## clock; the rig is built again. null sails the default gear. A skipper on this board must be set
+## up again on the new simulation (RaceRunner does it at the new start).
+func change_gear(new_gear: GearChoice) -> void:
+	var place: Vector3 = Vector3(sim.telemetry.position.x, 0.0, sim.telemetry.position.z)
+	var heading_rad: float = deg_to_rad(sim.telemetry.heading_deg)
+	var water_time_s: float = sim.time_s
+	gear = new_gear
+	sim = (new_gear if new_gear != null else GearChoice.defaults()).sim_with(sim)
+	if not is_equal_approx(fin_stiffness, 1.0):
+		sim.set_fin_stiffness(fin_stiffness)
+	controller.set_sail(sim.sail, sim.sailor_config, sim.air_density_kg_m3)
+	autopilot.sail = sim.sail
+	autopilot.air_density_kg_m3 = sim.air_density_kg_m3
+	controls = SimControls.new()
+	controller.reset_controls(controls)
+	sim.reset(place, heading_rad)
+	sim.time_s = water_time_s
+	_previous_state = sim.sailor_state
+	# The rig and the effects hold the old simulation's gear: built again (the sailor stays).
+	remove_child(_rig)
+	_rig.queue_free()
+	if _effects != null:
+		remove_child(_effects)
+		_effects.queue_free()
+		_effects = null
+	_figure.queue_free()
+	remove_child(_figure)
+	_build_visuals()
+	if _sail_colour != Color.TRANSPARENT:
+		_rig.tint_sail(_sail_colour)
+	_rig.set_process(not _far_away)
+	_copy_state_to_visuals()
+	reset_physics_interpolation()
 
 
 ## Skips the rest of the time in the water.
@@ -304,6 +345,7 @@ func _build_visuals() -> void:
 
 ## The sail's colour, so the boards of a race tell apart (RaceRunner).
 func set_sail_colour(colour: Color) -> void:
+	_sail_colour = colour
 	_rig.tint_sail(colour)
 
 
@@ -321,6 +363,11 @@ func set_name_label(text: String) -> void:
 		_name_label.visibility_range_end = 300.0
 		add_child(_name_label)
 	_name_label.text = text
+
+
+## The name above the mast head ("" without one): the race director's map writes it by the board.
+func label_text() -> String:
+	return _name_label.text if _name_label != null else ""
 
 
 ## What a tick of this board costs on average since the last call, milliseconds: the sailor (the

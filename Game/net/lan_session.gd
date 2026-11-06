@@ -1,11 +1,14 @@
 class_name LanSession
 extends Node
-## LAN multiplayer's connection (the autoload "Lan"; Documentation/reports/multiplayer/PLAN.md). One
-## PC hosts, the other joins. The host is the admin: it picks the map, free sailing or a race, the
-## wind and the waves and the AI fleet (LanGame); the guest picks its own name and gear and says it
-## is ready; the host presses Start and both PCs load the same scene. In the scene, NetBoards
-## (net_boards.gd) sends and shows the boards; its messages travel through this node, which is at the
-## same place (/root/Lan) on both PCs, as Godot's remote calls need.
+## LAN multiplayer's connection (the autoload "Lan"; Documentation/reports/multiplayer/PLAN.md and
+## RACE_DIRECTOR.md). One PC hosts, up to seven others join, also once the game has started (they
+## race from the next start). The host is the admin: it picks the map, free sailing or a race, the
+## wind and the waves and the AI fleet (LanGame), and in the game it is the race director; a guest
+## picks its own name and gear and says it is ready; the host presses Start and every PC loads the
+## same scene. In the scene, NetBoards (net_boards.gd) sends and shows the boards; its messages
+## travel through this node, which is at the same place (/root/Lan) on every PC, as Godot's remote
+## calls need. A guest's messages to all reach the other guests through the host (Godot's server
+## relay, on by default).
 ##
 ## The pieces:
 ## - the connection: Godot's ENet (UDP), port GAME_PORT on the host (D1);
@@ -39,9 +42,11 @@ signal ended(reason: String)
 
 const GAME_PORT: int = 47520
 const DISCOVERY_PORT: int = 47521
-const MAX_PLAYERS: int = 2
-## Raised when the messages change, so two different builds refuse each other politely.
-const PROTOCOL: int = 1
+## The host and seven guests (Max, 6 November 2026; RACE_DIRECTOR.md R1).
+const MAX_PLAYERS: int = 8
+## Raised when the messages change, so two different builds refuse each other politely (2: up to 8
+## players, joining late, a board's keyframe numbered by its gear's epoch, the live course).
+const PROTOCOL: int = 2
 ## The channels: 0 the lobby and the reliable game messages, 1 the boards' states (unreliable), 2
 ## the race's state (reliable, apart so it never waits behind the lobby).
 const CHANNELS: int = 3
@@ -252,6 +257,9 @@ func _on_peer_disconnected(id: int) -> void:
 		if player.peer_id == id:
 			players.erase(player)
 			break
+	if in_game:
+		# Every PC's list of who plays (a later guest may take the free slot).
+		game.players = players.duplicate()
 	_deliver("on_peer_left", [id], false)
 	_send_lobby()
 	lobby_changed.emit()
@@ -281,8 +289,6 @@ func _hello(protocol: int, version: String, layout: int, player_name: String, ge
 		refusal = "The host runs version %s and this PC %s: both need the same version." % [game_version(), version]
 	elif layout != BoardSnapshot.layout_hash():
 		refusal = "The two PCs run different builds of version %s (the physics differ): both need the same build." % version
-	elif in_game:
-		refusal = "The game has already started."
 	elif players.size() >= MAX_PLAYERS:
 		refusal = "The game is full."
 	if refusal != "":
@@ -299,7 +305,17 @@ func _hello(protocol: int, version: String, layout: int, player_name: String, ge
 	players.append(guest)
 	players.sort_custom(func(a: LanPlayer, b: LanPlayer) -> bool: return a.slot < b.slot)
 	_welcome.rpc_id(sender, guest.slot)
-	_send_lobby()
+	if in_game:
+		# Joining a game that runs (RACE_DIRECTOR.md R2): ready at once, in the game's list of players
+		# (every PC makes a board for it), and the start message to this guest alone: it loads the
+		# scene and races from the next start.
+		guest.ready = true
+		game.players = players.duplicate()
+		_send_lobby()
+		_start.rpc_id(sender, game.to_dict())
+		print("LAN: %s joins the game under way (slot %d)" % [guest.name, guest.slot])
+	else:
+		_send_lobby()
 	lobby_changed.emit()
 
 
@@ -463,29 +479,48 @@ func _deliver(method: String, arguments: Array, keep: bool = true) -> void:
 		_waiting_messages.append([method, arguments])
 
 
-## The peers to send the game's messages to: from the host every guest, from a guest the host.
-func send_keyframe(board_id: int, bytes: PackedByteArray, to_peer: int = 0) -> void:
+## A board's keyframe (its whole state, once per gear: BoardSnapshot) to one peer, or to every other
+## PC (a guest's reaches the other guests through the host: Godot's server relay). `epoch` counts the
+## board's gear changes (RACE_DIRECTOR.md R3): every state names the keyframe it was taken against,
+## so a state of the old gear is never written into the new board. `gear` is the board, sail and fin
+## ids, for the other PCs to build the board on.
+func send_keyframe(board_id: int, epoch: int, gear: PackedStringArray, bytes: PackedByteArray, to_peer: int = 0) -> void:
 	if to_peer != 0:
-		_keyframe.rpc_id(to_peer, board_id, bytes)
+		_keyframe.rpc_id(to_peer, board_id, epoch, gear, bytes)
 	else:
-		_keyframe.rpc(board_id, bytes)
+		_keyframe.rpc(board_id, epoch, gear, bytes)
 
 
 @rpc("any_peer", "call_remote", "reliable", 0)
-func _keyframe(board_id: int, bytes: PackedByteArray) -> void:
-	_deliver("on_keyframe", [multiplayer.get_remote_sender_id(), board_id, bytes])
+func _keyframe(board_id: int, epoch: int, gear: PackedStringArray, bytes: PackedByteArray) -> void:
+	_deliver("on_keyframe", [multiplayer.get_remote_sender_id(), board_id, epoch, gear, bytes])
 
 
-## A board's state for a tick, in parts of at most STATE_PART_BYTES.
-func send_state(tick: int, board_id: int, bytes: PackedByteArray) -> void:
+## A board's state for a tick, in parts of at most STATE_PART_BYTES, to every other PC (a guest's
+## through the host).
+func send_state(tick: int, board_id: int, epoch: int, bytes: PackedByteArray) -> void:
 	var parts: int = maxi(ceili(bytes.size() / float(STATE_PART_BYTES)), 1)
 	for part: int in parts:
-		_state.rpc(tick, board_id, part, parts, bytes.slice(part * STATE_PART_BYTES, (part + 1) * STATE_PART_BYTES))
+		_state.rpc(tick, board_id, epoch, part, parts, bytes.slice(part * STATE_PART_BYTES, (part + 1) * STATE_PART_BYTES))
 
 
 @rpc("any_peer", "call_remote", "unreliable", 1)
-func _state(tick: int, board_id: int, part: int, parts: int, bytes: PackedByteArray) -> void:
-	_deliver("on_state_part", [multiplayer.get_remote_sender_id(), tick, board_id, part, parts, bytes], false)
+func _state(tick: int, board_id: int, epoch: int, part: int, parts: int, bytes: PackedByteArray) -> void:
+	_deliver("on_state_part", [multiplayer.get_remote_sender_id(), tick, board_id, epoch, part, parts, bytes], false)
+
+
+## The race director's course (RACE_DIRECTOR.md R6), as Course.to_dict() in game metres, to one guest
+## or all.
+func send_course(data: Dictionary, to_peer: int = 0) -> void:
+	if to_peer != 0:
+		_course.rpc_id(to_peer, data)
+	else:
+		_course.rpc(data)
+
+
+@rpc("authority", "call_remote", "reliable", 0)
+func _course(data: Dictionary) -> void:
+	_deliver("on_course", [data])
 
 
 ## The host's clock, every tick: its tick, the water's clock and the wind's (RaceWindClock), and the
@@ -523,9 +558,13 @@ func _fleet(fleet: Array) -> void:
 	_deliver("on_fleet", [fleet])
 
 
-## A new start of the race (the host's restart): where each player waits, and the race's numbers.
-func send_race_restart(info: Dictionary) -> void:
-	_race_restart.rpc(info)
+## A new start of the race (the host's restart, or a race after a race), to every guest or to one
+## that joined later: where each player waits, and the race's numbers.
+func send_race_restart(info: Dictionary, to_peer: int = 0) -> void:
+	if to_peer != 0:
+		_race_restart.rpc_id(to_peer, info)
+	else:
+		_race_restart.rpc(info)
 
 
 @rpc("authority", "call_remote", "reliable", 0)

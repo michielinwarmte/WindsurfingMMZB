@@ -23,8 +23,16 @@ extends Node
 ## judged where it is now, its state moved on by its speed for its age). The guest's RaceMirror shows
 ## the host's race and judge.
 ##
-## Board numbers on the network: a player's is their slot (0 the host, 1 the guest), an AI board's
-## AI_ID_BASE plus its place in the fleet.
+## Board numbers on the network: a player's is their slot (0 the host, 1 to 7 the guests), an AI
+## board's AI_ID_BASE plus its place in the fleet.
+##
+## Up to 8 players, joining late, gear between starts (RACE_DIRECTOR.md R1 to R3): a guest's states
+## reach the other guests through the host (the server relay), and every PC takes a board's states
+## only from the PC that sails it (or the host, which also passes on a guest's keyframe to a guest
+## that comes later). A board's keyframe carries its gear and an epoch, raised at every gear change;
+## a state names its epoch and is dropped unless the PC holds that keyframe. Players who join while
+## the game runs get a puppet on every PC as soon as the lobby says so (_sync_players()); the host
+## gives a late guest everything as it is now and starts nobody's race again for it.
 
 const AI_ID_BASE: int = 100
 ## The AI boards' states go out every this many ticks (20 a second), each on its own tick of the
@@ -59,12 +67,24 @@ var puppets: Dictionary[int, WindsurferNode] = {}
 ## The host's race (null on the guest and in free sailing); the guest's mirror of it.
 var runner: RaceRunner = null
 var mirror: RaceMirror = null
+## The host's race director (RACE_DIRECTOR.md): what it decided goes out with the race's state.
+var director: RaceDirector = null
 
 var _buffers: Dictionary[int, StateBuffer] = {}
 var _keyframes_in: Dictionary[int, BoardSnapshot] = {}
 var _keyframes_out: Dictionary[int, BoardSnapshot] = {}
 ## Which peer sails each puppet (to drop a state for a board that is not theirs).
 var _owners: Dictionary[int, int] = {}
+## The gear epoch of each keyframe this PC sends (its own board; the host's AI boards too) and of
+## each it holds (R3); the gear ids and the bytes of the keyframes it holds (the host passes a
+## guest's on to a guest that comes later).
+var _epoch_out: Dictionary[int, int] = {}
+var _epoch_in: Dictionary[int, int] = {}
+var _gear_in: Dictionary[int, PackedStringArray] = {}
+var _keyframe_bytes_in: Dictionary[int, PackedByteArray] = {}
+## The guests in the game when it began (the host): their scene being ready starts the race again,
+## so the countdown is the same for all; a later guest's does not (R2).
+var _initial_peers: Array[int] = []
 var _clock: NetClock = NetClock.new()
 ## The game's own physics rate (project.godot): a tick is always 1 / NORMAL_TICKS s of game time,
 ## also while the guest keeps a slow host's pace (keep_the_hosts_pace()).
@@ -112,7 +132,8 @@ var _track_every: int = 0
 ## --lan_robot=<skipper>: a scripted skipper sails this PC's board in a race (tools/lan_test.sh races
 ## two robots and the AI fleet to the finish and compares both PCs' results). Empty: the player sails.
 var _robot_name: String = ""
-var _results_printed: bool = false
+## The last race whose results were printed (its number; RaceRunner.race_number).
+var _results_printed_for: int = -1
 
 
 ## The after-physics half of the tick (step 3 in the note at the top).
@@ -153,20 +174,69 @@ func setup(sailing: SailingScene, mine: WindsurferNode) -> void:
 	if not Lan.game.race:
 		_place_for_free_sailing()
 	for player: LanPlayer in Lan.game.players:
-		if player.slot != Lan.my_slot:
-			var puppet: WindsurferNode = _make_puppet(player.slot, player.gear(), player.name, Color.TRANSPARENT, true)
-			_owners[player.slot] = player.peer_id
-			puppet.visible = false
+		if player.peer_id != 1 and player.slot != Lan.my_slot:
+			_initial_peers.append(player.peer_id)
+	_sync_players()
+	Lan.lobby_changed.connect(_sync_players)
 	Lan.register_handler(self)
 	if Lan.is_guest():
-		_send_own_keyframe(1)
+		# To every other PC: the host, and the other guests through it.
+		_send_own_keyframe(0)
 		Lan.send_scene_ready()
 	print("LAN: in the game as %s (slot %d), %d other player(s): %s" % [Lan.my_name, Lan.my_slot, Lan.game.players.size() - 1, Lan.game.summary()])
 
 
 func _exit_tree() -> void:
 	Lan.unregister_handler(self)
+	if Lan.lobby_changed.is_connected(_sync_players):
+		Lan.lobby_changed.disconnect(_sync_players)
 	restore_pace()
+
+
+## A puppet for every other player in the game's list, made when they come (also while the game runs:
+## R2) and made again when a newcomer takes the slot of one who left; a player gone from the list
+## keeps their board where it was, without a name.
+func _sync_players() -> void:
+	if scene == null:
+		return
+	var listed: Dictionary[int, bool] = {}
+	for player: LanPlayer in Lan.game.players:
+		if player.slot == Lan.my_slot:
+			continue
+		listed[player.slot] = true
+		if puppets.has(player.slot) and _owners.get(player.slot, -1) == player.peer_id:
+			continue
+		if puppets.has(player.slot):
+			_forget_puppet(player.slot)
+		var gear: GearChoice = player.gear()
+		if _gear_in.has(player.slot):
+			var ids: PackedStringArray = _gear_in[player.slot]
+			gear = GearChoice.from_ids(ids[0], ids[1], ids[2])
+		var puppet: WindsurferNode = _make_puppet(player.slot, gear, player.name, Color.TRANSPARENT, true)
+		_owners[player.slot] = player.peer_id
+		puppet.visible = false
+	for id: int in puppets.keys():
+		if id < AI_ID_BASE and not listed.has(id) and _owners.get(id, -1) != -2:
+			# Gone (the host also hears it as on_peer_left()).
+			puppets[id].set_name_label("(left)")
+			_buffers[id] = StateBuffer.new()
+			_owners[id] = -2
+
+
+## A puppet taken away (its slot has a new player).
+func _forget_puppet(id: int) -> void:
+	var node: WindsurferNode = puppets[id]
+	puppets.erase(id)
+	_buffers.erase(id)
+	_applied.erase(id)
+	_applied_tick.erase(id)
+	_shown.erase(id)
+	_keyframes_in.erase(id)
+	_epoch_in.erase(id)
+	_gear_in.erase(id)
+	_keyframe_bytes_in.erase(id)
+	scene.remove_child(node)
+	node.queue_free()
 
 
 ## In free sailing each player starts at the usual spot, the guest FREE_SAIL_APART_M upwind of it.
@@ -238,11 +308,20 @@ func puppet_positions() -> PackedVector3Array:
 	return positions
 
 
-## The host's race: its restarts go to the guests.
+## The host's race: its restarts go to the guests, and the AI's new gear at a new start (R3).
 func attach_runner(race_runner: RaceRunner) -> void:
 	runner = race_runner
 	runner.restarted.connect(_on_runner_restarted)
+	runner.fleet_regeared.connect(_on_fleet_regeared)
+	# The players racing at each start: a guest who joined since is in it, one who left is not (R2).
+	runner.remote_source = func() -> Array: return [remote_players(), remote_names()]
 	_put_robot_on_board(runner.race, 0, runner.rules, runner.sailing_area())
+
+
+## The AI boards that took other gear for the wind at a new start: their new keyframes to the guests.
+func _on_fleet_regeared(indices: Array[int]) -> void:
+	for i: int in indices:
+		gear_changed(AI_ID_BASE + i, runner.opponents[i])
 
 
 ## The guest's race: a mirror of the host's.
@@ -397,7 +476,10 @@ func _send_states_now() -> void:
 				if (my_tick + i) % AI_SEND_EVERY == 0:
 					_send_board(AI_ID_BASE + i, runner.opponents[i], my_tick)
 			if my_tick % RACE_STATE_EVERY == 0 and runner.race != null:
-				Lan.send_race_state(runner.race.to_state(), runner.rules.to_state() if runner.rules != null else {})
+				var race_state: Dictionary = runner.race.to_state()
+				if director != null:
+					race_state["director"] = director.info()
+				Lan.send_race_state(race_state, runner.rules.to_state() if runner.rules != null else {})
 	elif _clock.is_known():
 		# The guest's states carry the host's tick they belong to.
 		_send_board(Lan.my_slot, own, _clock.host_tick_now(my_tick))
@@ -421,41 +503,75 @@ func _send_board(id: int, node: WindsurferNode, tick: int) -> void:
 	var bytes: PackedByteArray = BoardSnapshot.capture(node.sim).encode_diff(_keyframes_out[id])
 	var t1: int = Time.get_ticks_usec()
 	_bytes_out += bytes.size()
-	Lan.send_state(tick, id, bytes)
+	Lan.send_state(tick, id, _epoch_out.get(id, 0), bytes)
 	_us_capture += t1 - t0
 	_us_rpc += Time.get_ticks_usec() - t1
 
 
-## A board's keyframe (made once; a later guest gets the same one) to a peer.
+## A board's keyframe (made once per gear; a later guest gets the same one) to a peer, or to every
+## other PC (peer 0), with the board's gear and epoch.
 func _send_keyframe(id: int, node: WindsurferNode, peer: int) -> void:
 	if not _keyframes_out.has(id):
 		_keyframes_out[id] = BoardSnapshot.capture(node.sim)
 	var bytes: PackedByteArray = _keyframes_out[id].encode_full()
 	_bytes_out += bytes.size()
-	Lan.send_keyframe(id, bytes, peer)
+	Lan.send_keyframe(id, _epoch_out.get(id, 0), gear_ids(node), bytes, peer)
 
 
 func _send_own_keyframe(peer: int) -> void:
 	_send_keyframe(Lan.my_slot, own, peer)
 
 
+## A board's board, sail and fin ids (the default gear's for a board without a choice).
+static func gear_ids(node: WindsurferNode) -> PackedStringArray:
+	var gear: GearChoice = node.gear if node.gear != null else GearChoice.defaults()
+	return PackedStringArray([gear.board.id(), gear.sail.id(), gear.fin.id()])
+
+
+## A board this PC sails has new gear (R3; the board was rebuilt with WindsurferNode.change_gear()):
+## a new epoch and keyframe, to every other PC. Its states from now on name the new epoch.
+func gear_changed(id: int, node: WindsurferNode) -> void:
+	_epoch_out[id] = _epoch_out.get(id, 0) + 1
+	_keyframes_out[id] = BoardSnapshot.capture(node.sim)
+	_send_keyframe(id, node, 0)
+
+
+## This PC's board has new gear (the player chose it between starts).
+func own_gear_changed() -> void:
+	gear_changed(Lan.my_slot, own)
+
+
 # ---------------------------------------------------------------- the messages in (from LanSession)
 
-func on_keyframe(sender: int, id: int, bytes: PackedByteArray) -> void:
-	if not _may_send(sender, id):
+func on_keyframe(sender: int, id: int, epoch: int, gear: PackedStringArray, bytes: PackedByteArray) -> void:
+	if not _may_send(sender, id) or id == Lan.my_slot:
 		return
+	if _epoch_in.has(id) and epoch < _epoch_in[id]:
+		return  # an older gear's, come late
 	var state: BoardSnapshot = BoardSnapshot.decode_full(bytes)
 	if state == null:
 		return
 	_bytes_in += bytes.size()
 	_keyframes_in[id] = state
+	_keyframe_bytes_in[id] = bytes
+	_epoch_in[id] = epoch
+	var new_gear: bool = _gear_in.has(id) and _gear_in[id] != gear
+	_gear_in[id] = gear
+	if puppets.has(id) and gear.size() == 3:
+		var node: WindsurferNode = puppets[id]
+		if new_gear or gear_ids(node) != gear:
+			node.change_gear(GearChoice.from_ids(gear[0], gear[1], gear[2]))
+		# The states held were taken against the old keyframe; the puppet takes the next one whole.
+		_buffers[id] = StateBuffer.new()
+		_applied.erase(id)
+		_applied_tick.erase(id)
 
 
 ## A part of a board's state (LanSession.send_state()): kept until all its parts are here, then the
 ## state is read. Parts of a tick that never completes are dropped after a second.
-func on_state_part(sender: int, tick: int, id: int, part: int, parts: int, bytes: PackedByteArray) -> void:
+func on_state_part(sender: int, tick: int, id: int, epoch: int, part: int, parts: int, bytes: PackedByteArray) -> void:
 	if parts <= 1:
-		on_state(sender, tick, id, bytes)
+		on_state(sender, tick, id, epoch, bytes)
 		return
 	var key: Vector2i = Vector2i(id, tick)
 	if not _parts.has(key):
@@ -474,7 +590,7 @@ func on_state_part(sender: int, tick: int, id: int, part: int, parts: int, bytes
 	var whole: PackedByteArray = PackedByteArray()
 	for piece: Variant in held:
 		whole.append_array(piece as PackedByteArray)
-	on_state(sender, tick, id, whole)
+	on_state(sender, tick, id, epoch, whole)
 
 
 func _drop_old_parts(tick: int) -> void:
@@ -483,9 +599,11 @@ func _drop_old_parts(tick: int) -> void:
 			_parts.erase(key)
 
 
-func on_state(sender: int, tick: int, id: int, bytes: PackedByteArray) -> void:
+func on_state(sender: int, tick: int, id: int, epoch: int, bytes: PackedByteArray) -> void:
 	if not _keyframes_in.has(id) or not _buffers.has(id) or not _may_send(sender, id):
 		return
+	if epoch != _epoch_in.get(id, -1):
+		return  # taken against another gear's keyframe than the one held
 	var t0: int = Time.get_ticks_usec()
 	var state: BoardSnapshot = BoardSnapshot.decode_diff(bytes, _keyframes_in[id])
 	_us_read += Time.get_ticks_usec() - t0
@@ -498,19 +616,22 @@ func on_state(sender: int, tick: int, id: int, bytes: PackedByteArray) -> void:
 	_buffers[id].add(tick, state)
 
 
-## A board's states come from the PC that sails it: a guest sends only its own; the host the rest.
+## A board's states come from the PC that sails it: a guest sends only its own; the host the rest
+## (and passes on a guest's keyframe to a guest that came later).
 func _may_send(sender: int, id: int) -> bool:
 	if Lan.is_host():
 		return _owners.get(id, -1) == sender
-	return sender == 1
+	return sender == 1 or _owners.get(id, -1) == sender
 
 
 func on_clock(tick: int, water_s: float, wind_s: float, travel_m: float, day_s: float, host_real_s: float) -> void:
 	_clock.receive(tick, Engine.get_physics_frames(), water_s, wind_s, travel_m, day_s, host_real_s)
 
 
-## A guest's scene is loaded (the host): it gets the AI fleet, every board's keyframe and a new
-## start of the race, so everyone starts the countdown together.
+## A guest's scene is loaded (the host): it gets the AI fleet, every board's keyframe (the other
+## guests' passed on), the course as the race director has it and the race. A guest that was in the
+## game from its start starts the race again, so everyone starts the countdown together; a guest
+## that joined later (R2) gets the race as it stands and races from the next start.
 func on_scene_ready(peer: int) -> void:
 	if not Lan.is_host():
 		return
@@ -521,8 +642,44 @@ func on_scene_ready(peer: int) -> void:
 		for i: int in runner.opponents.size():
 			_send_keyframe(AI_ID_BASE + i, runner.opponents[i], peer)
 	_send_own_keyframe(peer)
-	if runner != null:
+	for id: int in _keyframe_bytes_in:
+		if _owners.get(id, -1) != peer and _owners.get(id, -1) != -2:
+			Lan.send_keyframe(id, _epoch_in.get(id, 0), _gear_in.get(id, PackedStringArray()), _keyframe_bytes_in[id], peer)
+	var course: Course = scene.live_course()
+	if course != null:
+		Lan.send_course(course.to_dict(null), peer)
+	if runner == null:
+		return
+	if _initial_peers.has(peer):
+		_initial_peers.erase(peer)
 		runner.restart()
+	else:
+		var info: Dictionary = restart_info()
+		info["late"] = true
+		Lan.send_race_restart(info, peer)
+		print("LAN: %s's scene is ready; the race goes on, they race from the next start" % _name_of(peer))
+
+
+## A player's name by their connection (the host's list).
+static func _name_of(peer: int) -> String:
+	for player: LanPlayer in Lan.players:
+		if player.peer_id == peer:
+			return player.name
+	return "a guest"
+
+
+## The race director's course to every guest whose scene is ready (the host; RACE_DIRECTOR.md R6).
+func send_course(course: Course) -> void:
+	if not Lan.is_host() or _ready_peers.is_empty():
+		return
+	Lan.send_course(course.to_dict(null))
+
+
+## The race director's course (a guest): onto the water, the minimap and into the race.
+func on_course(data: Dictionary) -> void:
+	var course: Course = Course.from_dict(data, null)
+	if course != null:
+		scene.apply_course(course)
 
 
 ## Who sails the AI boards, for the guest's puppets: name, sail colour and gear.
@@ -559,7 +716,8 @@ func _on_runner_restarted() -> void:
 
 
 ## The host's start for the guests: the race's boards in its order (names and network numbers),
-## where each player waits and heads, and the race's numbers.
+## where each player waits and heads, and the race's numbers. "keep": the boards stay where they are
+## (a race after a race, R4); "late" (added for a guest that joined later): the race as it stands.
 func restart_info() -> Dictionary:
 	var names: PackedStringArray = PackedStringArray()
 	for i: int in runner.race.board_count():
@@ -567,20 +725,25 @@ func restart_info() -> Dictionary:
 	names[0] = Lan.my_name
 	var ids: Array = [Lan.my_slot]
 	var spots: Dictionary = {Lan.my_slot: runner.player_spot}
-	var slots: Array[int] = remote_slots()
-	for i: int in slots.size():
-		ids.append(slots[i])
-		spots[slots[i]] = runner.remote_spots[i]
+	# The other players in this race (a guest who joined during it races from the next start, R2).
+	for i: int in runner.remote_players.size():
+		var slot: int = puppets.find_key(runner.remote_players[i])
+		ids.append(slot)
+		if i < runner.remote_spots.size():
+			spots[slot] = runner.remote_spots[i]
 	for i: int in runner.opponents.size():
 		ids.append(AI_ID_BASE + i)
-	return {"names": names, "ids": ids, "spots": spots, "heading_deg": runner.start_heading_deg, "laps": runner.setup.laps,
-		"prestart_s": runner.setup.prestart_s, "time_limit_s": runner.race.time_limit_s, "rules": runner.rules != null}
+	return {"names": names, "ids": ids, "spots": spots, "heading_deg": runner.start_heading_deg, "laps": runner.race.laps,
+		"prestart_s": runner.race.prestart_s, "time_limit_s": runner.race.time_limit_s, "rules": runner.rules != null,
+		"keep": runner.kept_places, "race_no": runner.race_number}
 
 
-## The host's race starts again (on the guest): this PC's board to its spot, the mirror anew.
+## The host's race starts again (on the guest): this PC's board to its spot (not for a race after a
+## race, nor for a guest that joined while a race was on), the mirror anew.
 func on_race_restart(info: Dictionary) -> void:
 	var spots: Dictionary = info.get("spots", {})
-	if spots.has(Lan.my_slot):
+	var moved: bool = not bool(info.get("keep", false)) and not bool(info.get("late", false))
+	if moved and spots.has(Lan.my_slot):
 		var spot: Vector2 = spots[Lan.my_slot]
 		own.start_position = Vector3(spot.x, 0.0, spot.y)
 		own.start_heading_deg = float(info.get("heading_deg", own.start_heading_deg))
@@ -678,18 +841,20 @@ static func _track_text(node: WindsurferNode) -> String:
 		t.toes_share, t.back_foot_share]
 
 
-## Once the race is over (--lan_report or --lan_track): every board's place, name, finish and
-## penalty, as this PC has the race (the host its own, the guest its mirror).
+## Once a race is over (--lan_report or --lan_track), once per race: its number (the host's count),
+## every board's place, name, finish and penalty, as this PC has the race (the host its own, the guest
+## its mirror). A race after a race prints again (RACE_DIRECTOR.md R4).
 func _print_results_once() -> void:
-	if _results_printed or (_report_every_s <= 0.0 and _track_every <= 0):
+	if _report_every_s <= 0.0 and _track_every <= 0:
 		return
 	var race: RaceSim = runner.race if runner != null else (mirror.race if mirror != null else null)
-	if race == null or race.phase() != RaceSim.Phase.FINISHED:
+	var number: int = runner.race_number if runner != null else (mirror.race_number if mirror != null else 0)
+	if race == null or race.phase() != RaceSim.Phase.FINISHED or number == _results_printed_for:
 		return
-	_results_printed = true
+	_results_printed_for = number
 	for result: RaceResult in race.results():
 		var who: String = Lan.my_name if result.name == RaceRunner.PLAYER_NAME else result.name
-		print("RESULT %d %s %s %.2f %.1f %d/%d" % [result.place, who.replace(" ", "_"), "finished" if result.finished else "dnf",
+		print("RESULT %d %d %s %s %.2f %.1f %d/%d" % [number, result.place, who.replace(" ", "_"), "finished" if result.finished else "dnf",
 			result.finish_time_s, result.penalty_s, result.steps_done, result.steps_total])
 
 

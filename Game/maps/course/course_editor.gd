@@ -23,6 +23,8 @@ extends Node
 ## - Every change can be undone (Ctrl+Z), also Clear. M shows and hides the course.
 ## - Courses are saved as JSON in the map's courses folder, in the project, so the team shares
 ##   them through git (WD6).
+## - In a race, the race director's view (RaceDirectorView, RACE_DIRECTOR.md R5) hosts it: it hands
+##   in the race's course (edit_course()) and takes every change from course_changed.
 
 ## How close (pixels) the mouse must be to a mark to grab it.
 const PICK_RADIUS_PX: float = 14.0
@@ -34,6 +36,10 @@ const SAME_LEG_DEG: float = 15.0
 const SAME_LEG_M: float = 40.0
 ## How many changes Undo remembers.
 const UNDO_LIMIT: int = 200
+## After every change of the course (a mark dragged, added, deleted, a template, an undo...): the
+## course as it is now (null when cleared).
+signal course_changed(course: Course)
+
 ## How often the panel's angles to the wind are brought up to date, seconds (the wind turns slowly).
 const PANEL_REFRESH_S: float = 1.0
 const RULES_PATH: String = "res://maps/course/iqfoil_courses.tres"
@@ -211,6 +217,19 @@ func start_adding_mark() -> void:
 	_select("")
 	_panel.set_adding(true)
 	_panel.show_message("Click on the water where the new mark goes. It goes into the leg lit in yellow, on every lap; hold Shift for only the leg under the mouse. Away from the legs it is a lone mark, to type into the order. Esc stops.")
+
+
+## Takes a course to edit (the race's, from the race director's view), without a step to undo.
+func edit_course(new_course: Course) -> void:
+	_stop_adding()
+	_dragging = null
+	course = new_course
+	_changed()
+
+
+## A line on the panel (the race director's view: why a change was refused).
+func show_message(text: String) -> void:
+	_panel.show_message(text)
 
 
 ## Shows or hides the course and its panel (M).
@@ -633,6 +652,7 @@ func _changed() -> void:
 		_selected_id = ""
 	_select(_selected_id)
 	_update_panel()
+	course_changed.emit(course)
 
 
 ## The panel: a summary line, the legs and the warnings.

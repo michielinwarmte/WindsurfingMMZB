@@ -93,6 +93,15 @@ def compare(label, seens, tracks):
     return matched, worst
 
 
+def by_race(results):
+    """The RESULT lines grouped by their race's number (the first field)."""
+    races = {}
+    for parts in results:
+        if parts:
+            races.setdefault(parts[0], []).append(parts[1:])
+    return races
+
+
 def main():
     host_tracks, host_seens, host_results, host_errors = read(sys.argv[1])
     host_judged = read.judged
@@ -117,14 +126,20 @@ def main():
         if worst["place"] > PLACE_TOLERANCE_M:
             print("FAIL: a board shown %.3f m from where its PC had it (tolerance %.2f m)" % (worst["place"], PLACE_TOLERANCE_M))
             ok = False
-    if host_results or guest_results:
-        print("Results on the host:  " + "; ".join(" ".join(r) for r in host_results))
-        print("Results on the guest: " + "; ".join(" ".join(r) for r in guest_results))
-        if host_results != guest_results:
-            print("FAIL: the two PCs' finish lists differ")
+    # Each RESULT line starts with the race's number (a race after a race, RACE_DIRECTOR.md R4); a PC
+    # that joined later has only the later races: the races both have are compared.
+    host_races, guest_races = by_race(host_results), by_race(guest_results)
+    common = sorted(set(host_races) & set(guest_races))
+    for number in common:
+        print("Race %s on the first:  %s" % (number, "; ".join(" ".join(r) for r in host_races[number])))
+        print("Race %s on the second: %s" % (number, "; ".join(" ".join(r) for r in guest_races[number])))
+        if host_races[number] != guest_races[number]:
+            print("FAIL: the two PCs' finish lists of race %s differ" % number)
             ok = False
         else:
-            print("The finish lists agree.")
+            print("The finish lists of race %s agree." % number)
+    if (host_races or guest_races) and not common:
+        print("No race finished on both PCs (first: races %s, second: races %s)." % (sorted(host_races), sorted(guest_races)))
     print("SYNC CHECK: " + ("PASS" if ok else "FAIL"))
     sys.exit(0 if ok else 1)
 
