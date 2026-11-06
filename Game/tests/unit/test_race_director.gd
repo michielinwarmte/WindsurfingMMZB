@@ -73,6 +73,22 @@ func test_an_abandoned_race_is_over_with_nobody_finished() -> void:
 	assert_eq(race.results().size(), 1)
 
 
+func test_a_guest_shows_the_hosts_order_of_two_boards_nearly_level() -> void:
+	var host: RaceSim = _racing()
+	host.add_board("Joost")
+	host.update_board(1, Vector2(-10.0, -5.2))  # 0.2 m further up than Lena: second on the host
+	host.step(DT)
+	var guest: RaceSim = RaceSim.new(_course(), 1, PRESTART_S)
+	guest.add_board("Lena")
+	guest.add_board("Joost")
+	# The guest sees Joost a few ticks later than he is: ahead of Lena by its own measure.
+	guest.update_board(0, Vector2(10.0, -5.0))
+	guest.update_board(1, Vector2(-10.0, -9.0))
+	guest.apply_state(host.to_state())
+	assert_eq(guest.race_order(), host.race_order(), "the same places on every PC")
+	assert_eq(guest.place(0), host.place(0))
+
+
 # ---------------------------------------------------------------- the race after a race
 
 func test_the_next_countdown_comes_the_gap_after_a_race_and_keeps_the_boards_where_they_are() -> void:

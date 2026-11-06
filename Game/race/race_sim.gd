@@ -72,6 +72,11 @@ var _start_in_s: float = -1.0
 ## first to last, and each board's place. A big fleet's HUD asks for the places every frame; a
 ## sort per question made 33 boards' fleet lines cost 0.3 s (F1 fleet_frame).
 var _order_cache: Array[int] = []
+## A guest's copy of the host's race (LAN multiplayer): the host's own order of the boards, as its
+## last state said (apply_state()). Boards on the same step are ranked by their distance to it, which
+## each PC measures from its own view of the boards (the others' drawn a few ticks late): two boards
+## nearly level came out in a different order on the guest's PC. Empty: the race works out its own.
+var _host_order: Array[int] = []
 var _places: PackedInt32Array = PackedInt32Array()
 var _order_stale: bool = true
 
@@ -420,6 +425,13 @@ func _is_over() -> bool:
 func _order() -> Array[int]:
 	if not _order_stale:
 		return _order_cache
+	if _host_order.size() == _boards.size():
+		_order_cache = _host_order.duplicate()
+		_places.resize(_order_cache.size())
+		for rank: int in _order_cache.size():
+			_places[_order_cache[rank]] = rank + 1
+		_order_stale = false
+		return _order_cache
 	var distances: PackedFloat64Array = PackedFloat64Array()
 	var order: Array[int] = []
 	for i: int in _boards.size():
@@ -586,7 +598,7 @@ func to_state() -> Dictionary:
 	for board: Board in _boards:
 		boards.append([board.next_step, board.splits, board.finish_time_s, board.penalty_s, board.ocs, board.wrong_side_until_s])
 	return {"phase": int(_phase), "started": _started, "clock": _clock_s, "first_finish": _first_finish_s,
-		"start_in": _start_in_s, "boards": boards}
+		"start_in": _start_in_s, "boards": boards, "order": _order().duplicate()}
 
 
 ## Takes the host's race as it stands (to_state()). Boards the state does not name keep theirs.
@@ -606,6 +618,10 @@ func apply_state(state: Dictionary) -> void:
 		board.penalty_s = float(values[3])
 		board.ocs = bool(values[4])
 		board.wrong_side_until_s = float(values[5])
+	# The host's order: every PC shows the same places (_host_order).
+	_host_order.clear()
+	for index: Variant in state.get("order", []):
+		_host_order.append(int(index))
 	_order_stale = true
 
 
