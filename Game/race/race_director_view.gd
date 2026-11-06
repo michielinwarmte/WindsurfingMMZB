@@ -130,12 +130,10 @@ func open() -> void:
 	_taking_course = false
 	_editor.show_message("Drag the marks; during a race only their places can change.")
 	if _map_wind == null and scene.map_wind_field() != null:
-		# Built at the first opening, shown at once: particles' trails made while hidden come out
-		# wrong (long streaks all pointing the same way).
 		_add_wind_picture()
-	elif _streaks != null:
-		_streaks.restart()
-		_streaks.visible = true
+	# The wind speed colours show the gusts and lulls (C); the streaks wait for V (see _add_wind_picture()).
+	if _speed_layer != null:
+		_speed_layer.visible = true
 	_give_the_board_to_the_pilot()
 	_update_status()
 
@@ -164,17 +162,25 @@ func _set_camera_active(on: bool) -> void:
 	_camera.set_process_unhandled_input(on)
 
 
-## The camera straight above the course, high enough to see all of it with room for the panels.
+## The camera straight above the course, high enough to see all of it in the space between the two
+## panels (the director's on the left, the course maker's on the right), and the course in the
+## middle of that space. In the view's canvas units (720 high; wider for a wide window).
 func _look_at_the_course() -> void:
 	var course: Course = scene.live_course()
 	if course == null:
 		return
-	var box: Rect2 = course.bounds().grow(150.0)
-	var half_view: float = tan(deg_to_rad(_camera.fov * 0.5))
-	var window: Vector2 = get_viewport().get_visible_rect().size
-	var across_share: float = window.y / maxf(window.x, 1.0)
-	var height_m: float = maxf(box.size.y, box.size.x * across_share * 1.6) * 0.5 / half_view
-	_camera.look_down_at(box.get_center(), height_m)
+	var box: Rect2 = course.bounds().grow(100.0)
+	var screen: Vector2 = get_viewport().get_visible_rect().size
+	var free_left: float = PANEL_WIDTH_PX + 30.0
+	var free_right: float = maxf(screen.x - CoursePanel.WIDTH_PX - 80.0, free_left + 200.0)
+	var free_width: float = free_right - free_left
+	# How many metres one canvas unit covers at a height: the view is 2 h tan(fov / 2) tall.
+	var tall: float = 2.0 * tan(deg_to_rad(_camera.fov * 0.5))
+	var metres_per_unit: float = maxf(box.size.x / free_width, box.size.y / (screen.y - 40.0))
+	var height_m: float = metres_per_unit * screen.y / tall
+	# Screen right is east: the middle of the free space is this far east of the screen's middle.
+	var shift_m: float = ((free_left + free_right) * 0.5 - screen.x * 0.5) * metres_per_unit
+	_camera.look_down_at(box.get_center() - Vector2(shift_m, 0.0), height_m)
 
 
 ## The panels as big, against the window, as in a 1280 x 720 window (the wind viewer's way, for the
@@ -326,6 +332,14 @@ func _add_wind_picture() -> void:
 	_streaks.name = "DirectorStreaks"
 	add_child(_streaks)
 	_streaks.setup(wind, pattern_texture, lee_texture)
+	# Moved every frame: at a fixed 60 a second with interpolation, in a race scene drawn at fewer
+	# frames than that, the streaks' trails came out wrong (long, nearly north-south whatever the
+	# wind; the wind viewer, at 100 fps, did not show it).
+	_streaks.fixed_fps = 0
+	_streaks.interpolate = false
+	# Off until V: in this view their direction is not yet right in every run (in the wind viewer it
+	# is), so the speed colours show the wind meanwhile.
+	_streaks.visible = false
 	var grid: TerrainGrid = scene.shore_grid
 	if grid == null:
 		return
@@ -446,7 +460,7 @@ func _build_panel() -> void:
 	_button("Abandon it", race_row).pressed.connect(func() -> void: director.abandon())
 	_button("Everyone to the line", race_row).pressed.connect(func() -> void: director.everyone_to_the_line())
 	column.add_child(HSeparator.new())
-	var help: Label = _label("Your board races on the autopilot while this view is open.\nM or Esc: back to your board.\nW A S D, wheel, right mouse: move the map." + ("\nV streaks, C wind colours." if scene.map_wind_field() != null else ""), column)
+	var help: Label = _label("Your board races on the autopilot while this view is open.\nM or Esc: back to your board.\nW A S D, wheel, right mouse: move the map." + ("\nC wind speed colours; V streaks (their direction is still being checked)." if scene.map_wind_field() != null else ""), column)
 	help.modulate = Color(1.0, 1.0, 1.0, 0.75)
 
 
