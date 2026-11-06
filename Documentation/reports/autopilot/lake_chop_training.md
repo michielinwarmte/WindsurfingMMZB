@@ -134,7 +134,8 @@ this round). The open water's push check is 9 cases neutral, 6 pushed; m/s made 
 | **`c2hu10`** | **0** | 17.9 / 10.1 / 9.4 | 9.05 / 10.91 | 1 fall | the head-up ease only from 10 degrees a second (the AI's stick) |
 | `c2hu6` | 0 | 17.9 / 10.1 / 9.4 | 9.07 / 10.94 | 1 fall | the ease while carving up at 6 degrees |
 | **`c2s25hu10`**, `c2s25` | **0** | 18.0 / 10.1 / 9.4 | 8.97 / 10.71 | **no fall** | and the pilot's faster hands (2.5): the matrix's last fall goes; the push check's 24 kt broad reach 5 to 8 % slower (one run each) |
-| `c2b1014`, `c2dep4`, `c2g1719` | 1 | | about the baseline | 1 fall | the gates moved: 10 to 14 degrees a second, 17 to 19 kt; the urgent ease twice as fast |
+| `c2b1014`, `c2g1719` | 1 | | about the baseline | 1 fall | the gates moved: 10 to 14 degrees a second, 17 to 19 kt |
+| `c2dep4` | 3 (2 on the afternoons) | 17.5 / 10.1 / 9.4 | 9.05 / 10.70 | 1 fall | the pilot's urgent ease twice as fast |
 | `c2hold`, `c2hike12` | 3 | 17.8, 18.2 | 9.08, 9.10 | no fall | the ease also on the hold's corrections; more pull (1.2): faster on the map's beam reach (22.1 kt) and on the reach check (9 of 9 steady), but 2 falls at 24 kt |
 | `c2b710`, `c2a9` | 5, 6 | | | | the gate from 7 degrees a second, or the ease in the air only to 9 degrees: the 24 kt reach falls again |
 | `c2g1921` | 16 | | | | the ease in the air only from 19 to 21 kt: too late for the steady 24 kt (about 20 kt at the sail) |
@@ -142,3 +143,24 @@ this round). The open water's push check is 9 cases neutral, 6 pushed; m/s made 
 The remaining open-water matrix fall (24 kt, a tack from a beam reach on flat water) comes 0.3 s
 after Space, while the heading hold is turning the board back up after the case's bear-away: only
 the ease on the hold's corrections (`c2hold`) or the faster sheet takes it.
+
+## Round 4 (lc4): the candidates on six new hours, the open water's second sample, the race
+
+`rounds/lc4.txt`. The same 30 lake cases at six other hours (12:00 to 17:00 every hour: 180
+manoeuvre cases in the map's wind and in a steady 18 and 24 kt) and the 40 afternoon reaches; the
+push check at 75 and 120 degrees with the gusts 6.5 s apart (18 and 24 kt, neutral and pushed); the
+race on T2 on the lake at 14:30 and 16:00 with the four AI skippers.
+
+| Variant | Lake falls (of 180) | of them at 24 kt | Push2 neutral / pushed | Race 14:30: finished, mean time, falls | Race 16:00 |
+|---|---|---|---|---|---|
+| baseline | 29 | 16 | 12.80 / 13.20 | 4 of 4, 4:26, 0 | 4 of 4, 11:26, 2 |
+| `c2hu10` | **6** | 6 (two catapults) | 12.78 / 13.21 | 4 of 4, 4:18, 1 | 4 of 4, 8:00, 0 |
+| `c2s20hu10` | **4** | 4 | 12.83 / 13.20 | 4 of 4, 4:44, 0 | 4 of 4, 7:50, 1 |
+| `c2s25hu10` | 8 | 7 | 12.77 / 13.18 | 4 of 4, 4:35, 0 | 4 of 4, 7:28, 0 |
+| `c2hu6` | 6 | 6 | 12.65 / 12.58 | 4 of 4, 4:40, 0 | 4 of 4, 7:51, 3 |
+
+On new hours the candidates are not perfect: what is left is the steady 24 kt beam reach's
+catapult in the air (the eased sail still pulls 200 N, and a slam that knocks the board sideways
+on landing tips the sailor over in 0.2 s). The race on the lake: every board finished in every race;
+at 16:00 (a lull at the start) the candidates' fleets were three to four minutes quicker on average
+(one race each: partly chance).

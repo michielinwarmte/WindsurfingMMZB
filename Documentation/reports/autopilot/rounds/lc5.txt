@@ -1,0 +1,15 @@
+# Lake chop round 5 (6 November 2026): the three candidates on yet other patterns, to choose.
+# Round 4 on six new hours (180 manoeuvre cases; the baseline 29 falls): c2hu10 6 (two catapults on
+# the steady 24 kt beam reach, each counted in the five cases that sail it before their manoeuvre),
+# c2s20hu10 4, c2s25hu10 8, c2hu6 6; the open water's second sample as the baseline's for all but
+# c2hu6 (dropped: its pushed 24 kt reach 16 % slower); the T2 race on the lake: all finished at
+# 14:30 and 16:00 for every variant, falls 2 (baseline), 1, 1, 0, 3.
+# Here: the lake at four more hours (12:30, 13:30, 15:30, 16:30: 120 manoeuvre cases and the 40
+# afternoon reaches), the open water's third sample (60 and 135 degrees, gusts 9.5 s apart), the
+# race at 13:00 and 15:00. Run with --matrix_times=12:30,13:30,15:30,16:30 --race_times=13:00,15:00
+# --push2_twas=60,135 --push2_gust=9.5 --only=lake,push2,pushed2,race. (c2s20hu10's standard open
+# water and three-hour lake set: round lc5d.)
+base:
+c2hu10: --controller.head_up_alpha_deg=9 --controller.head_up_ease_on_hold=0 --controller.rail_from_ms=2 --controller.rail_full_ms=5 --controller.airborne_alpha_deg=6 --controller.airborne_sheet_in_share=3 --controller.airborne_wind_from_kt=18 --controller.airborne_wind_full_kt=20 --controller.airborne_bounce_from_dps=8 --controller.airborne_bounce_full_dps=12 --controller.head_up_ease_from_dps=10
+c2s25hu10: --controller.head_up_alpha_deg=9 --controller.head_up_ease_on_hold=0 --controller.rail_from_ms=2 --controller.rail_full_ms=5 --controller.airborne_alpha_deg=6 --controller.airborne_sheet_in_share=3 --controller.airborne_wind_from_kt=18 --controller.airborne_wind_full_kt=20 --controller.airborne_bounce_from_dps=8 --controller.airborne_bounce_full_dps=12 --controller.head_up_ease_from_dps=10 --controller.pilot_sheet_rate_per_s=2.5
+c2s20hu10: --controller.head_up_alpha_deg=9 --controller.head_up_ease_on_hold=0 --controller.rail_from_ms=2 --controller.rail_full_ms=5 --controller.airborne_alpha_deg=6 --controller.airborne_sheet_in_share=3 --controller.airborne_wind_from_kt=18 --controller.airborne_wind_full_kt=20 --controller.airborne_bounce_from_dps=8 --controller.airborne_bounce_full_dps=12 --controller.head_up_ease_from_dps=10 --controller.pilot_sheet_rate_per_s=2.0

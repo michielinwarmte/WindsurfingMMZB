@@ -5,6 +5,7 @@
     tools/autopilot_suite.sh --round=lc1 --variants=... --only=lake --cores=14
     tools/autopilot_suite.sh --round=lc9 --variants=... --only=lake --lake_wave_scale=1.5
     tools/autopilot_suite.sh ... --matrix_times=12:00,13:15,14:30,15:45,17:00   (more lake patterns)
+    tools/autopilot_suite.sh ... --race_times=13:00,15:00 --push2_twas=60,135 --push2_gust=9.5   (other samples)
 
 Every variant (a line "<label>: <overrides>" of the variants file) is scored by the parts in --only
 (default reach,push,pushed,matrix,lake; race on request):
@@ -44,6 +45,9 @@ MATRIX_TIMES = ["12:00", "14:30", "17:00"]
 STEADY_KTS = ["18", "24"]
 RACE_TIMES = ["14:30", "16:00"]
 RACE_SKIPPERS = "allrounder,cautious,gambler,rookie"
+# The open water's second sample (push2, pushed2): two courses at 18 and 24 kt, gusts this far apart.
+PUSH2_TWAS = "75,120"
+PUSH2_GUST = "6.5"
 ALL_PARTS = "reach,push,pushed,matrix,lake"
 # Which override groups each harness takes.
 GROUPS = {
@@ -116,8 +120,8 @@ def jobs_for(label, overrides, out_dir, parts, scale_args):
     # push2: more of the open water, other gusts (6.5 s apart) and other courses (75 and 120 degrees)
     # at 18 and 24 kt, neutral and pushed: four cases each, the open sea's second sample.
     for part, winds, cases, extra in (("push", "12,18,24", 9, []), ("pushed", "18,24", 6, ["--pilot.hike_share=1.6"]),
-                                      ("push2", "18,24", 4, ["--twas=75,120", "--gust_period=6.5"]),
-                                      ("pushed2", "18,24", 4, ["--twas=75,120", "--gust_period=6.5", "--pilot.hike_share=1.6"])):
+                                      ("push2", "18,24", 4, ["--twas=" + PUSH2_TWAS, "--gust_period=" + PUSH2_GUST]),
+                                      ("pushed2", "18,24", 4, ["--twas=" + PUSH2_TWAS, "--gust_period=" + PUSH2_GUST, "--pilot.hike_share=1.6"])):
         if part not in parts:
             continue
         push_dir = os.path.join(out_dir, part)
@@ -249,8 +253,14 @@ def merge_lake(lake_dir, out_dir):
 
 
 def main():
-    global MATRIX_TIMES
+    global MATRIX_TIMES, RACE_TIMES, PUSH2_TWAS, PUSH2_GUST
     options = parse_args(sys.argv[1:])
+    if options.get("race_times"):
+        RACE_TIMES = options["race_times"].split(",")
+    if options.get("push2_twas"):
+        PUSH2_TWAS = options["push2_twas"]
+    if options.get("push2_gust"):
+        PUSH2_GUST = options["push2_gust"]
     if options.get("matrix_times"):
         # More times of day for the lake's matrix and the steady winds: more wave and gust patterns.
         MATRIX_TIMES = options["matrix_times"].split(",")
