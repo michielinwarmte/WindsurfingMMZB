@@ -43,3 +43,7 @@ shader_parameter/roughness_far_m = 2000.0
 shader_parameter/shore_line_depth_m = 0.15
 shader_parameter/shore_line_strength = 0.35
 shader_parameter/grid_strength = 0.0
+shader_parameter/whitecap_law = 1
+shader_parameter/whitecap_water_factor = 0.66
+shader_parameter/foam_life_s = 2.54
+shader_parameter/foam_lag_s = 0.35

@@ -100,6 +100,10 @@ uniform vec3 foam_color : source_color = vec3(0.93, 0.96, 0.98);
 // slope of the surface at a crest) is above this: real waves whitecap from a steepness of
 // about 0.3 and break at 0.44, so a gentle swell shows no foam at all.
 uniform float foam_threshold = 0.3;
+// The open sea in a known wind (OceanNode sets lake_wind_ms there too): the look's own mirror roughness is
+// the one for this wind (m/s at 12.5 m: 15 kt at 10 m, ocean.gd's RIPPLE_REFERENCE_WIND_KT), and the mirror
+// is as much rougher or smoother as Cox and Munk's mean square slope at the wind of the moment.
+uniform float open_look_wind_ms = 7.95;
 // A lake's own waves (PHYSICS_SPEC.md 9.17; lake_waves_on and the grid are in gerstner.gdshaderinc).
 // Only the trains the physics floats on (lake_shape_trains) move the surface, so the board floats on
 // exactly the shape you see. The near mesh shows such a train as shape where its cells are small
@@ -240,6 +244,39 @@ vec4 lake_pixel_exact(vec2 rest) {
 	return (vec4(1.0) - smoothstep(2.0 * lengths, 6.0 * lengths, vec4(reach_m))) * lake_shape_mask();
 }
 
+// A lake train drawn exactly (gerstner_lake(), `weight` of it): its squeeze at the 8 earlier moments.
+void lake_exact_lags(vec4 wave, float amplitude, float weight, vec2 rest, inout vec4 lag_a, inout vec4 lag_b) {
+	if (amplitude <= 0.0 || weight <= 0.0) {
+		return;
+	}
+	float k = 2.0 * PI / max(wave.w, 0.5);
+	float omega = wave_omega(k);
+	float s = min(k * amplitude, PI / 7.0) * weight;
+	float phase = k * dot(wave.xy, rest) - omega * water_time_s + wave.z;
+	foam_lags_add(s, vec2(cos(phase), sin(phase)), foam_rate(wave.xy, max(wave.w, 0.5), omega), lag_a, lag_b);
+}
+
+// One of the open sea's waves (gerstner()) for its whitecaps: its squeeze now and at the 8 earlier moments
+// (as lake_look_wave() does for the lake's), faded where a pixel is too big for it, and its full variance.
+void sea_breaking(vec4 wave, float amplitude, vec2 rest, float pixel_m, inout vec3 breaking, inout float full_variance, inout vec4 lag_a, inout vec4 lag_b) {
+	if (amplitude <= 0.0) {
+		return;
+	}
+	float s = wave.z;
+	full_variance += 0.5 * s * s;
+	float shown = wave_shown(wave.w, pixel_m);
+	if (shown <= 0.0) {
+		return;
+	}
+	float k = 2.0 * PI / max(wave.w, 0.5);
+	float omega = wave_omega(k);
+	float slope = s * shown;
+	float phase = k * dot(wave.xy, rest) - omega * water_time_s;
+	vec2 cos_sin = vec2(cos(phase), sin(phase));
+	breaking += vec3(slope * cos_sin.y, 0.5 * slope * slope, slope * slope * slope * slope);
+	foam_lags_add(slope, cos_sin, foam_rate(wave.xy, max(wave.w, 0.5), omega), lag_a, lag_b);
+}
+
 // The lake's surface at a pixel: near the camera, where the board floats on them, the exact Gerstner
 // tangents of the trains the physics rides at the pixel's rest point, faded where a wavelength
 // covers too few pixels; elsewhere (farther out, from high up, on the far water) and for the trains
@@ -250,8 +287,9 @@ vec4 lake_pixel_exact(vec2 rest) {
 // `breaking` the breaking waves' sums for the whitecaps (lake_look_wave()), `full_variance` their
 // crest steepness's variance if all were drawn, `trains_mss` the mean square slope all the trains hold
 // here (the short waves get the rest of the wind's, lake_short_mss()) and `peak_period_s` the lake's
-// peak period here (0 off the lake's grid).
-void lake_pixel_surface(vec2 rest, float pixel_m, out vec3 tangent_x, out vec3 tangent_z, out float crest, out float total_steepness, out float faded_slope2, out vec3 breaking, out float full_variance, out float trains_mss, out float peak_period_s) {
+// peak period here (0 off the lake's grid); `lag_a` and `lag_b` the breaking waves' squeeze at the 8 earlier
+// moments the foam left behind is drawn from (lake_look.gdshaderinc, 6.).
+void lake_pixel_surface(vec2 rest, float pixel_m, out vec3 tangent_x, out vec3 tangent_z, out float crest, out float total_steepness, out float faded_slope2, out vec3 breaking, out float full_variance, out float trains_mss, out float peak_period_s, out vec4 lag_a, out vec4 lag_b) {
 	vec4 lengths = vec4(wave_a.w, wave_b.w, wave_c.w, wave_d.w);
 	vec4 shown = vec4(1.0) - smoothstep(lengths / 6.0, lengths / 3.0, vec4(pixel_m));
 	vec4 near_shape = lake_pixel_exact(rest);
@@ -269,11 +307,19 @@ void lake_pixel_surface(vec2 rest, float pixel_m, out vec3 tangent_x, out vec3 t
 	full_variance = 0.5 * dot(steepness, steepness);
 	trains_mss = 0.5 * dot(slopes, slopes);
 	peak_period_s = 0.0;
-	vec4 waves[4] = vec4[](wave_a, wave_b, wave_c, wave_d);
+	lag_a = vec4(0.0);
+	lag_b = vec4(0.0);
+	lake_exact_lags(wave_a, amplitudes.x, exact_weights.x, rest, lag_a, lag_b);
+	lake_exact_lags(wave_b, amplitudes.y, exact_weights.y, rest, lag_a, lag_b);
+	lake_exact_lags(wave_c, amplitudes.z, exact_weights.z, rest, lag_a, lag_b);
+	lake_exact_lags(wave_d, amplitudes.w, exact_weights.w, rest, lag_a, lag_b);
+	// Written out train by train: a loop indexing the vectors (amplitudes[i]) made the shader compiler log
+	// "OpVectorExtractDynamic is not supported yet" eight times at every start.
 	vec4 elsewhere = sqrt(max(vec4(1.0) - near_shape, vec4(0.0)));
-	for (int i = 0; i < 4; i++) {
-		lake_spread_train(i, waves[i].z, amplitudes[i] * elsewhere[i], pixel_m, rest, tangent_x, tangent_z, faded_slope2, breaking);
-	}
+	lake_spread_train(0, wave_a.z, amplitudes.x * elsewhere.x, pixel_m, rest, tangent_x, tangent_z, faded_slope2, breaking, lag_a, lag_b);
+	lake_spread_train(1, wave_b.z, amplitudes.y * elsewhere.y, pixel_m, rest, tangent_x, tangent_z, faded_slope2, breaking, lag_a, lag_b);
+	lake_spread_train(2, wave_c.z, amplitudes.z * elsewhere.z, pixel_m, rest, tangent_x, tangent_z, faded_slope2, breaking, lag_a, lag_b);
+	lake_spread_train(3, wave_d.z, amplitudes.w * elsewhere.w, pixel_m, rest, tangent_x, tangent_z, faded_slope2, breaking, lag_a, lag_b);
 	// The short train: nodes as lake_envelope; its amplitude at the recent wind (9.17, the gusts).
 	vec2 f = (rest - lake_grid.xy) * lake_grid.z;
 	if (f.x < 0.0 || f.y < 0.0 || f.x >= float(lake_grid_size.x - 1) || f.y >= float(lake_grid_size.y - 1)) {
@@ -285,7 +331,7 @@ void lake_pixel_surface(vec2 rest, float pixel_m, out vec3 tangent_x, out vec3 t
 		mix(texelFetch(lake_look_data, node + ivec2(0, 1), 0), texelFetch(lake_look_data, node + ivec2(1, 1), 0), t.x), t.y);
 	float a = look.r * pow(max(wind_recent_ratio(rest), 0.0), look.g);
 	peak_period_s = look.a;
-	lake_spread_train(4, lake_look_band.z, a, pixel_m, rest, tangent_x, tangent_z, faded_slope2, breaking);
+	lake_spread_train(4, lake_look_band.z, a, pixel_m, rest, tangent_x, tangent_z, faded_slope2, breaking, lag_a, lag_b);
 	float look_slope = a * 2.0 * PI / lake_look_band.w;
 	full_variance += 0.5 * min(look_slope, PI / 7.0) * min(look_slope, PI / 7.0);
 	trains_mss += 0.5 * look_slope * look_slope;
@@ -320,14 +366,17 @@ void fragment() {
 		float breaking_full;
 		float trains_mss;
 		float peak_period_s;
-		lake_pixel_surface(rest_xz, pixel_m, tangent_x, tangent_z, crest, total_steepness, waves_faded_slope2, breaking, breaking_full, trains_mss, peak_period_s);
-		// The wind of this moment here: the short waves' slope (Cox and Munk) and the whitecaps' share
-		// (Zhao and Toba, with the lake's own waves here).
+		vec4 lag_a;
+		vec4 lag_b;
+		lake_pixel_surface(rest_xz, pixel_m, tangent_x, tangent_z, crest, total_steepness, waves_faded_slope2, breaking, breaking_full, trains_mss, peak_period_s, lag_a, lag_b);
+		// The wind of this moment here: the short waves' slope (Cox and Munk, in wind rows) and the
+		// whitecaps' share (whitecap_cover(), with the lake's own waves here).
 		float wind_here = wind_ratio_here(world_position.xz);
-		lake_short_waves(rest_xz, pixel_m, lake_short_mss(lake_wind_ms.y * wind_here, trains_mss), tangent_x, tangent_z, waves_faded_slope2);
+		float rows = wind_rows(world_position.xz, lake_wind_ms.x * wind_here, pixel_m);
+		lake_short_waves(rest_xz, pixel_m, lake_short_mss(lake_wind_ms.y * wind_here, trains_mss) * rows, tangent_x, tangent_z, waves_faded_slope2);
 		// Fresh foam is frothy: a little lighter and darker with the same fraying noise.
 		float fray;
-		lake_foam = lake_whitecap(breaking, breaking_full, whitecap_fraction(lake_wind_ms.x * wind_here, peak_period_s), rest_xz, pixel_m, fray);
+		lake_foam = lake_whitecap(breaking, lag_a, lag_b, breaking_full, whitecap_cover(lake_wind_ms.x * wind_here, peak_period_s), rest_xz, pixel_m, fray);
 		lake_foam *= whitecap_opacity * (0.85 + 0.15 * fray);
 		lake_gust = lake_gust_signal(wind_here);
 		lake_slope = vec2(tangent_x.y, -tangent_z.y);
@@ -339,6 +388,29 @@ void fragment() {
 		pixel_crest_steepness = crest;
 	}
 	float wind = wind_ripple_factor(world_position.xz);
+	// The open sea in the wind (lake_look.gdshaderinc, 5. to 7.; OceanNode hands it the mean wind as
+	// lake_wind_ms): whitecaps by the measured law on its waves, the foam they leave, and a mirror as much
+	// rougher than the look's own (made for open_look_wind_ms) as Cox and Munk's slope, in wind rows.
+	float sea_foam = -1.0;
+	float sea_roughness = 1.0;
+	if (!lake_waves_on && lake_wind_ms.x > 0.0) {
+		vec2 footprint = fwidth(rest_xz);
+		float pixel_m = max(footprint.x, footprint.y);
+		vec3 breaking = vec3(0.0);
+		float full_variance = 0.0;
+		vec4 lag_a = vec4(0.0);
+		vec4 lag_b = vec4(0.0);
+		sea_breaking(wave_a, wave_amplitudes.x, rest_xz, pixel_m, breaking, full_variance, lag_a, lag_b);
+		sea_breaking(wave_b, wave_amplitudes.y, rest_xz, pixel_m, breaking, full_variance, lag_a, lag_b);
+		sea_breaking(wave_c, wave_amplitudes.z, rest_xz, pixel_m, breaking, full_variance, lag_a, lag_b);
+		sea_breaking(wave_d, wave_amplitudes.w, rest_xz, pixel_m, breaking, full_variance, lag_a, lag_b);
+		float wind_here = sqrt(max(wind, 0.0));
+		float fray;
+		sea_foam = lake_whitecap(breaking, lag_a, lag_b, full_variance, whitecap_cover(lake_wind_ms.x * wind_here, 0.0), rest_xz, pixel_m, fray);
+		sea_foam *= whitecap_opacity * (0.85 + 0.15 * fray);
+		float rows = wind_rows(world_position.xz, lake_wind_ms.x * wind_here, pixel_m);
+		sea_roughness = sqrt(cox_munk_mss(lake_wind_ms.y) * rows / cox_munk_mss(open_look_wind_ms));
+	}
 	// On a lake, how much rougher the water is here than the lake's mean (lake_gust_signal()).
 	float gust = clamp(lake_waves_on ? lake_gust * lake_gust_contrast : (wind - 1.0) * gust_look_contrast, -1.0, 1.0);
 	float darker = 1.0 - gust_darkening * max(gust, 0.0);
@@ -387,7 +459,8 @@ void fragment() {
 
 	// 5. Foam on the steep crests covers the rest; the grid lines lie on top.
 	// On a lake, the whitecaps of its wind (lake_whitecap()).
-	float foam = lake_waves_on ? lake_foam : smoothstep(foam_threshold, foam_threshold + 0.15, pixel_crest_steepness) * 0.7;
+	// On the open sea in a known wind, its whitecaps by the law (sea_foam); without one, the steep crests.
+	float foam = lake_waves_on ? lake_foam : (sea_foam >= 0.0 ? sea_foam : smoothstep(foam_threshold, foam_threshold + 0.15, pixel_crest_steepness) * 0.7);
 	albedo = mix(albedo, foam_color, foam);
 	emission *= 1.0 - foam;
 	float distance_fade = clamp(1.0 - distance_m / grid_fade_distance_m, 0.0, 1.0);
@@ -398,7 +471,7 @@ void fragment() {
 	float roughness = mix(roughness_value, roughness_far, smoothstep(0.0, roughness_far_m, distance_m));
 	// A gust's rougher water mirrors the bright sky less and more diffusely: darker and matt;
 	// a lull's is glassier.
-	roughness = max(roughness * wind, gust_roughness * max(gust, 0.0));
+	roughness = max(roughness * wind * sea_roughness, gust_roughness * max(gust, 0.0));
 	// A lake's wave slopes too small for the pixels roughen the mirror instead: a GGX alpha of
 	// roughness squared, whose square is their mean square slope (Beckmann's m^2 is the mss). That
 	// holds the short waves of the wind here too (lake_short_waves()), so a gust is rougher and a lull

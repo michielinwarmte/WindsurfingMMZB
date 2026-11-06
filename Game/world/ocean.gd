@@ -17,7 +17,8 @@ const SEA_LOOK_PATH: String = "res://world/sea_water.tres"
 ## The ripples grow with the wind up to this many times the look's own strength, which is
 ## the strength at this wind speed (knots, 10 m up).
 const RIPPLE_REFERENCE_WIND_KT: float = 15.0
-const RIPPLE_MAX_FACTOR: float = 1.4
+## (Up to 30 kt: before 6 November 2026 they stopped growing at 21 kt, so 24 and 30 looked the same.)
+const RIPPLE_MAX_FACTOR: float = 2.0
 ## Below about 2 knots the water is almost glassy.
 const RIPPLE_MIN_FACTOR: float = 0.1
 
@@ -65,6 +66,14 @@ var _total_amplitude_m: float = 0.0
 var _look_ripple_strength: float = 0.7
 ## Whether the water is a lake's own waves (LakeWaveField): the graded mesh and the lake's shader path.
 var _lake: bool = false
+## The water's foam and wind rows drift downwind with the surface (lake_look.gdshaderinc, 6. and 7.):
+## at this share of the wind at 10 m (the wind-driven surface drift is a few % of the wind, the usual
+## 3 % of oil-spill drift; an estimate for the foam), along the mean wind's direction of the run, fixed.
+const FOAM_DRIFT_SHARE: float = 0.03
+var _rows_along: Vector2 = Vector2(1.0, 0.0)
+## How far the foam has drifted since the water was built (m), and the water's clock then.
+var _foam_offset_m: Vector2 = Vector2.ZERO
+var _foam_time_s: float = -1.0
 
 
 ## Builds the meshes for this simulation's water and this camera.
@@ -143,6 +152,13 @@ func _apply_look() -> void:
 		var look_parameters: Dictionary[String, Variant] = LakeLook.shader_parameters((_sim.water as LakeWaveField).lake)
 		for key: String in look_parameters:
 			set_water_parameter(key, look_parameters[key])
+	# The direction the wind rows lie along and the foam drifts: the mean wind's, fixed while this water
+	# lasts (a pattern turned with every shift would swing across the whole lake).
+	var from_deg: float = _sim.wind_config.from_bearing_deg if _sim.wind_config != null else 270.0
+	if _lake:
+		from_deg = (_sim.water as LakeWaveField).lake.from_deg
+	_rows_along = WaveField.direction_for_bearing(from_deg + 180.0)
+	set_water_parameter("wind_rows_along", _rows_along)
 	_near.material_override = _near_material
 	_far.material_override = _far_material
 
@@ -240,8 +256,24 @@ func _process(_delta: float) -> void:
 		var eye: Vector3 = _camera.global_position
 		_near_material.set_shader_parameter("lake_lod_centre", Vector2(eye.x, eye.z))
 		_near_material.set_shader_parameter("lake_lod_height_m", maxf(eye.y - _base_height_m, 0.0))
+	_drift_the_foam(time_s)
 	if ripples_follow_wind:
 		_follow_wind()
+
+
+## The foam and the wind rows drift downwind with the surface: the drift of this frame added to the
+## offset (so a change of the wind never jumps them), on the water's own clock. On the open water the
+## shader also gets the mean wind of the moment (the lake scene sets the lake's, sail_silvaplana.gd).
+func _drift_the_foam(time_s: float) -> void:
+	var wind_10m_ms: float = _sim.wind.speed_at_height(10.0)
+	var drift_ms: Vector2 = _rows_along * wind_10m_ms * FOAM_DRIFT_SHARE
+	if _foam_time_s >= 0.0:
+		_foam_offset_m += drift_ms * clampf(time_s - _foam_time_s, 0.0, 0.5)
+	_foam_time_s = time_s
+	set_water_parameter("foam_drift_ms", drift_ms)
+	set_water_parameter("foam_offset_m", _foam_offset_m)
+	if not _lake:
+		set_water_parameter("lake_wind_ms", Vector2(wind_10m_ms, _sim.wind.speed_at_height(LakeLook.COX_MUNK_HEIGHT_M)))
 
 
 ## The ripples drift downwind and grow with the true wind at the board.
