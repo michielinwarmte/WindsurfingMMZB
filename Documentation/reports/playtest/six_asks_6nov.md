@@ -45,3 +45,18 @@ When an agent reports: read its diff (every `Game/sim/` change in full, for Mich
 - 17:08 wind on the water + lake wind multiplier merged (ce63b35, b1c568f, 5a0acaa; merge 3e8e938). Contact sheets looked at: 8 to 30 kt clearly different, no stripes. Left over: spray off crests above 25 kt, handed to the board-fx agent. Board-fx agent started in WindsurfingMMZB-shading on gr/board-fx.
 - 17:40 fin brands merged (e6a6c90..9657e9b). Open for Michiel: the race-shaped fins bend about 1.9x the measured test fin at the same depth (since GE3; a data-only fix is in the report). Open for Max: the colours and marks, the wind ranges on the cards.
 - 17:50 interim play folder WindsurfingMMZB-play-6nov2026-night (+ .zip) from 893c6c2: push on the mouse, lake wind multiplier, wind on the water, fin brands; launchers and cfgs copied from evening-keys; checked with a 3137x1263 lake race screenshot from the folder's own exe (.screenshots/play_night_check_3137.png): both gauges, the key strip's wheel/burst, whitecaps, the fleet. LAN test of this build not run (the autopilot agent may be using the fixed port). The live play-test ended ~17:45.
+
+## Max's second list (~18:10, 6 November 2026): eight small issues
+
+| # | Max's ask | Branch | Agent |
+|---|---|---|---|
+| 7 | Start upwind of the startboat on a slalom race; course builder option: slalom race, course race, iQ hybrid race, free sailing (also easier for the AI to train) | `race/types-start-marks` | wave 3 |
+| 8 | UI of the finishing leaderboard out of frame; a resolution-based UI; general UI improvements | `fix/push-and-leaderboard` (WindsurfingMMZB-gp2) | Opus, 18:12 |
+| 9 | Host and joined player: after changing things in the race director or the gear menu the push slider is gone | `fix/push-and-leaderboard` | the same |
+| 10 | Downwind button (A/D) while pressing Space to gybe instead of heading: now it sometimes tacks when we want to gybe | `gp/manoeuvres` | wave 3 |
+| 11 | More interactive gybes and tacks | `gp/manoeuvres` | wave 3 |
+| 12 | Start buoys different from rounding marks; marks bigger in general | `race/types-start-marks` | wave 3 |
+| 13 | Host and joiners can spectate racers | `mp/spectate` | wave 3 |
+| 14 | Draw distance increase option | `fix/push-and-leaderboard` | the same |
+
+- 18:12 fix/push-and-leaderboard agent launched (asks 8, 9, 14).
