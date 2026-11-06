@@ -21,7 +21,8 @@ extends Node3D
 ## water, placed for the settings' wind; a map scene has its own, see _course_named()), starts the
 ## board 150 m behind its start line and puts it on the HUD and the mini-map; --lines=1 draws its
 ## start and finish lines on the water; --course_view=all puts a fixed camera above the whole
-## course, --course_view=<mark> (1, 4S, start_boat, ...) one beside that mark (for screenshots).
+## course, --course_view=<mark> (1, 4S, start_boat, ...) one beside that mark (for screenshots);
+## --race_type=slalom|course|hybrid|free races the course as that type (Course.RaceType).
 ## Watching a night's generations race (tools/gens.sh): --behind=<m> --wind=<kt> --blind=1
 ## --spectate=1 with the race (RaceSetup.read_options()); while spectating Tab and Shift+Tab pick
 ## the next or the previous board to watch and L follows the leader again (RaceRunner).
@@ -694,6 +695,9 @@ func _course_from_options(usual_start: Vector2) -> Course:
 	if found == null:
 		push_warning("No course called \"%s\" in this scene. The open water has %s; Lake Silvaplana has %s and the courses saved in %s." % [
 			course_name, RaceCourses.T1_NAME, RaceCourses.T2_NAME, RaceCourses.SAVED_FOLDER])
+	elif not _user_option("race_type").is_empty():
+		# --race_type=slalom|course|hybrid|free: the course raced as that type (Course.RaceType).
+		found.race_type = Course.race_type_from_name(_user_option("race_type"))
 	return found
 
 

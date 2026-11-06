@@ -153,12 +153,13 @@ const WIND_MEMORY_S: float = 90.0
 ## m behind the line it ran along the line past its end).
 const START_RUN_IN_TWA_DEG: float = 60.0
 ## A slalom's start (_slalom_start_heading()): it waits within SLALOM_PARK_RADIUS_M of its spot upwind
-## of the committee boat, slows down from SLALOM_SLOW_FROM_M before it, and goes when the time it
-## needs to its crossing is SLALOM_GO_SPARE_S more than the time left (it gains speed on the way
-## down, which the navigation's estimate counts as lost).
+## of the committee boat, slows down from SLALOM_SLOW_FROM_M before it, and goes when it has no more
+## than SLALOM_GO_SPARE_S to spare: the time left less the time it needs to its crossing. (Going at
+## 0 s to spare, 11 personas on iq_pd3 in 15 kt started 0.8 to 15.4 s after the gun, none early: the
+## navigation's estimate is on the long side, and the luff near the line keeps an early board back.)
 const SLALOM_PARK_RADIUS_M: float = 20.0
 const SLALOM_SLOW_FROM_M: float = 60.0
-const SLALOM_GO_SPARE_S: float = 0.0
+const SLALOM_GO_SPARE_S: float = 1.5
 ## The run in is this much wider than the angle the board beats at (the polar's, for the wind and its
 ## character), and no wider than START_RUN_IN_WIDEST_TWA_DEG, degrees: its track, with the leeway, must
 ## lay the spot. 60 was 15 above the old beat of 45; at the polar's 55 to 59 a run in at 60 could not be

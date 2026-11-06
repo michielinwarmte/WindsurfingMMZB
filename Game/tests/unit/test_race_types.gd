@@ -88,7 +88,7 @@ func test_a_slalom_waits_upwind_of_the_committee_boat_spread_across_the_wind() -
 	for spot: Vector2 in spots:
 		assert_almost_eq((spot - boat).dot(up), RaceCourses.SLALOM_WAIT_UPWIND_M, 0.5, "upwind of the committee boat")
 		var behind_m: float = -RoundingCheck.over_line_m(spot, start.points[0], start.points[1], start.in_dir)
-		assert_gte(behind_m, RaceCourses.SLALOM_WAIT_CLEAR_M - 0.5, "behind the line's extension, not over it")
+		assert_gte(behind_m, 20.0, "behind the line's extension, not over it")
 		across_m.append((spot - boat).dot(across))
 	var sorted: PackedFloat32Array = across_m.duplicate()
 	sorted.sort()
@@ -104,9 +104,26 @@ func test_a_slalom_waits_upwind_of_the_committee_boat_spread_across_the_wind() -
 		assert_almost_eq(RoundingCheck.over_line_m(crossing, start.points[0], start.points[1], start.in_dir), 0.0, 0.01, "on the line")
 		assert_lte(crossing.distance_to(boat), line_m, "between its ends")
 		assert_almost_eq((crossing - spot).normalized().dot(dive), 1.0, 0.001, "straight down the broad reach")
-	# The boat's end of the row crosses nearest the boat.
-	assert_lt(RaceCourses.slalom_crossing(course, RaceCourses.slalom_slot(course, 1.0)).distance_to(boat),
-		RaceCourses.slalom_crossing(course, RaceCourses.slalom_slot(course, 0.0)).distance_to(boat))
+	# The row's near end crosses by the boat, its far end at most SLALOM_FARTHEST_CROSSING_M down the line.
+	assert_almost_eq(RaceCourses.slalom_crossing(course, RaceCourses.slalom_slot(course, 1.0)).distance_to(boat),
+		RaceCourses.SLALOM_LINE_INSET_M, 0.01)
+	assert_almost_eq(RaceCourses.slalom_crossing(course, RaceCourses.slalom_slot(course, 0.0)).distance_to(boat),
+		minf(RaceCourses.SLALOM_FARTHEST_CROSSING_M, line_m - RaceCourses.SLALOM_LINE_INSET_M), 0.01)
+
+
+## On a short line (T2's) the row's far end still crosses the line, by the pin: none of its broad
+## reaches runs past the pin (they ran over the line's extension on iq_pd3).
+func test_every_slalom_spot_reaches_the_line_on_a_short_line() -> void:
+	var config: MapConfig = load(MAP_CONFIG_PATH) as MapConfig
+	for saved: String in ["t2_slalom", "iq_pd3", "iq_sd3"]:
+		var course: Course = RaceCourses.load_named(saved, config)
+		var start: RaceStep = RaceSim.new(course, 1, 60.0).steps()[0]
+		var dive: Vector2 = RaceCourses.slalom_dive_direction(course)
+		for i: int in 11:
+			var spot: Vector2 = RaceCourses.slalom_slot(course, i / 10.0)
+			var crossing: Vector2 = RaceCourses.slalom_crossing(course, spot)
+			assert_almost_eq((crossing - spot).normalized().dot(dive), 1.0, 0.001, "%s: straight down the broad reach" % saved)
+			assert_gt(-RoundingCheck.over_line_m(spot, start.points[0], start.points[1], start.in_dir), 20.0, saved + ": behind the line")
 
 
 func test_a_course_race_still_waits_behind_the_line() -> void:
@@ -115,13 +132,18 @@ func test_a_course_race_still_waits_behind_the_line() -> void:
 		var start: RaceStep = RaceSim.new(course, 1, 60.0).steps()[0]
 		for spot: Vector2 in RaceRunner.pre_start_spots(course, start, 6, 60.0):
 			assert_almost_eq(-RoundingCheck.over_line_m(spot, start.points[0], start.points[1], start.in_dir), 60.0, 1.0, id + ": 60 m behind the line")
-	# The same course set to slalom waits upwind of its boat: the type decides, not the shape.
-	var slalom: Course = CourseTemplates.build("LG2", _rules(), 15.0, 24, 0.0, Vector2.ZERO)
-	slalom.race_type = Course.RaceType.SLALOM
-	var boat: Vector2 = slalom.mark(CourseMark.START_BOAT).position
-	var first: RaceStep = RaceSim.new(slalom, 1, 60.0).steps()[0]
-	for spot: Vector2 in RaceRunner.pre_start_spots(slalom, first, 6, 60.0):
-		assert_almost_eq((spot - boat).dot(Course.direction_of(slalom.axis_deg)), RaceCourses.SLALOM_WAIT_UPWIND_M, 0.5)
+	# A slalom's reaching line (PD3's) set to course racing waits behind its line: the type decides.
+	var course_race: Course = CourseTemplates.build("PD3", _rules(), 15.0, 24, 0.0, Vector2.ZERO)
+	course_race.race_type = Course.RaceType.COURSE
+	assert_false(course_race.starts_upwind_of_the_boat())
+	# A slalom laid with a line square to the wind cannot be reached down onto from upwind of its
+	# boat: it waits behind the line.
+	var square: Course = CourseTemplates.build("LG2", _rules(), 15.0, 24, 0.0, Vector2.ZERO)
+	square.race_type = Course.RaceType.SLALOM
+	assert_false(square.starts_upwind_of_the_boat(), "an upwind line")
+	var first: RaceStep = RaceSim.new(square, 1, 60.0).steps()[0]
+	for spot: Vector2 in RaceRunner.pre_start_spots(square, first, 6, 60.0):
+		assert_almost_eq(-RoundingCheck.over_line_m(spot, first.points[0], first.points[1], first.in_dir), 60.0, 1.0, "behind the line")
 
 
 ## The scripted skipper on a slalom makes for the crossing of its own broad reach, not a spot pulled

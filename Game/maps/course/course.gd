@@ -512,9 +512,19 @@ func is_raced() -> bool:
 	return race_type != RaceType.FREE
 
 
-## Whether the boards start on a reach from upwind of the committee boat (a slalom).
+## Whether the boards start on a reach from upwind of the committee boat: a slalom whose start line
+## runs more along the wind than across it (a reaching start, the committee boat its upwind end). A
+## slalom laid with a line across the wind (an upwind start) cannot be reached down onto from upwind
+## of its boat: its boards wait behind the line, as for a course race.
 func starts_upwind_of_the_boat() -> bool:
-	return race_type == RaceType.SLALOM
+	if race_type != RaceType.SLALOM:
+		return false
+	var boat: CourseMark = mark(CourseMark.START_BOAT)
+	var pin: CourseMark = mark(CourseMark.START_PIN)
+	if boat == null or pin == null or boat.position.is_equal_approx(pin.position):
+		return false
+	var boat_upwind: float = (boat.position - pin.position).normalized().dot(direction_of(axis_deg))
+	return boat_upwind > sin(deg_to_rad(45.0))
 
 
 ## The race type's name in the course files: "course", "slalom", "hybrid" or "free".

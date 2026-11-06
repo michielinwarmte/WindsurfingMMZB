@@ -29,17 +29,18 @@ const T1_START_LINE_M: float = 60.0
 const PRE_START_BEHIND_M: float = 150.0
 ## A slalom's start (Max, 6 November 2026: "Start upwind of the startboat on a slalom race"): the
 ## boards wait in a row SLALOM_WAIT_UPWIND_M upwind of the committee boat, spread across the wind
-## on the side away from the course, from SLALOM_WAIT_CLEAR_M behind the line's upwind extension to
-## SLALOM_ROW_M further. At the gun each bears away onto a broad reach SLALOM_DIVE_TWA_DEG from the
-## wind and reaches down onto the line, crossing it where that reach meets it: the nearer the
-## boat's end of the row, the nearer the boat it crosses. The row stays inside the sailing area
-## (SailingArea.UPWIND_M above the boat, ACROSS_M across): an ESTIMATE of a slalom's waiting area,
-## not a class number; the dive of 140 degrees is a broad reach a slalom board sails at full speed, and with
-## the row 35 m upwind it puts the row 35 to 120 m out from the line, its crossings from the boat end to
-## some 110 m down the line.
+## on the side away from the course. At the gun each bears away onto a broad reach
+## SLALOM_DIVE_TWA_DEG from the wind and reaches down onto the line. Each spot of the row is set back
+## up that broad reach from a point of the line: the row's near end crosses the line by the boat,
+## its far end SLALOM_FARTHEST_CROSSING_M down the line (or at its pin end if the line is shorter).
+## On a reaching line (along the wind) the row then runs 30 to 115 m out from the line. It stays
+## inside the sailing area (SailingArea.UPWIND_M above the boat, ACROSS_M across). ESTIMATES of a
+## slalom's waiting area, not class numbers; 140 degrees is a broad reach a slalom board sails at full
+## speed. (A row of fixed spots 35 to 120 m out put the far end's broad reach past the pin of a short
+## line: its boards aimed at the pin from too far up, ran over the line's extension and started 15 s
+## late, on iq_pd3.)
 const SLALOM_WAIT_UPWIND_M: float = 35.0
-const SLALOM_WAIT_CLEAR_M: float = 35.0
-const SLALOM_ROW_M: float = 85.0
+const SLALOM_FARTHEST_CROSSING_M: float = 100.0
 const SLALOM_DIVE_TWA_DEG: float = 140.0
 ## The crossing is kept this far in from the line's ends, metres.
 const SLALOM_LINE_INSET_M: float = 6.0
@@ -156,12 +157,29 @@ static func wait_spot(course: Course, share: float, behind_m: float) -> Vector2:
 
 
 ## A slalom's waiting spot (SLALOM_WAIT_UPWIND_M upwind of the committee boat), at `share` of the
-## row: 1 at its end nearest the line's upwind extension, 0 at its far end.
+## row: 1 at its end nearest the line (its broad reach crosses the line by the boat), 0 at its far
+## end (crossing SLALOM_FARTHEST_CROSSING_M down the line, or by the pin of a shorter line). The spot
+## is that point of the line, moved back up the broad reach (slalom_dive_direction()) to the row's
+## height.
 static func slalom_slot(course: Course, share: float) -> Vector2:
 	var boat: Vector2 = course.mark(CourseMark.START_BOAT).position
+	var pin: Vector2 = course.mark(CourseMark.START_PIN).position
+	var length_m: float = boat.distance_to(pin)
+	var inset: float = minf(SLALOM_LINE_INSET_M, 0.4 * length_m)
+	# Where its broad reach would cross a line SLALOM_FARTHEST_CROSSING_M long, and where it crosses
+	# this one (no further than the pin).
+	var wanted_m: float = lerpf(maxf(SLALOM_FARTHEST_CROSSING_M, inset), inset, clampf(share, 0.0, 1.0))
+	var along_m: float = clampf(wanted_m, inset, maxf(length_m - inset, inset))
+	var crossing: Vector2 = boat.lerp(pin, along_m / maxf(length_m, 0.01))
 	var up: Vector2 = Course.direction_of(course.axis_deg)
-	var out_m: float = SLALOM_WAIT_CLEAR_M + (1.0 - clampf(share, 0.0, 1.0)) * SLALOM_ROW_M
-	return boat + up * SLALOM_WAIT_UPWIND_M + _away_across_the_wind(course) * out_m
+	var dive: Vector2 = slalom_dive_direction(course)
+	# Back up the broad reach until it is SLALOM_WAIT_UPWIND_M above the boat; on a line shorter than
+	# the row needs, the far spots further up their reach (by as much as the line falls short), so
+	# that the row keeps its width and every reach still meets the line (a short line's row of fixed
+	# height had its boards 3 m apart on T2).
+	var line_falls_m: float = (pin - boat).normalized().dot(-up)
+	var climb_m: float = SLALOM_WAIT_UPWIND_M + (boat - crossing).dot(up) + (wanted_m - along_m) * maxf(line_falls_m, 0.0)
+	return crossing - dive * climb_m / maxf(-dive.dot(up), 0.2)
 
 
 ## The direction of a slalom's dive onto the line (one metre long): a broad reach SLALOM_DIVE_TWA_DEG
@@ -189,19 +207,6 @@ static func slalom_crossing(course: Course, from: Vector2) -> Vector2:
 		u = (from - boat).cross(dive) / across
 	var inset: float = minf(SLALOM_LINE_INSET_M, 0.4 * length_m)
 	return boat + along * clampf(u, inset, length_m - inset)
-
-
-## Across the wind (one metre long), toward the side the boards wait on: away from the course.
-static func _away_across_the_wind(course: Course) -> Vector2:
-	var up: Vector2 = Course.direction_of(course.axis_deg)
-	var back: Vector2 = -_course_side_of_start_line(course)
-	var flat: Vector2 = back - up * back.dot(up)
-	if flat.length() < 0.2:
-		# A line square to the wind: the boards wait out beyond the boat's end.
-		var boat: Vector2 = course.mark(CourseMark.START_BOAT).position
-		flat = boat - course.mark(CourseMark.START_PIN).position
-		flat = flat - up * flat.dot(up)
-	return flat.normalized()
 
 
 ## Where a board waits before the start: PRE_START_BEHIND_M behind the middle of the start line,

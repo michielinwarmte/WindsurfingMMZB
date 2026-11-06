@@ -23,6 +23,10 @@ extends RefCounted
 const ACROSS_M: float = 150.0
 const DOWNWIND_M: float = 100.0
 const UPWIND_M: float = 50.0
+## A slalom's start (Course.starts_upwind_of_the_boat()) waits upwind of the committee boat, in a row
+## that reaches up to some 100 m above it on a short line (RaceCourses.slalom_slot()): the area
+## reaches this far up the wind there.
+const SLALOM_UPWIND_M: float = 120.0
 ## On a lake every part of the area keeps at least this much water to the shore, metres: the AI
 ## boards are not stopped by the shallows the way the player's board is.
 const SHORE_ROOM_M: float = 80.0
@@ -76,7 +80,8 @@ static func around_start(course: Course, clearance: Callable = Callable()) -> Sa
 	# The sides: left and right across the wind, down and up the wind, from the line's middle.
 	var line: PackedFloat32Array = PackedFloat32Array([minf(ends[0].x, ends[1].x), maxf(ends[0].x, ends[1].x),
 		minf(ends[0].y, ends[1].y), maxf(ends[0].y, ends[1].y)])
-	var sides: PackedFloat32Array = PackedFloat32Array([line[0] - ACROSS_M, line[1] + ACROSS_M, line[2] - DOWNWIND_M, line[3] + UPWIND_M])
+	var upwind_m: float = SLALOM_UPWIND_M if course.starts_upwind_of_the_boat() else UPWIND_M
+	var sides: PackedFloat32Array = PackedFloat32Array([line[0] - ACROSS_M, line[1] + ACROSS_M, line[2] - DOWNWIND_M, line[3] + upwind_m])
 	if clearance.is_valid():
 		sides = area._fitted_to_water(clearance, middle, sides, line)
 	area._set_sides(middle, sides[0], sides[1], sides[2], sides[3])
