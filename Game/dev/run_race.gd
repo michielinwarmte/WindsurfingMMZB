@@ -111,6 +111,7 @@ static var _lake: EnvironmentConfig = null
 static var _lake_time_s: float = 14.5 * 3600.0
 ## --pilot.<field> and --controller.<field> for every skipper's controller.
 static var _controller_overrides: Dictionary[String, float] = {}
+static var _overrides_read: bool = false
 
 
 ## One board in the race: its simulation, who sails it, and what is counted about it.
@@ -579,6 +580,15 @@ static func _make_lake_sim() -> WindsurferSim:
 
 ## The --pilot. and --controller. settings on a skipper's controller.
 static func _apply_controller_overrides(controller: PlayerController) -> void:
+	if not _overrides_read:
+		# Also when the harness is used by a test (test_living_skipper_fleet.gd uses make_entries()):
+		# the environment variable WSIM_CONTROLLER ("controller.rail_full_ms=0;pilot.hike_share=1.0"),
+		# to try a setting on a validation test (GUT refuses options it does not know).
+		_overrides_read = true
+		for item: String in OS.get_environment("WSIM_CONTROLLER").split(";", false):
+			if (item.begins_with("pilot.") or item.begins_with("controller.")) and item.contains("="):
+				var parts: PackedStringArray = item.split("=", true, 1)
+				_controller_overrides[parts[0]] = parts[1].to_float()
 	for key: String in _controller_overrides:
 		var parts: PackedStringArray = key.split(".", true, 1)
 		if parts[0] == "pilot":

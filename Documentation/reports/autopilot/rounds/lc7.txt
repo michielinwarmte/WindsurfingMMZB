@@ -1,0 +1,11 @@
+# Lake chop round 7 (6 November 2026): the before and after on the shipped defaults (round 4's c2hu10
+# with the rail's fade lowered to 0.3 to 1 m/s: from 2 to 5 m/s it made a rookie start over the line
+# in the fleet's validation test, test_living_skipper_fleet.gd; at 0.3 to 1 the fleet starts as before
+# and the 18 lake cases out of irons and the held turns still do not fall). "before" sails with the
+# chop technique off (the controller's settings before this training: it sails bit for bit as the
+# baseline). The lake at six other hours (12:15, 12:45, 13:45, 15:15, 16:15, 16:45: 180 manoeuvre
+# cases) and the 40 afternoon reaches. Run with --matrix_times=12:15,12:45,13:45,15:15,16:15,16:45
+# --only=lake. The standard set for "final": round lc7s. (A first start of this round, before the
+# rail's change, was stopped after a minute: .sim_output/autopilot/lc7_stopped, not used.)
+before: --controller.head_up_alpha_deg=90 --controller.rail_full_ms=0 --controller.airborne_alpha_deg=90
+final:

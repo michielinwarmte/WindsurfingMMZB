@@ -217,9 +217,9 @@ var _was_down: Dictionary[String, bool] = {}
 
 
 ## Sailing in chop (Documentation/reports/autopilot/lake_chop_training.md). The defaults are the lake
-## training's choice (6 November 2026, round 4's c2hu10): the ease while carving up at speed (for a key
-## or a tack), no rail at walking pace, the ease in the air in strong wind and short chop with the sail
-## back in fast on landing. On Lake Silvaplana's waves it fell in none of the 130 cases the rounds tuned
+## training's choice (6 November 2026, round 4's c2hu10, with the rail's fade lowered for the fleet's
+## start): the ease while carving up at speed (for a key or a tack), no rail at walking pace, the ease
+## in the air in strong wind and short chop with the sail back in fast on landing. On Lake Silvaplana's waves it fell in none of the 130 cases the rounds tuned
 ## on (the controller before: 26) and in 6 of 180 on six other hours (before: 29), with the afternoon
 ## reaches and the open water's push check as fast as before. Less pull in chop (chop_hike_drop) and
 ## waiting for the wave (manoeuvre_wait_max_s) are built and off: the rounds found no gain in them.
@@ -227,9 +227,12 @@ var _was_down: Dictionary[String, bool] = {}
 ## faded in from rail_from_ms to rail_full_ms. A board at walking pace does not carve, and in chop a
 ## sailor standing on the windward rail of a slow board with a luffing sail is tipped off it (the
 ## lake matrix's out-of-irons case: the board rolled to 50 degrees at 2 km/h and the sailor fell
-## off). Both 0: the rail at every speed, as before.
-var rail_from_ms: float = 2.0
-var rail_full_ms: float = 5.0
+## off). Faded in from 2 to 5 m/s it also slowed the AI's turns while holding back before a start (a
+## rookie over the line in the fleet's validation test); from 0.3 to 1 m/s it still keeps the board out
+## of irons upright (18 lake cases, no fall) and the fleet's start is as before. Both 0: the rail at
+## every speed.
+var rail_from_ms: float = 0.3
+var rail_full_ms: float = 1.0
 ## Heading up on purpose at speed (a tack's carve up to the wind, or a key held toward the wind):
 ## the auto-sheet trims no closer than head_up_alpha_deg of angle of attack, from head_up_ease_from_ms
 ## on. The turn's push is felt as heel to leeward (atan(v w / g): 15 degrees at 15 degrees per second
