@@ -28,6 +28,21 @@ class Leg:
 		return Course.bearing_deg(from_point, to_point)
 
 
+## What kind of racing the course is for (Max, 6 November 2026: "on the course builder a option for
+## slalom race, course race and iq hybrid race and then also free sailing. also easier for ai to
+## train"). It is an input the race and the AI rely on instead of guessing from the shape:
+## - COURSE: course racing (windward-leeward, trapezoid): an upwind start, the boards wait behind
+##   the line; beats and runs;
+## - SLALOM: a sprint slalom: a reaching start, the boards wait upwind of the committee boat and
+##   reach down onto the line at the gun; reaches with gybe marks;
+## - HYBRID: the iQFOiL's mixed sprints (the upwind sprints US3/US4, the medal race MR1): course
+##   racing's start and beat, slalom's reaches;
+## - FREE: free sailing: no countdown, no results; the marks are on the water to sail round.
+enum RaceType { COURSE, SLALOM, HYBRID, FREE }
+## The race types in the order the course makers list them, and their names in the course files.
+const RACE_TYPES: Array[RaceType] = [RaceType.SLALOM, RaceType.COURSE, RaceType.HYBRID, RaceType.FREE]
+const RACE_TYPE_NAMES: PackedStringArray = ["course", "slalom", "hybrid", "free"]
+
 ## How finely a leg is checked for land, metres.
 const LAND_CHECK_STEP_M: float = 10.0
 ## The "frame" of a course file whose positions are game metres (x east, z south) instead of
@@ -45,6 +60,8 @@ var axis_deg: float = 0.0
 var size_percent: float = 100.0
 ## How many boards the start line is set for.
 var boards: int = 40
+## What kind of racing it is for (RaceType): the start, the AI's plan, or free sailing.
+var race_type: RaceType = RaceType.COURSE
 var marks: Array[CourseMark] = []
 
 
@@ -384,6 +401,7 @@ func copy() -> Course:
 	result.axis_deg = axis_deg
 	result.size_percent = size_percent
 	result.boards = boards
+	result.race_type = race_type
 	for each: CourseMark in marks:
 		result.add_mark(each.id, each.position, each.side)
 	return result
@@ -414,6 +432,7 @@ func to_dict(config: MapConfig) -> Dictionary:
 		"axis_deg": snappedf(axis_deg, 0.1),
 		"size_percent": size_percent,
 		"boards": boards,
+		"race_type": race_type_name(race_type),
 		"marks": mark_list,
 	}
 
@@ -437,6 +456,7 @@ func _to_game_frame_dict() -> Dictionary:
 		"axis_deg": snappedf(axis_deg, 0.1),
 		"size_percent": size_percent,
 		"boards": boards,
+		"race_type": race_type_name(race_type),
 		"marks": mark_list,
 	}
 
@@ -455,6 +475,8 @@ static func from_dict(data: Dictionary, config: MapConfig) -> Course:
 	course.axis_deg = float(data.get("axis_deg", 0.0))
 	course.size_percent = float(data.get("size_percent", 100.0))
 	course.boards = int(data.get("boards", 40))
+	# A file saved before the race types: the type its template has (CourseTemplates.race_type_of()).
+	course.race_type = race_type_from_name(str(data.get("race_type", race_type_name(CourseTemplates.race_type_of(course.template)))))
 	for item: Dictionary in data.get("marks", []):
 		var side: CourseMark.Rounding = CourseMark.side_from_name(str(item.get("side", "")))
 		if in_game_metres:
@@ -481,6 +503,41 @@ static func load_from(path: String, config: MapConfig) -> Course:
 	if not (data is Dictionary):
 		return null
 	return from_dict(data, config)
+
+
+# ---------------------------------------------------------------- the race type
+
+## Whether the course is raced (every type but free sailing).
+func is_raced() -> bool:
+	return race_type != RaceType.FREE
+
+
+## Whether the boards start on a reach from upwind of the committee boat (a slalom).
+func starts_upwind_of_the_boat() -> bool:
+	return race_type == RaceType.SLALOM
+
+
+## The race type's name in the course files: "course", "slalom", "hybrid" or "free".
+static func race_type_name(type: RaceType) -> String:
+	return RACE_TYPE_NAMES[type]
+
+
+## The race type from its name in a course file (anything else: COURSE).
+static func race_type_from_name(text: String) -> RaceType:
+	var index: int = RACE_TYPE_NAMES.find(text.strip_edges().to_lower())
+	return index as RaceType if index >= 0 else RaceType.COURSE
+
+
+## The race type as the course makers and the HUD show it.
+static func race_type_title(type: RaceType) -> String:
+	match type:
+		RaceType.SLALOM:
+			return "Slalom race"
+		RaceType.HYBRID:
+			return "iQ hybrid race"
+		RaceType.FREE:
+			return "Free sailing"
+	return "Course race"
 
 
 # ---------------------------------------------------------------- directions

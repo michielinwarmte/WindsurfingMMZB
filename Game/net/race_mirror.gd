@@ -80,13 +80,16 @@ func restart(info: Dictionary) -> void:
 	rules = RaceRules.new(race.board_count(), course.axis_deg) if bool(info.get("rules", race_setup.rules)) else null
 	_start_signals = RaceStartSignals.new(race.prestart_s)
 	hud.reset()
-	_show_racing_hud(_my_index >= 0)
+	_show_racing_hud(_my_index >= 0 and course.is_raced())
 
 
 ## The race director's changed course (R6): the race's steps take it (only the marks' places during a
 ## race; RaceSim.refresh_course()), and the next start is built on it.
 func update_course(new_course: Course) -> void:
 	course = new_course
+	if not course.is_raced():
+		# Free sailing (Course.RaceType.FREE): no race card.
+		_show_racing_hud(false)
 	if race != null:
 		race.refresh_course(new_course)
 
@@ -166,6 +169,10 @@ func shadow_deficit() -> float:
 
 func _process(_delta: float) -> void:
 	if race == null:
+		return
+	if not course.is_raced():
+		# Free sailing: the plain screen, and what the director says.
+		_notice.show_text(RaceDirector.notice_text(director, true, race))
 		return
 	if _my_index < 0:
 		# Not in this race (joined during it): the race card is hidden, the notice says when it races.

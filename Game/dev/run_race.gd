@@ -703,6 +703,9 @@ static func _make_skipper_board(skipper_name: String, race: RaceSim, course: Cou
 	var behind: float = behind_m if behind_m > 0.0 else wait_behind_m(race.prestart_s)
 	var along: Vector2 = start.points[0] - start.points[1]
 	var at: Vector2 = RaceCourses.pre_start_spot(course) + start.in_dir * (RaceCourses.PRE_START_BEHIND_M - behind) + along * (share - 0.5)
+	if course.starts_upwind_of_the_boat():
+		# A slalom: in the row upwind of the committee boat (RaceCourses.slalom_slot()).
+		at = RaceCourses.slalom_slot(course, share)
 	entry.sim.reset(Vector3(at.x, 0.0, at.y), deg_to_rad(RaceCourses.pre_start_heading_deg(course)))
 	entry.controller.reset_controls(entry.controls)
 	return entry

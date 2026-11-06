@@ -1,12 +1,14 @@
 class_name CoursePanel
 extends PanelContainer
-## The course maker's panel (MAP_SILVAPLANA_PLAN.md, W4a): choose a template, set the course's axis,
+## The course maker's panel (MAP_SILVAPLANA_PLAN.md, W4a): choose a template, its race type (slalom,
+## course racing, iQ hybrid or free sailing: Course.RaceType), set the course's axis,
 ## size and number of boards, add marks, type the order the marks are sailed in, change the
 ## selected mark (name, rounding side, delete), undo, clear, save and load the team's courses; it
 ## lists the legs and the warnings. Fit to water makes the course fit the lake (CourseFitter). It
 ## only shows and asks: CourseEditor does the work, through the signals.
 
 signal template_chosen(id: String)
+signal race_type_chosen(type: Course.RaceType)
 signal boards_changed(boards: int)
 signal size_changed(percent: float)
 signal axis_changed(degrees: float)
@@ -29,6 +31,7 @@ const SELECTED_COLOR: Color = Color("#ffd60a")
 const MUTED: Color = Color(1.0, 1.0, 1.0, 0.65)
 
 var _template: OptionButton
+var _race_type: OptionButton
 var _boards: SpinBox
 var _size: SpinBox
 var _axis: SpinBox
@@ -75,6 +78,20 @@ func _ready() -> void:
 		_template.add_item(CourseTemplates.title(id))
 	_template.item_selected.connect(_on_template_selected)
 	box.add_child(_template)
+
+	var kind: HBoxContainer = _row(box)
+	var kind_label: Label = Label.new()
+	kind_label.text = "Race type"
+	kind.add_child(kind_label)
+	_race_type = OptionButton.new()
+	_race_type.name = "RaceType"
+	_race_type.focus_mode = Control.FOCUS_NONE
+	_race_type.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_race_type.tooltip_text = "Slalom: the boards wait upwind of the committee boat and reach down onto the line. Course: an upwind start. iQ hybrid: an upwind start with reaches. Free sailing: no countdown, no results; the marks stay on the water."
+	for type: Course.RaceType in Course.RACE_TYPES:
+		_race_type.add_item(Course.race_type_title(type))
+	_race_type.item_selected.connect(func(index: int) -> void: race_type_chosen.emit(Course.RACE_TYPES[index]))
+	kind.add_child(_race_type)
 
 	var turning: HBoxContainer = _row(box)
 	_axis = _spin_box(turning, "Axis °", 0.0, 359.0, 1.0, "The wind direction the course is set for: mark 1 lies this way from the start")
@@ -186,7 +203,9 @@ func show_course(course: Course, summary: String, legs_header: PackedStringArray
 			(control as SpinBox).editable = course != null
 		elif control is LineEdit:
 			(control as LineEdit).editable = course != null
+	_race_type.disabled = course == null
 	if course != null:
+		_race_type.select(Course.RACE_TYPES.find(course.race_type))
 		_axis.set_value_no_signal(roundf(course.axis_deg))
 		_size.set_value_no_signal(course.size_percent)
 		_boards.set_value_no_signal(course.boards)
@@ -202,6 +221,18 @@ func show_course(course: Course, summary: String, legs_header: PackedStringArray
 		_columns[i].text = "\n".join(lines)
 	_warnings.text = "\n".join(warnings)
 	_warnings.visible = not warnings.is_empty()
+
+
+## The race type the selector shows (for tests): its title.
+func race_type_text() -> String:
+	return _race_type.get_item_text(_race_type.selected) if _race_type.selected >= 0 else ""
+
+
+## Picks a race type as if it were chosen in the selector (for tests and scripts).
+func choose_race_type(type: Course.RaceType) -> void:
+	var index: int = Course.RACE_TYPES.find(type)
+	_race_type.select(index)
+	race_type_chosen.emit(type)
 
 
 ## Shows the selected mark (null: none, the row is hidden). The lines' ends and the gates' marks

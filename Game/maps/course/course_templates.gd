@@ -62,6 +62,18 @@ static func default_boards(id: String) -> int:
 	return 40
 
 
+## The race type a template is for (Course.RaceType): the sprint slaloms PD3 and SD3 are slaloms;
+## the windward-leewards and the trapezoids course racing; the upwind sprints US3 and US4 and the
+## medal race MR1 (PM1, SM1) mix the two (a beat or a run with reaches): iQ hybrid races. Anything
+## else (no template, a course made by hand): course racing.
+static func race_type_of(id: String) -> Course.RaceType:
+	if id in ["PD3", "SD3"]:
+		return Course.RaceType.SLALOM
+	if id in ["US3", "US4", "PM1", "SM1"]:
+		return Course.RaceType.HYBRID
+	return Course.RaceType.COURSE
+
+
 ## True for the courses with a reaching start (the start line along the wind).
 static func has_reaching_start(id: String) -> bool:
 	return id in ["PD3", "SD3", "PM1", "SM1"]
@@ -81,6 +93,7 @@ static func build(id: String, rules: CourseRules, wind_kt: float, boards: int, a
 	course.template = id
 	course.name = title(id)
 	course.boards = boards
+	course.race_type = race_type_of(id)
 	course.axis_deg = fposmod(axis_deg, 360.0)
 	var line_m: float = start_line_m(rules, id, boards)
 	match id:
