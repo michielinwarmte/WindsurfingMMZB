@@ -245,6 +245,12 @@ func forget_the_sea() -> void:
 		WaterSurface.forget_samples(samples)
 
 
+## The wet bottom of the last compute(): its wet length along the centreline and its mean wet width,
+## m (0, 0 out of the water). For the hull's view of a lake's waves (LakeWaveField.set_footprint()).
+func wet_footprint_m() -> Vector2:
+	return Vector2(wetted_length_m, planing_beam_m)
+
+
 func compute(body: SimRigidBody, buoyancy: BuoyancyModel, surface: WaterSurface, time_s: float, gravity_ms2: float, total_mass_kg: float, dt: float = 1.0 / 240.0) -> void:
 	_clear()
 	# What the buoyancy grid found this substep, read once (see the note at the top).

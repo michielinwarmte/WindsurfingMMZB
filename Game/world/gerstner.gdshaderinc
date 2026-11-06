@@ -17,6 +17,16 @@ uniform vec4 wave_amplitudes = vec4(0.0);
 uniform float water_time_s = 0.0;
 
 const float G = 9.81;
+// The depth the waves travel in, m (0: deep water): WaveField.angular_frequency() (PHYSICS_SPEC.md
+// 9.18), omega^2 = g k tanh(k h).
+uniform float wave_depth_m = 0.0;
+
+// A wave's angular frequency from its wave number, in the water's depth (WaveField.angular_frequency()).
+// tanh's argument is held at 10 (tanh(10) = 1 - 4e-9): a graphics card may work tanh out from
+// exponentials, which overflow to infinity / infinity for a short wave in deep water.
+float wave_omega(float k) {
+	return wave_depth_m > 0.0 ? sqrt(G * k * tanh(min(k * wave_depth_m, 10.0))) : sqrt(G * k);
+}
 
 // Accumulates one wave: the displacement of 9.4, the tangent vectors of 9.6a and the
 // rendering-only crest factor. `rest` is the world (x, z) of the undisplaced vertex.
@@ -27,7 +37,7 @@ void gerstner(vec4 wave, float amplitude, vec2 rest, float t, inout vec3 displac
 	vec2 d = wave.xy;
 	float s = wave.z;
 	float k = 2.0 * PI / max(wave.w, 0.5);
-	float omega = sqrt(G * k);
+	float omega = wave_omega(k);
 	float phase = k * dot(d, rest) - omega * t;
 	float sp = sin(phase);
 	float cp = cos(phase);
@@ -94,7 +104,7 @@ void gerstner_lake(vec4 wave, float amplitude, float weight, vec2 rest, float t,
 	}
 	vec2 d = wave.xy;
 	float k = 2.0 * PI / max(wave.w, 0.5);
-	float omega = sqrt(G * k);
+	float omega = wave_omega(k);
 	float a = amplitude * weight;
 	float s = min(k * amplitude, PI / 7.0) * weight;
 	float phase = k * dot(d, rest) - omega * t + wave.z;

@@ -44,6 +44,9 @@ const WAVE_SCALE_MAX: float = 2.0
 ## The swell's own height scale: 0 is no swell (a lake), 3 a big one.
 const SWELL_SCALE_MIN: float = 0.0
 const SWELL_SCALE_MAX: float = 3.0
+## The lake's own waves' height multiplier (lake_wave_scale): from half to twice the growth law's.
+const LAKE_WAVE_SCALE_MIN: float = 0.5
+const LAKE_WAVE_SCALE_MAX: float = 2.0
 ## How far the chop may be turned from straight downwind, degrees either way.
 const CHOP_OFFSET_MAX_DEG: float = 90.0
 ## How far the waves of a group are spread around its direction: 0 is every wave straight
@@ -127,6 +130,9 @@ var water_depth_m: float
 ## PHYSICS_SPEC.md 9.17), sail on those instead of the waves above (WaveSetConfig.place_waves).
 ## Off: the waves above everywhere, as before.
 var lake_waves: bool
+## The lake's own waves' height times this (1 = the growth law's, PHYSICS_SPEC.md 9.18): for the
+## autopilot's training on higher waves. The command line's --lake_wave_scale=<x> overrides it.
+var lake_wave_scale: float
 
 # --- Sailing (section "sailing") ---
 var control_mode: PlayerController.Mode
@@ -232,6 +238,7 @@ func reset_to_defaults() -> void:
 	fetch_km = 3.0
 	water_depth_m = DEPTH_DEEP_M
 	lake_waves = true
+	lake_wave_scale = 1.0
 
 	control_mode = PlayerController.Mode.BEGINNER
 	auto_sheet = true
@@ -304,6 +311,7 @@ func build_wave_set_config() -> WaveSetConfig:
 	var config: WaveSetConfig = base.duplicate(true)
 	config.enable_waves = waves_enabled and wave_preset != WavePreset.FLAT
 	config.place_waves = lake_waves
+	config.place_height_scale = lake_wave_scale
 	match wave_preset:
 		WavePreset.MEDIUM_CHOP:
 			_set_chop(config, MEDIUM_CHOP_AMPLITUDES_M, MEDIUM_CHOP_STEEPNESS)
@@ -388,7 +396,7 @@ func sea_signature() -> String:
 	signature += "/swell %s %.0f %.2f/chop %s %.0f %.0f/spread %.2f" % [swell_follows_wind, swell_from_deg, swell_height_scale, chop_follows_wind, chop_from_deg, chop_offset_deg, wave_spread]
 	if wave_preset == WavePreset.FROM_WIND:
 		signature += "/made by %.0f kt over %.1f km, %.1f m deep" % [wind_speed_kt, fetch_km, water_depth_m]
-	signature += "/lake %s" % lake_waves
+	signature += "/lake %s x%.2f" % [lake_waves, lake_wave_scale]
 	return signature
 
 
@@ -418,6 +426,7 @@ func write_to(config: ConfigFile) -> void:
 	config.set_value("waves", "fetch_km", fetch_km)
 	config.set_value("waves", "depth_m", water_depth_m)
 	config.set_value("waves", "lake_waves", lake_waves)
+	config.set_value("waves", "lake_wave_scale", lake_wave_scale)
 
 	config.set_value("sailing", "control_mode", int(control_mode))
 	config.set_value("sailing", "auto_sheet", auto_sheet)
@@ -482,6 +491,7 @@ func read_from(config: ConfigFile) -> void:
 	fetch_km = clampf(_float(config, "waves", "fetch_km", fetch_km), FETCH_MIN_KM, FETCH_MAX_KM)
 	water_depth_m = clampf(_float(config, "waves", "depth_m", water_depth_m), DEPTH_MIN_M, DEPTH_DEEP_M)
 	lake_waves = _bool(config, "waves", "lake_waves", lake_waves)
+	lake_wave_scale = clampf(_float(config, "waves", "lake_wave_scale", lake_wave_scale), LAKE_WAVE_SCALE_MIN, LAKE_WAVE_SCALE_MAX)
 
 	control_mode = clampi(_int(config, "sailing", "control_mode", control_mode), 0, PlayerController.Mode.size() - 1) as PlayerController.Mode
 	auto_sheet = _bool(config, "sailing", "auto_sheet", auto_sheet)

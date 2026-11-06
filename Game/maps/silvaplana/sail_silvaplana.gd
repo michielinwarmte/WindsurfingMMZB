@@ -233,8 +233,8 @@ func _say_which_waves() -> void:
 		print("Lake Silvaplana: the settings' waves (Lake waves off)")
 		return
 	var lake: LakeWaves = lake_water.lake
-	print("Lake Silvaplana's own waves (PHYSICS_SPEC.md 9.17): built for %.1f kt at 10 m from %.0f degrees; the physics floats on the %d longest of %d trains; crests up to %.0f cm" % [
-		lake.wind_10m_ms / SimMath.KNOT_MS, lake.from_deg, lake.physics_count, lake.band_count, 100.0 * lake.max_total_amplitude_m])
+	print("Lake Silvaplana's own waves (PHYSICS_SPEC.md 9.17, 9.18): built for %.1f kt at 10 m from %.0f degrees, x%.2f the growth law's height; the physics floats on the %d longest of %d trains; crests up to %.0f cm" % [
+		lake.wind_10m_ms / SimMath.KNOT_MS, lake.from_deg, lake.config.height_scale, lake.physics_count, lake.band_count, 100.0 * lake.max_total_amplitude_m])
 
 
 ## --overview and --measure (see the top of this file).

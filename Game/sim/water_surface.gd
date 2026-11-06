@@ -39,6 +39,12 @@ func velocity_at(_x: float, _z: float, _time_s: float) -> Vector3:
 	return Vector3.ZERO
 
 
+## Velocity of the water depth_m below the surface (the fin's centre of pressure). Flat water and a
+## surface without depth: the surface's velocity.
+func velocity_below(x: float, z: float, _depth_m: float, time_s: float) -> Vector3:
+	return velocity_at(x, z, time_s)
+
+
 ## The height, the normal and the velocity at a world (x, z) at once, written into record
 ## `index` of `samples`: the answers the hull asks at each of its points every substep. The
 ## same answers as the three functions above; a surface that can share the work between them

@@ -24,6 +24,10 @@ const MAX_WAVES: int = 4
 ## EnvironmentConfig.lake_waves, PHYSICS_SPEC.md 9.17), use those instead of this set. Off: this
 ## set everywhere, as before. The open water has none, so this changes nothing there.
 @export var place_waves: bool = false
+## The place's own waves' height times this (1 = the growth law's; PHYSICS_SPEC.md 9.18): the
+## settings' "Lake wave height", for the autopilot's training on higher waves (1.5). The command
+## line's --lake_wave_scale=<x> takes its place when given (WindsurferSim._place_lake_waves()).
+@export_range(0.0, 3.0) var place_height_scale: float = 1.0
 
 @export_group("Swell")
 ## true: the swell travels downwind, turned by swell_offset_deg, and turns with the wind.

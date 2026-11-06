@@ -180,11 +180,16 @@ static func build(telemetry: Telemetry, race: RaceSim, index: int, wind: WindFie
 
 
 ## The sea's height where a board sails: the highest crest above the still water (the sum of the
-## waves' amplitudes, WaveSetConfig.total_amplitude_m()), metres; 0 on flat water. It does not
-## change while a board sails, so a skipper takes it once.
+## waves' amplitudes, WaveSetConfig.total_amplitude_m()), metres; 0 on flat water. On a lake's own
+## waves the lake's crest where the board is (LakeWaveField.crest_height_at(), PHYSICS_SPEC.md
+## 9.17: they grow with the fetch). A skipper takes it once, when it is set up.
 static func sea_height_m(sim: WindsurferSim) -> float:
 	if sim == null or not sim.has_waves() or sim.wave_set_config == null:
 		return 0.0
+	var lake: LakeWaveField = sim.water as LakeWaveField
+	if lake != null:
+		var origin: Vector3 = sim.body.origin_world()
+		return lake.crest_height_at(origin.x, origin.z)
 	return sim.wave_set_config.total_amplitude_m()
 
 

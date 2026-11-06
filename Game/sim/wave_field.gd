@@ -28,6 +28,11 @@ var steepness: PackedFloat64Array = PackedFloat64Array()
 var dir_x: PackedFloat64Array = PackedFloat64Array()
 var dir_z: PackedFloat64Array = PackedFloat64Array()
 var wavelength: PackedFloat64Array = PackedFloat64Array()
+## Whether the water's orbital motion fades below the surface (velocity_below()): e^(-k depth) per
+## wave, deep water's linear theory (coastalwiki, Shallow-water wave theory: cosh(k(z + h)) /
+## sinh(kh), which is e^(kz) in deep water). On for a lake's own waves (LakeWaveField, 9.18); off
+## for the wave set's sea, whose fin feels the surface's motion as before (a question for Michiel).
+var fades_with_depth: bool = false
 
 
 ## wind_from_bearing_deg: the base wind's compass bearing, which orients the chop, and the
@@ -75,6 +80,15 @@ func set_wind_bearing(wind_from_bearing_deg: float) -> void:
 static func direction_for_bearing(bearing_deg: float) -> Vector2:
 	var bearing: float = deg_to_rad(bearing_deg)
 	return Vector2(sin(bearing), -cos(bearing))
+
+
+## The angular frequency of a wave of wave number k in water depth_m deep: the dispersion relation
+## omega^2 = g k tanh(k h) (9.1, 9.18; coastalwiki, Shallow-water wave theory). depth_m 0 (or
+## less) is deep water, sqrt(g k), the same number as before to the last bit.
+static func angular_frequency(wave_k: float, depth_m: float) -> float:
+	if depth_m <= 0.0:
+		return sqrt(G * wave_k)
+	return sqrt(G * wave_k * tanh(wave_k * depth_m))
 
 
 ## Period of wave i, seconds.
@@ -190,6 +204,34 @@ func velocity_at_rest(rest_x: float, rest_z: float, t: float) -> Vector3:
 	return velocity
 
 
+## The water's velocity depth_m below the surface at a world (x, z) (the fin, 9.18): the surface's
+## orbital velocity of each wave times e^(-k depth), when the field fades with depth
+## (fades_with_depth); otherwise, and at the surface, velocity_at() itself.
+func velocity_below(x: float, z: float, depth_m: float, t: float) -> Vector3:
+	if not fades_with_depth or depth_m <= 0.0 or count == 0:
+		return velocity_at(x, z, t)
+	var rest: Vector2 = rest_point_at(x, z, t)
+	return _velocity_at_rest_below(rest.x, rest.y, t, depth_m)
+
+
+## velocity_at_rest() with each wave's part times e^(-k depth).
+func _velocity_at_rest_below(rest_x: float, rest_z: float, t: float, depth_m: float) -> Vector3:
+	var velocity: Vector3 = Vector3.ZERO
+	for i: int in count:
+		var phase: float = k[i] * (dir_x[i] * rest_x + dir_z[i] * rest_z) + (_phase_of_wave(i) - omega[i] * t)
+		var fade: float = exp(-k[i] * depth_m)
+		var forward: float = steepness[i] * c[i] * sin(phase) * fade
+		velocity.x += dir_x[i] * forward
+		velocity.z += dir_z[i] * forward
+		velocity.y -= amplitude[i] * omega[i] * cos(phase) * fade
+	return velocity
+
+
+## Wave i's phase at the origin at time 0: 0 for the wave set's waves (LakeWaveField has its own).
+func _phase_of_wave(_i: int) -> float:
+	return 0.0
+
+
 ## The height, the normal and the velocity at a world (x, z) at once, into record `index` of
 ## `samples` (WaterSurface.SAMPLE_*): one solve for the rest point and one pass over the
 ## waves, where height_at, normal_at and velocity_at take a solve and a pass each. Started
@@ -284,4 +326,5 @@ func shader_parameters() -> Dictionary[String, Variant]:
 			parameters[names[slot]] = Vector4(0.0, -1.0, 0.0, 10.0)
 	parameters["wave_amplitudes"] = amplitudes
 	parameters["base_height_m"] = base_height_m
+	parameters["wave_depth_m"] = 0.0
 	return parameters

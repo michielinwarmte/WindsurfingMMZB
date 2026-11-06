@@ -65,6 +65,11 @@ var sail: SailModel
 var rig: RigFrame = RigFrame.new()
 var wind: WindField
 var water: WaterSurface
+## The water as the hull feels it (the buoyancy grid and the hull model): on a lake's own waves its
+## own view of them, each train averaged over the hull's wet bottom (LakeWaveField.set_footprint(),
+## PHYSICS_SPEC.md 9.18), so the hull bridges the chop shorter than it; everywhere else the same
+## surface as `water`. The fin, the rig in the water, the effects and the telemetry take `water`.
+var hull_water: WaterSurface
 var telemetry: Telemetry = Telemetry.new()
 
 ## Density of the air (kg/m3): 1.225 at sea level; a place brings its own (EnvironmentConfig,
@@ -216,6 +221,7 @@ var _net_torque_world: Vector3 = Vector3.ZERO
 ## see the note at the top). The sailor's are named as in SailorConfig.
 var _gravity_ms2: float = 9.81
 var _board_length_m: float = 0.0
+var _board_width_m: float = 0.0
 var _board_thickness_m: float = 0.0
 var _board_residuary_peak_froude: float = 0.0
 var _mast_foot_local: Vector3 = Vector3.ZERO
@@ -348,6 +354,7 @@ func _init(board: BoardConfig, sail_cfg: SailConfig, fin_cfg: FinConfig, sailor_
 	sail = SailModel.new(sail_config)
 	wind = WindField.new(wind_config)
 	water = FlatWater.new(water_config)
+	hull_water = water
 	reset(Vector3.ZERO, 0.0)
 
 
@@ -400,22 +407,55 @@ func set_fin_stiffness(factor: float) -> void:
 
 
 func set_waves(enabled: bool) -> void:
-	if enabled and wave_set_config != null and wave_set_config.enable_waves:
+	# A place's own waves (Lake Silvaplana's) follow their own switch, place_waves, whatever the
+	# open water's sea is set to (9.18: the lake's waves are the standard there).
+	var lake_on: bool = wave_set_config != null and wave_set_config.place_waves
+	if enabled and wave_set_config != null and (wave_set_config.enable_waves or lake_on):
 		var lake: LakeWaves = _place_lake_waves()
 		if lake != null:
 			water = LakeWaveField.new(lake, water_config)
-		else:
+			hull_water = LakeWaveField.new(lake, water_config)
+			_update_hull_footprint(board_config.length_m, board_config.width_m)
+			return
+		if wave_set_config.enable_waves:
 			water = WaveField.new(wave_set_config, water_config, wind_config.from_bearing_deg)
+		else:
+			water = FlatWater.new(water_config)
 	else:
 		water = FlatWater.new(water_config)
+	hull_water = water
+
+
+## On a lake's own waves, the hull's view of them follows its wet bottom (9.18): how long it is
+## (the planing strips' wet length; the whole board while it floats still or flies) and how wide,
+## and which way the bow points. Called before each substep's buoyancy, with the hull's last wet
+## bottom (a substep behind, a few millimetres).
+func _update_hull_footprint(wet_length_m: float, wet_beam_m: float) -> void:
+	var lake_view: LakeWaveField = hull_water as LakeWaveField
+	if lake_view == null:
+		return
+	if wet_length_m < 0.1 or wet_beam_m < 0.05:
+		# The copies of the tick (_copy_configs()): no engine lock on a worker thread.
+		wet_length_m = _board_length_m
+		wet_beam_m = _board_width_m
+	var forward: Vector3 = SimMath.horizontal(-body.aft_axis())
+	var bow: Vector2 = Vector2(forward.x, forward.z)
+	bow = bow.normalized() if bow.length() > 1e-6 else Vector2(0.0, -1.0)
+	lake_view.set_footprint(wet_length_m, wet_beam_m, bow)
 
 
 ## The place's own lake waves for this wind, when the wave set asks for them and the place has them
-## (9.17); null otherwise (the wave set's waves).
+## (9.17); null otherwise (the wave set's waves). Their height times the wave set's multiplier
+## (WaveSetConfig.place_height_scale, the settings' "Lake wave height"), or the command line's when
+## one is given (--lake_wave_scale=1.5: every tool and the AI's training take it from there).
 func _place_lake_waves() -> LakeWaves:
 	if environment == null or not wave_set_config.place_waves:
 		return null
-	return environment.lake_waves_for(wind, wind_config)
+	var height_scale: float = wave_set_config.place_height_scale
+	var given: float = LakeWaves.command_line_scale()
+	if given > 0.0:
+		height_scale = given
+	return environment.lake_waves_for(wind, wind_config, height_scale)
 
 
 ## Whether the water has waves on it.
@@ -495,8 +535,11 @@ func step(dt: float, controls: SimControls) -> void:
 		body.add_force(Vector3(0.0, -_gravity_ms2 * body.mass_kg, 0.0))
 		if sailing:
 			sailor.add_force(Vector3(0.0, -_gravity_ms2 * sailor.mass_kg, 0.0))
-		buoyancy.apply(body, water, time_s, _gravity_ms2, sub_dt)
-		hull.compute(body, buoyancy, water, time_s, _gravity_ms2, mass_model.total_mass_kg, sub_dt)
+		if hull_water != water:
+			var footprint: Vector2 = hull.wet_footprint_m()
+			_update_hull_footprint(footprint.x, footprint.y)
+		buoyancy.apply(body, hull_water, time_s, _gravity_ms2, sub_dt)
+		hull.compute(body, buoyancy, hull_water, time_s, _gravity_ms2, mass_model.total_mass_kg, sub_dt)
 		# The water the hull takes along, from the hull's and the fin's last computations, and
 		# the hull's mass and inertia with it (what _set_hull_mass_properties() sets).
 		var heave_added_mass_kg: float = hull.heave_added_mass_kg
@@ -552,6 +595,7 @@ func _copy_configs() -> void:
 	wind.copy_config()
 	_gravity_ms2 = sim_config.gravity_ms2
 	_board_length_m = board_config.length_m
+	_board_width_m = board_config.width_m
 	_board_thickness_m = board_config.thickness_m
 	_board_residuary_peak_froude = board_config.residuary_peak_froude
 	_back_strap_z_m = 0.5 * board_config.length_m - board_config.back_strap_from_tail_m if board_config.back_strap_from_tail_m > 0.0 else INF

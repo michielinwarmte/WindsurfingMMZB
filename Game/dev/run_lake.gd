@@ -112,6 +112,10 @@ class Result:
 func _templates() -> Array[Case]:
 	return [
 		Case.new("straight", "straight", 180.0, "none", 0.0, 0.0, -1.0, 45.0, "start"),
+		# A broad reach (true wind 135 degrees off the bow, starboard tack), held as the straight
+		# beam reach is: from the start and from the lake's middle.
+		Case.new("broad", "straight", 135.0, "none", 0.0, 0.0, -1.0, 40.0, "start"),
+		Case.new("broad_mid", "straight", 135.0, "none", 0.0, 0.0, -1.0, 40.0, "middle"),
 		Case.new("tack_stb", "tack", 180.0, "none", 0.0, 0.0, 25.0, 48.0, "start"),
 		Case.new("tack_port", "tack", 0.0, "none", 0.0, 0.0, 25.0, 48.0, "middle"),
 		Case.new("tack_held", "tack", 180.0, "steer_right", 25.0, 40.0, -1.0, 45.0, "start"),

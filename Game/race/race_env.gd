@@ -551,8 +551,9 @@ func _make_board(at: Vector2, heading_deg: float, _seed: int, weather: Weather =
 		# Each board its own copy of the sea, as of every config it sails with.
 		b.sim.wave_set_config = sea.duplicate(true)
 	b.sim.set_waves(waves)  # again, so the waves line up with this wind
-	b.sea_height_m = RaceObservation.sea_height_m(b.sim)
 	b.sim.reset(Vector3(at.x, 0.0, at.y), deg_to_rad(fposmod(heading_deg, 360.0)))
+	# After the board is at its spot: on a lake's own waves the sea's height is the lake's there.
+	b.sea_height_m = RaceObservation.sea_height_m(b.sim)
 	b.controller = PlayerController.new()
 	b.controller.set_sail(b.sim.sail, b.sim.sailor_config, b.sim.air_density_kg_m3)
 	b.hands = AiHands.new()

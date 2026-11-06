@@ -25,13 +25,13 @@ enum GrowthLaw { SPM, CEM }
 @export var wavelengths_m: PackedFloat32Array = PackedFloat32Array([8.0, 4.0, 2.0, 1.0])
 @export var offsets_deg: PackedFloat32Array = PackedFloat32Array([0.0, -7.0, 10.0, -14.0])
 ## How many of the trains (the longest) the physics floats on; the picture draws the rest as shading
-## only (their slopes, not their shape), so the shape you see is the shape the board floats on. Two:
-## the hull cannot ride the 2 m and 1 m trains yet (PH9, PH10: its strips and buoyancy on waves
-## shorter than the board). Measured on a beam reach at the start in the map's 18 kt (14:30): the
-## old sea 20.5 kt mean, the 8 m and 4 m trains 20.3 kt, all four 10.7 kt, the 2 m and 1 m alone
-## 5.6 kt (and 4.7 kt with the water's velocity taken out: it is the heights, not the fin). Raise it
-## to 4 when the hull rides short chop.
-@export_range(0, 4) var physics_trains: int = 2
+## only (their slopes, not their shape), so the shape you see is the shape the board floats on. All
+## four (9.18): the hull feels each train averaged over its wet bottom (LakeWaveField.set_footprint()),
+## so it bridges the chop shorter than it, as a real planing board does. Last night's two (8 m and
+## 4 m) were measured before the hull did that: all four then halved the beam reach's speed (10.7
+## against 20.3 kt at the start in the map's 18 kt), the strips meeting every 1 m and 2 m crest as
+## if the hull were as short as a strip (PH10).
+@export_range(0, 4) var physics_trains: int = 4
 ## A shorter train for the picture only (the shader): the physics never sees it.
 @export var look_wavelength_m: float = 0.5
 @export var look_offset_deg: float = 18.0
@@ -40,6 +40,13 @@ enum GrowthLaw { SPM, CEM }
 ## Every train's height times this (1 = the growth law's). For a later measurement on the water:
 ## lake measurements found the laws too high in light wind (the research, 1.3).
 @export var height_scale: float = 1.0
+
+## The phases of the trains at the origin at time 0 come from Godot's random numbers with this seed
+## (the research's "seeded phases"): the same sea on every PC and in every run with the same seed.
+@export var phase_seed: int = 44
+## The depth the trains travel in, m (omega^2 = g k tanh(k h), 9.18): 0 takes the median depth of
+## the lake's nodes from its depth grid (Silvaplana: deep water for every train).
+@export var reference_depth_m: float = 0.0
 
 @export_group("Fetch")
 ## The map's cells: the fetch and the wave heights are worked out at the corners of squares this

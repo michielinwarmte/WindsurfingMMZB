@@ -56,6 +56,19 @@ static func build(depth_at: Callable, area: Rect2, cell: float, wind_from_deg: f
 
 
 ## Whether a node is water.
+## The median depth of the water nodes (m; 0 with none): the lake's reference depth for the
+## dispersion (LakeWaves.reference_depth_m, PHYSICS_SPEC.md 9.18).
+func median_depth_m() -> float:
+	var depths: PackedFloat32Array = PackedFloat32Array()
+	for depth: float in depth_m:
+		if depth > 0.0:
+			depths.append(depth)
+	if depths.is_empty():
+		return 0.0
+	depths.sort()
+	return depths[depths.size() / 2]
+
+
 func is_water(column: int, row: int) -> bool:
 	return depth_m[row * columns + column] > 0.0
 
