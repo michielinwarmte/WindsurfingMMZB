@@ -344,6 +344,12 @@ extends Resource
 @export_group("Falling and getting back up")
 ## The board heels toward the sail only when the sailor can no longer balance the sail's
 ## pull. Past this leeward heel a standing person is pulled over the sail: a catapult.
+## The fall's bar (Max, 6 November 2026: "the detection of what a crash would be is too strict";
+## Documentation/reports/autopilot/stay_on_the_board.md, PHYSICS_SPEC.md 7.7): the game's sailor
+## (sailor_default.tres) has catapult_heel_deg 30, fall_back_heel_deg 32, standing_fall_heel_deg
+## 50, catapult_pull_share 0.2, catapult_time_s 0.2, fall_back_time_s 0.3 and tip_time_s 0.5;
+## the defaults here are the rule before it (20, 25, 40, 0, 0, 0, 0.3), so a fresh SailorConfig
+## falls as the game did until then.
 @export var catapult_heel_deg: float = 20.0
 ## Past this windward heel the sailor falls in backwards (the pull vanished while hiked out).
 @export var fall_back_heel_deg: float = 25.0

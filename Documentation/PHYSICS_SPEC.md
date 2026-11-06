@@ -3759,6 +3759,25 @@ The bold parts are new. With `catapult_pull_share` 0 and both times 0 the rule i
 
 **The sense of balance (read only; nothing in the physics reads it).** `lee_fall_share`, `windward_fall_share` and `tipping_share` (on the simulation and in `Telemetry`, and at the end of the CSV's columns): how far the sailor is toward the limit the fall check uses at that moment, 0 in balance and 1 at the limit. To leeward the heel over the catapult's limit while hanging (else over the standing one), to windward the windward tip over the fall back's limit while hanging (else the standing one), and the tipping force over what the hips hold (from 1 on, the tip time runs). The autopilot's recovery reflex (`PlayerController.reflex_on`) reads them; a sailor feels how near the edge they are.
 
+**The numbers (the game's sailor, `sailor_default.tres`; a fresh `SailorConfig` keeps the old ones).** For Michiel's OK. What the baseline's falls were and how each number was measured: the report, sections 1 and 4.
+
+| Number | Before | Now | Why |
+|---|---|---|---|
+| `catapult_heel_deg` | 20 | 30 | A hooked-in sailor with bent knees and the feet in the straps rides a leeward heel with the ankles, the knees and the hips; 20 degrees is well inside what the ankles alone roll (an estimate: the textbook range of the ankle's roll is 20 to 35 degrees, more with the knees). In the baseline every catapult came with the board itself heeled 11 to 24 degrees and the sail eased; only the felt heel crossed 20 |
+| `catapult_pull_share` | 0 (any pull over 120 N) | 0.2 | A catapult is the sail's pull levering the sailor over the boom. A pull under a fifth of the weight (167 N for 85 kg) a body holds by leaning back 15 cm: at the boom 1.5 m up it is 250 N·m, the feet pass 120 N·m and the weight 15 cm back 125 N·m (the model's own numbers). The baseline's catapults had 0.04 to 0.33 of the weight (median 0.14), nearly all in the air with the sail eased |
+| `catapult_time_s` | 0 | 0.2 s | A wave's roll and a landing's jolt last a tenth to a few tenths of a second (at 24 kt on the lake the board leaves the water for 0.27 s at a time); a heel that stays past the limit for 0.2 s with the pull on is a catapult. Estimate |
+| `fall_back_heel_deg` | 25 | 32 | Moved with the catapult, still below the standing limit. The windward tip is measured after the pull's help (atan(pull / weight)), so it counts only the part the sailor has to catch with the body. Estimate |
+| `fall_back_time_s` | 0 | 0.3 s | A fall backwards needs the pull to be gone for longer than a jolt: a hiked sailor whose sail goes light over a crest for a moment catches it by sheeting in or bending at the hips. Estimate |
+| `standing_fall_heel_deg` | 40 | 50 | Standing (no pull to hang on), the knees and the boom in the hands hold a board heeled 40 degrees; at 50 the deck is steeper than wet feet hold. The backstop for any board rolled that far, whatever the sail does. Estimate |
+| `tip_time_s` | 0.3 s | 0.5 s | The hips, the knees and the arms on the boom hold a body tipped harder than they can for a moment; half a second is a reaction (0.2 to 0.3 s) and a move (the sheet out, a step). Estimate. The front foot's brief pull keeps its 0.3 s (`front_foot_pull_brief_s`) |
+| `fall_feel_time_s` | 1.0 s | 1.0 s (unchanged) | No fall in the baseline was set off by a short push; left as it was |
+
+The autopilot's pilot reads `catapult_heel_deg` too (`Autopilot._expected_turn_heel_deg`: the push expected from a head-up fades over the last 10 degrees before the catapult), so with the bar at 30 it expects the push of a carve up to 20 degrees of felt heel instead of 10. Measured with the rest (the report).
+
+**Still possible.** A sheeted sail at 24 kt held in through a head-up throws the sailor over it (`test_stay_on_the_board.gd`); the pushed dial keeps its risk (the reflex fades out at the top of the slider); the standing limit catches any board rolled to 50 degrees.
+
+**An observation, not changed:** the felt heel the fall checks read is atan(sideways / down) of the felt gravity, with the body's vertical acceleration averaged over `fall_feel_time_s`. With the board dropping off a crest the body is near free fall, the felt "down" shrinks and a small sideways push becomes a large felt heel (9 to 34 degrees in 0.3 s, `lake_chop_training.md`). The pull share and the time above keep that from throwing a sailor whose sail is eased; a floor on the felt "down" (say half of g) for the fall checks would be the physical fix, for Michiel to weigh.
+
 
 ## 8. Wind field: base wind, gusts, shifts and height gradient
 
