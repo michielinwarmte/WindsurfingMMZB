@@ -85,6 +85,10 @@ const BODY_TRAVEL_MIN_PX: float = 100.0
 const BODY_TRAVEL_MAX_PX: float = 800.0
 const BODY_SPRING_MIN_S: float = 0.5
 const BODY_SPRING_MAX_S: float = 4.0
+## The push on the mouse (MouseBody.push_on_mouse): one notch of the wheel moves the push this much,
+## from 5 % (fine) to 25 % (a quarter of the dial a notch).
+const BODY_PUSH_STEP_MIN: float = 0.05
+const BODY_PUSH_STEP_MAX: float = 0.25
 
 # --- Wind (section "wind" in the file) ---
 ## Wind speed at 10 m height, knots (what a forecast says).
@@ -168,6 +172,11 @@ var body_weight_share: float
 var body_travel_px: float
 ## 1: the feet still hold the rail for you; 2: they correct slowly and your hand holds it.
 var body_level: int
+## The push on the mouse as well (MouseBody.PushOnMouse: 0 off, 1 the wheel, 2 the wheel and the left
+## button's burst; the lead's recommendation, 2, the default, so the push is on the mouse whenever the
+## body is), and the wheel's step (a share of the dial a notch).
+var body_push_on_mouse: int
+var body_push_step: float
 
 # --- Graphics (section "graphics") ---
 var fullscreen: bool
@@ -261,6 +270,8 @@ func reset_to_defaults() -> void:
 	body_weight_share = 1.0
 	body_travel_px = 300.0
 	body_level = 1
+	body_push_on_mouse = MouseBody.PushOnMouse.WHEEL_AND_BUTTON
+	body_push_step = 0.1
 
 	fullscreen = false
 	vsync = true
@@ -450,6 +461,8 @@ func write_to(config: ConfigFile) -> void:
 	config.set_value("body", "weight_share", body_weight_share)
 	config.set_value("body", "travel_px", body_travel_px)
 	config.set_value("body", "level", body_level)
+	config.set_value("body", "push_on_mouse", body_push_on_mouse)
+	config.set_value("body", "push_step", body_push_step)
 
 	config.set_value("graphics", "fullscreen", fullscreen)
 	config.set_value("graphics", "vsync", vsync)
@@ -518,6 +531,8 @@ func read_from(config: ConfigFile) -> void:
 	body_weight_share = clampf(_float(config, "body", "weight_share", body_weight_share), BODY_SHARE_MIN, BODY_SHARE_MAX)
 	body_travel_px = clampf(_float(config, "body", "travel_px", body_travel_px), BODY_TRAVEL_MIN_PX, BODY_TRAVEL_MAX_PX)
 	body_level = clampi(_int(config, "body", "level", body_level), 1, 2)
+	body_push_on_mouse = clampi(_int(config, "body", "push_on_mouse", body_push_on_mouse), 0, MouseBody.PushOnMouse.size() - 1)
+	body_push_step = clampf(_float(config, "body", "push_step", body_push_step), BODY_PUSH_STEP_MIN, BODY_PUSH_STEP_MAX)
 
 	fullscreen = _bool(config, "graphics", "fullscreen", fullscreen)
 	vsync = _bool(config, "graphics", "vsync", vsync)

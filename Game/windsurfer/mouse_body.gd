@@ -37,6 +37,12 @@ enum Centre { STAYS, SPRINGS_BACK }
 ## starboard tack (the wind from the right) the leeward rail is the port one, so there left is more
 ## rail; on port tack right is. RIGHT_IS_MORE_RAIL: right is always more leeward rail.
 enum Sideways { AS_SEEN, RIGHT_IS_MORE_RAIL }
+## The push on the mouse as well (Max, 6 November 2026: "push in combination with mouse control";
+## Documentation/reports/gameplay/gp2_push_on_mouse.md), so one hand does the body and the push.
+## OFF: only W and S move the push. WHEEL: the wheel moves it in steps of push_step (up is more).
+## WHEEL_AND_BUTTON: and the left button held is a burst: the push goes to 100 % and, let go, back to
+## where the wheel and the keys had it (PlayerController.push_now). W and S work with every choice.
+enum PushOnMouse { OFF, WHEEL, WHEEL_AND_BUTTON }
 
 ## Level 2: the feet's own correction of the rail slowed to this (SailorConfig.lean_feel_time_s;
 ## GP0 measured level 2 with 2.0 s), so a gust heels the board past the technique's rail and your
@@ -74,6 +80,17 @@ var level: int = 1
 ## A body set by a script (the harness, the LAN test's --body): it stays exactly where it was put;
 ## the mouse, the spring and the re-centring leave it alone.
 var scripted: bool = false
+## The push on the mouse (the setting "Push on the mouse") and how far one notch of the wheel moves
+## the push (the setting "Wheel step": 0.1 is 10 %; from the default 75 % two notches up are the
+## ladder's 95 %).
+var push_on_mouse: PushOnMouse = PushOnMouse.WHEEL_AND_BUTTON
+var push_step: float = 0.1
+
+# --- The push on the mouse (read by PlayerController._move_the_slider()) ---
+## Whether the left button is held: the burst to 100 %.
+var burst_held: bool = false
+## The wheel's notches not yet taken by the controller (+ more push, - less).
+var _wheel_notches: float = 0.0
 
 # --- Where the body is ---
 ## Sideways, -1 (the mouse all the way left) to +1 (all the way right); 0 is the middle.
@@ -174,6 +191,35 @@ func rest() -> void:
 	pitch_press = 0.0
 
 
+## The wheel turned (the sailing scene, main.gd, hands it on only while the mouse is the body's):
+## notches up (+) or down (-), a fraction for a smooth-scrolling wheel. Nothing with the push off the
+## mouse.
+func wheel(notches: float) -> void:
+	if push_on_mouse == PushOnMouse.OFF:
+		return
+	_wheel_notches += notches
+
+
+## The left button pressed (true) or let go (false). Only with the setting "Wheel and left button".
+func hold_burst(held: bool) -> void:
+	burst_held = held and push_on_mouse == PushOnMouse.WHEEL_AND_BUTTON
+
+
+## How far the wheel has moved the push since the last call (push_step a notch, + more), and the
+## notches are used up.
+func take_push_change() -> float:
+	var change: float = _wheel_notches * push_step
+	_wheel_notches = 0.0
+	return change
+
+
+## The mouse is no longer the body's (a menu opened, the window was left): no burst held, no notch
+## waiting. The push goes back to where the wheel and the keys had it.
+func let_go_of_the_push() -> void:
+	burst_held = false
+	_wheel_notches = 0.0
+
+
 ## The feet's correction time for this level: the sailor's own (own_s) at level 1, slowed to
 ## SLOW_FEEL_TIME_S at level 2 (never quicker than the sailor's own).
 func feel_time_s(own_s: float) -> float:
@@ -190,6 +236,12 @@ func configure(values: SettingsValues) -> void:
 	weight_share = values.body_weight_share
 	travel_px = values.body_travel_px
 	level = values.body_level
+	push_on_mouse = values.body_push_on_mouse as PushOnMouse
+	push_step = values.body_push_step
+	if push_on_mouse != PushOnMouse.WHEEL_AND_BUTTON:
+		burst_held = false
+	if push_on_mouse == PushOnMouse.OFF:
+		_wheel_notches = 0.0
 
 
 ## One line for the F1 panel (the numbers are for tuning only; the gauge shows the same in words).
@@ -198,9 +250,20 @@ func describe() -> String:
 	if scripted:
 		how = "held by script"
 	var keys: String = "" if scripted else "   Esc frees the mouse, right button or C looks around"
-	return "mouse body (level %d, %s) at side %+.2f back %+.2f: %s %.0f %%   %s %.0f %%%s" % [
+	return "mouse body (level %d, %s) at side %+.2f back %+.2f: %s %.0f %%   %s %.0f %%%s\n%s" % [
 		level, how, side, back, "toes" if roll_press >= 0.0 else "heels", absf(roll_press) * 100.0,
-		"back foot" if pitch_press >= 0.0 else "front foot", absf(pitch_press) * 100.0, keys]
+		"back foot" if pitch_press >= 0.0 else "front foot", absf(pitch_press) * 100.0, keys, push_keys_text()]
+
+
+## The push on the mouse in words, for the F1 panel and the gauge: which mouse controls move the push.
+func push_keys_text() -> String:
+	match push_on_mouse:
+		PushOnMouse.WHEEL:
+			return "push on the mouse: wheel ±%.0f %% a notch (W/S too)" % (push_step * 100.0)
+		PushOnMouse.WHEEL_AND_BUTTON:
+			return "push on the mouse: wheel ±%.0f %% a notch, left button held: burst to 100 %%%s (W/S too)" % [
+				push_step * 100.0, " NOW" if burst_held else ""]
+	return "push on the mouse: off (W/S)"
 
 
 ## The sailor's own leeward rail on this course, degrees, at a full hike in the straps: the same

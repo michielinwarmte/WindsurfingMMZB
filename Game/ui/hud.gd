@@ -104,9 +104,13 @@ var _panel: PanelContainer
 var _detail: Label
 ## What came before the last fall, frozen for the detail panel (GP0's playtest).
 var _fall_watch: FallWatch = FallWatch.new()
-## The keys along the bottom edge, and the keys shown (FREE_KEYS, ...).
+## The keys along the bottom edge, and the keys shown (FREE_KEYS, ... with the mouse's keys added).
 var _hints: HBoxContainer
 var _keys: Array[Array] = FREE_KEYS
+## The keys of the moment (FREE_KEYS, RACE_KEYS, ...) before the mouse's are added, and the push on
+## the mouse they were shown with (MouseBody.PushOnMouse; -1: no body on the mouse).
+var _base_keys: Array[Array] = FREE_KEYS
+var _mouse_push: int = -1
 var _rose: WindRose
 ## The gauges in a row at the bottom in the middle: the push, and the body beside it.
 var _gauges: HBoxContainer
@@ -376,11 +380,42 @@ func help_text() -> String:
 
 ## The keys along the bottom edge: each key in a small chip, then what it does.
 func _show_keys(keys: Array[Array]) -> void:
-	if keys == _keys and _hints.get_child_count() > 0:
+	_base_keys = keys
+	var shown: Array[Array] = with_mouse_keys(keys, _mouse_push)
+	if shown == _keys and _hints.get_child_count() > 0:
 		return
-	_keys = keys
+	_keys = shown
 	_build_hints()
 	_fit_hints()
+
+
+## The keys with the body on the mouse (mouse_push: MouseBody.PushOnMouse, -1 without a body): the
+## wheel beside W and S for the push, the left button's burst after it, and the mouse as the body.
+## Lists without the push (spectating) stay as they are.
+static func with_mouse_keys(keys: Array[Array], mouse_push: int) -> Array[Array]:
+	if mouse_push < 0:
+		return keys
+	var shown: Array[Array] = []
+	for key: Array in keys:
+		if key[0] != "W S":
+			shown.append(key)
+			continue
+		if mouse_push == MouseBody.PushOnMouse.OFF:
+			shown.append(key)
+		else:
+			shown.append(["W S  Wheel", "push"])
+		if mouse_push == MouseBody.PushOnMouse.WHEEL_AND_BUTTON:
+			shown.append(["Hold left", "burst"])
+		shown.append(["Mouse", "body"])
+	return shown
+
+
+## The body on the mouse and its push, for the keys along the bottom (-1: no body on the mouse).
+func _show_mouse_keys(mouse_push: int) -> void:
+	if mouse_push == _mouse_push:
+		return
+	_mouse_push = mouse_push
+	_show_keys(_base_keys)
 
 
 ## The keys at the biggest text size that fits across the window (a narrow window: smaller).
@@ -430,10 +465,13 @@ func _build_hints() -> void:
 
 
 func update_from(t: Telemetry, controller: PlayerController, camera_name: String, use_autopilot: bool) -> void:
-	# The push slider's level (W/S) on the gauge, when the controller has one.
-	_push_gauge.set_level(NAN if use_autopilot else controller.push_level)
-	# The body on the mouse, when the player has it on.
+	# The push slider on the gauge, when the controller has one: the level the sailor is at, and in a
+	# burst (the left mouse button) the level chosen with the keys and the wheel.
+	var push_now: float = controller.push_level if is_nan(controller.push_now) else controller.push_now
+	_push_gauge.set_level(NAN if use_autopilot else push_now, controller.push_level if controller.is_bursting() else NAN)
+	# The body on the mouse, when the player has it on, and its keys along the bottom.
 	_body_gauge.set_body(null if use_autopilot else controller.body, t)
+	_show_mouse_keys(-1 if use_autopilot or controller.body == null else controller.body.push_on_mouse)
 	if not _race_mode:
 		_fill_status_card(t, controller, camera_name, use_autopilot)
 	_rose.heading_deg = t.heading_deg
@@ -469,7 +507,7 @@ func update_from(t: Telemetry, controller: PlayerController, camera_name: String
 		+ "rig   harness %4.0f N   mast foot pushing down %4.0f N\n" % [t.harness_tension_n, -t.mast_foot_force_up_n]
 		+ "auto-sheet %s%s" % ["on" if controller.auto_sheet else "off", "   pilot set from the command line (--pilot.)" if not controller.pilot_overrides.is_empty() else ""]
 		# The push slider and what it asks of the sailor (PushDial.describe), with the legs' push.
-		+ ("\n%s\nnow: sea rail +%.1f deg (bounce %.0f deg/s)   back foot %+.2f" % [controller.push_text(), controller.auto_sheet_pilot.wave_rail_deg(), controller.auto_sheet_pilot.felt_bounce_dps(), t.back_foot_push] if controller.push_text() != "" else "")
+		+ ("\n%s\nnow: sea rail +%.1f deg (bounce %.0f deg/s)   back foot %+.2f   %s" % [controller.push_text(), controller.auto_sheet_pilot.wave_rail_deg(), controller.auto_sheet_pilot.felt_bounce_dps(), t.back_foot_push, controller.burst_text()] if controller.push_text() != "" else "")
 		# The body on the mouse (package B, an experiment): what it adds, for tuning only; the card
 		# never shows it (the player reads the board, the spray and the sound).
 		+ ("\n" + controller.body_text() if controller.body_text() != "" else "")

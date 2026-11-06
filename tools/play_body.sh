@@ -11,8 +11,11 @@
 # Leave it in the middle and the sailor sails with their own technique, as before. It works only
 # planing in the footstraps and not in a turn; it comes back to the middle at every tack, gybe and
 # fall. Esc frees the mouse (the pause menu), and Esc > Settings > Body switches Max's choices while
-# sailing. Hold the right mouse button or C to look around with the orbit camera (key 2). Up/Down
-# still move the push slider, A/D steer. F1 shows the numbers (for tuning only; the strip shows none).
+# sailing. Hold the right mouse button or C to look around with the orbit camera (key 2; with it held
+# the wheel zooms). The push is on the mouse too (gp2_push_on_mouse.md): the wheel moves it in steps
+# of 10 % (up is more) and the left button held is a burst to 100 % that comes back to your level when
+# you let go; W/S still move it, Up/Down sheet, A/D steer. F1 shows the numbers (for tuning only; the
+# strip shows none).
 #
 # The open water, 18 kt from the West with gusts (0.2 every 8 s) and the waves, beginner mode with the
 # auto-sheet, starting on starboard tack heading 180 (a beam reach, where the board gets planing), the
@@ -32,6 +35,9 @@
 #                                               the end; default all of it)
 #   tools/play_body.sh --travel=500             a slower mouse (pixels from end to end; default 300)
 #   tools/play_body.sh --push=100 --gusts=0.3   the slider and the gusts as in tools/play_push.sh
+#   tools/play_body.sh --push_mouse=wheel       the push on the mouse: off (W/S only), wheel, or
+#                                               button (the wheel and the left button's burst, default)
+#   tools/play_body.sh --push_step=0.05         the wheel's step a notch (0.05 to 0.25; default 0.1)
 #   tools/play_body.sh --body=0                 the same water without the body, to compare
 #
 # The settings are written to .sim_output/playtest/body.cfg each time (the game also saves to it if
@@ -52,6 +58,8 @@ windward=false
 toes=1.0
 weight=1.0
 travel=300
+push_mouse=2
+push_step=0.1
 for arg in "$@"; do
 	case "$arg" in
 		--wind=*) wind="${arg#--wind=}" ;;
@@ -71,6 +79,10 @@ for arg in "$@"; do
 		--weight=*) weight="${arg#--weight=}" ;;
 		--toes=*) toes="${arg#--toes=}" ;;
 		--travel=*) travel="${arg#--travel=}" ;;
+		--push_mouse=off) push_mouse=0 ;;
+		--push_mouse=wheel) push_mouse=1 ;;
+		--push_mouse=button) push_mouse=2 ;;
+		--push_step=*) push_step="${arg#--push_step=}" ;;
 		*) echo "Unknown option $arg (see the header of $0)" >&2; exit 1 ;;
 	esac
 done
@@ -105,6 +117,8 @@ toes_share=$toes
 weight_share=$weight
 travel_px=$travel
 level=$level
+push_on_mouse=$push_mouse
+push_step=$push_step
 CFG
 # Godot on Windows wants C:/... rather than /c/...
 if command -v cygpath >/dev/null 2>&1; then

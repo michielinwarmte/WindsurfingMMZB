@@ -15,7 +15,8 @@ extends Node3D
 ## menu opens at that time), --page=settings/<tab>|controls|howto (and that page of it).
 ## --settings=<file.cfg> or --settings=defaults: see ui/game_settings.gd.
 ## --body=<side>,<back> turns the body on the mouse on (package B) and holds it there by script,
-## each from -1 to 1 (MouseBody.side and back; the mouse is then not captured).
+## each from -1 to 1 (MouseBody.side and back; the mouse is then not captured); with it --burst=1
+## holds the push's burst (the left mouse button of "Push on the mouse") by script, for screenshots.
 ## A race course on the water (RACING_PLAN.md, 9A): --course=<name> shows it (t1_loop on the open
 ## water, placed for the settings' wind; a map scene has its own, see _course_named()), starts the
 ## board 150 m behind its start line and puts it on the HUD and the mini-map; --lines=1 draws its
@@ -175,16 +176,46 @@ func _exit_tree() -> void:
 
 
 ## The body on the mouse (package B): while the mouse is captured its movement is the sailor's body,
-## unless the look key (the right mouse button, or C) is held, which turns the orbit camera instead.
+## unless the look key (the right mouse button, or C) is held, which turns the orbit camera instead;
+## and its wheel and left button are the push (push_with_the_mouse()).
 ## _input, not _unhandled_input: no part of the HUD may take the movement first.
 func _input(event: InputEvent) -> void:
 	var body: MouseBody = _windsurfer.controller.body
-	if body == null or not (event is InputEventMouseMotion) or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+	if body == null or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		return
-	if Input.is_action_pressed("camera_look"):
+	if event is InputEventMouseButton:
+		push_with_the_mouse(event as InputEventMouseButton)
+		return
+	if not (event is InputEventMouseMotion) or Input.is_action_pressed("camera_look"):
 		return
 	# Screen pixels: the same hand movement on any window size.
 	body.move((event as InputEventMouseMotion).screen_relative)
+
+
+## The push on the mouse (Settings > Body > Push on the mouse; MouseBody.push_on_mouse), called only
+## while the mouse is the body's (captured: sailing, not in a menu, not spectating, not behind the
+## autopilot): a notch of the wheel up is a step more push, down a step less, and the left button held
+## is the burst to 100 %. The wheel no longer zooms the orbit camera then, unless the look key (the
+## right mouse button, or C) is held. Returns whether the push took the button.
+func push_with_the_mouse(button: InputEventMouseButton) -> bool:
+	var body: MouseBody = _windsurfer.controller.body
+	if body == null or body.push_on_mouse == MouseBody.PushOnMouse.OFF:
+		return false
+	var index: MouseButton = button.button_index
+	if index == MOUSE_BUTTON_WHEEL_UP or index == MOUSE_BUTTON_WHEEL_DOWN:
+		if Input.is_action_pressed("camera_look"):
+			return false
+		if button.pressed:
+			# A smooth-scrolling wheel sends parts of a notch (the event's factor); 0 means a whole one.
+			var notches: float = button.factor if button.factor > 0.0 else 1.0
+			body.wheel(notches if index == MOUSE_BUTTON_WHEEL_UP else -notches)
+		get_viewport().set_input_as_handled()
+		return true
+	if index == MOUSE_BUTTON_LEFT and body.push_on_mouse == MouseBody.PushOnMouse.WHEEL_AND_BUTTON:
+		body.hold_burst(button.pressed)
+		get_viewport().set_input_as_handled()
+		return true
+	return false
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -512,6 +543,10 @@ func _update_mouse_capture() -> void:
 	var director_open: bool = _director_view != null and _director_view.is_open
 	var wanted: bool = body != null and not body.scripted and not _in_menu and not get_tree().paused and not director_open 		and not _net_menu_open and not _is_spectating() and not _windsurfer.use_autopilot 		and not _screenshot_run and DisplayServer.get_name() != "headless"
 	var captured: bool = Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
+	if body != null and not wanted and not body.scripted:
+		# The mouse is not the body's (a menu, the autopilot): no burst held, no notch waiting, so a
+		# button let go behind a menu cannot leave the push at 100 %.
+		body.let_go_of_the_push()
 	if wanted and not captured:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	elif captured and not wanted:
@@ -598,6 +633,9 @@ func _apply_command_line_options() -> void:
 		var parts: PackedStringArray = options["body"].split(",")
 		_body_hold = Vector2(parts[0].to_float(), parts[1].to_float() if parts.size() > 1 else 0.0)
 		_apply_body_settings()
+		# --burst=1: the push's burst held by script too (the left mouse button; for screenshots).
+		if options.get("burst", "0") == "1":
+			_windsurfer.controller.body.hold_burst(true)
 		print(_windsurfer.controller.body_text())
 
 

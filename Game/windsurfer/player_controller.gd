@@ -23,7 +23,9 @@ extends RefCounted
 ## PushCurveConfig; Documentation/reports/push_slider/PLAN.md).
 ## The mouse can be the sailor's body (package B, an experiment, the setting "Mouse body"):
 ## sideways the toes against the heels, forward and back the back foot against the front foot, the
-## feet pressing in the straps (body, MouseBody).
+## feet pressing in the straps (body, MouseBody). The push is then on the mouse as well (the setting
+## "Push on the mouse"): the wheel moves it in steps and the left button held is a burst to 100 %
+## (push_now); W and S still work.
 
 enum Mode { BEGINNER, ADVANCED }
 enum Manoeuvre { NONE, TACK_HEADING_UP, TACK_BEARING_AWAY, GYBE_BEARING_AWAY, GYBE_HEADING_UP }
@@ -137,6 +139,20 @@ var pilot_overrides: Dictionary[String, float] = {}
 var push_level: float = NAN
 var push_curve: PushCurveConfig = null
 var push_rate_per_s: float = 0.4
+## The level the sailor is at now: what is applied to the pilot and the controls, and where the
+## gauge's needle points. It is push_level, except while the body's burst is held (the left mouse
+## button, MouseBody.burst_held: "push on the mouse"), when it goes to 100 %, and let go it comes
+## back to push_level. It gets there at push_mouse_rate_per_s (the full range in 1 s, two and a half
+## times the keys' pace: from the 75 % start to 100 % in a quarter of a second, a pump's quick
+## commit), so the rig's extra lean of the top of the ladder (10 degrees) comes in over that time and
+## not in one tick; a notch of the wheel likewise takes a tenth of a second. The keys move push_level
+## slower than that, so with W and S it is push_level exactly. An AI skipper's hands: push_level,
+## always. NaN with no slider.
+var push_now: float = NAN
+var push_mouse_rate_per_s: float = 1.0
+## In a burst: from the button pressed until the sailor is back at push_level after it is let go
+## (is_bursting(); a notch of the wheel down is not a burst).
+var _in_burst: bool = false
 ## The legs in the beginner's turn loop (PH35, the push slider plan, round 3): how much of the
 ## helm the back foot carries by pushing the sideways hold against its strap (Helm), beside the
 ## rake, the tilt and the rail; the sim applies it only in the straps. 0 = as before.
@@ -471,7 +487,10 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 ## foot against the front foot, written as the feet's press (SimControls.feet_roll_press and
 ## feet_pitch_press) every tick; the simulation presses with them, the feet staying in the straps.
 ## Without a body nothing changes (the presses stay 0). In a manoeuvre the body presses nothing (the
-## turn's own bank and trim rule there). The push slider's extras are its own and are left alone.
+## turn's own bank and trim rule there). The push slider's extras are its own and are left alone:
+## the simulation adds the toes' and heels' bank to the slider's rail, and the back or front foot's
+## weight takes over the trim the technique and the slider search for, as far as it presses (how the
+## two combine, measured: Documentation/reports/gameplay/gp2_push_on_mouse.md).
 func _move_the_body(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 	if body == null:
 		if _body_was_on:
@@ -511,10 +530,14 @@ func _move_the_slider(telemetry: Telemetry, controls: SimControls, dt: float) ->
 		var key: float = _axis("push_more", "push_less")
 		if key != 0.0:
 			push_level = clampf(push_level + key * push_rate_per_s * dt, 0.0, 1.0)
-	if not is_nan(push_level):
+		if body != null:
+			# The push on the mouse: the wheel's notches since the last update, beside the keys.
+			push_level = clampf(push_level + body.take_push_change(), 0.0, 1.0)
+	_follow_the_push(dt)
+	if not is_nan(push_now):
 		if push_curve == null:
 			push_curve = PushDial.default_curve()
-		PushDial.apply_level(push_level, push_curve, auto_sheet_pilot, controls)
+		PushDial.apply_level(push_now, push_curve, auto_sheet_pilot, controls)
 	# The pilot's numbers set from outside win over the slider's, field by field (the game's
 	# --pilot. options, the harnesses).
 	for field: String in pilot_overrides:
@@ -530,6 +553,31 @@ func _move_the_slider(telemetry: Telemetry, controls: SimControls, dt: float) ->
 	# The rail for the sea (Autopilot.wave_rail_deg): the sailor rails more when the board bounces.
 	auto_sheet_pilot.feel_the_sea(telemetry, dt)
 	controls.rail_bank_extra_deg += auto_sheet_pilot.wave_rail_deg()
+
+
+## The level the sailor is at (push_now): push_level, or 100 % while the body's burst is held,
+## followed at push_mouse_rate_per_s (never slower than the keys move push_level, so the keys alone
+## give push_level exactly). The first level, an AI skipper's hands and no slider: at once.
+func _follow_the_push(dt: float) -> void:
+	if is_nan(push_level):
+		push_now = NAN
+		return
+	var bursting: bool = hands == null and body != null and body.burst_held
+	var wanted: float = 1.0 if bursting else push_level
+	if is_nan(push_now) or hands != null:
+		push_now = wanted
+	else:
+		push_now = move_toward(push_now, wanted, maxf(push_mouse_rate_per_s, push_rate_per_s) * dt)
+	if bursting:
+		_in_burst = true
+	elif push_now == push_level:
+		_in_burst = false
+
+
+## Whether the push is in a burst: the left button held, or the sailor still coming back from it to
+## the level chosen with the keys and the wheel (the gauge shows where it comes back to).
+func is_bursting() -> bool:
+	return _in_burst and not is_nan(push_now)
 
 
 ## How much of the ease in the air applies in this wind and this sea, 0 to 1: the wind's share
@@ -633,13 +681,18 @@ func _release_the_slider(controls: SimControls) -> void:
 	controls.trim_aim_extra_deg = 0.0
 
 
-## The slider's line for the HUD ("" without a slider).
+## The slider's line for the HUD ("" without a slider): the level the sailor is at.
 func push_text() -> String:
 	if is_nan(push_level):
 		return ""
 	if push_curve == null:
 		push_curve = PushDial.default_curve()
-	return PushDial.describe(push_level, push_curve)
+	return PushDial.describe(push_level if is_nan(push_now) else push_now, push_curve)
+
+
+## In a burst, the level it comes back to, for the F1 panel ("" otherwise).
+func burst_text() -> String:
+	return "burst: back to %.0f %% when let go" % (push_level * 100.0) if is_bursting() else ""
 
 
 ## The beginner's turn-rate loop. turn_key asks for a rate; without a key the heading hold
