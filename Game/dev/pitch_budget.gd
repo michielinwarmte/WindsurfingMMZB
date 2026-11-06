@@ -204,7 +204,7 @@ func _step_taken_apart(sim: WindsurferSim, dt: float, controls: SimControls) -> 
 			sim._ride_the_hull(sub_dt)
 		sim.time_s += sub_dt
 		if sailing:
-			sim._check_balance()
+			sim._check_balance(sub_dt)
 		else:
 			sim.fallen_for_s += sub_dt
 			if sim.fallen_for_s >= sim._waterstart_time_s:
