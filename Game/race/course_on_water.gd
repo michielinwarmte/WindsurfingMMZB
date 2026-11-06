@@ -492,6 +492,11 @@ func _make_shared_parts() -> void:
 	_flag_material = _two_sided(FLAG_COLOR)
 	_start_flag_material = _two_sided(CourseOverlay.START_FLAG)
 	_finish_flag_material = _two_sided(CourseOverlay.FINISH_FLAG)
+	# The pins' flags glow a little, as the buoys do: lit from behind, a plain orange flag turned brown.
+	for line_flag: StandardMaterial3D in [_start_flag_material, _finish_flag_material]:
+		line_flag.emission_enabled = true
+		line_flag.emission = line_flag.albedo_color
+		line_flag.emission_energy_multiplier = BUOY_GLOW
 	_hull_material = VisualMath.plain_material(HULL_COLOR)
 	_cabin_material = VisualMath.plain_material(CABIN_COLOR)
 	_line_material = ShaderMaterial.new()

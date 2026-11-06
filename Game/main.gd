@@ -758,7 +758,8 @@ func _true_wind_at(at: Vector3) -> Vector3:
 ## board waits, looking across the line at the course. A mark's name (start_boat for "start
 ## boat"): beside that mark, across the wind, so its flag is seen side on (a boat a little from
 ## behind, to see its deck). "<view>@<m>" (start@50, start_pin@20, 1@50): from that far away at a
-## sailor's eye height (2 m above the water), as a sailor sees it coming.
+## sailor's eye height (2 m above the water), as a sailor sees it coming. "start_top": straight above
+## the start line and where the boards wait before it (on a slalom the row upwind of the boat).
 func _look_at_the_course(view: String) -> void:
 	var camera: Camera3D = _camera_rig.camera
 	var across: Vector2 = Course.direction_of(_course.axis_deg + 90.0)
@@ -780,8 +781,14 @@ func _look_at_the_course(view: String) -> void:
 		camera.look_at(Vector3(looked_at.x, 1.2, looked_at.y), Vector3.UP)
 		_camera_rig.set_process(false)
 		return
-	if view == "all":
+	if view == "all" or view == "start_top":
 		var box: Rect2 = _course.bounds().grow(80.0)
+		if view == "start_top":
+			# Straight above the start: its line and where the boards wait (RaceCourses.wait_spot()).
+			box = Rect2(_course.mark(CourseMark.START_BOAT).position, Vector2.ZERO).expand(_course.mark(CourseMark.START_PIN).position)
+			for share: float in [0.0, 1.0]:
+				box = box.expand(RaceCourses.wait_spot(_course, share, RaceSetup.new().wait_behind_m()))
+			box = box.grow(40.0)
 		var window: Vector2 = get_viewport().get_visible_rect().size
 		# The camera's fov is from the top of the picture to the bottom; across it sees more.
 		var half_view: float = tan(deg_to_rad(camera.fov * 0.5))
@@ -951,11 +958,11 @@ func apply_course(new_course: Course) -> void:
 	if _net != null and _net.mirror != null:
 		_net.mirror.update_course(new_course)
 	if _user_option("lan_report") != "":
-		# For the LAN check (tools/lan_test.sh): where every mark is now, on this PC.
+		# For the LAN check (tools/lan_test.sh): the race type and where every mark is now, on this PC.
 		var marks: PackedStringArray = PackedStringArray()
 		for mark: CourseMark in new_course.marks:
 			marks.append("%s %.2f %.2f" % [mark.id.replace(" ", "_"), mark.position.x, mark.position.y])
-		print("COURSE %s" % ", ".join(marks))
+		print("COURSE type=%s, %s" % [Course.race_type_name(new_course.race_type), ", ".join(marks)])
 
 
 # ---------------------------------------------------------------- LAN multiplayer

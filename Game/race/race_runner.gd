@@ -243,6 +243,10 @@ func restart(keep_places: bool = false) -> void:
 	rules = RaceRules.new(race.board_count(), course.axis_deg) if setup.rules else null
 	var behind_m: float = setup.wait_behind_m()
 	var spots: PackedVector2Array = pre_start_spots(course, race.steps()[0], opponents.size() + 1 + remote_players.size(), behind_m)
+	if course.starts_upwind_of_the_boat():
+		# A slalom's row upwind of the boat, kept inside the sailing area (off a lake's shore).
+		for i: int in spots.size():
+			spots[i] = inside_area(_area, spots[i])
 	var heading_deg: float = RaceCourses.pre_start_heading_deg(course)
 	if spectating:
 		# The AI boards in their order along the line (no player's slot in the middle).
@@ -389,6 +393,17 @@ static func pre_start_spots(race_course: Course, start: RaceStep, count: int, be
 		if i != player_slot:
 			spots.append(middle + along * (shares[i] - 0.5))
 	return spots
+
+
+## A point moved inside a sailing area, at least 10 m from its sides (as the skippers keep their
+## points: Skipper._inside_area()).
+static func inside_area(area: SailingArea, point: Vector2) -> Vector2:
+	if area == null:
+		return point
+	var here: Vector2 = area.local(point)
+	var across_m: float = maxf(area.half_across_m - 10.0, 0.0)
+	var up_m: float = maxf(area.half_up_m - 10.0, 0.0)
+	return area.point_at(clampf(here.x, -across_m, across_m), clampf(here.y, -up_m, up_m))
 
 
 ## Where `count` boards wait `behind_m` behind the start line, spread evenly along it in their
