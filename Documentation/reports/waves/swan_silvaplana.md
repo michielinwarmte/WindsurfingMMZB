@@ -189,6 +189,10 @@ A wave feels the bottom where the water is shallower than half its length. With 
 3. **SWAN's physics for a lake:** WESTH (the default), Komen or ST6, once all three have run? And whether the game should take SWAN's Hs as a grid behind a setting (default unchanged) if it differs clearly from the law.
 4. **The air's density:** the waves' laws assume sea-level air. Is the 20 % thinner air at 1791 m something to put in (it would lower the waves), or leave it until a measurement says so?
 
+## Checks
+
+On the branch's final code: `tools/check.sh` 446 files, 0 failed; `tools/test.sh` 843 of 843 pass. `tools/test.sh validation` was not run: nothing in `Game/sim/` changed. Not verified: how the water looks on Max's screen with any option (none was built).
+
 ## Files
 
 - `Game/dev/swan_export.gd`: the game's lake for SWAN (depth, the map's wind, the game's model, the lines' points).
