@@ -232,6 +232,12 @@ var rail_full_ms: float = 0.0
 ## the sailor out of the carve; a sailor carving up into a tack in chop eases a little. 90: no ease.
 var head_up_alpha_deg: float = 90.0
 var head_up_ease_from_ms: float = 7.0
+## Whether the heading hold's own corrections toward the wind count as heading up (true), or only a
+## key held (or a tack) does (false). In chop the hold corrects all the time (the waves yaw the board
+## 20 to 45 degrees a second), so with true the ease also comes on in straight sailing.
+var head_up_ease_on_hold: bool = true
+## The turn key held at this update (beginner mode), +1 right, -1 left, 0 none.
+var _turn_key: float = 0.0
 ## The pull held in chop: the pilot's hike_share times (1 - chop_hike_drop) when the board bounces
 ## (the pitch rate's RMS that Autopilot.feel_the_sea() feels) at chop_bounce_full_dps or more, none
 ## at chop_bounce_from_dps or less, straight between: more margin when it gets wild, the full pull on
@@ -336,6 +342,7 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 	# Steering.
 	var steer_key: float = _axis("steer_right", "steer_left")  # +1 = turn right on the screen
 	var tilt_key: float = _axis("tilt_right", "tilt_left")  # +1 = mast top toward starboard
+	_turn_key = clampf(steer_key + tilt_key, -1.0, 1.0) if mode == Mode.BEGINNER else 0.0
 	var rake_key: float = _axis("rake_back", "rake_forward")  # +1 = rig back
 	# Through a gybe the sailor keeps the sail eased: with the rig laid forward and the body
 	# inside the turn, a fully powered sail would pull them over it. The bank does the
@@ -546,6 +553,8 @@ func _heading_up_at_speed(telemetry: Telemetry, controls: SimControls) -> bool:
 	if manoeuvre != Manoeuvre.NONE:
 		return false
 	# Heading up is a right turn on starboard tack (tack +1) and a left turn on port tack.
+	if not head_up_ease_on_hold and _turn_key * tack_sign(telemetry) <= 0.0:
+		return false
 	return wanted_rate_dps * tack_sign(telemetry) > 5.0
 
 

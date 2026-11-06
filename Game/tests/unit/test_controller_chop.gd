@@ -172,3 +172,20 @@ func test_the_sail_comes_back_in_faster_after_a_jump() -> void:
 	assert_eq(controller.auto_sheet_pilot.sheet_in_share, 3.0, "and for a while after landing")
 	_run(controller, t, controls, 1.0)
 	assert_eq(controller.auto_sheet_pilot.sheet_in_share, own, "then the pilot's own pace again")
+
+
+func test_the_heading_holds_corrections_ease_only_when_asked() -> void:
+	for on_hold: bool in [true, false]:
+		var controller: PlayerController = PlayerController.new()
+		controller.head_up_alpha_deg = 9.0
+		controller.head_up_ease_on_hold = on_hold
+		var controls: SimControls = SimControls.new()
+		var t: Telemetry = _telemetry(12.0)
+		t.heading_deg = 180.0
+		_run(controller, t, controls, 0.5)
+		# The board has been knocked 10 degrees to port: the hold turns it back to the right, which on
+		# starboard tack is toward the wind.
+		t.heading_deg = 170.0
+		_run(controller, t, controls, 0.2)
+		assert_eq(controller.auto_sheet_pilot.max_alpha_deg, 9.0 if on_hold else 90.0,
+			"the hold's correction toward the wind eases the sheet only with head_up_ease_on_hold")
