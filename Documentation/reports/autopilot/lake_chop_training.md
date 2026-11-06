@@ -86,3 +86,59 @@ mean speeds (beam / broad / broad from the middle, kt; the baseline 17.9 / 10.1 
 
 Kept for round 3: the faster sheet, the ease while carving up at 6 degrees, no rail at walking pace.
 The 24 kt beam reach still catapults with all of them (it is the board in the air: round 2).
+
+The open water for the same variants (`.logs/lake_chop/lc1_open.log`): no fall in the push check
+at either dial for any of them; the speed made good over the nine neutral cases 8.97 to 9.08 m/s
+against the baseline's 9.05, except `chophike30` (8.70, 4 % slower); the matrix's one fall (the
+24 kt tack from a beam reach on flat water) is gone with every head-up ease, the faster sheet and
+less pull. The reach check (it sails the pilot itself) changes only with the pilot's own numbers:
+`hike10` and `depallow3` make all nine reaches steady (the 24 kt close reach's pitch SD from 0.31
+to below 0.3), `sheetrate25` changes nothing. `waverail3` wrecks it (0 of 4 goal cases, 5.3 m/s):
+the pilot's own course hold adds its rail for the sea to the controls every update instead of
+setting it, so the rail grows without end. That is in `Game/sim/autopilot.gd` (not changed here;
+written down for Michiel, see the end); the controller sets it, so the AI boards are not affected.
+
+## Round 2 (lc2): the board in the air, the helm in chop, the timing
+
+`rounds/lc2.txt`, 15 variants (a few left out after round 1 to keep it short), the lake and the
+open water. A first look at the steady 24 kt reach had shown the ease in the air at work (the
+three 24 kt beam reaches without a fall) but 20 % slower; the round tried lighter and gated eases.
+
+| Variant | Lake falls (of 130) | Afternoons beam / broad / mid | Map beam, s24 beam | Push check neutral (pushed), m/s made good | What it is |
+|---|---|---|---|---|---|
+| baseline | 26 | 17.9 / 10.1 / 9.4 | 21.8, 18.1 | 9.05 (10.87), no fall | |
+| **`c1`** | **0** | **18.1 / 10.1 / 9.4** | 21.7, 18.6 | 8.76 (10.24), no fall | the ease while carving up (9 degrees, a key or a tack only), no rail at walking pace, the ease in the air (6 degrees) from 18 to 20 kt at the sail with the sail back in on landing at 3 |
+| `air6rs3` | 4 | 15.6 / 9.9 / 9.3 | 17.9, 18.6 | 8.42 (9.72), 1 fall | the ease in the air at every wind, back in at 3: safe and slow |
+| `air6`, `air6a01` | 6, 6 | 14.8, 15.6 / ... | 16.9, 18.5 | 8.53, 8.64 | the ease in the air at every wind (after 0.1 s light) |
+| `air6rs3g` | 14 | 18.1 / 10.1 / 9.4 | 21.7, 18.6 | 8.63 (10.27), 1 fall | the ease in the air from 18 to 20 kt only: the 24 kt falls go (14 to 2) and the afternoons keep their speed |
+| `helmrate1`, `trimfeel04`, `holdrate05`, `hu9key`, `legs0`, `rategain005` | 15 to 19 | 16.9 to 18.0 | | 9.0 to 9.1 | a calmer helm or sheet: some help, no pattern, and new falls appear where old ones go |
+| `air6s15h1`, `air9s15`, `wait08`, `gybealpha6` | 18 to 26 | | | | a lighter ease (only when nearly nothing carries the board) lets the 24 kt reach fall again; waiting for the bow to drop before a tack changes nothing |
+
+`c1` is the first variant that fell in none of the 130 lake cases. But on the open water it lost
+speed made good where the baseline does not fall: the push check's 24 kt reaches (beam 13.99 to
+12.61 m/s, broad 14.21 to 13.41; pushed 14.65 to 12.20). The open sea's longer swell also lifts the
+board off the water, and the ease came on there for nothing. The open sea pitches the board at 3.5
+to 9 degrees a second (the push check's nine cases), the lake's chop at 10 to 17 (its telemetry):
+that is round 3's gate.
+
+## Round 3 (lc3): only in short chop, and round 1's winners on top
+
+`rounds/lc3.txt`, 13 variants around `c2` = `c1` with the ease in the air only when the board
+bounces at 8 to 12 degrees a second or more (`airborne_bounce_from_dps`, `_full_dps`; added for
+this round). The open water's push check is 9 cases neutral, 6 pushed; m/s made good, the mean.
+
+| Variant | Lake falls (of 130) | Afternoons | Push neutral / pushed | Open water matrix | |
+|---|---|---|---|---|---|
+| baseline | 26 | 17.9 / 10.1 / 9.4 | 9.05 / 10.87 | 1 fall | |
+| **`c2`** | **0** | 17.9 / 10.1 / 9.4 | **9.08 / 10.83** | 1 fall | the gate gives the open sea its speed back |
+| **`c2hu10`** | **0** | 17.9 / 10.1 / 9.4 | 9.05 / 10.91 | 1 fall | the head-up ease only from 10 degrees a second (the AI's stick) |
+| `c2hu6` | 0 | 17.9 / 10.1 / 9.4 | 9.07 / 10.94 | 1 fall | the ease while carving up at 6 degrees |
+| **`c2s25hu10`**, `c2s25` | **0** | 18.0 / 10.1 / 9.4 | 8.97 / 10.71 | **no fall** | and the pilot's faster hands (2.5): the matrix's last fall goes; the push check's 24 kt broad reach 5 to 8 % slower (one run each) |
+| `c2b1014`, `c2dep4`, `c2g1719` | 1 | | about the baseline | 1 fall | the gates moved: 10 to 14 degrees a second, 17 to 19 kt; the urgent ease twice as fast |
+| `c2hold`, `c2hike12` | 3 | 17.8, 18.2 | 9.08, 9.10 | no fall | the ease also on the hold's corrections; more pull (1.2): faster on the map's beam reach (22.1 kt) and on the reach check (9 of 9 steady), but 2 falls at 24 kt |
+| `c2b710`, `c2a9` | 5, 6 | | | | the gate from 7 degrees a second, or the ease in the air only to 9 degrees: the 24 kt reach falls again |
+| `c2g1921` | 16 | | | | the ease in the air only from 19 to 21 kt: too late for the steady 24 kt (about 20 kt at the sail) |
+
+The remaining open-water matrix fall (24 kt, a tack from a beam reach on flat water) comes 0.3 s
+after Space, while the heading hold is turning the board back up after the case's bear-away: only
+the ease on the hold's corrections (`c2hold`) or the faster sheet takes it.

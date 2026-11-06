@@ -203,7 +203,8 @@ def summarise(round_name, label):
         print("       goal cases met (front, trim, sd): %d of 4; steady and upright: %d of %d" % (met, steady, len(rows)))
     else:
         print("reach: no rows")
-    for name, title in (("push_neutral.txt", "push neutral"), ("push_pushed.txt", "push pushed (hike 1.6)")):
+    for name, title in (("push_neutral.txt", "push neutral"), ("push_pushed.txt", "push pushed (hike 1.6)"),
+                        ("push2_neutral.txt", "push2 neutral"), ("push2_pushed.txt", "push2 pushed")):
         prow = push_rows(os.path.join(base, name))
         if prow:
             falls = sum(r["falls"] for r in prow)
@@ -245,8 +246,10 @@ def table_line(round_name, label):
         cells.append("reach %-12s" % "= defaults")
     else:
         cells.append("reach %-12s" % "-")
-    for name in ("push_neutral.txt", "push_pushed.txt"):
+    for name in ("push_neutral.txt", "push_pushed.txt", "push2_neutral.txt", "push2_pushed.txt"):
         prow = push_rows(os.path.join(base, name))
+        if not prow and name.startswith("push2"):
+            continue
         if prow:
             cells.append("F%d %5.2f" % (sum(r["falls"] for r in prow), sum(r["made"] for r in prow) / len(prow)))
         else:

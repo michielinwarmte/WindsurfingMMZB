@@ -14,6 +14,8 @@ Every variant (a line "<label>: <overrides>" of the variants file) is scored by 
 - push    the push check in the open water's gusts and waves at the neutral dial: nine cases of
           120 s (Game/dev/run_push.gd) -> push_neutral.txt
 - pushed  the same at the pushed dial (--pilot.hike_share=1.6), 18 and 24 kt -> push_pushed.txt
+- push2, pushed2  more open water: 18 and 24 kt at 75 and 120 degrees, gusts 6.5 s apart, neutral
+          and pushed -> push2_neutral.txt, push2_pushed.txt
 - matrix  the manoeuvre matrix on the open water (Game/dev/run_matrix.gd) -> matrix.txt
 - lake    Lake Silvaplana on its own waves (Game/dev/run_lake.gd --lake_waves=1):
             lake_afternoons.txt  the beam reach, the broad reach and the broad reach from the middle
@@ -111,7 +113,11 @@ def jobs_for(label, overrides, out_dir, parts, scale_args):
         jobs.append(Job(label, "res://dev/run_reach.gd",
                         ["--seconds=90", "--from=60", "--out_dir=" + os.path.join(out_dir, "reach")] + reach_over,
                         os.path.join(out_dir, "reach.txt"), 810))
-    for part, winds, cases, extra in (("push", "12,18,24", 9, []), ("pushed", "18,24", 6, ["--pilot.hike_share=1.6"])):
+    # push2: more of the open water, other gusts (6.5 s apart) and other courses (75 and 120 degrees)
+    # at 18 and 24 kt, neutral and pushed: four cases each, the open sea's second sample.
+    for part, winds, cases, extra in (("push", "12,18,24", 9, []), ("pushed", "18,24", 6, ["--pilot.hike_share=1.6"]),
+                                      ("push2", "18,24", 4, ["--twas=75,120", "--gust_period=6.5"]),
+                                      ("pushed2", "18,24", 4, ["--twas=75,120", "--gust_period=6.5", "--pilot.hike_share=1.6"])):
         if part not in parts:
             continue
         push_dir = os.path.join(out_dir, part)
@@ -278,6 +284,10 @@ def main():
             merge_push(os.path.join(out_dir, "push"), 9, os.path.join(out_dir, "push_neutral.txt"))
         if "pushed" in parts:
             merge_push(os.path.join(out_dir, "pushed"), 6, os.path.join(out_dir, "push_pushed.txt"))
+        if "push2" in parts:
+            merge_push(os.path.join(out_dir, "push2"), 4, os.path.join(out_dir, "push2_neutral.txt"))
+        if "pushed2" in parts:
+            merge_push(os.path.join(out_dir, "pushed2"), 4, os.path.join(out_dir, "push2_pushed.txt"))
         if "matrix" in parts:
             merge_matrix(os.path.join(out_dir, "matrix"), os.path.join(out_dir, "matrix.txt"))
         if "lake" in parts:
