@@ -7,6 +7,9 @@ extends Control
 ## middle and the ladder's words under it. The HUD (hud.gd) shows it at the bottom in the middle
 ## for the board on the screen, free sailing and racing alike, and hides it for a board without a
 ## slider (NaN: the autopilot, a skipper that leaves the slider alone).
+## The push on the mouse (GP2, gp2_push_on_mouse.md): while the left button's burst holds the push
+## above the level chosen with the keys and the wheel, the gauge says BURST and a thin marker shows
+## the chosen level, where the push comes back to when the button is let go.
 
 ## Michiel's ladder (31 October 2026): its levels and what each means.
 const STEP_LEVELS: PackedFloat64Array = [0.0, 0.25, 0.5, 0.75, 0.85, 0.95, 1.0]
@@ -29,6 +32,8 @@ const FOLLOW_RATE: float = 14.0
 
 ## The slider's level, 0 to 1; NaN hides the gauge.
 var level: float = NAN
+## In a burst: the level chosen with the keys and the wheel (NaN: no burst, the same as level).
+var chosen: float = NAN
 ## What is drawn: the level, eased.
 var _shown: float = 0.0
 var _card: StyleBoxFlat = HudStyle.card()
@@ -45,10 +50,13 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
 
-## The board's slider this frame (PlayerController.push_level); NaN hides the gauge.
-func set_level(value: float) -> void:
+## The board's slider this frame: the level the sailor is at (PlayerController.push_now), and the
+## level chosen with the keys and the wheel (push_level), shown apart only in a burst. NaN hides the
+## gauge.
+func set_level(value: float, chosen_value: float = NAN) -> void:
 	if is_nan(value):
 		level = NAN
+		chosen = NAN
 		visible = false
 		return
 	if not visible:
@@ -56,6 +64,17 @@ func set_level(value: float) -> void:
 		queue_redraw()
 	level = clampf(value, 0.0, 1.0)
 	visible = true
+	var burst_from: float = NAN
+	if not is_nan(chosen_value) and value > chosen_value + 0.005:
+		burst_from = clampf(chosen_value, 0.0, 1.0)
+	if is_nan(burst_from) != is_nan(chosen) or (not is_nan(burst_from) and absf(burst_from - chosen) > 0.0005):
+		chosen = burst_from
+		queue_redraw()
+
+
+## Whether the gauge shows a burst (the push above the level chosen with the keys and the wheel).
+func is_burst() -> bool:
+	return not is_nan(chosen)
 
 
 func _process(delta: float) -> void:
@@ -112,9 +131,17 @@ func _draw() -> void:
 	draw_line(centre + at * (RADIUS - THICKNESS * 0.5 - 9.0), centre + at * (RADIUS + THICKNESS * 0.5 + 3.0), Color(0.0, 0.0, 0.0, 0.5), 7.0, true)
 	draw_line(centre + at * (RADIUS - THICKNESS * 0.5 - 8.0), centre + at * (RADIUS + THICKNESS * 0.5 + 2.0), Color.WHITE, 4.0, true)
 	draw_circle(centre + at * (RADIUS - THICKNESS * 0.5 - 8.0), 3.5, Color.WHITE)
-	# The words: PUSH, the level, and what it means.
+	# In a burst: a thin marker at the level the push comes back to.
+	if is_burst():
+		var back: Vector2 = Vector2.from_angle(angle_for(chosen))
+		draw_line(centre + back * (RADIUS - THICKNESS * 0.5 - 6.0), centre + back * (RADIUS + THICKNESS * 0.5 + 2.0), Color(1.0, 1.0, 1.0, 0.75), 2.0, true)
+		draw_circle(centre + back * (RADIUS - THICKNESS * 0.5 - 6.0), 3.0, Color(1.0, 1.0, 1.0, 0.75), false, 1.5, true)
+	# The words: PUSH (BURST in a burst), the level, and what it means.
 	var colour: Color = colour_for(_shown)
-	_text("PUSH", HudStyle.sans(700), 13, centre.y - 44.0, HudStyle.DIM_COLOR)
+	if is_burst():
+		_text("BURST", HudStyle.sans(800), 13, centre.y - 44.0, colour)
+	else:
+		_text("PUSH", HudStyle.sans(700), 13, centre.y - 44.0, HudStyle.DIM_COLOR)
 	_text("%d %%" % roundi(_shown * 100.0), HudStyle.sans(800), 34, centre.y - 6.0, HudStyle.TEXT_COLOR if _shown < 0.95 else colour)
 	_text(word_for(_shown), HudStyle.sans(600), 15, centre.y + 26.0, colour)
 

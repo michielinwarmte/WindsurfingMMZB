@@ -379,8 +379,15 @@ func _build_body_rows(s: SettingsValues) -> void:
 	rows.append(_add_list(grid, "Level", ["1: the feet hold the rail", "2: you hold the rail"], s.body_level - 1,
 		"2: the feet correct slowly, a gust heels the board further",
 		func(index: int) -> void: s.body_level = index + 1))
+	# The push on the mouse as well (gp2_push_on_mouse.md): one hand for the body and the push.
+	rows.append(_add_list(grid, "Push on the mouse", ["Off (W and S only)", "Wheel", "Wheel and left button"], s.body_push_on_mouse,
+		"Wheel up: more push. Left button held: a burst to 100 %. W and S always work",
+		func(index: int) -> void: s.body_push_on_mouse = index))
+	rows.append(_add_slider(grid, "Wheel step", SettingsValues.BODY_PUSH_STEP_MIN, SettingsValues.BODY_PUSH_STEP_MAX, 0.05, s.body_push_step,
+		func(v: float) -> String: return "%.0f %% more or less push a notch of the wheel" % (v * 100.0),
+		func(v: float) -> void: s.body_push_step = v))
 	_enable_with(on_row, rows)
-	_add_note(grid, "The feet stay in the straps; the mouse is how they press. Sideways is the toes against the heels: the toes put the leeward rail down, the heels bring the board flat. Forward and back is the front foot against the back foot: pull the mouse back and the weight goes onto the back foot (the nose lifts, faster, until it bounces), push it forward and it goes onto the front foot. The middle is the sailor's own technique. It works only planing in the footstraps, not in a turn. Hold the right mouse button or C to look around with the orbit camera.")
+	_add_note(grid, "The feet stay in the straps; the mouse is how they press. Sideways is the toes against the heels: the toes put the leeward rail down, the heels bring the board flat. Forward and back is the front foot against the back foot: pull the mouse back and the weight goes onto the back foot (the nose lifts, faster, until it bounces), push it forward and it goes onto the front foot. The middle is the sailor's own technique. It works only planing in the footstraps, not in a turn. The wheel moves the push in steps, and the left button held is a burst to 100 % push that comes back to your level when you let go. Hold the right mouse button or C to look around with the orbit camera (with the button held the wheel zooms).")
 
 
 func _build_graphics_rows(s: SettingsValues) -> void:
