@@ -11,6 +11,7 @@ Documentation/
   PROGRESS_LOG.md        live: one entry per session, newest first
   PHYSICS_SPEC.md        reference: the physics as built
   MAP_SILVAPLANA_PLAN.md live plan: the map track (open: MA1 to MA8)
+  backlog/               live: the plan to 1.0 (1.0.md, QUESTIONS.md, BOARD.md, epics/E01 to E18)
   gameplay_controls_v0.2.pdf   the design behind version 0.2 (section GP)
   MALOJA_WIND_RESEARCH.md, SILVAPLANA_SPOT_NOTES.md, POLAR_15KT.md, iqfoil_...pdf   reference
   images/                the figures and screenshots
@@ -35,6 +36,7 @@ Updated 26 October 2026 (Session 55): `AI_FLEET_PLAN.md` and `PHYSICS_REQUESTS_F
 | File | What it is |
 |---|---|
 | [gameplay_controls_v0.2.pdf](gameplay_controls_v0.2.pdf) | The gameplay and control design for version 0.2, from a voice session with Tarpie on 23 October 2026: the player becomes the sailor (push against risk on a reach, railing upwind, absorbing chop, the gybe's timing, the mouse and the gamepad as the sailor's body). Max's direction of 26 October 2026: one dial (push), and the rail and the back foot on the mouse as an experiment. The plan is section GP of the roadmap |
+| [backlog/](backlog/README.md) | **Live.** The plan to version 1.0 (6 November 2026): what 1.0 is and the version ladder (`1.0.md`), the open questions with the lead's recommendations (`QUESTIONS.md`), where we stand and the current sprint (`BOARD.md`), eighteen epics with their stories and tasks (`epics/`), and the rules for keeping it (`README.md`); `tools/backlog.py` prints the counts |
 | [MAP_SILVAPLANA_PLAN.md](MAP_SILVAPLANA_PLAN.md) | Max's map track: Lake Silvaplana from Swiss open data (phases M0 to M4) and the wind analyser (W0 to W5), with the open data's sources and the map's decisions. M0 to M3 and W0 to W5 are built; the open tasks (M4, W4b, the day types) are MA1 to MA8 in the roadmap |
 
 ## Reference
@@ -68,6 +70,8 @@ One report per package, written by whoever built it and read by the lead before 
 | [reports/ui/](reports/ui/) | Session 68: the race block and the push gauge, before and after (`race_hud_before.png`, `race_hud_countdown.png`, `race_hud_racing.png`; ROADMAP UI6) |
 | [reports/u1/](reports/u1/) | U1, planing on a smaller wet area: the sources, the measurements, the physics, the planing onset, the porpoising, the finish (`finish_u16.md` measured where the board rails out) |
 | [reports/u2/](reports/u2/) | U2, the fin bends: the sources, the measurements (`fin_measure.md` has a sweep of the rail from 0 to 24 degrees), the fin's physics, the heeled hull, the technique (`fin_technique.md`: the map of rail against trim), the look, riding the fin (`fin_ride.md`: the weight aft), the hull's lift. For Michiel's review PH1 |
+| [reports/spots/](reports/spots/) | The dossier on the twelve spots of 1.0 (6 November 2026, web research): location, wind system, water, beach, events, open geodata per country, a difficulty against Silvaplana (`spot_dossier.md`) |
+| [reports/characters/](reports/characters/) | The reference list of the top windsurf racers 2006 to 2026 (PWA slalom, IFCA, the Olympics, iQFOiL, Formula, the Défi, Lüderitz) for the AI characters' names (`real_sailors.md`; the source only, never in `Game/`) |
 
 ## Archive: finished work, kept as it was
 

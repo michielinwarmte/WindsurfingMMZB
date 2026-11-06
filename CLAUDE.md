@@ -2,6 +2,8 @@
 
 Windsurfing simulator by the MMZB team in **Godot 4.7.2 (standard build, GDScript)**. The Godot project is in `Game/`. Version 0.1.0 was released on 21 October 2026; the old Unity version is in `Legacy/` as a read-only reference.
 
+**The plan to 1.0:** [Documentation/backlog/](Documentation/backlog/README.md) (from 6 November 2026): what 1.0 is (`1.0.md`), the open questions (`QUESTIONS.md`), the sprint board and where we stand (`BOARD.md`), one file per epic with its stories and tasks (`epics/`), and `python -I tools/backlog.py` for the counts. A session starts at `BOARD.md`, takes a story, and moves its status and tasks as the README there says; the roadmap's item IDs stay and are named by the stories.
+
 **Where things stand:** [ROADMAP.md](ROADMAP.md): every open item by section of the game (GP gameplay, PH physics, RA racing, GR graphics, SO sound, UI, MA map, TE tech, PR project), each with an ID, its files, what it waits on and its version; the plan for 0.2; what waits for whom; how an update and a release are made; the prompts to continue. Refer to items by their ID, and when an item is done or a new one appears, update the roadmap in the same session. The newest entry in [Documentation/PROGRESS_LOG.md](Documentation/PROGRESS_LOG.md) says where the last session stopped. The map of every document is [Documentation/README.md](Documentation/README.md); finished plans and progress files live in `Documentation/archive/` and are never deleted, and the agents' reports in `Documentation/reports/<work>/`.
 
 **The tracks:**
