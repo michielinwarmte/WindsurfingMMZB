@@ -182,6 +182,19 @@ var air_lift_n: float = 0.0
 var air_pitch_nm: float = 0.0
 var launch_coupling: float = 0.0
 var pitch_inertia_kgm2: float = 0.0
+## The feet (GP2, the feet's press): the rider's own press where it has got to (-1 to +1 each:
+## the toes against the heels, + the leeward rail down; the back foot against the front foot, + the
+## weight back), how the feet press now, whoever asks (the technique's reflex and balance, or the
+## rider): the roll moment they pass as a share of the most they can (+1 all of it on the toes, the
+## leeward rail down; -1 all on the heels), and where their pressure is between the straps (0 all
+## the weight on the front strap, 1 all on the back strap; 0.5 without straps).
+var feet_roll_press: float = 0.0
+var feet_pitch_press: float = 0.0
+var toes_share: float = 0.0
+var back_foot_share: float = 0.5
+## How far the rider's press reaches the board now: 1 planing in the straps, 0 out of them or below
+## planing (WindsurferSim._planing_share); the body gauge says "works" from a half.
+var feet_press_reach: float = 0.0
 
 
 ## The column names of to_csv_row(), in the same order.
@@ -194,7 +207,7 @@ static func csv_header() -> String:
 		+ "wetted_length_m,wetted_aft_m,spray_root_factor,heave_added_mass_kg,rig_tilt,rig_lean_deg,sailor_state,boom_across,fin_immersed," \
 		+ "bow_immersion_m,planing_cop_z_m,fall_kind,wanted_bank_deg,felt_push_ms2,felt_heel_deg,bow_drag_n,water_height_m," \
 		+ "hand_force_n,foot_force_n,mast_foot_force_n,feet_moment_roll_nm,hand_moment_roll_nm,leg_sway_m,feet_moment_excess_nm,rail_press,sailor_x_m,sailor_y_m,target_x_m,target_y_m,feet_x_m,feet_z_m,hull_resistance_n,hand_force_up_n,mast_foot_force_up_n,pitch_from_mast_foot_nm,pitch_from_feet_force_nm,pitch_from_feet_moment_nm,attachment_x_n,attachment_z_n,harness_tension_n,yaw_fin_nm,yaw_rig_nm,yaw_sailor_nm,yaw_water_nm,yaw_net_nm,roll_fin_nm,roll_rig_nm,roll_sailor_nm,roll_water_nm,roll_net_nm,rail_grip_n,rail_yaw_nm,twa_at_sail_deg," 		+ "friction_area_m2,wet_front_m,push_centre_m,fin_up_n,fin_load_share,fin_tilt_deg,fin_bend_tip_deg," \
-		+ "back_foot_push,back_foot_yaw_nm,trim_aim_deg,air_lift_n,air_pitch_nm,launch_coupling,pitch_inertia_kgm2"
+		+ "back_foot_push,back_foot_yaw_nm,trim_aim_deg,air_lift_n,air_pitch_nm,launch_coupling,pitch_inertia_kgm2," 		+ "feet_roll_press,feet_pitch_press,toes_share,back_foot_share,feet_press_reach"
 
 
 func to_csv_row() -> String:
@@ -209,7 +222,8 @@ func to_csv_row() -> String:
 		hand_force_n, foot_force_n, mast_foot_force_n, feet_moment_roll_nm, hand_moment_roll_nm, leg_sway_m, feet_moment_excess_nm, rail_press,
 		sailor_position_body.x, sailor_position_body.y, posture_target_body.x, posture_target_body.y, feet_body.x, feet_body.z, hull_resistance_n, hand_force_up_n, mast_foot_force_up_n, pitch_from_mast_foot_nm, pitch_from_feet_force_nm, pitch_from_feet_moment_nm, attachment_x_n, attachment_z_n, harness_tension_n, yaw_fin_nm, yaw_rig_nm, yaw_sailor_nm, yaw_water_nm, yaw_net_nm, roll_fin_nm, roll_rig_nm, roll_sailor_nm, roll_water_nm, roll_net_nm, rail_grip_n, rail_yaw_nm, twa_at_sail_deg,
 		friction_area_m2, wet_front_m, push_centre_m, fin_up_n, fin_load_share, fin_tilt_deg, fin_bend_tip_deg,
-		back_foot_push, back_foot_yaw_nm, trim_aim_deg, air_lift_n, air_pitch_nm, launch_coupling, pitch_inertia_kgm2]
+		back_foot_push, back_foot_yaw_nm, trim_aim_deg, air_lift_n, air_pitch_nm, launch_coupling, pitch_inertia_kgm2,
+		feet_roll_press, feet_pitch_press, toes_share, back_foot_share, feet_press_reach]
 	var parts: PackedStringArray = PackedStringArray()
 	for value: Variant in values:
 		if value is float:

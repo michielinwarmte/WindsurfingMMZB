@@ -41,6 +41,17 @@ var back_foot_push: float = 0.0
 var rail_bank_extra_deg: float = 0.0
 var trim_aim_extra_deg: float = 0.0
 var rig_lean_extra_deg: float = 0.0
+## The rider's own press with the feet in the straps (GP2, the body on the mouse; Max, 6 November
+## 2026: "the feet need to stay in the straps, like real life, but the pressure and rotation is
+## different"). Each from -1 to +1; 0 = the technique alone, bit for bit as before.
+## feet_roll_press: the toes against the heels. +1 = a full press of the toes: the feet turn the
+## board SailorConfig.feet_press_rail_deg (10) further to leeward than the technique's bank and hold it
+## there with all their roll moment; -1 = the heels, the same toward the windward rail (a flatter board).
+## feet_pitch_press: the back foot against the front foot. +1 = all the weight on the back strap
+## (the nose up); -1 = all on the front strap (the nose down).
+## Only planing in the straps and not in a turn (WindsurferSim._move_the_feet_press).
+var feet_roll_press: float = 0.0
+var feet_pitch_press: float = 0.0
 
 
 func duplicate_controls() -> SimControls:
@@ -57,6 +68,8 @@ func duplicate_controls() -> SimControls:
 	copy.rail_bank_extra_deg = rail_bank_extra_deg
 	copy.trim_aim_extra_deg = trim_aim_extra_deg
 	copy.rig_lean_extra_deg = rig_lean_extra_deg
+	copy.feet_roll_press = feet_roll_press
+	copy.feet_pitch_press = feet_pitch_press
 	return copy
 ## Testing aid: when true the sailor stops moving fore and aft (stance and hang-back hold
 ## still) while still balancing sideways, so a scenario can show whether the board's pitch

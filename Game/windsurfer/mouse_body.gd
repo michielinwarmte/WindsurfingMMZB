@@ -1,29 +1,32 @@
 class_name MouseBody
 extends RefCounted
 ## Package B, an experiment: the sailor's body on the mouse (ROADMAP GP2; the design is
-## Documentation/reports/playtest/feedback_5_november_2026.md, section 5, and the report of this
-## build is Documentation/reports/gameplay/gp2_mouse_body.md).
+## Documentation/reports/playtest/feedback_5_november_2026.md, section 5; the first build is
+## Documentation/reports/gameplay/gp2_mouse_body.md, and the feet's press after Max's play-test of
+## 6 November 2026 is Documentation/reports/gameplay/gp2_feet_pressure.md).
 ##
-## While sailing the mouse is captured and stands for the sailor's body:
-## - sideways is the rail: how far the feet let the leeward rail go down (the bank the feet aim for
-##   while hiked out in the straps and not turning);
-## - forward and back is the back foot: pull the mouse back (toward you) and the weight goes onto the
-##   tail, the nose lifts (more trim); push it forward and the weight goes forward (less trim).
-## The mouse left in the middle is the sailor's own technique, as in 0.1.
+## While sailing the mouse is captured and stands for the sailor's body, the feet staying in the
+## straps (Max, 6 November 2026: "the feet need to stay in the straps, like real life, but the
+## pressure and rotation is different"):
+## - sideways is the toes against the heels: toward more rail, the feet press the leeward rail down
+##   with the toes (the ankles roll the board); the other way, the heels press the windward rail
+##   down and the board comes flat;
+## - forward and back is the back foot against the front foot: pull the mouse back (toward you) and
+##   the weight goes onto the back foot, over the back strap (the knees and hips move it), the nose
+##   lifts; push it forward and the weight goes onto the front foot, the nose goes down.
+## The mouse left in the middle is the sailor's own technique, exactly as in 0.1.
 ##
-## Nothing here touches the physics. The body only works out two numbers that the push slider
-## already uses (SimControls.rail_bank_extra_deg and trim_aim_extra_deg, PH3: degrees on top of the
-## technique's own bank and trim); PlayerController adds them to the slider's every tick. What the
-## rail and the back foot then do (faster, bouncing, a catapult, a slower railed board) is the
-## simulation's own answer: no new forces, nothing scripted. The simulation only aims for these
-## targets while planing in the straps and not turning, so the mouse does nothing below planing or in
-## a manoeuvre.
-##
-## The ranges go a little past what GP0 measured (Documentation/reports/gameplay/gp0_measure.md: the
-## rail 0 to 8 degrees, beyond 8 only slower; the trim 0.5 to 3.5 degrees), because Max asked for
-## more on 6 November 2026: the rail to 12 degrees in all, the trim 0 to 5. Max's open choices
-## (ROADMAP GD7, the design's "open choices") are settings, with the lead's recommendation as the
-## default, so they can be switched while playing.
+## The body writes two controls of the simulation (SimControls.feet_roll_press and
+## feet_pitch_press, -1 to +1): how hard the feet press, as a share of a full press. A full press of
+## the toes turns the board 10 degrees further to leeward than the technique's bank and the feet hold
+## it there with all their roll moment; a full back foot puts all the weight on the back strap, the
+## front foot pulling up in its strap. The simulation moves the feet there at the pace of a weight
+## shift (0.4 s from the middle to an end), and its own search for the trim (the easing off on a
+## bounce included) stands aside as far as the body presses. What the board then does (faster, a bounce, a catapult, a slower over-railed board) is
+## the simulation's own answer. The press works only planing in the straps and not in a turn, so the
+## mouse does nothing below planing or in a manoeuvre. Max's open choices (ROADMAP GD7, the design's
+## "open choices") are settings, with the lead's recommendation as the default, so they can be
+## switched while playing.
 
 ## What the mouse does when you leave it alone (GD7 a). STAYS: it stays where you put it (holding
 ## an angle is the point), and it comes back to the middle (the technique) at every tack, gybe and
@@ -35,37 +38,35 @@ enum Centre { STAYS, SPRINGS_BACK }
 ## rail; on port tack right is. RIGHT_IS_MORE_RAIL: right is always more leeward rail.
 enum Sideways { AS_SEEN, RIGHT_IS_MORE_RAIL }
 
-## The most the mouse may ask for in all: the rail, and the trim from the flattest to the most nose-up.
-## GP0's measured bands were 8 degrees of rail (beyond it only slower) and a trim of 0.5 to 3.5; Max
-## asked for "the limits a bit more" (6 November 2026), so past those bands is now the player's to
-## find out: more rail is slower, too much back foot bounces and catapults. The feet still hold only
-## what they can (the simulation's own reach).
-const RAIL_MAX_DEG: float = 12.0
-const TRIM_MIN_DEG: float = 0.0
-const TRIM_MAX_DEG: float = 5.0
 ## Level 2: the feet's own correction of the rail slowed to this (SailorConfig.lean_feel_time_s;
-## GP0 measured level 2 with 2.0 s), so a gust heels the board past the angle and your hand holds it.
+## GP0 measured level 2 with 2.0 s), so a gust heels the board past the technique's rail and your
+## toes and heels hold it.
 const SLOW_FEEL_TIME_S: float = 2.0
-## With the windward rail on, the far side's windward rail, degrees (GP0's follow-up sailed the
-## reach check with 4 degrees of windward rail: Documentation/reports/gameplay/gp0_measure.md).
+## With the windward rail on, the heels press on until the windward rail is this far down (GP0's
+## follow-up sailed the reach check with 4 degrees of windward rail: gp0_measure.md). Off, they stop
+## at a flat board.
 const WINDWARD_RAIL_DEG: float = 4.0
+## The heels' press eases off over the last degrees before the board is where the far side ends (flat,
+## or the windward rail), so it comes to rest there instead of pressing past it.
+const FAR_SIDE_EASE_DEG: float = 2.0
 
 # --- The settings (SettingsValues, section "body"; the defaults are the lead's recommendations) ---
 var centre: Centre = Centre.STAYS
 ## SPRINGS_BACK: the time in which the mouse comes back to the middle (95 % of the way).
 var spring_back_s: float = 1.5
 var sideways: Sideways = Sideways.AS_SEEN
-## Whether the far side goes past a flat board to the windward rail down (to windward_rail_deg).
-## Off: the far side is a flat board (the design's "the other way flat"). A windward rail is slower
-## everywhere once planing (GP0's follow-up), and the hull's heeled lift is still uncertain (PH27).
+## Whether the heels go on past a flat board to the windward rail down (to windward_rail_deg).
+## Off: the far side ends at a flat board (the design's "the other way flat"). A windward rail is
+## slower everywhere once planing (GP0's follow-up), and the hull's heeled lift is still uncertain (PH27).
 var windward_rail: bool = false
 var windward_rail_deg: float = WINDWARD_RAIL_DEG
-## The most leeward rail the mouse adds to the technique's (the design: 0 to +6 degrees; Max asked for
-## more, 6 November 2026: 9), never past RAIL_MAX_DEG in all.
-var rail_more_deg: float = 9.0
-## The back foot: the trim the mouse adds or takes away, either way (the design: 1.5; Max asked for
-## more, 6 November 2026: 2.5).
-var trim_range_deg: float = 2.5
+## The toes and heels: how much of a full press the mouse at the end of its travel asks (1: all of it,
+## the bank 10 degrees past the technique's, SailorConfig.feet_press_rail_deg; the setting "Toes and
+## heels").
+var toes_share: float = 1.0
+## The back and front foot: how much of the weight the mouse at the end of its travel moves onto that
+## foot's strap (1: all of it; the setting "Back foot").
+var weight_share: float = 1.0
 ## Mouse travel from one end of the range to the other, in pixels (the design: about 300).
 var travel_px: float = 300.0
 ## 1: the feet still correct the rail themselves within 0.4 s; 2: slowed to SLOW_FEEL_TIME_S.
@@ -81,15 +82,13 @@ var side: float = 0.0
 ## back: weight on the tail); 0 is the middle.
 var back: float = 0.0
 
-## What the body asked for at the last update, in degrees on top of everything else (for the F1
-## panel and the tests), and the totals the feet then aimed for (the technique, the slider and the
-## body together).
-var rail_deg: float = 0.0
-var trim_deg: float = 0.0
-var rail_total_deg: float = 0.0
-var trim_total_deg: float = 0.0
-## Whether the body added its numbers at the last update (false in a manoeuvre), and the tack it
-## last aimed on (+1 starboard, -1 port, 0 not yet): for the gauge (ui/body_gauge.gd).
+## What the body asks of the feet at the last update (SimControls.feet_roll_press and
+## feet_pitch_press, -1 to +1): the toes (+, the leeward rail down) against the heels, and the back
+## foot (+, the weight on the back strap) against the front foot.
+var roll_press: float = 0.0
+var pitch_press: float = 0.0
+## Whether the body pressed at the last update (false in a manoeuvre), and the tack it last pressed
+## on (+1 starboard, -1 port, 0 not yet): for the gauge (ui/body_gauge.gd).
 var working: bool = false
 var last_tack: float = 0.0
 
@@ -140,47 +139,39 @@ func rail_side() -> float:
 	return -signf(last_tack)
 
 
-## The rail the body adds, degrees, given the leeward rail the feet already aim for without it
-## (the technique's on this course, the slider's and the sea's together). Toward more rail: up to
-## rail_more_deg, never past RAIL_MAX_DEG in all. The other way: the whole travel takes the board to
-## flat (or, with windward_rail, on to windward_rail_deg of windward rail).
-func rail_extra_deg(base_deg: float, tack: float) -> float:
+## The toes against the heels, -1 to +1 (SimControls.feet_roll_press), on this tack and with the
+## board heeled this far to leeward (degrees). Toward more rail the toes press, up to toes_share of a
+## full press at the end of the travel. The other way the heels press, easing off over the
+## last FAR_SIDE_EASE_DEG before the board is flat (or, with windward_rail, before the windward rail
+## is windward_rail_deg down), so they bring it there and no further.
+func toes_press(tack: float, leeward_heel_deg: float) -> float:
 	var r: float = more_rail(tack)
 	if r >= 0.0:
-		var room: float = maxf(RAIL_MAX_DEG - base_deg, 0.0)
-		return minf(r * rail_more_deg, room)
+		return r * toes_share
 	var far_deg: float = -windward_rail_deg if windward_rail else 0.0
-	return r * maxf(base_deg - far_deg, 0.0)
+	return r * toes_share * clampf((leeward_heel_deg - far_deg) / FAR_SIDE_EASE_DEG, 0.0, 1.0)
 
 
-## The trim the back foot adds, degrees, given the trim the feet already aim for without it (the
-## technique's by speed and the slider's): back * trim_range_deg, kept inside GP0's band
-## TRIM_MIN_DEG to TRIM_MAX_DEG (where the base itself is outside the band, the body only brings it
-## back toward the band, never further out).
-func trim_extra_deg(base_deg: float) -> float:
-	var lowest: float = minf(TRIM_MIN_DEG - base_deg, 0.0)
-	var highest: float = maxf(TRIM_MAX_DEG - base_deg, 0.0)
-	return clampf(back * trim_range_deg, lowest, highest)
+## The back foot against the front foot, -1 to +1 (SimControls.feet_pitch_press): back times
+## weight_share.
+func back_foot_press() -> float:
+	return back * weight_share
 
 
-## Works out and remembers the body's two numbers for this tick (see rail_extra_deg and
-## trim_extra_deg). Returns nothing; read rail_deg and trim_deg.
-func aim(rail_base_deg: float, trim_base_deg: float, tack: float) -> void:
-	rail_deg = rail_extra_deg(rail_base_deg, tack)
-	trim_deg = trim_extra_deg(trim_base_deg)
-	rail_total_deg = rail_base_deg + rail_deg
-	trim_total_deg = trim_base_deg + trim_deg
+## Works out and remembers what the body asks of the feet this tick, on this tack (+1 starboard, -1
+## port) with the board heeled this far to leeward (degrees). Read roll_press and pitch_press.
+func press(tack: float, leeward_heel_deg: float) -> void:
+	roll_press = toes_press(tack, leeward_heel_deg)
+	pitch_press = back_foot_press()
 	working = true
 	last_tack = tack
 
 
-## No body this tick (in a manoeuvre, out of the water): nothing added.
-func rest(rail_base_deg: float, trim_base_deg: float) -> void:
+## No body this tick (in a manoeuvre): the feet press as the technique wants.
+func rest() -> void:
 	working = false
-	rail_deg = 0.0
-	trim_deg = 0.0
-	rail_total_deg = rail_base_deg
-	trim_total_deg = trim_base_deg
+	roll_press = 0.0
+	pitch_press = 0.0
 
 
 ## The feet's correction time for this level: the sailor's own (own_s) at level 1, slowed to
@@ -195,20 +186,21 @@ func configure(values: SettingsValues) -> void:
 	spring_back_s = values.body_spring_s
 	sideways = values.body_sideways as Sideways
 	windward_rail = values.body_windward_rail
-	rail_more_deg = values.body_rail_deg
-	trim_range_deg = values.body_trim_deg
+	toes_share = values.body_toes_share
+	weight_share = values.body_weight_share
 	travel_px = values.body_travel_px
 	level = values.body_level
 
 
-## One line for the F1 panel (the numbers are for tuning only; the strip shows nothing).
+## One line for the F1 panel (the numbers are for tuning only; the gauge shows the same in words).
 func describe() -> String:
 	var how: String = "stays" if centre == Centre.STAYS else "springs back in %.1f s" % spring_back_s
 	if scripted:
 		how = "held by script"
 	var keys: String = "" if scripted else "   Esc frees the mouse, right button or C looks around"
-	return "mouse body (level %d, %s) at side %+.2f back %+.2f: rail %+.1f deg (aim %.1f)   back foot %+.1f deg (trim aim %.1f)%s" % [
-		level, how, side, back, rail_deg, rail_total_deg, trim_deg, trim_total_deg, keys]
+	return "mouse body (level %d, %s) at side %+.2f back %+.2f: %s %.0f %%   %s %.0f %%%s" % [
+		level, how, side, back, "toes" if roll_press >= 0.0 else "heels", absf(roll_press) * 100.0,
+		"back foot" if pitch_press >= 0.0 else "front foot", absf(pitch_press) * 100.0, keys]
 
 
 ## The sailor's own leeward rail on this course, degrees, at a full hike in the straps: the same

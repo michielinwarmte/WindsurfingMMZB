@@ -23,6 +23,9 @@ extends SceneTree
 ##      1 + threshold x intensity, the timing_ease settings replace the case's own
 ##   [--slice=<i>/<n>] (run every n-th case from the i-th) [--out=<csv>] [--falls_out=<csv>]
 ##   [--label=<text>] (a column in the CSV, to tell runs apart)
+##   [--trace=<csv>] [--trace_every=6] every n-th tick of every case after --from, the feet's
+##      numbers (the heel and the bank the feet aim for, the hike, the feet's roll moment, the trim
+##      and the press, the bounce felt, the body's press): to see what the feet do with what is asked
 ##   [--gear_board=<id>] [--gear_sail=<id>] [--gear_fin=<id>] a gear page item (Game/gear/; the ids
 ##      are the files' names) in place of the default board, sail or fin, built as the game builds
 ##      the player's board (GearChoice.sim_with()); an unknown id sails the default
@@ -44,8 +47,10 @@ extends SceneTree
 ##   [--body.<field>=<n>] package B (GP2), the body on the mouse (MouseBody) held where the case puts
 ##      it, as a player holding the mouse there: body.side from -1 (the far side: a flat board) to +1
 ##      (the most leeward rail; here "right" is always more rail), body.back from -1 (the weight
-##      forward) to +1 (on the tail); and its settings (body.trim_range_deg, body.rail_more_deg,
-##      body.windward_rail=1, body.level=2: the feet's correction slowed, ...). Sweepable:
+##      forward) to +1 (on the tail); and its settings (body.toes_share, body.weight_share: how hard the
+##      feet press at the ends, body.windward_rail=1, body.level=2: the feet's correction slowed, ...).
+##      Since the feet's press (GP2, 6 November 2026) the body presses with the feet in the straps
+##      (SimControls.feet_roll_press, feet_pitch_press) instead of moving the technique's aims. Sweepable:
 ##      --sweep=body.side=-1,0,1 --sweep2=body.back=-1,0,1
 ## The groups are pilot (the auto-sheet's Autopilot), sailor (SailorConfig), sail (SailConfig), push
 ## (push.level), body (MouseBody) and timing (timing.lead_s, timing.threshold: to sweep the timing
@@ -118,8 +123,13 @@ class PushResult:
 	## The bounce: the root mean square of the pitch rate while sailing, degrees a second.
 	var pitch_rate_rms_dps: float = 0.0
 	## The leeward rail the feet aimed for while sailing (the technique's on the course plus the
-	## extras of the slider, the sea and the body), degrees: the mean.
+	## extras of the slider and the sea), degrees: the mean.
 	var rail_aim_mean_deg: float = 0.0
+	## The feet (GP2, the feet's press), means while sailing: how they pressed in roll as a share of
+	## their most (Telemetry.toes_share: + the toes, the leeward rail down) and where their pressure
+	## was between the straps (Telemetry.back_foot_share: 0 the front strap, 1 the back strap).
+	var toes_share_mean: float = 0.0
+	var back_foot_share_mean: float = 0.0
 
 
 func _initialize() -> void:
@@ -136,7 +146,7 @@ func _initialize() -> void:
 	var gear: GearChoice = _gear()
 	if gear != null:
 		print("gear: " + gear.names_line())
-	print("wind TWA  sweep                         made  vmg   sail%  falls  speed  heelMax finMax finP95 stall%  slipMax slipP95  pitchSD trim  heel  alpha lean  plan% front eased%  push  finN  finUp slip  back  sheet railAim trimAim")
+	print("wind TWA  sweep                         made  vmg   sail%  falls  speed  heelMax finMax finP95 stall%  slipMax slipP95  pitchSD trim  heel  alpha lean  plan% front eased%  push  finN  finUp slip  back  sheet railAim trimAim toes backFoot")
 	for i: int in cases.size():
 		if i % slice_count != slice_index:
 			continue
@@ -257,6 +267,8 @@ func _run_case(case: PushCase, falls: Array[String]) -> PushResult:
 	var last_sheet: float = 0.0
 	var sheet_rate_square_sum: float = 0.0
 	var alpha_square_sum: float = 0.0
+	var trace_path: String = _options.get("trace", "")
+	var trace_every: int = maxi(_options.get("trace_every", "6").to_int(), 1)
 	for i: int in steps:
 		var t: Telemetry = sim.telemetry
 		var easing: bool = false
@@ -313,6 +325,8 @@ func _run_case(case: PushCase, falls: Array[String]) -> PushResult:
 		previous_state = sim.sailor_state
 		var sheet_before: float = last_sheet
 		last_sheet = controls.sheet
+		if trace_path != "" and t.time_s >= from_s and i % trace_every == 0:
+			_append_row(trace_path, _trace_header(), _trace_row(case, sim, controls))
 		history.append(_warning_sample(t))
 		if history.size() > int(WARNING_BACK_S[0] / DT) + 2:
 			history.pop_front()
@@ -361,6 +375,8 @@ func _run_case(case: PushCase, falls: Array[String]) -> PushResult:
 		result.trim_aim_mean_deg += t.trim_aim_deg
 		result.rail_aim_mean_deg += MouseBody.technique_rail_deg(sim.sailor_config, t.twa_at_sail_deg) + controls.rail_bank_extra_deg
 		result.pitch_rate_rms_dps += t.pitch_rate_dps * t.pitch_rate_dps
+		result.toes_share_mean += t.toes_share
+		result.back_foot_share_mean += t.back_foot_share
 	var elapsed_s: float = maxf(result.samples * DT, DT)
 	var moved: Vector3 = sim.telemetry.position - start_position
 	result.made_good_ms = moved.dot(course) / elapsed_s
@@ -379,6 +395,8 @@ func _run_case(case: PushCase, falls: Array[String]) -> PushResult:
 	result.trim_aim_mean_deg /= n
 	result.rail_aim_mean_deg /= n
 	result.pitch_rate_rms_dps = sqrt(result.pitch_rate_rms_dps / n)
+	result.toes_share_mean /= n
+	result.back_foot_share_mean /= n
 	return result
 
 
@@ -496,6 +514,32 @@ func _warning_sample(t: Telemetry) -> Dictionary:
 		"yaw_rate_dps": t.yaw_rate_dps, "stalled": 1.0 if t.fin_stalled else 0.0}
 
 
+## --trace: what the feet did at one tick (starboard tack: the leeward rail is port, a negative
+## heel, so the heel and the banks are written leeward-positive; the roll moments are about the
+## aft axis, which on starboard tack is leeward-positive too: positive rails the board).
+func _trace_header() -> String:
+	return "label,wind_kt,twa_deg,sweep,time_s,speed_ms,sailing,planing_ratio,heel_lee_deg,wanted_bank_lee_deg,felt_beyond_deg,lean,asked_lean,stance,feet_roll_nm,feet_excess_nm,roll_fin_nm,roll_water_nm,roll_rig_nm,pitch_deg,trim_deg,trim_aim_deg,felt_trim_deg,felt_bounce_dps,trim_press_m,hang_back_m,rail_extra_deg,trim_extra_deg,roll_press,pitch_press,feet_roll_press,feet_pitch_press,toes_share,back_foot_share,rate_heel_dps"
+
+
+func _trace_row(c: PushCase, sim: WindsurferSim, controls: SimControls) -> String:
+	var t: Telemetry = sim.telemetry
+	return ",".join(PackedStringArray([_options.get("label", ""), _short(c.wind_kt), _short(c.twa_deg), c.sweep_text,
+		"%.2f" % t.time_s, "%.3f" % t.speed_ms, "1" if sim.sailor_state == WindsurferSim.SailorState.SAILING else "0",
+		"%.3f" % t.planing_ratio, "%.3f" % -t.heel_deg, "%.3f" % -t.wanted_bank_deg, "%.3f" % rad_to_deg(sim._felt_heel_beyond_rad),
+		"%.3f" % t.lean, "%.3f" % controls.lean, "%.3f" % t.stance, "%.1f" % t.feet_moment_roll_nm, "%.1f" % t.feet_moment_excess_nm,
+		"%.1f" % t.roll_fin_nm, "%.1f" % t.roll_water_nm, "%.1f" % t.roll_rig_nm,
+		"%.3f" % t.pitch_deg, "%.3f" % t.trim_deg, "%.3f" % t.trim_aim_deg, "%.3f" % sim.felt_trim_deg, "%.2f" % sim.felt_bounce_dps,
+		"%.3f" % sim.trim_press_m, "%.3f" % sim.hang_back_m, "%.2f" % controls.rail_bank_extra_deg, "%.2f" % controls.trim_aim_extra_deg,
+		"%.3f" % _press_of(controls, "feet_roll_press"), "%.3f" % _press_of(controls, "feet_pitch_press"),
+		"%.3f" % t.feet_roll_press, "%.3f" % t.feet_pitch_press, "%.3f" % t.toes_share, "%.3f" % t.back_foot_share,
+		"%.2f" % rad_to_deg(sim.body.angular_velocity_body().z)]))
+
+
+## A control of the feet's press (written by the body), by name.
+func _press_of(controls: SimControls, field: String) -> float:
+	return float(controls.get(field))
+
+
 const WARNING_FIELDS: PackedStringArray = ["fin_share", "slip_deg", "heel_lee_deg", "lean", "feet_excess_nm", "alpha_deg", "tws_kt", "speed_ms", "pitch_deg", "yaw_rate_dps", "stalled"]
 
 
@@ -554,17 +598,17 @@ func _kinds_text(r: PushResult) -> String:
 
 
 func _format(c: PushCase, r: PushResult) -> String:
-	return "%3.0f  %3.0f  %-28s  %5.2f %5.2f  %4.0f   %3d   %5.2f   %5.1f   %4.2f   %4.2f   %4.1f    %5.1f   %5.1f     %4.2f   %4.2f %5.1f %5.1f %4.2f  %4.0f  %4.2f  %4.0f  %5s %5.0f %5.0f %4.1f %5.2f  %4.2f  %5.2f   %5.2f %s%s" % [
+	return "%3.0f  %3.0f  %-28s  %5.2f %5.2f  %4.0f   %3d   %5.2f   %5.1f   %4.2f   %4.2f   %4.1f    %5.1f   %5.1f     %4.2f   %4.2f %5.1f %5.1f %4.2f  %4.0f  %4.2f  %4.0f  %5s %5.0f %5.0f %4.1f %5.2f  %4.2f  %5.2f   %5.2f %5.2f %5.2f %s%s" % [
 		c.wind_kt, c.twa_deg, c.sweep_text, r.made_good_ms, r.vmg_ms, r.sailing_share * 100.0, r.falls,
 		r.speed_sailing_ms, r.heel_leeward_max_deg, r.fin_share_max, r.fin_share_p95, r.fin_stalled_share * 100.0,
 		r.slip_max_deg, r.slip_p95_deg, r.pitch_sd_deg, r.trim_mean_deg, r.heel_mean_deg, r.alpha_mean_deg,
 		r.lean_mean, r.planing_share * 100.0, r.wet_front_m, r.eased_share * 100.0,
 		("%.2f" % r.push_level) if not is_nan(r.push_level) else "-", r.fin_lift_mean_n, r.fin_up_mean_n, r.slip_mean_deg, r.back_foot_mean, r.sheet_mean,
-		r.rail_aim_mean_deg, r.trim_aim_mean_deg, _kinds_text(r), " NaN" if r.nan else ""]
+		r.rail_aim_mean_deg, r.trim_aim_mean_deg, r.toes_share_mean, r.back_foot_share_mean, _kinds_text(r), " NaN" if r.nan else ""]
 
 
 func _csv_header() -> String:
-	return "label,wind_kt,twa_deg,sweep,made_good_ms,vmg_ms,sailing_share,falls,fall_kinds,speed_sailing_ms,heel_leeward_max_deg,fin_share_max,fin_share_p95,fin_stalled_share,slip_max_deg,slip_p95_deg,pitch_sd_deg,trim_mean_deg,heel_mean_deg,alpha_mean_deg,lean_mean,planing_share,wet_front_m,eased_share,nan,sheet_mean,sheet_rate_rms,alpha_sd_deg,push_level,fin_lift_mean_n,fin_up_mean_n,slip_mean_deg,rig_lean_mean_deg,back_foot_mean,trim_aim_mean_deg,wave_scale,legs,pitch_rate_rms_dps,rail_aim_mean_deg"
+	return "label,wind_kt,twa_deg,sweep,made_good_ms,vmg_ms,sailing_share,falls,fall_kinds,speed_sailing_ms,heel_leeward_max_deg,fin_share_max,fin_share_p95,fin_stalled_share,slip_max_deg,slip_p95_deg,pitch_sd_deg,trim_mean_deg,heel_mean_deg,alpha_mean_deg,lean_mean,planing_share,wet_front_m,eased_share,nan,sheet_mean,sheet_rate_rms,alpha_sd_deg,push_level,fin_lift_mean_n,fin_up_mean_n,slip_mean_deg,rig_lean_mean_deg,back_foot_mean,trim_aim_mean_deg,wave_scale,legs,pitch_rate_rms_dps,rail_aim_mean_deg,toes_share_mean,back_foot_share_mean"
 
 
 func _csv_row(c: PushCase, r: PushResult) -> String:
@@ -575,7 +619,8 @@ func _csv_row(c: PushCase, r: PushResult) -> String:
 		"%.2f" % r.trim_mean_deg, "%.2f" % r.heel_mean_deg, "%.2f" % r.alpha_mean_deg, "%.3f" % r.lean_mean,
 		"%.3f" % r.planing_share, "%.3f" % r.wet_front_m, "%.3f" % r.eased_share, "1" if r.nan else "0", "%.3f" % r.sheet_mean, "%.3f" % r.sheet_rate_rms, "%.2f" % r.alpha_sd_deg,
 		("%.3f" % r.push_level) if not is_nan(r.push_level) else "-1", "%.1f" % r.fin_lift_mean_n, "%.1f" % r.fin_up_mean_n, "%.2f" % r.slip_mean_deg, "%.2f" % r.rig_lean_mean_deg,
-		"%.3f" % r.back_foot_mean, "%.2f" % r.trim_aim_mean_deg, _options.get("wave_scale", "1"), _options.get("legs", "0"), "%.2f" % r.pitch_rate_rms_dps, "%.2f" % r.rail_aim_mean_deg]))
+		"%.3f" % r.back_foot_mean, "%.2f" % r.trim_aim_mean_deg, _options.get("wave_scale", "1"), _options.get("legs", "0"), "%.2f" % r.pitch_rate_rms_dps, "%.2f" % r.rail_aim_mean_deg,
+		"%.3f" % r.toes_share_mean, "%.3f" % r.back_foot_share_mean]))
 
 
 ## Appends a line, writing the header first when the file is new (several processes may share

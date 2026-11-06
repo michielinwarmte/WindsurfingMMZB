@@ -360,23 +360,23 @@ func _build_body_rows(s: SettingsValues) -> void:
 	rows.append(_add_list(grid, "Sideways", ["The board rolls with the mouse", "Right is always more rail"], s.body_sideways,
 		"Rolls with the mouse: as seen from behind the board",
 		func(index: int) -> void: s.body_sideways = index))
-	rows.append(_add_slider(grid, "Rail", SettingsValues.BODY_RAIL_MIN_DEG, SettingsValues.BODY_RAIL_MAX_DEG, 0.5, s.body_rail_deg,
-		func(v: float) -> String: return "up to %.1f° more leeward rail (%.0f° in all at most)" % [v, MouseBody.RAIL_MAX_DEG],
-		func(v: float) -> void: s.body_rail_deg = v))
+	rows.append(_add_slider(grid, "Toes and heels", SettingsValues.BODY_SHARE_MIN, SettingsValues.BODY_SHARE_MAX, 0.05, s.body_toes_share,
+		func(v: float) -> String: return "%.0f %% of a full press at the end (toes: 10° more rail)" % (v * 100.0),
+		func(v: float) -> void: s.body_toes_share = v))
 	rows.append(_add_switch(grid, "Windward rail", s.body_windward_rail,
-		"Off: the other way ends at a flat board. On: on to %.0f° of windward rail" % MouseBody.WINDWARD_RAIL_DEG,
+		"Off: the heels stop at a flat board. On: on to %.0f° of windward rail" % MouseBody.WINDWARD_RAIL_DEG,
 		func(on: bool) -> void: s.body_windward_rail = on))
-	rows.append(_add_slider(grid, "Back foot", SettingsValues.BODY_TRIM_MIN_DEG, SettingsValues.BODY_TRIM_MAX_DEG, 0.25, s.body_trim_deg,
-		func(v: float) -> String: return "±%.2f° of trim (the nose up or down)" % v,
-		func(v: float) -> void: s.body_trim_deg = v))
+	rows.append(_add_slider(grid, "Back foot", SettingsValues.BODY_SHARE_MIN, SettingsValues.BODY_SHARE_MAX, 0.05, s.body_weight_share,
+		func(v: float) -> String: return "%.0f %% of the weight onto a strap at the end" % (v * 100.0),
+		func(v: float) -> void: s.body_weight_share = v))
 	rows.append(_add_slider(grid, "Mouse travel", SettingsValues.BODY_TRAVEL_MIN_PX, SettingsValues.BODY_TRAVEL_MAX_PX, 50.0, s.body_travel_px,
 		func(v: float) -> String: return "%.0f px from one end to the other (less is quicker)" % v,
 		func(v: float) -> void: s.body_travel_px = v))
 	rows.append(_add_list(grid, "Level", ["1: the feet hold the rail", "2: you hold the rail"], s.body_level - 1,
-		"2: the feet correct slowly, a gust heels the board past your angle",
+		"2: the feet correct slowly, a gust heels the board further",
 		func(index: int) -> void: s.body_level = index + 1))
 	_enable_with(on_row, rows)
-	_add_note(grid, "Sideways is the rail: how far the leeward rail goes down. Forward and back is the back foot: pull the mouse back to put weight on the tail (the nose lifts, faster, until it bounces), push it forward for less. The middle is the sailor's own technique. It works only planing in the footstraps, not in a turn. Hold the right mouse button or C to look around with the orbit camera.")
+	_add_note(grid, "The feet stay in the straps; the mouse is how they press. Sideways is the toes against the heels: the toes put the leeward rail down, the heels bring the board flat. Forward and back is the front foot against the back foot: pull the mouse back and the weight goes onto the back foot (the nose lifts, faster, until it bounces), push it forward and it goes onto the front foot. The middle is the sailor's own technique. It works only planing in the footstraps, not in a turn. Hold the right mouse button or C to look around with the orbit camera.")
 
 
 func _build_graphics_rows(s: SettingsValues) -> void:

@@ -291,6 +291,34 @@ extends Resource
 ## (Documentation/reports/push_slider/push_slider.md).
 @export var back_foot_push_n: float = 150.0
 
+@export_group("The feet's press (GP2)")
+## The rider's own press with the feet in the straps (SimControls.feet_roll_press and
+## feet_pitch_press; the body on the mouse, package B): the toes against the heels, which uses
+## the feet's whole roll moment (feet_moment_max_nm) to put the leeward rail down or the windward
+## one, and the back foot against the front foot, which moves the weight between the straps (all
+## of it on the back strap, or all on the front strap). This is how long the feet take to go from
+## the middle to an end: a deliberate shift of the weight from one foot to the other. 0.4 s is an
+## estimate: a person shifting the weight onto one foot before a step does it in 0.3 to 0.6 s
+## (the anticipatory postural adjustment of gait initiation), and a rider in the straps moves less
+## than a walker. Documentation/reports/gameplay/gp2_feet_pressure.md, section 3.
+@export var feet_press_time_s: float = 0.4
+## The toes against the heels: how far a full press turns the board's bank past the technique's own,
+## degrees (the toes the leeward rail down; the heels the same the other way, which the body on the
+## mouse stops at a flat board unless its windward rail is on). The feet's reflex holds it with all
+## the roll moment the feet have (feet_moment_max_nm). 10 degrees is Max's own rail toward the wind
+## ("upwind up to 10, I think", 30 October 2026, the most rail the technique ever asks); GP0 measured
+## more than 8 degrees of rail only slower (Documentation/reports/gameplay/gp0_measure.md). On a
+## broad reach the feet's moment holds a fifth to a third of it (gp2_feet_pressure.md, section 5).
+@export var feet_press_rail_deg: float = 10.0
+## The press works only while the board planes: fully from this share of the weight carried by the
+## planing lift (Telemetry.planing_ratio: 0.55 to 0.75 planing on a reach, the game calls a board
+## planing above 0.5; a board railed 10 degrees dips to 0.46), fading to nothing at
+## feet_press_planing_from. Pressing the tail of a board still in the hump sinks it and rears the
+## nose: a first build that pressed from the hump's speed on (with the stance) held a 24 kt board at
+## 3 m/s, nose up 12 degrees, for 80 s.
+@export var feet_press_planing_full: float = 0.4
+@export var feet_press_planing_from: float = 0.2
+
 @export_group("A launch (PH43)")
 ## Board and rider leave a crest as one. The simulation's rigid body is the hull alone (7.8 kg,
 ## 3.4 kg m2 in pitch); the rider is a body of their own on the legs. On the water the water's

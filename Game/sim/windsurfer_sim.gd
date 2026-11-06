@@ -146,6 +146,13 @@ var trim_press_m: float = 0.0
 ## averaged (degrees, bow up) and its bounce (the pitch rate's RMS, degrees a second).
 var felt_trim_deg: float = 0.0
 var felt_bounce_dps: float = 0.0
+## The rider's own press with the feet in the straps (GP2; SimControls.feet_roll_press and
+## feet_pitch_press), where it has got to: each -1 to +1, moved toward what the controls ask at the
+## pace of a deliberate weight shift (_move_the_feet_press). The toes against the heels (+ the
+## leeward rail down) and the back foot against the front foot (+ the weight on the back strap).
+## 0 = the technique alone, as before.
+var feet_roll_press: float = 0.0
+var feet_pitch_press: float = 0.0
 ## Where the posture puts the centre of mass, where the feet stand and where the hands hold
 ## the boom, all in body axes (relative to the board origin). The posture is measured from
 ## the deck's centreline at the stance (posture_centre_body), at the feet's deck height.
@@ -302,6 +309,10 @@ var _front_foot_pull_held_n: float = 0.0
 var _back_foot_push_n: float = 0.0
 var _front_foot_pull_brief_n: float = 0.0
 var _front_foot_react_dps: float = 0.0
+var _feet_press_time_s: float = 0.0
+var _feet_press_rail_deg: float = 0.0
+var _feet_press_planing_full: float = 0.0
+var _feet_press_planing_from: float = 0.0
 var _launch_carry_share: float = 0.0
 var _launch_load_memory_s: float = 0.0
 ## What the hull has been carrying lately (N, _remember_hull_load): the yardstick of a launch.
@@ -332,6 +343,8 @@ var _controls_back_foot_push: float = 0.0
 var _controls_rail_bank_extra_deg: float = 0.0
 var _controls_trim_aim_extra_deg: float = 0.0
 var _controls_rig_lean_extra_deg: float = 0.0
+var _controls_feet_roll_press: float = 0.0
+var _controls_feet_pitch_press: float = 0.0
 ## The yaw moment of the back foot's push against the fin on the hull this substep, N m, body y
 ## (positive turns the bow to port); 0 with the control at 0 (_back_foot_yaw_nm).
 var back_foot_yaw_nm: float = 0.0
@@ -488,6 +501,8 @@ func reset(origin_xz: Vector3, heading_rad: float) -> void:
 	one_body_drop_m = 0.0
 	rail_press = 0.0
 	trim_press_m = 0.0
+	feet_roll_press = 0.0
+	feet_pitch_press = 0.0
 	felt_trim_deg = 0.0
 	felt_bounce_dps = 0.0
 	launch_coupling = 0.0
@@ -672,6 +687,10 @@ func _copy_configs() -> void:
 	_back_foot_push_n = sailor_config.back_foot_push_n
 	_front_foot_pull_brief_n = sailor_config.front_foot_pull_brief_n
 	_front_foot_react_dps = sailor_config.front_foot_react_dps
+	_feet_press_time_s = sailor_config.feet_press_time_s
+	_feet_press_rail_deg = sailor_config.feet_press_rail_deg
+	_feet_press_planing_full = sailor_config.feet_press_planing_full
+	_feet_press_planing_from = sailor_config.feet_press_planing_from
 	_launch_carry_share = sailor_config.launch_carry_share
 	_launch_load_memory_s = sailor_config.launch_load_memory_s
 	_air_lift = board_config.air_lift
@@ -705,6 +724,8 @@ func _read_controls(controls: SimControls) -> void:
 	_controls_rail_bank_extra_deg = controls.rail_bank_extra_deg
 	_controls_trim_aim_extra_deg = controls.trim_aim_extra_deg
 	_controls_rig_lean_extra_deg = controls.rig_lean_extra_deg
+	_controls_feet_roll_press = controls.feet_roll_press
+	_controls_feet_pitch_press = controls.feet_pitch_press
 
 
 ## The hull's mass and inertia, with the water it drags along (the added inertias of the
@@ -790,6 +811,8 @@ func _fall(side: int, kind: String, tack: float) -> void:
 	one_body_drop_m = 0.0
 	rail_press = 0.0
 	trim_press_m = 0.0
+	feet_roll_press = 0.0
+	feet_pitch_press = 0.0
 	# In the water the rider feels nothing of the board: what was felt of its attitude and its
 	# bounce goes with the fall (else the rider climbed back on still feeling the fall's bounce).
 	felt_trim_deg = 0.0
@@ -813,6 +836,8 @@ func waterstart() -> void:
 	one_body_drop_m = 0.0
 	rail_press = 0.0
 	trim_press_m = 0.0
+	feet_roll_press = 0.0
+	feet_pitch_press = 0.0
 	felt_trim_deg = 0.0
 	felt_bounce_dps = 0.0
 	_felt_push_ms2 = 0.0
@@ -935,7 +960,13 @@ func _fin_load_bank_rad(asked: float) -> float:
 		aim_deg += _controls_rail_bank_extra_deg
 	var aim: float = deg_to_rad(aim_deg) * planing_stance
 	var feet_reach: float = 2.0 * _feet_moment_max_nm / _feet_roll_stiffness_nm_per_rad * planing_stance
-	return -signf(lean) * clampf(aim - _felt_heel_beyond_rad, aim - feet_reach, aim)
+	# The rider's own press (GP2, _pressed_bank_rad): the toes turn the board further to leeward,
+	# the heels back toward flat, and the feet press on past that bank while the board stays short of it.
+	var furthest: float = aim
+	if feet_roll_press != 0.0:
+		aim += _pressed_bank_rad()
+		furthest = aim + _pressed_reach_rad()
+	return -signf(lean) * clampf(aim - _felt_heel_beyond_rad, aim - feet_reach, furthest)
 
 
 ## The bank by point of sail (U2): how much of fin_load_bank_deg the sailor wants on this
@@ -1135,14 +1166,17 @@ func _set_posture() -> void:
 	# the point where the legs push: the body stayed ahead of it, the feet had to hold it
 	# from tipping forward, and that came out as a bow-down moment at the feet, -117 N·m on
 	# the 18 kt beam reach: the front foot pressing, the very opposite of the technique.)
-	mass_model.update(body_stance, lean, hang_back_m + trim_press_m, one_body_drop_m, _rig_lean_now_rad)
+	# With the rider's own press (GP2), the weight is where the feet press it (_feet_pressure_point_m;
+	# the technique's trim_press_m without it).
+	var press_m: float = _feet_pressure_point_m()
+	mass_model.update(body_stance, lean, hang_back_m + press_m, one_body_drop_m, _rig_lean_now_rad)
 	# The mass model's answer, read once (see the note at the top).
 	var sailor_position_body: Vector3 = mass_model.sailor_position_body
 	var body_lean: float = body.to_body(sailor.position - body.origin_world()).x / _lean_max_m
 	var feet_lean: float = body_lean
 	if absf(lean) < absf(body_lean) or signf(lean) != signf(body_lean):
 		feet_lean = lean if signf(lean) == signf(body_lean) else 0.0
-	feet_body = mass_model.feet_position_body(stance, feet_lean, rail_press, trim_press_m)
+	feet_body = mass_model.feet_position_body(stance, feet_lean, rail_press, press_m)
 	# The body stands at its own stance (the feet may have stepped ahead of it), plus the
 	# trim press: the posture hangs from the feet's pressure point.
 	posture_centre_body = Vector3(0.0, feet_body.y, sailor_position_body.z - hang_back_m)
@@ -1254,6 +1288,7 @@ func _update_sailor(dt: float) -> void:
 	# hump_trim_deg, the front foot when it is above (nothing below hump speed, where the
 	# stance does the work; nothing while stepping round the mast in a tack).
 	var trimming: bool = forward_speed > hump_speed and not stepping and _controls_balance_reflex
+	_move_the_feet_press(trimming, clampf(_controls_lean, -1.0, 1.0), dt)
 	if _trim_feel_time_s > 0.0:
 		_trim_by_feel(trimming, forward_speed, dt)
 	else:
@@ -1265,7 +1300,10 @@ func _update_sailor(dt: float) -> void:
 			var trim_target_deg: float = _trim_aim_deg(forward_speed)
 			press_target = clampf((trim_target_deg - rad_to_deg(body.pitch_rad())) / _trim_press_band_deg, -1.0, 1.0) * _trim_press_max_m * clampf(hull.planing_ratio, 0.0, 1.0)
 		if not _controls_freeze_fore_aft:
-			trim_press_m = move_toward(trim_press_m, press_target, _trim_press_rate_ms * dt)
+			var rate_ms: float = _trim_press_rate_ms
+			if feet_pitch_press != 0.0:
+				rate_ms *= _technique_share(feet_pitch_press)
+			trim_press_m = move_toward(trim_press_m, press_target, rate_ms * dt)
 	trim_press_m = _press_within_straps(trim_press_m)
 	front_foot_couple_nm = _front_foot_couple_nm(trimming, forward_speed)
 
@@ -1377,6 +1415,13 @@ func _front_foot_couple_nm(trimming: bool, forward_speed: float) -> float:
 		return 0.0
 	var felt_deg: float = felt_trim_deg if _trim_feel_time_s > 0.0 else rad_to_deg(body.pitch_rad())
 	var below_aim: float = clampf((_trim_aim_deg(forward_speed) - felt_deg) / _trim_press_band_deg, 0.0, 1.0)
+	# The rider's own press (GP2): pressing the back foot, the front foot pulls up in its strap at
+	# least as hard as they press; pressing the front foot, the technique's pull for its trim stands
+	# aside as far as they press (the nose is meant to go down). The pull on a nose drop below stays.
+	if feet_pitch_press > 0.0:
+		below_aim = maxf(below_aim, feet_pitch_press)
+	elif feet_pitch_press < 0.0:
+		below_aim *= _technique_share(feet_pitch_press)
 	# The nose dropping fast (off a crest, PH43): the front foot pulls up at once, in proportion
 	# to the nose-down rate up to front_foot_react_dps, whatever the felt trim says. 0 = off.
 	var dropping: float = 0.0
@@ -1452,10 +1497,112 @@ func _trim_by_feel(trimming: bool, forward_speed: float, dt: float) -> void:
 	# setup bounced at 1.8 Hz between -4 and +2.7 degrees of pitch with the rider walking forward,
 	# and sailed steady once the rider stopped). There the chatter only stops the creep aft.
 	var push: float = aim * (1.0 - chatter) - chatter * clampf(1.0 - aim, 0.0, 1.0)
+	# The rider's own press (GP2): the technique's search, the chatter's easing off included, stands
+	# aside as far as the rider presses (_feet_pressure_point_m puts the weight where they press).
+	if feet_pitch_press != 0.0:
+		push *= _technique_share(feet_pitch_press)
 	# Onto the tail slowly, searching; off it quickly when the nose rides above the aim (a board
 	# heading up into a tack slows with its nose rising, and a rider still on the tail rears it).
 	var rate: float = _trim_press_release_ms if aim < 0.0 else _trim_press_rate_ms
 	trim_press_m = clampf(trim_press_m + push * rate * dt, -reach_m, reach_m)
+
+
+# --- The feet's press (GP2) ---------------------------------------------------------------------
+# The rider's own press with the feet in the straps (SimControls.feet_roll_press and feet_pitch_press;
+# the body on the mouse, package B; PHYSICS_SPEC.md section 7.5, "The feet's press"). The feet stay
+# where they are; what changes is how they press: the toes against the heels (the feet's roll moment)
+# and the back foot against the front foot (the weight between the straps). With nothing pressed
+# every function here leaves the technique exactly as it was.
+
+## The feet's press in the telemetry (Telemetry.feet_roll_press, feet_pitch_press, toes_share and
+## back_foot_share): what the rider presses, and how the feet press now, whoever asks.
+func _fill_feet_telemetry(t: Telemetry) -> void:
+	t.feet_roll_press = feet_roll_press
+	t.feet_pitch_press = feet_pitch_press
+	# The roll part of the feet's moment is about the aft axis, positive lifting the starboard rail:
+	# with the sailor out to starboard that puts the leeward (port) rail down, the toes.
+	var roll_nm: float = body.to_body(feet_moment_world).z
+	t.toes_share = clampf(roll_nm * signf(lean) / _feet_moment_max_nm, -1.0, 1.0) if _feet_moment_max_nm > 0.0 else 0.0
+	var spread: float = _back_strap_z_m - _front_strap_z_m
+	t.back_foot_share = clampf((feet_body.z - _front_strap_z_m) / spread, 0.0, 1.0) if is_finite(spread) and spread > 0.0 else 0.5
+	t.feet_press_reach = clampf(stance, 0.0, 1.0) * _planing_share() if sailor_state == SailorState.SAILING else 0.0
+
+
+## Moves feet_roll_press and feet_pitch_press toward what the controls ask, at the pace of a deliberate
+## weight shift: from the middle to an end in feet_press_time_s. They act only with the feet in the
+## straps (the stance), planing (_planing_share; and the trim press's "trimming": not stepping round
+## the mast) and the toes and the heels also not while the controls ask for a turn (that bank is the
+## turn's, as the fin's load is in _fin_load_bank_rad); the weight between the feet holds where it is
+## in the air. Elsewhere they go back to the middle at the same pace. Nothing asked and nothing
+## pressed: nothing happens.
+func _move_the_feet_press(trimming: bool, asked: float, dt: float) -> void:
+	if _controls_feet_roll_press == 0.0 and _controls_feet_pitch_press == 0.0 and feet_roll_press == 0.0 and feet_pitch_press == 0.0:
+		return
+	var in_the_straps: float = clampf(stance, 0.0, 1.0) * _planing_share() if trimming else 0.0
+	var not_turning: float = 1.0 - clampf(absf(asked), 0.0, 1.0)
+	var roll_wanted: float = clampf(_controls_feet_roll_press, -1.0, 1.0) * in_the_straps * not_turning
+	var pitch_wanted: float = clampf(_controls_feet_pitch_press, -1.0, 1.0) * in_the_straps
+	# In the air (a launch, PH43) the weight stays where it is along the board, as the technique's does.
+	if launch_coupling > 0.0:
+		pitch_wanted = feet_pitch_press
+	var step: float = dt / maxf(_feet_press_time_s, dt)
+	feet_roll_press = move_toward(feet_roll_press, roll_wanted, step)
+	feet_pitch_press = move_toward(feet_pitch_press, pitch_wanted, step)
+
+
+## How far the board planes, for the feet's press: 1 from feet_press_planing_full of the weight on the
+## planing lift, 0 at feet_press_planing_from and below (the hump, where pressing the tail rears the nose).
+func _planing_share() -> float:
+	var span: float = _feet_press_planing_full - _feet_press_planing_from
+	if span <= 0.0:
+		return 1.0 if hull.planing_ratio >= _feet_press_planing_full else 0.0
+	return clampf((hull.planing_ratio - _feet_press_planing_from) / span, 0.0, 1.0)
+
+
+## How much of the technique's own correction is left while the rider presses this hard: all of it
+## in the middle, none at a full press. The rider who presses has taken that job over.
+static func _technique_share(press: float) -> float:
+	return 1.0 - clampf(absf(press), 0.0, 1.0)
+
+
+## Where the feet's pressure is along the board, metres aft of the stance: the technique's own
+## (trim_press_m, the search for the trim aimed for), moved toward the back strap as the rider presses
+## the back foot or toward the front strap with the front foot, all the way at a full press (all the
+## weight on that strap). The weight goes with it, as with the technique's press (U1.3: the posture
+## hangs from the feet's pressure point), so the press is a pitch moment of the weight on the feet
+## times how far it moves: about 850 N over 0.6 m between the straps of Max's board.
+func _feet_pressure_point_m() -> float:
+	if feet_pitch_press == 0.0:
+		return trim_press_m
+	var strap_m: float
+	if feet_pitch_press > 0.0:
+		# As far aft as the straps let the pressure go (on a board without straps, the press's reach).
+		strap_m = minf(_press_within_straps(INF), _trim_press_max_m)
+	else:
+		strap_m = maxf(_press_within_straps(-INF), -_trim_press_max_m)
+	return lerpf(trim_press_m, strap_m, absf(feet_pitch_press))
+
+
+## The toes against the heels (_fin_load_bank_rad, while feet_roll_press is not 0): the rotation of
+## the ankles turns the board feet_roll_press times feet_press_rail_deg further to leeward (the toes)
+## or back toward flat and beyond (the heels) than the technique's own bank, radians. Not scaled by the
+## hike, as the technique's bank is: the rider presses on purpose with the feet in the straps, however
+## far the body hangs out (the hike's scaling muted the first build's rail to a fifth on a broad
+## reach, gp2_mouse_body.md section 7). The feet's reflex then holds the board there with all the
+## roll moment they have (feet_moment_max_nm, what the body's balance leaves), as it holds the
+## technique's bank.
+func _pressed_bank_rad() -> float:
+	return deg_to_rad(feet_roll_press * _feet_press_rail_deg)
+
+
+## The pressure of the toes (_fin_load_bank_rad): while the board stays short of the bank they turn it
+## to (the fin or the water holding it up), the feet aim further, as far as their reflex reaches (from
+## its full moment one way to its full moment the other, as the technique's own correction of a board
+## heeled past its bank does the other way): the feet press harder, up to all their roll moment on the
+## toes. The heels have that already: the technique's correction aims further to windward when the
+## board heels past the bank.
+func _pressed_reach_rad() -> float:
+	return 2.0 * _feet_moment_max_nm / _feet_roll_stiffness_nm_per_rad * maxf(feet_roll_press, 0.0)
 
 
 ## The water the fin carries when it moves broadside: a flat plate of chord c moving
@@ -2026,6 +2173,7 @@ func _fill_telemetry(controls: SimControls) -> void:
 	t.feet_moment_roll_nm = body.to_body(feet_moment_world).z
 	t.hand_moment_roll_nm = hand_moment_body.z
 	t.feet_moment_excess_nm = feet_moment_excess_nm
+	_fill_feet_telemetry(t)
 	# What turns (yaw) and heels (roll) the hull, by source: the fin, the rig at the mast
 	# foot, the sailor through the feet, and the water on the hull (everything else).
 	var centre: Vector3 = body.position

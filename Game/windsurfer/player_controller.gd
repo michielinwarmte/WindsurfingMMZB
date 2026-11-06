@@ -22,7 +22,8 @@ extends RefCounted
 ## with the sail let fly to the most speed with a crash likely (PushDial, the ladder in
 ## PushCurveConfig; Documentation/reports/push_slider/PLAN.md).
 ## The mouse can be the sailor's body (package B, an experiment, the setting "Mouse body"):
-## sideways the rail, forward and back the back foot, on top of the slider (body, MouseBody).
+## sideways the toes against the heels, forward and back the back foot against the front foot, the
+## feet pressing in the straps (body, MouseBody).
 
 enum Mode { BEGINNER, ADVANCED }
 enum Manoeuvre { NONE, TACK_HEADING_UP, TACK_BEARING_AWAY, GYBE_BEARING_AWAY, GYBE_HEADING_UP }
@@ -162,13 +163,12 @@ var planing_steer_full_ms: float = 11.1
 var legs_rate_gain: float = 1.0 / 12.0
 
 ## Package B, an experiment: the sailor's body on the mouse (MouseBody, mouse_body.gd; ROADMAP GP2).
-## Sideways the rail, forward and back the back foot, added to the push slider's extras every
-## update (_move_the_body()). It comes back to the middle (the technique) at every tack, gybe and
+## Sideways the toes against the heels, forward and back the back foot against the front foot: the
+## feet's press, written every update (_move_the_body()). It comes back to the middle (the technique) at every tack, gybe and
 ## reset. null: no body (the AI boards, the tests, and the player with the setting off), and the
 ## controller is exactly as before.
 var body: MouseBody = null
 var _body_was_on: bool = false
-static var _fallback_sailor: SailorConfig = null
 
 ## Beginner mode holds the heading when no steering key is pressed.
 var hold_heading: bool = true
@@ -347,47 +347,34 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 	_move_the_body(telemetry, controls, dt)
 
 
-## Package B, the body on the mouse (MouseBody; ROADMAP GP2): the rail and the back foot the mouse
-## asks for, added to the slider's extras (and the sea's rail) every tick. Without a body nothing
-## changes. In a manoeuvre the body adds nothing (the turn's own bank and trim rule there).
+## Package B, the body on the mouse (MouseBody; ROADMAP GP2): the toes against the heels and the back
+## foot against the front foot, written as the feet's press (SimControls.feet_roll_press and
+## feet_pitch_press) every tick; the simulation presses with them, the feet staying in the straps.
+## Without a body nothing changes (the presses stay 0). In a manoeuvre the body presses nothing (the
+## turn's own bank and trim rule there). The push slider's extras are its own and are left alone.
 func _move_the_body(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 	if body == null:
-		if _body_was_on and is_nan(push_level):
-			# The body just went (the setting switched off) and no slider writes the extras afresh.
-			controls.rail_bank_extra_deg = 0.0
-			controls.trim_aim_extra_deg = 0.0
+		if _body_was_on:
+			# The body just went (the setting switched off): the feet press as the technique wants.
+			controls.feet_roll_press = 0.0
+			controls.feet_pitch_press = 0.0
 		_body_was_on = false
 		return
 	_body_was_on = true
-	if is_nan(push_level):
-		# No slider: nothing else writes the extras each tick, so the body's are written afresh.
-		controls.rail_bank_extra_deg = 0.0
-		controls.trim_aim_extra_deg = 0.0
-	# What the feet aim for without the body: the technique's own on this course and at this speed,
-	# plus what the slider (and the sea) just asked.
-	var sailor: SailorConfig = _sailor if _sailor != null else _default_sailor()
-	var rail_base_deg: float = MouseBody.technique_rail_deg(sailor, telemetry.twa_at_sail_deg) + controls.rail_bank_extra_deg
-	var trim_base_deg: float = MouseBody.technique_trim_deg(sailor, telemetry.speed_ms) + controls.trim_aim_extra_deg
 	body.spring(dt)
 	if manoeuvre != Manoeuvre.NONE:
-		body.rest(rail_base_deg, trim_base_deg)
-		return
-	body.aim(rail_base_deg, trim_base_deg, tack_sign(telemetry))
-	controls.rail_bank_extra_deg += body.rail_deg
-	controls.trim_aim_extra_deg += body.trim_deg
+		body.rest()
+	else:
+		var tack: float = tack_sign(telemetry)
+		# Starboard tack (+1): the leeward rail is the port one, a negative heel.
+		body.press(tack, -telemetry.heel_deg * tack)
+	controls.feet_roll_press = body.roll_press
+	controls.feet_pitch_press = body.pitch_press
 
 
 ## The body's line for the F1 panel ("" without a body).
 func body_text() -> String:
 	return body.describe() if body != null else ""
-
-
-## The game's sailor (Game/config/sailor_default.tres), for a controller that was not handed the
-## simulation's own (set_sail() without a sailor).
-static func _default_sailor() -> SailorConfig:
-	if _fallback_sailor == null:
-		_fallback_sailor = load("res://config/sailor_default.tres")
-	return _fallback_sailor
 
 
 ## The push slider: the keys or the hands move the level, and the level sets the pilot and the
@@ -640,6 +627,8 @@ func reset_controls(controls: SimControls) -> void:
 	controls.rail_bank_extra_deg = 0.0
 	controls.trim_aim_extra_deg = 0.0
 	controls.rig_lean_extra_deg = 0.0
+	controls.feet_roll_press = 0.0
+	controls.feet_pitch_press = 0.0
 	# After a fall or a restart the body starts from the sailor's own technique again.
 	if body != null:
 		body.recentre()
