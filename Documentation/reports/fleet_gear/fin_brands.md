@@ -96,7 +96,8 @@ Marco sails Forbidden Stingray 122 L  ·  Point.9 BC-1 8.8 m²  ·  NT8 Octane 4
 Mara sails PJ New Sealand Slalom T-SEC 125 L  ·  Savanna Cheetah 8.5 m²  ·  Blacksmith Fins Tempered 40 cm
 ```
 
-  All three started, sailed two of the six steps in the 300 s without a fall (the race is longer than 300 s: "DNF" means stopped by the clock). The log also shows the race tool's usual script errors at load ("Identifier not found: GameSettings" in `hud.gd` and `main.gd`), from files this branch did not touch; the race then runs.
+  All three started, sailed two of the six steps in the 300 s without a fall (the race is longer than 300 s: "DNF" means stopped by the clock). The log also shows the race tool's script errors at load ("Identifier not found: GameSettings" in `hud.gd` and `main.gd`): those files and lines are the same at the branch's start (f01bc9f), so they are older than this work; the race then runs.
+- **The persona matrix** (`tools/persona_matrix.sh --personas=hana,marco,mara,liv`, 15 kt, on their own gear; Liv sails Start Fins' Holeshot 42 cm on her 129 L board): every one finished both races without a fall. The windward-leeward (LG2): Mara, Hana, Marco, Liv (14:06 to 14:44). The slalom (PD3): Marco, Hana, Mara, Liv (3:50 to 4:28). The table is in `.sim_output/persona_matrix.txt`.
 
 ## 6. The physics check at the ends of the range
 
