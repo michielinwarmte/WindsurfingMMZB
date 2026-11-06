@@ -257,7 +257,21 @@ Added by the shaper (part 4) on the lead's decision of 1 November 2026: none of 
 | secondary: silver | `#C9D0D8` | the disc |
 | accent: blue | `#2F80ED` | the disc's rim, "TAG" in the print |
 
-Print ink: light grey "MON" and blue "TAG" on carbon. Font: Fira Sans Heavy, capitals. The fins themselves are plain black carbon (no print). `Brand.makes_fins` is true for Montag only.
+Print ink: light grey "MON" and blue "TAG" on carbon. Font: Fira Sans Heavy, capitals. The fins themselves are plain black carbon (no print). Since 6 November 2026 `Brand.makes_fins` is true for Montag, the five fin brands below and PJ New Sealand (whose fin is the game's default fin).
+
+## The five fin brands (6 November 2026)
+
+Max's ask: "Add more fins: Z fins > M fins, Finish fins > Start fins, Carpenter fins > Blacksmith fins, Hurricane fins > Typhoon fins, NP7 > NT8." The name after the arrow is the game's; the real maker's name stays out of `Game/` (it is in the real makers' list of `Game/tests/unit/test_brands.gd`, which the tests check every brand and every fin against). Drawn by `tools/brands/make_logos.py` like the others, in Open Sans (SIL Open Font License), on Max's Windows PC through the script's new fallback (the letters from the font's `.ttf`, the PNGs by Godot). The colours are my choice in the spirit of each name, not copied from the real makers' looks (not checked against them). Each brand's fin wears the brand's colours on the water: a body colour and a coloured tip (`GearItem.fin_colour`, `fin_tip_colour`, `fin_tip_share`). How the fins work: [fin_brands.md](fin_brands.md).
+
+| Brand (after) | Slug | Tagline | Mark | Primary / secondary / accent | The fin |
+|---|---|---|---|---|---|
+| <img src="../../../Game/assets/brands/m_fins/logo.png" width="70" alt="M Fins"> **M Fins** (Z fins) | `m_fins` | Made to measure. | a forward-leaning lime M on a carbon disc | carbon `#15171A` / white `#F2F4F5` / lime `#B6F01E` | "Mach": carbon, the lowest 22 % lime |
+| <img src="../../../Game/assets/brands/start_fins/logo.png" width="70" alt="Start Fins"> **Start Fins** (Finish fins) | `start_fins` | First off the line. | the start lights: two out, the last one green | racing green `#10372A` / off-white `#F4F1E6` / start green `#2EE06E` | "Holeshot": dark green carbon, the lowest 15 % start green |
+| <img src="../../../Game/assets/brands/blacksmith_fins/logo.png" width="70" alt="Blacksmith Fins"> **Blacksmith Fins** (Carpenter fins) | `blacksmith_fins` | Forged, not poured. | a fin glowing on an anvil | iron `#25272B` / steel `#A7B0BA` / ember `#FF6B1A` | "Tempered": iron grey, the lowest 28 % ember orange (hot from the forge) |
+| <img src="../../../Game/assets/brands/typhoon_fins/logo.png" width="70" alt="Typhoon Fins"> **Typhoon Fins** (Hurricane fins) | `typhoon_fins` | Calm in the eye of the storm. | the weather map's storm: a ring round a red eye, two arms | navy `#0E1F44` / white `#FFFFFF` / storm red `#E8322B` | "Eyewall": navy, the lowest 15 % red |
+| <img src="../../../Game/assets/brands/nt8/logo.png" width="70" alt="NT8"> **NT8** (NP7) | `nt8` | Infinity, stood up. | a magenta 8 of two rings on a black disc | black `#0B0B0C` / white `#EDEDED` / magenta `#FF2E88` | "Octane": carbon, the lowest 20 % magenta |
+
+Print ink: the light colour, then the accent ("M" lime and "FINS" white; "START" green; "BLACKSMITH" steel and "FINS" ember; "TYPHOON" white and "FINS" red; "NT" white and "8" magenta), on the primary. The model names are made up. The fin brands appear on the gear page's Fin tab only (they make no boards or sails).
 
 ## Choices for every brand
 
@@ -267,7 +281,7 @@ Print ink: light grey "MON" and blue "TAG" on carbon. Font: Fira Sans Heavy, cap
 
 ## For the shaper and the gear page: how to use `Brand`
 
-`Game/gear/brand.gd` (class `Brand`, a Resource) holds one brand: `name`, `slug`, `tagline`, `makes_boards`, `makes_sails`, the colours `primary`, `secondary`, `accent`, and the textures `logo`, `wordmark`, `mark`. The eleven are in `Game/gear/brands/<slug>.tres`.
+`Game/gear/brand.gd` (class `Brand`, a Resource) holds one brand: `name`, `slug`, `tagline`, `makes_boards`, `makes_sails`, `makes_fins`, the colours `primary`, `secondary`, `accent`, and the textures `logo`, `wordmark`, `mark`. The eleven are in `Game/gear/brands/<slug>.tres`.
 
 ```gdscript
 for brand: Brand in Brand.all():          # the eleven, in the gear page's order
