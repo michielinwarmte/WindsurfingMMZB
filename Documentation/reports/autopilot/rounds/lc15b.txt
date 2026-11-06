@@ -1,0 +1,12 @@
+# Lake chop at 1.5x, round B (6 November 2026). Round A (130 lake cases at 1.5x): before 28 falls,
+# final 21, and the ease in the air from 15 to 17 kt at the sail (f_wind1517, against 18 to 20) 9,
+# with the afternoons' beam reach the fastest (13.8 kt against 12.5 before and 13.3 final). Round B
+# around it: the wind gate at 16 to 18, with the chop gate higher (10 to 14 degrees a second, so that
+# the realistic waves feel it less), with less pull in chop, with the carve-up ease at 6. Whether
+# the gate can come down without hurting 1x: round lc8, at the same time.
+# Run with --lake_wave_scale=1.5 --only=lake.
+# w1517 (its 1.5x numbers are round A's f_wind1517): --controller.airborne_wind_from_kt=15 --controller.airborne_wind_full_kt=17
+w1618: --controller.airborne_wind_from_kt=16 --controller.airborne_wind_full_kt=18
+w1517b1014: --controller.airborne_wind_from_kt=15 --controller.airborne_wind_full_kt=17 --controller.airborne_bounce_from_dps=10 --controller.airborne_bounce_full_dps=14
+w1517chop15: --controller.airborne_wind_from_kt=15 --controller.airborne_wind_full_kt=17 --controller.chop_hike_drop=0.15
+w1517hu6: --controller.airborne_wind_from_kt=15 --controller.airborne_wind_full_kt=17 --controller.head_up_alpha_deg=6

@@ -1,6 +1,130 @@
 # The autopilot on the lake's chop: the training of 6 November 2026
 
-(Draft, filled in as the rounds come in.)
+For Max (and Michiel). Written 6 November 2026 by Claude Opus 5.5 on Max's PC, on the branch
+`autopilot/lake-chop` (from `night2/combined` 6530c14: tonight's full lake waves and the feet's
+press). Not pushed, not merged. Every number below is from a run of `tools/autopilot_suite.sh`
+(the outputs in `.sim_output/autopilot/<round>/`, the logs in `.logs/lake_chop/`), with the number
+of runs it counts; estimates are called estimates.
+
+Max asked: *"please train the autopilot extensively on the new waves. i expect it to be harder to
+sail"*, *"dont shortcut the training. better to much than to little"*, and for 1.5 times higher
+waves: *"try but if it fails much skip it"*.
+
+## In short
+
+- **The autopilot falls far less on the lake's chop, and is as fast as before.** On the lake's
+  realistic waves it fell in none of the 130 cases the rounds tuned on (before: 26: the manoeuvres in
+  the map's wind 6, in a steady 18 kt 6, in a steady 24 kt 14), and on sixteen other hours of the day
+  in 21 of 480 cases (before: 58). The afternoon reaches in the map's wind are exactly as fast as
+  before (beam 17.9 kt, broad 10.1, over ten afternoons, no fall either way).
+- **What changed is how the autopilot's sailor handles the sheet and the rail** (the beginner
+  controller that every AI board and the beginner player sail with; `Game/sim/` is untouched):
+  1. **It eases the sail while carving up at speed** (into a tack, or a key held toward the wind).
+     Before, the tacks from planing speed catapulted 1 to 2 s into the head-up: the turn's push plus
+     the chop's roll reached the catapult's 20 degrees with the sail fully sheeted.
+  2. **No weight on the rail at walking pace.** Out of irons, the slow board with a luffing sail
+     was rolled off its windward rail by the chop.
+  3. **It sheets out when the board goes light over a crest in strong wind and short chop**, and
+     back in fast on landing. In a steady 24 kt the board leaves the water about once a second; in
+     the air the sail's pull rolls it and the sailor goes over the sail.
+- **Not cured: the 24 kt beam reach held for a long time.** Counting each fall once (17 hours of a
+  steady 24 kt): 28 fall events before, 11 after; but the beam reach sailed for 45 s still catapulted
+  in 8 of the 17 hours (before: 4), now mostly after 25 s. The ease in the air buys the manoeuvres
+  at 24 kt more than the long reach. It is the place to look next (and to play-test).
+- **The open water and the validation are as before:** the push check in gusts and waves without a
+  fall at either dial and within 1 % of the speed made good on all three samples; the manoeuvre
+  matrix the same one fall (a 24 kt tack on flat water); validation 38 pass, 8 fail, 2 pending, the
+  same eight known reds; unit tests 835 of 835; `tools/check.sh` 442 files, 0 failed;
+  `tools/lan_test.sh --map=lake` SYNC CHECK: PASS.
+- **The 1.5x waves:** two rounds ran (12 variants, 130 lake cases each); it did not fail much, so it was not
+  stopped. The shipped defaults fall in 21 of 130 cases where the controller before fell in 28, with
+  the afternoons' beam reach 13.3 kt against 12.5. The ease in the air from less wind (15 to 17 kt at
+  the sail) brings it down to 9, but on the realistic waves it costs the afternoons' beam reach 0.9 kt
+  (17.0 against 17.9) and the map's 0.8 kt, so it is not a default: it is a setting for a rough day
+  (`airborne_wind_from_kt` 15, `airborne_wind_full_kt` 17).
+
+## Before and after
+
+"Before" is the branch as it came (round lc0, and the controller with the new settings off in later
+rounds: it sails bit for bit the same); "after" is the shipped defaults (round lc7s, the rest as
+named). Lake cases: falls / cases; speeds in kt (the mean of the last 15 s of a straight run, or the
+12 s after a manoeuvre).
+
+| What | Before | After |
+|---|---|---|
+| **Lake 1x**, the afternoon reaches (ten times of day in the map's wind, 40 runs) | beam 17.9, broad 10.1, broad from the middle 9.4, after the gybe 13.2; 0 falls | **17.9, 10.1, 9.4, 12.9; 0 falls** |
+| Lake 1x, the manoeuvre matrix in the map's wind (12:00, 14:30, 17:00) | 6 falls / 30 (4 catapults in tacks and a held turn, 2 out of irons) | **0 / 30** |
+| Lake 1x, every manoeuvre in a steady 18 kt (three hours) | 6 / 30 | **0 / 30** |
+| Lake 1x, every manoeuvre in a steady 24 kt (three hours) | 14 / 30; the beam reach 18.1 kt, catapulted in 2 of 3 (after 19 and 21 s) | **0 / 30; the beam reach 18.5 kt, no fall** |
+| Lake 1x, the same 90 cases on sixteen other hours (rounds 4, 5, 7) | 58 / 480 | **21 / 480** (rounds 4 and 5 with the rail's earlier fade) |
+| Lake 1x, a steady 24 kt on seventeen hours, each fall counted once | 28 fall events; the 45 s beam reach fell in 4 | **11; the 45 s beam reach fell in 8** |
+| Lake 1x, the T2 race (the all-rounder, cautious, gambler, rookie) | 14:30 all in, mean 4:26, 0 falls; 16:00 all in, 11:26, 2 falls; 13:00 all in, 5:05, 0; 15:00 all in, 5:12, 4 | 14:30 all in, 4:38, 1; 16:00 all in, 8:51, 1; 13:00 all in, 5:06, 0; 15:00 all in, 3:39, 1 (13:00 and 15:00 with the rail's earlier fade) |
+| **Lake 1.5x** (130 cases: the afternoons and the three sets) | 28 falls; the afternoons' beam reach 12.5 | 21 falls (the 24 kt set 8 of 30, the map's 8, 18 kt 1, the afternoons 4); the beam reach 13.3. With the ease in the air from 15 kt (not shipped, it slows 1x): 9 falls, 13.8 |
+| **Open water**, the push check (gusts and waves; 9 cases neutral, 6 pushed), m/s made good | 9.05 / 10.87, no fall | 8.96 / 10.89, no fall |
+| Open water, the second sample (75 and 120 degrees, gusts 6.5 s apart) | 12.80 / 13.20, no fall | 12.81 / 13.21, no fall |
+| Open water, the third sample (60 and 135 degrees, gusts 9.5 s apart) | 10.35 / 10.48, no fall | 10.27 / 10.48, no fall (c2hu10, the rail's earlier fade) |
+| Open water, the manoeuvre matrix (24 cases, flat water) | 1 fall (24 kt, a tack from a beam reach) | 1 fall (the same) |
+| Open water, the reach check (nine flat-water reaches) | 3 of 4 goal cases, 8 of 9 steady | the same (it sails the pilot itself, which did not change) |
+| **Validation** (`tools/test.sh validation`, 48 tests) | 38 pass, 8 fail, 2 pending | **38 pass, 8 fail, 2 pending**: the same eight; the skipper's 12 kt time 12:21.2 before, 12:24.8 now (its limit 12:00, red either way); the others' numbers identical |
+| Unit tests (`tools/test.sh`) | 822 of 822 | 835 of 835 (13 new) |
+
+## What changed in the autopilot
+
+All in `Game/windsurfer/player_controller.gd` (PlayerController: the beginner player's controls and
+the hands every AI skipper sails with). New settings, with the defaults the training chose:
+
+| Setting | Default | What it does |
+|---|---|---|
+| `head_up_alpha_deg` | 9 | while carving up at speed (from `head_up_ease_from_ms` 7 m/s), the auto-sheet trims no closer than 9 degrees of angle of attack |
+| `head_up_ease_on_hold` | false | only for a key held toward the wind or a tack, not for the heading hold's small corrections |
+| `head_up_ease_from_dps` | 10 | a turn toward the wind of at least 10 degrees a second counts (an AI's stick steers all the time) |
+| `rail_from_ms`, `rail_full_ms` | 0.3, 1.0 | the weight on the inside rail for a turn fades in from 0.3 to 1 m/s |
+| `airborne_alpha_deg` | 6 | while the water carries less than `airborne_support_share` (0.3) of the board's weight, and `airborne_hold_s` (0.3 s) after, the sail is trimmed no closer than 6 degrees |
+| `airborne_wind_from_kt`, `airborne_wind_full_kt` | 18, 20 | that ease only in strong wind (the true wind at the sail) |
+| `airborne_bounce_from_dps`, `airborne_bounce_full_dps` | 8, 12 | and only in short chop (the pitch rate's RMS the sailor feels): the open sea's swell pitches the board at 3.5 to 9 degrees a second and it does not fall there; the lake's chop at 10 to 17 |
+| `airborne_sheet_in_share` | 3 | for 1 s after landing the sail comes back in three times as fast as the pilot's usual pace (the body stayed hiked out) |
+| `chop_hike_drop`, `manoeuvre_wait_max_s`, `airborne_after_s`, `airborne_heel_from_deg`, `pilot_sheet_rate_per_s` | off (0, 0, 0, -90, 1.5) | built and measured, not used: less pull in chop cost the afternoons 2.6 kt; waiting for the wave before a tack changed nothing; the faster sheet (2.5) took the open-water matrix's fall but cost the pushed 24 kt broad reach 7 to 8 % in every sample |
+
+The tests: `Game/tests/unit/test_controller_chop.gd` (13: each setting on its own, and the defaults).
+Two older tests were adjusted because they measure something the defaults now change, with the
+reason written in them: `test_feet_press.gd`'s "exactly as before" sails the controller with the new
+settings off (its numbers are from before tonight), and `test_player_controller.gd`'s helm
+directions test keeps the rail at every speed (its board is at rest).
+
+The tools: `tools/autopilot_suite.sh` now runs every case as its own Godot process in one pool
+(`tools/autopilot_suite.py`, `--cores=`), with the new parts `lake`, `race`, `push2`/`pushed2` and
+the options `--lake_wave_scale`, `--matrix_times`, `--race_times`, `--push2_twas`, `--push2_gust`;
+`tools/autopilot_summary.py <round> --table` prints one line per variant; `Game/dev/run_lake.gd`
+takes `--pilot./--controller./--sailor./--sail.` settings and several `--only` parts;
+`Game/dev/run_race.gd --map=lake --time=hh:mm` races on the lake's wind and waves, and reads
+`WSIM_CONTROLLER` so a setting can be tried on a validation test; `tools/fall_trace.py` prints the
+seconds before a fall from a telemetry CSV.
+
+## What Max should look at
+
+1. **`tools/play.sh lake`, Settings > Wind 24 kt, beginner mode:** sail a beam reach for a minute.
+   Over the crests the sail should now ease for a moment and come back; does it look and feel like a
+   sailor sheeting out on a jump, or like flapping? And the long reach can still catapult (8 of 17
+   hours in the tests): how often does it for you?
+2. **A tack from a planing beam reach in chop (Space, or a key held into the wind):** the sail eases
+   a little while the board carves up. Does the tack still feel quick?
+3. **Out of irons on the lake** (stop, hold a key): the board should no longer roll you off.
+4. **A race on T2 on the lake with the AI fleet:** fewer falls, and the start (the fleet's
+   validation test caught a rookie over the line with the first version of the rail's fade; fixed).
+5. **The open water at 24 kt:** it should sail exactly as before.
+
+## For Michiel (nothing in `Game/sim/` was changed)
+
+- `Autopilot.update()` adds its rail for the sea to `rail_bank_extra_deg` at every update (`+=`)
+  when `wave_rail_max_deg > 0` and no slider sets the controls afresh: the rail then grows without
+  end (the reach check's `waverail3` variant: 0 of 4 goal cases, 5.3 m/s). Nothing in the game hits
+  it today (only the slider sets the wave rail, and it resets the controls); a one-line fix there.
+- The catapult in the air: while the board is light, the felt heel the fall check reads grows from
+  the board's own heel (the sail rolls it with nothing under it) and the sideways push, over a body
+  in free fall: 9 to 34 degrees in 0.3 s on the 24 kt reach. The controller can only ease the sail;
+  whether a sailor in the air should be thrown that easily is a physics question (and PH9, the legs
+  in pitch, may change how often the board flies).
+- `test_push_warning.gd` (a known red) wants the pushed board to catapult at 24 kt: still 0 now.
 
 ## How it was tested
 
@@ -34,7 +158,7 @@ Every round is a file of variants (`rounds/lc<n>.txt`), each a label and its set
 
 Each run is deterministic (the same settings give the same run), but a small change moves every
 wave encounter, so one case can fall or not by chance. That is why each round counts falls over
-120 lake cases and speeds over 40 reaches, and why a winner is checked again on more patterns.
+130 lake cases and speeds over 40 reaches, and why a winner is checked again on more patterns.
 
 ## The baseline (round lc0)
 
@@ -186,3 +310,117 @@ three open-water samples (within 1 %), its AI fleet finished every race with few
 6 in the four races at 13:00, 14:30, 15:00 and 16:00), and it changes nothing on flat water or in light wind. The faster sheet would
 also take the last open-water matrix fall, but costs the pushed 24 kt broad reach 7 to 8 % in every
 sample: left as a setting (`pilot_sheet_rate_per_s`), not a default.
+
+## Round 6 (lc6): the shipped defaults on their own, and the last refinements
+
+`rounds/lc6.txt`. `final` is `c2hu10` as the controller's defaults with no overrides at all: it sailed
+every case exactly as `c2hu10` had (the same falls, speeds and races to the digit), so the defaults
+are set as measured. On top of it:
+
+| Variant | Lake falls (of 130) | Afternoons | Push neutral / pushed | Push2 neutral / pushed | Matrix | Races (falls) |
+|---|---|---|---|---|---|---|
+| `final` | 0 | 17.9 / 10.1 / 9.4 | 9.05 / 10.91 | 12.78 / 13.21 | 1 fall | 4:18, 8:00 (1) |
+| `f_air5` | 1 | 18.1 / 10.1 / 9.4 | 9.09 / 10.83 | 12.78 / 13.21 | 1 fall | (2) |
+| `f_hike115` | 2 | 17.9 / 10.1 / 9.4 | 8.96 / 10.57 | 12.89 / 12.89 | 1 fall | (0) |
+| `f_hu7` | 1 | 17.9 / 10.1 / 9.4 | 9.05 / 10.92 | 12.78 / 13.21 | 1 fall | (1) |
+
+None is better than `final`: more pull (1.15) is not faster on the open water and falls twice on the
+lake; a stronger ease in the air or a carve-up ease at 7 degrees each fall once.
+
+**The validation of the defaults found one new red**, the AI fleet's start
+(`test_living_skipper_fleet.gd`, T1, 16 boards from random spots): a rookie over the line at the
+gun and not started again within 20 s. Trying each setting on the test (`WSIM_CONTROLLER`, read by
+`Game/dev/run_race.gd`) showed it is the rail's fade from 2 to 5 m/s: the boards holding back before
+the start turn more slowly without the rail. From 0.3 to 1 m/s the fleet starts as before (every
+board within 8 s of the gun) and the 18 lake cases out of irons and the held turns still do not
+fall. The defaults now fade the rail in from 0.3 to 1 m/s; rounds 7 and 7s measure them.
+
+## Round 7 (lc7, lc7s): the shipped defaults, before and after
+
+`rounds/lc7s.txt`: `final` (the defaults with the rail's fade at 0.3 to 1 m/s) on the whole
+standard set. `rounds/lc7.txt`: `before` (the chop technique off: the controller as it was) and
+`final` on six more hours (12:15, 12:45, 13:45, 15:15, 16:15, 16:45).
+
+- The standard set: no fall in the 130 lake cases; the afternoons 17.9 / 10.1 / 9.4 kt; the push
+  check 8.96 / 10.89 m/s (the baseline 9.05 / 10.87: the neutral mean 1 % lower, the size of the
+  chaos between near-identical variants), the second sample 12.81 / 13.21 (12.80 / 13.20); the matrix
+  one fall, as before; both races finished by all four boards (one fall in each).
+- The six more hours: `before` 15 falls in 180 (map 5, 18 kt 4, 24 kt 6), `final` 13 (map 2, 18 kt 0,
+  24 kt 11). On these hours the 24 kt beam reach caught `final` five times out of six after 26 to 37
+  s, where `before` did not fall once.
+
+The 24 kt sets of all four hour sets together (17 hours: rounds 0 or 7s, 4, 5 and 7; each fall
+counted once, since the beam reach, the tacks, the held turn and the two gybes sail the same first
+25 s from the start; `final` here is `c2hu10` on the hours of rounds 4 and 5), with a third
+controller run for it on the same 17 hours: the defaults without the ease in the air
+(`.sim_output/lake_chop/noair/`):
+
+| Controller | The beam reach from the start fell before 25 s | The 45 s beam reach fell after 25 s | Other falls (manoeuvres, out of irons, broad reaches) | Fall events |
+|---|---|---|---|---|
+| before | 3 | 1 | 24 | 28 |
+| the defaults without the ease in the air | 3 | 1 | 14 | 18 |
+| **the defaults** | 2 | 6 | 3 | **11** |
+
+So the ease while carving up and the rail's fade take ten of the 24 kt falls, and the ease in the air
+seven more; but the board that keeps sailing the 24 kt beam reach for 45 s still catapults, and in
+these runs more often late (6 of 17 hours against 1): the ease keeps it going through the first
+crests and then a slam on landing tips the sailor over in 0.2 s with the eased sail still pulling
+200 N. An open item (see "What Max should look at" and "For Michiel").
+
+## Round 8 (lc8): the 1.5x finding on the realistic waves
+
+`rounds/lc8.txt`. The 1.5x round A (below) found that the ease in the air from less wind falls far
+less on the higher waves. On the realistic waves and the open water (the standard set):
+
+| Variant | Lake falls (of 130) | Afternoons beam / broad / mid | Map's beam reach | Push neutral / pushed | Push2 | Matrix |
+|---|---|---|---|---|---|---|
+| the defaults (18 to 20 kt) | 0 | 17.9 / 10.1 / 9.4 | 21.7 | 8.96 / 10.89 | 12.81 / 13.21 | 1 fall |
+| `w1517` (15 to 17 kt) | 0 | **17.0** / 9.9 / 9.4 | 20.9 | 8.96 / 10.85 | 12.80 / 13.14 | 1 fall |
+| `w1618` (16 to 18 kt) | 0 | 17.6 / 10.1 / 9.4 | 20.6 | 8.96 / 10.85 | 12.80 / 13.23 | 1 fall |
+| `w1517b1014` (and the chop gate 10 to 14) | 1 | 16.9 / 10.0 / 9.4 | 20.7 | 9.03 / 10.67 | 12.80 / 13.16 | 1 fall |
+
+On the realistic waves the defaults already fall in none of these, and a lower gate only costs
+speed (the afternoons' beam reach 0.3 to 0.9 kt): the 1.5x finding is not used (Max's rule: only
+if it also helps or does not hurt 1x). It stays a setting for a rough day.
+
+## The 1.5x waves (lc15a, lc15b)
+
+`--lake_wave_scale=1.5`, the lake only (130 cases a variant: the 40 afternoon reaches and the three
+sets of 30), two rounds, 12 variants. It did not fail much, so it was not stopped early.
+
+| Variant | Falls (of 130) | Afternoons beam / broad / mid | Map / 18 kt / 24 kt sets | What it is |
+|---|---|---|---|---|
+| before | 28 | 12.5 / 8.9 / 8.0 (3 falls) | 10 / 2 / 13 | the controller as it was |
+| **final** (the shipped defaults) | **21** | 13.3 / 8.9 / 8.0 (4 falls) | 8 / 1 / 8 | |
+| `f_wind1517`, `w1517hu6` | **9**, 9 | **13.8** / 8.8 / 8.0 (0 falls) | 0 / 1 / 8 | the ease in the air from 15 to 17 kt at the sail (and the carve-up ease at 6) |
+| `w1517chop15` | 10 | 13.8 / 8.8 / 8.0 (1) | 0 / 2 / 7 | and 15 % less pull in chop |
+| `w1618`, `w1517b1014` | 12, 12 | 11.8, 12.9 | 0 / 1 / 8, 0 / 1 / 11 | the gate at 16 to 18 kt; the chop gate higher |
+| `f_chop15`, `f_hike10`, `f_hu6` | 19, 21, 22 | 12.1 to 13.3 | | less pull in chop, less pull, the carve-up ease at 6 |
+| `f_air4`, `f_s25` | 25, 28 | 12.5, 13.6 | | a stronger ease in the air; the faster sheet |
+
+At 1.5x the map's wind (15 to 18.5 kt at the sail) is already strong enough to throw the board off
+the higher crests, so the ease in the air pays from less wind there; the steady 24 kt set stays at
+7 to 13 falls in 30 for every variant (before 13; the long beam reach, as at 1x). The report on the waves
+(`Documentation/reports/waves/lake_waves_full.md`) called 1.5x "a rough day"; the autopilot gets
+through it with a quarter fewer falls than before, and with the lower gate with two thirds fewer.
+
+## The checks on the final code
+
+- `tools/test.sh validation`: 48 tests, 38 pass, 8 fail, 2 pending, the same eight known reds (the
+  polar sweep's speeds and shape, the top speed 14.67 m/s, the planing onset 7.42 m/s, the fin's
+  side force 745 N, the push warning, the skipper's 12 kt limit 12:24.8 (before 12:21.2), the settled
+  speed on waves at TWA 120 12.09 m/s). 19 min (the PC busy with the rounds).
+- `tools/test.sh`: 835 of 835 (822 before; 13 new in `test_controller_chop.gd`).
+- `tools/check.sh`: 442 files, 0 failed.
+- `tools/lan_test.sh --map=lake`: SYNC CHECK: PASS.
+- `Game/default_bus_layout.tres` and `Game/project.godot` restored after every round (the suite does it).
+
+## The rounds, in files
+
+`Documentation/reports/autopilot/rounds/`: `lc0.txt` (the baseline), `lc1.txt`, `lc1b.txt` (merged
+into lc2, not run on its own), `lc2.txt`, `lc3.txt`, `lc4.txt`, `lc5.txt`, `lc5d.txt`, `lc6.txt`,
+`lc7.txt`, `lc7s.txt`, `lc8.txt`, `lc15a.txt`, `lc15b.txt`. Each round's outputs:
+`.sim_output/autopilot/<round>/<variant>/` (not committed); `python -I tools/autopilot_summary.py
+<round> --table` prints them. Two rounds were stopped a minute or three in and started again with
+better settings (`lc3_stopped`, `lc7_stopped`, kept, not used). The rounds ran from 02:43 to 07:30
+on 13 to 14 Godot processes at a time.
