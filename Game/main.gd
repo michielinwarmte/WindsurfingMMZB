@@ -833,15 +833,19 @@ func show_net_message(text: String, seconds: float) -> void:
 
 ## --measure=<seconds>: the frame rate without vsync, the frame on average and at worst, and how
 ## much of a frame the physics and the rest take, over that many seconds after a warm-up; then
-## quits. For finding frame drops (a race with four boards, Session 51).
+## quits. For finding frame drops (a race with four boards, Session 51). Also how long the graphics
+## card takes to draw a frame, which the frame rate hides while the processor is the slower one.
 func _measure_frame_rate(seconds: float) -> void:
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+	var viewport_rid: RID = get_viewport().get_viewport_rid()
+	RenderingServer.viewport_set_measure_render_time(viewport_rid, true)
 	for i: int in 180:
 		await get_tree().process_frame
 	var frames: int = 0
 	var worst_ms: float = 0.0
 	var physics_ms: float = 0.0
 	var process_ms: float = 0.0
+	var gpu_ms: float = 0.0
 	_windsurfer.cost_text()  # the warm-up's numbers are dropped
 	if _race_runner != null:
 		_race_runner.cost_text()
@@ -855,12 +859,14 @@ func _measure_frame_rate(seconds: float) -> void:
 		last_us = now_us
 		physics_ms += Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0
 		process_ms += Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0
+		gpu_ms += RenderingServer.viewport_get_measured_render_time_gpu(viewport_rid)
 		frames += 1
 	var total_s: float = (Time.get_ticks_usec() - start_us) / 1e6
 	# The boards sailing: the player's (unless parked by --spectate) and the AI boards.
 	var boards: int = (0 if _is_spectating() else 1) + (_race_runner.opponents.size() if _race_runner != null else 0)
 	print("Measured %.0f s with %d boards: %.0f fps; a frame %.1f ms on average, %.1f ms at worst; physics %.1f ms and the rest %.1f ms of a frame" % [
 		total_s, boards, frames / total_s, 1000.0 * total_s / frames, worst_ms, physics_ms / frames, process_ms / frames])
+	print("  the graphics card: %.2f ms a frame" % (gpu_ms / frames))
 	print("  the player's board: %s" % _windsurfer.cost_text())
 	if _race_runner != null and not _race_runner.opponents.is_empty():
 		# One line for the whole fleet, not one per board.

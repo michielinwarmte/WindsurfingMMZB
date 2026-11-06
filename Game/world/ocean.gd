@@ -138,6 +138,11 @@ func _apply_look() -> void:
 	if _lake:
 		_near_material.set_shader_parameter("lake_lod_reach", LAKE_LOD_REACH)
 		_far_material.set_shader_parameter("lake_displace", false)
+		# The lake's look in the wind (res://world/lake_look.gdshaderinc): its short waves' directions and
+		# a first wind (the lake scene sets the wind of every moment, set_water_parameter()).
+		var look_parameters: Dictionary[String, Variant] = LakeLook.shader_parameters((_sim.water as LakeWaveField).lake)
+		for key: String in look_parameters:
+			set_water_parameter(key, look_parameters[key])
 	_near.material_override = _near_material
 	_far.material_override = _far_material
 

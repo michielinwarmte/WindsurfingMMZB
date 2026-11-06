@@ -23,6 +23,8 @@ extends SailingScene
 ##   --heading=<degrees>              start with this heading instead of 132
 ##   --start=<east>,<north>           start at this spot instead of off the camping beach
 ##   --overview=<east>,<north>,<height>  a fixed camera there, looking at the board
+##   --overview_look=<east>,<north>   ... looking at that point on the water instead (a gust coming
+##       down the lake, the same view at every moment)
 ##   --measure=<seconds>              print the frame rate and the frame times (main.gd) and quit
 ##   --check-gusts=1                  compare the gust picture the graphics card drew with
 ##       MapWind's numbers, print the result and quit (run it the same way)
@@ -53,8 +55,10 @@ var _map_config: MapConfig
 var _lake_area: LakeArea
 ## The gusts on the water (null when the map's wind is off).
 var _gust_picture: WindRippleMap = null
-## The --overview camera position (Vector3.INF: none).
+## The --overview camera position (Vector3.INF: none), and the point it looks at (--overview_look;
+## Vector3.INF: the board).
 var _overview_at: Vector3 = Vector3.INF
+var _overview_look: Vector3 = Vector3.INF
 
 
 func _enter_tree() -> void:
@@ -98,7 +102,8 @@ func _process(delta: float) -> void:
 	_show_the_wind_of_the_moment()
 	if _overview_at != Vector3.INF:
 		_camera_rig.camera.global_position = _overview_at
-		_camera_rig.camera.look_at(_windsurfer.get_global_transform_interpolated().origin)
+		var target: Vector3 = _overview_look if _overview_look != Vector3.INF else _windsurfer.get_global_transform_interpolated().origin
+		_camera_rig.camera.look_at(target)
 
 
 ## The start spot in game coordinates, on the water.
@@ -223,6 +228,10 @@ func _show_the_wind_of_the_moment() -> void:
 	_hud.clock_text = field.time_of_day_text().left(5)  # hours and minutes: the strip is full
 	if _gust_picture != null:
 		_gust_picture.show_moment(field.moment())
+		# The lake's mean wind of the moment for the water's look (lake_look.gdshaderinc): at 10 m for
+		# the whitecaps, at 12.5 m for Cox and Munk's roughness. The gust picture adds the place's.
+		_ocean.set_water_parameter("lake_wind_ms", Vector2(field.speed_at_height(LakeLook.WHITECAP_HEIGHT_M),
+			field.speed_at_height(LakeLook.COX_MUNK_HEIGHT_M)))
 
 
 ## Which waves the lake has, in the console (and the logs of the checks): its own (Lake waves on)
@@ -243,6 +252,9 @@ func _apply_map_options() -> void:
 	if overview.size() == 3:
 		_overview_at = _map_config.lv95_to_game(overview[0], overview[1], overview[2] + _map_config.lake_level_m)
 		_camera_rig.set_process(false)
+		var look: PackedFloat64Array = _option_numbers("overview_look")
+		if look.size() == 2:
+			_overview_look = _map_config.lv95_to_game(look[0], look[1], _map_config.lake_level_m)
 	if _option_numbers("check-gusts").size() == 1:
 		_check_gust_picture()
 

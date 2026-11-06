@@ -19,6 +19,10 @@
 //   4. Small wind ripples, drifting downwind, tilt the wave's surface: they break up the
 //      mirror and catch the sun. They only change the shading and never move the surface.
 //   5. Foam on the steepest crests, and an optional grid for speed on flat water.
+// On a lake's own waves (lake_waves_on), 4 and 5 are the lake's look in the wind instead
+// (res://world/lake_look.gdshaderinc): short waves and a mirror as rough as the wind of that
+// moment there makes them (Cox and Munk), so a gust is a darker, rougher patch, and whitecaps
+// as many as the wind and the lake's waves there make (Zhao and Toba).
 //
 // The mesh this runs on must only be translated (never rotated or scaled): the vertex
 // positions are taken as world rest positions and the normal is written as a world normal.
@@ -211,36 +215,14 @@ float wind_recent_ratio(vec2 position) {
 	return 2.0 * texture(wind_ripple_map, uv).g;
 }
 
-// A train the picture shows as shading only (the physics does not ride it), as three short-crested
-// parts that share its energy (each a / sqrt(3)): turned 26 degrees either way and stretched over
-// its octave (x 1.14, 1, 0.88), each with its own phase. Real short wind waves spread about 40
-// degrees either side of the wind at 1.6 times the peak frequency (Donelan-Banner spreading, as
-// Horvath 2015 gives it; the research, 4.1), so one long-crested train looks like brushed metal. The
-// parts' turn and stretch are a choice for the look, within that spread. Adds the parts' slopes to
-// the tangents (as a height field) and the mean square slope of what the pixels cannot show to
-// `faded_slope2`.
-const vec3 SHADING_TURNS_RAD = vec3(-0.45, 0.0, 0.45);
-const vec3 SHADING_STRETCH = vec3(1.14, 1.0, 0.88);
-const vec3 SHADING_PHASES = vec3(1.7, 0.0, 4.1);
+// The lake's look in the wind: the spread trains, the short waves, the wind's roughness and the
+// whitecaps (lake_spread_train(), lake_short_waves(), lake_whitecap()).
+#include "res://world/lake_look.gdshaderinc"
 
-void lake_shading_train(vec4 wave, float amplitude, float pixel_m, vec2 rest, inout vec3 tangent_x, inout vec3 tangent_z, inout float faded_slope2) {
-	if (amplitude <= 0.0) {
-		return;
-	}
-	float part_a = amplitude * 0.57735;
-	for (int j = 0; j < 3; j++) {
-		float turn_c = cos(SHADING_TURNS_RAD[j]);
-		float turn_s = sin(SHADING_TURNS_RAD[j]);
-		vec2 d = vec2(wave.x * turn_c - wave.y * turn_s, wave.x * turn_s + wave.y * turn_c);
-		float length_m = wave.w * SHADING_STRETCH[j];
-		float k = 2.0 * PI / length_m;
-		float shown = 1.0 - smoothstep(length_m / 6.0, length_m / 3.0, pixel_m);
-		float phase = k * dot(d, rest) - wave_omega(k) * water_time_s + wave.z + SHADING_PHASES[j];
-		float slope = part_a * k * cos(phase) * shown;
-		tangent_x.y += slope * d.x;
-		tangent_z.y += slope * d.y;
-		faded_slope2 += 0.5 * (1.0 - shown) * (part_a * k) * (part_a * k);
-	}
+// The wind here relative to the lake's mean of this moment (the gust picture's red channel holds its
+// square, halved; 1 without a picture).
+float wind_ratio_here(vec2 position) {
+	return sqrt(max(wind_ripple_factor(position), 0.0));
 }
 
 // How much of each train a pixel shades exactly (the rest short-crested): all of it within two
@@ -261,23 +243,36 @@ vec4 lake_pixel_exact(vec2 rest) {
 // The lake's surface at a pixel: near the camera, where the board floats on them, the exact Gerstner
 // tangents of the trains the physics rides at the pixel's rest point, faded where a wavelength
 // covers too few pixels; elsewhere (farther out, from high up, on the far water) and for the trains
-// the physics does not ride, short-crested shading (lake_shading_train()), so few long trains do not
+// the physics does not ride, short-crested shading (lake_spread_train()), so few long trains do not
 // show as regular stripes from afar. The two are blended by the square roots of the exact share
 // (lake_pixel_exact()), which keeps the slopes' energy. The picture's short train (raised by the
-// recent wind) as shading too. `faded_slope2` gets the mean square slope of what was faded out.
-void lake_pixel_surface(vec2 rest, float pixel_m, out vec3 tangent_x, out vec3 tangent_z, out float crest, out float total_steepness, out float faded_slope2) {
+// recent wind) as shading too. `faded_slope2` gets the mean square slope of what was faded out;
+// `breaking` the breaking waves' sums for the whitecaps (lake_look_wave()), `full_variance` their
+// crest steepness's variance if all were drawn, `trains_mss` the mean square slope all the trains hold
+// here (the short waves get the rest of the wind's, lake_short_mss()) and `peak_period_s` the lake's
+// peak period here (0 off the lake's grid).
+void lake_pixel_surface(vec2 rest, float pixel_m, out vec3 tangent_x, out vec3 tangent_z, out float crest, out float total_steepness, out float faded_slope2, out vec3 breaking, out float full_variance, out float trains_mss, out float peak_period_s) {
 	vec4 lengths = vec4(wave_a.w, wave_b.w, wave_c.w, wave_d.w);
 	vec4 shown = vec4(1.0) - smoothstep(lengths / 6.0, lengths / 3.0, vec4(pixel_m));
 	vec4 near_shape = lake_pixel_exact(rest);
+	vec4 exact_weights = shown * sqrt(near_shape);
 	vec3 displacement;
-	lake_wave_surface(rest, shown * sqrt(near_shape), displacement, tangent_x, tangent_z, crest, total_steepness);
+	lake_wave_surface(rest, exact_weights, displacement, tangent_x, tangent_z, crest, total_steepness);
 	vec4 amplitudes = lake_amplitudes(rest);
 	vec4 slopes = amplitudes * 2.0 * PI / lengths;
-	faded_slope2 = dot((vec4(1.0) - shown) * near_shape * slopes * slopes, vec4(0.5));
+	vec4 steepness = min(slopes, vec4(PI / 7.0));
+	faded_slope2 = dot((vec4(1.0) - shown * shown) * near_shape * slopes * slopes, vec4(0.5));
+	// The exact trains' squeeze is their crest sum (gerstner_lake()).
+	vec4 exact_steepness = steepness * exact_weights;
+	vec4 exact_squared = exact_steepness * exact_steepness;
+	breaking = vec3(crest, 0.5 * dot(exact_squared, vec4(1.0)), dot(exact_squared, exact_squared));
+	full_variance = 0.5 * dot(steepness, steepness);
+	trains_mss = 0.5 * dot(slopes, slopes);
+	peak_period_s = 0.0;
 	vec4 waves[4] = vec4[](wave_a, wave_b, wave_c, wave_d);
 	vec4 elsewhere = sqrt(max(vec4(1.0) - near_shape, vec4(0.0)));
 	for (int i = 0; i < 4; i++) {
-		lake_shading_train(waves[i], amplitudes[i] * elsewhere[i], pixel_m, rest, tangent_x, tangent_z, faded_slope2);
+		lake_spread_train(i, waves[i].z, amplitudes[i] * elsewhere[i], pixel_m, rest, tangent_x, tangent_z, faded_slope2, breaking);
 	}
 	// The short train: nodes as lake_envelope; its amplitude at the recent wind (9.17, the gusts).
 	vec2 f = (rest - lake_grid.xy) * lake_grid.z;
@@ -289,7 +284,11 @@ void lake_pixel_surface(vec2 rest, float pixel_m, out vec3 tangent_x, out vec3 t
 	vec4 look = mix(mix(texelFetch(lake_look_data, node, 0), texelFetch(lake_look_data, node + ivec2(1, 0), 0), t.x),
 		mix(texelFetch(lake_look_data, node + ivec2(0, 1), 0), texelFetch(lake_look_data, node + ivec2(1, 1), 0), t.x), t.y);
 	float a = look.r * pow(max(wind_recent_ratio(rest), 0.0), look.g);
-	lake_shading_train(lake_look_band, a, pixel_m, rest, tangent_x, tangent_z, faded_slope2);
+	peak_period_s = look.a;
+	lake_spread_train(4, lake_look_band.z, a, pixel_m, rest, tangent_x, tangent_z, faded_slope2, breaking);
+	float look_slope = a * 2.0 * PI / lake_look_band.w;
+	full_variance += 0.5 * min(look_slope, PI / 7.0) * min(look_slope, PI / 7.0);
+	trains_mss += 0.5 * look_slope * look_slope;
 }
 
 float grid_line(vec2 p, float cell, float width) {
@@ -306,13 +305,32 @@ void fragment() {
 	float waves_faded_slope2 = 0.0;
 	float pixel_crest_factor = crest_factor;
 	float pixel_crest_steepness = crest_steepness;
+	// A lake's whitecaps and the slope of its surface for the refraction (lake_look.gdshaderinc).
+	float lake_foam = 0.0;
+	vec2 lake_slope = vec2(0.0);
+	float lake_gust = 0.0;
 	if (lake_waves_on) {
 		vec2 footprint = fwidth(rest_xz);
+		float pixel_m = max(footprint.x, footprint.y);
 		vec3 tangent_x;
 		vec3 tangent_z;
 		float crest;
 		float total_steepness;
-		lake_pixel_surface(rest_xz, max(footprint.x, footprint.y), tangent_x, tangent_z, crest, total_steepness, waves_faded_slope2);
+		vec3 breaking;
+		float breaking_full;
+		float trains_mss;
+		float peak_period_s;
+		lake_pixel_surface(rest_xz, pixel_m, tangent_x, tangent_z, crest, total_steepness, waves_faded_slope2, breaking, breaking_full, trains_mss, peak_period_s);
+		// The wind of this moment here: the short waves' slope (Cox and Munk) and the whitecaps' share
+		// (Zhao and Toba, with the lake's own waves here).
+		float wind_here = wind_ratio_here(world_position.xz);
+		lake_short_waves(rest_xz, pixel_m, lake_short_mss(lake_wind_ms.y * wind_here, trains_mss), tangent_x, tangent_z, waves_faded_slope2);
+		// Fresh foam is frothy: a little lighter and darker with the same fraying noise.
+		float fray;
+		lake_foam = lake_whitecap(breaking, breaking_full, whitecap_fraction(lake_wind_ms.x * wind_here, peak_period_s), rest_xz, pixel_m, fray);
+		lake_foam *= whitecap_opacity * (0.85 + 0.15 * fray);
+		lake_gust = lake_gust_signal(wind_here);
+		lake_slope = vec2(tangent_x.y, -tangent_z.y);
 		mat3 to_view = mat3(VIEW_MATRIX);
 		NORMAL = normalize(to_view * normalize(cross(tangent_z, tangent_x)));
 		TANGENT = normalize(to_view * normalize(tangent_x));
@@ -321,26 +339,33 @@ void fragment() {
 		pixel_crest_steepness = crest;
 	}
 	float wind = wind_ripple_factor(world_position.xz);
-	float gust = clamp((wind - 1.0) * gust_look_contrast, -1.0, 1.0);
+	// On a lake, how much rougher the water is here than the lake's mean (lake_gust_signal()).
+	float gust = clamp(lake_waves_on ? lake_gust * lake_gust_contrast : (wind - 1.0) * gust_look_contrast, -1.0, 1.0);
 	float darker = 1.0 - gust_darkening * max(gust, 0.0);
 	float glassier = 1.0 + gust_glassiness * max(-gust, 0.0);
 
 	// 4. Two layers of ripples, a big and a small one, at slightly different angles. They
-	// drift on the engine's clock: they are only a look, and keep moving in the menus.
-	vec2 along = normalize(ripple_drift_direction + vec2(1e-6, 0.0));
-	vec3 big = ripple_layer(world_position.xz, ripple_size_m, ripple_speed_ms, along, TIME);
-	vec3 small = ripple_layer(world_position.xz, ripple_size_m * 0.35, ripple_speed_ms * 0.6,
-		normalize(along + vec2(-along.y, along.x) * 0.4), TIME);
-	vec3 ripple = normalize(big + small);
+	// drift on the engine's clock: they are only a look, and keep moving in the menus. A lake's own
+	// waves draw their short waves themselves (lake_short_waves()), sized by the wind, so there the
+	// ripples' noise is left out.
+	vec3 ripple = vec3(0.0, 0.0, 1.0);
+	if (!lake_waves_on) {
+		vec2 along = normalize(ripple_drift_direction + vec2(1e-6, 0.0));
+		vec3 big = ripple_layer(world_position.xz, ripple_size_m, ripple_speed_ms, along, TIME);
+		vec3 small = ripple_layer(world_position.xz, ripple_size_m * 0.35, ripple_speed_ms * 0.6,
+			normalize(along + vec2(-along.y, along.x) * 0.4), TIME);
+		ripple = normalize(big + small);
+	}
 	NORMAL_MAP = ripple * 0.5 + 0.5;
-	NORMAL_MAP_DEPTH = ripple_strength * wind * near;
+	NORMAL_MAP_DEPTH = lake_waves_on ? 0.0 : ripple_strength * wind * near;
+	vec2 tilt = lake_waves_on ? lake_slope : ripple.xy;
 
 	// 1. How much water the view passes through before it reaches what lies behind it.
 	vec3 bed = bed_behind(SCREEN_UV, world_position, INV_PROJECTION_MATRIX, INV_VIEW_MATRIX);
 	float straight_path_m = length(bed - world_position);
 
 	// 2. Look a little to the side, more where the water is deeper (no bending at the edge).
-	vec2 bent_uv = SCREEN_UV + ripple.xy * refraction_strength * near * clamp(straight_path_m / 3.0, 0.0, 1.0);
+	vec2 bent_uv = SCREEN_UV + tilt * refraction_strength * near * clamp(straight_path_m / 3.0, 0.0, 1.0);
 	vec3 bent_bed = bed_behind(bent_uv, world_position, INV_PROJECTION_MATRIX, INV_VIEW_MATRIX);
 	if (bent_bed.y > world_position.y) {
 		// The bent look would land on something above the water (the shore, the board): don't bend.
@@ -361,7 +386,8 @@ void fragment() {
 	vec3 emission = bed_color * through * (1.0 - shore) * (1.0 - mirrored);
 
 	// 5. Foam on the steep crests covers the rest; the grid lines lie on top.
-	float foam = smoothstep(foam_threshold, foam_threshold + 0.15, pixel_crest_steepness) * 0.7;
+	// On a lake, the whitecaps of its wind (lake_whitecap()).
+	float foam = lake_waves_on ? lake_foam : smoothstep(foam_threshold, foam_threshold + 0.15, pixel_crest_steepness) * 0.7;
 	albedo = mix(albedo, foam_color, foam);
 	emission *= 1.0 - foam;
 	float distance_fade = clamp(1.0 - distance_m / grid_fade_distance_m, 0.0, 1.0);
@@ -373,11 +399,13 @@ void fragment() {
 	// A gust's rougher water mirrors the bright sky less and more diffusely: darker and matt;
 	// a lull's is glassier.
 	roughness = max(roughness * wind, gust_roughness * max(gust, 0.0));
-	// A lake's wave slopes too small for the pixels roughen the mirror instead (a GGX alpha of
-	// roughness squared, widened by their mean square slope).
+	// A lake's wave slopes too small for the pixels roughen the mirror instead: a GGX alpha of
+	// roughness squared, whose square is their mean square slope (Beckmann's m^2 is the mss). That
+	// holds the short waves of the wind here too (lake_short_waves()), so a gust is rougher and a lull
+	// or the lee glassier by Cox and Munk's measurement, near and far.
 	if (lake_waves_on) {
-		float alpha = roughness * roughness;
-		roughness = sqrt(sqrt(alpha * alpha + waves_faded_slope2));
+		float alpha = roughness_value * roughness_value;
+		roughness = clamp(sqrt(sqrt(alpha * alpha + waves_faded_slope2)) + lake_gust_roughness * gust, 0.0, 1.0);
 	}
 	ROUGHNESS = clamp(mix(roughness, 0.5, foam), 0.0, 1.0);
 	METALLIC = 0.0;
