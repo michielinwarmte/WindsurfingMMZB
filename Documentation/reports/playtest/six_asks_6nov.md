@@ -80,3 +80,11 @@ When an agent reports: read its diff (every `Game/sim/` change in full, for Mich
 
 All nine agents: about 5.3 M tokens; the lead (Fable) on top.
 - 21:58 Max: "pushed?" -> all ten branches of the day pushed to origin (play/6nov-evening 8099705 and the nine agent branches); main untouched.
+
+## The night of 6 November: the autopilot on the player's board (Max, ~22:10)
+
+Max on night3: "it will not go up on plane, the character moves wrong and will not power the sail up; in a reach out of nowhere it opens up the sail and stops"; "in low speeds the autopilot is moving a lot. these reflexes must fade away at low speeds".
+
+- Built on `fix/reflex-setting` (178b319, from play/6nov-evening 13d85b3; worktree WindsurfingMMZB-fixes): the reflex fades to nothing at walking pace (3 m/s) and is full from 6 m/s, for every board; the step forward at walking pace off unless asked for (`reflex_step_forward`); Settings > Sailing > Recovery reflex (on) for the player's board. Tests 16/16 + 2/2, the full suite green, check 486/0. Play folder `WindsurfingMMZB-play-6nov2026-night4` (+ zip) from it at 22:55; the night run keeps the old code in the playtest worktree: merge in the morning.
+- **Measured, honestly:** `tools/push_check.sh` with push 75 % and the body held (0.3, 0.3), the first 40 s from rest at 18 and 24 kt on TWA 100 and 135, and 150 s on the 24 kt reaches: old code (night3) and new code identical to the last digit in every column; eased 0 %; the reflex never fired on the open water. The fade is Max's rule, not the proven cure.
+- **The other suspect:** the slalom start of `race/types-start-marks` (`skipper.gd _slalom_start_heading()`): before the gun a skipper-driven board waits luffed up at steerage speed upwind of the boat and holds back hard when early; under the autopilot the player's board is skipper-driven too. The night run's first race (PD3) showed the AI starting 20 to 76 s late. If Max was on PD3, that is it; LG2/O2 start the old way. Plan for Max: (a) a switch that puts the slalom start back behind the line until it is tuned, or (b) relax the wait (no luffing).
