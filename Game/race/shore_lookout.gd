@@ -17,6 +17,12 @@ const DEEP_M: float = 2.0
 const ROOM_M: float = 40.0
 ## The path ahead is looked at every this many metres.
 const STEP_M: float = 10.0
+## The most room to the land that counts (openness_m()), metres: beyond it all water is as good.
+const MOST_ROOM_M: float = 250.0
+## Finding the way out (most_open_heading_deg()): how many headings are tried, and how far ahead
+## their water is looked at, metres.
+const HEADINGS: int = 24
+const ESCAPE_LOOK_M: float = 60.0
 
 var _grid: TerrainGrid = null
 var _clearance: CourseFitter = null
@@ -40,6 +46,32 @@ func is_open(point: Vector2) -> bool:
 	if -_grid.height_at(point.x, point.y) < DEEP_M:
 		return false
 	return _clearance == null or _clearance.clearance_m(point) >= ROOM_M
+
+
+## How open the water at a point is, metres: its room to the nearest land (at most MOST_ROOM_M); 0 on
+## land, off the grid, or where it is too shallow.
+func openness_m(point: Vector2) -> float:
+	if not _grid.contains(point.x, point.y) or -_grid.height_at(point.x, point.y) < DEEP_M:
+		return 0.0
+	if _clearance == null:
+		return MOST_ROOM_M
+	return minf(_clearance.clearance_m(point), MOST_ROOM_M)
+
+
+## The compass heading from a point toward the most open water near it: of HEADINGS headings round
+## the compass, the one whose water is most open ESCAPE_LOOK_M and twice that ahead (a board that has
+## got into the shallows or close to the land heads that way).
+func most_open_heading_deg(from: Vector2) -> float:
+	var best_deg: float = 0.0
+	var best_m: float = -1.0
+	for i: int in HEADINGS:
+		var heading_deg: float = 360.0 * i / HEADINGS
+		var way: Vector2 = Course.direction_of(heading_deg)
+		var open_m: float = openness_m(from + way * ESCAPE_LOOK_M) + openness_m(from + way * ESCAPE_LOOK_M * 2.0)
+		if open_m > best_m:
+			best_m = open_m
+			best_deg = heading_deg
+	return best_deg
 
 
 ## How far a board can sail from a point on a compass heading before the open water ends, metres;

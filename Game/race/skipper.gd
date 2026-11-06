@@ -119,6 +119,9 @@ const SHORE_LOOK_MAX_M: float = 160.0
 const SHORE_REACH_FROM_DEG: float = 70.0
 const SHORE_REACH_TO_DEG: float = 125.0
 const SHORE_TURN_STEP_DEG: float = 10.0
+## With less open water ahead than this (metres) the board is at the edge already: it heads for the
+## most open water near it (_escape_the_shore()).
+const SHORE_ESCAPE_M: float = 25.0
 ## The leeway and the speed it expects are smoothed over this long, seconds; the leeway is measured
 ## above MEASURE_LEEWAY_FROM_MS.
 const MEASURE_SMOOTH_S: float = 3.0
@@ -638,14 +641,20 @@ func _think(telemetry: Telemetry) -> void:
 ##   water), if the other tack has more water ahead;
 ## - the shore ahead on a reach (or on both tacks): it turns, on the same tack, to the heading with the
 ##   most water ahead (no closer to the wind than it can sail).
-## A penalty's circle is left alone: it is turned on the spot.
+## A penalty's circle is left alone (it is turned on the spot) unless it is out of the open water.
+## Already at the edge (less than SHORE_ESCAPE_M ahead): _escape_the_shore().
 func _keep_off_the_shore(telemetry: Telemetry, heading_deg: float) -> float:
-	if shore == null or _penalty_phase > 0:
+	if shore == null:
 		return heading_deg
 	var position: Vector2 = _position(telemetry)
 	var look_m: float = clampf(telemetry.speed_ms * SHORE_LOOK_S, SHORE_LOOK_MIN_M, SHORE_LOOK_MAX_M)
 	var wind_deg: float = telemetry.wind_from_bearing_deg
+	if _penalty_phase > 0:
+		# The circle is turned where it is, unless that is out of the open water already.
+		return heading_deg if shore.is_open(position) else _escape_the_shore(telemetry, position, heading_deg, wind_deg)
 	var here_m: float = shore.water_ahead_m(position, heading_deg, look_m)
+	if here_m < SHORE_ESCAPE_M:
+		return _escape_the_shore(telemetry, position, heading_deg, wind_deg)
 	# The same angle to the wind on the other tack.
 	var other_deg: float = 2.0 * wind_deg - heading_deg
 	if _tack_due_s >= 0.0:
@@ -675,6 +684,29 @@ func _keep_off_the_shore(telemetry: Telemetry, heading_deg: float) -> float:
 				best_m = water_m
 				best_deg = try_deg
 	return best_deg
+
+
+## Already at the edge of the open water (in the shallows, or close to the land: every heading looks
+## the same from here, "0 m ahead"): it heads for the most open water near it (ShoreLookout.
+## most_open_heading_deg()), as close to that heading as it can sail; when that water lies on the
+## other side of the wind it tacks or gybes there (even slow), and meanwhile sails as near to it as
+## this tack allows. A tack or gybe the race asked for that would not take it that way waits.
+func _escape_the_shore(telemetry: Telemetry, position: Vector2, heading_deg: float, wind_deg: float) -> float:
+	var way_out_deg: float = shore.most_open_heading_deg(position)
+	note += ", away from the shore"
+	var out_twa: float = wrapf(wind_deg - way_out_deg, -180.0, 180.0)
+	var out_tack: float = 1.0 if out_twa >= 0.0 else -1.0
+	var tack: float = 1.0 if wrapf(wind_deg - heading_deg, -180.0, 180.0) >= 0.0 else -1.0
+	# No closer to the wind than it can sail, and not dead downwind.
+	var out_abs: float = clampf(absf(out_twa), _upwind_twa_deg(), 170.0)
+	if out_tack == tack:
+		_tack_due_s = -1.0
+		return wind_deg - tack * out_abs
+	if _controller.manoeuvre == PlayerController.Manoeuvre.NONE:
+		_ask_for_manoeuvre(true, true)
+	# Until the tack or gybe: on this tack, as near to the way out as it sails (head up toward it if
+	# it lies upwind, bear away if downwind), so the turn comes soon.
+	return wind_deg - tack * (_upwind_twa_deg() if absf(out_twa) < 90.0 else 170.0)
 
 
 ## When within each THINK_INTERVAL_S this skipper thinks, seconds: spread over the interval by the
