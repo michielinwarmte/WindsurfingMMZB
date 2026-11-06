@@ -45,6 +45,19 @@ Notes: anything worth keeping (measurements, decisions, links to reports).
 5. Never delete a story, a task or a note. Move, mark, strike through.
 6. Run `python -I tools/backlog.py` before you commit: it prints the counts and complains about a line it cannot read. Then `python -I tools/backlog.py --html` so the dashboard matches the files, and commit and push it with them: the pushed file is how the other PCs and accounts get the new page.
 
-**How the dashboard stays true.** The files in this folder are the only source: a status or a tick changes here, never on the page. The page is rebuilt from them by one command, so it can never disagree with the files for longer than a session. If the team wants to change a status from the page itself, that is a later step (a page that writes back, or a sync into Taskdash); say so and it gets a story.
+**How the dashboard stays true.** The files in this folder are the only source; the page is rebuilt from them by one command, so it can never disagree with the files for longer than a session.
+
+**Reviewing from the page.** You can edit on the dashboard: open a story and set its status, click a task to tick it, write a note (what you saw, what needs improving, a decision), or add a story to an epic. The page keeps your edits in your browser, shows them with an "edited here" chip, and the panel "Your changes on this page" turns them into a short text:
+
+```
+backlog-changes v1
+by Max on 2026-11-07 10:12
+E01.S03 status doing
+E01.S03 task T2 done
+E01.S03 note: the spin-out feels too soft at 24 kt
+E05 story: A beach bar with a webcam of the wind | done when: you can read the wind from the bar
+```
+
+Copy it and paste it to the lead (any Claude session, on any account), or download it and run `python -I tools/backlog.py --apply=<the file>` yourself. The script changes the status line, ticks the task, appends the note with your name and the date, or adds the story with the next free number and the status `todo`; it never deletes and it says what it could not read. Then the page is rebuilt (`--html`), committed and pushed, and your browser drops the changes that are now in the files. A new story from the page gets `Size: ?`, `Owner: ?` and `Milestone: ?`: the next session fills them in.
 
 **The rhythm (proposed, Q38).** A sprint is one week, from one LAN play-test evening to the next. At the evening: play the build, answer the questions, choose Next. Between: the lead and the agents build; Michiel reviews the physics commits in one batch; Max play-tests the folder of the day.

@@ -30,9 +30,10 @@ Done when: `play/6nov-evening` (with the night run's reds fixed) is merged into 
 Status: doing | Size: S | Owner: the lead, the team | Milestone: M1 | Needs: Q41, Q42 | Roadmap: —
 Done when: CLAUDE.md points every session at `Documentation/backlog/`, ROADMAP.md's top says where the 1.0 plan is, the document map lists the folder, the first sprint is on BOARD.md, and the team has agreed the rhythm (Q41).
 - [x] T1 The backlog written (6 November 2026): README, 1.0, QUESTIONS, BOARD, 18 epics, `tools/backlog.py`
-- [ ] T2 CLAUDE.md, ROADMAP.md and the document map point at it
+- [x] T2 CLAUDE.md, ROADMAP.md and the document map point at it
 - [ ] T3 The first sprint agreed; the rhythm written in README.md
 - [ ] T4 Committed on a docs branch and merged
+Notes: the lead, 2026-11-06: the review loop from the dashboard (edits on the page, a change list, tools/backlog.py --apply) built and tested with this very note
 
 ### E18.S04 · Branch and folder hygiene
 Status: todo | Size: S | Owner: the lead; Max decides on the folders | Milestone: M1 | Needs: E18.S02 | Roadmap: —
@@ -67,3 +68,12 @@ Status: todo | Size: S | Owner: the lead | Milestone: any | Needs: — | Roadmap
 Done when: every milestone's release updates the README (features, controls, known gaps), the changelog, the document map, and archives the finished plans; the roadmap's open rows are moved into the stories at 0.4 (Q40).
 - [ ] T1 The README and the changelog at each release
 - [ ] T2 The roadmap's rows into the stories at 0.4 (if Q40 says so)
+
+### E18.S09 · The review loop: edits made on the dashboard go into the files with tools/backlog.py --apply
+Status: review | Size: S | Owner: the lead; Max tries it | Milestone: M1 | Needs: — | Roadmap: —
+Done when: Max changes a status, ticks a task, writes a note and adds a story on the page, pastes the text to the lead, and the next build of the page shows them from the files.
+- [x] T1 The page's controls: the status select, the tasks that tick on a click, the note box, "Add a story" in an epic; the edits kept in the browser and shown with an "edited here" chip
+- [x] T2 The "Your changes" panel: the text (one line per change, the name and the date), copy, download, show, clear
+- [x] T3 `tools/backlog.py --apply`: the status, the tick, the note with the author, the new story with the next free number; bad lines reported, nothing deleted; tested on this story
+- [ ] T4 Max's first round trip from his own PC and browser (the file from git or the GitHub-served link), pasted to a session on his account
+Notes: added from the dashboard by the lead, 2026-11-06, as the first test of the loop; the fields filled by hand afterwards (a story from the page gets ? for its size, owner and milestone until a session fills them).

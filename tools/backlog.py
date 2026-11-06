@@ -6,6 +6,18 @@ Run from the repository root:
   python -I tools/backlog.py --epic=E04 --status=doing --milestone=M10 --owner=Max   filtered
   python -I tools/backlog.py --html               writes Documentation/backlog/dashboard.html
   python -I tools/backlog.py --html=some/path.html
+  python -I tools/backlog.py --apply=changes.txt   applies a change list made on the dashboard (see below)
+
+The change list is what the dashboard's "Your changes" panel gives you: one line per change,
+  backlog-changes v1
+  by Max on 2026-11-07 10:12
+  E01.S03 status doing
+  E01.S03 task T2 done
+  E01.S03 note: the spin-out feels too soft at 24 kt
+  E05 story: A beach bar with a webcam of the wind | done when: you can read the wind from the bar
+The script changes the status line, ticks or unticks the task, appends the note (with the author and the date)
+to the story's Notes line, or adds a new story at the end of the epic with the next free number and the status
+todo. It never deletes anything and it prints what it applied and what it could not. Run --html afterwards.
 
 It reads every `Documentation/backlog/epics/E*.md`, finds the stories (a `### E04.S02 · Title` heading
 followed by its `Status: ... | Size: ... | ...` line), their tasks (`- [ ]` / `- [x]` lines), the `Done when:`
@@ -223,6 +235,111 @@ def build_data(epics: list) -> dict:
     return data
 
 
+CHANGE_RE = re.compile(
+    r"^(?P<id>E\d{2}(?:\.S\d{2})?)\s+(?:(?P<kind>status|task|note|story)\b)\s*:?\s*(?P<rest>.*)$"
+)
+
+
+def apply_changes(text: str) -> int:
+    """Apply a change list (the dashboard's export) to the epic files. Returns the number of lines not applied."""
+    author, date = "", datetime.date.today().isoformat()
+    applied, failed = [], []
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or line.startswith("backlog-changes"):
+            continue
+        by = re.match(r"^by\s+(.+?)\s+on\s+(\S+)", line)
+        if by:
+            author, date = by.group(1).strip(), by.group(2).strip()
+            continue
+        m = CHANGE_RE.match(line)
+        if not m:
+            failed.append(f"cannot read: {line}")
+            continue
+        target, kind, rest = m.group("id"), m.group("kind"), m.group("rest").strip()
+        epic_id = target[:3]
+        path = next(iter(EPICS_DIR.glob(f"{epic_id}-*.md")), None)
+        if path is None:
+            failed.append(f"no epic file for {target}: {line}")
+            continue
+        lines = path.read_text(encoding="utf-8").split("\n")
+        stamp = f"{author or 'the dashboard'}, {date}"
+        if kind == "story":
+            if "." in target:
+                failed.append(f"a new story names the epic only (E05 story: ...): {line}")
+                continue
+            title, _, done_when = rest.partition("| done when:")
+            title, done_when = title.strip(), done_when.strip()
+            if not title:
+                failed.append(f"a new story needs a title: {line}")
+                continue
+            numbers = [int(x) for x in re.findall(rf"^### {epic_id}\.S(\d{{2}})", "\n".join(lines), re.M)]
+            new_id = f"{epic_id}.S{(max(numbers) + 1 if numbers else 1):02d}"
+            block = [
+                "",
+                f"### {new_id} · {title}",
+                "Status: todo | Size: ? | Owner: ? | Milestone: ? | Needs: — | Roadmap: —",
+                f"Done when: {done_when or 'to be written'}",
+                "- [ ] T1 Write the story's tasks",
+                f"Notes: added from the dashboard by {stamp}.",
+            ]
+            while lines and lines[-1] == "":
+                lines.pop()
+            lines.extend(block + [""])
+            applied.append(f"{new_id} added to {path.name}: {title}")
+        else:
+            if "." not in target:
+                failed.append(f"a {kind} change names a story (E01.S03 {kind} ...): {line}")
+                continue
+            start = next((i for i, l in enumerate(lines) if l.startswith(f"### {target} ")), None)
+            if start is None:
+                failed.append(f"no story {target} in {path.name}: {line}")
+                continue
+            end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith("### ") or lines[i].startswith("## ")), len(lines))
+            if kind == "status":
+                value = rest.lower()
+                if value not in STATUSES:
+                    failed.append(f"unknown status '{value}': {line}")
+                    continue
+                si = next((i for i in range(start, end) if lines[i].startswith("Status:")), None)
+                if si is None:
+                    failed.append(f"{target} has no Status line: {line}")
+                    continue
+                lines[si] = re.sub(r"^Status:\s*[^|]*", f"Status: {value} ", lines[si], count=1).replace("  |", " |", 1)
+                applied.append(f"{target} status {value}")
+            elif kind == "task":
+                tm = re.match(r"^(T\d+[a-z]?)\s+(done|open|ticked|unticked)\b", rest, re.I)
+                if not tm:
+                    failed.append(f"a task change is 'task T2 done' or 'task T2 open': {line}")
+                    continue
+                tid, state = tm.group(1), tm.group(2).lower() in ("done", "ticked")
+                ti = next((i for i in range(start, end) if re.match(rf"^\s*- \[[ xX]\] {re.escape(tid)}\b", lines[i])), None)
+                if ti is None:
+                    failed.append(f"no task {tid} in {target}: {line}")
+                    continue
+                lines[ti] = re.sub(r"^(\s*- \[)[ xX](\])", lambda mm: mm.group(1) + ("x" if state else " ") + mm.group(2), lines[ti], count=1)
+                applied.append(f"{target} task {tid} {'done' if state else 'open'}")
+            elif kind == "note":
+                if not rest:
+                    failed.append(f"an empty note: {line}")
+                    continue
+                note = f"{stamp}: {rest}"
+                ni = next((i for i in range(start, end) if lines[i].startswith("Notes:")), None)
+                if ni is None:
+                    last = max(i for i in range(start, end) if lines[i].strip() != "")
+                    lines.insert(last + 1, f"Notes: {note}")
+                else:
+                    lines[ni] = lines[ni].rstrip() + f" | {note}"
+                applied.append(f"{target} note added")
+        path.write_text("\n".join(lines), encoding="utf-8")
+    for a in applied:
+        print("applied:", a)
+    for f in failed:
+        print("NOT applied:", f)
+    print(f"{len(applied)} applied, {len(failed)} not applied. Run --html to rebuild the page.")
+    return len(failed)
+
+
 def write_html(epics: list, out: Path) -> None:
     data = build_data(epics)
     payload = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
@@ -336,6 +453,20 @@ details.story .body p { max-width: 80ch; }
 .empty { color: var(--muted); padding: 12px; }
 .goal { color: var(--fg-2); max-width: 80ch; }
 footer { color: var(--muted); font-size: 12.5px; display: grid; gap: 4px; }
+.chip.edited { border-style: dashed; color: var(--accent); background: transparent; }
+.edit { display: grid; gap: 8px; padding-top: 10px; border-top: 1px dashed var(--line); }
+.edit label { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--fg-2); }
+.edit select, .edit input, .edit textarea, .panel input { font: inherit; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--fg); min-width: 0; }
+.edit textarea { width: 100%; min-height: 54px; resize: vertical; }
+.edit button, .panel button { font: inherit; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; color: var(--fg); cursor: pointer; }
+.edit button:hover, .panel button:hover { border-color: var(--accent); }
+.edit button:focus-visible, .panel button:focus-visible, .edit select:focus-visible, .edit input:focus-visible, .edit textarea:focus-visible, .panel input:focus-visible { outline: 2px solid var(--accent); }
+.task.clickable { cursor: pointer; }
+.task.clickable:hover .box { border-color: var(--accent); }
+.panel { display: grid; gap: 8px; }
+.panel .btns { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.panel textarea { width: 100%; min-height: 120px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--fg); }
+.pnote { color: var(--accent); }
 @media (max-width: 520px) { h1 { font-size: 32px; } .row { grid-template-columns: auto 1fr; } .row .chip { grid-column: 2; justify-self: start; } details.story > summary { grid-template-columns: auto 1fr; } details.story .meta { grid-column: 1 / -1; justify-content: flex-start; } }
 @media (prefers-reduced-motion: no-preference) { .bar > i { transition: width 300ms ease; } }
 </style>
@@ -347,6 +478,16 @@ footer { color: var(--muted); font-size: 12.5px; display: grid; gap: 4px; }
     <p class="sub" id="updated"></p>
     <div class="headline" id="headline"></div>
   </header>
+
+  <section>
+    <div class="tile panel" id="panel">
+      <div class="eyebrow">Your changes on this page</div>
+      <label style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--fg-2)">Your name <input id="who" type="text" placeholder="Max" aria-label="Your name" style="width:140px"></label>
+      <div class="sub" id="pcount"></div>
+      <div class="btns"><button type="button" id="pcopy">Copy as text</button><button type="button" id="pdownload">Download</button><button type="button" id="pshow">Show the text</button><button type="button" id="pclear">Clear all</button></div>
+      <textarea id="ptext" hidden readonly aria-label="Your changes as text"></textarea>
+    </div>
+  </section>
 
   <section>
     <h2>Who is waited on</h2>
@@ -432,6 +573,43 @@ footer { color: var(--muted); font-size: 12.5px; display: grid; gap: 4px; }
   }
 
   var ALL = []; D.epics.forEach(function (e) { e.stories.forEach(function (s) { s.epic = e.id; s.epicTitle = e.title; ALL.push(s); }); });
+
+  // Your changes: kept in this browser (localStorage), shown on the page, exported as text for the files behind it.
+  var KEY = 'backlog-changes-v1', WHO = 'backlog-who';
+  var pending = []; try { pending = JSON.parse(localStorage.getItem(KEY) || '[]') || []; } catch (e) { pending = []; }
+  var byId = {}; ALL.forEach(function (s) { byId[s.id] = s; });
+  var epicById = {}; D.epics.forEach(function (e) { epicById[e.id] = e; });
+  function taskOf(s, tid) { return s.tasks.filter(function (x) { return x.text.indexOf(tid + ' ') === 0; })[0]; }
+  pending = pending.filter(function (c) { // drop what the files already have
+    var s = byId[c.id];
+    if (c.kind === 'status') return !!s && s.status !== c.value;
+    if (c.kind === 'task') { if (!s) return false; var t = taskOf(s, c.task); return !!t && t.done !== c.done; }
+    if (c.kind === 'note') return !!s;
+    if (c.kind === 'story') return !!epicById[c.epic];
+    return false;
+  });
+  function applyPending() {
+    ALL.forEach(function (s) { s.edited = false; s.pnotes = []; });
+    D.epics.forEach(function (e) { e.stories = e.stories.filter(function (s) { return !s.isNew; }); });
+    pending.forEach(function (c) {
+      if (c.kind === 'story') {
+        var e = epicById[c.epic]; if (!e) return;
+        e.stories.push({ id: e.id + '.new', title: c.title, status: 'todo', size: '?', owner: '?', milestone: '?', needs: '', roadmap: '',
+          done_when: c.done_when || '', notes: '', tasks: [], epic: e.id, epicTitle: e.title, isNew: true, edited: true, pnotes: [] });
+        return;
+      }
+      var s = byId[c.id]; if (!s) return; s.edited = true;
+      if (c.kind === 'status') s.status = c.value;
+      else if (c.kind === 'task') { var t = taskOf(s, c.task); if (t) t.done = c.done; }
+      else if (c.kind === 'note') s.pnotes.push(c.text);
+    });
+  }
+  function savePending() { try { localStorage.setItem(KEY, JSON.stringify(pending)); } catch (e) {} }
+  function addChange(c) {
+    if (c.kind === 'status' || c.kind === 'task') pending = pending.filter(function (p) { return !(p.kind === c.kind && p.id === c.id && (c.kind !== 'task' || p.task === c.task)); });
+    pending.push(c); savePending(); applyPending(); renderPanel();
+  }
+  applyPending();
   var LIVE = live(ALL);
 
   // Header
@@ -538,19 +716,39 @@ footer { color: var(--muted); font-size: 12.5px; display: grid; gap: 4px; }
     if (s.size) meta.appendChild(el('span', { class: 'chip mini', text: s.size }));
     var td = s.tasks.filter(function (t) { return t.done; }).length;
     if (s.tasks.length) meta.appendChild(el('span', { class: 'chip mini num', text: td + '/' + s.tasks.length }));
+    if (s.edited) meta.appendChild(el('span', { class: 'chip mini edited', text: s.isNew ? 'new, not yet in the files' : 'edited here' }));
     det.appendChild(sum);
     var body = el('div', { class: 'body' });
     body.appendChild(el('p', { html: '<strong>Owner:</strong> ' + esc(s.owner || '–') + (s.needs && s.needs !== '—' ? ' · <strong>Needs:</strong> ' + esc(s.needs) : '') + (s.roadmap && s.roadmap !== '—' ? ' · <strong>Roadmap:</strong> ' + esc(s.roadmap) : '') + ' · <strong>Epic:</strong> ' + esc(s.epic + ' ' + s.epicTitle) }));
     if (s.done_when) body.appendChild(el('p', { html: '<strong>Done when:</strong> ' + md(s.done_when) }));
     if (s.tasks.length) {
       var tl = el('div', { class: 'tasks' });
-      s.tasks.forEach(function (t) { tl.appendChild(el('div', { class: 'task' + (t.done ? ' done' : '') }, [el('span', { class: 'box', text: t.done ? '✓' : '' }), el('span', { class: 'txt', html: md(t.text) })])); });
+      s.tasks.forEach(function (t) {
+        var tid = (t.text.match(/^(T\d+[a-z]?)\s/) || [])[1];
+        var row = el('div', { class: 'task' + (t.done ? ' done' : '') + (tid && !s.isNew ? ' clickable' : ''), title: tid ? 'Click to tick or untick' : '' }, [el('span', { class: 'box', text: t.done ? '✓' : '' }), el('span', { class: 'txt', html: md(t.text) })]);
+        if (tid && !s.isNew) row.addEventListener('click', function () { addChange({ kind: 'task', id: s.id, task: tid, done: !t.done }); refresh(det, s); });
+        tl.appendChild(row);
+      });
       body.appendChild(tl);
     }
     if (s.notes) body.appendChild(el('p', { html: '<strong>Notes:</strong> ' + md(s.notes) }));
+    (s.pnotes || []).forEach(function (n) { body.appendChild(el('p', { class: 'pnote', text: 'Your note, not yet in the files: ' + n })); });
+    if (!s.isNew) {
+      var ed = el('div', { class: 'edit' });
+      var sel = el('select', { 'aria-label': 'Status of ' + s.id });
+      STATUS_ORDER.forEach(function (st) { var o = el('option', { value: st, text: st }); if (st === s.status) o.selected = true; sel.appendChild(o); });
+      sel.addEventListener('change', function () { addChange({ kind: 'status', id: s.id, value: sel.value }); refresh(det, s); });
+      ed.appendChild(el('label', {}, ['Set the status', sel]));
+      var ta = el('textarea', { placeholder: 'A note for the files: what you saw, what needs improving, a decision', 'aria-label': 'A note for ' + s.id });
+      var nb = el('button', { type: 'button', text: 'Add the note' });
+      nb.addEventListener('click', function () { var v = ta.value.trim(); if (!v) return; addChange({ kind: 'note', id: s.id, text: v }); refresh(det, s); });
+      ed.appendChild(ta); ed.appendChild(el('div', {}, [nb]));
+      body.appendChild(ed);
+    }
     det.appendChild(body);
     return det;
   }
+  function refresh(det, s) { det.replaceWith(storyEl(s, true)); }
 
   // The epic dialog
   var dlg = document.getElementById('dlg'), dlgBody = document.getElementById('dlgbody');
@@ -566,6 +764,17 @@ footer { color: var(--muted); font-size: 12.5px; display: grid; gap: 4px; }
     var list = el('div', { class: 'stories' });
     ss.forEach(function (s) { list.appendChild(storyEl(s, s.id === storyId)); });
     dlgBody.appendChild(list);
+    var form = el('div', { class: 'edit' }, [el('div', { class: 'eyebrow', text: 'Add a story to this epic' })]);
+    var ti = el('input', { type: 'text', placeholder: 'What should exist, in one line', 'aria-label': 'The new story', style: 'width:100%' });
+    var dw = el('textarea', { placeholder: 'Done when... (optional)', 'aria-label': 'Done when' });
+    var ab = el('button', { type: 'button', text: 'Add the story' });
+    ab.addEventListener('click', function () {
+      var t = ti.value.trim(); if (!t) return;
+      addChange({ kind: 'story', epic: e.id, title: t, done_when: dw.value.trim() });
+      list.appendChild(storyEl(e.stories[e.stories.length - 1], true)); ti.value = ''; dw.value = '';
+    });
+    form.appendChild(ti); form.appendChild(dw); form.appendChild(el('div', {}, [ab]));
+    dlgBody.appendChild(form);
     if (typeof dlg.showModal === 'function') dlg.showModal(); else dlg.setAttribute('open', '');
     if (storyId) { var t = document.getElementById('story-' + storyId); if (t) t.scrollIntoView({ block: 'center' }); }
   }
@@ -602,6 +811,42 @@ footer { color: var(--muted); font-size: 12.5px; display: grid; gap: 4px; }
   q.addEventListener('input', render);
   render();
 
+  // The changes panel
+  var whoEl = document.getElementById('who'), pcount = document.getElementById('pcount'), ptext = document.getElementById('ptext');
+  try { whoEl.value = localStorage.getItem(WHO) || ''; } catch (e) {}
+  whoEl.addEventListener('input', function () { try { localStorage.setItem(WHO, whoEl.value); } catch (e) {} ptext.value = exportText(); });
+  function stamp() { var d = new Date(); function p(n) { return (n < 10 ? '0' : '') + n; } return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()); }
+  function oneLine(t) { return String(t).replace(/\s+/g, ' ').trim(); }
+  function exportText() {
+    var out = ['backlog-changes v1', 'by ' + (oneLine(whoEl.value) || 'someone') + ' on ' + stamp()];
+    pending.forEach(function (c) {
+      if (c.kind === 'status') out.push(c.id + ' status ' + c.value);
+      else if (c.kind === 'task') out.push(c.id + ' task ' + c.task + ' ' + (c.done ? 'done' : 'open'));
+      else if (c.kind === 'note') out.push(c.id + ' note: ' + oneLine(c.text));
+      else if (c.kind === 'story') out.push(c.epic + ' story: ' + oneLine(c.title) + (c.done_when ? ' | done when: ' + oneLine(c.done_when) : ''));
+    });
+    return out.join('\n');
+  }
+  function renderPanel() {
+    pcount.textContent = pending.length
+      ? pending.length + ' change' + (pending.length > 1 ? 's' : '') + ' waiting to go into the files. Copy the text and paste it to the lead, or download it for tools/backlog.py --apply. The page shows your edits already; the numbers at the top follow once the files are updated and the page rebuilt.'
+      : 'No changes yet. Open a story and set its status, click a task to tick it, write a note, or add a story from an epic; it stays in this browser until you send it.';
+    ptext.value = exportText();
+  }
+  document.getElementById('pcopy').addEventListener('click', function () {
+    var t = exportText(); ptext.value = t;
+    function fallback() { ptext.hidden = false; ptext.focus(); ptext.select(); pcount.textContent = 'Copying was refused here: select the text below and copy it yourself.'; }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(function () { pcount.textContent = 'Copied. Paste it to the lead.'; }, fallback); else fallback();
+  });
+  document.getElementById('pdownload').addEventListener('click', function () {
+    var blob = new Blob([exportText()], { type: 'text/plain' }); var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'backlog-changes-' + stamp().replace(/[: ]/g, '-') + '.txt';
+    document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  });
+  document.getElementById('pshow').addEventListener('click', function () { ptext.value = exportText(); ptext.hidden = !ptext.hidden; });
+  document.getElementById('pclear').addEventListener('click', function () { if (!pending.length) return; pending = []; savePending(); location.reload(); });
+  renderPanel();
+
   document.getElementById('foot').textContent = 'Statuses: todo, next (chosen for the sprint), doing, review (built, waiting for a person), done, blocked, dropped. Sizes S, M, L, XL. Milestones M1 to M11 have no order.';
 })();
 </script>
@@ -622,6 +867,10 @@ def main(argv: list[str]) -> int:
             html_out = BACKLOG_DIR / "dashboard.html"
         elif arg.startswith("--html="):
             html_out = Path(arg.split("=", 1)[1])
+        elif arg.startswith("--apply="):
+            source = arg.split("=", 1)[1]
+            text = sys.stdin.read() if source == "-" else Path(source).read_text(encoding="utf-8")
+            return 2 if apply_changes(text) else 0
         else:
             for key in filters:
                 if arg.startswith(f"--{key}="):
