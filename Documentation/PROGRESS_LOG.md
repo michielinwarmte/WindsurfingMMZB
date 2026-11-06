@@ -15,6 +15,13 @@ Template for new entries:
 
 ---
 
+## 6 November 2026 - Spectating a LAN race (Max's PC)
+**Phase:** version 0.2, MP12, on `mp/spectate` from `play/6nov-evening` (dae6fda), worktree `WindsurfingMMZB-gp2`. Claude Opus 5.5 for the lead, no agents; cut off once by the Opus usage limit and resumed. The report: [reports/multiplayer/spectate_6nov.md](reports/multiplayer/spectate_6nov.md).
+**Done:** Max's ask 13 of his second list, "host and joiners can spectate racers": watch any racer on every PC (Tab, Shift+Tab, L), the lobby's Spectate switch, the Esc menu's Spectate / Stay a spectator / Race again, a finished player watching the others, a late joiner watching until the next start, a retired board on every finish list; PROTOCOL 2 to 3. Nothing in `Game/sim/`.
+**Verified:** `tools/test.sh` 955 of 955 (11 new in `test_spectate.gd`); `tools/check.sh` 484 files, 0 failed; `tools/lan_test.sh` with two guests, a spectator and a retirement, with a late joiner, and with a spectating host: all PASS (every board within 0.0000 m); screenshots at 1280 x 720 and 3137 x 1263 looked at. Not verified: two real PCs, the feel of the camera switch, a real finish on screen, the lake with a spectator.
+**Decisions:** none by the team; the agent's: one Esc entry whose words follow the moment, the camera to the leader 4 s after a finish.
+**Next:** Max and Michiel's two-PC test (the report's checklist); MP13's choices.
+
 ## 6 November 2026 - Manoeuvres (Max's PC): Space + A/D, and interactive tacks and gybes
 **Phase:** version 0.2, GP12, on `gp/manoeuvres` from `play/6nov-evening` (e9238fa), worktree `WindsurfingMMZB-shading`. Claude Opus 5.5 for the lead, no agents. The report: [reports/gameplay/gp_manoeuvres_6nov.md](reports/gameplay/gp_manoeuvres_6nov.md).
 **Done:** Max's asks 10 and 11 of his second list: Space with A/D held chooses the tack (toward the wind) or the gybe (away), from any course, with a 0.3 s grace; and three switches in Settings > Sailing: the turn follows A/D, the body carves through the turn, the rig flips on a second Space. Nothing in `Game/sim/` or `ai_hands.gd`; the AI's manoeuvres unchanged. `tools/matrix.sh` drives the player's hands with `--hold_turn`, `--body_carve`, `--body_back`, `--cue`.
