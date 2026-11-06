@@ -15,6 +15,13 @@ Template for new entries:
 
 ---
 
+## 6 November 2026 - Manoeuvres (Max's PC): Space + A/D, and interactive tacks and gybes
+**Phase:** version 0.2, GP12, on `gp/manoeuvres` from `play/6nov-evening` (e9238fa), worktree `WindsurfingMMZB-shading`. Claude Opus 5.5 for the lead, no agents. The report: [reports/gameplay/gp_manoeuvres_6nov.md](reports/gameplay/gp_manoeuvres_6nov.md).
+**Done:** Max's asks 10 and 11 of his second list: Space with A/D held chooses the tack (toward the wind) or the gybe (away), from any course, with a 0.3 s grace; and three switches in Settings > Sailing: the turn follows A/D, the body carves through the turn, the rig flips on a second Space. Nothing in `Game/sim/` or `ai_hands.gd`; the AI's manoeuvres unchanged. `tools/matrix.sh` drives the player's hands with `--hold_turn`, `--body_carve`, `--body_back`, `--cue`.
+**Verified:** `tools/test.sh` 927 of 927 (9 new); `tools/check.sh` 0 failed; the matrix with the player's hands: hands-off identical to the last digit, each part alone 0 falls in 45, everything at once 5 falls at 24 kt; the key strip, the Controls page and Settings > Sailing at 1280 x 720 and 3137 x 1263 looked at. Not verified: the feel (every key press scripted).
+**Decisions:** none by the team; the agent's limits: the back foot in gybes only (13 falls in tacks), the hands act only into the turn, 40°/s gybe cap, the tack's cue through the autopilot's own flip.
+**Next:** Max's play-test; the open questions (a late automatic flip so a cue pays; the sheet keys as a cue).
+
 ## 6 November 2026 - Small fixes of the evening (Max's PC): the push gauge after the LAN menus, the finish list, UI scale, draw distance
 **Phase:** version 0.2, on `fix/push-and-leaderboard` from `play/6nov-evening` (b61f39c), worktree `WindsurfingMMZB-gp2`. Claude Opus 5.5 for the lead, no agents. The report: [reports/ui/small_fixes_6nov_evening.md](reports/ui/small_fixes_6nov_evening.md).
 **Done:** Max's asks 8, 9 and 14 of his second list: the push gauge gone after the race director's view or the gear menu (LAN only: the temporary AI hands let go of the slider; `_slider_back_after_hands()`), the finish list out of frame (anchors without offsets), Settings > Graphics > UI scale (75 to 150 %, the in-game screen) and Draw distance (Near to Very far, with the frame times).
