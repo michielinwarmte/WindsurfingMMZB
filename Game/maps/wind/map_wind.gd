@@ -28,10 +28,23 @@ var lake_axis: Vector2
 const TRAVEL_STEP_S: float = 10.0
 var _travel_m: PackedFloat64Array = PackedFloat64Array()
 
+## The lake wind multiplier (Max, 6 November 2026: "Silvaplana changable wind (multiplier)"): the
+## measured day's mean wind times this, from LAKE_WIND_SCALE_MIN to LAKE_WIND_SCALE_MAX. At 14:30 the
+## measured day is about 18 kt at 10 m; 0.44 makes it 8 kt, 1.65 about 30. Given on the command line
+## (--lake_wind_scale=<x>, which every tool that loads the map's wind takes, load_from()) or by the
+## settings' "Lake wind" (the lake scene and the wind viewer, scale_to_sail()).
+const LAKE_WIND_SCALE_MIN: float = 0.4
+const LAKE_WIND_SCALE_MAX: float = 2.0
+const LAKE_WIND_SCALE_ARGUMENT: String = "--lake_wind_scale="
+## The day as measured (its file's), before the multiplier: day is this, or a copy of it with the
+## multiplier on (set_lake_wind_scale()).
+var _measured_day: WindDay
+
 
 func _init(wind_pattern: WindPattern, wind_day: WindDay, wind_gusts: WindGusts = null, wind_lee: WindLee = null) -> void:
 	pattern = wind_pattern
 	day = wind_day
+	_measured_day = wind_day
 	gusts = wind_gusts
 	lee = wind_lee
 	var to_rad: float = deg_to_rad(pattern.lake_from_deg + 180.0)
@@ -53,7 +66,61 @@ static func load_from(pattern_json_path: String, day_path: String, config: MapCo
 	if failed:
 		push_error("MapWind: can't load %s, %s, %s or %s" % [pattern_json_path, day_path, gusts_path, lee_json_path])
 		return null
-	return MapWind.new(wind_pattern, wind_day, wind_gusts, wind_lee)
+	var wind: MapWind = MapWind.new(wind_pattern, wind_day, wind_gusts, wind_lee)
+	# The command line's multiplier, for every tool (the game's settings come on top: scale_to_sail()).
+	var given: float = command_line_lake_wind_scale()
+	if given > 0.0:
+		wind.set_lake_wind_scale(given)
+	return wind
+
+
+## The lake's wind times `scale` (kept within LAKE_WIND_SCALE_MIN to LAKE_WIND_SCALE_MAX): the ONE
+## place the multiplier goes in. The day's mean becomes scale times the measured day's, and with it
+## everything that is made from the mean: the gusts' and lulls' spread and their drift down the lake
+## (moment()), the lee's depth (velocity_in()), and what is asked of day.lake_speed_ms() elsewhere (the
+## lake's own waves, EnvironmentConfig.lake_waves_for(); the race director's wind). The day gets its own
+## copy, so the measured day's resource is never written; at 1 it is the measured day itself, bit for
+## bit. Set it before a run, or at a restart: the gusts jump to where the new drift has carried them.
+func set_lake_wind_scale(scale: float) -> void:
+	var kept: float = clampf(scale, LAKE_WIND_SCALE_MIN, LAKE_WIND_SCALE_MAX)
+	if kept == lake_wind_scale():
+		return
+	if kept == 1.0:
+		day = _measured_day
+	else:
+		day = _measured_day.duplicate() as WindDay
+		day.lake_wind_scale = kept
+	if gusts != null:
+		_add_up_travel()
+
+
+## The lake wind multiplier now (1: the measured day).
+func lake_wind_scale() -> float:
+	return day.lake_wind_scale
+
+
+## The multiplier given on the command line (--lake_wind_scale=1.35), or -1 when none is.
+static func lake_wind_scale_from_arguments(arguments: PackedStringArray) -> float:
+	for argument: String in arguments:
+		if argument.begins_with(LAKE_WIND_SCALE_ARGUMENT):
+			return argument.trim_prefix(LAKE_WIND_SCALE_ARGUMENT).to_float()
+	return -1.0
+
+
+## This run's command-line multiplier (of the Godot run's user arguments), or -1.
+static func command_line_lake_wind_scale() -> float:
+	return lake_wind_scale_from_arguments(OS.get_cmdline_user_args())
+
+
+## The multiplier to sail with: the command line's when one is given, else the settings' `setting`.
+static func scale_to_sail(setting: float) -> float:
+	return scale_chosen(setting, OS.get_cmdline_user_args())
+
+
+## scale_to_sail() for these command-line arguments.
+static func scale_chosen(setting: float, arguments: PackedStringArray) -> float:
+	var given: float = lake_wind_scale_from_arguments(arguments)
+	return given if given > 0.0 else setting
 
 
 ## The wind at a time of day (seconds since midnight): the day's mean and what the gusts need then.

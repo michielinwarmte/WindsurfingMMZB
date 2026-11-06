@@ -47,6 +47,10 @@ const SWELL_SCALE_MAX: float = 3.0
 ## The lake's own waves' height multiplier (lake_wave_scale): from half to twice the growth law's.
 const LAKE_WAVE_SCALE_MIN: float = 0.5
 const LAKE_WAVE_SCALE_MAX: float = 2.0
+## The lake's wind multiplier (lake_wind_scale, MapWind's range): 0.4 to 2 times the map's measured day
+## (at 14:30 about 7 to 36 kt at 10 m).
+const LAKE_WIND_SCALE_MIN: float = MapWind.LAKE_WIND_SCALE_MIN
+const LAKE_WIND_SCALE_MAX: float = MapWind.LAKE_WIND_SCALE_MAX
 ## How far the chop may be turned from straight downwind, degrees either way.
 const CHOP_OFFSET_MAX_DEG: float = 90.0
 ## How far the waves of a group are spread around its direction: 0 is every wave straight
@@ -99,6 +103,10 @@ var shifts_enabled: bool
 ## The largest swing of the wind direction, degrees either way.
 var max_shift_deg: float
 var shift_period_s: float
+## Lake Silvaplana's wind times this (MapWind.set_lake_wind_scale(); 1 = the map's measured day, the
+## open water's wind above does not count there). The command line's --lake_wind_scale=<x> overrides it.
+## In the [wind] section, so a LAN guest sails the host's.
+var lake_wind_scale: float
 
 # --- Waves (section "waves") ---
 var waves_enabled: bool
@@ -222,6 +230,7 @@ func reset_to_defaults() -> void:
 	gusts_enabled = wind.gusts_enabled
 	gust_intensity = wind.gust_intensity
 	gust_period_s = wind.gust_period_s
+	lake_wind_scale = 1.0
 	shifts_enabled = wind.shifts_enabled
 	max_shift_deg = wind.max_shift_deg
 	shift_period_s = wind.shift_period_s
@@ -399,7 +408,8 @@ func sea_signature() -> String:
 	signature += "/swell %s %.0f %.2f/chop %s %.0f %.0f/spread %.2f" % [swell_follows_wind, swell_from_deg, swell_height_scale, chop_follows_wind, chop_from_deg, chop_offset_deg, wave_spread]
 	if wave_preset == WavePreset.FROM_WIND:
 		signature += "/made by %.0f kt over %.1f km, %.1f m deep" % [wind_speed_kt, fetch_km, water_depth_m]
-	signature += "/lake %s x%.2f" % [lake_waves, lake_wave_scale]
+	# The lake's waves grow from its wind (EnvironmentConfig.lake_waves_for()), so its multiplier too.
+	signature += "/lake %s x%.2f wind x%.2f" % [lake_waves, lake_wave_scale, lake_wind_scale]
 	return signature
 
 
@@ -412,6 +422,7 @@ func write_to(config: ConfigFile) -> void:
 	config.set_value("wind", "gusts_enabled", gusts_enabled)
 	config.set_value("wind", "gust_intensity", gust_intensity)
 	config.set_value("wind", "gust_period_s", gust_period_s)
+	config.set_value("wind", "lake_wind_scale", lake_wind_scale)
 	config.set_value("wind", "shifts_enabled", shifts_enabled)
 	config.set_value("wind", "max_shift_deg", max_shift_deg)
 	config.set_value("wind", "shift_period_s", shift_period_s)
@@ -478,6 +489,7 @@ func read_from(config: ConfigFile) -> void:
 	gusts_enabled = _bool(config, "wind", "gusts_enabled", gusts_enabled)
 	gust_intensity = clampf(_float(config, "wind", "gust_intensity", gust_intensity), GUST_INTENSITY_MIN, GUST_INTENSITY_MAX)
 	gust_period_s = clampf(_float(config, "wind", "gust_period_s", gust_period_s), GUST_PERIOD_MIN_S, GUST_PERIOD_MAX_S)
+	lake_wind_scale = clampf(_float(config, "wind", "lake_wind_scale", lake_wind_scale), LAKE_WIND_SCALE_MIN, LAKE_WIND_SCALE_MAX)
 	shifts_enabled = _bool(config, "wind", "shifts_enabled", shifts_enabled)
 	max_shift_deg = clampf(_float(config, "wind", "max_shift_deg", max_shift_deg), SHIFT_MIN_DEG, SHIFT_MAX_DEG)
 	shift_period_s = clampf(_float(config, "wind", "shift_period_s", shift_period_s), SHIFT_PERIOD_MIN_S, SHIFT_PERIOD_MAX_S)

@@ -88,6 +88,8 @@ func _ready() -> void:
 	_shore = TerrainGrid.load_from(SHORE_GRID_PATH)
 	_ground = TerrainGrid.load_from(GROUND_PATH)
 	_wind = MapWind.load_from(PATTERN_PATH, DAY_PATH, _config, GUSTS_PATH, LEE_PATH)
+	# The settings' Lake wind multiplier (or --lake_wind_scale): the viewer shows the wind the lake sails.
+	_wind.set_lake_wind_scale(MapWind.scale_to_sail(GameSettings.values.lake_wind_scale))
 	var pattern_texture: ImageTexture = ImageTexture.create_from_image(_wind.pattern.to_image(_ground))
 	var lee_texture: ImageTexture = ImageTexture.create_from_image(_wind.lee.to_image())
 	_streaks.setup(_wind, pattern_texture, lee_texture)

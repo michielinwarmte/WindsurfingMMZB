@@ -19,11 +19,19 @@ extends Resource
 @export var station_afternoon_from_deg: float = 0.0
 ## How much stronger the wind is on the water (the lake's average) than at the station.
 @export var water_vs_station: float = 1.0
+## The player's lake wind: the measured day's speed times this (Max, 6 November 2026: "Silvaplana
+## changable wind (multiplier)"; Settings > Wind > Lake wind, or --lake_wind_scale=<x>). 1 is the
+## measured day, bit for bit. Not exported, so never saved in the day's file: MapWind's
+## set_lake_wind_scale() sets it on its own copy of the day, and the measured day's resource, which
+## everything that loads it shares, is never changed.
+var lake_wind_scale: float = 1.0
 
 
-## The lake's average wind speed at a time of day (seconds since midnight), in m/s.
+## The lake's average wind speed at a time of day (seconds since midnight), in m/s, times the
+## player's lake_wind_scale. Everything of the map's wind follows from it: the gusts and lulls and
+## their drift, the lee, the lake's own waves (EnvironmentConfig.lake_waves_for()), the HUD's number.
 func lake_speed_ms(time_of_day_s: float) -> float:
-	return _interpolate(station_speed_kt, time_of_day_s) * water_vs_station * SimMath.KNOT_MS
+	return _interpolate(station_speed_kt, time_of_day_s) * water_vs_station * SimMath.KNOT_MS * lake_wind_scale
 
 
 ## How many degrees the wind comes from further clockwise than in the afternoon, at a time of day

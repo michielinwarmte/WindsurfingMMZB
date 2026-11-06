@@ -20,6 +20,7 @@ extends SailingScene
 ##
 ## Options for screenshots and checks, besides main.gd's (LV95 metres; heights above the lake):
 ##   --time=<hh:mm>                   start at this time of day instead of 14:30
+##   --lake_wind_scale=<x>            the map's wind times x instead of the settings' Lake wind
 ##   --heading=<degrees>              start with this heading instead of 132
 ##   --start=<east>,<north>           start at this spot instead of off the camping beach
 ##   --overview=<east>,<north>,<height>  a fixed camera there, looking at the board
@@ -72,6 +73,7 @@ func _enter_tree() -> void:
 	if session_time_s >= 0.0:
 		environment.start_hour = session_time_s / 3600.0
 	windsurfer.environment = environment
+	_scale_the_lake_wind(environment)
 	# Before main.gd's part, which moves the start behind a race course's start line (--course).
 	windsurfer.start_position = start_position()
 	super()
@@ -145,10 +147,22 @@ func _apply_wind_settings_live() -> void:
 	pass
 
 
-## After main.gd builds new water (new waves after a restart), the gusts go on it again.
+## After main.gd builds new water (new waves after a restart), the gusts go on it again. A new lake
+## wind multiplier comes first, so the new waves grow from the new wind (the settings' sea_signature()
+## holds the multiplier: in a race it waits for R, as the waves do).
 func _rebuild_sea() -> void:
+	_scale_the_lake_wind(_windsurfer.environment)
 	super()
 	_put_gusts_on_water()
+
+
+## The settings' Lake wind (or the command line's --lake_wind_scale) on the map's wind every board of
+## this session shares (MapWind.set_lake_wind_scale(): the mean, the gusts, the lee, the waves, the HUD).
+## A LAN guest has the host's settings' [wind] section, so the host's multiplier.
+func _scale_the_lake_wind(environment: EnvironmentConfig) -> void:
+	var map_wind: MapWind = environment.map_wind() if environment != null else null
+	if map_wind != null:
+		map_wind.set_lake_wind_scale(MapWind.scale_to_sail(GameSettings.values.lake_wind_scale))
 
 
 ## The Shadows setting on the map's sun (main.gd sets it on the open water's sun).

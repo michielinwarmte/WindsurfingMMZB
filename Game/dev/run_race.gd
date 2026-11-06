@@ -64,6 +64,7 @@ extends SceneTree
 ##                         and the lake's own waves (PHYSICS_SPEC.md 9.17, 9.18), at --time=14:30 (any
 ##                         hh:mm); --wind_kt is then the lake's mean wind of that hour. With a course
 ##                         on the lake (t2_slalom). --lake_wave_scale=<x> sets the waves' height.
+##                         --lake_wind_scale=<x> the map's wind times x (and the waves grown from it).
 ##                         On the lake a board whose fin touches the bottom has run aground: it stops
 ##                         where it is (as in the game, RaceRunner) and an AGROUND line says where and
 ##                         what its skipper was doing; the count is printed at the end. The skippers
