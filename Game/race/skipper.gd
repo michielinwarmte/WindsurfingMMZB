@@ -160,7 +160,7 @@ const SLALOM_PARK_RADIUS_M: float = 20.0
 const SLALOM_SLOW_FROM_M: float = 60.0
 const SLALOM_GO_SPARE_S: float = 1.0
 const SLALOM_DIVE_CLOSEST_TWA_DEG: float = 60.0
-const SLALOM_DIVE_DEEPEST_TWA_DEG: float = 160.0
+const SLALOM_DIVE_DEEPEST_TWA_DEG: float = 148.0
 ## The run in is this much wider than the angle the board beats at (the polar's, for the wind and its
 ## character), and no wider than START_RUN_IN_WIDEST_TWA_DEG, degrees: its track, with the leeway, must
 ## lay the spot. 60 was 15 above the old beat of 45; at the polar's 55 to 59 a run in at 60 could not be
@@ -1659,19 +1659,25 @@ func _slalom_start_heading(telemetry: Telemetry, step: RaceStep, behind_m: float
 
 ## The heading of a slalom's reach down onto the line: straight through its crossing when that is
 ## a reach on its present tack (between SLALOM_DIVE_CLOSEST_TWA_DEG and SLALOM_DIVE_DEEPEST_TWA_DEG
-## from the wind), so that the navigation does not sail it as a run with gybes; on the other tack it
-## turns onto the reach's tack at once; a beat or a run is sailed the navigation's way.
+## from the wind), so that the navigation does not sail it as a run with gybes. Deeper than that it
+## sails the deepest of them (a line along the wind is met a little further down); bearing away
+## further, Hana's board went through the wind's eye onto the other gybe and started 15 s late on
+## iq_pd3. On the other tack it turns onto the reach's tack at once; a beat is sailed the
+## navigation's way.
 func _slalom_dive_deg(telemetry: Telemetry, spot: Vector2) -> float:
 	var position: Vector2 = _position(telemetry)
 	var through: Vector2 = _through(position, spot)
-	var needed_twa: float = Navigation.wind_angle_deg(position, through, telemetry.wind_from_bearing_deg)
-	if absf(needed_twa) >= SLALOM_DIVE_CLOSEST_TWA_DEG and absf(needed_twa) <= SLALOM_DIVE_DEEPEST_TWA_DEG:
-		if signf(needed_twa) == _tack():
-			return Course.bearing_deg(position, through) + _keep_clear_deg(telemetry, _tack())
+	var wind_deg: float = telemetry.wind_from_bearing_deg
+	var needed_twa: float = Navigation.wind_angle_deg(position, through, wind_deg)
+	if absf(needed_twa) < SLALOM_DIVE_CLOSEST_TWA_DEG:
+		return _course_to(telemetry, through)
+	if signf(needed_twa) != _tack():
 		# On the other tack: it turns onto the reach's tack now, not later on a run's layline.
 		_ask_for_manoeuvre(true)
-		return telemetry.wind_from_bearing_deg - _tack() * absf(telemetry.twa_deg)
-	return _course_to(telemetry, through)
+		return wind_deg - _tack() * absf(telemetry.twa_deg)
+	if absf(needed_twa) > SLALOM_DIVE_DEEPEST_TWA_DEG:
+		return wind_deg - _tack() * SLALOM_DIVE_DEEPEST_TWA_DEG + _keep_clear_deg(telemetry, _tack())
+	return Course.bearing_deg(position, through) + _keep_clear_deg(telemetry, _tack())
 
 
 ## Its spot in a slalom's waiting row upwind of the committee boat, inside the sailing area.
