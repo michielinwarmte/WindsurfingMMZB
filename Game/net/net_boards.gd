@@ -147,7 +147,10 @@ var _parked: Dictionary[int, bool] = {}
 var _watched_id: int = -1
 ## --lan_tab_every=<s>: while watching, Tab every this many seconds (tools/lan_test.sh); 0 none.
 ## --lan_retire_at=<s>: this PC's player chooses Spectate at that race time (retiring); -1 never.
+## --lan_watch=<number>: while watching, the camera stays on that board when it is on the water (the
+## screenshots of a remote board); -1 none.
 var _tab_every_s: float = 0.0
+var _watch_wanted: int = -1
 var _tab_at_s: float = 0.0
 var _retire_at_s: float = -1.0
 
@@ -190,6 +193,7 @@ func setup(sailing: SailingScene, mine: WindsurferNode) -> void:
 	_tab_every_s = maxf(options.get("lan_tab_every", "0").to_float(), 0.0)
 	_tab_at_s = _tab_every_s
 	_retire_at_s = options.get("lan_retire_at", "-1").to_float()
+	_watch_wanted = options.get("lan_watch", "-1").to_int()
 	if not Lan.game.race:
 		_place_for_free_sailing()
 		if Lan.i_spectate():
@@ -984,6 +988,8 @@ func _check_spectate_options() -> void:
 		_retire_at_s = -1.0
 		print("LAN: Spectate chosen at race time %.1f s (retiring)" % race.clock_s())
 		scene.spectate_or_race_again()
+	if _watch_wanted >= 0 and own_parked():
+		_watch_board(_watch_wanted)
 	if _tab_every_s > 0.0 and own_parked():
 		_tab_at_s -= _dt
 		if _tab_at_s <= 0.0:
@@ -1003,6 +1009,24 @@ func _check_spectate_options() -> void:
 		_watched_id = id
 		if id >= 0:
 			print("WATCH %d %d %s %s" % [_host_tick_now(), id, race.board_name(index).replace(" ", "_"), RaceHud.watch_place_text(race, index).replace(" ", "_")])
+
+
+## The camera on the board with this network number, if it is on the water (--lan_watch).
+func _watch_board(id: int) -> void:
+	var choice: SpectateChoice = null
+	var order: Array[int] = []
+	if runner != null:
+		choice = runner.choice
+		order = runner.watch_order()
+	elif mirror != null:
+		choice = mirror.choice
+		order = mirror.watch_order()
+	for index: int in order:
+		var board: int = _network_id(runner.board_node(index)) if runner != null else mirror.board_id(index)
+		if board == id:
+			choice.followed = index
+			choice.follows_leader = false
+			return
 
 
 ## A board's network number (the host): its player's slot, or AI_ID_BASE and its place in the fleet.

@@ -668,7 +668,7 @@ func _process(delta: float) -> void:
 	if index < 0:
 		return  # nobody on the water to watch yet
 	var node: WindsurferNode = followed_node()
-	hud.set_watching(race.board_name(index) if player_parked else "", choice.follows_leader, RaceHud.watch_place_text(race, index))
+	hud.set_watching(race.board_name(index) if player_parked else "", choice.follows_leader, RaceHud.watch_place_text(race, index) if player_parked else "")
 	# While a player who finished watches the others, the finish list stays on the screen.
 	hud.results_wanted = player_parked and not spectating and race.is_finished(0)
 	hud.update_from(race, index, node.telemetry(), shadow_deficit(node), rules)

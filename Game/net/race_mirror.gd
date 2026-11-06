@@ -141,6 +141,11 @@ func board_id(index: int) -> int:
 	return _ids[index] if index >= 0 and index < _ids.size() else -1
 
 
+## The race number of the board with a network number (-1 when it is not in the race).
+func index_of(id: int) -> int:
+	return _ids.find(id)
+
+
 # ---------------------------------------------------------------- spectating
 
 ## Whether the camera watches the others (this PC's board off the water).
@@ -306,7 +311,7 @@ func _process(delta: float) -> void:
 	hud.visible = true
 	RaceDirector.show_on_card(hud, lines)
 	var node: WindsurferNode = followed_node()
-	hud.set_watching(race.board_name(index) if own_parked else "", choice.follows_leader, RaceHud.watch_place_text(race, index))
+	hud.set_watching(race.board_name(index) if own_parked else "", choice.follows_leader, RaceHud.watch_place_text(race, index) if own_parked else "")
 	# While a player who finished watches the others, the finish list stays on the screen.
 	hud.results_wanted = own_parked and _my_index >= 0 and race.is_finished(_my_index)
 	hud.update_from(race, index, node.telemetry(), shadow_deficit() if node == _own else 0.0, rules)

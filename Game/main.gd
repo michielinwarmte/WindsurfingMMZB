@@ -114,6 +114,9 @@ var _net_message_until_ms: int = -1
 ## run never captures the mouse.
 var _body_hold: Vector2 = Vector2(NAN, NAN)
 var _screenshot_run: bool = false
+## The board being watched whose floating name is hidden (the HUD's title names it; above the board
+## it would sit behind the race card at the top of the screen); null for none.
+var _unlabelled: WindsurferNode = null
 
 
 func _enter_tree() -> void:
@@ -280,6 +283,7 @@ func _process(delta: float) -> void:
 			_pause_menu.open_page(_pause_page)
 	# The board on the screen: the player's, or while spectating the board being watched.
 	var shown: WindsurferNode = _shown_board()
+	_hide_the_watched_boards_name(shown)
 	_camera_rig.set_target(shown)
 	if _audio != null:
 		_audio.follow(shown)
@@ -315,6 +319,21 @@ func _shown_board() -> WindsurferNode:
 	if _net != null and _net.mirror != null:
 		return _net.mirror.followed_node()
 	return _windsurfer
+
+
+## The watched board's floating name hidden, the one watched before shown again.
+func _hide_the_watched_boards_name(shown: WindsurferNode) -> void:
+	var watched: WindsurferNode = shown if shown != _windsurfer else null
+	if watched == _unlabelled:
+		return
+	if _unlabelled != null and is_instance_valid(_unlabelled):
+		var old_label: Node3D = _unlabelled.get_node_or_null("NameLabel") as Node3D
+		if old_label != null:
+			old_label.visible = true
+	_unlabelled = watched
+	var label: Node3D = watched.get_node_or_null("NameLabel") as Node3D if watched != null else null
+	if label != null:
+		label.visible = false
 
 
 ## Tab (+1) and Shift+Tab (-1) while watching: the next or the previous board in race order.
@@ -1094,7 +1113,7 @@ func _set_net_menu_open(open: bool) -> void:
 		_pause_menu.open("A network game: the water goes on while this menu is open.")
 		_offer_gear_change()
 		# Spectating a LAN race (spectate_6nov.md): the entry says what it does now.
-		var offered: bool = Lan.game.race and (_race_runner != null or _net.mirror != null)
+		var offered: bool = _net != null and Lan.game.race and (_race_runner != null or _net.mirror != null)
 		_pause_menu.set_spectate_choice(offered, spectate_entry_text())
 	else:
 		_pause_menu.close()
