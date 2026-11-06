@@ -207,14 +207,13 @@ func _fill_brand_part(kind: GearItem.Kind) -> void:
 	part.add_child(items)
 
 
-## The Fin tab's brand part under its header: the brand's fin as a card (lit when it is the chosen
-## fin; pressing it chooses the fin at the slider's depth), and the depth slider with the depth and
-## the area, the depth recommended for the chosen board marked under it.
+## The Fin tab's brand part under its header: the depth slider with the depth and the area, the
+## depth recommended for the chosen board marked under it, and the brand's fin of that depth as a
+## card (lit when it is the chosen fin; pressing it chooses it). The slider comes first, so it shows
+## without scrolling in a 1280 x 720 window.
 func _fill_fin_part(part: VBoxContainer, brand: Brand) -> void:
 	var sizes: FinSizes = GearCatalogue.FIN_SIZES
 	var depth: int = sizes.clamp_depth(roundi(chosen().fin.size))
-	_fin_card_place = _flow()
-	part.add_child(_fin_card_place)
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 16)
 	var title: Label = Label.new()
@@ -241,10 +240,13 @@ func _fill_fin_part(part: VBoxContainer, brand: Brand) -> void:
 	row.add_child(_fin_value)
 	part.add_child(row)
 	var hint: Label = Label.new()
-	hint.text = "The orange mark: %d cm, the depth for your board (%d cm wide). Deeper for lighter wind, shorter for more." % [
+	hint.text = "Orange mark: %d cm, for your %d cm wide board. Deeper for light wind, shorter for strong wind." % [
 		recommended, roundi(board_width_m * 100.0)]
 	hint.theme_type_variation = &"HintLabel"
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	part.add_child(hint)
+	_fin_card_place = _flow()
+	part.add_child(_fin_card_place)
 	_show_fin_card(brand, depth)
 	_fin_slider.value_changed.connect(_on_fin_depth_changed.bind(brand))
 
