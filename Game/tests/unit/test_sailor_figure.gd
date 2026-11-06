@@ -34,11 +34,11 @@ func _figure(sim: WindsurferSim) -> SailorFigure:
 	return figure
 
 
-## The boom's direction in the board's axes, as windsurfer.gd works it out.
+## The boom's direction in the board's axes, as windsurfer.gd works it out (the simulation's boom,
+## square to the raked mast: SailConfig.boom_square_to_mast).
 func _boom_dir(sim: WindsurferSim) -> Vector3:
 	var rig_to_board: Basis = sim.body.basis.transposed() * sim.rig.basis
-	var angle: float = sim.sail.sail_angle_rad()
-	return rig_to_board * Vector3(sin(angle), 0.0, cos(angle))
+	return rig_to_board * sim.sail.boom_direction_local
 
 
 func _pose(sim: WindsurferSim, figure: SailorFigure) -> FigureSkeleton:
@@ -275,3 +275,73 @@ func test_fall_poses_without_error() -> void:
 		_assert_figure_finite(figure, "fall at %.2f" % eased)
 	assert_eq(sim.sailor_state, WindsurferSim.SailorState.FALLEN)
 	assert_false(figure.find_child("HarnessLineLeft", true, false).visible, "no harness line in the water")
+
+
+## Sailor polish (6 November 2026): planing, the feet stand in the windward footstraps and stay
+## there when the weight moves between them (the trim, the mouse's back foot): the hips and the
+## knees move it, not the feet. Before, the feet followed the feet's pressure point and slid up to
+## half a metre out of the straps (the back foot off the tail with the back foot pressed).
+func test_planing_feet_stay_in_the_straps_while_the_weight_moves() -> void:
+	var sim: WindsurferSim = _sail(18.0, 180.0, 8.0)
+	assert_gt(sim.stance, 0.95, "planing in the straps")
+	var figure: SailorFigure = _figure(sim)
+	var s: FigureSkeleton = _pose(sim, figure)
+	var board: BoardConfig = sim.board_config
+	var front_z: float = 0.5 * board.length_m - board.front_strap_from_tail_m
+	var back_z: float = 0.5 * board.length_m - board.back_strap_from_tail_m
+	var front: int = s.front_side()
+	assert_true(s.in_straps, "the figure is in the straps")
+	assert_almost_eq(s.ankles[front].z, front_z, 0.02, "the front foot in the front strap")
+	assert_almost_eq(s.ankles[1 - front].z, back_z, 0.02, "the back foot in the back strap")
+	var before: PackedVector3Array = s.ankles.duplicate()
+	# All the weight onto the back strap, then onto the front strap, a few ticks each.
+	for press: float in [0.4, -0.4]:
+		sim.trim_press_m = press
+		sim.feet_body.z += press
+		for i: int in 10:
+			sim.time_s += DT
+			s = _pose(sim, figure)
+			for side: int in [FigureSkeleton.LEFT, FigureSkeleton.RIGHT]:
+				assert_almost_eq(s.ankles[side].distance_to(before[side]), 0.0, 0.01, "the feet stay put, press %.1f" % press)
+		sim.feet_body.z -= press
+
+
+## The rig as drawn: the physics turns the boom over to the other side in one tick when the sail
+## changes sides; the drawn boom swings across round the mast instead, a little each tick, and ends
+## where the physics has it.
+func test_drawn_boom_swings_across_instead_of_jumping() -> void:
+	var rig: DrawnRig = DrawnRig.new()
+	var port: Vector3 = Vector3(-0.9, 0.0, 0.44).normalized()
+	var starboard: Vector3 = Vector3(0.9, 0.0, 0.44).normalized()
+	rig.update(Vector3.UP, port, Basis.IDENTITY, -1.0)
+	assert_almost_eq(rig.boom_dir.distance_to(port), 0.0, 1e-4, "starts where the physics has it")
+	var largest_step_rad: float = 0.0
+	var saw_flipping: bool = false
+	for i: int in 90:
+		var before: Vector3 = rig.boom_dir
+		rig.update(Vector3.UP, starboard, Basis.IDENTITY, DT)
+		saw_flipping = saw_flipping or rig.flipping
+		largest_step_rad = maxf(largest_step_rad, before.angle_to(rig.boom_dir))
+	assert_true(saw_flipping, "it swings across")
+	assert_lt(largest_step_rad, 0.2, "never more than about 11 degrees in a tick")
+	assert_almost_eq(rig.boom_dir.distance_to(starboard), 0.0, 0.01, "and ends where the physics has it")
+
+
+## A hand holding the boom keeps its hold when the place it should hold moves a little (it slides
+## at a person's pace), and lets go and takes a new hold, one hand at a time, when it moves far.
+func test_hands_slide_and_regrip_one_at_a_time() -> void:
+	var hands: FigureHands = FigureHands.new()
+	hands.boom_root = Vector3(0.0, 1.5, -0.1)
+	hands.boom_dir = Vector3.BACK
+	var holds: PackedInt32Array = PackedInt32Array([FigureHands.Hold.BOOM, FigureHands.Hold.BOOM])
+	hands.update(holds, PackedFloat64Array([0.9, 0.5]), FigureHands.RIGHT, -1.0)
+	var start: Vector3 = hands.positions[FigureHands.LEFT]
+	hands.update(holds, PackedFloat64Array([0.95, 0.5]), FigureHands.RIGHT, DT)
+	assert_lt(hands.positions[FigureHands.LEFT].distance_to(start), FigureHands.SLIDE_RATE_MS * DT + 1e-4, "a small move is a slide")
+	hands.update(holds, PackedFloat64Array([1.3, 0.1]), FigureHands.RIGHT, DT)
+	assert_true(hands.is_reaching(FigureHands.RIGHT), "the first hand lets go to take a new hold")
+	assert_false(hands.is_reaching(FigureHands.LEFT), "the other holds on meanwhile")
+	for i: int in 60:
+		hands.update(holds, PackedFloat64Array([1.3, 0.1]), FigureHands.RIGHT, DT)
+	assert_almost_eq(hands.along_m[FigureHands.LEFT], 1.3, 0.01, "both hands end where they should hold")
+	assert_almost_eq(hands.along_m[FigureHands.RIGHT], 0.1, 0.01)

@@ -109,9 +109,12 @@ var _sail_lift_m: float = 0.0
 # The mast's model stretched to the mast's length, and the boom's to the boom's.
 var _mast_stretch: float = 1.0
 var _boom_stretch: float = 1.0
-# The pose at the last sailing tick, from which a fall starts.
+# The pose at the last sailing tick, from which a fall starts, and the way the mast lay on the
+# water at the last fallen tick, from which it rises at a waterstart.
 var _last_mast_dir: Vector3 = Vector3.UP
 var _last_boom_dir: Vector3 = Vector3.BACK
+var _lying_dir: Vector3 = Vector3.RIGHT
+var _lying_boom_dir: Vector3 = Vector3.BACK
 # The cloth's state, eased from tick to tick (see shape_sail).
 var _belly_side: float = -1.0
 var _flutter: float = 0.0
@@ -300,15 +303,33 @@ func shape_sail(sail: SailModel, time_s: float) -> void:
 
 ## The fall on screen: the rig pivots about the mast foot until it lies on the water on the
 ## side of the fall. `eased` runs from 0 (the fall starts) to 1 (the rig is down), `side`
-## is -1 for port and +1 for starboard. The cloth goes slack.
-func pose_fallen(eased: float, side: float) -> void:
+## is -1 for port and +1 for starboard. The cloth goes slack. Then, as the sailor swims to the
+## windward side to waterstart (`swim` 0 to 1, `windward` the side: +1 starboard), a rig that fell
+## to leeward is pulled round the front of the board onto the water on the windward side, where
+## it rises from at the waterstart (pose_rising).
+func pose_fallen(eased: float, side: float, swim: float = 0.0, windward: float = 0.0) -> void:
 	var flat: Vector3 = Vector3(side, 0.03, 0.0).normalized()
+	if swim > 0.0 and windward != 0.0 and signf(windward) != signf(side):
+		flat = flat.rotated(Vector3.UP, signf(side) * PI * smoothstep(0.0, 1.0, swim))
+	_lying_dir = flat
+	_lying_boom_dir = _last_boom_dir
 	var mast_dir: Vector3 = _last_mast_dir.slerp(flat, eased).normalized()
 	_pose_rig(mast_dir, _last_boom_dir)
 	var camber: float = _sail_config.camber * lerpf(1.0, 0.3, eased)
 	_set_cloth(_belly_side, camber, deg_to_rad(TWIST_LIGHT_DEG) * (1.0 - eased), 0.0, 0.0)
 	_flutter = 0.0
 	_last_cloth_time_s = NAN
+
+
+## A waterstart on screen: the rig rises from where it lay on the water up to the sailing pose
+## (`mast_dir` and `boom_dir`, as pose_sailing takes them), `raised` from 0 (lying) to 1 (up).
+func pose_rising(mast_dir: Vector3, boom_dir: Vector3, raised: float) -> void:
+	var eased: float = smoothstep(0.0, 1.0, raised)
+	var drawn_mast: Vector3 = _lying_dir.slerp(mast_dir, eased).normalized()
+	var drawn_boom: Vector3 = _lying_boom_dir.slerp(boom_dir, eased).normalized() if _lying_boom_dir.dot(boom_dir) > -0.99 else boom_dir
+	_pose_rig(drawn_mast, drawn_boom)
+	_last_mast_dir = drawn_mast
+	_last_boom_dir = drawn_boom
 
 
 ## Which way the belly bulges in the sail's frame (z = boom direction x mast direction).
@@ -348,9 +369,12 @@ static func flutter_for_load(load_coefficient: float) -> float:
 
 
 ## From the boom's centre line to the windward arm at the hand grip, in the board's axes:
-## where the hands hold the wishbone (the simulation's grip is on the centre line).
+## where the hands hold the wishbone (the simulation's grip is on the centre line). When the sail
+## changes sides the windward arm changes over with the belly (it shrinks through the centre line
+## as the belly goes over), so a hand holding on near the mast moves across smoothly; taken by the
+## belly's sign alone it jumped half a metre in one tick in the middle of the flip.
 func windward_arm_offset() -> Vector3:
-	var leeward_dir: Vector3 = _sail.transform.basis.z.normalized() * signf(_belly_side)
+	var leeward_dir: Vector3 = _sail.transform.basis.z.normalized() * clampf(_belly_side, -1.0, 1.0)
 	return -leeward_dir * BOOM_ARM_HALF_WIDTH_AT_GRIP_M
 
 
