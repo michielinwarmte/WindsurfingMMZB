@@ -45,7 +45,7 @@ const CARVE_FULL_TURN_DPS: float = 15.0
 ## speed (BOW_FULL_MS), gone at BOW_GONE_MS and as the board planes.
 const ARM_ANGLE_DEG: float = 19.47
 const ARM_LENGTH_M: float = 14.0
-const ARM_WIDTH_M: float = 0.18
+const ARM_WIDTH_M: float = 0.35
 const ARM_LIFETIME_S: float = 5.0
 const BOW_START_MS: float = 0.5
 const BOW_FULL_MS: float = 2.0

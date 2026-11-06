@@ -32,8 +32,11 @@ uniform vec3 foam_color : source_color = vec3(0.92, 0.95, 0.97);
 // the lines are fainter than the churn and thin out within a few seconds).
 uniform float rail_line_opacity = 0.42;
 uniform float churn_opacity = 0.9;
-// The bow wave's lines: faint (a low wave catching the light and a little foam at the bow).
-uniform float arm_opacity = 0.45;
+// The bow wave's lines: faint (a low wave catching the light and a little foam at the bow), as a row
+// of short crests (the divergent waves of a Kelvin wake are short crests along the V, not a line),
+// this far apart along the arm (by eye).
+uniform float arm_opacity = 0.22;
+uniform float arm_crest_spacing_m = 0.9;
 uniform float patch_opacity = 0.6;
 
 varying vec2 rest_position;
@@ -75,10 +78,11 @@ float trail_foam(vec2 uv, float age, float strength, float carve) {
 
 float arm_foam(vec2 uv, float age, float along, float strength) {
 	float across = abs(uv.y * 2.0 - 1.0);
-	float line = 1.0 - smoothstep(0.3, 1.0, across);
+	float line = 1.0 - smoothstep(0.0, 1.0, across);
 	// Strongest at the bow (a little white water there), fading along the arm and with age.
 	float bow = 1.0 + 1.5 * (1.0 - smoothstep(0.0, 0.2, along));
-	return arm_opacity * line * bow * strength * (1.0 - along) * pow(1.0 - age, 2.0);
+	float crests = mix(0.45, 1.0, 0.5 + 0.5 * sin(uv.x * TAU / arm_crest_spacing_m));
+	return arm_opacity * line * crests * bow * strength * pow(1.0 - along, 2.0) * pow(1.0 - age, 2.0);
 }
 
 float patch_foam(vec2 uv, float age, float strength) {
