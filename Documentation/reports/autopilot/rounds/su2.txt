@@ -1,0 +1,2 @@
+# Round 2 of the stay-on-the-board work: the bar moved and the recovery reflex on.
+barreflex: --sailor.catapult_heel_deg=30 --sailor.fall_back_heel_deg=32 --sailor.standing_fall_heel_deg=50 --sailor.catapult_pull_share=0.2 --sailor.catapult_time_s=0.2 --sailor.fall_back_time_s=0.3 --sailor.tip_time_s=0.5 --controller.reflex_on=1

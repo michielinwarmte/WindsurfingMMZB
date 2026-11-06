@@ -110,7 +110,11 @@ func test_overpowered_sailor_is_catapulted_and_the_board_stays_upright() -> void
 	gut.p("catapult: fell at %.1f s, heel at the fall %.1f, largest after %.1f, at the end %.1f deg" % [fell_at, heel_at_fall, max_heel_after, heel_at_end])
 	assert_gt(fell_at, 20.0, "the sailor went over")
 	assert_true(sim.fall_kind == "catapult" or sim.fall_kind == "tipped over", "to leeward, over the sail (%s)" % sim.fall_kind)
-	assert_lt(heel_at_fall, 30.0, "the board had heeled only a little when the sailor let go")
+	# Since the fall's bar moved (6 November 2026, PHYSICS_SPEC.md 7.7: a catapult past 30 degrees of
+	# felt heel held for 0.2 s, where it was 20 at once) the board heels further before the sailor goes:
+	# 44 degrees here, where it was under 30. It is still a catapult and still short of the standing
+	# limit; the old numbers' fall is pinned in test_stay_on_the_board.gd.
+	assert_lt(heel_at_fall, sim.sailor_config.standing_fall_heel_deg, "the sailor let go before the board was rolled past the standing limit")
 	# The kick as the sailor leaves (0.3 s after) is sensitive: 42.7 degrees with the boom held
 	# at 0.6 m and level, 50 at 0.62, 57.5 at 0.70, 59.4 at 0.6 with the boom square to the
 	# raked mast (the default since PH16 step 16, which loosened this from 45), 63.7 at 0.70 and
