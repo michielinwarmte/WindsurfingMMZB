@@ -9,6 +9,8 @@ var index: int = 0
 ## 1 for the winner.
 var place: int = 0
 var finished: bool = false
+## It left the race before finishing (RaceSim.retire(): a LAN player who chose to spectate).
+var retired: bool = false
 ## Race time at the finish line, seconds; -1 for a board that did not finish.
 var finish_time_s: float = -1.0
 ## Seconds behind the winner (0 for the winner); -1 for a board that did not finish.
@@ -21,9 +23,10 @@ var steps_done: int = 0
 var steps_total: int = 0
 
 
-## One line for the tools' output: place, name, time (or DNF), gap, steps done, the splits.
+## One line for the tools' output: place, name, time (or DNF, or RET for a board that retired), gap,
+## steps done, the splits.
 func to_line() -> String:
-	var time_text: String = format_time(finish_time_s) if finished else "DNF"
+	var time_text: String = format_time(finish_time_s) if finished else ("RET" if retired else "DNF")
 	var gap_text: String = ("+" + format_time(gap_s)) if finished else "-"
 	var split_texts: PackedStringArray = PackedStringArray()
 	for split: float in splits:

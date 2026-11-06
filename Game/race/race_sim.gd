@@ -44,6 +44,9 @@ class Board:
 	var ocs: bool = false
 	## The race time until which its "wrong side" warning shows.
 	var wrong_side_until_s: float = -INF
+	## It left the race before finishing (retire(): a LAN player who chose to spectate): nothing more
+	## is checked, and it is last in the order, "retired" in the results.
+	var retired: bool = false
 
 
 ## The race ends this long after the first board finishes (seconds), if not every board is in.
@@ -306,6 +309,21 @@ func is_finished(index: int) -> bool:
 	return _boards[index].finish_time_s >= 0.0
 
 
+## A board leaves the race before finishing (LAN multiplayer: a player who chose to spectate). From
+## now on nothing of its moves is checked; it goes to the end of the order and is "retired" in the
+## results. A board that has finished keeps its finish.
+func retire(index: int) -> void:
+	var board: Board = _boards[index]
+	if board.finish_time_s >= 0.0 or board.retired:
+		return
+	board.retired = true
+	_order_stale = true
+
+
+func is_retired(index: int) -> bool:
+	return _boards[index].retired
+
+
 ## The race time a board's uncleared penalties will add at its finish (RaceRules.time_penalty_s();
 ## whoever runs the race sets it every tick, so the finish adds what stands then). Nothing after
 ## the board has finished.
@@ -339,6 +357,7 @@ func results() -> Array[RaceResult]:
 		result.index = order[rank]
 		result.place = rank + 1
 		result.finished = board.finish_time_s >= 0.0
+		result.retired = board.retired
 		result.finish_time_s = board.finish_time_s
 		result.gap_s = board.finish_time_s - winner_s if result.finished else -1.0
 		result.splits = board.splits.duplicate()
@@ -353,8 +372,8 @@ func results() -> Array[RaceResult]:
 
 ## Checks a board's move during the tick from one race time to the next against its next step.
 func _check_move(board: Board, from_s: float, to_s: float) -> void:
-	if board.next_step >= _steps.size():
-		return  # finished: it sails on, and nothing is checked
+	if board.next_step >= _steps.size() or board.retired:
+		return  # finished (it sails on) or retired: nothing is checked
 	var step: RaceStep = _steps[board.next_step]
 	if step.kind == RaceStep.Kind.START:
 		_check_start(board, step, from_s, to_s)
@@ -404,19 +423,18 @@ func _complete_step(board: Board, at_s: float) -> void:
 			_first_finish_s = at_s
 
 
-## The race is over when every board has finished, finish_window_s after the first finisher, or at
-## the time limit.
+## The race is over when every board has finished or retired, finish_window_s after the first
+## finisher, or at the time limit.
 func _is_over() -> bool:
 	if _clock_s >= time_limit_s:
 		return true
-	if _first_finish_s < 0.0:
-		return false
-	if _clock_s >= _first_finish_s + finish_window_s:
-		return true
+	var everyone_in: bool = true
 	for board: Board in _boards:
-		if board.finish_time_s < 0.0:
-			return false
-	return true
+		if board.finish_time_s < 0.0 and not board.retired:
+			everyone_in = false
+	if everyone_in:
+		return true
+	return _first_finish_s >= 0.0 and _clock_s >= _first_finish_s + finish_window_s
 
 
 ## The boards' numbers in race order (see place()), worked out again only when a board has moved or
@@ -455,6 +473,9 @@ func _is_ahead(a: int, b: int, distances: PackedFloat64Array) -> bool:
 	var finished_b: bool = board_b.finish_time_s >= 0.0
 	if finished_a != finished_b:
 		return finished_a
+	# A retired board after every board still racing.
+	if board_a.retired != board_b.retired:
+		return board_b.retired
 	if finished_a:
 		if board_a.finish_time_s != board_b.finish_time_s:
 			return board_a.finish_time_s < board_b.finish_time_s
@@ -592,11 +613,11 @@ func _marks_exist(id: String) -> bool:
 
 ## The race as it stands, for a guest's PC (LAN multiplayer, Documentation/reports/multiplayer/
 ## PLAN.md, D8): the clock and the phase, and per board its next step, splits, finish time, penalty,
-## OCS and wrong-side warning. Not the boards' places: the guest knows where every board is.
+## OCS, wrong-side warning and whether it retired. Not the boards' places: the guest knows where every board is.
 func to_state() -> Dictionary:
 	var boards: Array = []
 	for board: Board in _boards:
-		boards.append([board.next_step, board.splits, board.finish_time_s, board.penalty_s, board.ocs, board.wrong_side_until_s])
+		boards.append([board.next_step, board.splits, board.finish_time_s, board.penalty_s, board.ocs, board.wrong_side_until_s, board.retired])
 	return {"phase": int(_phase), "started": _started, "clock": _clock_s, "first_finish": _first_finish_s,
 		"start_in": _start_in_s, "boards": boards, "order": _order().duplicate()}
 
@@ -618,6 +639,7 @@ func apply_state(state: Dictionary) -> void:
 		board.penalty_s = float(values[3])
 		board.ocs = bool(values[4])
 		board.wrong_side_until_s = float(values[5])
+		board.retired = values.size() > 6 and bool(values[6])
 	# The host's order: every PC shows the same places (_host_order).
 	_host_order.clear()
 	for index: Variant in state.get("order", []):
