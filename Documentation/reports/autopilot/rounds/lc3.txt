@@ -1,0 +1,17 @@
+# Lake chop round 3 (6 November 2026): the winners of rounds 1 and 2 together.
+# Round 1 (130 lake cases a variant, the baseline 26 falls): the pilot's hands faster on the sheet
+# (sheet_rate_per_s 2.5 against 1.5) 8 falls and no speed lost on the afternoons; the ease while
+# carving up (head_up_alpha_deg 6) 8 falls, none new, no speed lost; no rail at walking pace
+# (rail_from_ms 2, rail_full_ms 5) cures the falls out of irons (8 fixed, none new); less pull held
+# in chop (chop_hike_drop 0.3) 6 falls but the afternoons' beam reach 2.6 kt slower; hike_share 1.0
+# 11 falls, 0.4 kt slower.
+b: --pilot.sheet_rate_per_s=2.5 --controller.head_up_alpha_deg=6 --controller.rail_from_ms=2 --controller.rail_full_ms=5
+bkey: --pilot.sheet_rate_per_s=2.5 --controller.head_up_alpha_deg=6 --controller.head_up_ease_on_hold=0 --controller.rail_from_ms=2 --controller.rail_full_ms=5
+bs35: --pilot.sheet_rate_per_s=3.5 --controller.head_up_alpha_deg=6 --controller.rail_from_ms=2 --controller.rail_full_ms=5
+bs20: --pilot.sheet_rate_per_s=2.0 --controller.head_up_alpha_deg=6 --controller.rail_from_ms=2 --controller.rail_full_ms=5
+bhu9: --pilot.sheet_rate_per_s=2.5 --controller.head_up_alpha_deg=9 --controller.rail_from_ms=2 --controller.rail_full_ms=5
+bair: --pilot.sheet_rate_per_s=2.5 --controller.head_up_alpha_deg=6 --controller.rail_from_ms=2 --controller.rail_full_ms=5 --controller.airborne_alpha_deg=6 --controller.airborne_sheet_in_share=3 --controller.airborne_wind_from_kt=18 --controller.airborne_wind_full_kt=20
+bairall: --pilot.sheet_rate_per_s=2.5 --controller.head_up_alpha_deg=6 --controller.rail_from_ms=2 --controller.rail_full_ms=5 --controller.airborne_alpha_deg=6 --controller.airborne_sheet_in_share=3
+bchop15: --pilot.sheet_rate_per_s=2.5 --controller.head_up_alpha_deg=6 --controller.rail_from_ms=2 --controller.rail_full_ms=5 --controller.chop_hike_drop=0.15
+bhike10: --pilot.sheet_rate_per_s=2.5 --controller.head_up_alpha_deg=6 --controller.rail_from_ms=2 --controller.rail_full_ms=5 --pilot.hike_share=1.0
+bdep4: --pilot.sheet_rate_per_s=2.5 --controller.head_up_alpha_deg=6 --controller.rail_from_ms=2 --controller.rail_full_ms=5 --pilot.depower_urgent_rate_per_s=4
