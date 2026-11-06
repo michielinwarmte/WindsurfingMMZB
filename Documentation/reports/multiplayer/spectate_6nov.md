@@ -41,7 +41,7 @@ While you watch, your own board is **off the water**: hidden on every PC, not sa
 
 ## The tests
 
-**Unit tests** (`Game/tests/unit/test_spectate.gd`, 11 tests): a retired board is last, "retired" in the results and the race ends without it; a race of retired boards only is over; the retirement reaches a guest's copy of the race (and an older state reads as not retired); Tab on the host goes through AI boards and other players' boards in race order and skips boards off the water; a spectating host numbers the other players from the first board; Tab on a guest goes through the host's board, the AI and skips a spectating guest; a player who finished watches four seconds later (host and guest); in a real race scene, Spectate retires the board, the camera goes to an AI board, Tab moves it, the next start puts the board back at its spot, Stay a spectator leaves the player out of the following start, Race again brings them back; the lobby's flags travel; the title's text. `tools/test.sh`: see the lead's message for the final count. `tools/check.sh`: 0 failed.
+**Unit tests** (`Game/tests/unit/test_spectate.gd`, 11 tests): a retired board is last, "retired" in the results and the race ends without it; a race of retired boards only is over; the retirement reaches a guest's copy of the race (and an older state reads as not retired); Tab on the host goes through AI boards and other players' boards in race order and skips boards off the water; a spectating host numbers the other players from the first board; Tab on a guest goes through the host's board, the AI and skips a spectating guest; a player who finished watches four seconds later (host and guest); in a real race scene, Spectate retires the board, the camera goes to an AI board, Tab moves it, the next start puts the board back at its spot, Stay a spectator leaves the player out of the following start, Race again brings them back; the lobby's flags travel; the title's text. `tools/test.sh` on the final tree: 955 of 955 tests pass. `tools/check.sh`: 484 files, 0 failed.
 
 **LAN tests** (`tools/lan_test.sh`, two or three game instances on this PC, headless, the robot sailing the players' boards):
 
@@ -88,7 +88,7 @@ New options for these runs: `--spectate=<n>` (the n-th guest spectates), `--reti
 2. `3d69d80` RaceRunner: watch any board of the race, the other PCs' players too (race_runner.gd's own commit: only spectating code; restart() changes two lines)
 3. `8c4e2f6` LAN spectating: finished players watch the others, Tab over every racer
 4. `c27a780` LAN spectating: the menu's Spectate / Race again, the lobby's switch, the LAN test
-5. the screenshots, the hidden name label, `--lan_watch`, this report (see the lead's message)
+5. `2eca37c` the screenshots, the hidden name label, `--lan_watch`, this report (and one line of race_runner.gd: the watch title's place only while watching)
 
 ## Tokens
 
