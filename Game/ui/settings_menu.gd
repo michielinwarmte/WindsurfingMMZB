@@ -161,6 +161,26 @@ func _build_wind_rows(s: SettingsValues) -> void:
 		func(v: float) -> String: return "%.0f s" % v,
 		func(v: float) -> void: s.shift_period_s = v)
 	_enable_with(shifts, [shift_size, shift_period])
+	# Lake Silvaplana sails the map's own wind (the measured Maloja day), not the wind above: this
+	# multiplies it (Max, 6 November 2026), and its gusts, lee and waves with it.
+	_add_slider(grid, "Lake wind", SettingsValues.LAKE_WIND_SCALE_MIN, SettingsValues.LAKE_WIND_SCALE_MAX, 0.05, s.lake_wind_scale,
+		func(v: float) -> String: return _lake_wind_text(v),
+		func(v: float) -> void: s.lake_wind_scale = v)
+
+
+## The lake wind slider's text: the multiplier, and what the lake's mean wind at 10 m is with it at
+## 14:30, when a sail on the lake starts (the HUD's number there).
+func _lake_wind_text(scale: float) -> String:
+	const DAY_PATH: String = "res://maps/silvaplana/wind/maloja_day.tres"
+	const WIND_PATH: String = "res://maps/silvaplana/wind_silvaplana.tres"
+	const PATTERN_HEIGHT_M: float = 5.0  # environment_silvaplana.tres's map_wind_height_m
+	var day: WindDay = load(DAY_PATH) as WindDay
+	var wind: WindConfig = load(WIND_PATH) as WindConfig
+	if day == null or wind == null:
+		return "x%.2f the map's wind" % scale
+	var at_10m: float = pow(10.0 / PATTERN_HEIGHT_M, wind.shear_exponent)
+	var knots: float = day.lake_speed_ms(14.5 * 3600.0) / SimMath.KNOT_MS * at_10m * scale
+	return "x%.2f the map's wind: %.0f kt at 14:30 (Silvaplana only)" % [scale, knots]
 
 
 func _build_wave_rows(s: SettingsValues) -> void:

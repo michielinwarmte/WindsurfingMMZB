@@ -30,6 +30,8 @@ extends SceneTree
 ##                               whole run). The autopilot's suite scores its variants with them
 ##                               (tools/autopilot_suite.sh --only=lake).
 ##   --lake_wave_scale=<x>       every lake wave train's height times x (WindsurferSim reads it)
+##   --lake_wind_scale=<x>       the map's wind times x (MapWind.load_from() reads it: the mean,
+##                               the gusts, the lee and the waves grown from it; 1.35 is about 24 kt)
 ##
 ## The cases start where the lake scene starts (off the camping beach, sail_silvaplana.gd) when
 ## their course leads out over the lake; the port-tack starts and the run would reach the shore

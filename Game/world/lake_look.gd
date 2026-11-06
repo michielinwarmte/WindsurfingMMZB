@@ -135,6 +135,42 @@ static func breaking_wave_parameter(wind_10m_ms: float, peak_period_s: float) ->
 	return drag * wind_10m_ms * wind_10m_ms / (AIR_VISCOSITY * TAU / peak_period_s)
 
 
+## The whitecap laws of the water shader's whitecap_cover() (lake_look.gdshaderinc, 5.; wind_on_water.md):
+## 0 Zhao and Toba 2001 with the lake's own waves, 1 Callaghan et al. 2008 (open sea), 2 Monahan and
+## O'Muircheartaigh 1980 (open sea).
+enum WhitecapLaw { ZHAO_TOBA, CALLAGHAN_2008, MONAHAN_1980 }
+## The lake's look (lake_water.tres): fresh water's foam lasts 2.54 s against the sea's 3.85 s (Monahan and
+## Zietlow 1969, as Wu 2000 gives it), so a sea law's cover times 0.66 there (an estimate).
+const FRESH_WATER_FACTOR: float = 0.66
+## Young waves start to whitecap from this breaking-wave parameter, fully from 1000 (the shader's
+## whitecap_young_onset; Toba and Koga's 1000, the softening an estimate).
+const YOUNG_ONSET: float = 500.0
+
+
+## The open sea's measured whitecap cover, percent, for U10 (m/s): Callaghan et al. 2008's two fits (as
+## Albert et al. 2016 give them), or Monahan and O'Muircheartaigh 1980.
+static func sea_whitecap_percent(wind_10m_ms: float, law: WhitecapLaw = WhitecapLaw.CALLAGHAN_2008) -> float:
+	if law == WhitecapLaw.MONAHAN_1980:
+		return 3.84e-4 * pow(maxf(wind_10m_ms, 0.0), 3.41)
+	if wind_10m_ms <= 3.70:
+		return 0.0
+	if wind_10m_ms < 10.18:
+		return 3.18e-3 * pow(wind_10m_ms - 3.70, 3.0)
+	return 4.82e-4 * pow(wind_10m_ms + 1.98, 3.0)
+
+
+## The shader's whitecap_cover(): the share of the water white (0 to 1) by a law; a sea law times
+## `water_factor` and, with the lake's own waves here (`peak_period_s` above 0), none where they are too
+## young to break.
+static func whitecap_cover(wind_10m_ms: float, peak_period_s: float, law: WhitecapLaw, water_factor: float = 1.0) -> float:
+	if law == WhitecapLaw.ZHAO_TOBA:
+		return whitecap_fraction(wind_10m_ms, peak_period_s)
+	var cover: float = sea_whitecap_percent(wind_10m_ms, law) / 100.0 * water_factor
+	if peak_period_s > 0.0:
+		cover *= smoothstep(YOUNG_ONSET, 1000.0, breaking_wave_parameter(wind_10m_ms, peak_period_s))
+	return minf(cover, 0.2)
+
+
 ## The wind (U10, m/s) at which waves of `peak_period_s` start to whitecap: R_B = 1000 (Toba and Koga).
 static func whitecap_onset_ms(peak_period_s: float) -> float:
 	var low: float = 0.0
