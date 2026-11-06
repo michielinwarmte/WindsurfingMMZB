@@ -1,6 +1,7 @@
 class_name SpectateChoice
 extends RefCounted
-## Which board the camera follows while spectating a race (--spectate=1, RaceRunner): at first the
+## Which board the camera follows while spectating a race (--spectate=1, RaceRunner; in a LAN game
+## also RaceMirror, over every racer on the water: watchable()): at first the
 ## leader, and the leader again whenever the lead changes, but only once the new leader has led for
 ## HOLD_S, so the camera does not flick between two boards side by side in a close pack. Tab and
 ## Shift+Tab step to the next and the previous board in race order and stop following the leader;
@@ -55,6 +56,18 @@ func step(order: Array[int], by: int) -> int:
 	var at: int = order.find(followed)
 	followed = order[wrapi(at + by, 0, order.size())] if at >= 0 else order[0]
 	return followed
+
+
+## The boards the camera may follow, in race order: those `can_watch` (called with a board's number)
+## says are on the water. In a LAN game a player's board that is parked off the water (that player
+## watches too: finished, retired or a spectator) is left out, and the AI boards, the other PCs'
+## players and the host's board are all in (RaceRunner.watch_order(), RaceMirror.watch_order()).
+static func watchable(order: Array[int], can_watch: Callable) -> Array[int]:
+	var list: Array[int] = []
+	for index: int in order:
+		if can_watch.call(index):
+			list.append(index)
+	return list
 
 
 ## L: follow the leader again, from now on and at once.

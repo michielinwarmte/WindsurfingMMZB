@@ -19,7 +19,8 @@ extends Control
 ## RaceRunner updates this every frame from the race (RaceSim) and the player's telemetry; the HUD's
 ## own card and panel are hidden meanwhile (Hud.set_race_mode), F1 brings the panel back.
 ## While spectating (set_watching) the cards are about the board the camera follows, with its name
-## on a line above, and the standings mark that board instead of "you".
+## and place on a line above ("Spectating Hana, 3rd"), and the standings mark that board instead of
+## "you". A LAN player who has finished and watches the others keeps the finish list (results_wanted).
 ## Laid out for a window 720 pixels high, like the HUD it is part of (hud.gd: any window size).
 
 const SPLIT_SHOWN_S: float = 4.0
@@ -88,6 +89,10 @@ var _results_texts: Array[Label] = []
 ## leader by itself.
 var _watching: String = ""
 var _follows_leader: bool = true
+var _watch_place: String = ""
+## The results stay on the screen while this is set, whichever board the cards are about: the
+## player's own race is over and the camera watches the others (RaceRunner, RaceMirror).
+var results_wanted: bool = false
 ## How many splits have been shown, so a new one is noticed.
 var _splits_seen: int = 0
 var _split_until_s: float = -1.0
@@ -302,18 +307,37 @@ func reset() -> void:
 		cell.text = ""
 
 
-## Spectating: the name of the board the camera follows, and whether it follows the leader by
-## itself (Tab: by hand). An empty name: racing yourself, no title.
-func set_watching(board_name: String, follows_leader: bool) -> void:
-	if board_name == _watching and follows_leader == _follows_leader:
+## Spectating: the name of the board the camera follows, its place (watch_place_text()), and
+## whether it follows the leader by itself (Tab: by hand). An empty name: racing yourself, no title.
+func set_watching(board_name: String, follows_leader: bool, place_text: String = "") -> void:
+	if board_name == _watching and follows_leader == _follows_leader and place_text == _watch_place:
 		return
+	var new_board: bool = board_name != _watching
 	_watching = board_name
 	_follows_leader = follows_leader
+	_watch_place = place_text
 	_title.visible = not board_name.is_empty()
-	_title.text = "Watching %s   %s" % [board_name, "(the leader; Tab: another board)" if follows_leader else "(L: follow the leader)"]
-	# A new board: its own splits from now on, and the fleet list marks it at once.
-	_splits_seen = -1
-	_fleet_refresh_at_s = -INF
+	_title.text = watch_title(board_name, place_text, follows_leader)
+	if new_board:
+		# A new board: its own splits from now on, and the fleet list marks it at once.
+		_splits_seen = -1
+		_fleet_refresh_at_s = -INF
+
+
+## The line above the race card while spectating: "Spectating Hana, 3rd   ·   Tab: next   L: the leader".
+static func watch_title(board_name: String, place_text: String, follows_leader: bool) -> String:
+	var who: String = board_name if place_text.is_empty() else "%s, %s" % [board_name, place_text]
+	var keys: String = "the leader   ·   Tab: next board" if follows_leader else "Tab: next   L: the leader"
+	return "Spectating %s   ·   %s" % [who, keys]
+
+
+## A watched board's place for the title: "3rd", "finished 2nd" or "retired".
+static func watch_place_text(race: RaceSim, index: int) -> String:
+	if race.is_retired(index):
+		return "retired"
+	if race.is_finished(index):
+		return "finished %s" % ordinal(race.place(index))
+	return ordinal(race.place(index))
 
 
 ## What the race says about board `index` (the player, or the board watched), and that board's
@@ -389,7 +413,7 @@ func update_from(race: RaceSim, index: int, t: Telemetry, shadow_deficit: float 
 		_warning.show()
 	else:
 		_warning.hide()
-	if race.phase() == RaceSim.Phase.FINISHED or race.is_finished(index):
+	if race.phase() == RaceSim.Phase.FINISHED or race.is_finished(index) or results_wanted:
 		if refresh or not _results.visible:
 			_show_results(time_trial_table(race, index) if _time_trial else results_table(race))
 		_results.show()
@@ -495,7 +519,7 @@ func _fill_fleet(race: RaceSim, player: int, mark: String) -> void:
 		if board == -1:
 			texts = PackedStringArray(["", "...", "", ""])
 		elif board >= 0:
-			var going: String = "finished" if race.is_finished(board) else "to " + race.next_step_name(board)
+			var going: String = "finished" if race.is_finished(board) else ("retired" if race.is_retired(board) else "to " + race.next_step_name(board))
 			texts = PackedStringArray(["%d" % race.place(board), race.board_name(board).left(14), going,
 				mark if board == player else gap_text(race.splits_s(board), race.splits_s(player))])
 		var colour: Color = HudStyle.HIGHLIGHT_COLOR if board == player else TEXT_COLOR
@@ -569,7 +593,7 @@ func _show_split(race: RaceSim, index: int) -> void:
 static func fleet_text(race: RaceSim, player: int, mark: String = "you") -> String:
 	var lines: PackedStringArray = PackedStringArray()
 	for i: int in race.race_order():
-		var going: String = "finished" if race.is_finished(i) else "to " + race.next_step_name(i)
+		var going: String = "finished" if race.is_finished(i) else ("retired" if race.is_retired(i) else "to " + race.next_step_name(i))
 		var gap: String = mark if i == player else gap_text(race.splits_s(i), race.splits_s(player))
 		lines.append("%d. %-12s %-16s %s" % [race.place(i), race.board_name(i).left(12), going, gap])
 	return "\n".join(lines)
@@ -653,6 +677,8 @@ static func results_table(race: RaceSim) -> String:
 		if result.finished:
 			var penalty: String = "   (%.0f s penalty)" % result.penalty_s if result.penalty_s > 0.0 else ""
 			lines.append("  %d. %-14s %s   +%s%s" % [result.place, result.name, clock(result.finish_time_s), clock(result.gap_s), penalty])
+		elif result.retired:
+			lines.append("  %d. %-14s retired" % [result.place, result.name])
 		else:
 			lines.append("  %d. %-14s sailing, %d of %d" % [result.place, result.name, result.steps_done, result.steps_total])
 	lines.append("")
