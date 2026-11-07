@@ -14,7 +14,14 @@ out="$REPO_ROOT/.sim_output/lake_speed"
 mkdir -p "$out"
 if [ ! -f "$out/project/project.godot" ]; then
 	import_project "$godot"
-	cp -r "$REPO_ROOT/Game" "$out/project.tmp" && mv "$out/project.tmp" "$out/project"
+	rm -rf "$out/project.tmp"
+	# cp can report a file that was busy (a Godot writing its cache); the copy counts when it matches.
+	cp -r "$REPO_ROOT/Game" "$out/project.tmp" || true
+	if ! diff -rq "$REPO_ROOT/Game" "$out/project.tmp" >> "$out/tuner.log" 2>&1; then
+		echo "the frozen copy differs from Game/: not started" >> "$out/tuner.log"
+		exit 1
+	fi
+	mv "$out/project.tmp" "$out/project"
 	(cd "$REPO_ROOT" && git checkout -- Game/project.godot Game/default_bus_layout.tres 2>/dev/null || true)
 fi
 python_bin="python3"
