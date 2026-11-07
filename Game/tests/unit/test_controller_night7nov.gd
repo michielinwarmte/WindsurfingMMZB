@@ -57,8 +57,11 @@ func test_an_ai_can_hold_shift_too() -> void:
 
 func test_a_short_tap_asks_for_a_small_turn_with_little_rail() -> void:
 	# A 0.1 s tap ramps to a fraction of the key (steer_rise_s 0.2: half of it), and the rail's share
-	# of a key held that briefly is small (tap_rail_full_s), so the weight hardly moves.
+	# of a key held that briefly is small (tap_rail_full_s), so the weight hardly moves. The ramp is the
+	# player's (NIGHT_TUNING); an AI board's fresh controller steers without it.
 	var controller: PlayerController = PlayerController.new()
+	controller.steer_rise_s = 0.2
+	controller.tap_rail_full_s = 0.4
 	controller.rail_full_ms = 0.0
 	var controls: SimControls = SimControls.new()
 	Input.action_press("steer_right")

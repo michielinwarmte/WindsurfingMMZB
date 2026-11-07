@@ -70,10 +70,11 @@ var _sharp: bool = false
 ## shaped into a ramp, steer_rise_s from nothing to full and steer_fall_s back (0: the key as it is),
 ## so a tap asks for a small, smooth turn; and the rail's share of the turn grows with how long the
 ## key has been held, full after tap_rail_full_s, so a tap steers with the rig and does not throw the
-## sailor's weight onto a rail. An AI's stick goes through the same ramp (one controller for all).
-var steer_rise_s: float = 0.2
-var steer_fall_s: float = 0.15
-var tap_rail_full_s: float = 0.4
+## sailor's weight onto a rail. All three are 0 by default (the key as it is: the AI fleet steers as on
+## 6 November); the player's board gets the night's numbers (NIGHT_TUNING, Settings > Night-tuned steering).
+var steer_rise_s: float = 0.0
+var steer_fall_s: float = 0.0
+var tap_rail_full_s: float = 0.0
 var _steer_smooth: float = 0.0
 var _key_held_s: float = 0.0
 ## Getting on the plane (Max, 7 November 2026: "better getting on plane technique"): below planing
@@ -1575,6 +1576,7 @@ func _just_pressed(action: String) -> bool:
 ## on the AI fleet's boards it slowed two race tests' starts, and their numbers had raced well.
 const NIGHT_TUNING: Dictionary[String, float] = {
 	"sharp_turn_factor": 2.25,
+	"steer_rise_s": 0.2,
 	"steer_fall_s": 0.0625,
 	"tap_rail_full_s": 0.85,
 	"helm_rate_per_s": 2.625,
