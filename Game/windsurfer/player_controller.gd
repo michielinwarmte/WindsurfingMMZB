@@ -583,12 +583,15 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 	if light and strong > 0.0:
 		# The pilot never trims beyond 24 degrees of angle of attack: from there to the full ease.
 		var cap_deg: float = airborne_alpha_deg if strong >= 1.0 else lerpf(24.0, airborne_alpha_deg, strong)
+		# Pushed hard, the sailor keeps the sail closed over the crests (Max, 7 November 2026: "100 % needs
+		# to be full power... close the sail even in waves"): the ease is gone at full push.
+		cap_deg = lerpf(cap_deg, 24.0, push_commit())
 		auto_sheet_pilot.max_alpha_deg = minf(auto_sheet_pilot.max_alpha_deg, cap_deg)
 		_resheet_for_s = airborne_resheet_s
 	else:
 		_resheet_for_s = maxf(_resheet_for_s - dt, 0.0)
 	if airborne_sheet_in_share > 0.0 and not pilot_overrides.has("sheet_in_share"):
-		auto_sheet_pilot.sheet_in_share = airborne_sheet_in_share if _resheet_for_s > 0.0 else _own_sheet_in_share
+		auto_sheet_pilot.sheet_in_share = lerpf(airborne_sheet_in_share, _own_sheet_in_share, push_commit()) if _resheet_for_s > 0.0 else _own_sheet_in_share
 	_ease_getting_going(telemetry, dt)
 	_turn_wanted = 0.0
 	var was_in_a_manoeuvre: bool = manoeuvre != Manoeuvre.NONE
@@ -1600,6 +1603,24 @@ func _just_pressed(action: String) -> bool:
 # start_help_until_ms.
 var start_alpha_deg: float = 90.0
 var start_help_until_ms: float = 7.0
+## The push slider's top (Max, 7 November 2026: "the push slider is too soft. 100 % needs to be full power,
+## sending it ... close the sail even in waves and try to get the best speeds"): from push_commit_from the
+## eases the technique adds on the player's board (the sail eased over a crest, the slow sheet-in getting
+## going) give way, and at a full push they are gone. 2 (above any push): never, as on an AI board; the
+## player's set (NIGHT_TUNING) has 0.75, the slider's middle, so below it nothing changes.
+var push_commit_from: float = 2.0
+
+
+## How far the push has gone past push_commit_from: 0 there and below, 1 at a full push.
+func push_commit() -> float:
+	if push_commit_from >= 1.0:
+		return 0.0
+	var level: float = push_now if not is_nan(push_now) else push_level
+	if is_nan(level):
+		return 0.0
+	return smoothstep(push_commit_from, 1.0, level)
+
+
 var start_sheet_in_share: float = 0.0
 var start_hike_share: float = 0.0
 var start_rake_back: float = 0.0
@@ -1680,7 +1701,8 @@ func _lake_pull_and_trim(telemetry: Telemetry, controls: SimControls) -> void:
 
 ## The sheet while getting going and against a nose dive: the angle of attack capped, the pace set.
 func _ease_getting_going(telemetry: Telemetry, dt: float) -> void:
-	var share: float = _start_share(telemetry)
+	# Pushed hard, the sailor sheets in to get going (push_commit()).
+	var share: float = _start_share(telemetry) * (1.0 - push_commit())
 	if start_alpha_deg < 90.0 and share > 0.0:
 		auto_sheet_pilot.max_alpha_deg = minf(auto_sheet_pilot.max_alpha_deg, lerpf(90.0, start_alpha_deg, share))
 	if start_sheet_in_share > 0.0 and share > 0.0 and not pilot_overrides.has("sheet_in_share"):
@@ -1753,7 +1775,7 @@ const NIGHT_TUNING: Dictionary[String, float] = {
 	"reflex_bear_away_dps": 12.0,
 	"key_tack_rate_dps": 24.0,
 	"tack_rate_max_dps": 23.75,
-	"start_sheet_in_share": 0.25,
+	"push_commit_from": 0.75,
 	"plane_head_up_deg": 22.5,
 	"plane_head_up_from_twa_deg": 95.0,
 	"gust_bear_away_deg": 0.0,

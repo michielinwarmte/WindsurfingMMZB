@@ -42,7 +42,7 @@ PARAMS = [
     # Getting going (Max: "better balance and control at low speeds")
     ("start_alpha_deg", 6.0, 90.0),
     ("start_help_until_ms", 4.0, 9.0),
-    ("start_sheet_in_share", 0.0, 1.0),
+    # start_sheet_in_share out (Max, 7 November 2026: "when not planing the sailor doesn't want to sheet in").
     ("start_hike_share", 0.0, 1.4),
     ("start_rake_back", 0.0, 0.5),
     ("plane_head_up_deg", 0.0, 30.0),
