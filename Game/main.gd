@@ -267,6 +267,51 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _physics_process(_delta: float) -> void:
 	_check_shore()
+	_record_tick()
+
+
+## The session recorder (7 November 2026, Max's play-test: what the real game does, not a harness):
+## off unless the game is started with --record=<file.csv>; while sailing (not in a menu) it writes the
+## telemetry row (Telemetry.csv_header) plus what the controller decides and the keys held, ten times a
+## second. The first line holds the settings.
+var _record_file: FileAccess = null
+var _record_path: String = ""
+var _record_ticks: int = 0
+
+
+func _record_tick() -> void:
+	if _record_path == "":
+		for arg: String in OS.get_cmdline_user_args():
+			if arg.begins_with("--record="):
+				_record_path = arg.trim_prefix("--record=")
+		if _record_path == "":
+			_record_path = "-"
+	if _record_path == "-" or _in_menu or _windsurfer == null or _windsurfer.sim == null:
+		return
+	_record_ticks += 1
+	if _record_ticks % 6 != 0:
+		return
+	var c: PlayerController = _windsurfer.controller
+	var t: Telemetry = _windsurfer.sim.telemetry
+	if _record_file == null:
+		_record_file = FileAccess.open(_record_path, FileAccess.WRITE)
+		if _record_file == null:
+			_record_path = "-"
+			return
+		var s: SettingsValues = GameSettings.values
+		_record_file.store_line("# settings: night_tuning=%s recovery_reflex=%s balance_stance=%s mode=%s auto_sheet=%s autopilot=%s body=%s" % [s.night_tuning, s.recovery_reflex, s.balance_stance, c.mode, c.auto_sheet, _windsurfer.use_autopilot, c.body != null])
+		_record_file.store_line(Telemetry.csv_header() + ",c_wanted_rate_dps,c_held_heading_deg,c_turn_key,c_push_now,c_push_level,c_reflex,c_player_steered,c_head_up_deg,c_manoeuvre,ctl_rake,ctl_rig_tilt,ctl_lean,ctl_back_foot,ctl_sheet,body_side,body_back,keys")
+	var keys: PackedStringArray = []
+	for action: String in ["steer_left", "steer_right", "steer_sharp", "tack", "sheet_in", "sheet_out", "push_more", "push_less", "rake_back", "rake_forward"]:
+		if InputMap.has_action(action) and Input.is_action_pressed(action):
+			keys.append(action)
+	var ctl: SimControls = _windsurfer.controls
+	_record_file.store_line(t.to_csv_row() + ",%.3f,%.2f,%.2f,%.3f,%.3f,%.3f,%s,%.2f,%d,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%s" % [
+		c.wanted_rate_dps, c.held_heading_deg, c._turn_key, c.push_now if not is_nan(c.push_now) else -1.0,
+		c.push_level if not is_nan(c.push_level) else -1.0, c.reflex_strength(), c._player_steered, c._plane_head_up_now_deg(t),
+		c.manoeuvre, ctl.rake, ctl.rig_tilt, ctl.lean, ctl.back_foot_push, ctl.sheet,
+		c.body.side if c.body != null else 0.0, c.body.back if c.body != null else 0.0, " ".join(keys)])
+	_record_file.flush()
 
 
 func _process(delta: float) -> void:
