@@ -521,7 +521,10 @@ func set_sail(sail: SailModel, sailor: SailorConfig = null, air_density_kg_m3: f
 
 ## Reads the keys and writes the controls: sheet, boom across, rake, rig tilt and lean.
 func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
+	_take_back_the_lake_rake(controls)
+	_feel_the_gust(telemetry, dt)
 	_move_the_slider(telemetry, controls, dt)
+	_lake_pull_and_trim(telemetry, controls)
 	auto_sheet_pilot.update_tack(telemetry)
 	if reflex_on:
 		_feel_the_fall(telemetry, dt)
@@ -586,6 +589,7 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		_resheet_for_s = maxf(_resheet_for_s - dt, 0.0)
 	if airborne_sheet_in_share > 0.0 and not pilot_overrides.has("sheet_in_share"):
 		auto_sheet_pilot.sheet_in_share = airborne_sheet_in_share if _resheet_for_s > 0.0 else _own_sheet_in_share
+	_ease_getting_going(telemetry, dt)
 	_turn_wanted = 0.0
 	var was_in_a_manoeuvre: bool = manoeuvre != Manoeuvre.NONE
 	if manoeuvre != Manoeuvre.NONE and _key_gives_up():
@@ -669,6 +673,7 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 			_step_forward_on_a_rising_nose(telemetry, controls, dt)
 
 	controls.balance_reflex = true
+	_rake_back_when_slow(telemetry, controls)
 	_move_the_body(telemetry, controls, dt)
 	if reflex_on and body == null:
 		# The heels against an over-railed board (planing in the straps; the sim sees to that). With
@@ -967,7 +972,8 @@ func _steer_beginner(telemetry: Telemetry, controls: SimControls, turn_key: floa
 			_held_heading_deg = wrapf(telemetry.heading_deg + lead_deg, 0.0, 360.0)
 			_heading_held = true
 		# Getting going: the hold aims further off the wind below the plane (plane_bear_away_deg).
-		var aim_deg: float = _held_heading_deg - tack_sign(telemetry) * _plane_bear_away_now_deg(telemetry)
+		var aim_deg: float = _held_heading_deg - tack_sign(telemetry) * (_plane_bear_away_now_deg(telemetry)
+			- _plane_head_up_now_deg(telemetry) + _gust_bear_away_now_deg(telemetry))
 		var turn_right_deg: float = wrapf(aim_deg - telemetry.heading_deg, -180.0, 180.0)
 		var per_deg: float = hold_rate_per_deg * lerpf(slow_hold_scale, 1.0, _planing_blend(telemetry))
 		rate = clampf(per_deg * turn_right_deg, -hold_rate_limit_dps, hold_rate_limit_dps)
@@ -1204,6 +1210,10 @@ func _bear_away_from_the_fall(telemetry: Telemetry, rate_dps: float) -> float:
 
 func reset_controls(controls: SimControls) -> void:
 	_settling = false
+	_rake_bias_given = 0.0
+	_chop_trim_given = 0.0
+	_nose_dive_for_s = 0.0
+	_gust_mean_kt = -1.0
 	_holding_back = false
 	lee_danger = 0.0
 	windward_danger = 0.0
@@ -1574,6 +1584,155 @@ func _just_pressed(action: String) -> bool:
 ## below the plane, taps, the Shift carve, flying, the reflex, tacks and gybes): the suite's cost 974.8 ->
 ## 471.1, falls 3 -> 0. On the player's board only (main.gd, Settings > Sailing > Night-tuned steering):
 ## on the AI fleet's boards it slowed two race tests' starts, and their numbers had raced well.
+# ---------------------------------------------------------------------------------------------
+# The lake technique (Max, 7 November 2026, 10:15: "better balance and control at low speeds, so it
+# will be easier to get onto the plane; that the board doesn't nose dive in stronger winds at low
+# speeds; going downwind and crosswind in waves is slow"). What a sailor does with the hands and the
+# heading; nothing here touches the physics. Every number is off or neutral by default, so the AI
+# fleet sails as before; the player's board gets the tuned numbers through NIGHT_TUNING. Tuned by
+# tools/lake_tuner.py on the lake suite (Documentation/reports/autopilot/lake_speed/README.md).
+#
+# Getting going: below start_help_until_ms the auto-sheet trims to at most start_alpha_deg (90: no
+# cap), the cap opening to none at start_help_until_ms; below the same speed the pilot sheets in at
+# start_sheet_in_share of the body's pace and holds start_hike_share of the pull the lean can take
+# (0: the pilot's own), and the rig is raked back by start_rake_back on top of the helm (0: none;
+# a rig raked back moves the sail's push aft and takes weight off the nose), all fading out by
+# start_help_until_ms.
+var start_alpha_deg: float = 90.0
+var start_help_until_ms: float = 7.0
+var start_sheet_in_share: float = 0.0
+var start_hike_share: float = 0.0
+var start_rake_back: float = 0.0
+## Heading up to get going on a broad reach (the other way round from plane_bear_away_deg): below the
+## plane, on a course further off the wind than plane_head_up_from_twa_deg, the heading hold aims up to
+## plane_head_up_deg closer to the wind (no closer than that angle), fading out as plane_bear_away_deg
+## does (plane_help_full_ms to plane_help_until_ms). A broad reach has less apparent wind and the
+## board stays in the hump (measured on the lake: 7.7 km/h after 75 s at 135 degrees in the lake's
+## own wind, where 100 degrees planed after 15 s). 0: off.
+var plane_head_up_deg: float = 0.0
+var plane_head_up_from_twa_deg: float = 110.0
+## The nose dive below the plane: slower than nose_dive_below_ms, with the bow buried deeper than
+## nose_dive_bow_m (Telemetry.bow_immersion_m; 0: off) or the nose down more than nose_dive_pitch_deg,
+## the sailor eases the sail to at most nose_dive_alpha_deg and rakes the rig back by
+## nose_dive_rake_back, for at least nose_dive_hold_s. Measured on the lake at 1.3 times its wind: the
+## bow goes 0.2 to 0.3 m under and the nose 7 to 11 degrees down in the first 3 s from rest.
+var nose_dive_bow_m: float = 0.0
+var nose_dive_pitch_deg: float = 12.0
+var nose_dive_below_ms: float = 8.0
+var nose_dive_alpha_deg: float = 8.0
+var nose_dive_rake_back: float = 0.0
+var nose_dive_hold_s: float = 0.5
+var _nose_dive_for_s: float = 0.0
+## Riding a gust on a reach: planing, with the wind at the sail above its own slow mean (over
+## gust_mean_s) by more than gust_from_kt, the heading hold aims further off the wind, up to
+## gust_bear_away_deg at gust_full_kt above the mean (no further than gust_bear_away_to_twa_deg), and
+## comes back up as the gust passes: the sailor turns the gust's extra push into speed instead of heel.
+## 0: off.
+var gust_bear_away_deg: float = 0.0
+var gust_from_kt: float = 1.0
+var gust_full_kt: float = 3.0
+var gust_bear_away_to_twa_deg: float = 150.0
+var gust_mean_s: float = 8.0
+var _gust_mean_kt: float = -1.0
+var _gust_extra_kt: float = 0.0
+## In chop: the feet's trim aim (SimControls.trim_aim_extra_deg, degrees of nose up) plus
+## chop_trim_aim_deg times the chop felt (chop_share()). 0: off.
+var chop_trim_aim_deg: float = 0.0
+var _rake_bias_given: float = 0.0
+var _chop_trim_given: float = 0.0
+
+
+## How much of the getting-going help is in use, 1 standing still to 0 at start_help_until_ms.
+func _start_share(telemetry: Telemetry) -> float:
+	return 1.0 - smoothstep(0.5 * start_help_until_ms, start_help_until_ms, telemetry.speed_ms)
+
+
+## The rig's extra rake of the last update comes off before the helm moves it again, so it never
+## adds up (the helm moves the rake from where it is).
+func _take_back_the_lake_rake(controls: SimControls) -> void:
+	controls.rake -= _rake_bias_given
+	_rake_bias_given = 0.0
+
+
+## The wind at the sail against its own slow mean: how far into a gust the board is (knots).
+func _feel_the_gust(telemetry: Telemetry, dt: float) -> void:
+	if gust_bear_away_deg <= 0.0:
+		return
+	if _gust_mean_kt < 0.0:
+		_gust_mean_kt = telemetry.tws_at_sail_kt
+	_gust_mean_kt = lerpf(_gust_mean_kt, telemetry.tws_at_sail_kt, clampf(dt / maxf(gust_mean_s, 0.1), 0.0, 1.0))
+	_gust_extra_kt = telemetry.tws_at_sail_kt - _gust_mean_kt
+
+
+## After the slider: the pull held while getting going, and the feet's trim in chop.
+func _lake_pull_and_trim(telemetry: Telemetry, controls: SimControls) -> void:
+	if start_hike_share > 0.0:
+		var share: float = _start_share(telemetry)
+		var own: float = auto_sheet_pilot.hike_share if (not is_nan(push_level) or pilot_overrides.has("hike_share")) else _own_hike_share
+		auto_sheet_pilot.hike_share = lerpf(own, start_hike_share, share)
+	if chop_trim_aim_deg != 0.0 or _chop_trim_given != 0.0:
+		# The slider writes the trim afresh every update; without it the last addition comes off first.
+		if is_nan(push_now):
+			controls.trim_aim_extra_deg -= _chop_trim_given
+		_chop_trim_given = chop_trim_aim_deg * chop_share()
+		controls.trim_aim_extra_deg += _chop_trim_given
+
+
+## The sheet while getting going and against a nose dive: the angle of attack capped, the pace set.
+func _ease_getting_going(telemetry: Telemetry, dt: float) -> void:
+	var share: float = _start_share(telemetry)
+	if start_alpha_deg < 90.0 and share > 0.0:
+		auto_sheet_pilot.max_alpha_deg = minf(auto_sheet_pilot.max_alpha_deg, lerpf(90.0, start_alpha_deg, share))
+	if start_sheet_in_share > 0.0 and share > 0.0 and not pilot_overrides.has("sheet_in_share"):
+		auto_sheet_pilot.sheet_in_share = lerpf(auto_sheet_pilot.sheet_in_share, start_sheet_in_share, share)
+	if _nose_buried(telemetry):
+		_nose_dive_for_s = nose_dive_hold_s
+	else:
+		_nose_dive_for_s = maxf(_nose_dive_for_s - dt, 0.0)
+	if _nose_dive_for_s > 0.0:
+		auto_sheet_pilot.max_alpha_deg = minf(auto_sheet_pilot.max_alpha_deg, nose_dive_alpha_deg)
+
+
+func _nose_buried(telemetry: Telemetry) -> bool:
+	if nose_dive_bow_m <= 0.0 or telemetry.speed_ms >= nose_dive_below_ms:
+		return false
+	return telemetry.bow_immersion_m > nose_dive_bow_m or telemetry.pitch_deg < -nose_dive_pitch_deg
+
+
+## The rig raked back while getting going (start_rake_back) and while the nose is buried
+## (nose_dive_rake_back), on top of the helm; taken back at the next update.
+func _rake_back_when_slow(telemetry: Telemetry, controls: SimControls) -> void:
+	if manoeuvre != Manoeuvre.NONE:
+		return
+	var bias: float = start_rake_back * _start_share(telemetry)
+	if _nose_dive_for_s > 0.0:
+		bias = maxf(bias, nose_dive_rake_back)
+	if bias <= 0.0:
+		return
+	var before: float = controls.rake
+	controls.rake = clampf(controls.rake + bias, -1.0, 1.0)
+	_rake_bias_given = controls.rake - before
+
+
+## How much closer to the wind the heading hold aims to get going on a broad reach, degrees.
+func _plane_head_up_now_deg(telemetry: Telemetry) -> float:
+	if plane_head_up_deg <= 0.0 or telemetry.is_planing:
+		return 0.0
+	var room_deg: float = clampf(absf(telemetry.twa_deg) - plane_head_up_from_twa_deg, 0.0, plane_head_up_deg)
+	var slow: float = 1.0 - smoothstep(plane_help_full_ms, maxf(plane_help_until_ms, plane_help_full_ms + 0.01), telemetry.speed_ms)
+	return room_deg * slow
+
+
+## How much further off the wind the heading hold aims to ride a gust, degrees (gust_bear_away_deg).
+func _gust_bear_away_now_deg(telemetry: Telemetry) -> float:
+	if gust_bear_away_deg <= 0.0 or not telemetry.is_planing or manoeuvre != Manoeuvre.NONE:
+		return 0.0
+	var span: float = maxf(gust_full_kt - gust_from_kt, 0.1)
+	var into: float = clampf((_gust_extra_kt - gust_from_kt) / span, 0.0, 1.0)
+	var room_deg: float = clampf(gust_bear_away_to_twa_deg - absf(telemetry.twa_deg), 0.0, gust_bear_away_deg)
+	return room_deg * into
+
+
 const NIGHT_TUNING: Dictionary[String, float] = {
 	"sharp_turn_factor": 2.25,
 	"steer_rise_s": 0.2,
