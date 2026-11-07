@@ -359,3 +359,49 @@ from rest still planes (26.7 km/h). **So it cannot happen again:** the lake suit
 night's low-speed steering cases, with a cost on a wandering course (10 x the RMS over 2 deg) and on a key
 turn that does not stay (3 x the shortfall below 20 deg); the tuner no longer tunes the head-up or the slow
 gains. Test: `test_after_the_player_steers_the_head_up_leaves_the_course_alone`.
+
+
+## The real game: the mouse body, the recorder, the start, the sheet keys (23:25 to 00:05)
+
+After the low-speed fix Max launched the new play folder and the first thing on Silvaplana was the board
+bearing away from its beam-reach start. Then: "the mouse body is not active while not planing. How can I
+get to you that you are not fixing the problem, what do you need?" The harnesses (`run_lake`, `run_night`)
+drive the controller without the game's input, menus and settings, so they cannot see what the game does.
+
+**1. The mouse body's capture jump (1f0966c), a precaution.** Max's F1 menu read "mouse body at side +1.00
+back +1.00" on a launch: the body summed every mouse motion, and the cursor's warp to the window's centre
+when the game takes the mouse arrives as one motion. Held at the corner in the lake's 18 kt the board makes
+9.7 km/h instead of 30. Now `MouseBody.captured()` recentres the body and ignores motion for 250 ms, and one
+event longer than the whole travel (300 px) is never a hand. Test: `test_mouse_body_capture.gd`. This was a
+real fault, but not the one Max meant.
+
+**2. The session recorder (7828498).** The game itself now writes what it does, when started with
+`--record=<file.csv>` (off otherwise): every 6 physics ticks (10 rows a second) while sailing, the telemetry
+row (`Telemetry.csv_header()`: position, speed, heading, pitch, heel, wind, sail, fin, hull) plus the
+controller's choices (wanted rate, held heading, turn key, push now and level, reflex, player steered,
+head-up, manoeuvre), the controls (rake, rig tilt, lean, back foot, sheet), the mouse body (side, back) and
+the keys held. The first line is `# settings: ...` (night tuning, reflex, balance stance, mode, auto-sheet,
+autopilot, body). How to use it: [the recorder guide](../playtest/session_recorder.md).
+
+**3. What the recorder showed: the start's spin is the hull, and it is old.** Run headless on the Silvaplana
+scene with Max's settings, the board at t = 2.5 s, 7 km/h, nose 0.24 m under water, takes a water yaw moment
+of 280 to 413 N m and pivots about 30 degrees off the wind; the autopilot's helm at its stop cannot hold it.
+The 6 November evening-keys build (`WindsurfingMMZB-old6nov`, f72f565) does **the same**: it is the hull's
+buried-bow physics, not this week's controller. With the low-speed fix the start now wobbles about +-15
+degrees and gets going. Max: "much much better, in the beginning there was a little thingy", then "leave it".
+Open for Michiel: the buried bow's yaw moment at low speed (backlog E01.S18).
+
+**4. The sheet keys' stall and dump (9e97706).** Max's own recording (`.sim_output/realgame/max_recording_2355.csv`,
+620 rows; "sometimes the character glitches and sheets off totally for no reason"), rows 103 to 137: Up held
+half a second sheeted to 0.85; for the 3 s the keys keep the auto-sheet away the board turned and the sail
+stalled (48 to 71 degrees of attack); then the auto-sheet took over at its full pace, 0.85 to 0.32 in 0.3 s.
+Now a stalled sail (past `manual_sheet_stall_deg`, 30) ends the keys' hold at once, and after a hold the
+auto-sheet eases to its trim at 0.6 a second for 1.5 s (`manual_resume_rate_per_s`, `manual_resume_s`). The
+other sheet-offs in that recording are the start's spin (the sheet follows the apparent wind). Test:
+`test_manual_sheet_resume.gd`. Max's play-test after it: "much much better".
+
+**Where it stands (8 November 00:05):** `physics/realism-7nov` at 9e97706, pushed, not merged. Play folder
+`WindsurfingMMZB-play-7nov2026-record` (with the "Record a session" launcher). Open and in the backlog: E01.S17
+(downwind), E01.S18 (the start's buried-bow spin), E01.S19 (the switches for Michiel: the balance stance and
+the fin's plate drag), E01.S20 (the sail twist law and the legs), E07.S12 (Max's play-test of the low-speed
+control and the push), E17.S10 (the recorder's next steps). Nothing in this report is in `main`.
