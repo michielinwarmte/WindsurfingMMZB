@@ -55,9 +55,8 @@ PARAMS = [
     ("nose_dive_rake_back", 0.0, 0.6),
     ("nose_dive_hold_s", 0.1, 1.5),
     # Across and downwind in the waves
-    ("gust_bear_away_deg", 0.0, 15.0),
-    ("gust_from_kt", 0.0, 3.0),
-    ("gust_full_kt", 1.5, 6.0),
+    # Max, 7 November 2026: the autopilot does not bear away in gusts by itself (PLAN_downwind_case.md,
+    # "b: no"): gust_bear_away_deg stays at the code's 0 and its two gust thresholds are not tuned.
     ("chop_trim_aim_deg", -3.0, 4.0),
     ("chop_hike_drop", 0.0, 0.5),
     ("pilot_sheet_rate_per_s", 0.8, 3.0),
@@ -123,7 +122,7 @@ def tuning_of(values, defaults, tuned):
 
 
 def valid(v):
-    return (v["reflex_from_share"] < v["reflex_full_share"] - 0.04 and v["gust_full_kt"] > v["gust_from_kt"] + 0.5
+    return (v["reflex_from_share"] < v["reflex_full_share"] - 0.04 and v.get("gust_full_kt", 3.0) > v.get("gust_from_kt", 1.0) + 0.5
             and v["airborne_wind_full_kt"] > v["airborne_wind_from_kt"] + 0.5 and v["plane_help_until_ms"] > v["plane_help_full_ms"] + 0.5)
 
 
