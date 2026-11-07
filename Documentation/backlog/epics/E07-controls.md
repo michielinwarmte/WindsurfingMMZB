@@ -83,3 +83,14 @@ Status: todo | Size: S | Owner: the lead | Milestone: M8 | Needs: Q22, E14.S01 |
 Done when: the career unlocks the levels by lessons passed or results (Q22), free sailing stays open, and the HUD shows the next step.
 - [ ] T1 The unlock rules
 - [ ] T2 The coach's and the office's prompts
+
+### E07.S12 · The player's low-speed control and the push at 100 % (7 November): Max's sign-off, then merged
+Status: review | Size: S | Owner: Max, the lead | Milestone: M1 | Needs: — | Roadmap: —
+Done when: Max has sailed `WindsurfingMMZB-play-7nov2026-record` (or a later folder) and agrees: 100 % push is full power, the low-speed steering and heel are as on the 6 November evening-keys build, no sheet-off glitches, the mouse body centred at launch; then `physics/realism-7nov` is merged into play and main with the team.
+- [x] T1 100 % push is full power on the player's board: the eases give way from 75 % (`push_commit_from`), the lake training's slow sheet-in while getting going out (d8338dc)
+- [x] T2 The low-speed control back to 6 November: five of the trainings' numbers out of `NIGHT_TUNING`, the slow head-up only after a start until the player steers (d70cd1e). Proved against the 6 November build: the course wanders 0.5 to 1.3°, 30° key turns keep 31 to 43°, the heel 5 to 9°
+- [x] T3 The sheet keys: a stalled sail ends the keys' hold and the auto-sheet eases back to its trim (9e97706, found in Max's own recording)
+- [x] T4 The mouse body starts in the middle when the game takes the mouse (1f0966c)
+- [ ] T5 Max's sign-off (8 November 00:00: "much much better")
+- [ ] T6 Merged with the team: play/6nov-evening, then main
+Notes: report `Documentation/reports/physics/realism_audit_7nov2026.md`, the last two sections. Lesson: a tuner with no guard for a behaviour trades it away; the lake suite now guards low-speed steering (E09.S08). The lake training stopped on Max's word, 7 November 23:25 ("it's good now, save it").

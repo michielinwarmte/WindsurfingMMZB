@@ -75,6 +75,7 @@ Done when: every physics or controller change runs `tools/autopilot_suite.sh` ro
 - [ ] T1 The budgets written per wind band and water from today's numbers
 - [ ] T2 The suite's "release gate" round and its summary line in the pull request's text
 - [ ] T3 The night-run script generalised (parts per spot) for the second machine
+Notes: 7 November: the lake suite (`tools/lake_suite.py`, 30 Silvaplana cases, branch `autopilot/lake-speed` and on `physics/realism-7nov`) now has the night's low-speed steering cases among its guards, with a cost on a wandering course and on a key turn that does not stay, after the trainings had traded the player's low-speed steering away (E07.S12). The lake tuner's runs are kept in `.sim_output/lake_speed/`.
 
 ### E09.S09 · The brain's yardstick, and the next night
 Status: todo | Size: M | Owner: the lead, Michiel's PC | Milestone: M9 | Needs: E09.S08, E17.S07 | Roadmap: RA5, RA14, RA9, RA10

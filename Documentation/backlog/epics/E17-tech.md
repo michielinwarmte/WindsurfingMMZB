@@ -72,3 +72,14 @@ Status: todo | Size: S | Owner: the lead | Milestone: M11 | Needs: — | Roadmap
 Done when: a crash or a NaN writes a report (the log, the settings, the last states) that a tester can send with one click, and the team's build number is in it.
 - [ ] T1 The report file and the button
 - [ ] T2 The build number in the log's first line
+
+### E17.S10 · The session recorder: from play-test to repeatable test
+Status: todo | Size: S | Owner: the lead | Milestone: M2 | Needs: — | Roadmap: —
+Done when: a play-tester can mark a moment while recording, a recording can be replayed headless as a repeatable test, the AI boards and a two-PC LAN race can be recorded, and `Documentation/reports/playtest/session_recorder.md` says how.
+- [x] T1 The recorder in the game: `--record=<file.csv>`, 10 rows a second (the telemetry, the controller's choices, the controls, the mouse body, the keys held), the settings on the first line; the play folder's "Record a session" launcher (7828498)
+- [ ] T2 A marker key (for example F8) that writes a "this was weird" row
+- [ ] T3 Replay: a recording's keys fed back into the game headless, so before and after a fix sail the same input
+- [ ] T4 The AI boards recorded in a race
+- [ ] T5 LAN: both PCs record a two-PC race and the boards are compared
+- [ ] T6 The window size, UI scale and frame time in the rows (for the UI on any window size and the 60 fps goal)
+Notes: built 7 November after Max asked "how can I get to you that you are not fixing the problem, what do you need?" The harnesses do not see the game's input and settings; the recorder runs in the real game. It found the start's spin (E01.S18) and the sheet keys' dump (E07.S12). Close to E17.S09 (crash reports).

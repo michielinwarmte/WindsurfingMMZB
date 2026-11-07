@@ -158,9 +158,34 @@ Done when: each is fixed or closed with a reason.
 ### E01.S17 · Downwind: the board cannot hold planing speed at 135° in Silvaplana's conditions (core physics)
 Status: todo | Size: L | Owner: Michiel, the lead builds the tests | Milestone: M2 | Needs: Max's GPS tracks (T5) | Roadmap: PH46
 Done when: the sail's drive and the board's drag are each checked against a written source, the polar at Silvaplana has no cliff between 120° and 135° (today 56 km/h in the gusts at 120°, 31 to 33 at 135°), the 117 L / 7.5 m in a 24 kt gust (10 m) makes 50 to 55 km/h across and 55 to 60 at 120 to 135° after a flying start, upwind matches Max's reference, and every regression suite is green or re-baselined with Michiel. The full issue, the evidence and the tests: `Documentation/reports/autopilot/lake_speed/ISSUE_downwind_physics.md` (branch `autopilot/lake-speed` until merged). Max (7 November 2026): "this is the core physics so it needs to be 100% right"; check upwind too.
-- [ ] T1 P1 the tow test: the board's drag curve 15 to 70 km/h, three gear combos, against a reference drag curve
+- [x] T1 P1 the tow test: the board's drag curve 15 to 70 km/h, three gear combos, against a reference drag curve (done another way on 7 November: against Savitsky, see the notes)
 - [ ] T2 P2 the sail sweep: lift, drag and drive per apparent wind and angle of attack; the controller's 18° against the best drive
 - [ ] T3 P3 the polar at Silvaplana: 45 to 165°, 14 to 26 kt, flat and waves, 0.98 and 1.225 kg/m3, from rest and flying
 - [ ] T4 P4 the upwind check: pointing, speed and speed made good at 45 to 65° (today 45° cannot be held, 55° 23 km/h)
 - [ ] T5 P5 the real reference: Max's GPS tracks at Silvaplana with the station's wind, a measured polar
 - [ ] T6 P6 the regression: unit, check, validation (the polar sweep re-baselined), the night and lake suites, the AI race tests, LAN; then the autopilot retuned
+Notes: the 7 November audit (branch `physics/realism-7nov`, report `Documentation/reports/physics/realism_audit_7nov2026.md`). T1: a tow in the game could not be built (with no pull on the hands the posture came apart), so the game's hull in 20 sailing states (the 120 L board, 12 to 24 kt, 45 to 135°) was compared with Savitsky's (1964) planing method for the same load and centre of push (`Documentation/reports/physics/savitsky_check.py`): the game's drag over Savitsky's is 0.97 to 1.01 on the reaches, 0.93 to 1.08 broad, 1.0 to 1.18 upwind. The hull's drag is not the cause; the open question is the attitude (the water's push 0.8 to 1.4 m from the tail, Gourlay's RS:X 0.6 m: 15 to 30 % less drag), decided only by a measured trim or wet length. T4 started: upwind 21 to 38 km/h at 48 to 58° after a flying start (20 and 24 kt, flat water); the fin's flat-plate drag at every slip was a fault (it belongs past the stall only), the fix is a switch, off (E01.S19). Whether upwind is too slow waits for T5.
+
+### E01.S18 · The start's spin: a buried bow pivots the board off the wind at low speed
+Status: todo | Size: M | Owner: Michiel, the lead measures | Milestone: M2 | Needs: — | Roadmap: —
+Done when: a start from rest on Silvaplana (the player's board, Max's settings, recorded headless with the session recorder) no longer pivots off the wind more than a bar Michiel and Max set (today about 30° at first, about 15° either way since the low-speed fix), the water's yaw moment on a buried bow is checked against a source (or an estimate labelled as one), and the 6 November build's start is the "before".
+- [ ] T1 The start re-recorded and the moments logged (today at 2.5 s and 7 km/h the nose is 0.24 m under and the water's yaw moment is 280 to 413 N m; the autopilot's helm at its stop cannot hold it)
+- [ ] T2 Which part of the hull model gives the yaw (the bow's side force and its lever), and what the real one would be
+- [ ] T3 The fix, switchable, before and after over several start times; the lake suite's starts and the night suite's guards
+Notes: found 7 November 23:40 with the session recorder (E17.S10); the 6 November evening-keys build (f72f565) does the same, so it is old hull physics, not this week's controller. Max: "much much better, in the beginning there was a little thingy", then "leave it" (for now).
+
+### E01.S19 · Michiel's review of the 7 November physics switches: the balance stance and the fin's plate drag
+Status: review | Size: M | Owner: Michiel | Milestone: M2 | Needs: — | Roadmap: —
+Done when: Michiel has read `physics/realism-7nov` (the audit report and its commits) and decided for each switch: on, off or retuned. If one goes on, the steering and the autopilot are retuned on it and every suite is green.
+- [ ] T1 The balance stance (`SailorConfig.stance_dive_full_deg`; Settings > Sailing > Balance stance (test)): the strong starts' dive -13 to -10°, planing 8.1 to 5.8 s, the reaches the same; but rare falls in turns. Max plays it on and off first
+- [ ] T2 The fin's flat-plate drag only past the stall (`FinConfig.cd_plate_post_stall`, after Viterna and Corrigan 1982): upwind +0.7 to +0.9 km/h, the beam reach the same; switched on, the Shift tacks fell and the AI was slower, so the steering needs retuning on it
+- [ ] T3 The branch merged with the team after the review (the controller part is E07.S12)
+Notes: branch `physics/realism-7nov`, pushed (9e97706 on 8 November), from `autopilot/lake-speed`. Both switches are off by default, so the physics is bit-for-bit as before until Michiel decides.
+
+### E01.S20 · The sail's twist beyond its data, the legs' porpoise on flat water, the waves' cost
+Status: todo | Size: M | Owner: Michiel | Milestone: M3 | Needs: — | Roadmap: —
+Done when: each of the three is checked against a source or a measurement and fixed or closed with a reason, with before and after numbers.
+- [ ] T1 The sail's twist under load: the law 1/(1+q/125) is fitted to the wind tunnel's 8 m/s and used up to 17 m/s; find data at higher apparent winds, refit or bound it
+- [ ] T2 The legs: at 135° on flat water the board porpoises (the legs at 1.2 Hz, damping 0.9); softer legs removed it in the audit; choose the numbers from a source and check the chop (E01.S07)
+- [ ] T3 The waves' cost in a steady wind (17 to 24 % downwind, 11 to 14 % across): against a source or Max's GPS tracks (E01.S17 T5)
+Notes: the 7 November audit's findings D and E and the legs, `Documentation/reports/physics/realism_audit_7nov2026.md`.
