@@ -11,6 +11,7 @@ const KEY_ROWS: Array[Array] = [
 	[["Q", "E"], "Rake the rig forward / back"],
 	[["←", "→"], "Tilt the rig sideways (advanced)"],
 	[["Space", "A", "D"], "Space + A/D: tack toward the wind, gybe away from it (Space alone: by your course)"],
+	[["Shift", "A", "D"], "Shift + A/D: carve (turn about twice as sharp; also into a tack or gybe)"],
 	[["T"], "Auto-sheet on / off"],
 	[["Tab"], "Beginner / advanced mode"],
 	[["1", "2", "3", "4"], "Camera: follow, orbit, top-down, free"],

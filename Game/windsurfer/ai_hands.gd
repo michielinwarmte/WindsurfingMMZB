@@ -44,3 +44,12 @@ func take_press(action: String) -> bool:
 		tack = false
 		return true
 	return false
+
+
+## Shift held (the player's carve: PlayerController.sharp_turn_factor), for the harnesses' scripted hands.
+var sharp: bool = false
+
+
+## What the controller reads for a held key: Shift (steer_sharp) as sharp, nothing else.
+func held(action: String) -> bool:
+	return sharp if action == "steer_sharp" else false

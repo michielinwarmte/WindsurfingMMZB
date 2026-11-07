@@ -1,0 +1,30 @@
+# The night tuner's best set so far (tools/night_tuner.py, 7 November 2026).
+# Written 2026-11-07 07:32; candidate c0206; total cost 469.6 (baseline 974.8; lower is better).
+# Per scenario (cost / falls), best against baseline:
+#   plane      318.2 / 0   (baseline    338.7 / 0)
+#   steer       52.0 / 0   (baseline    172.9 / 0)
+#   taps        68.8 / 0   (baseline     48.3 / 0)
+#   carve      -47.2 / 0   (baseline    -38.2 / 0)
+#   fly       -221.7 / 0   (baseline    -98.6 / 1)
+#   reflex    -150.3 / 0   (baseline   -150.4 / 0)
+#   turns      449.8 / 0   (baseline    702.1 / 2)
+# The overrides (PlayerController's numbers that differ from the code's defaults), one per line:
+--controller.sharp_turn_factor=2.25
+--controller.steer_rise_s=0
+--controller.steer_fall_s=0.0625
+--controller.tap_rail_full_s=0.85
+--controller.helm_rate_per_s=2.625
+--controller.slow_rate_gain_scale=1.675
+--controller.slow_integral_scale=0.325
+--controller.slow_hold_scale=1.4
+--controller.hold_lead_s=0
+--controller.rate_gain=0.01525
+--controller.carve_rate_dps=45.75
+--controller.head_up_rate_budget_dps_ms=160
+--controller.airborne_alpha_deg=12
+--controller.airborne_support_share=0.2125
+--controller.airborne_hold_s=0.05
+--controller.reflex_from_share=0.5
+--controller.reflex_bear_away_dps=12
+--controller.key_tack_rate_dps=24
+--controller.tack_rate_max_dps=23.75
