@@ -1738,9 +1738,17 @@ func _rake_back_when_slow(telemetry: Telemetry, controls: SimControls) -> void:
 
 ## How much closer to the wind the heading hold aims to get going on a broad reach, degrees.
 func _plane_head_up_now_deg(telemetry: Telemetry) -> float:
-	if plane_head_up_deg <= 0.0 or telemetry.is_planing:
+	if plane_head_up_deg <= 0.0:
 		return 0.0
-	var room_deg: float = clampf(absf(telemetry.twa_deg) - plane_head_up_from_twa_deg, 0.0, plane_head_up_deg)
+	# Measured from the course held, not the course now (Max's play-test, 7 November 2026: a start at 120
+	# degrees went up to about 107 and back, because the room shrank as the board came up), and released
+	# by the speed alone: the hull's planing flag flickers in chop at 24 km/h and dropped the head-up at
+	# every flicker, the board falling back to the broad reach, the sail square and the board never planing.
+	# The held course's angle: the angle now plus how far the board has turned up from the held heading
+	# (a right turn heads up on starboard tack, tack_sign +1).
+	var turned_up_deg: float = tack_sign(telemetry) * wrapf(telemetry.heading_deg - _held_heading_deg, -180.0, 180.0) if _heading_held else 0.0
+	var held_twa_deg: float = absf(telemetry.twa_deg) + turned_up_deg
+	var room_deg: float = clampf(held_twa_deg - plane_head_up_from_twa_deg, 0.0, plane_head_up_deg)
 	var slow: float = 1.0 - smoothstep(plane_help_full_ms, maxf(plane_help_until_ms, plane_help_full_ms + 0.01), telemetry.speed_ms)
 	return room_deg * slow
 
