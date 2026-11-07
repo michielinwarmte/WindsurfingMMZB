@@ -169,3 +169,39 @@ and runs `exec tools/night_tuner.sh --until=09:00`.
    Things the harness could not check: how the ramp feels on the keyboard, and whether Shift + A
    and Shift + D reach the A/D actions in the real game window (Godot matches an action's key with
    extra modifiers held, so it should).
+
+## The morning of 7 November: what was applied, and the checks
+
+The tuner stopped by itself at 09:02 after 265 candidates (4 rounds); its best, c0206 (07:32), scored 469.6. The lead's choices:
+
+1. **The key ramp's rise kept at 0.2 s.** The best set had it at 0 (faster turns), which made the taps score worse than before (68.8 against 48.3). With 0.2 s the total is 471.1 (taps 63.5, no falls); with 0.1 s two gybe falls came back (684.7), so the turns are sensitive there.
+2. **On the player's board only.** As the code's defaults the set also changed the AI fleet (one controller for all): two race tests' starts went late. So the code's defaults are the fleet's numbers of 6 November again (the ramp and the tap rail 0, the key as it is) and `PlayerController.NIGHT_TUNING` (the 18 numbers of best.txt with the rise at 0.2) is put on the player's board by `main.gd` when **Settings > Sailing > Night-tuned steering** is on (the default). Off: yesterday's steering, to compare.
+
+The suite on the final code with the player's set (`tools/night_suite.sh --label=morning_final`):
+
+| scenario | before (the night's baseline) | after (the player's tuned set) |
+|---|---:|---:|
+| getting on the plane | 338.7 | 318.2 |
+| steering below the plane | 172.9 | 52.3 |
+| taps | 48.3 | 63.5 |
+| Shift carve | -38.2 | -46.2 |
+| flying (24 and 30 kt) | -98.6 | -221.7 |
+| the reflex | -150.4 | -150.3 |
+| tacks and gybes | 702.1 | 455.2 |
+| **total** (lower is better) | **974.8** | **471.1** |
+| falls in the 49 cases | 3 | 0 |
+
+Taps are a little worse than the baseline's ramp (0.2 / 0.15 / 0.4): the tuner shortened the fall and lengthened the tap rail for the turns' sake. Max's feel decides.
+
+**Checks on the final code** (the branch's head):
+- `tools/test.sh`: 987 of 987; `tools/check.sh`: 489 files, 0 failed.
+- `tools/test.sh validation` (before the last fix): 36 pass, 10 fail, 2 pending: the 8 known reds with their known numbers (the polar sweep 11.85 / 13.53 / 14.55 / 14.67 / 7.65 m/s, its shape 5.45, the top speed 14.67, the planing onset 7.42, the fin's side force 745 N, the push warning 0 catapults, the waves' settled speed at 120° 12.09, the skipper's 12 kt time 12:19.1), plus the fleet's start on T1 and on the lake. The T1 start was the key ramp acting on the AI's stick: with the ramp on the player's board only it passes again. The lake start: red on 6 November's code too (play/6nov-evening 19fece0: the same five boards late, two outside the area at the gun), so not tonight's: most likely yesterday evening's race-types merge (the sailing area for starts); a roadmap item
+- `tools/lan_test.sh --map=lake --seconds=40`: SYNC CHECK: PASS.
+- The play folder `WindsurfingMMZB-play-7nov2026-morning` (+ zip) from this code, its Settings page checked from its own exe.
+
+**Not verified:** the feel of the Shift carve, the taps and the ramp on a real keyboard (every key in the suite is scripted); the AI fleet in full races on the new code (its steering is yesterday's, so only the start tests were rerun).
+
+**For Michiel** (the agent's questions, unchanged): light wind below 12 kt (1.3 to 1.6 m/s at 8 to 10 kt, no planing at 10 kt; pumping is not modelled); the yaw damping below the plane (a 30° head-up overshot to 60° before the tuning); the reflex's thresholds are never reached in these cases.
+
+**Tokens:** the agent about 0.2 M; the lead's two wake-ups and this morning about 0.3 to 0.5 M (an estimate; the lead's conversation context is large).
+
