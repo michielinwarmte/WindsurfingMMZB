@@ -657,6 +657,8 @@ func _apply_manoeuvre_settings() -> void:
 	# The recovery reflex on the player's board only by the setting (off by default: with the body on
 	# the mouse it eased the sail on a reach, 6 November 2026); the AI fleet's controllers keep their own.
 	controller.reflex_on = settings.recovery_reflex
+	# The night training's steering numbers (7 November 2026) on the player's board only.
+	controller.use_night_tuning(settings.night_tuning)
 
 
 ## Package B, the body on the mouse (MouseBody; Settings > Body, ROADMAP GP2): on or off, Max's

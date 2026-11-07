@@ -176,6 +176,9 @@ var manoeuvre_flip_on_cue: bool
 ## walking pace) and no longer steps the sailor forward: with the body on the mouse it had eased the
 ## sail on a reach and kept the board off the plane. The AI fleet's boards have it whatever this says.
 var recovery_reflex: bool
+## The night training's steering numbers on the player's board (PlayerController.NIGHT_TUNING;
+## 7 November 2026). Off: the numbers the AI fleet sails with.
+var night_tuning: bool
 
 # --- The body on the mouse (section "body"; package B, ROADMAP GP2, an experiment) ---
 ## The mouse is the sailor's body while sailing (MouseBody). Off by default: it is an experiment.
@@ -293,6 +296,7 @@ func reset_to_defaults() -> void:
 	manoeuvre_body_carves = true
 	manoeuvre_flip_on_cue = true
 	recovery_reflex = true
+	night_tuning = true
 
 	mouse_body = false
 	body_centre = MouseBody.Centre.STAYS
@@ -492,6 +496,7 @@ func write_to(config: ConfigFile) -> void:
 	config.set_value("sailing", "manoeuvre_body_carves", manoeuvre_body_carves)
 	config.set_value("sailing", "manoeuvre_flip_on_cue", manoeuvre_flip_on_cue)
 	config.set_value("sailing", "recovery_reflex", recovery_reflex)
+	config.set_value("sailing", "night_tuning", night_tuning)
 
 	config.set_value("body", "mouse_body", mouse_body)
 	config.set_value("body", "centre", body_centre)
@@ -567,6 +572,7 @@ func read_from(config: ConfigFile) -> void:
 	manoeuvre_body_carves = _bool(config, "sailing", "manoeuvre_body_carves", manoeuvre_body_carves)
 	manoeuvre_flip_on_cue = _bool(config, "sailing", "manoeuvre_flip_on_cue", manoeuvre_flip_on_cue)
 	recovery_reflex = _bool(config, "sailing", "recovery_reflex", recovery_reflex)
+	night_tuning = _bool(config, "sailing", "night_tuning", night_tuning)
 
 	mouse_body = _bool(config, "body", "mouse_body", mouse_body)
 	body_centre = clampi(_int(config, "body", "centre", body_centre), 0, MouseBody.Centre.size() - 1)
