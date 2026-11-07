@@ -45,7 +45,7 @@ const GEAR: Dictionary[String, PackedStringArray] = {
 ## How far ahead each scenario wants open water (m).
 const ROOM_WANTED_M: Dictionary[String, float] = {"start": 450.0, "strong": 350.0, "reach": 1400.0}
 const BALANCE_WINDOW_S: float = 30.0
-const CSV_EVERY_S: float = 0.5
+var CSV_EVERY_S: float = 0.5
 
 var _options: Dictionary[String, String] = {}
 ## --forces=1: the CSV also has the apparent wind, the sheet and the forces along the board.
@@ -107,6 +107,7 @@ func _run() -> Dictionary:
 	var bear_away_steer: float = _options.get("bear_away_steer", "1").to_float()
 	var bore_away: bool = bear_away_at_s < 0.0
 	_forces = _options.get("forces", "0") == "1"
+	CSV_EVERY_S = _options.get("csv_every", "0.5").to_float()
 	sim.reset(start, deg_to_rad(start_heading_deg))
 
 	var seconds: float = _options.get("seconds", str(_default_seconds(scenario))).to_float()
@@ -328,7 +329,7 @@ func _open_csv() -> FileAccess:
 	if file == null:
 		return null
 	file.store_line("time_s,x,z,east_lv95,north_lv95,wind_kt,wind_from_deg,wind_at_sail_kt,twa_deg,speed_kmh,heading_deg,pitch_deg,heel_deg,bow_immersion_m,planing,state"
-		+ (",aws_kt,awa_deg,sheet,alpha_deg,drive_n,sail_drag_n,hull_resistance_n,fin_drag_n,bow_drag_n" if _forces else ""))
+		+ (",aws_kt,awa_deg,sheet,alpha_deg,drive_n,sail_drag_n,hull_resistance_n,fin_drag_n,bow_drag_n,fin_up_n,fin_tilt_deg,mast_foot_up_n,pitch_mast_foot_nm,pitch_feet_force_nm,pitch_feet_moment_nm,buoyancy_n,planing_lift_n,push_centre_m,wet_front_m" if _forces else ""))
 	return file
 
 
@@ -337,8 +338,9 @@ func _csv_row(file: FileAccess, t: Telemetry, now_s: float, state: int, wind_kt:
 	file.store_line("%.1f,%.1f,%.1f,%.0f,%.0f,%.2f,%.1f,%.2f,%.1f,%.2f,%.1f,%.2f,%.2f,%.3f,%d,%d" % [now_s, t.position.x, t.position.z,
 		lv95[0], lv95[1], wind_kt, wind_from_deg, t.tws_at_sail_kt, t.twa_deg, t.speed_kmh, t.heading_deg,
 		t.pitch_deg, t.heel_deg, t.bow_immersion_m, 1 if t.is_planing else 0, state]
-		+ (",%.2f,%.1f,%.3f,%.1f,%.0f,%.0f,%.0f,%.0f,%.0f" % [t.aws_kt, t.awa_deg, t.sheet, t.alpha_deg, t.drive_n,
-			t.sail_drag_n, t.hull_resistance_n, t.fin_drag_n, t.bow_drag_n] if _forces else ""))
+		+ (",%.2f,%.1f,%.3f,%.1f,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%.1f,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%.3f,%.3f" % [t.aws_kt, t.awa_deg, t.sheet, t.alpha_deg, t.drive_n,
+			t.sail_drag_n, t.hull_resistance_n, t.fin_drag_n, t.bow_drag_n, t.fin_up_n, t.fin_tilt_deg, t.mast_foot_force_up_n,
+			t.pitch_from_mast_foot_nm, t.pitch_from_feet_force_nm, t.pitch_from_feet_moment_nm, t.buoyancy_n, t.planing_lift_n, t.push_centre_m, t.wet_front_m] if _forces else ""))
 
 
 func _default_seconds(scenario: String) -> float:

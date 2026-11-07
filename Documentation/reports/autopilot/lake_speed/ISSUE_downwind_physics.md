@@ -75,6 +75,8 @@ the board's drag decides everything, and a small error in either shows there fir
 | H3 | the planing hull's lift and trim at speed downwind (nose 2 deg up, the wetted length) giving more residuary drag than a real board | P1 |
 | H4 | not physics: the controller's trim downwind (sheet, angle of attack, stance, the mast foot's pressure). Excluded first, so the physics is judged with the best technique | P2, P3 |
 | H5 | the air density: 0.98 kg/m3 (plausible for a warm afternoon at 1,800 m; confirm the number used and its source) | P3 |
+| H6 | **the fin lifts the tail at speed (Max, 7 November 2026: "in real life the fin will never lift up the back of the board while the nose is still in the water; only fins over 60 cm in weird cases")**. Measured on flat water: the fin's upward force grows with the speed, 40 N at 30 km/h, 113 N at 48, 150 to 185 N at 55 to 60; the nose drops with it, from 3.3 degrees up to 0.8 to 1.3. The source: the fin's bend (U2, `fin_model.gd` `_bend`, 19 October 2026) tilts its lift 10 to 11 degrees toward the deck, so about a fifth of the fin's sideways force pushes the tail up. A flat board wets more of its bottom: a likely part of H1 | P1, P7 |
+| H7 | **the sailor's stance pushes the nose under getting going.** In the first 0.5 to 2 s from rest the body passes 150 to 200 N m nose-down through the feet (x1.3, 130 degrees: the nose 14 degrees down, the bow 0.43 m under) while the fin pushes nothing (0 to 9 N). The sim puts the sailor forward at low speed and steps back with the speed; a sailor starting in a strong wind stands back | P7 |
 
 ## The tests to implement (the full check)
 
@@ -110,6 +112,8 @@ real reference (P5).
 nearest station at that time; speed by heading gives a measured polar: crosswind, downwind and upwind.
 Without it the targets are Max's numbers (crosswind 50 to 55, downwind 55 to 60 km/h in the gusts, 7 to 8 m,
 medium to big board). The acceptance below is written from those until the tracks exist.
+
+**P7 The fin's lift and the board's trim.** The fin's bend against real flex data (the flex test the model is calibrated to, the tip's deflection under sailing loads, sources written down); the fin's upward force and its pitch moment against the speed; the board's trim at 30 to 70 km/h against planing-hull science (the trim angle of least drag); the sailor's stance and the body's pitch moment from rest to the plane in 14 to 26 kt against how a sailor starts (back foot, weight back in a strong wind).
 
 **P6 Regression after any physics change.** `tools/test.sh` (unit), `tools/check.sh`, `tools/test.sh
 validation` (the 8 known reds: the polar sweep's numbers will move and are re-baselined with Michiel), the
