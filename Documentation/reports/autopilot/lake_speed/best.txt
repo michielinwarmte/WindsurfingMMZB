@@ -1,3 +1,6 @@
+# 7 November 2026, 23:25: the training stopped (Max: "it is good now, save it"). The set the player's board
+# sails is PlayerController.NIGHT_TUNING in the code (commit d70cd1e and after: the steering fix, the
+# push commit, the slow sheet-in out); this file is the afternoon's tuner result and is not applied again.
 # The lake tuner's best set so far (tools/lake_tuner.py, 7 November 2026): the whole
 # PlayerController.NIGHT_TUNING it makes (tools/lake_tuner_apply.sh writes it into the code).
 # Written 2026-11-07 17:53; candidate c0181; round 3; total cost 1068.1 (baseline 1206.0; lower is better).

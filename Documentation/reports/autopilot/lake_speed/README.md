@@ -274,3 +274,7 @@ Findings, in order of weight:
 
 Not tested: another sail angle of attack (`--pilot.target_alpha_deg` did not reach the sail; the
 controller sets its own 18 degrees).
+
+## Stopped (7 November 2026, 23:25)
+
+Max: "stop the AI training. It's good now, save it." The tuner's runs are kept in `.sim_output/lake_speed/`: `oldphysics_run_7nov1058` (184 candidates, 1206.0 -> 1068.1 with the gust bear-away at 3.75), `run_7nov2025_nogust`, `run_7nov2218_push`, `run_7nov2228_headup`, `run_7nov2234_headup60` and `run_7nov2321_stopped` (stopped before its baseline). The player's board sails `PlayerController.NIGHT_TUNING` as of commit d70cd1e and after (the low-speed steering fix: Documentation/reports/physics/realism_audit_7nov2026.md); best.txt is not applied again. The lake suite's guards now include the night's low-speed steering cases. Next: `PLAN_downwind_case.md`, when Max wants more training.
