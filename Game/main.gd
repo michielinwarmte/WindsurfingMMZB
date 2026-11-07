@@ -698,6 +698,8 @@ func _update_mouse_capture() -> void:
 		body.let_go_of_the_push()
 	if wanted and not captured:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		# The body starts in the middle, and the capture's own jump is not a hand movement.
+		body.captured()
 	elif captured and not wanted:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 

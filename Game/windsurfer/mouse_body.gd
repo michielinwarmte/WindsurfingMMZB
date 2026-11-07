@@ -75,6 +75,9 @@ var toes_share: float = 1.0
 var weight_share: float = 1.0
 ## Mouse travel from one end of the range to the other, in pixels (the design: about 300).
 var travel_px: float = 300.0
+## After a capture the body ignores the mouse this long (ms): captured().
+var capture_quiet_ms: int = 250
+var _quiet_until_ms: int = 0
 ## 1: the feet still correct the rail themselves within 0.4 s; 2: slowed to SLOW_FEEL_TIME_S.
 var level: int = 1
 ## A body set by a script (the harness, the LAN test's --body): it stays exactly where it was put;
@@ -115,9 +118,22 @@ var last_tack: float = 0.0
 func move(relative: Vector2) -> void:
 	if scripted:
 		return
+	# The jump the capture makes (Max, 7 November 2026: at launch the body sat in the corner, heels 100 %,
+	# back foot 95 %, and the board could not get going): nothing counts for capture_quiet_ms after the
+	# mouse is taken, and one event longer than the whole travel is a warp, never a hand.
+	if Time.get_ticks_msec() < _quiet_until_ms or relative.length() > travel_px:
+		return
 	var per_px: float = 2.0 / maxf(travel_px, 1.0)
 	side = clampf(side + relative.x * per_px, -1.0, 1.0)
 	back = clampf(back + relative.y * per_px, -1.0, 1.0)
+
+
+## The mouse has just been captured (the start, back from a menu): the body to the middle, and the
+## motion of the next capture_quiet_ms ignored (the cursor's warp to the window's centre arrives as a
+## motion event).
+func captured() -> void:
+	recentre()
+	_quiet_until_ms = Time.get_ticks_msec() + capture_quiet_ms
 
 
 ## Back to the middle: the sailor's own technique (at a tack, a gybe, a fall, a restart).
