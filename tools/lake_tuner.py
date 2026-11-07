@@ -45,7 +45,7 @@ PARAMS = [
     # start_sheet_in_share out (Max, 7 November 2026: "when not planing the sailor doesn't want to sheet in").
     ("start_hike_share", 0.0, 1.4),
     ("start_rake_back", 0.0, 0.5),
-    ("plane_head_up_deg", 0.0, 30.0),
+    ("plane_head_up_deg", 30.0, 70.0),  # Max: from any course up to the beam reach while slow (not below 30)
     ("plane_head_up_from_twa_deg", 95.0, 125.0),
     # The nose dive in a strong wind at low speed
     ("nose_dive_bow_m", 0.0, 0.3),

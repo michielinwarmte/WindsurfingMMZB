@@ -1784,7 +1784,7 @@ const NIGHT_TUNING: Dictionary[String, float] = {
 	"key_tack_rate_dps": 24.0,
 	"tack_rate_max_dps": 23.75,
 	"push_commit_from": 0.75,
-	"plane_head_up_deg": 22.5,
+	"plane_head_up_deg": 60.0,  # Max, 7 November 2026: never stuck slow on a broad reach; from any course up to the beam reach
 	"plane_head_up_from_twa_deg": 95.0,
 	"gust_bear_away_deg": 0.0,
 	"airborne_wind_from_kt": 14.5,
