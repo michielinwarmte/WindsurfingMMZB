@@ -1,0 +1,39 @@
+# The lake tuner's best set so far (tools/lake_tuner.py, 7 November 2026): the whole
+# PlayerController.NIGHT_TUNING it makes (tools/lake_tuner_apply.sh writes it into the code).
+# Written 2026-11-07 17:53; candidate c0181; round 3; total cost 1068.1 (baseline 1206.0; lower is better).
+# Per scenario (cost / falls), best against baseline:
+#   start      283.2 / 0   (baseline    286.9 / 0)
+#   strong     253.0 / 0   (baseline    278.7 / 0)
+#   reach      377.5 / 0   (baseline    479.3 / 0)
+#   guards     154.5 / 0   (baseline    161.1 / 0)
+# Speed in the gusts, km/h (best; baseline): beam x1.0 40.51 (39.66), beam x1.3 45.85 (42.26), broad x1.0 18.71 (8.23), broad x1.3 32.27 (32.2)
+# The numbers, one per line:
+--controller.sharp_turn_factor=2.25
+--controller.steer_rise_s=0.2
+--controller.steer_fall_s=0.0625
+--controller.tap_rail_full_s=0.85
+--controller.helm_rate_per_s=2.625
+--controller.slow_rate_gain_scale=1.675
+--controller.slow_integral_scale=0.325
+--controller.slow_hold_scale=1.4
+--controller.hold_lead_s=0.4
+--controller.rate_gain=0.01525
+--controller.carve_rate_dps=45.75
+--controller.head_up_rate_budget_dps_ms=160
+--controller.airborne_alpha_deg=12
+--controller.airborne_support_share=0.15
+--controller.airborne_hold_s=0.05
+--controller.reflex_from_share=0.5
+--controller.reflex_bear_away_dps=12
+--controller.key_tack_rate_dps=24
+--controller.tack_rate_max_dps=23.75
+--controller.start_sheet_in_share=0.25
+--controller.plane_head_up_deg=22.5
+--controller.plane_head_up_from_twa_deg=95
+--controller.gust_bear_away_deg=0
+--controller.airborne_wind_from_kt=14.5
+--controller.plane_help_full_ms=6
+--controller.plane_help_until_ms=9.4
+--controller.reflex_full_share=0.96
+--controller.reflex_alpha_deg=9
+# 7 November 2026, 19:35: gust_bear_away_deg set from the tuner's 3.75 to 0 by the lead (Max: the autopilot does not bear away in gusts by itself).
