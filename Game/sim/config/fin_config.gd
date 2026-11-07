@@ -89,6 +89,14 @@ extends Resource
 @export var cd_viscous_factor: float = 0.5
 ## Drag coefficient of the fin as a flat plate square to the flow (applied as cd_plate * sin^2 of the slip).
 @export var cd_plate: float = 1.2
+## The plate drag only past the stall, faded in over cd_plate_blend_deg from stall_peak_deg: a stalled,
+## separated fin pushes like a plate; an attached one does not (the physics realism audit, 7 November
+## 2026; Viterna and Corrigan 1982, Hoerner). Upwind it takes a third off the fin's drag (+3 % speed),
+## but the controller and the AI were tuned on the old drag: with it on, the lake suite's Shift-carve
+## tacks at 18 and 24 kt fell five times and the skipper's 12 kt race and the fleet's starts got slower.
+## So false (at every slip, as before) until Michiel has looked at it and the steering is retuned on it.
+@export var cd_plate_post_stall: bool = false
+@export var cd_plate_blend_deg: float = 6.0
 
 @export_group("Limits")
 ## Below this flow speed the fin forces are zero (they would be below 0.01 N anyway).

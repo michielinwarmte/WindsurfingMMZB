@@ -248,3 +248,68 @@ of its frozen project). Its best set had `gust_bear_away_deg` 3.75: the autopilo
 which Max ruled out ("b: no"); the lead set it to 0 in best.txt and took it and its two thresholds out of
 the tuner. The physics by default is unchanged, so the new run starts fresh from that best set (applied to
 `NIGHT_TUNING` with the gust at 0) on the same physics.
+
+## P1, the board's drag: proved against Savitsky (7 November, 21:00; Max: "prove if the board's drag is too much. I find upwind that it's also way too slow")
+
+**Method.** A tow in the game (the pull through the centre of mass, no wind on the sail) did not work: with
+no pull on the hands the sailor's posture and the rig came apart and the board stood on its tail; the hook
+was reverted. Instead the game's board in 20 real sailing states (`Game/dev/pitch_budget.gd`, sea level,
+the default 120 L board, 12 to 24 kt, 45/60/100/135 deg) against Savitsky's (1964) planing method computed
+outside the game (`savitsky_check.py`, in this folder) for exactly the same load on the water (planing lift
+plus buoyancy), the same centre of that push from the tail and the same mean wet beam: Savitsky solves the
+wet length and the trim that carry that load there and gives the pressure drag plus the ITTC-1957 friction
+at the mean bottom velocity.
+
+**Result: the hull's drag is Savitsky's.** The game's hull drag over Savitsky's: 0.97 to 1.01 on the
+reaches (100 deg), 0.93 to 1.08 broad (135 deg, 0.69 in 12 kt), 1.0 to 1.18 upwind (45 to 60 deg: the game
+also has the heeled bottom and the leeway, Savitsky's straight plate does not). The trims and wet lengths
+agree within a few tenths. The board is not too draggy for the attitude it rides at.
+
+**The attitude.** The water's push sits 0.8 m (reaches) to 1.1 to 1.4 m (upwind) from the tail; with it at
+0.6 m (Gourlay's RS:X, the sailor at the back strap) Savitsky gives 15 to 21 % less drag on the reaches and
+27 to 30 % less upwind. But the push follows from the whole windsurfer's balance: the drive at the sail's
+centre of effort (1.5 to 2.3 m up) pitches the bow down, and the sail's lift (300 N upwind, the rig leaned
+25 deg to windward) and the fin's take weight off the water, so the water's smaller load needs a longer
+lever. The game's centre of mass is further aft (0.06 to 0.35 m) than Gourlay's (0.35 m): consistent. Not
+changed: what would decide it is a measured wet length or trim of a planing slalom board.
+
+**Drake's 0.15:** the game's hull and fin drag over the weight is 0.09 to 0.14 below 27 km/h, 0.18 to 0.20
+at 36 to 42 km/h, 0.23 to 0.25 at 51 to 56 and 0.27 to 0.34 at 59 to 66 km/h. Drake's figure covers 6 to
+about 20 kn (37 km/h); above it the friction grows with the speed squared.
+
+## Upwind (Silvaplana, the 117 L / 7.5 m, flat water, a steady wind, after a flying start)
+
+The lake suite's upwind runs started from rest on the upwind course (no sailor does) and never got going;
+with a reach first (100 deg) and then heading up:
+
+| wind at 10 m | about 48 deg | about 53 deg | about 58 deg |
+|---|---:|---:|---:|
+| 20 kt (16.8 at the sail) | 21 km/h | 26 | 31 |
+| 24 kt (20.2 at the sail) | 27 | 33 | 38 |
+
+45 deg is not held (in 20 kt the sailor falls). What limits it: the sail is fully sheeted (sheet 1.00, 14
+deg of attack, near its best), 100 % push sails as 75 %, sea-level air (25 % more force) adds 0 to 4 % and a
+rigid sail nothing at 24 kt. So upwind is the sail's drive at a narrow apparent wind (27 deg: drive about a
+third of the side force at a lift-to-drag ratio of 8) against the hull's and the fin's drag.
+
+**The fin's drag: a fault, fixed.** `FinModel.drag_coefficient` added a flat plate's drag, `1.2 sin^2(slip)`,
+at every slip. That is the drag of separated flow past the stall (the post-stall model of Viterna and
+Corrigan 1982); below the stall a foil's drag is its profile and induced drag (Hoerner). Upwind (slip about
+5 deg) it was a third of the fin's drag. Now (`FinConfig.cd_plate_post_stall`, true) it fades in from the
+stall (12 deg) over 6 deg. Measured before the fix (`--fin.cd_plate=0`): the fin's drag upwind 32 -> 20,
+27 -> 16 and 41 -> 27 N, the speed +0.7 to +0.9 km/h (3 %); the beam reach unchanged (56.7 -> 56.8 km/h).
+
+**Not proven:** whether these upwind speeds are too slow. The validation's reference (built from anchors,
+not measured) puts 45 deg at 0.75 of the wind and 60 deg at 1.0 for freeride kit at sea level; the game
+gives about 0.75 to 0.87 at 53 to 58 deg in Silvaplana's air. Max's real upwind numbers (angle and speed
+on the 7.5 m at Silvaplana, a GPS track with the wind) are what would decide it (P5).
+
+### The fin fix's checks (21:20): built, off by default
+
+With `cd_plate_post_stall` on: 997 of 998 unit tests (the red one pins the old numbers), `check.sh` clean;
+the validation polar up a little (45 deg 10.6 -> 10.9 kt, 60 deg 16.9 -> 17.3, 120 deg 28.5 -> 28.9); the
+lake suite's reaches better (482 -> 383, the strong beam reach 43.4 km/h in the gusts) but five falls in the
+turns, all Shift-carve tacks at 18 and 24 kt (the manoeuvre the night training tuned on the old drag), and
+the skipper's 12 kt race slower (12:24.8 -> 12:31.4) with more late boards at the fleet starts. So the fix
+stays in the code, off by default (`FinConfig.cd_plate_post_stall` false, the old drag bit for bit), until
+Michiel has reviewed it and the steering is retuned on it. Test: `test_fin_plate_drag.gd`.

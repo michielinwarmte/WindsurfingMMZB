@@ -173,6 +173,12 @@ func lift_coefficient(slip: float) -> float:
 func drag_coefficient(lift_coeff: float, slip: float = 0.0) -> float:
 	var induced: float = lift_coeff * lift_coeff / (PI * config.effective_aspect_ratio() * config.oswald_e)
 	var plate: float = config.cd_plate * sin(slip) * sin(slip)
+	# The flat plate's drag is the separated flow's: past the stall (Viterna and Corrigan 1982, the post-stall
+	# model); below it the foil's drag is its profile and induced drag (Hoerner, Fluid-Dynamic Drag). Until
+	# 7 November 2026 it was added at every slip: upwind (slip about 5 deg) a third of the fin's drag (the
+	# physics realism audit). cd_plate_post_stall false (the default for now): at every slip, as before.
+	if config.cd_plate_post_stall:
+		plate *= smoothstep(config.stall_peak_deg, config.stall_peak_deg + config.cd_plate_blend_deg, rad_to_deg(absf(slip)))
 	return config.cd_profile + induced + config.cd_profile * absf(lift_coeff) * config.cd_viscous_factor + plate
 
 
