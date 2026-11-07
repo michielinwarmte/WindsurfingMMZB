@@ -659,6 +659,8 @@ func _apply_manoeuvre_settings() -> void:
 	controller.reflex_on = settings.recovery_reflex
 	# The night training's steering numbers (7 November 2026) on the player's board only.
 	controller.use_night_tuning(settings.night_tuning)
+	# The balance stance (the physics realism audit, 7 November 2026) on the player's board, to test.
+	_windsurfer.use_balance_stance(settings.balance_stance)
 
 
 ## Package B, the body on the mouse (MouseBody; Settings > Body, ROADMAP GP2): on or off, Max's

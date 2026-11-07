@@ -56,6 +56,41 @@ extends Resource
 ## bottom to meet the water at the angle that lifts it onto the plane. Every sailor learns
 ## this as "step back to get planing".
 @export var hump_trim_deg: float = 3.0
+## Balancing the rig's pull (the realism audit, 7 November 2026): the sail's pull on the hands,
+## a boom's height above the deck, tips the board's nose down (from rest in 22 kt about 500 N m,
+## which the floating board's pitch stiffness turns into a 10 to 14 degree nose dive). A sailor
+## steps back as far as cancels it, whatever the speed: in a strong wind at once, in a light one
+## hardly at all, so the board stays level. The stance aimed for is at least this share of the
+## stance whose weight shift (mass x g x the travel from the rest stance to the straps) equals
+## the pull's moment (the forward pull times the boom's height). 0: off, the stance by speed only.
+@export var stance_balance_share: float = 0.0
+## Off by default (0): over 12 runs a case on the lake (Documentation/reports/physics/realism_audit_7nov2026.md,
+## B) 0.5 halved the strong-wind starts' dive but cost the strong beam reach 8 % in the gusts and made two AI
+## boards late at the T1 start; the felt part below gives most of the gain at no cost.
+## The balance is felt: a sailor feels the nose go down and steps back, at any speed
+## (above the hump speed hump_trim_deg does it already). From stance_dive_from_deg of nose-down pitch
+## the stance aimed for rises to the straps at stance_dive_full_deg. The anticipation above is half of
+## the pull's moment, not all of it: the sailor's lean (the hang-back) takes the rest, and at 1.0 the
+## 12 kt broad reach, not planing, put the weight in the straps, sank the tail and fell (the reach check).
+@export var stance_dive_from_deg: float = 1.0
+## Off by default (0) for every board: in the lake suite the felt step gave the starts a third less nose
+## dive and planing a second or two sooner, but one turn in 22 or one strong start in 12 fell where the
+## old stance never did. The player can switch it on (Settings > Sailing > Balance stance, test) at
+## BALANCE_STANCE_FULL_DEG. Documentation/reports/physics/realism_audit_7nov2026.md, finding B.
+@export var stance_dive_full_deg: float = 0.0
+const BALANCE_STANCE_FULL_DEG: float = 6.0
+## Through the hump the weight goes back while the bow is below hump_trim_deg and is held there; with
+## the bow more than this above hump_trim_deg (the board on its tail, the tail dragging) the sailor
+## lets it forward again to what the speed and the pull ask for. 0: held as before (the default: in the
+## lake suite's turns it let the weight forward in the gybes' exits and three sailors fell).
+@export var stance_bow_high_deg: float = 0.0
+## The two felt rules (the nose dive and the bow high) read the pitch averaged over this time: a dive
+## of a second or two is felt, the waves' bobbing at 1 to 2 Hz hardly moves the weight (at 0.5 s a 1 Hz
+## swing comes through at a third). 0: the pitch as it is.
+@export var stance_feel_time_s: float = 0.5
+## The felt step is for getting going on a course, not for a manoeuvre: it waits while the sailor steps
+## round the mast and for this long after the sail goes across (s).
+@export var stance_felt_after_flip_s: float = 5.0
 ## How fast the sailor can move fore and aft (fraction of the full stance per second).
 @export var stance_rate_per_s: float = 1.0
 ## Trimming with the feet once over the hump: the sailor presses the back foot to free the

@@ -179,6 +179,9 @@ var recovery_reflex: bool
 ## The night training's steering numbers on the player's board (PlayerController.NIGHT_TUNING;
 ## 7 November 2026). Off: the numbers the AI fleet sails with.
 var night_tuning: bool
+## The balance stance on the player's board (the physics realism audit, 7 November 2026, finding B):
+## the sailor steps back for a nose driven down by the rig while getting going. Off by default, to test.
+var balance_stance: bool
 
 # --- The body on the mouse (section "body"; package B, ROADMAP GP2, an experiment) ---
 ## The mouse is the sailor's body while sailing (MouseBody). Off by default: it is an experiment.
@@ -297,6 +300,7 @@ func reset_to_defaults() -> void:
 	manoeuvre_flip_on_cue = true
 	recovery_reflex = true
 	night_tuning = true
+	balance_stance = false
 
 	mouse_body = false
 	body_centre = MouseBody.Centre.STAYS
@@ -497,6 +501,7 @@ func write_to(config: ConfigFile) -> void:
 	config.set_value("sailing", "manoeuvre_flip_on_cue", manoeuvre_flip_on_cue)
 	config.set_value("sailing", "recovery_reflex", recovery_reflex)
 	config.set_value("sailing", "night_tuning", night_tuning)
+	config.set_value("sailing", "balance_stance", balance_stance)
 
 	config.set_value("body", "mouse_body", mouse_body)
 	config.set_value("body", "centre", body_centre)
@@ -573,6 +578,7 @@ func read_from(config: ConfigFile) -> void:
 	manoeuvre_flip_on_cue = _bool(config, "sailing", "manoeuvre_flip_on_cue", manoeuvre_flip_on_cue)
 	recovery_reflex = _bool(config, "sailing", "recovery_reflex", recovery_reflex)
 	night_tuning = _bool(config, "sailing", "night_tuning", night_tuning)
+	balance_stance = _bool(config, "sailing", "balance_stance", balance_stance)
 
 	mouse_body = _bool(config, "body", "mouse_body", mouse_body)
 	body_centre = clampi(_int(config, "body", "centre", body_centre), 0, MouseBody.Centre.size() - 1)

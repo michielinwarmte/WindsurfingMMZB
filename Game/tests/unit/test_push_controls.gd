@@ -13,8 +13,13 @@ const DT: float = 1.0 / 60.0
 ## course on flat water in a steady wind, set up as the reach check's case (the sail eased at the
 ## start, no height gradient, from heading 180), sailed for `seconds`: planing in the straps by
 ## 20 s.
-func _planing_sim(seconds: float, controls: SimControls, pilot: Autopilot) -> WindsurferSim:
+func _planing_sim(seconds: float, controls: SimControls, pilot: Autopilot, balance: bool = true) -> WindsurferSim:
 	var sim: WindsurferSim = WindsurferSim.create_for(EnvironmentConfig.new(), false, true)
+	if not balance:
+		# The stance by speed alone, as before the balance stance (7 November 2026, the realism audit B).
+		sim.sailor_config.stance_balance_share = 0.0
+		sim.sailor_config.stance_dive_full_deg = 0.0
+		sim.sailor_config.stance_bow_high_deg = 0.0
 	sim.wind_config.speed_kt = 18.0
 	sim.wind_config.from_bearing_deg = 270.0
 	sim.wind_config.height_gradient_enabled = false
@@ -89,8 +94,10 @@ func test_the_back_foot_heads_up_on_port_tack_too() -> void:
 func test_out_of_the_straps_the_back_foot_has_little_to_push_against() -> void:
 	var controls: SimControls = SimControls.new()
 	var pilot: Autopilot = Autopilot.new()
-	# 2 s: the board is getting going, the feet still stepping back (the stance about half).
-	var sim: WindsurferSim = _planing_sim(2.0, controls, pilot)
+	# 2 s: the board is getting going, the feet still stepping back (the stance about half). With the
+	# balance stance the sailor is in the straps by then; this test is about the push's share, so the
+	# stance follows the speed alone here.
+	var sim: WindsurferSim = _planing_sim(2.0, controls, pilot, false)
 	assert_between(sim.stance, 0.2, 0.8, "between the rest stance and the straps")
 	controls.back_foot_push = 1.0
 	sim.step(DT, controls)

@@ -375,6 +375,8 @@ func _build_sailing_rows(s: SettingsValues) -> void:
 		func(on: bool) -> void: s.recovery_reflex = on)
 	_add_switch(grid, "Night-tuned steering", s.night_tuning, "The autopilot training of 7 November on your board (off: the AI fleet's numbers)",
 		func(on: bool) -> void: s.night_tuning = on)
+	_add_switch(grid, "Balance stance (test)", s.balance_stance, "Your sailor steps back when the sail drives the nose down getting going (the physics check of 7 November)",
+		func(on: bool) -> void: s.balance_stance = on)
 
 
 ## Package B, the body on the mouse (an experiment, ROADMAP GP2; MouseBody). The switch turns it on;

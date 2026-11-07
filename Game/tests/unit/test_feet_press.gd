@@ -59,6 +59,11 @@ func _run(wind_kt: float, twa_deg: float, push: float, seconds: float) -> Packed
 	sim.wind_config.gusts_enabled = true
 	sim.wind_config.shifts_enabled = false
 	sim.wind = WindField.new(sim.wind_config)
+	# The stance as it was before the balance stance of 7 November 2026 (the physics realism audit,
+	# finding B: the step back for the rig's pull and a nose driven down): these numbers are from before it.
+	sim.sailor_config.stance_balance_share = 0.0
+	sim.sailor_config.stance_dive_full_deg = 0.0
+	sim.sailor_config.stance_bow_high_deg = 0.0
 	var controller: PlayerController = PlayerController.new()
 	# The controller as it sailed before the lake's chop technique (its defaults since the autopilot's
 	# training of 6 November 2026, Documentation/reports/autopilot/lake_chop_training.md): this test

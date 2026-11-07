@@ -126,6 +126,10 @@ var _asked_across: float = 0.0
 ## kicked the hull into a spin with its inertia).
 var stance: float = 0.0
 var body_stance: float = 0.0
+## The stance the rig's pull asks for alone (SailorConfig.stance_balance_share), for the telemetry.
+var stance_balance_target: float = 0.0
+## The pitch as the sailor feels it for the stance (deg, averaged over SailorConfig.stance_feel_time_s).
+var stance_felt_pitch_deg: float = 0.0
 ## -1 = sailor out to port, +1 = out to starboard.
 var lean: float = 0.0
 ## How far the sailor's weight hangs back behind the feet, metres.
@@ -310,6 +314,15 @@ var _running_trim_fast_deg: float = 0.0
 var _running_trim_fast_speed_ms: float = 0.0
 var _running_trim_fastest_speed_ms: float = 0.0
 var _stance_rate_per_s: float = 0.0
+var _stance_balance_share: float = 0.0
+var _stance_dive_from_deg: float = 0.0
+var _stance_dive_full_deg: float = 0.0
+var _stance_bow_high_deg: float = 0.0
+var _stance_feel_time_s: float = 0.0
+var _stance_felt_after_flip_s: float = 0.0
+var _since_sail_flip_s: float = 1000.0
+var _stance_last_sail_side: int = 0
+var _stance_travel_m: float = 0.0
 var _stance_speed_full_ms: float = 0.0
 var _stance_speed_start_ms: float = 0.0
 var _standing_fall_heel_deg: float = 0.0
@@ -521,6 +534,9 @@ func reset(origin_xz: Vector3, heading_rad: float) -> void:
 	feet_roll_press = 0.0
 	feet_pitch_press = 0.0
 	felt_trim_deg = 0.0
+	stance_felt_pitch_deg = 0.0
+	_stance_last_sail_side = 0
+	_since_sail_flip_s = 1000.0
 	felt_bounce_dps = 0.0
 	launch_coupling = 0.0
 	rider_inertia_kgm2 = 0.0
@@ -699,6 +715,13 @@ func _copy_configs() -> void:
 	_running_trim_fast_speed_ms = sailor_config.running_trim_fast_speed_ms
 	_running_trim_fastest_speed_ms = sailor_config.running_trim_fastest_speed_ms
 	_stance_rate_per_s = sailor_config.stance_rate_per_s
+	_stance_balance_share = sailor_config.stance_balance_share
+	_stance_dive_from_deg = sailor_config.stance_dive_from_deg
+	_stance_dive_full_deg = sailor_config.stance_dive_full_deg
+	_stance_bow_high_deg = sailor_config.stance_bow_high_deg
+	_stance_feel_time_s = sailor_config.stance_feel_time_s
+	_stance_felt_after_flip_s = sailor_config.stance_felt_after_flip_s
+	_stance_travel_m = absf(sailor_config.stance_planing_z_m - sailor_config.stance_rest_z_m)
 	_stance_speed_full_ms = sailor_config.stance_speed_full_ms
 	_stance_speed_start_ms = sailor_config.stance_speed_start_ms
 	_standing_fall_heel_deg = sailor_config.standing_fall_heel_deg
@@ -848,6 +871,9 @@ func _fall(side: int, kind: String, tack: float) -> void:
 	# In the water the rider feels nothing of the board: what was felt of its attitude and its
 	# bounce goes with the fall (else the rider climbed back on still feeling the fall's bounce).
 	felt_trim_deg = 0.0
+	stance_felt_pitch_deg = 0.0
+	_stance_last_sail_side = 0
+	_since_sail_flip_s = 1000.0
 	felt_bounce_dps = 0.0
 	knee_bend_m = 0.0
 	leg_sway_m = 0.0
@@ -871,6 +897,9 @@ func waterstart() -> void:
 	feet_roll_press = 0.0
 	feet_pitch_press = 0.0
 	felt_trim_deg = 0.0
+	stance_felt_pitch_deg = 0.0
+	_stance_last_sail_side = 0
+	_since_sail_flip_s = 1000.0
 	felt_bounce_dps = 0.0
 	_felt_push_ms2 = 0.0
 	_felt_lift_ms2 = 0.0
@@ -1300,6 +1329,39 @@ func _update_sailor(dt: float) -> void:
 	# The controls are this tick's copies (see the note at the top).
 	var forward_speed: float = -body.to_body(body.velocity).z
 	var stance_target: float = smoothstep(_stance_speed_start_ms, _stance_speed_full_ms, forward_speed)
+	# Balancing the rig's pull (SailorConfig.stance_balance_share): the forward pull on the hands,
+	# a boom's height up, against the weight moved from the rest stance to the straps.
+	# The pull's moment as a share of the weight shift from the rest stance to the straps.
+	var pull_share: float = 0.0
+	if _stance_travel_m > 0.0:
+		var pull_forward: float = maxf(-body.to_body(hand_force_world).z, 0.0)
+		pull_share = pull_forward * _boom_height_m / (_sailor_mass_kg * _gravity_ms2 * _stance_travel_m)
+	stance_balance_target = clampf(_stance_balance_share * pull_share, 0.0, 1.0)
+	stance_target = maxf(stance_target, stance_balance_target)
+	# Felt: the nose driven down by the rig's pull sends the weight back at any speed
+	# (SailorConfig.stance_dive_from_deg); a board settling as it slows, the sail eased, does not (a
+	# sailor steps forward then), so the felt part fades in with the pull (a share of 0.15 to 0.5).
+	# What the sailor feels of the pitch: averaged over stance_feel_time_s, so a nose dive of a second
+	# or two is felt and the waves' bobbing (1 to 2 Hz) hardly moves the weight.
+	if sail.sail_side != _stance_last_sail_side:
+		# The first look after a reset or a water start is not a flip.
+		if _stance_last_sail_side != 0:
+			_since_sail_flip_s = 0.0
+		_stance_last_sail_side = sail.sail_side
+	else:
+		_since_sail_flip_s += dt
+	var pitch_now_deg: float = rad_to_deg(body.pitch_rad())
+	stance_felt_pitch_deg = lerpf(stance_felt_pitch_deg, pitch_now_deg, clampf(dt / _stance_feel_time_s, 0.0, 1.0)) if _stance_feel_time_s > 0.0 else pitch_now_deg
+	if _stance_dive_full_deg > _stance_dive_from_deg:
+		var nose_down_deg: float = -stance_felt_pitch_deg
+		var felt: float = clampf((nose_down_deg - _stance_dive_from_deg) / (_stance_dive_full_deg - _stance_dive_from_deg), 0.0, 1.0)
+		# Getting going on a course, not in a manoeuvre: in a tack or a gybe the nose dips and the sail
+		# fills again with the board slow, and a step back there (or less of the step round the mast)
+		# threw the sailor off in the lake suite's turns. So not while stepping, and not for
+		# stance_felt_after_flip_s after the sail went across.
+		var in_manoeuvre: bool = _controls_step_forward > 0.0 or _since_sail_flip_s < _stance_felt_after_flip_s
+		if not in_manoeuvre:
+			stance_target = maxf(stance_target, felt * smoothstep(0.15, 0.5, pull_share))
 	# Through the hump the weight goes aft as long as the bow is below the hump attitude
 	# (SailorConfig.hump_trim_deg), and stays there once the bow is up: a sailor steps back
 	# until the nose lifts and does not walk forward again while the board climbs onto the
@@ -1307,8 +1369,14 @@ func _update_sailor(dt: float) -> void:
 	# walked forward as soon as the bow began to rise and pressed it down again mid-hump.)
 	var hump_speed: float = _board_residuary_peak_froude * sqrt(_gravity_ms2 * _board_length_m)
 	if forward_speed > hump_speed:
-		var bow_low: bool = rad_to_deg(body.pitch_rad()) < _hump_trim_deg
-		stance_target = maxf(stance_target, 1.0 if bow_low else stance)
+		var bow_deg: float = rad_to_deg(body.pitch_rad())
+		var bow_low: bool = bow_deg < _hump_trim_deg
+		# A board standing on its tail (the bow more than stance_bow_high_deg above hump_trim_deg) lets
+		# the weight forward again, to what the speed and the pull ask for: a sailor does not hold the
+		# weight back while the tail drags (the realism audit B, 7 November 2026; 0: held as before).
+		var bow_high: bool = _stance_bow_high_deg > 0.0 and stance_felt_pitch_deg > _hump_trim_deg + _stance_bow_high_deg
+		if not bow_high:
+			stance_target = maxf(stance_target, 1.0 if bow_low else stance)
 	# In a tack the sailor steps round the front of the mast instead, and quickly, but only
 	# as far as the nose allows: a board still carrying speed buries its nose under a sailor
 	# who steps forward too early, so the sailor stops stepping (and backs off) as the

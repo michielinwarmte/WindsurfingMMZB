@@ -73,6 +73,17 @@ func _run() -> Dictionary:
 	# The references (not scored): the same lake without its waves, or in sea-level air.
 	if _options.get("waves", "1") == "0":
 		sim.set_waves(false)
+	# A steady wind instead of the map's (--steady_kt=<kt> at 10 m, the lake's mean direction, no gusts):
+	# the waves stay the map's (built for the hour and --lake_wind_scale), as test_lake_chop.gd does it.
+	if _options.has("steady_kt"):
+		var field: MapWindField = sim.wind as MapWindField
+		var steady: WindConfig = field.config.duplicate() as WindConfig
+		steady.speed_kt = _options["steady_kt"].to_float()
+		steady.from_bearing_deg = rad_to_deg(field.current_from_bearing_rad)
+		steady.gusts_enabled = false
+		steady.shifts_enabled = false
+		sim.wind_config = steady
+		sim.wind = WindField.new(steady)
 	if _options.has("air"):
 		sim.air_density_kg_m3 = _options["air"].to_float()
 	var controller: PlayerController = PlayerController.new()
@@ -88,6 +99,14 @@ func _run() -> Dictionary:
 		if key.contains("."):
 			settings[key] = _options[key].to_float()
 	_apply(settings, controller)
+	# The physics audit's overrides (7 November 2026): --sail.<field>= --fin.<field>= --sailor.<field>=
+	# set the sim's config (copied into the models at every tick and reset). The board's own numbers
+	# are not offered: its buoyancy grid is built when the sim is made.
+	var configs: Dictionary[String, Resource] = {"sail": sim.sail_config, "fin": sim.fin_config, "sailor": sim.sailor_config}
+	for key: String in settings:
+		var part: String = key.get_slice(".", 0)
+		if configs.has(part):
+			configs[part].set(key.get_slice(".", 1), settings[key])
 	var controls: SimControls = SimControls.new()
 	controller.reset_controls(controls)
 
@@ -140,7 +159,7 @@ func _run() -> Dictionary:
 	var dive_pitch_deg: float = _options.get("dive_pitch_deg", "-6").to_float()
 	var dive_below_ms: float = _options.get("dive_below_ms", "8").to_float()
 	var plane_ms: float = _options.get("plane_ms", "7.5").to_float()
-	var map_wind: MapWindField = sim.wind as MapWindField
+	var map_wind: Variant = sim.wind
 	var local_kt: float = 0.0
 	var local_from_deg: float = 0.0
 	for i: int in int(seconds / DT):
@@ -329,7 +348,7 @@ func _open_csv() -> FileAccess:
 	if file == null:
 		return null
 	file.store_line("time_s,x,z,east_lv95,north_lv95,wind_kt,wind_from_deg,wind_at_sail_kt,twa_deg,speed_kmh,heading_deg,pitch_deg,heel_deg,bow_immersion_m,planing,state"
-		+ (",aws_kt,awa_deg,sheet,alpha_deg,drive_n,sail_drag_n,hull_resistance_n,fin_drag_n,bow_drag_n,fin_up_n,fin_tilt_deg,mast_foot_up_n,pitch_mast_foot_nm,pitch_feet_force_nm,pitch_feet_moment_nm,buoyancy_n,planing_lift_n,push_centre_m,wet_front_m" if _forces else ""))
+		+ (",aws_kt,awa_deg,sheet,alpha_deg,drive_n,sail_drag_n,hull_resistance_n,fin_drag_n,bow_drag_n,fin_up_n,fin_tilt_deg,mast_foot_up_n,pitch_mast_foot_nm,pitch_feet_force_nm,pitch_feet_moment_nm,buoyancy_n,planing_lift_n,push_centre_m,wet_front_m,stance" if _forces else ""))
 	return file
 
 
@@ -338,9 +357,9 @@ func _csv_row(file: FileAccess, t: Telemetry, now_s: float, state: int, wind_kt:
 	file.store_line("%.1f,%.1f,%.1f,%.0f,%.0f,%.2f,%.1f,%.2f,%.1f,%.2f,%.1f,%.2f,%.2f,%.3f,%d,%d" % [now_s, t.position.x, t.position.z,
 		lv95[0], lv95[1], wind_kt, wind_from_deg, t.tws_at_sail_kt, t.twa_deg, t.speed_kmh, t.heading_deg,
 		t.pitch_deg, t.heel_deg, t.bow_immersion_m, 1 if t.is_planing else 0, state]
-		+ (",%.2f,%.1f,%.3f,%.1f,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%.1f,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%.3f,%.3f" % [t.aws_kt, t.awa_deg, t.sheet, t.alpha_deg, t.drive_n,
+		+ (",%.2f,%.1f,%.3f,%.1f,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%.1f,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%.3f,%.3f,%.2f" % [t.aws_kt, t.awa_deg, t.sheet, t.alpha_deg, t.drive_n,
 			t.sail_drag_n, t.hull_resistance_n, t.fin_drag_n, t.bow_drag_n, t.fin_up_n, t.fin_tilt_deg, t.mast_foot_force_up_n,
-			t.pitch_from_mast_foot_nm, t.pitch_from_feet_force_nm, t.pitch_from_feet_moment_nm, t.buoyancy_n, t.planing_lift_n, t.push_centre_m, t.wet_front_m] if _forces else ""))
+			t.pitch_from_mast_foot_nm, t.pitch_from_feet_force_nm, t.pitch_from_feet_moment_nm, t.buoyancy_n, t.planing_lift_n, t.push_centre_m, t.wet_front_m, t.stance] if _forces else ""))
 
 
 func _default_seconds(scenario: String) -> float:

@@ -130,6 +130,14 @@ func use_body_level(body: MouseBody) -> void:
 	sim.sailor_config.lean_feel_time_s = body.feel_time_s(_own_lean_feel_time_s) if body != null else _own_lean_feel_time_s
 
 
+## The balance stance (the physics realism audit, 7 November 2026, finding B) on the player's own copy of
+## the sailor's config: the sailor steps back for a nose driven down by the rig while getting going.
+func use_balance_stance(on: bool) -> void:
+	if not own_config_copies or sim == null:
+		return
+	sim.sailor_config.stance_dive_full_deg = SailorConfig.BALANCE_STANCE_FULL_DEG if on else 0.0
+
+
 ## Puts the board back at the start, at rest.
 func reset() -> void:
 	controls = SimControls.new()
