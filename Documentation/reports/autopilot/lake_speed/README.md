@@ -235,3 +235,42 @@ steering, push 75 %).
 - The gusts in the map's wind are mostly the place, not time: the "speed in the gusts" is measured
   where the wind at the board is in its top quarter along each track.
 - The AI fleet is untouched (its defaults did not change), so no race was rerun.
+
+## The downwind probe (7 November 2026, afternoon; not fixed yet, Max: "find the issue, do not fix it right away")
+
+Runs in `.sim_output/downwind_probe/` (`run.sh`; new harness options `--twa_start`, `--bear_away_at`,
+`--bear_away_steer`, `--forces=1` for the apparent wind, the sheet and the forces in the CSV). The 117 L /
+7.5 m, the lake's middle at 14:30, flat water unless said.
+
+| run | wind at the sail | what happened |
+|---|---|---|
+| x1.3, 100 degrees, then bear away to 135 at 25 s | 17 to 20 kt | 56 km/h on the reach (apparent 32 kt from 33 deg); after the bear-away the drive 290 -> 157 N against 240 N of drag: 47 -> 26 km/h in 20 s, off the plane at 50 s |
+| the same, sea-level air | 17 to 20 kt | a little better (max 38 km/h), the same shape |
+| x1.5, the same | 20 to 24 kt, bear-away in a lull | 59 -> 32 km/h in 15 s |
+| x1.5, from rest at 135 | 20 to 24 kt | 46 to 55 km/h while the wind at the sail is 23 to 24 kt, 39 to 42 at 20 kt |
+| x1.3, bear away to 125 only | 17 to 20 kt | max 48 km/h, still slowing |
+
+Findings, in order of weight:
+1. **Downwind needs real wind; across the wind the board makes its own.** On the reach the board's speed
+   gives it 32 to 35 kt of apparent wind; at 135 degrees it only gets 15 to 19 kt. In the sim, 50 to 55
+   km/h at 135 degrees holds with about 22 to 24 kt at the sail (about 26 to 28 kt at 10 m: the profile is
+   0.84 from 10 m to the sail, shear exponent 0.11). The map at x1.3 gives 17 to 20 kt at the sail with
+   gusts of 1 to 2 kt over the mean. The sail's pull at 16 kt apparent from 46 degrees (159 N) matches a
+   textbook lift and drag estimate (the lead's estimate, not measured); the board's drag (hull + fin about
+   200 N at 42 km/h, 220 at 55 downwind) is unverified. For Michiel: is that drag right? Max: "save this
+   as an issue", core physics, 100 % right, check upwind too: [ISSUE_downwind_physics.md](ISSUE_downwind_physics.md)
+   (backlog E01.S17).
+2. **The map's wind turns along the lake; the autopilot holds a compass heading.** Sailing east from the
+   middle the local wind veers from 223 to 241 degrees in 350 m (the lake's mean stays 222). The heading
+   hold keeps the compass course, so 135 degrees to the wind becomes 145 to 160 (dead downwind, the sail
+   stalled at 40 to 59 degrees of attack). Max: the turn is real, and the compass hold stays (fine for
+   downwind tactics).
+3. **Bearing away in a lull.** In two runs the bear-away came as the wind dropped 3 to 4 kt. A sailor bears
+   away in the gust and heads up in the lull. Max: that is the test's own timing (a fixed 25 s), not the
+   autopilot's; the autopilot does not get its own gust steering, the map's gusts are fine. The downwind case
+   that waits for a gust: [PLAN_downwind_case.md](PLAN_downwind_case.md), to run after the training.
+4. The waves (20 to 25 % across the wind, known) and the thin air (from rest at 135: max 33.5 km/h, 44.6 at
+   sea level) come on top.
+
+Not tested: another sail angle of attack (`--pilot.target_alpha_deg` did not reach the sail; the
+controller sets its own 18 degrees).

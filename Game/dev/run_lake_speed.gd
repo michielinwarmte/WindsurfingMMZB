@@ -48,6 +48,8 @@ const BALANCE_WINDOW_S: float = 30.0
 const CSV_EVERY_S: float = 0.5
 
 var _options: Dictionary[String, String] = {}
+## --forces=1: the CSV also has the apparent wind, the sheet and the forces along the board.
+var _forces: bool = false
 var _grid: TerrainGrid = null
 var _map: MapConfig = null
 
@@ -96,7 +98,16 @@ func _run() -> Dictionary:
 	var course: Vector3 = SimMath.dir_from_bearing(deg_to_rad(heading_deg))
 	var place: Vector3 = _place()
 	var start: Vector3 = _start_for(place, course, ROOM_WANTED_M.get(scenario, 800.0), sim.fin_config.span_m)
-	sim.reset(start, deg_to_rad(heading_deg))
+	# A reach first, then bearing away (Max, 7 November 2026: "the apparent wind will keep the push"):
+	# --twa_start=<deg> the start's heading, --bear_away_at=<s> when the hands turn to --twa (at
+	# --bear_away_steer of the key, 1 the full key); the room and made good are along --twa's course.
+	var start_twa_deg: float = _options.get("twa_start", str(twa_deg)).to_float()
+	var start_heading_deg: float = fposmod(wind_from_deg - tack * start_twa_deg, 360.0)
+	var bear_away_at_s: float = _options.get("bear_away_at", "-1").to_float()
+	var bear_away_steer: float = _options.get("bear_away_steer", "1").to_float()
+	var bore_away: bool = bear_away_at_s < 0.0
+	_forces = _options.get("forces", "0") == "1"
+	sim.reset(start, deg_to_rad(start_heading_deg))
 
 	var seconds: float = _options.get("seconds", str(_default_seconds(scenario))).to_float()
 	var from_s: float = _options.get("from", str(_default_from(scenario))).to_float()
@@ -135,6 +146,13 @@ func _run() -> Dictionary:
 		var now_s: float = i * DT
 		var t: Telemetry = sim.telemetry
 		hands.steer = 0.0
+		if not bore_away and now_s >= bear_away_at_s:
+			# A right turn (positive steer) increases the heading.
+			var still_deg: float = wrapf(heading_deg - t.heading_deg, -180.0, 180.0)
+			if absf(still_deg) > 2.0:
+				hands.steer = bear_away_steer * signf(still_deg)
+			else:
+				bore_away = true
 		if sim.sailor_state == WindsurferSim.SailorState.SAILING:
 			controller.update(t, controls, DT)
 		sim.step(DT, controls)
@@ -309,7 +327,8 @@ func _open_csv() -> FileAccess:
 	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
 	if file == null:
 		return null
-	file.store_line("time_s,x,z,east_lv95,north_lv95,wind_kt,wind_from_deg,wind_at_sail_kt,twa_deg,speed_kmh,heading_deg,pitch_deg,heel_deg,bow_immersion_m,planing,state")
+	file.store_line("time_s,x,z,east_lv95,north_lv95,wind_kt,wind_from_deg,wind_at_sail_kt,twa_deg,speed_kmh,heading_deg,pitch_deg,heel_deg,bow_immersion_m,planing,state"
+		+ (",aws_kt,awa_deg,sheet,alpha_deg,drive_n,sail_drag_n,hull_resistance_n,fin_drag_n,bow_drag_n" if _forces else ""))
 	return file
 
 
@@ -317,7 +336,9 @@ func _csv_row(file: FileAccess, t: Telemetry, now_s: float, state: int, wind_kt:
 	var lv95: PackedFloat64Array = _map.game_to_lv95(t.position)
 	file.store_line("%.1f,%.1f,%.1f,%.0f,%.0f,%.2f,%.1f,%.2f,%.1f,%.2f,%.1f,%.2f,%.2f,%.3f,%d,%d" % [now_s, t.position.x, t.position.z,
 		lv95[0], lv95[1], wind_kt, wind_from_deg, t.tws_at_sail_kt, t.twa_deg, t.speed_kmh, t.heading_deg,
-		t.pitch_deg, t.heel_deg, t.bow_immersion_m, 1 if t.is_planing else 0, state])
+		t.pitch_deg, t.heel_deg, t.bow_immersion_m, 1 if t.is_planing else 0, state]
+		+ (",%.2f,%.1f,%.3f,%.1f,%.0f,%.0f,%.0f,%.0f,%.0f" % [t.aws_kt, t.awa_deg, t.sheet, t.alpha_deg, t.drive_n,
+			t.sail_drag_n, t.hull_resistance_n, t.fin_drag_n, t.bow_drag_n] if _forces else ""))
 
 
 func _default_seconds(scenario: String) -> float:
