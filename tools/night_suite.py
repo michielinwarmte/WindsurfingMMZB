@@ -173,8 +173,12 @@ def case_cost(scenario, r):
         cost += plane_s - 3.0 * r["made_good_ms"]
     elif scenario == "steer":
         cost += 2.0 * r["hold_rms_deg"]
+        # A wandering course is a fault, not a detail (7 November 2026: the lake set wandered 9 to 10 degrees).
+        cost += 10.0 * max(r["hold_rms_deg"] - 2.0, 0.0)
         for p in presses:
             cost += max(p["turn_max_deg"] - 30.0, 0.0) + 0.5 * abs(p["turn_deg"] - 30.0)
+            # A key turn that does not stay (the autopilot turning back) is a fault: 7 November 2026, 3 to 7 degrees kept of 30.
+            cost += 3.0 * max(20.0 - p["turn_deg"], 0.0)
             cost += (p["settle_s"] if p["settle_s"] >= 0 else 7.0)
             cost += 0.3 * p["heel_jump_deg"] + 10.0 * p["lean_jump"] + 3.0 * p["rake_jump"]
             cost += FALL_COST * (1 if p["fell"] else 0) * 0.0  # counted in the case's falls

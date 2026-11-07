@@ -313,3 +313,49 @@ turns, all Shift-carve tacks at 18 and 24 kt (the manoeuvre the night training t
 the skipper's 12 kt race slower (12:24.8 -> 12:31.4) with more late boards at the fleet starts. So the fix
 stays in the code, off by default (`FinConfig.cd_plate_post_stall` false, the old drag bit for bit), until
 Michiel has reviewed it and the steering is retuned on it. Test: `test_fin_plate_drag.gd`.
+
+## The low-speed control: what broke it since 6 November, proved (22:40 to 23:30)
+
+Max: "please investigate all this slow stuff ... before it was way better
+(WindsurfingMMZB-play-6nov2026-evening-keys). Fix it for good and find why. No saying it's fixed without
+it being fixed." and "it is the full control at low speeds, also steering".
+
+**Step 1, the old build against today's code.** The evening-keys build is play/6nov-evening f72f565 (6
+November 15:42; worktree `WindsurfingMMZB-old6nov`). `Game/dev/run_lake.gd` (in both) sailed the same lake
+cases (beam, broad, out of irons, a turn on a run; 14:30, the lake's waves, push 75 %): the old build and
+today's code with the plain controller numbers gave **identical numbers in every case**. So the physics and
+the base controller are as they were; the difference is the player's tuned set (`NIGHT_TUNING`: the night
+training's steering plus the lake training's additions).
+
+**Step 2, low-speed key steering** (`run_night.gd --scenario=steer`: the heading hold, then 30 degree key
+turns away and up; 8, 10 and 14 kt open water and the lake at 18 kt): with the player's set the course
+wandered 5 to 10.5 deg (1 deg before), a 30 deg turn away kept only 3 to 7 deg (the autopilot turned back),
+the heel jumped 14 to 25 deg in a turn up (6 to 9 before), and at 8 kt a tap to bear away turned the board
+the wrong way.
+
+**Step 3, the culprits, one at a time:**
+- `plane_head_up_deg` (the lake training's 22.5, the lead's 60 of this evening): the slow head-up turned the
+  board back up after the player's own turn: off -> the course 0.6 deg, the turn kept 31 deg.
+- `carve_rate_dps` 45.75 (the night's; the code's 57) and `head_up_rate_budget_dps_ms` 160 (the code's 100):
+  the doubled heel jumps (reverted -> 6.5/9.0 deg at 10 kt, 4.9 at 14 kt, as on 6 November).
+- The slow gains (`slow_rate_gain_scale` 1.675, `slow_integral_scale`, `slow_hold_scale`): not a cause of the
+  steering fault; with them the starts score better (287 against 315) but the turns worse (guards 406 with 4
+  falls against 319 with 2), so out (control first).
+
+**The fix:** those five out of `NIGHT_TUNING` (the code's own numbers), and the head-up kept only after a
+start until the player steers (`_player_steered`, reset by `reset_controls`), at 60 deg so a start on a broad
+course still gets going. Low-speed steering, 6 November -> the player's set before -> now:
+
+| | 6 Nov build | before the fix | fixed |
+|---|---|---|---|
+| 8 kt: course wander, turn kept, heel up | 0.65, 34, 5.8 | 9.2, 6, 25.1 | 0.51, 35, 5.7 |
+| 10 kt | 0.93, 32, 9.1 | 10.5, 7, 17.1 | 0.73, 34, 9.0 |
+| 14 kt | 1.07, 34, 5.5 | 5.5, 23, 13.9 | 1.14, 36, 4.9 |
+| lake 18 kt (turn kept, heel) | 29, 5.5 | 3, 9.8 | 31, 5.2 |
+
+Lake suite (single start time): before 1291.7 (guards 410.2, 1 fall), fixed 1239.6 (guards 319.1, 2 falls:
+the 24 kt late Shift gybe, which falls in both), start 287 -> 315, strong and reach the same, the broad reach
+from rest still planes (26.7 km/h). **So it cannot happen again:** the lake suite's guards now include the
+night's low-speed steering cases, with a cost on a wandering course (10 x the RMS over 2 deg) and on a key
+turn that does not stay (3 x the shortfall below 20 deg); the tuner no longer tunes the head-up or the slow
+gains. Test: `test_after_the_player_steers_the_head_up_leaves_the_course_alone`.

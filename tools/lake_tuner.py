@@ -45,8 +45,8 @@ PARAMS = [
     # start_sheet_in_share out (Max, 7 November 2026: "when not planing the sailor doesn't want to sheet in").
     ("start_hike_share", 0.0, 1.4),
     ("start_rake_back", 0.0, 0.5),
-    ("plane_head_up_deg", 30.0, 70.0),  # Max: from any course up to the beam reach while slow (not below 30)
-    ("plane_head_up_from_twa_deg", 95.0, 125.0),
+    # plane_head_up_deg out (7 November 2026: low-speed steering, see the audit report)
+    # plane_head_up_from_twa_deg out (7 November 2026: low-speed steering, see the audit report)
     # The nose dive in a strong wind at low speed
     ("nose_dive_bow_m", 0.0, 0.3),
     ("nose_dive_pitch_deg", 3.0, 20.0),
@@ -72,9 +72,9 @@ PARAMS = [
     ("plane_help_full_ms", 2.0, 6.0),
     ("plane_help_until_ms", 6.0, 9.6),
     ("helm_rate_per_s", 1.0, 3.5),
-    ("slow_rate_gain_scale", 0.3, 3.0),
-    ("slow_integral_scale", 0.3, 3.0),
-    ("slow_hold_scale", 0.4, 2.0),
+    # slow_rate_gain_scale out (7 November 2026: low-speed steering, see the audit report)
+    # slow_integral_scale out (7 November 2026: low-speed steering, see the audit report)
+    # slow_hold_scale out (7 November 2026: low-speed steering, see the audit report)
     ("hold_lead_s", 0.0, 0.8),
     ("hold_rate_per_deg", 0.3, 1.5),
     ("hold_rate_limit_dps", 8.0, 30.0),

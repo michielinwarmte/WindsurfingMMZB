@@ -568,6 +568,9 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 	var steer_key: float = _axis("steer_right", "steer_left")  # +1 = turn right on the screen
 	var tilt_key: float = _axis("tilt_right", "tilt_left")  # +1 = mast top toward starboard
 	_turn_key = clampf(steer_key + tilt_key, -1.0, 1.0) if mode == Mode.BEGINNER else 0.0
+	# The player has chosen a course: from now on the slow head-up leaves it alone (_plane_head_up_now_deg).
+	if _turn_key != 0.0:
+		_player_steered = true
 	_sharp = _held("steer_sharp")
 	_shape_the_key(clampf(steer_key + tilt_key, -1.0, 1.0), dt)
 	var rake_key: float = _axis("rake_back", "rake_forward")  # +1 = rig back
@@ -1213,6 +1216,7 @@ func _bear_away_from_the_fall(telemetry: Telemetry, rate_dps: float) -> float:
 
 func reset_controls(controls: SimControls) -> void:
 	_settling = false
+	_player_steered = false
 	_rake_bias_given = 0.0
 	_chop_trim_given = 0.0
 	_nose_dive_for_s = 0.0
@@ -1631,6 +1635,8 @@ var start_rake_back: float = 0.0
 ## board stays in the hump (measured on the lake: 7.7 km/h after 75 s at 135 degrees in the lake's
 ## own wind, where 100 degrees planed after 15 s). 0: off.
 var plane_head_up_deg: float = 0.0
+## True once the player (or an AI's hands) has steered since the last start: the slow head-up is off then.
+var _player_steered: bool = false
 var plane_head_up_from_twa_deg: float = 110.0
 ## The nose dive below the plane: slower than nose_dive_below_ms, with the bow buried deeper than
 ## nose_dive_bow_m (Telemetry.bow_immersion_m; 0: off) or the nose down more than nose_dive_pitch_deg,
@@ -1738,7 +1744,9 @@ func _rake_back_when_slow(telemetry: Telemetry, controls: SimControls) -> void:
 
 ## How much closer to the wind the heading hold aims to get going on a broad reach, degrees.
 func _plane_head_up_now_deg(telemetry: Telemetry) -> float:
-	if plane_head_up_deg <= 0.0:
+	# Only after a start, until the player steers (7 November 2026: after a key turn away it turned the board
+	# back up, so a 30 degree turn kept 3 to 7 and the course wandered 9 to 10 degrees at low speed).
+	if plane_head_up_deg <= 0.0 or _player_steered:
 		return 0.0
 	# Measured from the course held, not the course now (Max's play-test, 7 November 2026: a start at 120
 	# degrees went up to about 107 and back, because the room shrank as the board came up), and released
@@ -1764,18 +1772,18 @@ func _gust_bear_away_now_deg(telemetry: Telemetry) -> float:
 
 
 const NIGHT_TUNING: Dictionary[String, float] = {
+	# Out on 7 November 2026 (Max: "the full control at low speeds, also steering"; proved against the
+	# 6 November build, Documentation/reports/physics/realism_audit_7nov2026.md): the slow head-up fought the
+	# player's course (a 30 degree key turn kept 3 to 7, the course wandering 9 to 10 deg), carve_rate_dps and
+	# head_up_rate_budget_dps_ms doubled the heel in a key turn (up to 25 deg at 8 kt), and the slow gains:
+	# the code's own numbers again for those.
 	"sharp_turn_factor": 2.25,
 	"steer_rise_s": 0.2,
 	"steer_fall_s": 0.0625,
 	"tap_rail_full_s": 0.85,
 	"helm_rate_per_s": 2.625,
-	"slow_rate_gain_scale": 1.675,
-	"slow_integral_scale": 0.325,
-	"slow_hold_scale": 1.4,
 	"hold_lead_s": 0.4,
 	"rate_gain": 0.01525,
-	"carve_rate_dps": 45.75,
-	"head_up_rate_budget_dps_ms": 160.0,
 	"airborne_alpha_deg": 12.0,
 	"airborne_support_share": 0.15,
 	"airborne_hold_s": 0.05,
@@ -1784,14 +1792,14 @@ const NIGHT_TUNING: Dictionary[String, float] = {
 	"key_tack_rate_dps": 24.0,
 	"tack_rate_max_dps": 23.75,
 	"push_commit_from": 0.75,
-	"plane_head_up_deg": 60.0,  # Max, 7 November 2026: never stuck slow on a broad reach; from any course up to the beam reach
-	"plane_head_up_from_twa_deg": 95.0,
 	"gust_bear_away_deg": 0.0,
 	"airborne_wind_from_kt": 14.5,
 	"plane_help_full_ms": 6.0,
 	"plane_help_until_ms": 9.4,
 	"reflex_full_share": 0.96,
 	"reflex_alpha_deg": 9.0,
+	"plane_head_up_deg": 60.0,  # after a start only, until the player steers: up to the beam reach to get going
+	"plane_head_up_from_twa_deg": 95.0,
 }
 
 

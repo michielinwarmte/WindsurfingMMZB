@@ -76,6 +76,23 @@ func test_a_buried_nose_eases_the_sail_and_rakes_the_rig_back_without_adding_up(
 	assert_eq(fast.auto_sheet_pilot.max_alpha_deg, 90.0)
 
 
+func test_after_the_player_steers_the_head_up_leaves_the_course_alone() -> void:
+	# 7 November 2026: after a key turn away at low speed the head-up turned the board back up (a 30 degree
+	# turn kept 3 to 7, the course wandering 9 to 10 degrees). It helps after a start only, until the player
+	# steers.
+	var c: PlayerController = PlayerController.new()
+	c.plane_head_up_deg = 20.0
+	var controls: SimControls = SimControls.new()
+	Input.action_press("steer_left")
+	_run(c, _telemetry(140.0, 2.0), controls, 0.2)
+	Input.action_release("steer_left")
+	_run(c, _telemetry(140.0, 2.0), controls, 1.0)
+	assert_almost_eq(c.wanted_rate_dps, 0.0, 0.5, "the course the player chose is held")
+	c.reset_controls(controls)
+	_run(c, _telemetry(140.0, 2.0), controls, 0.5)
+	assert_gt(c.wanted_rate_dps * c.tack_sign(_telemetry(140.0)), 1.0, "after a new start it helps again")
+
+
 func test_a_slow_broad_reach_heads_up_to_get_going() -> void:
 	var c: PlayerController = PlayerController.new()
 	c.plane_head_up_deg = 20.0

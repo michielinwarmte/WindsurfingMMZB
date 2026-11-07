@@ -43,7 +43,9 @@ GEARS = ["small", "medium", "big"]
 TARGET_BEAM_KMH = 50.0
 TARGET_BROAD_KMH = 55.0
 HARNESS = "res://dev/run_lake_speed.gd"
-GUARD_SCENARIOS = ("taps", "carve", "reflex", "turns")
+# "steer" (7 November 2026, Max: "it is the full control at low speeds, also steering"): the night's
+# below-the-plane steering at 8 and 10 kt, so no tuned number can make the board wander or undo a key turn.
+GUARD_SCENARIOS = ("taps", "carve", "reflex", "turns", "steer")
 
 # (id, scenario, args) for one gear; the place, the hour and the course spread over the cases.
 LAKE_CASES = [
