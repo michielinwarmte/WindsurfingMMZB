@@ -53,6 +53,49 @@ var lean_rate_per_s: float = 2.0
 ## which at planing speed is a lot of rake back), the share of weight put on the inside
 ## rail, and how fast the sailor moves the helm.
 var turn_rate_dps: float = 30.0
+## Shift + A/D, the carve (Max, 7 November 2026: "we press and hold shift and steer to steer more
+## sharply"): with Shift held the key asks for sharp_turn_factor times the turn rate, at any speed,
+## and the head-up limit at speed widens by the same factor. The rail follows the rate asked (so a
+## planing board banks into the sharp turn), times sharp_rail_gain while the planing technique is in
+## use. Into a Space tack or gybe with the key held toward the turn, Shift multiplies the key's rate
+## by sharp_manoeuvre_factor and the manoeuvre's caps (gybe_rate_max_dps, tack_rate_max_dps) by
+## sharp_cap_factor. Plain A/D is unchanged. Night of 7 November: these are tuned by
+## tools/night_tuner.py (Documentation/reports/autopilot/night_7nov/).
+var sharp_turn_factor: float = 2.0
+var sharp_rail_gain: float = 1.0
+var sharp_manoeuvre_factor: float = 1.5
+var sharp_cap_factor: float = 1.25
+var _sharp: bool = false
+## A short A/D tap (Max, 7 November 2026: "we do taps now it disbalances the character"): the key is
+## shaped into a ramp, steer_rise_s from nothing to full and steer_fall_s back (0: the key as it is),
+## so a tap asks for a small, smooth turn; and the rail's share of the turn grows with how long the
+## key has been held, full after tap_rail_full_s, so a tap steers with the rig and does not throw the
+## sailor's weight onto a rail. An AI's stick goes through the same ramp (one controller for all).
+var steer_rise_s: float = 0.2
+var steer_fall_s: float = 0.15
+var tap_rail_full_s: float = 0.4
+var _steer_smooth: float = 0.0
+var _key_held_s: float = 0.0
+## Getting on the plane (Max, 7 November 2026: "better getting on plane technique"): below planing
+## speed, on a course closer to the wind than plane_bear_away_to_twa_deg, the heading hold aims up to
+## plane_bear_away_deg further off the wind (a sailor bears away to a broad reach to get going, then
+## comes back up): all of it below plane_help_full_ms, none from plane_help_until_ms. Only the
+## heading hold does this (no key held): a key held is the player's own course. 0: off.
+var plane_bear_away_deg: float = 0.0
+var plane_bear_away_to_twa_deg: float = 125.0
+var plane_help_full_ms: float = 4.0
+var plane_help_until_ms: float = 8.5
+## Steering below the plane (Max: "better non planing steering"): the turn-rate loop's gains
+## (rate_gain, rate_integral_gain) and the heading hold's rate per degree (hold_rate_per_deg) times
+## these below planing_steer_from_ms - 2 m/s, blending to the planing numbers at planing_steer_from_ms.
+## 1: as before.
+var slow_rate_gain_scale: float = 1.0
+var slow_integral_scale: float = 1.0
+var slow_hold_scale: float = 1.0
+## In the air (Max: "more control on high speeds while flying"): while the board is light over a
+## crest (see airborne_alpha_deg), the turn-rate loop's helm is held this much (0: as before, 1: the
+## helm and its trim held where they are, the yaw in the air not chased).
+var airborne_helm_hold: float = 0.0
 ## Heading up is slower at speed: the board turning toward the wind must be banked to
 ## windward against the centripetal force, with the hike that the sail already uses, so the
 ## rate is held to head_up_rate_budget over the speed (at least head_up_rate_min). At planing
@@ -521,6 +564,8 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 	var steer_key: float = _axis("steer_right", "steer_left")  # +1 = turn right on the screen
 	var tilt_key: float = _axis("tilt_right", "tilt_left")  # +1 = mast top toward starboard
 	_turn_key = clampf(steer_key + tilt_key, -1.0, 1.0) if mode == Mode.BEGINNER else 0.0
+	_sharp = _held("steer_sharp")
+	_shape_the_key(clampf(steer_key + tilt_key, -1.0, 1.0), dt)
 	var rake_key: float = _axis("rake_back", "rake_forward")  # +1 = rig back
 	# Through a gybe the sailor keeps the sail eased: with the rig laid forward and the body
 	# inside the turn, a fully powered sail would pull them over it. The bank does the
@@ -559,7 +604,7 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		if manoeuvre == Manoeuvre.NONE:
 			_settling = true
 	elif mode == Mode.BEGINNER:
-		_steer_beginner(telemetry, controls, clampf(steer_key + tilt_key, -1.0, 1.0), dt)
+		_steer_beginner(telemetry, controls, _steer_smooth, dt)
 		_turn_wanted = signf(wanted_rate_dps) if absf(wanted_rate_dps) > 5.0 else 0.0
 	else:
 		# Raw controls: rake comes back to neutral when Q/E are released, like the others.
@@ -907,10 +952,11 @@ func _steer_beginner(telemetry: Telemetry, controls: SimControls, turn_key: floa
 		return
 	var rate: float = 0.0
 	if turn_key != 0.0:
-		rate = turn_key * turn_rate_dps
+		var sharp: float = sharp_turn_factor if _sharp else 1.0
+		rate = turn_key * turn_rate_dps * sharp
 		# A right turn heads up on starboard tack, a left turn on port tack.
 		if signf(rate) == tack_sign(telemetry):
-			var cap: float = clampf(head_up_rate_budget_dps_ms / maxf(telemetry.speed_ms, 0.1), head_up_rate_min_dps, turn_rate_dps)
+			var cap: float = clampf(head_up_rate_budget_dps_ms / maxf(telemetry.speed_ms, 0.1), head_up_rate_min_dps, turn_rate_dps) * sharp
 			rate = clampf(rate, -cap, cap)
 		_heading_held = false
 	elif hold_heading:
@@ -919,8 +965,11 @@ func _steer_beginner(telemetry: Telemetry, controls: SimControls, turn_key: floa
 			var lead_deg: float = clampf(-telemetry.yaw_rate_dps * hold_lead_s, -hold_lead_max_deg, hold_lead_max_deg)
 			_held_heading_deg = wrapf(telemetry.heading_deg + lead_deg, 0.0, 360.0)
 			_heading_held = true
-		var turn_right_deg: float = wrapf(_held_heading_deg - telemetry.heading_deg, -180.0, 180.0)
-		rate = clampf(hold_rate_per_deg * turn_right_deg, -hold_rate_limit_dps, hold_rate_limit_dps)
+		# Getting going: the hold aims further off the wind below the plane (plane_bear_away_deg).
+		var aim_deg: float = _held_heading_deg - tack_sign(telemetry) * _plane_bear_away_now_deg(telemetry)
+		var turn_right_deg: float = wrapf(aim_deg - telemetry.heading_deg, -180.0, 180.0)
+		var per_deg: float = hold_rate_per_deg * lerpf(slow_hold_scale, 1.0, _planing_blend(telemetry))
+		rate = clampf(per_deg * turn_right_deg, -hold_rate_limit_dps, hold_rate_limit_dps)
 	held_heading_deg = _held_heading_deg if _heading_held else -1.0
 	if reflex_on:
 		rate = _bear_away_from_the_fall(telemetry, rate)
@@ -1004,13 +1053,22 @@ func _steer_at_rate(telemetry: Telemetry, controls: SimControls, rate_dps: float
 	# A positive yaw rate turns the bow to port, so the rate of turning right is its negative.
 	var error_dps: float = wanted_rate_dps - (-telemetry.yaw_rate_dps)
 	var tack: float = tack_sign(telemetry)
-	_helm_trim_up = clampf(_helm_trim_up + rate_integral_gain * error_dps * tack * dt, -1.0, 1.0)
-	helm_right = clampf(_helm_trim_up * tack + rate_gain * error_dps, -1.0, 1.0)
+	# Below the plane the loop's own gains (slow_rate_gain_scale, slow_integral_scale); in the air the
+	# helm held (airborne_helm_hold): the water no longer answers it.
+	var planing: float = _planing_blend(telemetry)
+	var held: float = airborne_helm_hold if _airborne_for_s > 0.0 else 0.0
+	var integral_gain: float = rate_integral_gain * lerpf(slow_integral_scale, 1.0, planing) * (1.0 - held)
+	var gain: float = rate_gain * lerpf(slow_rate_gain_scale, 1.0, planing)
+	_helm_trim_up = clampf(_helm_trim_up + integral_gain * error_dps * tack * dt, -1.0, 1.0)
+	var helm_now: float = clampf(_helm_trim_up * tack + gain * error_dps, -1.0, 1.0)
+	helm_right = lerpf(helm_now, helm_right, held)
 	var pivot: bool = Helm.pivoting(telemetry, controls, pivot_within_deg)
 	# The rig closes the loop. The rail is not in the loop: weight goes on the inside rail
 	# in proportion to the wanted rate (the sim banks the board for a coordinated turn at
 	# that rate), and none while pivoting through the wind, where a board on its rail skids.
 	var rail: float = 0.0 if (pivot or not rail_on) else clampf(wanted_rate_dps / carve_rate_dps, -1.0, 1.0) * _rail_by_speed(telemetry)
+	if manoeuvre == Manoeuvre.NONE:
+		rail *= _key_rail_share(telemetry)
 	var lean_before: float = controls.lean
 	# The legs (PH35): the back foot carries legs_share of the helm, and the slider's push on top;
 	# none while pivoting, where the feet are out of the straps. Planing in the straps they also
@@ -1310,14 +1368,20 @@ func _manoeuvre_rate_dps(is_gybe: bool) -> float:
 	# into a catapult (the matrix, gp_manoeuvres_6nov.md).
 	if manoeuvre == Manoeuvre.GYBE_HEADING_UP or manoeuvre == Manoeuvre.TACK_BEARING_AWAY:
 		return rate
+	var sharp: bool = false
 	if _turn_key_along() > 0.0:
 		rate = key_gybe_rate_dps if is_gybe else key_tack_rate_dps
+		# Shift held with the key: the carve into the turn (sharp_manoeuvre_factor, sharp_cap_factor).
+		sharp = _sharp
+		if sharp:
+			rate *= sharp_manoeuvre_factor
 	var carve: float = body_carve()
 	if carve != 0.0:
 		rate *= 1.0 + body_carve_share * carve
 	# A head-up at planing speed faster than about 20 degrees a second pulls the sailor over the sail
 	# (head_up_rate_min_dps; the matrix's tacks at 24 kt with the key and the body together).
-	return minf(rate, gybe_rate_max_dps if is_gybe else tack_rate_max_dps)
+	var cap: float = gybe_rate_max_dps if is_gybe else tack_rate_max_dps
+	return minf(rate, cap * (sharp_cap_factor if sharp else 1.0))
 
 
 ## The manoeuvre is over (done, given up or timed out): the cue is forgotten, and a body that carved
@@ -1445,6 +1509,54 @@ func _axis(positive: String, negative: String) -> float:
 	if Input.is_action_pressed(negative):
 		value -= 1.0
 	return value
+
+
+## True while the key is held (an AI's hands: what they hold, AiHands.held()).
+func _held(action: String) -> bool:
+	if hands != null:
+		return hands.held(action)
+	return InputMap.has_action(action) and Input.is_action_pressed(action)
+
+
+## The turn key shaped into a ramp (steer_rise_s, steer_fall_s), and how long it has been held
+## (_key_held_s, for the rail's share): a short tap becomes a small, smooth turn.
+func _shape_the_key(raw: float, dt: float) -> void:
+	var rising: bool = absf(raw) > absf(_steer_smooth) or signf(raw) * signf(_steer_smooth) < 0.0
+	var time_s: float = steer_rise_s if rising else steer_fall_s
+	if time_s <= 0.0:
+		_steer_smooth = raw
+	else:
+		_steer_smooth = move_toward(_steer_smooth, raw, dt / time_s)
+	if raw != 0.0:
+		_key_held_s += dt
+	elif _steer_smooth == 0.0:
+		_key_held_s = 0.0
+
+
+## The share of the rail a key's turn gets: growing with how long the key has been held (a tap gets
+## little), and in a sharp turn on the plane times sharp_rail_gain. 1 for the heading hold.
+func _key_rail_share(telemetry: Telemetry) -> float:
+	var share: float = 1.0
+	if tap_rail_full_s > 0.0 and _steer_smooth != 0.0:
+		share = smoothstep(0.0, tap_rail_full_s, _key_held_s)
+	if _sharp and _steer_smooth != 0.0:
+		share *= lerpf(1.0, sharp_rail_gain, _planing_technique(telemetry))
+	return share
+
+
+## 0 below planing_steer_from_ms - 2 m/s, 1 from planing_steer_from_ms: where the slow steering's
+## numbers give way to the planing ones.
+func _planing_blend(telemetry: Telemetry) -> float:
+	return smoothstep(planing_steer_from_ms - 2.0, planing_steer_from_ms, telemetry.speed_ms)
+
+
+## How much further off the wind the heading hold aims to get going, degrees (plane_bear_away_deg).
+func _plane_bear_away_now_deg(telemetry: Telemetry) -> float:
+	if plane_bear_away_deg <= 0.0 or telemetry.is_planing:
+		return 0.0
+	var room_deg: float = clampf(plane_bear_away_to_twa_deg - absf(telemetry.twa_deg), 0.0, plane_bear_away_deg)
+	var slow: float = 1.0 - smoothstep(plane_help_full_ms, maxf(plane_help_until_ms, plane_help_full_ms + 0.01), telemetry.speed_ms)
+	return room_deg * slow
 
 
 ## True on the update in which the key went down, and not again until it is released.

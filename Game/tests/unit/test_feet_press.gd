@@ -64,6 +64,10 @@ func _run(wind_kt: float, twa_deg: float, push: float, seconds: float) -> Packed
 	# training of 6 November 2026, Documentation/reports/autopilot/lake_chop_training.md): this test
 	# is about the feet's press left in the middle, and its numbers are from before that training.
 	controller.head_up_alpha_deg = 90.0
+	# And the key as it was before the tap smoothing of 7 November 2026 (no ramp, the rail at once).
+	controller.steer_rise_s = 0.0
+	controller.steer_fall_s = 0.0
+	controller.tap_rail_full_s = 0.0
 	controller.rail_full_ms = 0.0
 	controller.airborne_alpha_deg = 90.0
 	controller.push_level = push
