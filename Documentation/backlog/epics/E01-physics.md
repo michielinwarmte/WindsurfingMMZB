@@ -154,3 +154,13 @@ Done when: each is fixed or closed with a reason.
 - [ ] T2 The 30 Hz yaw flutter on the steady 18 kt reach (PH38)
 - [ ] T3 The race's best run angle 10° deeper than the polar's (PH41, a skipper fact)
 - [ ] T4 The sine gusts' jump every period, only if the sines are played again (PH24)
+
+### E01.S17 · Downwind: the board cannot hold planing speed at 135° in Silvaplana's conditions (core physics)
+Status: todo | Size: L | Owner: Michiel, the lead builds the tests | Milestone: M2 | Needs: Max's GPS tracks (T5) | Roadmap: PH46
+Done when: the sail's drive and the board's drag are each checked against a written source, the polar at Silvaplana has no cliff between 120° and 135° (today 56 km/h in the gusts at 120°, 31 to 33 at 135°), the 117 L / 7.5 m in a 24 kt gust (10 m) makes 50 to 55 km/h across and 55 to 60 at 120 to 135° after a flying start, upwind matches Max's reference, and every regression suite is green or re-baselined with Michiel. The full issue, the evidence and the tests: `Documentation/reports/autopilot/lake_speed/ISSUE_downwind_physics.md` (branch `autopilot/lake-speed` until merged). Max (7 November 2026): "this is the core physics so it needs to be 100% right"; check upwind too.
+- [ ] T1 P1 the tow test: the board's drag curve 15 to 70 km/h, three gear combos, against a reference drag curve
+- [ ] T2 P2 the sail sweep: lift, drag and drive per apparent wind and angle of attack; the controller's 18° against the best drive
+- [ ] T3 P3 the polar at Silvaplana: 45 to 165°, 14 to 26 kt, flat and waves, 0.98 and 1.225 kg/m3, from rest and flying
+- [ ] T4 P4 the upwind check: pointing, speed and speed made good at 45 to 65° (today 45° cannot be held, 55° 23 km/h)
+- [ ] T5 P5 the real reference: Max's GPS tracks at Silvaplana with the station's wind, a measured polar
+- [ ] T6 P6 the regression: unit, check, validation (the polar sweep re-baselined), the night and lake suites, the AI race tests, LAN; then the autopilot retuned
