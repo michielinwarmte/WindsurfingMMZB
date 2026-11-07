@@ -23,6 +23,7 @@ extends SceneTree
 ## +1 carve the toes or heels toward the inside of the turn (-1 the outside: flatten), and the back
 ## foot (+) or the front foot (-); in the middle before Space and after the manoeuvre.
 ## [--cue=1] [--cue_delay=<s>]: Space pressed again this long after the "flip now" window opens.
+## [--sharp=1]: with --hold_turn, Shift held with the key (the carve into the turn, 7 November 2026).
 ## [--shift=<s>]: every case's key times and Space this much later (another wave under the turn).
 ##
 ## The per-case CSV files have the same columns as tools/simulate.sh, so .scratch/trace.py
@@ -47,6 +48,7 @@ var _shift_s: float = 0.0
 ## Per case: the key held toward the turn ("" none), when the "flip now" window opened (-1 not yet)
 ## and whether the cue was given.
 var _held_action: String = ""
+var _sharp: bool = false
 var _cue_open_since_s: float = -1.0
 var _cue_given: bool = false
 var _waves: bool = false
@@ -136,6 +138,7 @@ func _initialize() -> void:
 	_waves = options.get("waves", "0") == "1"
 	_wave_scale = options.get("wave_scale", "1").to_float()
 	_hold_turn = options.get("hold_turn", "0") == "1"
+	_sharp = options.get("sharp", "0") == "1"
 	if options.has("body_carve") or options.has("body_back"):
 		_body_carve = options.get("body_carve", "0").to_float()
 		_body_back = options.get("body_back", "0").to_float()
@@ -187,7 +190,7 @@ func _initialize() -> void:
 
 
 func _run_case(c: Case, every: int, out_dir: String) -> Result:
-	for action: String in ["steer_left", "steer_right", "tack", "sheet_in", "sheet_out", "rake_back", "rake_forward"]:
+	for action: String in ["steer_left", "steer_right", "steer_sharp", "tack", "sheet_in", "sheet_out", "rake_back", "rake_forward"]:
 		Input.action_release(action)
 	_held_action = ""
 	_cue_open_since_s = -1.0
@@ -350,8 +353,11 @@ func _hands_in_the_manoeuvre(controller: PlayerController, body: MouseBody, spac
 		if in_it:
 			_held_action = "steer_right" if turn > 0.0 else "steer_left"
 			Input.action_press(_held_action)
+			if _sharp:
+				Input.action_press("steer_sharp")
 		elif _held_action != "":
 			Input.action_release(_held_action)
+			Input.action_release("steer_sharp")
 			_held_action = ""
 	if body != null:
 		# As seen from behind the board (MouseBody.Sideways.AS_SEEN) the mouse toward the turn puts
