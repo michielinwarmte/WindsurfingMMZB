@@ -61,7 +61,7 @@ var turn_rate_dps: float = 30.0
 ## by sharp_manoeuvre_factor and the manoeuvre's caps (gybe_rate_max_dps, tack_rate_max_dps) by
 ## sharp_cap_factor. Plain A/D is unchanged. Night of 7 November: these are tuned by
 ## tools/night_tuner.py (Documentation/reports/autopilot/night_7nov/).
-var sharp_turn_factor: float = 2.0
+var sharp_turn_factor: float = 2.25
 var sharp_rail_gain: float = 1.0
 var sharp_manoeuvre_factor: float = 1.5
 var sharp_cap_factor: float = 1.25
@@ -72,8 +72,8 @@ var _sharp: bool = false
 ## key has been held, full after tap_rail_full_s, so a tap steers with the rig and does not throw the
 ## sailor's weight onto a rail. An AI's stick goes through the same ramp (one controller for all).
 var steer_rise_s: float = 0.2
-var steer_fall_s: float = 0.15
-var tap_rail_full_s: float = 0.4
+var steer_fall_s: float = 0.0625
+var tap_rail_full_s: float = 0.85
 var _steer_smooth: float = 0.0
 var _key_held_s: float = 0.0
 ## Getting on the plane (Max, 7 November 2026: "better getting on plane technique"): below planing
@@ -89,9 +89,9 @@ var plane_help_until_ms: float = 8.5
 ## (rate_gain, rate_integral_gain) and the heading hold's rate per degree (hold_rate_per_deg) times
 ## these below planing_steer_from_ms - 2 m/s, blending to the planing numbers at planing_steer_from_ms.
 ## 1: as before.
-var slow_rate_gain_scale: float = 1.0
-var slow_integral_scale: float = 1.0
-var slow_hold_scale: float = 1.0
+var slow_rate_gain_scale: float = 1.675
+var slow_integral_scale: float = 0.325
+var slow_hold_scale: float = 1.4
 ## In the air (Max: "more control on high speeds while flying"): while the board is light over a
 ## crest (see airborne_alpha_deg), the turn-rate loop's helm is held this much (0: as before, 1: the
 ## helm and its trim held where they are, the yaw in the air not chased).
@@ -108,16 +108,16 @@ var airborne_helm_hold: float = 0.0
 ## second at 13.8 m/s, 13 at 15.7. Raised to the rate a 30 degree bank would carry (23 and 21),
 ## the sailor fell at 18 and 24 kt; the floor of 12 sits just under that limit, and at 12 the
 ## head-up at 18 and 24 kt is now as quick as at 12 kt.
-var head_up_rate_budget_dps_ms: float = 100.0
+var head_up_rate_budget_dps_ms: float = 160.0
 var head_up_rate_min_dps: float = 12.0
 var hold_rate_per_deg: float = 0.8
 var hold_rate_limit_dps: float = 20.0
 ## When the hold re-arms the board may still be swinging; the held heading is set a little
 ## ahead (at most hold_lead_max_deg), where the board will be once it has settled, so the
 ## helm is not slammed back.
-var hold_lead_s: float = 0.3
+var hold_lead_s: float = 0.0
 var hold_lead_max_deg: float = 10.0
-var rate_gain: float = 0.01
+var rate_gain: float = 0.01525
 var rate_integral_gain: float = 0.02
 ## A gybe is a carve: the sailor banks the board into the turn and the rig follows, at
 ## gybe_rate_dps. A tack is carved up to the wind at tack_rate_dps, then pivoted through it
@@ -129,7 +129,7 @@ var tack_rate_dps: float = 15.0
 ## The turn rate a full lean on a rail is sized for (the sim banks the board for a
 ## coordinated turn at lean times this rate: SailorConfig.carve_rate_dps). The rail asked
 ## for a wanted rate is rate / carve_rate_dps; the rig does the rest.
-var carve_rate_dps: float = 57.0
+var carve_rate_dps: float = 45.75
 ## After a manoeuvre at planing speed (above settle_speed_ms) the board is left to
 ## straighten by itself (rig neutral, weight off the rails) until it turns slower than
 ## settle_rate_dps; only then does the heading hold take over. A hold that grabbed a board
@@ -159,7 +159,7 @@ var _choose_grace_left_s: float = 0.0
 ## timeout, and the key then steers as on a reach.
 var turn_follows_key: bool = true
 var key_gybe_rate_dps: float = 40.0
-var key_tack_rate_dps: float = 20.0
+var key_tack_rate_dps: float = 24.0
 ## 2. The body carves (with the mouse body on): in a tack or gybe the mouse sideways toward the
 ## inside of the turn (as seen from behind the board: the way the board turns; the rail that goes
 ## down in the turn, the toes in a gybe and the heels in a tack) tightens the turn by up to
@@ -176,7 +176,7 @@ var key_tack_rate_dps: float = 20.0
 var body_in_manoeuvres: bool = true
 var body_carve_share: float = 0.33
 var gybe_rate_max_dps: float = 40.0
-var tack_rate_max_dps: float = 20.0
+var tack_rate_max_dps: float = 23.75
 ## 3. The flip on your cue: in the window before the rig goes across by itself (a gybe: from
 ## gybe_cue_from_twa_deg of true wind angle on; a tack: once the bow is tack_cue_through_deg
 ## through the wind and the sail would fill on the new side; by itself at Autopilot.flip_twa_deg,
@@ -195,7 +195,7 @@ var _cue_hold_left_s: float = 0.0
 var _own_flip_twa_deg: float = NAN
 ## The angle of attack the sail is eased to through a gybe.
 var gybe_entry_alpha_deg: float = 8.0
-var helm_rate_per_s: float = 2.0
+var helm_rate_per_s: float = 2.625
 ## The last helm, -1 (full left) to +1 (full right), the rate the loop asked for and the
 ## heading it holds, for the HUD and for debugging.
 var helm_right: float = 0.0
@@ -396,9 +396,9 @@ var _manoeuvre_wait_s: float = 0.0
 ## the sailor, falling with it, is pulled over the sail: the steady 24 kt beam reach on the lake left
 ## the water three times in 1.5 s and the third catapulted (the felt heel from 9 to 34 degrees in
 ## 0.3 s). A sailor sheets out on a jump. 90: no ease.
-var airborne_alpha_deg: float = 6.0
-var airborne_support_share: float = 0.3
-var airborne_hold_s: float = 0.3
+var airborne_alpha_deg: float = 12.0
+var airborne_support_share: float = 0.2125
+var airborne_hold_s: float = 0.05
 ## The ease only for a real jump, not every skip off a crest: once the board has been light for
 ## airborne_after_s, and only while the felt heel to leeward is beyond airborne_heel_from_deg (-90:
 ## whatever the heel). The ease costs drive: eased at every skip the steady 24 kt reach lost a fifth
@@ -450,13 +450,13 @@ var _own_sheet_in_share: float = 0.5
 ## reflex fades out, and at the top of the slider it is gone: the pushed dial keeps its risk.
 ## reflex_on false: the controller as before 6 November 2026, bit for bit.
 var reflex_on: bool = true
-var reflex_from_share: float = 0.65
+var reflex_from_share: float = 0.5
 var reflex_full_share: float = 0.9
 var reflex_alpha_deg: float = 6.0
 var reflex_last_share: float = 0.95
 var reflex_last_alpha_deg: float = 1.0
 var reflex_sheet_rate_per_s: float = 4.0
-var reflex_bear_away_dps: float = 8.0
+var reflex_bear_away_dps: float = 12.0
 var reflex_bear_away_max_twa_deg: float = 130.0
 var reflex_heel_press: float = 1.0
 var reflex_catch_alpha_deg: float = 18.0
