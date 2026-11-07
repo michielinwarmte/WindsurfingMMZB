@@ -209,6 +209,13 @@ var held_heading_deg: float = -1.0
 var manoeuvre_timeout_s: float = 20.0
 ## After a sheet key the auto-sheet stays out of the way for this long.
 var manual_sheet_hold_s: float = 3.0
+## The sail stalled past this angle of attack ends the keys' hold at once (deg).
+var manual_sheet_stall_deg: float = 30.0
+## After the keys' hold the auto-sheet eases to its trim at this pace (sheet per second) for this long.
+var manual_resume_rate_per_s: float = 0.6
+var manual_resume_s: float = 1.5
+var _manual_resume_left_s: float = 0.0
+var _sheet_was_manual: bool = false
 ## Beginner mode: the sailor eases when more than this share of the hike is used, or the
 ## board heels more than this to leeward; the ease comes on and goes away at these rates.
 var ease_when_overpowered: bool = true
@@ -630,6 +637,13 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 	# Sheet: W pulls the boom in, S lets it out. With the auto-sheet on, the keys take over
 	# for a few seconds and then the automatic trim resumes.
 	var sheet_key: float = _axis("sheet_in", "sheet_out")
+	# Max's recording, 7 November 2026: Up held half a second sheeted to 0.85, the board turned, the sail
+	# stalled at 48 to 71 degrees of attack for the 3 s the keys keep the auto-sheet away, and then the
+	# auto-sheet dumped it (0.85 to 0.32 in 0.3 s). A sailor does not hold a stalled sail: past
+	# manual_sheet_stall_deg the auto-sheet takes over at once; and when it takes over it eases to its trim
+	# at manual_resume_rate_per_s for manual_resume_s instead of its full pace.
+	if sheet_key == 0.0 and _manual_sheet_timer_s > 0.0 and telemetry.alpha_deg > manual_sheet_stall_deg:
+		_manual_sheet_timer_s = 0.0
 	if sheet_key != 0.0:
 		_manual_sheet_timer_s = manual_sheet_hold_s
 		# W past fully sheeted pushes the clew across the centreline; S brings it back first.
@@ -646,13 +660,20 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		_scratch.rake = controls.rake
 		auto_sheet_pilot.turn_right_wanted = _turn_wanted
 		auto_sheet_pilot.update(telemetry, _scratch, dt)
-		wanted_sheet = _scratch.sheet
+		if _sheet_was_manual:
+			_manual_resume_left_s = manual_resume_s
+		if _manual_resume_left_s > 0.0:
+			_manual_resume_left_s = maxf(_manual_resume_left_s - dt, 0.0)
+			wanted_sheet = move_toward(wanted_sheet, _scratch.sheet, manual_resume_rate_per_s * dt)
+		else:
+			wanted_sheet = _scratch.sheet
 		wanted_across = _scratch.boom_across
 		controls.hold_side = _scratch.hold_side
 		controls.step_forward = _scratch.step_forward
 	else:
 		controls.hold_side = 0
 		controls.step_forward = 0.0
+	_sheet_was_manual = _manual_sheet_timer_s > 0.0
 	_manual_sheet_timer_s = maxf(_manual_sheet_timer_s - dt, 0.0)
 
 	# Overpowered: the sailor lets the sail out rather than being pulled over it.
@@ -1234,6 +1255,8 @@ func reset_controls(controls: SimControls) -> void:
 	_cue_side = 0
 	_cue_window_open = false
 	_manual_sheet_timer_s = 0.0
+	_manual_resume_left_s = 0.0
+	_sheet_was_manual = false
 	_heading_held = false
 	_helm_trim_up = 0.0
 	helm_right = 0.0
