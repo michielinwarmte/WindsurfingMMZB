@@ -14,8 +14,9 @@ const VALUE_WIDTH: float = 380.0
 ## How many AI boards the fleet row offers (the player's board comes on top); 0 is you alone, a
 ## time trial against your own best (GP4).
 const FLEET_SIZES: PackedInt32Array = [0, 3, 7, 11, 15, 19, 23, 31]
-const COUNTDOWNS_S: PackedFloat32Array = [30.0, 60.0, 180.0]
-const COUNTDOWN_NAMES: PackedStringArray = ["30 s", "60 s", "3 min"]
+## The countdowns offered (Max, 8 November 2026: "120 s or 3 min or 5 min"; it was 30 s, 60 s, 3 min).
+const COUNTDOWNS_S: PackedFloat32Array = [120.0, 180.0, 300.0]
+const COUNTDOWN_NAMES: PackedStringArray = ["2 min", "3 min", "5 min"]
 ## The fleet's level (RaceSetup.level_spread): close (the game's), or rookie to pro as the sheets say.
 const LEVEL_NAMES: PackedStringArray = ["Close: everyone can win", "Wide: rookie to pro"]
 ## The templates on the open water are raced at this size (the class's full courses take 7 to 11
@@ -34,7 +35,7 @@ static var chosen_lake: bool = false
 static var chosen_course: int = 0
 static var chosen_fleet: int = 2
 static var chosen_who: Who = Who.PERSONAS
-static var chosen_countdown: int = 1
+static var chosen_countdown: int = 0
 static var chosen_shadows: bool = true
 static var chosen_rules: bool = true
 ## The personas sail their own gear from the catalogue (RaceSetup.gear).

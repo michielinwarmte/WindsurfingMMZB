@@ -171,6 +171,16 @@ const DROP_CLOSE_DEG: float = 55.0
 ## and a spot keeps this much open water round it (metres).
 const ANYWHERE_MARGIN_M: float = 300.0
 const ANYWHERE_OPEN_M: float = 60.0
+## The random suite's courses moved or laid on the lake (course_on_lake_problem()): a mark at least this far from the
+## shore, a leg at least this far (metres; the course fitter lays the saved ones at 200 and 50).
+const SUITE_MARK_ROOM_M: float = 80.0
+const SUITE_LEG_ROOM_M: float = 30.0
+const COURSE_RULES_PATH: String = "res://maps/course/iqfoil_courses.tres"
+## The random suite's new courses (fit_course_on_lake()): the course fitter's margins from the shore (metres) and the
+## smallest size it may make them (% of the class's).
+const SUITE_FIT_MARK_MARGIN_M: float = 150.0
+const SUITE_FIT_LEG_MARGIN_M: float = 60.0
+const SUITE_FIT_MIN_SIZE_PERCENT: float = 25.0
 
 ## The lake's shore grid, for the sailing area of a course on the lake (kept off the shore).
 const SHORE_GRID_PATH: String = "res://maps/silvaplana/terrain/shore_heights.json"
@@ -241,6 +251,8 @@ class Entry:
 	var falls_before_gun: int = 0
 	## The penalties already printed (judge()).
 	var penalties_seen: int = 0
+	## Where it was when the countdown began (the random suite's start check), and at every R.
+	var spawn_at: Vector2 = Vector2.INF
 
 
 func _initialize() -> void:
@@ -292,11 +304,41 @@ func _initialize() -> void:
 		elif key.begins_with("sailor."):
 			_sailor_overrides[key.trim_prefix("sailor.")] = options[key].to_float()
 
+	# --min_wind_kt=<kt> (the random suite; Max, 8 November 2026: below planing the AI's numbers say nothing): a race
+	# whose wind (the lake's mean of the hour times --lake_wind_scale) is lighter is refused, to be drawn again.
+	if options.has("min_wind_kt"):
+		var sailed_kt: float = wind_kt * (options.get("lake_wind_scale", "1").to_float() if _lake != null else 1.0)
+		if sailed_kt < options["min_wind_kt"].to_float():
+			print("WIND_TOO_LOW %.1f kt" % sailed_kt)
+			quit(3)
+			return
 	var course_name: String = options.get("course", "test")
-	var course: Course = course_named(course_name)
+	var course: Course = null
+	if course_name.begins_with("fit:"):
+		# --course=fit:<template> --fit_at=<x>,<z>: a new course laid on the lake (the random suite, 8 November 2026).
+		course = fit_course_on_lake(course_name.trim_prefix("fit:"), options.get("fit_at", ""), wind_kt)
+		if course == null:
+			print("COURSE_ILLEGAL nothing fits")
+			quit(3)
+			return
+	else:
+		course = course_named(course_name)
 	if course == null:
 		quit(2)
 		return
+	# --course_turn=<deg> --course_shift=<dx>,<dz>: the course turned about its start and moved (the random suite:
+	# the same course a little elsewhere). On the lake a course that then lies on land or near the shore is refused.
+	if options.has("course_turn") or options.has("course_shift"):
+		var pivot: Vector2 = course.start_middle()
+		course.turn_about(pivot, options.get("course_turn", "0").to_float())
+		var shift: PackedStringArray = options.get("course_shift", "0,0").split(",")
+		course.move_by(Vector2(shift[0].to_float(), shift[1].to_float() if shift.size() > 1 else 0.0))
+	if _lake != null and (options.has("course_turn") or options.has("course_shift") or course_name.begins_with("fit:")):
+		var why: String = course_on_lake_problem(course)
+		if why != "":
+			print("COURSE_ILLEGAL " + why)
+			quit(3)
+			return
 	if options.has("race_type"):
 		# --race_type=slalom|course|hybrid|free: the course raced as that type (Course.RaceType).
 		course.race_type = Course.race_type_from_name(options["race_type"])
@@ -410,6 +452,7 @@ func _initialize() -> void:
 				entry.trace_file.store_line(Telemetry.csv_header())
 	apply_skipper_overrides(entries, options)
 	race.start_in(free_sail_s)
+	print("COURSE_JSON " + course_json(race, course.axis_deg))
 
 	var outside_at_gun: PackedStringArray = PackedStringArray()
 	var gun_seen: bool = false
@@ -422,6 +465,9 @@ func _initialize() -> void:
 	var tick: int = 0
 	while tick < ticks:
 		tick += 1
+		if tick == 1:
+			for entry: Entry in entries:
+				entry.spawn_at = _where(entry)
 		if not restarted and race.is_started() and (race.clock_s() >= restart_after_s or race.phase() == RaceSim.Phase.FINISHED):
 			restarted = true
 			var restart_seed: int = options.get("restart_spawn_seed", str(spawn_seed + 1000)).to_int()
@@ -478,6 +524,10 @@ func _initialize() -> void:
 		print(penalty_report(rules, entries))
 	if bottom != null:
 		print("Aground: %d of %d boards%s" % [aground_count, entries.size(), " (the skippers look out for the shore)" if shore_guard else " (no shore lookout)"])
+	var timing_wind_kt: float = wind_kt * options.get("lake_wind_scale", "1").to_float()
+	var legs_expected: Array = []
+	for k: int in range(1, race.steps().size()):
+		legs_expected.append(snappedf(TrainingDrops.expected_leg_s(race.steps()[k - 1].target(), race.steps()[k].target(), course.axis_deg, timing_wind_kt), 0.1))
 	var expected_all_s: float = expected_time_s(race, drop_index, goal_index, Vector2(INF, INF), course.axis_deg, wind_kt) if not dropping else 0.0
 	for i: int in entries.size():
 		var result: Dictionary = heads_result(entries[i], race, i, drop_index, goal_index, expected_all_s, options)
@@ -485,6 +535,12 @@ func _initialize() -> void:
 		if rules != null and result["penalties"] > 0:
 			result["penalty_note"] = "last at %.0f s: %s" % [rules.last_breach_s(i), rules.breach_text(i)]
 		result["falls_before_gun"] = entries[i].falls_before_gun
+		# The random suite's numbers: where it began, the time it needed from there to the line, and each leg's expected
+		# time (the all-rounder's, TrainingDrops.expected_leg_s()) in the wind the race was sailed in.
+		result["spawn"] = [snappedf(entries[i].spawn_at.x, 0.1), snappedf(entries[i].spawn_at.y, 0.1)] if entries[i].spawn_at.x != INF else []
+		result["start_need_s"] = TrainingDrops.expected_leg_s(entries[i].spawn_at, race.steps()[0].target(), course.axis_deg, timing_wind_kt) if entries[i].spawn_at.x != INF else 0.0
+		result["legs_expected"] = legs_expected
+		result["prestart_s"] = prestart_s
 		print("HEADS_RESULT " + JSON.stringify(result))
 	quit(0)
 
@@ -551,6 +607,71 @@ static func restart_race(old: RaceSim, course: Course, laps: int, prestart_s: fl
 			entries[i].skipper.setup(entries[i].sim, entries[i].controller, entries[i].hands, race, i)
 	race.start_in(0.0)
 	return race
+
+
+## --course=fit:<template> (the random suite, 8 November 2026): an iQFOiL template laid on Lake Silvaplana by the
+## course fitter (as tools/fit_courses.sh lays the saved ones), square to the lake's mean wind of the hour and sized
+## for it, for 12 boards, as near to `fit_at` ("x,z", game metres; the lake scene's start when empty) as it fits.
+## Null when nothing fits.
+func fit_course_on_lake(template_id: String, fit_at: String, lake_wind_kt: float) -> Course:
+	if _lake == null:
+		push_error("--course=fit: needs --map=lake")
+		return null
+	var grid: TerrainGrid = _lake.depth_grid()
+	if grid == null:
+		grid = TerrainGrid.load_from(SHORE_GRID_PATH)
+	var at: Vector2 = Vector2.ZERO
+	if fit_at != "":
+		var parts: PackedStringArray = fit_at.split(",")
+		at = Vector2(parts[0].to_float(), parts[1].to_float() if parts.size() > 1 else 0.0)
+	var fitter: CourseFitter = CourseFitter.from_heights(grid.height_at, at)
+	# The saved lake courses were laid down to 25 % of the class's size (fit_courses_8nov.txt): so are these, with
+	# room enough from the shore for the AI's lookout.
+	fitter.mark_margin_m = SUITE_FIT_MARK_MARGIN_M
+	fitter.leg_margin_m = SUITE_FIT_LEG_MARGIN_M
+	fitter.min_size_percent = SUITE_FIT_MIN_SIZE_PERCENT
+	var rules: CourseRules = load(COURSE_RULES_PATH)
+	var wind_from_deg: float = _lake.map_wind().lake_from_deg(_lake_time_s)
+	var course: Course = fitter.fit_template(template_id.to_upper(), rules, lake_wind_kt, wind_from_deg, at, 12)
+	if course != null:
+		course.name = "fit %s at (%.0f, %.0f)" % [template_id.to_upper(), at.x, at.y]
+	else:
+		print("FIT_FAILED %s at (%.0f, %.0f): %s" % [template_id.to_upper(), at.x, at.y, fitter.last_reason])
+	return course
+
+
+## Why a course does not belong on the lake as it is ("" when it does): a mark or a leg on land (Course.problems()),
+## or a mark nearer the shore than SUITE_MARK_ROOM_M, or a leg nearer than SUITE_LEG_ROOM_M (the course fitter's
+## clearance).
+func course_on_lake_problem(course: Course) -> String:
+	var grid: TerrainGrid = _lake.depth_grid()
+	if grid == null:
+		grid = TerrainGrid.load_from(SHORE_GRID_PATH)
+	var problems: PackedStringArray = course.problems(grid.height_at)
+	if not problems.is_empty():
+		return "; ".join(problems)
+	var fitter: CourseFitter = CourseFitter.from_heights(grid.height_at, course.start_middle())
+	if not fitter.has_water():
+		return "the start is not on the lake"
+	var mark_room_m: float = fitter.smallest_mark_clearance_m(course)
+	if mark_room_m < SUITE_MARK_ROOM_M:
+		return "a mark %.0f m from the shore" % mark_room_m
+	var leg_room_m: float = fitter.smallest_leg_clearance_m(course)
+	if leg_room_m < SUITE_LEG_ROOM_M:
+		return "a leg %.0f m from the shore" % leg_room_m
+	return ""
+
+
+## The course for the random suite's scorer: every step's kind, name, points, rounding side and directions, one line.
+static func course_json(race: RaceSim, axis_deg: float) -> String:
+	var steps: Array = []
+	for step: RaceStep in race.steps():
+		var points: Array = []
+		for point: Vector2 in step.points:
+			points.append([snappedf(point.x, 0.1), snappedf(point.y, 0.1)])
+		steps.append({"kind": RaceStep.Kind.keys()[step.kind], "name": step.name, "points": points, "side": int(step.side),
+			"in": [snappedf(step.in_dir.x, 0.001), snappedf(step.in_dir.y, 0.001)], "out": [snappedf(step.out_dir.x, 0.001), snappedf(step.out_dir.y, 0.001)]})
+	return JSON.stringify({"axis_deg": axis_deg, "steps": steps})
 
 
 ## --spawn=anywhere (Max, 8 November 2026: "drop the AI anywhere on the field before the start and they always
