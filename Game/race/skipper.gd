@@ -653,7 +653,10 @@ func setup(sim: WindsurferSim, controller: PlayerController, hands: AiHands, rac
 	if persona != null:
 		config = persona.to_skipper_config(random_seed, sim.telemetry.tws_10m_kt, level_spread)
 	_rng.seed = random_seed
-	_time_s = 0.0
+	# The skipper's own clock runs on across races (RaceRunner.restart() sets it up again at R), so every
+	# "since" it keeps stays true. Set back to 0 here, the last manoeuvre's end from the race before lay
+	# minutes ahead of it, and no tack or gybe came for as long as that race had lasted (Max, 8 November
+	# 2026: "if I press R the AI lost their minds").
 	_wind_memory_deg = sim.telemetry.wind_from_bearing_deg
 	_last_position = _position(sim.telemetry)
 	_last_wanted_deg = sim.telemetry.heading_deg
@@ -666,8 +669,8 @@ func setup(sim: WindsurferSim, controller: PlayerController, hands: AiHands, rac
 		sailing_area = SailingArea.around_start(race.course)
 	# The first update thinks at once; after that at this skipper's own moment of each interval.
 	_think_phase_s = think_phase_s(index)
-	_next_think_s = 0.0
-	_others_time_s = 0.0
+	_next_think_s = _time_s
+	_others_time_s = _time_s
 	_delay_times.clear()
 	_delay_headings.clear()
 	_forget_the_race()
@@ -701,8 +704,23 @@ func _forget_the_race() -> void:
 	_getting_going = false
 	_getting_going_from_s = -INF
 	_slow_turn_from_s = -1.0
+	# The controller is reset with the board (no manoeuvre under way), and nothing timed in the race
+	# before is still waiting.
+	_last_manoeuvre = PlayerController.Manoeuvre.NONE
+	_manoeuvre_ended_s = -INF
+	_settling = false
+	_penalty_owed_s = -1.0
+	_penalty_pressed_s = -INF
+	_dirty_since_s = -1.0
+	_traffic_wait_from_s = -INF
+	_traffic_seen_s = -INF
+	_holding_since_s = -1.0
+	_keeping_clear = false
+	_sharp_wanted = false
 	if _hands != null:
 		_hands.hold_speed_ms = 0.0
+		_hands.sharp = false
+		_hands.tack = false
 
 
 ## The state a skipper is in (D4), from the race: FREE_SAILING before the countdown, after the race
@@ -2662,6 +2680,8 @@ func _push_level(telemetry: Telemetry) -> float:
 	var turning: bool = _tack_due_s >= 0.0 or _controller.manoeuvre != PlayerController.Manoeuvre.NONE or _settling
 	if turning or _near_a_mark(telemetry):
 		return NAN
+	if config.push_everywhere >= 0.0:
+		return clampf(config.push_everywhere, 0.0, 1.0)
 	var level: float = SkipperPolar.push_at(_polar_winds, _polar_twa, _polar_push, telemetry.tws_10m_kt, telemetry.twa_deg)
 	if is_nan(level):
 		if config.push_offset == 0.0 or absf(telemetry.twa_deg) < PUSH_UPWIND_TWA_DEG or _turning_onto_a_course(telemetry):

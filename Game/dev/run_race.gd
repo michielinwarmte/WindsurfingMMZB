@@ -34,6 +34,9 @@ extends SceneTree
 ##   [--spawn=line]        where the skippers' boards appear: line (behind the start line, below) or
 ##                         random (at random spots in the sailing area round the start line, as the
 ##                         game puts them: SailingArea; on the lake kept off the shore)
+##                         or anywhere (anywhere round the whole course, before the countdown: above the top
+##                         mark, far below the line, out to the sides, on the lake in open water;
+##                         anywhere_places())
 ##   [--spawn_seed=0]      the seed of the random spots: the same seed, the same spots
 ##   [--free_sail=0]       seconds of free sailing before the countdown starts
 ##   [--behind=<m>]        how far behind the start line the skippers' boards wait (the game's: 1 m
@@ -83,6 +86,10 @@ extends SceneTree
 ##                         ends when the board has done goal_steps more steps (or after 2.5 times the
 ##                         all-rounder's expected time plus 90 s). Every run prints a HEADS_RESULT line per
 ##                         board (tools/heads/suite.py scores them)
+##   [--restart_after=<s> --restart_spawn_seed=<n>] the game's R that long after the gun (or when the race is
+##                         over): a new race with the same skippers set up again and every board at a new random
+##                         spot (restart_race()); the results, the start report and --stop_after_gun are the
+##                         second race's
 ##   [--sailor.<field>=<n>] a number of every skipper's sailor (SailorConfig, on its own gear too):
 ##                         the fall rule's, for the stay-on-the-board work
 ##   [--out_dir=<folder>: a CSV per board: race time, x, z, heading, speed, its next step, and what
@@ -160,6 +167,10 @@ const DROP_SIDE_MAX_M: float = 250.0
 const DROP_HEADING_DEG: float = 70.0
 const DROP_IRONS_DEG: float = 40.0
 const DROP_CLOSE_DEG: float = 55.0
+## --spawn=anywhere (anywhere_places()): the box round the course's marks and lines is this much wider each way,
+## and a spot keeps this much open water round it (metres).
+const ANYWHERE_MARGIN_M: float = 300.0
+const ANYWHERE_OPEN_M: float = 60.0
 
 ## The lake's shore grid, for the sailing area of a course on the lake (kept off the shore).
 const SHORE_GRID_PATH: String = "res://maps/silvaplana/terrain/shore_heights.json"
@@ -332,6 +343,19 @@ func _initialize() -> void:
 				if entry.skipper != null:
 					entry.skipper.shore = lookout
 	var rules: RaceRules = give_rules(entries, race, course) if with_rules else null
+	# --spawn=anywhere: every board put anywhere round the course before the countdown (anywhere_places()).
+	var anywhere_lookout: ShoreLookout = ShoreLookout.for_lake(bottom, course.start_middle()) if bottom != null else null
+	var anywhere_wind_deg: float = _lake.map_wind().lake_from_deg(_lake_time_s) if _lake != null else course.axis_deg
+	if spawn == "anywhere" and not dropping:
+		var spots: Array[Vector3] = anywhere_places(race, entries.size(), spawn_seed, anywhere_lookout, anywhere_wind_deg)
+		for i: int in entries.size():
+			entries[i].sim.reset(Vector3(spots[i].x, 0.0, spots[i].y), deg_to_rad(spots[i].z))
+			if entries[i].controller != null:
+				entries[i].controller.reset_controls(entries[i].controls)
+			race.update_board(i, _where(entries[i]))
+		for i: int in entries.size():
+			if entries[i].skipper != null:
+				entries[i].skipper.setup(entries[i].sim, entries[i].controller, entries[i].hands, race, i)
 	# The drop: every board set down on the leg to the drop's step (the skipper's heads, 8 November).
 	var drop_index: int = 0
 	var goal_index: int = race.steps().size()
@@ -392,7 +416,25 @@ func _initialize() -> void:
 	var ticks: int = roundi((free_sail_s + prestart_s + seconds) / DT)
 	var aground_count: int = 0
 	var watch_lookout: ShoreLookout = ShoreLookout.for_lake(bottom, course.start_middle()) if bottom != null else null
-	for tick: int in ticks:
+	# --restart_after=<s>: the game's R that long after the gun (restart_race()); what is reported is the second race.
+	var restart_after_s: float = options["restart_after"].to_float() if options.has("restart_after") and not dropping else INF
+	var restarted: bool = false
+	var tick: int = 0
+	while tick < ticks:
+		tick += 1
+		if not restarted and race.is_started() and (race.clock_s() >= restart_after_s or race.phase() == RaceSim.Phase.FINISHED):
+			restarted = true
+			var restart_seed: int = options.get("restart_spawn_seed", str(spawn_seed + 1000)).to_int()
+			var restart_places: Array[Vector3] = anywhere_places(race, entries.size(), restart_seed, anywhere_lookout, anywhere_wind_deg) \
+				if spawn == "anywhere" else area.spawn_places(entries.size(), restart_seed)
+			race = restart_race(race, course, laps, prestart_s, entries, restart_places, random_seed + 1000)
+			rules = give_rules(entries, race, course) if with_rules else null
+			apply_skipper_overrides(entries, options)
+			aground_count = 0
+			gun_seen = false
+			tick = 0
+			ticks = roundi((prestart_s + seconds) / DT)
+			print("RESTART (the game's R) at race time %.0f s: the same skippers set up again, new random spots" % restart_after_s)
 		step_race(race, entries, blind, rules)
 		if bottom != null:
 			aground_count += _check_the_bottom(bottom, race, entries)
@@ -405,6 +447,8 @@ func _initialize() -> void:
 		if not gun_seen and race.is_started() and race.clock_s() >= 0.0:
 			gun_seen = true
 			outside_at_gun = boards_outside(race, area)
+		if restart_after_s < INF and not restarted:
+			continue  # the first race of a restart is sailed until the R
 		if race.phase() == RaceSim.Phase.FINISHED or race.clock_s() >= stop_after_gun_s:
 			break
 		if dropping and entries.all(func(e: Entry) -> bool: return e.goal_at_s >= 0.0 or e.aground):
@@ -463,6 +507,86 @@ static func _check_the_bottom(bottom: TerrainGrid, race: RaceSim, entries: Array
 				entry.name.replace(" ", "_"), race.clock_s(), at.x, at.y, entry.sim.telemetry.heading_deg, entry.sim.telemetry.speed_ms,
 				race.next_step_name(i), entry.skipper.note if entry.skipper != null else "autopilot"])
 	return count
+
+
+## --restart_after (Max, 8 November 2026: "if I press R the AI lost their minds"): what the game's R does
+## (RaceRunner.restart()), for the tool. A new race on the same course, the same boards and the same skipper
+## objects set up again on it (skipper.setup(), as the game does: every race before this tool's only ever had
+## fresh skippers), each board at a new random spot of the sailing area, at rest, and the countdown at once.
+## The boards' counts start again, so the results are the second race's.
+static func restart_race(old: RaceSim, course: Course, laps: int, prestart_s: float, entries: Array[Entry], places: Array[Vector3],
+		skipper_seed: int) -> RaceSim:
+	var race: RaceSim = RaceSim.new(course, laps, prestart_s)
+	race.finish_window_s = old.finish_window_s
+	race.time_limit_s = old.time_limit_s
+	for i: int in entries.size():
+		var entry: Entry = entries[i]
+		entry.sim.reset(Vector3(places[i].x, 0.0, places[i].y), deg_to_rad(places[i].z))
+		if entry.controller != null:
+			entry.controller.reset_controls(entry.controls)
+		entry.falls = 0
+		entry.was_fallen = false
+		entry.aground = false
+		entry.aground_note = ""
+		entry.tacks = 0
+		entry.gybes = 0
+		entry.last_manoeuvre = PlayerController.Manoeuvre.NONE
+		entry.goal_at_s = -1.0
+		entry.watch_s = 0.0
+		entry.stuck_s = 0.0
+		entry.stuck_run_s = 0.0
+		entry.longest_stuck_s = 0.0
+		entry.stuck_note = ""
+		entry.slow_s = 0.0
+		entry.min_open_m = INF
+		entry.turn_deg = 0.0
+		entry.last_heading_deg = NAN
+		entry.falls_before_gun = 0
+		entry.penalties_seen = 0
+		race.add_board(entry.name)
+		race.update_board(i, _where(entry))
+	for i: int in entries.size():
+		if entries[i].skipper != null:
+			entries[i].skipper.random_seed = skipper_seed + i
+			entries[i].skipper.setup(entries[i].sim, entries[i].controller, entries[i].hands, race, i)
+	race.start_in(0.0)
+	return race
+
+
+## --spawn=anywhere (Max, 8 November 2026: "drop the AI anywhere on the field before the start and they always
+## try to be the fastest at the finish"): `count` spots, Vector3(x, z, heading in degrees), each at a random place
+## anywhere round the course (the box round all its marks and lines, ANYWHERE_MARGIN_M wider each way: above
+## the top mark, far below the line, out to the sides), in open water (ANYWHERE_OPEN_M round it, when there is a
+## lookout), SailingArea.SPAWN_APART_M from the others where it can, heading any way but into the wind.
+static func anywhere_places(race: RaceSim, count: int, random_seed: int, lookout: ShoreLookout, wind_from_deg: float) -> Array[Vector3]:
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = random_seed
+	var low: Vector2 = Vector2(INF, INF)
+	var high: Vector2 = Vector2(-INF, -INF)
+	for step: RaceStep in race.steps():
+		for point: Vector2 in step.points:
+			low = low.min(point)
+			high = high.max(point)
+	low -= Vector2.ONE * ANYWHERE_MARGIN_M
+	high += Vector2.ONE * ANYWHERE_MARGIN_M
+	var places: Array[Vector3] = []
+	for i: int in count:
+		var spot: Vector2 = (low + high) * 0.5
+		for attempt: int in SailingArea.SPAWN_TRIES:
+			var candidate: Vector2 = Vector2(rng.randf_range(low.x, high.x), rng.randf_range(low.y, high.y))
+			if lookout != null and lookout.openness_m(candidate) < ANYWHERE_OPEN_M:
+				continue
+			var apart: bool = attempt > SailingArea.SPAWN_TRIES / 2 or places.all(func(p: Vector3) -> bool:
+				return Vector2(p.x, p.y).distance_to(candidate) >= SailingArea.SPAWN_APART_M)
+			spot = candidate
+			if apart:
+				break
+		var heading_deg: float = rng.randf_range(0.0, 360.0)
+		var off_wind_deg: float = Course.turn_deg(wind_from_deg, heading_deg)
+		if absf(off_wind_deg) < DROP_IRONS_DEG:
+			heading_deg = wind_from_deg + (signf(off_wind_deg) if off_wind_deg != 0.0 else 1.0) * DROP_CLOSE_DEG
+		places.append(Vector3(spot.x, spot.y, fposmod(heading_deg, 360.0)))
+	return places
 
 
 ## A drop's spot and heading (--drop_step; the skipper's heads, 8 November 2026): somewhere on the leg

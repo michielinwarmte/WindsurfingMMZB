@@ -44,6 +44,10 @@ enum StartStyle { LOOP, HOLD }
 ## sail and wind (SkipperPolar.push_level), as a share of the slider (0.1 is ten points of it). More
 ## push is faster and falls more. The personas' risk and boat speed can set it (RA6).
 @export_range(-0.5, 0.5) var push_offset: float = 0.0
+## An experiment (Max, 8 November 2026: his 9:43 on SM1 at full push with the body, the fleet's best 11:30): the
+## push slider held at this level on every point of sail, upwind too (not in a manoeuvre or before a mark, as
+## the polar's push). -1: off, the polar's push as before.
+@export var push_everywhere: float = -1.0
 
 @export_group("Hands")
 ## The delay between seeing and doing, seconds: every decision reaches the stick this late.
