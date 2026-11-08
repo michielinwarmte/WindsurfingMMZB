@@ -88,6 +88,15 @@ const KEEP_CLEAR_BEAR_AWAY_DEG: float = 15.0
 const KEEP_CLEAR_HEAD_UP_DEG: float = 15.0
 const KEEP_CLEAR_CLOSEST_TWA_DEG: float = 38.0
 const KEEP_CLEAR_SIDE_DEG: float = 12.0
+## Keeping clear by passing (_passing_turn_deg()): headings tried every PASS_STEP_DEG up to PASS_STEPS
+## steps either way, no deeper than PASS_DEEPEST_TWA_DEG; room wanted PASS_CLEAR_M over the next PASS_LOOK_S;
+## its own speed taken as at least PASS_MIN_SPEED_MS.
+const PASS_STEP_DEG: float = 5.0
+const PASS_STEPS: int = 8
+const PASS_DEEPEST_TWA_DEG: float = 160.0
+const PASS_CLEAR_M: float = 12.0
+const PASS_LOOK_S: float = 6.0
+const PASS_MIN_SPEED_MS: float = 3.0
 ## The best upwind and downwind angles of POLAR_15KT.md (45 and 135 degrees), which the character
 ## sheets' angles are measured from: a sheet's difference from them moves the polar's best angle in
 ## every wind (see _pointing_twa_deg() and _downwind_twa_deg()).
@@ -1451,7 +1460,8 @@ func _keep_clear_deg(telemetry: Telemetry, tack: float) -> float:
 		# It sees a board coming sooner the faster they close (its keep_clear_look_s of closing; 0: no), never later
 		# than its character's keep_clear_m.
 		var closing_ms: float = maxf(-apart.normalized().dot(other_velocity - _velocity), 0.0) if apart.length() > 0.01 else 0.0
-		if apart.length() > maxf(config.keep_clear_m, closing_ms * config.keep_clear_look_s):
+		var look_s: float = maxf(config.keep_clear_look_s, PASS_LOOK_S if config.keep_clear_by_passing and state == State.RACING else 0.0)
+		if apart.length() > maxf(config.keep_clear_m, closing_ms * look_s):
 			continue
 		if apart.dot(other_velocity - _velocity) < 0.0:
 			_keeping_clear = true
@@ -1462,6 +1472,8 @@ func _keep_clear_deg(telemetry: Telemetry, tack: float) -> float:
 				# Before the start it bears away whatever the rule: the course side is up the wind, and a
 				# windward board heading up near the line went over it early (8 of 120 boards against 2).
 				why = RaceRules.Why.NONE
+			if config.keep_clear_by_passing and state == State.RACING and why != RaceRules.Why.NONE:
+				return _passing_turn_deg(telemetry, tack, apart, other_velocity)
 			# Bearing away on starboard tack turns the bow to the left (the heading decreases); heading up
 			# turns it to the right.
 			if why == RaceRules.Why.WINDWARD_GIVES_WAY:
@@ -1477,6 +1489,39 @@ func _keep_clear_deg(telemetry: Telemetry, tack: float) -> float:
 				return turn_deg if turn_right else -turn_deg
 			return -tack * down_room_deg
 	return 0.0
+
+
+## Keeping clear by passing (SkipperConfig.keep_clear_by_passing): of the headings on its tack up to
+## PASS_STEPS * PASS_STEP_DEG either way (no closer to the wind than KEEP_CLEAR_CLOSEST_TWA_DEG, no deeper
+## than PASS_DEEPEST_TWA_DEG), the one nearest its course that keeps the two boards PASS_CLEAR_M apart over
+## the next PASS_LOOK_S (both holding their speed: the other its velocity now, this one its speed, at
+## least PASS_MIN_SPEED_MS); if none does, the one that passes widest. The turn from its heading, degrees.
+func _passing_turn_deg(telemetry: Telemetry, tack: float, apart: Vector2, other_velocity: Vector2) -> float:
+	var wind_deg: float = telemetry.wind_from_bearing_deg
+	var speed_ms: float = maxf(telemetry.speed_ms, PASS_MIN_SPEED_MS)
+	var best_turn_deg: float = 0.0
+	var best_found: bool = false
+	var widest_m: float = -1.0
+	var widest_turn_deg: float = 0.0
+	for k: int in range(-PASS_STEPS, PASS_STEPS + 1):
+		var turn_deg: float = k * PASS_STEP_DEG
+		var heading_deg: float = telemetry.heading_deg + turn_deg
+		var twa_deg: float = wrapf(wind_deg - heading_deg, -180.0, 180.0)
+		if absf(twa_deg) < KEEP_CLEAR_CLOSEST_TWA_DEG or absf(twa_deg) > PASS_DEEPEST_TWA_DEG or signf(twa_deg) != tack:
+			continue
+		var closing: Vector2 = other_velocity - Course.direction_of(heading_deg) * speed_ms
+		var at_s: float = 0.0
+		if closing.length_squared() > 1e-4:
+			at_s = clampf(-apart.dot(closing) / closing.length_squared(), 0.0, PASS_LOOK_S)
+		var nearest_m: float = (apart + closing * at_s).length()
+		if nearest_m > widest_m:
+			widest_m = nearest_m
+			widest_turn_deg = turn_deg
+		if nearest_m >= PASS_CLEAR_M and (not best_found or absf(turn_deg) < absf(best_turn_deg)):
+			best_found = true
+			best_turn_deg = turn_deg
+	note += ", passing clear"
+	return best_turn_deg if best_found else widest_turn_deg
 
 
 ## Rule 7, gust hunting, is not built yet: it needs the wind on the water around the board (the

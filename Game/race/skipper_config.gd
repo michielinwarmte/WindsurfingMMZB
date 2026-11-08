@@ -96,6 +96,11 @@ enum StartStyle { LOOP, HOLD }
 ## keep_clear_m): two boards crossing at 8 m/s close 15 m in a second, too late to duck behind (the
 ## skipper's heads, 8 November 2026: port and starboard penalties in the fleet races). 0 is as before.
 @export_range(0.0, 8.0) var keep_clear_look_s: float = 0.0
+## After the gun, the board that must keep clear works out where the two boards will be over the next
+## seconds and turns just enough (either way, on its tack) to pass with room (Skipper._passing_turn_deg())
+## instead of a fixed head-up or bear-away. Off: as before. The skipper's heads, 8 November 2026: the port
+## and starboard penalties were fast port boards running into a starboard board stopped in the crowd.
+@export var keep_clear_by_passing: bool = false
 
 @export_group("Tactics")
 ## How big a header (a wind shift that forces it away from the mark) makes it tack, degrees.

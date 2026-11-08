@@ -225,6 +225,8 @@ class Entry:
 	var aground_note: String = ""
 	## Its falls before the gun (the start's head).
 	var falls_before_gun: int = 0
+	## The penalties already printed (judge()).
+	var penalties_seen: int = 0
 
 
 func _initialize() -> void:
@@ -736,6 +738,21 @@ static func judge(rules: RaceRules, race: RaceSim, entries: Array[Entry]) -> voi
 	rules.step(DT, marks, race.clock_s() >= 0.0)
 	for i: int in entries.size():
 		race.set_time_penalty_s(i, rules.time_penalty_s(i))
+		# Every new penalty as a PENALTY line: who, against whom, why, and both boards as they were (the
+		# skipper's heads, 8 November 2026: the rules' incidents read one by one).
+		var given: int = rules.penalties(i) + rules.turns_done(i)
+		if given > entries[i].penalties_seen:
+			entries[i].penalties_seen = given
+			var j: int = rules.burdened_by(i)
+			var a: Telemetry = entries[i].sim.telemetry
+			var line: String = "PENALTY %.1f s %s: %s | %s at (%.0f, %.0f) hdg %.0f twa %.0f %.1f m/s %s" % [race.clock_s(), entries[i].name,
+				rules.breach_text(i), entries[i].name, a.position.x, a.position.z, a.heading_deg, a.twa_deg, a.speed_ms,
+				entries[i].skipper.note if entries[i].skipper != null else ""]
+			if j >= 0:
+				var b: Telemetry = entries[j].sim.telemetry
+				line += " | %s at (%.0f, %.0f) hdg %.0f twa %.0f %.1f m/s %s" % [entries[j].name, b.position.x, b.position.z, b.heading_deg,
+					b.twa_deg, b.speed_ms, entries[j].skipper.note if entries[j].skipper != null else ""]
+			print(line)
 
 
 ## Every board's place and whether its sail is up, into every board's shadows, before the physics.

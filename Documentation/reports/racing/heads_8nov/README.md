@@ -69,7 +69,18 @@ starters, oddly the sharp ones (Hana, Mara): they aim close to the gun and lose 
 (17 of 22 penalties in the start rounds). Now by the rule after the gun: the windward board heads up, a
 board clear astern or outside at a mark turns away from the other's side, port still bears away behind
 starboard; before the gun it bears away as before (heading up near the line sent boards over early).
-(Its measurement: filled in at the end.)
+Measured on the same 15 start rounds of eight personas: penalties 39 -> 29, the windward board's 33 -> 20,
+early starts and the median start unchanged. What is left are mostly port/starboard incidents, read one
+by one with the new PENALTY lines (`run_race.gd` prints both boards): a starboard board nearly stopped in
+the crowd (0.4 to 2.5 m/s, often right after the start) and port boards at 7 to 9 m/s that were already
+keeping clear running into it; a fixed bear-away seen 15 m out is too little at that speed. A longer
+look-ahead and a duck behind the starboard board's stern were measured and did not help; a third idea,
+**passing clear** (the burdened board works out where both will be over the next 6 s and turns just
+enough, either way, to pass 12 m clear: `keep_clear_by_passing`), was measured last against the very
+same code without it on the 22 start rounds: 45 penalties against 46, nothing else changed. **Left off.**
+So the incidents are not a question of the head's choice: the board does not turn in time at 9 m/s
+(reaction, the think interval, the hands' steering), or the crowd is already too close at the gun. The
+next step is a look at the hands' turn rate at speed and at the crowd on the line, with these PENALTY lines.
 
 **4 Tactics, and the wind information** (Max: "give them enough information about wind, water and
 shore"): **the wind lookout** reads the map's wind on the water 200 m ahead on both tacks on a beat or a
@@ -77,7 +88,19 @@ run and leaves a light patch for the side with more wind. Its A/B on 121 cases: 
 3 % faster with it, and it keeps boards off the dying-wind lee shores; kept on. Its numbers are on the
 sheet (`wind_look_m`, `wind_hole_share`), so personas can read the wind differently.
 
-**5 The personas**: every persona sails on these heads. (The fleet races: filled in at the end.)
+**5 The personas**: every persona sails on these heads. **The fleet races** (eleven, one per course,
+eight personas, the whole race with the rules and the wind shadows): **88 of 88 boards finished, no
+grounding, one fall**, 82 penalties, 4 OCS. Mean places: Kofi 3.6, Hana ("the pro") 3.9, Mara 4.1, Jonas
+("the rookie") 4.1, Lena 4.1, Liv 4.2, Elin 5.4, Bruno ("lost when it is light") 6.6. The storm sailor
+last in these mid winds is right; **the rookie in the middle is not: the levels do not spread enough
+yet**, and the penalty turns (20 to 30 s each, 6 to 14 per persona) shuffle the order more than the
+skills do. That is the personas' next step, after the penalties.
+
+**A lesson for every fleet test**: a race of several boards repeats exactly with the same code, but any
+change, even one that does nothing (the same sum added in another order), moves a heading by 0.1 degree
+and the incidents of the crowd come out differently: two runs of "the same" start set gave 9 and 14
+penalties in 48 boards. So fleet results need many rounds and a look at the kinds of incident; a
+difference of a few penalties is noise.
 
 ## Measured and not taken
 
@@ -85,6 +108,9 @@ sheet (`wind_look_m`, `wind_hole_share`), so personas can read the wind differen
   best (the refitted courses had removed most of the trap). Left at 0.
 - A faster slowest hold at the start (2.5 m/s): fewer clean starts, more penalties. Left at 0.
 - A start that reckons slower acceleration (0.7): inside the noise. Left at 1.0.
+- Keeping clear: a longer look-ahead (4 s), a port duck behind the starboard board, and passing clear by
+  working out both boards' paths: none cut the penalties. The look-ahead and passing clear stay on the
+  sheet, off (`keep_clear_look_s` 0, `keep_clear_by_passing` false); the duck was taken out.
 
 ## For Michiel and Max (the hands and the physics, not changed)
 

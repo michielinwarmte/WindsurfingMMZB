@@ -186,3 +186,19 @@ output folder); carry on with the next open step. Stop starting new work at 9:15
   Neither cuts the penalties: **the duck taken out again, the look-ahead left at 0** (measured, harmless).
   The port/starboard penalties want a look at single incidents with full traces (the next step for head 3).
   Unit tests and the load check on the final code running; then the play folder.
+- 06:30 the fleet races (11, current code, 8 personas): **88 of 88 boards finished, no grounding, 1 fall**,
+  82 penalties, 4 OCS. Mean places Kofi 3.6, Hana 3.9, Mara 4.1, Jonas (the rookie) 4.1, Lena 4.1, Liv 4.2,
+  Elin 5.4, Bruno 6.6: the levels do not spread enough; the penalty turns shuffle the order.
+- 06:35 repeatability: one start round run twice with the same code gives identical tracks; but any change,
+  even a reordered sum, moves a heading by 0.1 deg and a crowd's incidents come out differently (the slalom
+  rounds: 9 and 14 penalties with code that should act the same). Fleet A/Bs need many rounds.
+- 06:40 `run_race.gd` prints a PENALTY line per incident (both boards). Read: the port/starboard ones are
+  fast port boards (7-9 m/s, already keeping clear) running into a starboard board nearly stopped in the
+  crowd. `SkipperConfig.keep_clear_by_passing` (off): the burdened board turns just enough, either way, to
+  pass 12 m clear over the next 6 s. Its A/B against the identical code without it on the 22 start rounds
+  running (h2pass, h2base). The slalom dive change and the duck: taken out (no effect shown).
+- 07:05 passing clear's A/B (22 start rounds, the same code with and without): 100 clean against 97, penalties
+  45 against 46, port/starboard 17 against 19, the rest identical (the base reproduced h2kc2 exactly, so the
+  code is otherwise the same). No real gain: **left off** (`keep_clear_by_passing` false). The incidents are
+  not the head's choice: the board does not turn in time at 9 m/s, or the crowd is too close at the gun.
+  A light-wind round (x0.8, seed 9) running.
