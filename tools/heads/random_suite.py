@@ -5,7 +5,12 @@ Every run draws its own race, so the skipper is never tuned to a few fixed ones,
 checks that must always hold (not by who wins), with every mark rounding measured:
 
     python -I tools/heads/random_suite.py --run=<name> [--count=200] [--seed=1] [--cores=8]
-        [--project=<a frozen copy>/Game] [--cpu_mask=0x3FF] [--set=tune|holdout]
+        [--project=<a frozen copy>/Game] [--cpu_mask=0x5555] [--set=tune|holdout]
+
+Speed (measured 8 November 2026 on the 8-core Ryzen 7 5800X3D, one board, the editor engine): 4.0x real time alone,
+4.2x each with 8 side by side on one logical processor per core (mask 0x5555; about 55 % CPU, 33x real time
+together), 3.1x each with 12 on 12 logical processors (82 % CPU, 37x together: two jobs share a core). So 8 on 0x5555.
+The game's release engine is no faster (about 3x with its scene) and cannot run this script.
 
   --set=tune     draws from the seeds the skipper may be tuned on (the default)
   --set=holdout  draws from seeds that are never used for tuning: a fix counts only if these get better
@@ -456,8 +461,7 @@ def main(argv):
     godot = os.environ.get("GODOT", DEFAULT_GODOT)
     out_dir = os.path.join(ROOT, ".sim_output", "suite", run)
     os.makedirs(os.path.join(out_dir, "logs"), exist_ok=True)
-    limit_cpu(options.get("cpu_mask", "0x3FF"))
-    rng = random.Random(seed)
+    limit_cpu(options.get("cpu_mask", "0x5555"))
     lock = threading.Lock()
     results = []
     results_path = os.path.join(out_dir, "results.jsonl")
@@ -469,10 +473,13 @@ def main(argv):
     counter = [len(results)]
 
     def one(number):
+        attempt = 0
         while True:
-            with lock:
-                args, drawn = draw_race(rng)
-                label = "r%04d" % number
+            # Each race number (and each redraw of it) its own draw: the same races whatever the order, and a run that
+            # is stopped and started again goes on with new races instead of repeating its first ones.
+            attempt += 1
+            args, drawn = draw_race(random.Random(seed * 1000003 + number * 101 + attempt))
+            label = "r%04d" % number
             csv_dir = os.path.join(out_dir, label)
             full = args + ["--out_dir=%s" % csv_dir.replace("\\", "/")]
             command = [godot, "--headless", "--no-header", "--path", project, "-s", "res://dev/run_race.gd", "--"] + full
