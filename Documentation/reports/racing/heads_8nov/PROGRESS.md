@@ -146,3 +146,23 @@ output folder); carry on with the next open step. Stop starting new work at 9:15
   The trend on seeds never seen: baseline seed 1 111/121 (91.7 %), r3 seed 2 109/121 (90.1 %, before the
   slow-turn and slow-tack rules), r4 seed 3 115/121 (95.0 %). The stronger-wind round (x1.3, seed 7: 33
   races at 13:30/15:30/16:30 + 66 drops) running; unit tests on the newest code running.
+- 04:50 unit tests 1007/1007 on the newest code; commit 2f22c27.
+- 04:55 the keep-clear A/B on the same 15 start rounds (120 boards): old 65 clean, 39 penalties (33 windward),
+  2 OCS at the gun; by the rule 62 clean, 37 penalties (28 windward, 9 port), **8 OCS**. Before the gun the
+  boards reach along the line with the course side up the wind: a windward board heading up went over.
+  **Before the gun it bears away as before; the rule's way only after the gun.** Its A/B running (h2kc2).
+  (h2acc's rounds before this change are listed in h2acc/done_before_kc2.txt.)
+- 05:05 **more wind (x1.3, seed 7: 33 races, 66 drops): 86 of 99 clean, every race and drop got there, no
+  groundings**, races 1.18 x, drops 1.33 x. All 13 failures are falls (18 falls): 13 of them within 25 s of
+  a tack or gybe that stalled (e.g. LG2 13:30: a tack at 6 m/s in ~18 kt stopped head to wind, the board sat
+  at 0.5 m/s swinging round for 10 s and the sailor fell), the rest standing still in the start's holds.
+  **A finding for the hands (not changed): in the stronger wind the tacks stall.**
+- 05:05 the start's acceleration A/B (both with the first keep-clear, 168 boards): 0.7 gives 91 clean against
+  87, median 3.7 s against 4.8 s, but the late starters it was meant for are unchanged (40 vs 39) and 2 more
+  OCS: inside the noise, **left at 1.0**.
+- 05:10 the fleet races restarted on the current code at normal priority (the old ones, at low priority, had
+  only sailed 3 minutes each; their logs in h3_old_code/).
+- 05:30 **head 3, the keep-clear A/B** on the same 15 start rounds (120 boards): old (always bear away) 65
+  clean, 39 penalties (33 windward), 2 OCS at the gun, median 3.8 s; by the rule everywhere 62, 37, 8 OCS;
+  **by the rule after the gun only: 69 clean, 29 penalties (20 windward, 9 port), 2 OCS, median 3.8 s**.
+  Penalties -26 %, the windward board's -39 %. Kept. The final check (seed 8) and the fleet races running.

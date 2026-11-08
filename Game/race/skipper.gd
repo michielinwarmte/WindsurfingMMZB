@@ -1455,6 +1455,10 @@ func _keep_clear_deg(telemetry: Telemetry, tack: float) -> float:
 			var up_room_deg: float = clampf(absf(telemetry.twa_deg) - KEEP_CLEAR_CLOSEST_TWA_DEG, 0.0, KEEP_CLEAR_HEAD_UP_DEG)
 			var down_room_deg: float = clampf(_downwind_twa_deg() - absf(telemetry.twa_deg), 0.0, KEEP_CLEAR_BEAR_AWAY_DEG)
 			var why: RaceRules.Why = rules.why(_index) if rules != null else RaceRules.Why.NONE
+			if state == State.PRE_START:
+				# Before the start it bears away whatever the rule: the course side is up the wind, and a
+				# windward board heading up near the line went over it early (8 of 120 boards against 2).
+				why = RaceRules.Why.NONE
 			# Bearing away on starboard tack turns the bow to the left (the heading decreases); heading up
 			# turns it to the right.
 			if why == RaceRules.Why.WINDWARD_GIVES_WAY:
