@@ -202,3 +202,8 @@ output folder); carry on with the next open step. Stop starting new work at 9:15
   code is otherwise the same). No real gain: **left off** (`keep_clear_by_passing` false). The incidents are
   not the head's choice: the board does not turn in time at 9 m/s, or the crowd is too close at the gun.
   A light-wind round (x0.8, seed 9) running.
+- 07:30 **less wind (x0.8, seed 9, final code): 95 of 99 clean, no groundings, no falls**, races 0.93 x;
+  one T2 drop not finished (the old course), three slalom starts over early with no other board (PD3 and
+  T2 at 14:30, SD3 at 12:00): the board crossed the line's extension going to its waiting spot upwind of the
+  boat. Turning back at once (turn_now) did not change it: taken out, the cause is in the slalom start's
+  geometry in light wind (open).

@@ -37,6 +37,7 @@ Clean cases, the all-rounder alone, every Silvaplana course:
 | round 3 (seed 2, never seen) | + mark roundings from below | 109 / 121 (90.1 %) |
 | round 4 (seed 3, never seen) | + slow boards tack, tack past the layline | 115 / 121 (95.0 %), 0 falls |
 | more wind x1.3 (seed 7) | the same code | 86 / 99, **every race and drop finished**, 0 aground, 18 falls |
+| less wind x0.8 (seed 9) | the final code | **95 / 99, 0 aground, 0 falls**; one T2 drop not finished, 3 slalom starts over early (alone) |
 | **final (seed 8, never seen)** | everything | **75 / 77 (97.4 %)**: all 33 races clean, 0 aground, 0 falls in the races; the two failures are both T2 (the old course, kept) stuck in its light patch near the finish |
 
 ## What changed, by head
@@ -64,6 +65,10 @@ and 108 m). The trapezoids are now 30 % of the class size, the sprints 40-50 %, 
 were measured on 22 start rounds of eight personas and left as they were (no gain). The start crosses
 with a median of 4 s after the gun and OCS at the gun is rare (2 of 120); its open problem is late
 starters, oddly the sharp ones (Hana, Mara): they aim close to the gun and lose the time getting going.
+In light wind (x0.8) three slalom starts were over early with no other board about: the board crossed
+the line's extension on the way to its waiting spot upwind of the committee boat and came back late;
+turning back at once did not change it, so the cause is in the slalom start's geometry in light wind
+(open).
 
 **3 The racing rules**: keeping clear always bore away, which turns a windward board onto the leeward one
 (17 of 22 penalties in the start rounds). Now by the rule after the gun: the windward board heads up, a
