@@ -91,3 +91,8 @@ enum StartStyle { LOOP, HOLD }
 ## How much more wind it goes looking for, 0 to 1 (the lake only; not used on the open water,
 ## which has no gusts to see).
 @export_range(0.0, 1.0) var gust_appetite: float = 0.0
+## How far ahead it reads the wind on the water on a beat or a run, metres (Skipper._avoid_the_holes(): on
+## the lake it tacks or gybes away from a light patch toward more wind); 0 does not look.
+@export_range(0.0, 500.0) var wind_look_m: float = 200.0
+## A patch counts as a hole when its wind is under this share of the wind where the board is.
+@export_range(0.3, 1.0) var wind_hole_share: float = 0.75

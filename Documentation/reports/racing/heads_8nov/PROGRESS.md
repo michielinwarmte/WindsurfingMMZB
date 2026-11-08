@@ -72,3 +72,15 @@ output folder); carry on with the next open step. Stop starting new work at 9:15
   Michiel's: not changed. The skipper gets `SkipperConfig.get_going_twa_deg` (0 = off): slow under 2.5 m/s
   for 6 s after the gun, it sails that angle until 5 m/s (25 s at most). A/B on 44 light-wind drops per
   angle (0, 95, 115, 135) running.
+- 02:50 the US4 drop (r2's one not reached) read with the skipper's aim point in the track (new CSV columns
+  aim_x_m, aim_z_m): coming at a reach's mark from below (a beat in), the board had no plan for the tack to
+  arrive on: `_approach_tack()` refused any rounding that swings past dead downwind by more than 1 deg, and
+  the leg out ran 2 deg past it, so neither tack; then it sagged 20 m below the layline, passed the mark on
+  the wrong side and circled it for 4 minutes. Three fixes in skipper.gd: a swing of up to 20 deg past dead
+  downwind allowed (`DOWNWIND_SWING_DEG`; this also hits windward marks with a run out just past dead
+  downwind); a beat in to a reach's mark arrives on the rounding tack (`BEAT_IN_MARGIN_DEG`); within 80 m on
+  the arriving tack and unable to lay the entry point, it tacks twice up (`FETCH_CHECK_M`). The drop now
+  rounds (284 s, 2 tacks, 2 gybes).
+- 02:55 the getting-going A/B (44 light-wind drops each, seeds 3 and 4, 11:30-12:30 and 16:30-17:30):
+  off 44/44 clean (cost 1.159), 95 deg 43/44 (1.198), 115 deg 43/44 (1.228), 135 deg worse. On the refitted
+  courses the light-wind trap mostly went away; the angle does not help: **left off** (0, the default).

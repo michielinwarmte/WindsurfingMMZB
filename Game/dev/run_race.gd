@@ -128,7 +128,7 @@ static func apply_skipper_overrides(entries: Array[Entry], options: Dictionary[S
 			if field in scripted.config:
 				var current: Variant = scripted.config.get(field)
 				var value: float = options[key].to_float()
-				scripted.config.set(field, int(value) if current is int else value)
+				scripted.config.set(field, (value != 0.0) if current is bool else (int(value) if current is int else value))
 			else:
 				push_error("No field 'skipper.%s' to override." % field)
 
@@ -370,7 +370,7 @@ func _initialize() -> void:
 			file_name += "_%d" % file_names[file_name]
 		entry.file = FileAccess.open(out_dir.path_join(file_name + ".csv"), FileAccess.WRITE)
 		if entry.file != null:
-			entry.file.store_line("race_time_s,x_m,z_m,heading_deg,speed_ms,next_step,doing")
+			entry.file.store_line("race_time_s,x_m,z_m,heading_deg,speed_ms,next_step,doing,aim_x_m,aim_z_m")
 		# Every fall with the 2 s before it and what the skipper was doing (FALL_DETAIL lines, for
 		# tools/fall_detail.py).
 		var clock_text: String = options.get("time", "14:30") if _lake != null else "-"
@@ -1057,7 +1057,10 @@ func _write_row(entry: Entry, race: RaceSim, index: int) -> void:
 		return
 	var t: Telemetry = entry.sim.telemetry
 	var doing: String = entry.skipper.note if entry.skipper != null else "autopilot"
-	entry.file.store_line("%.2f,%.2f,%.2f,%.1f,%.2f,%d,%s" % [race.clock_s(), t.position.x, t.position.z, t.heading_deg, t.speed_ms, race.next_step_index(index), doing.replace(",", ";")])
+	var scripted: Skipper = entry.skipper as Skipper
+	var aim: Vector2 = scripted.aim_point if scripted != null and scripted.aim_point.is_finite() else Vector2(NAN, NAN)
+	entry.file.store_line("%.2f,%.2f,%.2f,%.1f,%.2f,%d,%s,%.1f,%.1f" % [race.clock_s(), t.position.x, t.position.z, t.heading_deg, t.speed_ms,
+		race.next_step_index(index), doing.replace(",", ";"), aim.x, aim.y])
 
 
 ## A board's name as a file name: "All-rounder 2" is all-rounder_2.

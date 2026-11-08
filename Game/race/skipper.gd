@@ -65,6 +65,16 @@ const THROUGH_LINE_M: float = 30.0
 ## again (a tack stops the board, and it needs some 40 m to get going), or to gybe (a planing gybe
 ## swings wide). See _course_to().
 const APPROACH_ROOM_M: float = 40.0
+## A board whose own way in to a reach's mark is within this of a beat (the polar's beat and the leeway)
+## comes in as on a beat: on the tack it can round from (_decide()), degrees.
+const BEAT_IN_MARGIN_DEG: float = 5.0
+## Within this of a mark's entry point on the tack it must arrive on, and still more than FETCH_SAG_DEG
+## inside the angle it can lay, the board tacks: it would pass the mark on the wrong side (metres, degrees).
+const FETCH_CHECK_M: float = 80.0
+const FETCH_SAG_DEG: float = 3.0
+## How far past dead downwind the bow may swing going round a mark on the tack it came in on (the leg out
+## being a run), degrees (_approach_tack()).
+const DOWNWIND_SWING_DEG: float = 20.0
 const APPROACH_ROOM_S: float = 6.0
 ## Rule 6: another board within the sheet's keep_clear_m and getting closer makes it bear away this
 ## much, degrees.
@@ -137,12 +147,10 @@ const SHORE_SLOW_DOWN_TWA_DEG: float = 150.0
 const SHORE_SLOW_OPEN_M: float = 40.0
 ## The wind ahead (_avoid_the_holes(); Max, 8 November 2026: "give them enough information about wind,
 ## water and shore"): a sailor sees the dark water of more wind and the glassy patches where it dies.
-## On a beat or a run it looks this far ahead on both tacks, metres; when its own tack sails into wind
-## under WIND_HOLE_SHARE of the wind where it is and the other tack has at least WIND_BETTER_SHARE of
-## that, it tacks or gybes now (within its tacks for the leg) instead of sailing into the hole. Only with
-## a map's wind (the lake); the open water's wind is the same everywhere.
-const WIND_LOOK_M: float = 200.0
-const WIND_HOLE_SHARE: float = 0.75
+## On a beat or a run it looks its character's wind_look_m ahead on both tacks; when its own tack sails
+## into wind under its wind_hole_share of the wind where it is and the other tack has at least
+## WIND_BETTER_SHARE of that, it tacks or gybes now (within its tacks for the leg) instead of sailing into
+## the hole. Only with a map's wind (the lake); the open water's wind is the same everywhere.
 const WIND_BETTER_SHARE: float = 1.2
 ## Closer than this to the next mark it no longer looks for holes, metres.
 const WIND_NEAR_MARK_M: float = 400.0
@@ -468,6 +476,8 @@ var _others_dt_s: float = THINK_INTERVAL_S
 ## whether it is keeping clear of one this tick (for the note).
 var _others_last: PackedVector2Array = PackedVector2Array()
 var _keeping_clear: bool = false
+## The point it last sailed for (_course_to()), for the race tool's track (Vector2.INF: none yet).
+var aim_point: Vector2 = Vector2.INF
 ## Getting going: how long it has been slow, whether it is getting going now and since when.
 var _slow_s: float = 0.0
 var _getting_going: bool = false
@@ -773,11 +783,11 @@ func _get_going(telemetry: Telemetry, heading_deg: float) -> float:
 	return telemetry.wind_from_bearing_deg - _tack() * config.get_going_twa_deg
 
 
-## The wind ahead (WIND_LOOK_M): on a beat or a run, when this tack sails into a light patch and the
+## The wind ahead (SkipperConfig.wind_look_m): on a beat or a run, when this tack sails into a light patch and the
 ## other tack has more wind, it asks for the tack or gybe now. It never overrides the shore: a manoeuvre
 ## the shore check already asked for or refused stands.
 func _avoid_the_holes(telemetry: Telemetry, heading_deg: float) -> void:
-	if not _leg_turns or _tack_due_s >= 0.0 or _controller.manoeuvre != PlayerController.Manoeuvre.NONE or note.contains("shore"):
+	if config.wind_look_m <= 0.0 or not _leg_turns or _tack_due_s >= 0.0 or _controller.manoeuvre != PlayerController.Manoeuvre.NONE 			or note.contains("shore"):
 		return
 	var position: Vector2 = _position(telemetry)
 	# Near the mark the mark decides: a gybe away there only means a gybe back.
@@ -788,9 +798,9 @@ func _avoid_the_holes(telemetry: Telemetry, heading_deg: float) -> void:
 		return
 	var wind_deg: float = telemetry.wind_from_bearing_deg
 	var other_deg: float = 2.0 * wind_deg - heading_deg
-	var ahead_ms: float = wind_speed_at(position + Course.direction_of(heading_deg) * WIND_LOOK_M)
-	var other_ms: float = wind_speed_at(position + Course.direction_of(other_deg) * WIND_LOOK_M)
-	if ahead_ms < WIND_HOLE_SHARE * here_ms and other_ms > WIND_BETTER_SHARE * ahead_ms:
+	var ahead_ms: float = wind_speed_at(position + Course.direction_of(heading_deg) * config.wind_look_m)
+	var other_ms: float = wind_speed_at(position + Course.direction_of(other_deg) * config.wind_look_m)
+	if ahead_ms < config.wind_hole_share * here_ms and other_ms > WIND_BETTER_SHARE * ahead_ms:
 		if shore != null and shore.water_ahead_m(position, other_deg, SHORE_LOOK_TURNING_MIN_M) < SHORE_LOOK_TURNING_MIN_M:
 			return
 		note += ", away from the light patch (%.0f kt ahead, %.0f kt on the other tack)" % [ahead_ms / SimMath.KNOT_MS, other_ms / SimMath.KNOT_MS]
@@ -884,6 +894,12 @@ func _decide(telemetry: Telemetry) -> float:
 		var up_deg: float = _pointing_twa_deg()
 		if leg_twa < up_deg + _leeway_deg or leg_twa > _run_twa_deg() + _leeway_deg:
 			arrive_tack = _approach_tack(step, wind_deg, up_deg if leg_twa < 90.0 else _downwind_twa_deg())
+		elif absf(wrapf(wind_deg - Course.bearing_deg(position, target), -180.0, 180.0)) < up_deg + _leeway_deg + BEAT_IN_MARGIN_DEG 				and position.distance_to(step.points[0]) > APPROACH_ROOM_M:
+			# The leg is a reach, but this board comes at the mark from below it (set back by a penalty,
+			# the boards it kept clear of, a drop): a beat, so it arrives on the tack it can round from.
+			# Aimed straight at the entry point it beat past the mark on the wrong side and circled it
+			# for four minutes (the skipper's heads, 8 November 2026: Silvaplana's US4, mark 2, 15:20).
+			arrive_tack = _approach_tack(step, wind_deg, up_deg)
 	return _course_to(telemetry, target, arrive_tack)
 
 
@@ -1092,6 +1108,11 @@ func _course_to(telemetry: Telemetry, target: Vector2, arrive_tack: float = 0.0,
 			var room_m: float = maxf(APPROACH_ROOM_M, telemetry.speed_ms * APPROACH_ROOM_S)
 			if position.distance_to(target) > room_m:
 				aim = target - Course.direction_of(wind_deg - arrive_tack * track_deg) * room_m
+			if tack == arrive_tack and absf(target_twa) < 90.0 and position.distance_to(target) < FETCH_CHECK_M 					and absf(target_twa) < up_track_deg - FETCH_SAG_DEG:
+				# On the arriving tack, near, and the target still to windward of what it can lay: it has
+				# sagged below the layline and would pass the mark on the wrong side. Two tacks up instead.
+				_ask_for_manoeuvre(true)
+	aim_point = aim
 	var bearing_deg: float = Course.bearing_deg(position, aim)
 	# The wind angle of the track straight there, positive with the wind from starboard.
 	var needed_deg: float = wrapf(wind_deg - bearing_deg, -180.0, 180.0)
@@ -1174,8 +1195,11 @@ static func _approach_tack(step: RaceStep, wind_deg: float, sail_twa_deg: float)
 		var heading_deg: float = wind_deg - tack * sail_twa_deg
 		var to_out: float = _turn_way_deg(heading_deg, out_deg, way)
 		var to_wind: float = _turn_way_deg(heading_deg, wind_deg, way)
-		# A leg out straight downwind is reached at dead downwind, not swung past it.
-		var to_downwind: float = _turn_way_deg(heading_deg, wind_deg + 180.0, way) + 1.0
+		# A leg out straight downwind is reached at dead downwind, not swung far past it: a run out a few
+		# degrees past dead downwind (DOWNWIND_SWING_DEG) is sailed on either gybe anyway. With 1 degree
+		# a run out 2 degrees past dead downwind found neither tack and the board came in with no plan,
+		# passed the mark on the wrong side and circled it (the skipper's heads, 8 November 2026, US4).
+		var to_downwind: float = _turn_way_deg(heading_deg, wind_deg + 180.0, way) + DOWNWIND_SWING_DEG
 		if to_wind > to_out and to_downwind > to_out:
 			good.append(tack)
 	return good[0] if good.size() == 1 else 0.0
