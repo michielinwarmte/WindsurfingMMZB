@@ -267,3 +267,17 @@ penalties. keep improving until 14:00".
   by their upwind sense: the rookie does not notice, the best sense tacks out of a 12 % cut). Off:
   keep_clear_from_gun (the starts), turn_sharp (not measured). The final check running: flFinal (9 fleet
   races, seed 61, never used), then kcFinal (the 22 start rounds against kcA), the unit tests.
+- 12:05 committed 9acce9b (the final set on by default); unit tests 1007/1007; release build; **LAN sync check on
+  the lake with three personas: PASS**. Play folder WindsurfingMMZB-play-8nov2026-racing (with an I2 launcher:
+  the short, crowded line).
+- 12:20 **fl1 complete (the package with Shift at any speed, 9 fleet races, seed 60 as h3): penalties 61 -> 29**,
+  every board finished; mean places Hana 3.1, Kofi 3.6, Mara 3.6, Lena 3.7, Liv 4.6, Jonas (the rookie) 5.3 (was
+  3.8), Bruno 6.0, Elin 6.2; but 14 falls (h3: 1), nearly all a board at 1.2-2 m/s keeping clear with Shift (the
+  5 m/s floor, in the final set, removes them), and Bruno at a standstill in the light PM1/SM1.
+- 12:30 **kcFinal complete (22 rounds, the final set): penalties 46 -> 32**, the starts as before (median 4.5 s
+  against 4.4), OCS 5 and 5, falls 1 and 1 (the same pre-gun fall). keep_clear_from_gun on top (12 rounds): 18
+  against 16 and the starts later: stays off. F (no slow down, Shift at any speed) had 12 on the same 12 rounds,
+  so kcFinalNoSlow (the final set without pass_slow_down, 22 rounds) is running to settle the slow-down.
+- 12:35 flFinal (seed 61): six of the seven T2 penalties came after the boards had finished ("free: back to the
+  area"): the look-ahead only ran while racing. A finished board's time is frozen, so they do not count, but
+  boards running into each other look wrong: `_judged()` now also covers a finished board while the race goes on.

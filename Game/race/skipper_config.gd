@@ -124,7 +124,9 @@ enum StartStyle { LOOP, HOLD }
 @export var keep_clear_from_gun: bool = false
 ## With keep_clear_by_passing, when no heading passes with the full room: the smallest turn that still passes a few
 ## metres clear, and the sail eased to slow down (Skipper.PASS_SLOW_SHARE). Off: the heading that passes widest.
-@export var pass_slow_down: bool = true
+## Measured (22 start rounds): 32 penalties with it, 25 without (port and starboard 16 against 6: a port board that
+## slows while crossing ahead is the one that gets hit). Off.
+@export var pass_slow_down: bool = false
 ## Dirty air (Skipper._clear_air()): on a beat in another sail's wind shadow, the wind cut by this share or more for
 ## a few seconds, with clear air on the other tack, it tacks away. 0: it does not notice.
 @export_range(0.0, 0.5) var dirty_air_share: float = 0.15

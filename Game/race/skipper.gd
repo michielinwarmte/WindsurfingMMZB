@@ -1703,12 +1703,16 @@ func _pass_clear_m() -> float:
 	return config.keep_clear_m if config.pass_room_from_sheet else PASS_CLEAR_M
 
 
-## True while it races and the judge gives penalties: racing, and with SkipperConfig.keep_clear_from_gun also on
-## its way to the start line after the gun (PRE_START lasts until the board crosses it; at the gun the boards going
+## True while the judge gives it penalties: racing or finished while the race goes on, and with
+## SkipperConfig.keep_clear_from_gun also on its way to the start line after the gun (PRE_START lasts until the board crosses it; at the gun the boards going
 ## from their holds kept clear of nobody, and two of the first penalties came in the first two seconds; measured:
 ## as many penalties, the starts 2.7 s later).
 func _judged() -> bool:
-	return state == State.RACING or (config.keep_clear_from_gun and state == State.PRE_START and _race.clock_s() >= 0.0)
+	if state == State.PRE_START:
+		return config.keep_clear_from_gun and _race.clock_s() >= 0.0
+	# Finished and sailing back while the others race, it still keeps clear (the judge still judges it: six of the
+	# seven penalties of a T2 fleet race came after the boards had finished, though they no longer count).
+	return _race.is_started() and _race.clock_s() >= 0.0 and _race.phase() != RaceSim.Phase.FINISHED
 
 
 ## Where a board's next mark is (Vector2.INF while it sails to a line or has finished): what mark room is
