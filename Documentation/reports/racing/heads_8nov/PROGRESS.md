@@ -281,3 +281,16 @@ penalties. keep improving until 14:00".
 - 12:35 flFinal (seed 61): six of the seven T2 penalties came after the boards had finished ("free: back to the
   area"): the look-ahead only ran while racing. A finished board's time is frozen, so they do not count, but
   boards running into each other look wrong: `_judged()` now also covers a finished board while the race goes on.
+- 12:45 **flFinal complete (seed 61, never used; the final set with the slow-down): 38 penalties, 12 of them after
+  the burdened board had finished** (26 while racing, against 61 for last night's set), 1 fall, 70 of 72
+  finished (Mara and Jonas on T2 at 16:30, the old course's light patch, as in the morning's report). Mean
+  places: Hana 2.6, Liv 2.8, Kofi 3.1, Mara 3.4, Lena 4.8, Elin 5.4, Bruno 6.8, **Jonas (the rookie) 7.2, last**.
+- 12:50 **kcFinalNoSlow complete (22 rounds): 25 penalties against the final set's 32** (port and starboard 6
+  against 16), everything else the same: **pass_slow_down off**. Against the code before today: **46 -> 25**.
+  Committed f2c722b (the slow-down off, keeping clear after the finish), rebuilt, the play folder updated, LAN
+  sync check PASS again. The last checks: flFinal2 (the shipping code, seed 61) and kc7 (11 start rounds on seed
+  7, never used today, the code before today against the shipping code).
+- 13:10 unit tests on the shipping code (f2c722b) 1007/1007. **kc7 (seed 7, start spots never used today, the
+  code before today against the shipping code), 6 rounds: penalties 14 -> 6, port and starboard 7 -> 0**, the
+  starts the same. `pass_room_from_sheet` (the passing room from each character, 8 to 20 m) on the 22 rounds:
+  7 against 2 on the first 7: stopped, off. The play folder zipped (292 MB).

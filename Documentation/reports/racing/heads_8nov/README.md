@@ -1,4 +1,4 @@
-# The skipper's heads trained on Silvaplana (night of 8 November 2026)
+# The skipper's heads trained on Silvaplana (8 November 2026: the night, and racing each other by day)
 
 Max's ask (00:30): train the rule-based skipper's heads one at a time (1 course sailing, 2 the start,
 3 the racing rules, 4 tactics, 5 the personas) until 9:30, on Silvaplana only, from slightly random
@@ -8,8 +8,61 @@ water and the shore, every weird failure looked into and fixed, more wind if the
 Branch `ai/skipper-heads-8nov` (from `physics/realism-7nov`), worktree `WindsurfingMMZB-fixes`, committed,
 not pushed, nothing merged. **Nothing in `Game/sim/` (the physics) and nothing in the autopilot or the
 controller changed**: all the changes are in the skipper (`Game/race/skipper.gd`, `skipper_config.gd`), the
-lake's iQFOiL course files, and the tools. Unit tests 1007/1007. The night step by step, with every
+personas' mapping (`persona.gd`), two questions added to the judge that change nothing in its judging
+(`race_rules.gd`), the lake's iQFOiL course files, and the tools. Unit tests 1007/1007. The night step by step, with every
 number: [PROGRESS.md](PROGRESS.md).
+
+## The day session: racing each other without penalties (8 November, 10:30 to 14:00)
+
+Max (10:40): "the heads can also Shift steer for faster steering. make them race each other and avoid
+penalties. keep improving until 14:00".
+
+**Why last night's keep-clear ideas could not work**: the skipper only reacted to the board the judge names,
+and the judge names boards only within 15 m (`RaceRules.NEAR_M`): a second and a half at the 10 m/s two
+crossing boards close at, half of it gone in the think interval and the reaction time. The look-ahead, the duck
+and passing clear were all cut off there. Now the skipper asks the rules itself, at any distance.
+
+On by default now (`SkipperConfig`), each measured in the start rounds (22 rounds of eight personas, the
+countdown and 90 s after the gun, against the identical code with the switches off):
+
+| What | Switch | Why |
+|---|---|---|
+| Keeping clear by looking ahead: every board it must keep clear of within about 6 s is checked (`RaceRules.must_keep_clear_why()`), and it turns just enough on its tack to pass all of them 12 m clear, bearing away first | `keep_clear_by_passing`, `pass_all_counted` | penalties 46 -> 40 on its own |
+| **Shift** (the carve) for a keep-clear turn of 8 degrees or more, from 5 m/s | `keep_clear_sharp` | Max's ask; below 5 m/s it threw sailors off (fixed) |
+| A penalty circle waits until no board is within 30 m (at most 45 s) | `penalty_when_clear` | a circle in the start crowd set off the next incidents |
+| No tack or gybe onto port into a starboard board's way (waits up to 6 s, never at the shore) | `tack_traffic_check` | |
+| Dirty air: on a beat in another sail's wind shadow, it tacks out | `dirty_air_share` 0.15 | racing each other |
+
+The personas now differ in how they read the wind (`Persona.to_skipper_config()`): the wind lookout from
+nothing for the rookie to 250 m for the best sense (40 % further for a gust hunter), and dirty air by the upwind
+sense (the rookie does not notice). Off: `pass_slow_down` (when no heading gives full room, the smallest turn
+that passes 5 m clear and the sail eased: 32 penalties with it, 25 without, as a port board that slows while
+crossing ahead is the one that gets hit), `keep_clear_from_gun` (keeping clear on the way to the line after the
+gun: 18 against 16 penalties on 12 rounds and the starts later), `turn_sharp` (Shift for every big turn, not
+measured). A finished board sailing back while the others race keeps clear too.
+
+**The fleet races** (the eight personas, the whole race, nine lake courses, last night's seed and hours):
+**penalties 61 -> 29**, every board finished. The mean places now follow the levels better: Hana ("the pro")
+3.1, Kofi 3.6, Mara 3.6, Lena 3.7, Liv 4.6, **Jonas ("the rookie") 5.3** (was 3.8), Bruno 6.0, Elin 6.2. That
+run still had Shift at any speed, and 14 boards fell in a slow keep-clear turn; with Shift only from 5 m/s
+those falls are gone: the same nine courses on a seed never used (61, with the slow-down still on) had one fall,
+26 penalties while racing (and 12 more after the boards had finished, which do not count; a finished board now
+keeps clear too: T2 9 -> 2), 70 of 72 boards finished (two on the old T2 in the 16:30 light patch, as in the
+morning), and the places in the order of the levels: Hana 2.6, Liv 2.8, Kofi 3.1, Mara 3.4, Lena 4.8, Elin 5.4,
+Bruno 6.8, **Jonas 7.2, last**.
+
+**The start rounds, the final set** (22 rounds, against the code before today): **penalties 46 -> 25**
+(port and starboard 19 -> 6, the windward board's 27 -> 18), the starts as before (median 4.5 s against 4.4),
+early starts 5 and 5, falls 1 and 1 (the same fall before the gun). **On start spots never used today** (seed 7,
+the code before today against the final set, 6 rounds so far): penalties 14 -> 6, port and starboard 7 -> 0, the
+starts the same. The passing room taken from each character (`pass_room_from_sheet`: 8 m bold to 20 m careful)
+was worse (7 against 2 on 7 rounds): off.
+
+What is left: the windward board's incidents in the first seconds after the gun, when the boards going from
+their holds are still on their way to the line (keeping clear there made the starts later and did not help);
+the personas still need more spread on the short courses; the AI does not carve its tacks and gybes with Shift
+(the controller takes the turn key only from the player's keys during a manoeuvre: a small change in the
+controller, Max's to approve).
 
 ## How the training works
 
@@ -135,6 +188,9 @@ python -I tools/heads/pool.py --jobs=.sim_output/heads/mine/jobs.txt --out=.sim_
 python -I tools/heads/suite.py .sim_output/heads/mine
 ```
 Starts: `make_jobs.py --races=0 --drops=0 --starts=2`; fleet races: `--fleet_races=1 --finish_window=600`;
-more wind: `--wind_scale=1.3`; a number tried on every skipper: `--extra="--skipper.wind_look_m=0"`.
+more wind: `--wind_scale=1.3`; a number tried on every skipper: `--extra="--skipper.wind_look_m=0"` (a switch:
+`=1` or `=true` on, `=0` off; before 8 November midday "true" was read as off). The penalties of start rounds or
+fleet races: the PENALTY lines in each log (both boards, what each was doing). Run every arm of an A/B on its own
+frozen copy: a pool reads the scripts when each job starts.
 One drop by hand: `tools/race.sh --course=iq_us4 --map=lake --time=15:20 --skippers=allrounder
 --drop_step=random --drop_seed=1002`.
