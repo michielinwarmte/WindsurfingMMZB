@@ -26,6 +26,7 @@ Done when: the ten iQFOiL courses and the saved courses race clean (no grounding
 - [ ] T2 The south-east lee band: the skipper reads the wind field and avoids the band (the stronger lanes), not only escapes it
 - [ ] T3 The sweep at the three hours and three multipliers; the results table in `Documentation/reports/multiplayer/RACE_DIRECTOR.md` or a new report
 - [ ] T4 Running aground as physics (E01.S10 T2) when it exists; until then the scene's stop for the AI (RA2, built)
+Notes: 8 Nov 2026 night (`ai/skipper-heads-8nov`): the scripted skipper's heads trained on Silvaplana from random drops: 75 of 77 clean on the final seed, lake wind x1.3 86 of 99 finished, x0.8 95 of 99 (`Documentation/reports/racing/heads_8nov/README.md`). Evening: the lake's north-east corner traps boards on starboard (E01.S21).
 
 ### E09.S03 · The starts
 Status: todo | Size: M | Owner: the lead | Milestone: M2 | Needs: E09.S01 | Roadmap: RA27, RA20, RA23, RA11, RA16
@@ -35,6 +36,7 @@ Done when: on every course type the fleet starts within 10 s of the gun (the med
 - [ ] T3 The 12 kt start and the boards waiting raked back for minutes (Greta, Kofi, Jonas): pump out of the wait (E01.S09 T4)
 - [ ] T4 The figure-of-eight hold for a line along the wind from far back (RA16), or the boards placed nearer in light wind
 - [ ] T5 The countdown's length per format (RA11b: 60 s now; a slalom's 3-2-1 minute sequence as the PWA runs it)
+Notes: 8 Nov 2026 day: racing each other, the 22 start rounds' penalties 46 -> 25 with the starts unchanged; evening: starts from anywhere (E09.S21), and every board starts after R (E09.S18).
 
 ### E09.S04 · Staying on the board
 Status: todo | Size: M | Owner: the lead, Michiel for the physics causes | Milestone: M2 | Needs: E01.S01 T3 | Roadmap: PH45, PH42, RA17, RA20
@@ -44,6 +46,7 @@ Done when: the fall budget (E09.S08) holds on the lake and the open water at 12 
 - [ ] T3 Leaving a shadow (with E01.S04 T3); the hold-back near a windward board in the last 10 s
 - [ ] T4 The push on the 24 kt bear-away and run (RA17): ease before the bear-away, the gybe at 14 m/s
 - [ ] T5 The reflex's chosen variant (from E09.S01 T3) and its fade above 80 % push kept for the player
+Notes: 8 Nov 2026: standstill falls while waiting luffed up in the slalom's spot (E09.S21 T2); below about 2 m/s the board barely steers (for Michiel).
 
 ### E09.S05 · The AI's push, and the specialists that show
 Status: todo | Size: M | Owner: the lead | Milestone: M2 | Needs: E09.S04 | Roadmap: RA7, RA19, RA21
@@ -52,6 +55,7 @@ Done when: a persona's push level, reaction time and gybe timing are on its shee
 - [ ] T2 The course and slalom specialists (RA19): a per-sailor gybe, the run angle, the shifts
 - [ ] T3 The polar per gear for the skipper's timing (RA21, with E06.S07)
 - [ ] T4 The persona matrix as the proof (`tools/persona_matrix.sh` on three seeds)
+Notes: 8 Nov 2026 evening: the push is not why the AI was slower than Max on SM1 (his 9:43): Hana alone sails 9:41 to 9:46 at any push (the polar's, +0.2 off the wind, 90 % or 100 % everywhere; `push_everywhere`, off).
 
 ### E09.S06 · The AI on a sea spot
 Status: todo | Size: M | Owner: the lead | Milestone: M3 | Needs: E01.S12, E04.S04 | Roadmap: —
@@ -140,3 +144,44 @@ Done when: the race page, the season and the LAN race the brains by default (the
 - [ ] T1 The default switched; the fallback rule
 - [ ] T2 The inference cost measured with fifty boards; the network's size against it
 - [ ] T3 The release rule: a physics change, a night, the suite, then the release
+
+### E09.S18 · The AI after R (the race again)
+Status: review | Size: S | Owner: the lead; Max's play-test | Milestone: M2 | Needs: — | Roadmap: —
+Done when: after R, and after the race director's race after a race, pressed at any moment (in the countdown, mid-race, after the finish), every AI board starts and races as in a first race; checked by Max on his screen.
+- [x] T1 The cause: `Skipper.setup()` reset its clock but kept its last manoeuvre's end, so no tack or gybe after R for as long as the race before had lasted (fixed 3ae30e9)
+- [x] T2 Tests: `tests/unit/test_skipper_restart.gd`, one through the game's own R (f321f1f)
+- [x] T3 The restart suite: 18 cases (R at six moments on SM1, PD3, O2): every board started, none early, none aground
+- [ ] T4 Max's play-test (play folder `WindsurfingMMZB-play-8nov2026-restart`)
+- [ ] T5 The open case: the rookie crawling after R on O2 in 2 of 18 cases (the sail let out, heeled to leeward; fine in a fresh race from the same spot): what outlives R
+Notes: 8 Nov 2026 evening, branch `ai/skipper-heads-8nov`; report `Documentation/reports/racing/heads_8nov/RESTART.md`. Old code: R after 10 minutes or after the finish left 10 or 11 of 11 boards never starting, aground.
+
+### E09.S19 · Trained and tested the way the game runs
+Status: doing | Size: S | Owner: the lead | Milestone: M2 | Needs: — | Roadmap: —
+Done when: every change to the skipper is checked through R (`--restart_after`), at the game's level (`--spread=0.5`) and from drops anywhere round the course (`--spawn=anywhere`), by one suite command, and the regression gate (E09.S08) includes it.
+- [x] T1 The race tool's `--restart_after` and `--spawn=anywhere` (3ae30e9)
+- [ ] T2 One suite command (`tools/heads/`) for the restart, anywhere and level runs, with a score
+- [ ] T3 In the regression gate (E09.S08)
+Notes: every training run before 8 Nov 2026 used fresh skippers and the sheets as written (spread 1, where the game uses 0.5), so the R bug was never seen.
+
+### E09.S20 · The fleet's runs
+Status: todo | Size: M | Owner: the lead | Milestone: M2 | Needs: — | Roadmap: RA20
+Done when: in an 11-board fleet on SM1 the boards lose no more than 15 s each per run against the same boards alone in the same wind, without more penalties.
+- [ ] T1 The measure: the fleet against each board alone with the lake's wind at the same moment (to tell the crowd from the wind)
+- [ ] T2 Out of the line of the boards just behind on a run (a few degrees higher or lower) rather than a gybe (`dirty_air_on_runs` made no difference in 8 pairs)
+- [ ] T3 The second run back through the boards still beating up
+Notes: 8 Nov 2026 evening: against Hana alone, the start, the reach, the beat and the finish cost 0 to 14 s a board; the first run 28 to 44 s, the second 42 to 55 s. Every AI at its best (`--spread=0`) was hardly faster (about 10 s a board). Alone the best personas match Max's 9:43 on SM1.
+
+### E09.S21 · Starts from anywhere
+Status: todo | Size: M | Owner: the lead | Milestone: M2 | Needs: — | Roadmap: RA16
+Done when: a board dropped anywhere round the course before the start sails the shortest way to the line and starts no later than the distance allows (within 20 s of the all-rounder's time from there), with no turn-back flips and no standstill falls.
+- [ ] T1 The way to the line as a route (beat up to the run-in, then the start's plan) instead of switching between "back behind the line" and the plan; a slalom line along the wind approached from its downwind side (`start_free_beyond_ends_m` cut the flips 18 -> 8, not the time)
+- [ ] T2 The slalom's wait no slower than the board stays up; a board at rest in its waiting spot gets going first (Bruno fell twice after R on PD3)
+- [ ] T3 A tack that does not go: take the other tack and keep it (`change_slow_tack`, off: 1 of 32 drops rescued); a fleet test
+Notes: 8 Nov 2026 evening: 96 single drops (6 courses), 84 started within 4 minutes, none aground; 5 fleet races of 11 dropped anywhere, 54 of 55 finished. The lake's north-east corner: E01.S21.
+
+### E09.S22 · The AI carves its tacks and gybes with Shift
+Status: blocked | Size: S | Owner: Max (the OK for the controller change), the lead | Milestone: M2 | Needs: Max's OK | Roadmap: —
+Done when: the AI's hands use the carve (Shift) inside their tacks and gybes as the player can, measured faster with no more falls.
+- [ ] T1 The controller takes the AI hands' turn key in a manoeuvre (`PlayerController._turn_key_along()` returns 0 for AI hands today): a small controller change, Max's OK
+- [ ] T2 The skipper carves where it pays; an A/B on the drops and the fleet races
+Notes: 8 Nov 2026: the AI already uses Shift for its keep-clear turns, from 5 m/s (slower it threw sailors off).

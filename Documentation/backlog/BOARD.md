@@ -54,13 +54,14 @@ Updated: 6 November 2026, 23:15 (the lead, Claude Fable 5.1), from the audit of 
 - E01.S05 The dive after a crest against video: no video yet (Max)
 
 ### Waiting on whom
-- **Michiel:** E01.S01 (the four OKs), E02.S01 (the seven wave decisions), Q7, Q9, Q10; from 7 November: E01.S19 (the two switches on `physics/realism-7nov`), E01.S17 (downwind), E01.S18 (the start's spin), E01.S20 (twist, legs, waves' cost)
-- **Max:** E07.S12 (the low-speed control and the push: the sign-off), the eight checks above, the open questions, the SWAN DLLs, the videos, the folders' fate
+- **Michiel:** E01.S01 (the four OKs), E02.S01 (the seven wave decisions), Q7, Q9, Q10; from 7 November: E01.S19 (the two switches on `physics/realism-7nov`), E01.S17 (downwind), E01.S18 (the start's spin), E01.S20 (twist, legs, waves' cost); from 8 November: E01.S21 (the lake's north-east corner)
+- **Max:** E09.S18 T4 (R in the play folder `WindsurfingMMZB-play-8nov2026-restart`), E09.S22 (the OK for the AI's carve), the merge of `ai/skipper-heads-8nov` (pushed 8 November), E07.S12 (the low-speed control and the push: the sign-off), the eight checks above, the open questions, the SWAN DLLs, the videos, the folders' fate
 - **The lead:** the night run, the merge, the release, the roadmap rows and the progress log for the 6 November work
 
 ### Done this sprint
 - 6 Nov: the audit of the whole project and this backlog (README, 1.0, QUESTIONS, BOARD, E01 to E18, `tools/backlog.py`); the research on the twelve spots (`Documentation/reports/spots/spot_dossier.md`) and the real racers 2006 to 2026 (`Documentation/reports/characters/real_sailors.md`); fourteen questions answered by Max and Michiel and folded into 1.0.md and the epics (Silvaplana the 13th, no foils, the neural AI as the goal, fifty boards if the physics stays, no order and no dates, third person, the made-up brand names, light name mixing, all formats, the backlog in the repository with ROADMAP.md kept); two more promises added late in the evening: the character with realistic joints, wetsuit, impact vest and lycra (E08.S02), and one visual theme for the game (E15.S09, Q46)
 - 7 Nov: the night training (the player's steering, Shift carve, taps); the lake-speed training (stopped 23:25 on Max's word); the physics realism audit (`Documentation/reports/physics/realism_audit_7nov2026.md`): the hull's drag checked against Savitsky, the fin's plate-drag fault, the balance stance, both as switches for Michiel (E01.S19); the downwind issue (E01.S17); 100 % push and the low-speed control fixed (E07.S12, review); the session recorder (E17.S10); new stories E01.S18 to S20, E07.S12, E17.S10
+- 8 Nov (`ai/skipper-heads-8nov`, pushed): the scripted skipper's heads trained on Silvaplana (night: 75 of 77 drops clean); racing each other without penalties (day: 46 -> 25 in the start rounds, 61 -> 29 in the fleet races; E11.S02 notes); the AI after R fixed (evening: every board starts after R, E09.S18 review); trained like the game (E09.S19); dropped anywhere and the fleet's speed measured (the runs cost 30 to 55 s a board each; E09.S20, E09.S21 new); E01.S21 and E09.S22 new; play folder `WindsurfingMMZB-play-8nov2026-restart`; report `Documentation/reports/racing/heads_8nov/RESTART.md`
 
 ## The sprints before this one
 

@@ -26,6 +26,7 @@ Done when: the rules set the PWA and the iQFOiL class apply is in `race_rules.gd
 - [ ] T3 The flags, the recalls, the black flag; the sounds
 - [ ] T4 The protest from the record; the scoring codes (DNF, DNS, OCS, BFD, DSQ, RET)
 - [ ] T5 Max's Stops from 0.1: the shadow's feel, the 20 s, the AI's circle (RA1 F3)
+Notes: 8 Nov 2026 day (`ai/skipper-heads-8nov`): the skipper keeps clear by the rules at any distance (`RaceRules.must_keep_clear_why()`, passing 6 s ahead, Shift from 5 m/s), turns its penalty circle clear of the crowd and does not tack onto port into a starboard board: penalties 46 -> 25 in 22 start rounds, 61 -> 29 in 9 fleet races, no falls.
 
 ### E11.S03 · Slalom elimination ladders
 Status: todo | Size: L | Owner: the lead, Max for the format | Milestone: M2 | Needs: E09.S03, E10.S06 | Roadmap: —

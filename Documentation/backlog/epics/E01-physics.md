@@ -189,3 +189,10 @@ Done when: each of the three is checked against a source or a measurement and fi
 - [ ] T2 The legs: at 135° on flat water the board porpoises (the legs at 1.2 Hz, damping 0.9); softer legs removed it in the audit; choose the numbers from a source and check the chop (E01.S07)
 - [ ] T3 The waves' cost in a steady wind (17 to 24 % downwind, 11 to 14 % across): against a source or Max's GPS tracks (E01.S17 T5)
 Notes: the 7 November audit's findings D and E and the legs, `Documentation/reports/physics/realism_audit_7nov2026.md`.
+
+### E01.S21 · The lake's north-east corner: a board on starboard crawls
+Status: todo | Size: S | Owner: Michiel | Milestone: M2 | Needs: — | Roadmap: —
+Done when: it is known why a board on starboard in the north-east of Silvaplana (game x 850 to 1050, z -940 to -1100, 14 to 16 kt at the sail) crawls at a close reach with the fin slipping 7 to 44 degrees and falls off at a standstill, while on port at the same spot it does 6 to 9 m/s; fixed, or explained and left.
+- [ ] T1 Reproduce on `ai/skipper-heads-8nov`: `run_race.gd -- --course=iq_pd3 --map=lake --time=14:30 --skippers=persona:hana --spawn=anywhere --spawn_seed=20 --seed=1 --trace=Hana`
+- [ ] T2 The cause: the lake's own waves at the long-fetch end, the local wind, the depth
+Notes: found 8 Nov 2026 evening by the start-from-anywhere suite (three boards trapped; Bruno fell 12 times on I2). On open water port and starboard are equal (upwind 6.99 against 6.92 m/s, the fin slip 6.5 against 6.2 degrees). Report: `Documentation/reports/racing/heads_8nov/RESTART.md` on `ai/skipper-heads-8nov`.
