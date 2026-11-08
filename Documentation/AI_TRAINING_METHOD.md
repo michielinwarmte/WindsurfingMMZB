@@ -43,6 +43,7 @@ push only when Max asks.
 | The race tool | `Game/dev/run_race.gd` | New options: `--course=fit:<template> --fit_at=x,z` (a new course laid on the lake), `--course_turn=<deg>`, `--course_shift=dx,dz` (refused on land or near the shore: `COURSE_ILLEGAL`), `--min_wind_kt=14` (`WIND_TOO_LOW`), `--restart_after=<s>` (the game's R), `--spawn=anywhere`, `--spread`; it prints `COURSE_JSON` and per board `HEADS_RESULT` with `spawn`, `start_need_s`, `legs_expected` |
 | A frozen copy | `.sim_output/suite/frozen/Game` | The suite runs on a copy, so the working tree can be edited while it runs. Make or refresh it: copy `.sim_output/heads/frozenAny/Game` (it has the import cache), then `cp -r Game/<part>/. <copy>/Game/<part>/` for `race dev windsurfer ui maps/course maps/silvaplana/courses sim config` |
 | On and off tests | `--extra="--skipper.<switch>=1"` | The same `--seed` and `--set` with and without the switch: the same races, so the difference is the switch |
+| Scoring again | `tools/heads/rescore.py` | `<run>` scores a finished run's roundings again with the present measures (the old `results.jsonl` kept as `results_before_<time>.jsonl`); `--dry` only prints the medians |
 | The summary | `tools/heads/suite_summary.py` | `<run>` (about 20 lines), `<run_off> <run_on>` (side by side, better / worse / same), `--failures=5`, `--wait` (waits until the run is complete: the one wake-up) |
 
 The Godot engine: `C:/Users/Max de Dikke/AppData/Local/Programs/Godot/4.7.2-stable/Godot_v4.7.2-stable_win64_console.exe`
@@ -82,7 +83,7 @@ Not drawn yet: gusts on the open water (the race tool has none), fleets (phase C
 |---|---|---|
 | closest | the nearest it came to the mark rounded (for a gate, the mark nearer to it) | 10 m |
 | out of the turn (`exit_m`) | its distance from the mark when its heading first holds after the rounding (under 6 deg in 2 s) | 15 m |
-| overstand | on a beat into the mark: how far its last tack was beyond the layline (the close-hauled track at 50 deg from the course's axis) | 25 m |
+| overstand | on a beat into the mark: how far its last tack was beyond its own layline: its own close-hauled track over the ground on that tack, from the same leg (without one: 57 deg off the course's axis on the open water, not measured on the lake). Until 9 November it was 50 deg off the axis, which counted a tack on the board's own layline as a 25 to 45 m overstand (it beats 57 deg off the wind on the open water, and on the lake the hour's wind does not blow along the course); rescore older runs with `tools/heads/rescore.py <run>` | 25 m |
 | gate extra turning | in a gate's 80 m circle: the heading turned beyond the turn from the way in to the way out | 120 deg |
 
 ## The speed (measured 8 November 2026, the 8-core Ryzen 7 5800X3D)
@@ -130,7 +131,7 @@ rules, less with the second PC as a second pool.
 
 | Loop | Date | What was fixed (switch) | Tune set (off -> on) | Hold-out (off -> on) | Taken |
 |---|---|---|---|---|---|
-| baseline | 8 Nov 2026 | none: baseline_A, phase A | at 67 races: 57 % pass every check; start 63 %, legs 81 %; out of the turn median 29 m (92 % over 15), overstand median 44 m (88 % over 25), gates over 120 deg 31 % | - | - |
+| baseline | 8-9 Nov 2026 | none: baseline_A, phase A, 300 races (seed 1) | 58.5 % pass every check; start 68 %, legs 89 %, race time 97 %, falls 97 %, aground 98.6 %; out of the turn median 30 m (93 % over 15), overstand median 31 m by the board's own track (212 beats; 58 m by the old 50 deg measure), closest median 7.6 m (33 % over 10), gates over 120 deg extra 41 %. The turn round a mark starts only once the rounding has counted: about 5 deg of it in the 6 s before the mark, the rest after (exit 35 m at a windward mark, 51 m at a leeward mark or gate onto a beat, 48 m at a slalom gybe mark) | - | - |
 
 ## The steps
 

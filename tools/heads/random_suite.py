@@ -80,7 +80,9 @@ FALL_EVERY_S = 300.0
 ROUND_CLOSEST_M = 10.0
 ROUND_EXIT_M = 15.0
 OVERSTAND_M = 25.0
-CLOSE_HAULED_TRACK_DEG = 50.0
+CLOSE_HAULED_TRACK_DEG = 57.0  # only without the board's own track, on the open water (own_close_hauled_track()): measured 57 deg (baseline_A, 31 races; it was 50)
+OWN_TRACK_MIN_S = 5.0
+OWN_TRACK_ROW_S = 0.1  # the race tool's CSV row every 6 ticks
 GATE_EXTRA_TURN_DEG = 120.0
 ZONE_M = 60.0
 GATE_ZONE_M = 80.0
@@ -231,9 +233,38 @@ def dist(a, b):
     return math.hypot(a[0] - b[0], a[1] - b[1])
 
 
-def roundings(rows, course, axis_deg):
+def own_close_hauled_track(rows, k, tack_at):
+    """The board's own close-hauled track over the ground on the tack of its last tack before mark k, from the same
+    leg before that tack: the median of the 1-s tracks where it was beating (the skipper's note) steadily (under 3 deg
+    in 1 s) on a heading within 15 deg of the last tack's. None with fewer than OWN_TRACK_MIN_S seconds of it. The
+    layline 50 deg off the course's axis was wrong on the lake, where the hour's wind does not blow along the course:
+    baseline_A (8 November 2026, 74 beats into a mark on the lake) beat 70 deg off the axis (median), so a tack on its
+    own layline counted as a 44 m overstand; against its own track the median was 21 m."""
+    t_tack = tack_at[0]
+    after = [q[3] for q in rows if q[5] == k and t_tack + 4.0 <= q[0] <= t_tack + 12.0]
+    final_heading = statistics.median(after) if after else tack_at[3]
+    leg = [q for q in rows if q[5] == k and t_tack - 600.0 <= q[0] < t_tack - 2.0]
+    tracks = []
+    j = 0
+    for i, q in enumerate(leg):
+        while j < len(leg) and leg[j][0] < q[0] + 1.0:
+            j += 1
+        if j >= len(leg):
+            break
+        p = leg[j]
+        if q[6].startswith("beat") and abs(turn(final_heading, q[3])) < 15.0 and abs(turn(q[3], p[3])) < 3.0 and dist((q[1], q[2]), (p[1], p[2])) > 0.5:
+            tracks.append(bearing((q[1], q[2]), (p[1], p[2])))
+    if len(tracks) * OWN_TRACK_ROW_S < OWN_TRACK_MIN_S:
+        return None
+    ref = tracks[0]
+    return (ref + statistics.median([turn(ref, t) for t in tracks])) % 360.0
+
+
+def roundings(rows, course, axis_deg, axis_is_wind=True):
     """Every mark and gate the board rounded: what, the closest approach, the distance out of the turn, the overstand on
-    a beat into it, the gate's extra turning."""
+    a beat into it, the gate's extra turning. The overstand is measured against the board's own close-hauled track;
+    without one, against a track CLOSE_HAULED_TRACK_DEG off the course's axis where the wind blows along it (axis_is_wind:
+    the open water), and not at all on the lake."""
     out = []
     steps = course["steps"]
     for k in range(1, len(steps) - 1):
@@ -274,8 +305,16 @@ def roundings(rows, course, axis_deg):
                     break
             if tack_at is not None:
                 p = (tack_at[1], tack_at[2])
-                off = abs(turn(axis_deg, bearing(p, mark)))
-                overstand = dist(p, mark) * math.sin(math.radians(off - CLOSE_HAULED_TRACK_DEG)) if off > CLOSE_HAULED_TRACK_DEG else 0.0
+                track = own_close_hauled_track(rows, k, tack_at)
+                if track is not None:
+                    # Beyond the board's own layline: the mark lies off its close-hauled track on that tack to leeward
+                    # (away from the course's axis, where the wind comes from).
+                    off = turn(track, bearing(p, mark))
+                    beyond = -off if turn(track, axis_deg) > 0.0 else off
+                    overstand = dist(p, mark) * math.sin(math.radians(min(max(beyond, 0.0), 90.0)))
+                elif axis_is_wind:
+                    off = abs(turn(axis_deg, bearing(p, mark)))
+                    overstand = dist(p, mark) * math.sin(math.radians(off - CLOSE_HAULED_TRACK_DEG)) if off > CLOSE_HAULED_TRACK_DEG else 0.0
         # A gate's extra turning: the heading turned within the gate's circle beyond the turn from the way in to the way out.
         extra_turn = None
         if step["kind"] == "GATE":
@@ -331,7 +370,7 @@ def score(label, log_text, csv_dir, drawn):
         # The race tool names the file as RunRace._file_name() does: lower case, spaces as underscores.
         csv_path = os.path.join(csv_dir, r["board"].lower().replace(" ", "_") + ".csv")
         if course and os.path.exists(csv_path):
-            rounds = roundings(read_csv(csv_path), course, course.get("axis_deg", 0.0))
+            rounds = roundings(read_csv(csv_path), course, course.get("axis_deg", 0.0), drawn.get("water") != "lake")
         boards.append({"board": r["board"], "checks": {k: {"ok": v[0], "what": v[1]} for k, v in checks.items()},
                        "pass": all(v[0] for v in checks.values()), "legs": legs, "roundings": rounds,
                        "falls": r.get("falls", 0), "note": r.get("note", "")})
