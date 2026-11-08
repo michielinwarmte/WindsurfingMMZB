@@ -3,7 +3,8 @@
 Max, after a race on SM1 (his 9:43, the AI boards on mark 4 of 6): "if I press R for restart the AI lost
 their minds ... for me it's the most important that you can drop the AI anywhere on the field before the
 start and they always try to be the fastest at the finish". Then: "continue training on the restart races
-and other stuff". Branch `ai/skipper-heads-8nov` (worktree `WindsurfingMMZB-fixes`), local commits only.
+and other stuff". Branch `ai/skipper-heads-8nov` (worktree `WindsurfingMMZB-fixes`), pushed on the evening of 8 November, not merged. The
+backlog's stories: E09.S18 to E09.S22 and E01.S21 (on `docs/backlog-1.0`).
 Nothing in `Game/sim/`, the controller or the autopilot changed.
 
 ## 1. R broke every AI board (fixed, 3ae30e9)

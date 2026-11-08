@@ -1,5 +1,8 @@
 # The skipper's heads trained on Silvaplana (8 November 2026: the night, and racing each other by day)
 
+**The evening (R, dropped anywhere, the fleet's speed): [RESTART.md](RESTART.md).** The branch was pushed on the evening
+of 8 November; nothing is merged. The backlog's stories for it: E09.S18 to E09.S22 and E01.S21 (on `docs/backlog-1.0`).
+
 Max's ask (00:30): train the rule-based skipper's heads one at a time (1 course sailing, 2 the start,
 3 the racing rules, 4 tactics, 5 the personas) until 9:30, on Silvaplana only, from slightly random
 places so it is no one-trick pony, the courses off the shore, enough information about the wind, the
