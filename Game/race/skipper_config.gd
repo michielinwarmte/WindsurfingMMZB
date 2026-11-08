@@ -100,7 +100,34 @@ enum StartStyle { LOOP, HOLD }
 ## seconds and turns just enough (either way, on its tack) to pass with room (Skipper._passing_turn_deg())
 ## instead of a fixed head-up or bear-away. Off: as before. The skipper's heads, 8 November 2026: the port
 ## and starboard penalties were fast port boards running into a starboard board stopped in the crowd.
-@export var keep_clear_by_passing: bool = false
+@export var keep_clear_by_passing: bool = true
+## Holds Shift (the carve, about twice the turn rate; Max, 8 November 2026) for a keep-clear turn of more than a
+## few degrees (Skipper.SHARP_ERROR_DEG). Off: as before.
+@export var keep_clear_sharp: bool = true
+## After the gun, a tack or gybe that would put it on port tack in a starboard board's way waits a few seconds
+## (Skipper.TRAFFIC_WAIT_MAX_S; never at the shore). Off: as before.
+@export var tack_traffic_check: bool = true
+## Holds Shift (the carve) for any turn of Skipper.SHARP_TURN_DEG or more (the bear-away at a mark, a course
+## change), except a head-up faster than Skipper.GENTLE_HEAD_UP_FROM_MS. Off: only keep_clear_sharp's turns.
+@export var turn_sharp: bool = false
+## With keep_clear_by_passing, the room it passes another board with is its keep_clear_m (a bold sailor close,
+## a careful one wide) instead of Skipper.PASS_CLEAR_M. Off: as before.
+@export var pass_room_from_sheet: bool = false
+## With keep_clear_by_passing, the heading it turns to passes every board it must keep clear of within reach, not
+## only the ones in the way of the heading it decided. Off: as before.
+@export var pass_all_counted: bool = true
+## A penalty turn waits until no other board is near (Skipper.PENALTY_CLEAR_M; at most Skipper.PENALTY_WAIT_MAX_S),
+## as sailors get clear before turning their circle. Off: it turns at once.
+@export var penalty_when_clear: bool = true
+## The look-ahead and the traffic check also on its way to the start line after the gun (not only once it has
+## crossed it). Off: from the line on.
+@export var keep_clear_from_gun: bool = false
+## With keep_clear_by_passing, when no heading passes with the full room: the smallest turn that still passes a few
+## metres clear, and the sail eased to slow down (Skipper.PASS_SLOW_SHARE). Off: the heading that passes widest.
+@export var pass_slow_down: bool = true
+## Dirty air (Skipper._clear_air()): on a beat in another sail's wind shadow, the wind cut by this share or more for
+## a few seconds, with clear air on the other tack, it tacks away. 0: it does not notice.
+@export_range(0.0, 0.5) var dirty_air_share: float = 0.15
 
 @export_group("Tactics")
 ## How big a header (a wind shift that forces it away from the mark) makes it tack, degrees.

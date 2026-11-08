@@ -88,7 +88,7 @@ const KEEP_CLEAR_BEAR_AWAY_DEG: float = 15.0
 const KEEP_CLEAR_HEAD_UP_DEG: float = 15.0
 const KEEP_CLEAR_CLOSEST_TWA_DEG: float = 38.0
 const KEEP_CLEAR_SIDE_DEG: float = 12.0
-## Keeping clear by passing (_passing_turn_deg()): headings tried every PASS_STEP_DEG up to PASS_STEPS
+## Keeping clear by passing (_passing_heading_deg()): headings tried every PASS_STEP_DEG up to PASS_STEPS
 ## steps either way, no deeper than PASS_DEEPEST_TWA_DEG; room wanted PASS_CLEAR_M over the next PASS_LOOK_S;
 ## its own speed taken as at least PASS_MIN_SPEED_MS.
 const PASS_STEP_DEG: float = 5.0
@@ -97,6 +97,32 @@ const PASS_DEEPEST_TWA_DEG: float = 160.0
 const PASS_CLEAR_M: float = 12.0
 const PASS_LOOK_S: float = 6.0
 const PASS_MIN_SPEED_MS: float = 3.0
+## Looking ahead (_look_ahead_keep_clear(), SkipperConfig.keep_clear_by_passing): a board further than
+## PASS_LOOK_S of both boards' speeds (the other taken as fast as PASS_OTHER_MAX_MS) is not looked at; a turn
+## onto a heading with less than PASS_SHORE_M of open water ahead is not made, metres.
+const PASS_OTHER_MAX_MS: float = 15.0
+const PASS_SHORE_M: float = 60.0
+## With SkipperConfig.pass_slow_down, when no heading passes with the full room: the smallest turn that still
+## passes PASS_MIN_ROOM_M (rather than the widest, a 45-degree bear-away that met the next board), and the sail
+## eased to PASS_SLOW_SHARE of its speed (never under PASS_SLOW_MIN_MS), as a sailor keeps clear by slowing.
+const PASS_MIN_ROOM_M: float = 5.0
+const PASS_SLOW_SHARE: float = 0.6
+const PASS_SLOW_MIN_MS: float = 3.0
+## The Shift carve (AiHands.sharp; Max, 8 November 2026: "the heads can also Shift steer for faster
+## steering"): while keeping clear with this much or more still to turn, degrees (SkipperConfig.keep_clear_sharp).
+const SHARP_ERROR_DEG: float = 8.0
+## Shift only this fast and faster, m/s: two boards at 2 m/s heading up with it to keep clear fell off (the start
+## rounds, 8 November 2026); a carve wants speed.
+const SHARP_FROM_MS: float = 5.0
+## With SkipperConfig.turn_sharp, any turn with this much or more still to go, degrees.
+const SHARP_TURN_DEG: float = 20.0
+## Tacking into traffic (SkipperConfig.tack_traffic_check): a tack or gybe onto port with a starboard board
+## that would pass within PASS_CLEAR_M over the next PASS_LOOK_S (this board on the new tack's course, after a
+## tack at TRAFFIC_TACK_SPEED_MS) waits, up to TRAFFIC_WAIT_MAX_S; a wait that has not been needed for
+## TRAFFIC_FORGET_S starts afresh.
+const TRAFFIC_TACK_SPEED_MS: float = 3.0
+const TRAFFIC_WAIT_MAX_S: float = 6.0
+const TRAFFIC_FORGET_S: float = 2.0
 ## The best upwind and downwind angles of POLAR_15KT.md (45 and 135 degrees), which the character
 ## sheets' angles are measured from: a sheet's difference from them moves the polar's best angle in
 ## every wind (see _pointing_twa_deg() and _downwind_twa_deg()).
@@ -172,6 +198,11 @@ const SHORE_SLOW_OPEN_M: float = 40.0
 const WIND_BETTER_SHARE: float = 1.2
 ## Closer than this to the next mark it no longer looks for holes, metres.
 const WIND_NEAR_MARK_M: float = 250.0
+## Dirty air (_clear_air(), SkipperConfig.dirty_air_share): in the shadow this long, seconds, before it tacks away;
+## the other tack's air looked at this far ahead, metres (the shadows reach 30 m); not within this of the mark.
+const DIRTY_AIR_S: float = 3.0
+const DIRTY_AIR_LOOK_M: float = 25.0
+const DIRTY_AIR_NEAR_MARK_M: float = 120.0
 ## Nearer than this to the finish line it runs for, on the gybe that reaches it, it steers straight at it, no
 ## deeper than DIRECT_RUN_DEEPEST_TWA_DEG: O2's 35 m finish line lay dead downwind of a board 47 m away, and
 ## the run's 135 degrees carried it past the end of the line, again and again for two minutes (the
@@ -513,6 +544,13 @@ var _others_dt_s: float = THINK_INTERVAL_S
 ## whether it is keeping clear of one this tick (for the note).
 var _others_last: PackedVector2Array = PackedVector2Array()
 var _keeping_clear: bool = false
+## Shift held for this think's turn (the carve): set while keeping clear with SkipperConfig.keep_clear_sharp.
+var _sharp_wanted: bool = false
+## Since when it has sailed in dirty air (another sail's shadow; -1: clear air).
+var _dirty_since_s: float = -1.0
+## Waiting for traffic before a tack (tack_traffic_check): since when, and when it last had to.
+var _traffic_wait_from_s: float = -INF
+var _traffic_seen_s: float = -INF
 ## Whether the step it sails for is the finish (set at every decision, for the straight run in).
 var _to_the_finish: bool = false
 ## Since when it heads up to tack because it is too slow to gybe (-1: not).
@@ -533,6 +571,13 @@ var _penalty_phase: int = 0
 var _penalty_from_s: float = 0.0
 var _penalty_gybe_first: bool = false
 var _penalty_pressed_s: float = -INF
+## Since when it owes a penalty it has not begun to turn (SkipperConfig.penalty_when_clear); -1: none owed.
+var _penalty_owed_s: float = -1.0
+## With penalty_when_clear the turn waits until no other sailing board is within PENALTY_CLEAR_M, metres, but no
+## longer than PENALTY_WAIT_MAX_S after the penalty (a circle in the crowd after the gun set off more incidents:
+## the skipper's heads, 8 November 2026).
+const PENALTY_CLEAR_M: float = 30.0
+const PENALTY_WAIT_MAX_S: float = 45.0
 var penalty_turns: int = 0
 const PENALTY_EASING: int = 1
 const PENALTY_FIRST: int = 2
@@ -719,18 +764,26 @@ func _think(telemetry: Telemetry) -> void:
 	_going_from_hold = false
 	_new_step_check()
 	_keeping_clear = false
+	_sharp_wanted = false
 	_leg_turns = false
 	_to_the_finish = false
 	# A penalty from the judge is taken at once, while racing (not in the pre-start crowd, where
 	# a circle would be a danger to everyone; it is carried to the start and taken on the first leg).
+	# With penalty_when_clear it first gets clear of the other boards (PENALTY_CLEAR_M), as sailors do.
 	if rules != null and _penalty_phase == 0 and state == State.RACING and rules.penalties(_index) > 0:
-		_penalty_phase = PENALTY_EASING
-		_penalty_from_s = _time_s
-		_penalty_pressed_s = -INF
+		if _penalty_owed_s < 0.0:
+			_penalty_owed_s = _time_s
+		if not config.penalty_when_clear or _time_s - _penalty_owed_s >= PENALTY_WAIT_MAX_S 				or _nearest_board_m(telemetry) >= PENALTY_CLEAR_M:
+			_penalty_phase = PENALTY_EASING
+			_penalty_from_s = _time_s
+			_penalty_pressed_s = -INF
+			_penalty_owed_s = -1.0
 	var decided_deg: float = _keep_off_the_shore(telemetry, _decide(telemetry))
 	_avoid_the_holes(telemetry, decided_deg)
+	_clear_air(telemetry, decided_deg)
 	decided_deg = _get_going(telemetry, decided_deg)
 	decided_deg = _slow_turn(telemetry, decided_deg)
+	decided_deg = _look_ahead_keep_clear(telemetry, decided_deg)
 	if _keeping_clear:
 		note += ", keeping clear"
 	_last_wanted_deg = decided_deg
@@ -866,6 +919,38 @@ func _avoid_the_holes(telemetry: Telemetry, heading_deg: float) -> void:
 			return
 		note += ", away from the light patch (%.0f kt ahead, %.0f kt on the other tack)" % [ahead_ms / SimMath.KNOT_MS, other_ms / SimMath.KNOT_MS]
 		_ask_for_manoeuvre(false)
+
+
+## Dirty air (SkipperConfig.dirty_air_share; Max, 8 November 2026: "make them race each other"): on a beat after
+## the gun, sailing in other sails' wind shadows (the shadows' factor at its place under 1 - dirty_air_share) for
+## DIRTY_AIR_S, with clearer air DIRTY_AIR_LOOK_M ahead on the other tack, it tacks away, as sailors do; not within
+## DIRTY_AIR_NEAR_MARK_M of the mark, never toward the shore, within its tacks for the beat.
+func _clear_air(telemetry: Telemetry, heading_deg: float) -> void:
+	var shadows: WindDisturbance = _sim.wind.disturbance if _sim.wind != null else null
+	if config.dirty_air_share <= 0.0 or shadows == null or not _leg_turns or state != State.RACING or absf(telemetry.twa_deg) > 90.0:
+		_dirty_since_s = -1.0
+		return
+	var position: Vector2 = _position(telemetry)
+	var wind_deg: float = telemetry.wind_from_bearing_deg
+	var downwind: Vector2 = Course.direction_of(wind_deg + 180.0)
+	var undisturbed: Vector3 = Vector3(downwind.x, 0.0, downwind.y) * maxf(telemetry.tws_10m_kt * SimMath.KNOT_MS, 1.0)
+	var here: float = shadows.factor_at(Vector3(position.x, 0.0, position.y), undisturbed)
+	if here >= 1.0 - config.dirty_air_share:
+		_dirty_since_s = -1.0
+		return
+	if _dirty_since_s < 0.0:
+		_dirty_since_s = _time_s
+	if _time_s - _dirty_since_s < DIRTY_AIR_S or _tack_due_s >= 0.0 or _controller.manoeuvre != PlayerController.Manoeuvre.NONE \
+			or note.contains("shore") or position.distance_to(_race.next_target(_index)) < DIRTY_AIR_NEAR_MARK_M:
+		return
+	var other_deg: float = 2.0 * wind_deg - heading_deg
+	var there: Vector2 = position + Course.direction_of(other_deg) * DIRTY_AIR_LOOK_M
+	if shadows.factor_at(Vector3(there.x, 0.0, there.y), undisturbed) <= here + 0.5 * config.dirty_air_share:
+		return
+	if shore != null and shore.water_ahead_m(position, other_deg, SHORE_LOOK_TURNING_MIN_M) < SHORE_LOOK_TURNING_MIN_M:
+		return
+	note += ", out of dirty air (%.0f %% of the wind)" % (100.0 * here)
+	_ask_for_manoeuvre(false)
 
 
 ## The map's wind speed at a point (game X, Z), m/s, at the wind pattern's height: what a sailor reads on
@@ -1447,6 +1532,9 @@ func _keep_clear_deg(telemetry: Telemetry, tack: float) -> float:
 	# line, and it misses its spot (the rules apply, but a start is a start).
 	if _going_from_hold:
 		return 0.0
+	# After the gun with the look-ahead on, keeping clear is _look_ahead_keep_clear()'s (in _think()).
+	if config.keep_clear_by_passing and rules != null and _judged():
+		return 0.0
 	var position: Vector2 = _position(telemetry)
 	var must_avoid: int = rules.burdened_by(_index) if rules != null else -2
 	for j: int in _race.board_count():
@@ -1460,8 +1548,7 @@ func _keep_clear_deg(telemetry: Telemetry, tack: float) -> float:
 		# It sees a board coming sooner the faster they close (its keep_clear_look_s of closing; 0: no), never later
 		# than its character's keep_clear_m.
 		var closing_ms: float = maxf(-apart.normalized().dot(other_velocity - _velocity), 0.0) if apart.length() > 0.01 else 0.0
-		var look_s: float = maxf(config.keep_clear_look_s, PASS_LOOK_S if config.keep_clear_by_passing and state == State.RACING else 0.0)
-		if apart.length() > maxf(config.keep_clear_m, closing_ms * look_s):
+		if apart.length() > maxf(config.keep_clear_m, closing_ms * config.keep_clear_look_s):
 			continue
 		if apart.dot(other_velocity - _velocity) < 0.0:
 			_keeping_clear = true
@@ -1472,8 +1559,6 @@ func _keep_clear_deg(telemetry: Telemetry, tack: float) -> float:
 				# Before the start it bears away whatever the rule: the course side is up the wind, and a
 				# windward board heading up near the line went over it early (8 of 120 boards against 2).
 				why = RaceRules.Why.NONE
-			if config.keep_clear_by_passing and state == State.RACING and why != RaceRules.Why.NONE:
-				return _passing_turn_deg(telemetry, tack, apart, other_velocity)
 			# Bearing away on starboard tack turns the bow to the left (the heading decreases); heading up
 			# turns it to the right.
 			if why == RaceRules.Why.WINDWARD_GIVES_WAY:
@@ -1491,37 +1576,146 @@ func _keep_clear_deg(telemetry: Telemetry, tack: float) -> float:
 	return 0.0
 
 
-## Keeping clear by passing (SkipperConfig.keep_clear_by_passing): of the headings on its tack up to
-## PASS_STEPS * PASS_STEP_DEG either way (no closer to the wind than KEEP_CLEAR_CLOSEST_TWA_DEG, no deeper
-## than PASS_DEEPEST_TWA_DEG), the one nearest its course that keeps the two boards PASS_CLEAR_M apart over
-## the next PASS_LOOK_S (both holding their speed: the other its velocity now, this one its speed, at
-## least PASS_MIN_SPEED_MS); if none does, the one that passes widest. The turn from its heading, degrees.
-func _passing_turn_deg(telemetry: Telemetry, tack: float, apart: Vector2, other_velocity: Vector2) -> float:
-	var wind_deg: float = telemetry.wind_from_bearing_deg
+## Keeping clear by looking ahead (SkipperConfig.keep_clear_by_passing, after the gun; the skipper's heads,
+## 8 November 2026: the judge names only boards within its NEAR_M, 15 m, a second and a half at the 10 m/s two
+## crossing boards close at, so the old keep-clear always began too late): every board it must keep clear of by
+## the rules as they stand (RaceRules.must_keep_clear_why(), at any distance) that would come within
+## PASS_CLEAR_M over the next PASS_LOOK_S if both held their course (the other its velocity now, this one the
+## heading it has decided at its speed, at least PASS_MIN_SPEED_MS). For those it turns just enough, on its tack,
+## to pass them all with room (_passing_heading_deg()); with keep_clear_sharp it holds Shift for the turn. Not in
+## a penalty turn, nor while a tack or gybe is asked for or under way. The heading, degrees.
+func _look_ahead_keep_clear(telemetry: Telemetry, decided_deg: float) -> float:
+	if not config.keep_clear_by_passing or rules == null or not _judged() or _penalty_phase > 0:
+		return decided_deg
+	if _tack_due_s >= 0.0 or _controller.manoeuvre != PlayerController.Manoeuvre.NONE:
+		return decided_deg
+	var tack: float = signf(wrapf(telemetry.wind_from_bearing_deg - decided_deg, -180.0, 180.0))
+	if tack == 0.0:
+		tack = _tack()
+	var position: Vector2 = _position(telemetry)
 	var speed_ms: float = maxf(telemetry.speed_ms, PASS_MIN_SPEED_MS)
-	var best_turn_deg: float = 0.0
-	var best_found: bool = false
+	var mine: Vector2 = Course.direction_of(decided_deg) * speed_ms
+	var my_mark: Vector2 = _mark_point(_index)
+	# Every board it must keep clear of within reach counts for the heading it turns to (a board bearing away
+	# behind one ran into another it had not counted: two penalties in the start rounds); the turn is made only
+	# when one of them is in the way of the heading it decided.
+	var aparts: PackedVector2Array = PackedVector2Array()
+	var velocities: PackedVector2Array = PackedVector2Array()
+	var in_the_way: bool = false
+	for j: int in _race.board_count():
+		if j == _index:
+			continue
+		var other: Vector2 = _race.board_position(j)
+		var apart: Vector2 = other - position
+		if apart.length() > PASS_LOOK_S * (speed_ms + PASS_OTHER_MAX_MS):
+			continue
+		var mark: Vector2 = my_mark if my_mark != Vector2.INF and _mark_point(j) == my_mark else Vector2.INF
+		if rules.must_keep_clear_why(_index, j, mark) == RaceRules.Why.NONE:
+			continue
+		var other_velocity: Vector2 = (other - _others_last[j]) / _others_dt_s
+		if _pass_room_m(apart, other_velocity - mine) < _pass_clear_m():
+			in_the_way = true
+		if config.pass_all_counted or _pass_room_m(apart, other_velocity - mine) < _pass_clear_m():
+			aparts.append(apart)
+			velocities.append(other_velocity)
+	if not in_the_way:
+		return decided_deg
+	_keeping_clear = true
+	_sharp_wanted = config.keep_clear_sharp
+	note += ", passing clear"
+	return _passing_heading_deg(telemetry, decided_deg, tack, speed_ms, aparts, velocities)
+
+
+## Of the headings on its tack up to PASS_STEPS * PASS_STEP_DEG either way of the one it decided (no closer to
+## the wind than KEEP_CLEAR_CLOSEST_TWA_DEG, no deeper than PASS_DEEPEST_TWA_DEG, none with less than
+## PASS_SHORE_M of open water ahead), the one nearest it that passes every board in the way with PASS_CLEAR_M of
+## room (bearing away first when two are as near); if none does, the one that passes widest. Degrees.
+func _passing_heading_deg(telemetry: Telemetry, base_deg: float, tack: float, speed_ms: float,
+		aparts: PackedVector2Array, velocities: PackedVector2Array) -> float:
+	var wind_deg: float = telemetry.wind_from_bearing_deg
+	var position: Vector2 = _position(telemetry)
+	var best_deg: float = base_deg
+	var best_k: int = 0
+	var found: bool = false
 	var widest_m: float = -1.0
-	var widest_turn_deg: float = 0.0
+	var widest_deg: float = base_deg
+	# With pass_slow_down: the nearest heading that passes PASS_MIN_ROOM_M, for when none gives the full room.
+	var some_k: int = 0
+	var some_deg: float = base_deg
+	var some_found: bool = false
 	for k: int in range(-PASS_STEPS, PASS_STEPS + 1):
-		var turn_deg: float = k * PASS_STEP_DEG
-		var heading_deg: float = telemetry.heading_deg + turn_deg
+		var heading_deg: float = base_deg + k * PASS_STEP_DEG
 		var twa_deg: float = wrapf(wind_deg - heading_deg, -180.0, 180.0)
 		if absf(twa_deg) < KEEP_CLEAR_CLOSEST_TWA_DEG or absf(twa_deg) > PASS_DEEPEST_TWA_DEG or signf(twa_deg) != tack:
 			continue
-		var closing: Vector2 = other_velocity - Course.direction_of(heading_deg) * speed_ms
-		var at_s: float = 0.0
-		if closing.length_squared() > 1e-4:
-			at_s = clampf(-apart.dot(closing) / closing.length_squared(), 0.0, PASS_LOOK_S)
-		var nearest_m: float = (apart + closing * at_s).length()
-		if nearest_m > widest_m:
-			widest_m = nearest_m
-			widest_turn_deg = turn_deg
-		if nearest_m >= PASS_CLEAR_M and (not best_found or absf(turn_deg) < absf(best_turn_deg)):
-			best_found = true
-			best_turn_deg = turn_deg
-	note += ", passing clear"
-	return best_turn_deg if best_found else widest_turn_deg
+		if k != 0 and shore != null and shore.water_ahead_m(position, heading_deg, PASS_SHORE_M) < PASS_SHORE_M:
+			continue
+		var mine: Vector2 = Course.direction_of(heading_deg) * speed_ms
+		var room_m: float = INF
+		for n: int in aparts.size():
+			room_m = minf(room_m, _pass_room_m(aparts[n], velocities[n] - mine))
+		if room_m > widest_m:
+			widest_m = room_m
+			widest_deg = heading_deg
+		if room_m >= PASS_MIN_ROOM_M and (not some_found or absi(k) < absi(some_k) or (absi(k) == absi(some_k) and k * tack < 0.0)):
+			some_found = true
+			some_k = k
+			some_deg = heading_deg
+		if room_m >= _pass_clear_m():
+			# Bearing away on starboard tack lowers the heading (k < 0); on port it raises it.
+			var nearer: bool = not found or absi(k) < absi(best_k) or (absi(k) == absi(best_k) and k * tack < 0.0)
+			if nearer:
+				found = true
+				best_k = k
+				best_deg = heading_deg
+	if found:
+		return best_deg
+	if config.pass_slow_down:
+		note += ", slowing"
+		_hands.hold_speed_ms = maxf(PASS_SLOW_SHARE * telemetry.speed_ms, PASS_SLOW_MIN_MS)
+		if some_found:
+			return some_deg
+	return widest_deg
+
+
+## The room two boards pass with over the next PASS_LOOK_S, metres: the nearest they come, the other at
+## `apart` moving at `closing` relative to this one; INF when they are not getting closer.
+static func _pass_room_m(apart: Vector2, closing: Vector2) -> float:
+	if apart.dot(closing) >= 0.0:
+		return INF
+	var at_s: float = clampf(-apart.dot(closing) / maxf(closing.length_squared(), 1e-6), 0.0, PASS_LOOK_S)
+	return (apart + closing * at_s).length()
+
+
+## How far the nearest other sailing board is, metres (INF: none).
+func _nearest_board_m(telemetry: Telemetry) -> float:
+	var position: Vector2 = _position(telemetry)
+	var nearest_m: float = INF
+	for j: int in _race.board_count():
+		if j != _index and (rules == null or rules.is_sailing(j)):
+			nearest_m = minf(nearest_m, position.distance_to(_race.board_position(j)))
+	return nearest_m
+
+
+## The room it passes another board with, metres: PASS_CLEAR_M, or its character's keep_clear_m with
+## SkipperConfig.pass_room_from_sheet (a bold sailor passes close, a careful one wide: 8 to 20 m).
+func _pass_clear_m() -> float:
+	return config.keep_clear_m if config.pass_room_from_sheet else PASS_CLEAR_M
+
+
+## True while it races and the judge gives penalties: racing, and with SkipperConfig.keep_clear_from_gun also on
+## its way to the start line after the gun (PRE_START lasts until the board crosses it; at the gun the boards going
+## from their holds kept clear of nobody, and two of the first penalties came in the first two seconds; measured:
+## as many penalties, the starts 2.7 s later).
+func _judged() -> bool:
+	return state == State.RACING or (config.keep_clear_from_gun and state == State.PRE_START and _race.clock_s() >= 0.0)
+
+
+## Where a board's next mark is (Vector2.INF while it sails to a line or has finished): what mark room is
+## judged by.
+func _mark_point(index: int) -> Vector2:
+	var step: RaceStep = _race.next_step(index)
+	return step.points[0] if step != null and step.kind == RaceStep.Kind.MARK else Vector2.INF
 
 
 ## Rule 7, gust hunting, is not built yet: it needs the wind on the water around the board (the
@@ -2417,6 +2611,7 @@ func _wander(dt: float) -> float:
 ## controller's own settling does (PlayerController.settle_rate_dps).
 func _steer_toward(telemetry: Telemetry, wanted_deg: float) -> void:
 	_hands.steer = 0.0
+	_hands.sharp = false
 	if _controller.manoeuvre != PlayerController.Manoeuvre.NONE:
 		return
 	if _settling:
@@ -2437,6 +2632,12 @@ func _steer_toward(telemetry: Telemetry, wanted_deg: float) -> void:
 	if signf(error_deg) == _tack() and telemetry.speed_ms > GENTLE_HEAD_UP_FROM_MS:
 		stick_limit = GENTLE_HEAD_UP_STICK
 	_hands.steer = clampf(error_deg / FULL_STICK_ERROR_DEG, -stick_limit, stick_limit)
+	# The Shift carve for a turn that must be quick (keeping clear): about twice the turn rate.
+	_hands.sharp = _sharp_wanted and absf(error_deg) >= SHARP_ERROR_DEG
+	if config.turn_sharp and absf(error_deg) >= SHARP_TURN_DEG and stick_limit >= 1.0:
+		_hands.sharp = true
+	if telemetry.speed_ms < SHARP_FROM_MS:
+		_hands.sharp = false
 
 
 ## The push slider as a good sailor sets it (AiHands.push, 0 to 1): the polar's level for the wind
@@ -2514,7 +2715,41 @@ func _ask_for_manoeuvre(needed: bool, even_slow: bool = false) -> void:
 		if _slow_turn_from_s < 0.0:
 			_slow_turn_from_s = _time_s
 		return
+	if config.tack_traffic_check and _judged() and rules != null and not note.contains("shore") \
+			and _traffic_on_the_new_tack():
+		if _time_s - _traffic_seen_s > TRAFFIC_FORGET_S:
+			_traffic_wait_from_s = _time_s
+		_traffic_seen_s = _time_s
+		if _time_s - _traffic_wait_from_s < TRAFFIC_WAIT_MAX_S:
+			note += ", waiting for traffic"
+			return
 	_tack_due_s = _time_s + config.reaction_time_s
+
+
+## True when a tack or gybe now would put it on port tack in a starboard board's way (tack_traffic_check):
+## on the new tack's course (the beat or the run), after a tack at TRAFFIC_TACK_SPEED_MS, after a gybe at its
+## speed, it would pass a sailing starboard board with less than PASS_CLEAR_M over the next PASS_LOOK_S.
+func _traffic_on_the_new_tack() -> bool:
+	var telemetry: Telemetry = _sim.telemetry
+	var tack: float = _tack()
+	if tack < 0.0:
+		return false
+	var upwind: bool = absf(telemetry.twa_deg) < 90.0
+	var new_deg: float = telemetry.wind_from_bearing_deg + tack * (_upwind_twa_deg() if upwind else _downwind_twa_deg())
+	var speed_ms: float = TRAFFIC_TACK_SPEED_MS if upwind else maxf(telemetry.speed_ms, PASS_MIN_SPEED_MS)
+	var mine: Vector2 = Course.direction_of(new_deg) * speed_ms
+	var position: Vector2 = _position(telemetry)
+	for j: int in _race.board_count():
+		if j == _index or not rules.is_sailing(j) or rules.board_tack(j) < 0.0:
+			continue
+		var other: Vector2 = _race.board_position(j)
+		var apart: Vector2 = other - position
+		if apart.length() > PASS_LOOK_S * (speed_ms + PASS_OTHER_MAX_MS):
+			continue
+		var other_velocity: Vector2 = (other - _others_last[j]) / _others_dt_s
+		if _pass_room_m(apart, other_velocity - mine) < _pass_clear_m():
+			return true
+	return false
 
 
 ## Presses Space once the reaction time is up.

@@ -184,6 +184,28 @@ func who_keeps_clear(i: int, j: int, mark: Vector2 = Vector2.INF) -> int:
 	return i if is_clear_astern(i, j) else j  # rule 12
 
 
+## Why board i must keep clear of board j by the rules as they stand now, at any distance apart
+## (Why.NONE: it need not, or one of them is in the water): a skipper looking ahead asks before the
+## two are near enough for the judge (NEAR_M). `mark`: the mark both sail to (mark room), or
+## Vector2.INF. It changes nothing in the judge.
+func must_keep_clear_why(i: int, j: int, mark: Vector2 = Vector2.INF) -> Why:
+	if i == j or i >= _boards.size() or j >= _boards.size() or not _boards[i].sailing or not _boards[j].sailing:
+		return Why.NONE
+	if who_keeps_clear(i, j, mark) != i:
+		return Why.NONE
+	return _why_of(i, j, i, mark)
+
+
+## A board's tack as the judge last saw it (+1 starboard, -1 port), and whether its sail is up: what a
+## skipper looking at the water around it can see.
+func board_tack(index: int) -> float:
+	return _boards[index].tack if index < _boards.size() else 1.0
+
+
+func is_sailing(index: int) -> bool:
+	return index < _boards.size() and _boards[index].sailing
+
+
 ## True when board i is clear astern of board j: all of its hull behind the line across j's stern.
 func is_clear_astern(i: int, j: int) -> bool:
 	var forward: Vector2 = Course.direction_of(_boards[j].heading_deg)

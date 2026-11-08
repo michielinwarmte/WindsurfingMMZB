@@ -207,3 +207,63 @@ output folder); carry on with the next open step. Stop starting new work at 9:15
   T2 at 14:30, SD3 at 12:00): the board crossed the line's extension going to its waiting spot upwind of the
   boat. Turning back at once (turn_now) did not change it: taken out, the cause is in the slalom start's
   geometry in light wind (open).
+
+## The day session (8 November 2026, 10:30 to 14:00): racing each other, without penalties
+
+Max (10:40): "the heads can also Shift steer for faster steering. make them race each other and avoid
+penalties. keep improving until 14:00".
+
+- 10:35 **why last night's three keep-clear ideas could not work**: the skipper only looked at the board the
+  judge names (`rules.burdened_by()`), and the judge names boards only within its `NEAR_M`, 15 m. A longer
+  look-ahead, the duck and passing clear were all cut off at 15 m: a second and a half at the 10 m/s two
+  crossing boards close at, half of it gone in the think interval and the reaction time. So they were never
+  really tested.
+- 10:40 the look-ahead rebuilt (`Skipper._look_ahead_keep_clear()`, `keep_clear_by_passing`): the skipper asks
+  the rules itself, at any distance (`RaceRules.must_keep_clear_why()`, a question that changes nothing in the
+  judge), for every board within six seconds of closing; for those that would come within 12 m if both held
+  their course it turns just enough, on its tack, to pass them all (bearing away first when two are as near;
+  no turn toward the shore). The Shift carve (`AiHands.sharp`, which the skipper never pressed):
+  `keep_clear_sharp` holds it for a keep-clear turn of 8 degrees or more. A/B on the 22 start rounds of last
+  night (seed 5): kcA as before, kcB the look-ahead, kcC the look-ahead and Shift.
+- 10:50 measured next (off by default): `tack_traffic_check` (a tack or gybe onto port with a starboard board in
+  the way waits up to 6 s, never at the shore), `turn_sharp` (Shift for any turn of 20 degrees or more, not a
+  head-up above 12 m/s). The personas now read the wind by their sense (`Persona.to_skipper_config()`:
+  `wind_look_m` 0 for the rookie up to 250 m for the best sense, 40 % further for a gust hunter).
+- 11:00 the first A/B was void: `--skipper.keep_clear_by_passing=true` reads "true" as the number 0 (off), so
+  the three arms were identical (last night's A/Bs used `=1` and stand). `apply_skipper_overrides()` now takes
+  true/false too. kcA (as before) reproduces last night's h2base exactly: the new code changes nothing while
+  its switches are off. B and C restarted on a second frozen copy (`frozen2`, without the persona change).
+- 11:15 on 10 rounds: penalties A 14, B (look-ahead) 13, C (look-ahead and Shift) 13; port/starboard 9 -> 5-6,
+  the windward board's 5 -> 7-8. Read one by one: many in the first 25 s after the gun with the boards still
+  "start: go" (PRE_START lasts until a board crosses the line, and the look-ahead only ran while RACING; going
+  from its hold a board kept clear of nobody); a board bearing away behind one ran into another it had not
+  counted; boards in a penalty turn are hard to read; and at I2 a crowd tacking at the same layline point
+  66-85 s after the gun, colliding in the tacks. Built and running: from the gun on (`_judged()`, kcD with
+  `tack_traffic_check`), and every board it must keep clear of counted for the heading it turns to
+  (`pass_all_counted`, kcE). Also ready: `pass_room_from_sheet` (the room from the character's keep_clear_m).
+- 11:30 on 10 common rounds: A 14, B 13, C 13, D 13 penalties, but D's starts 2.7 s later (median 6.6 s against
+  3.9): keeping clear on the way to the line after the gun costs the start and did not cut the penalties; now
+  its own switch `keep_clear_from_gun` (off). B and D stopped (kept as far as they ran) to make room. Built:
+  `penalty_when_clear` (a penalty circle waits until no board is within 30 m, at most 45 s: several start
+  penalties were a circle in the crowd setting off the next), `dirty_air_share` (on a beat in another sail's
+  shadow, the wind cut by that share for 3 s and clearer air on the other tack: it tacks away; the shadows'
+  own factor, `WindDisturbance.factor_at()`, read through the board's wind field). The fleet races (fl1:
+  9 courses, seed 60 as last night's h3, without LG2/LR2 at 90 minutes each) running with the package:
+  look-ahead, Shift, all counted, penalty when clear, traffic check, dirty air 0.15, the personas' wind reading.
+- 11:40 **kcC complete (22 rounds): penalties 46 -> 40** (port/starboard 19 -> 15, the windward board's 27 -> 25),
+  the starts unchanged (median 4.4 s), but falls 1 -> 3: both new falls were a board at 2 m/s heading up with
+  Shift held to keep clear. Shift now only from 5 m/s (`SHARP_FROM_MS`). An incident traced (LR2, Mara on
+  Jonas): with no heading passing the full 12 m, Mara took the widest, a 45-degree bear-away over 3 s while
+  Jonas, to leeward and keeping clear of another board, bore away too, and Mara grew faster than the
+  prediction (7.4 -> 10.4 m/s). `pass_slow_down`: then the smallest turn that still passes 5 m clear, and the
+  sail eased to 60 % of its speed. kcG (look-ahead, Shift, all counted, slow down, penalty when clear) running.
+- 11:50 on 12 common rounds: penalties A 23, C 21, E 16 (+ all counted, traffic check, from the gun), **F 12**
+  (+ penalty when clear); E and F 4 falls each, every one a board at about 2 m/s keeping clear with Shift (fixed
+  at 11:40); their starts 0.8 s later (the from-the-gun part, which ran unconditionally on their frozen copies).
+  kcG (no from-the-gun, no traffic check, + slow down) on 4 rounds: 4 against 7, the starts as A. The first two
+  fleet races (PD3, T2) as many penalties as last night (1 and 3). E and F stopped at 12 rounds.
+  **The final set, on by default** (`SkipperConfig`): keep_clear_by_passing, keep_clear_sharp (from 5 m/s),
+  pass_all_counted, penalty_when_clear, tack_traffic_check, pass_slow_down, dirty_air_share 0.15 (the personas
+  by their upwind sense: the rookie does not notice, the best sense tacks out of a 12 % cut). Off:
+  keep_clear_from_gun (the starts), turn_sharp (not measured). The final check running: flFinal (9 fleet
+  races, seed 61, never used), then kcFinal (the 22 start rounds against kcA), the unit tests.

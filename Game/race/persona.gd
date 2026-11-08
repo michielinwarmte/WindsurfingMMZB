@@ -114,6 +114,23 @@ const RIG_FROM_RISK: float = 0.4
 ## deeper) and shorter for one who rigs small (power 0: 3 cm shorter), cm; then kept within the
 ## depths whose wind range holds the wind.
 const FIN_FROM_POWER_CM: float = 4.0
+## Reading the wind on the water (SkipperConfig.wind_look_m, Skipper._avoid_the_holes()): the best sense looks
+## WIND_LOOK_BEST_M ahead, a sense of WIND_SENSE_FROM and below not at all (smoothly up to WIND_SENSE_FULL); a
+## gust hunter (gust_appetite 1) looks WIND_LOOK_GUST_SHARE further and leaves a fading patch sooner
+## (wind_hole_share up to WIND_HOLE_GUST). The skipper's heads, 8 November 2026: with every persona reading the
+## wind alike (200 m), the rookie finished mid-fleet.
+const WIND_LOOK_BEST_M: float = 250.0
+const WIND_SENSE_FROM: float = 0.25
+const WIND_SENSE_FULL: float = 0.9
+const WIND_LOOK_GUST_SHARE: float = 0.4
+const WIND_HOLE_MIDDLE: float = 0.75
+const WIND_HOLE_GUST: float = 0.85
+## Dirty air (SkipperConfig.dirty_air_share): an upwind sense under DIRTY_AIR_SENSE_FROM does not notice another
+## sail's shadow; from there it tacks out of one that cuts the wind by DIRTY_AIR_SHARE_POOR, the best sense out of
+## one that cuts it by DIRTY_AIR_SHARE_BEST.
+const DIRTY_AIR_SENSE_FROM: float = 0.4
+const DIRTY_AIR_SHARE_POOR: float = 0.3
+const DIRTY_AIR_SHARE_BEST: float = 0.12
 
 
 ## The character sheet for one race: the skills, each moved by its form in this wind (wind_form())
@@ -152,6 +169,12 @@ func to_skipper_config(seed: int, wind_kt: float = 15.0, level_spread: float = 1
 	# Downwind: a poor sense runs too deep and slow.
 	config.downwind_vmg_twa_deg = clampf(lerpf(150.0, 135.0, downwind), 110.0, 170.0)
 	config.gust_appetite = clampf(gust_appetite, 0.0, 1.0)
+	# Reading the wind on the water: far for a good sense, hardly at all for a rookie, further for a gust hunter.
+	var sense: float = (upwind + downwind) / 2.0
+	config.wind_look_m = WIND_LOOK_BEST_M * smoothstep(WIND_SENSE_FROM, WIND_SENSE_FULL, sense) 		* (1.0 + WIND_LOOK_GUST_SHARE * config.gust_appetite)
+	config.wind_hole_share = lerpf(WIND_HOLE_MIDDLE, WIND_HOLE_GUST, config.gust_appetite)
+	# Dirty air: a good upwind sense feels a smaller cut and tacks out of it; a rookie does not notice.
+	config.dirty_air_share = 0.0 if upwind < DIRTY_AIR_SENSE_FROM else 		lerpf(DIRTY_AIR_SHARE_POOR, DIRTY_AIR_SHARE_BEST, smoothstep(DIRTY_AIR_SENSE_FROM, 0.95, upwind))
 	# The start: its own spot, pulled to the favoured end by its nerve; the timing error drawn
 	# from the day's spread, a risky skipper aiming early.
 	config.start_spot = clampf(start_spot, 0.0, 1.0)

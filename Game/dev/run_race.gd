@@ -127,7 +127,10 @@ static func apply_skipper_overrides(entries: Array[Entry], options: Dictionary[S
 				continue
 			if field in scripted.config:
 				var current: Variant = scripted.config.get(field)
-				var value: float = options[key].to_float()
+				var text: String = options[key].strip_edges().to_lower()
+				# "true" and "false" too, for a bool: "true".to_float() is 0, which read every "=true" as off (the
+				# skipper's heads, 8 November 2026: the first look-ahead A/B ran three identical arms).
+				var value: float = 1.0 if text == "true" or text == "yes" else (0.0 if text == "false" or text == "no" else text.to_float())
 				scripted.config.set(field, (value != 0.0) if current is bool else (int(value) if current is int else value))
 			else:
 				push_error("No field 'skipper.%s' to override." % field)
