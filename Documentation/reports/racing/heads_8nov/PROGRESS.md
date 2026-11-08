@@ -322,3 +322,10 @@ penalties. keep improving until 14:00".
   board). The fleet's loss is on the runs (30 to 55 s a board each).
 - 19:00 Restart suite (18 cases): every board started, none early, none aground; open: a rookie crawling after R in
   2 cases (not in a fresh race from the same spot).
+- 20:10 Max: from the launchers fine, from the menu with 15 boards the AI did not race; "one-trick ponies". The real
+  game with the menu's 15 personas races normally on SM1, T2 and T1 (sped up, headless): not reproduced.
+- 20:40 The method agreed with Max (Documentation/AI_TRAINING_METHOD.md); the race tool's course variants and the
+  random suite with its checks, roundings and viewer built; the menu's countdowns 2/3/5 min. Commit 9d8229f.
+- 21:19 baseline_A started (phase A, 300 races). 22:00 the speed: 8 jobs on mask 0x5555 4.2x each, 33x together; five
+  different full races timed. Commit 3657669.
+- 22:40 baseline_A at 43: 25 pass every check; out of the turn median 29 m, overstand median 51 m.

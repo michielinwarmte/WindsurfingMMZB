@@ -35,6 +35,7 @@ Updated 26 October 2026 (Session 55): `AI_FLEET_PLAN.md` and `PHYSICS_REQUESTS_F
 | File | What it is |
 |---|---|
 | [gameplay_controls_v0.2.pdf](gameplay_controls_v0.2.pdf) | The gameplay and control design for version 0.2, from a voice session with Tarpie on 23 October 2026: the player becomes the sailor (push against risk on a reach, railing upwind, absorbing chop, the gybe's timing, the mouse and the gamepad as the sailor's body). Max's direction of 26 October 2026: one dial (push), and the rail and the back foot on the mouse as an experiment. The plan is section GP of the roadmap |
+| [AI_TRAINING_METHOD.md](AI_TRAINING_METHOD.md) | **Live.** How the AI skippers are trained and judged from 8 November 2026 (Max: "no one-trick ponies"): every race drawn at random (water, course, wind, countdown, start, R), checks every board must pass, every mark rounding measured, a hold-out set, the general head first, then the personas, then fleets; the tools (`tools/heads/random_suite.py`, the viewer), the speed, the steps |
 | [MAP_SILVAPLANA_PLAN.md](MAP_SILVAPLANA_PLAN.md) | Max's map track: Lake Silvaplana from Swiss open data (phases M0 to M4) and the wind analyser (W0 to W5), with the open data's sources and the map's decisions. M0 to M3 and W0 to W5 are built; the open tasks (M4, W4b, the day types) are MA1 to MA8 in the roadmap |
 
 ## Reference

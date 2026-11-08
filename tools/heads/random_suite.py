@@ -5,7 +5,12 @@ Every run draws its own race, so the skipper is never tuned to a few fixed ones,
 checks that must always hold (not by who wins), with every mark rounding measured:
 
     python -I tools/heads/random_suite.py --run=<name> [--count=200] [--seed=1] [--cores=8]
-        [--project=<a frozen copy>/Game] [--cpu_mask=0x5555] [--set=tune|holdout]
+        [--project=<a frozen copy>/Game] [--cpu_mask=0x5555] [--set=tune|holdout] [--phase=A|B]
+        [--extra="--skipper.<switch>=1 ..."]
+
+  --phase=A      one general head on every board (the default): a persona at its best with steady hands
+  --phase=B      the personas and characters: any of the 20 personas or the 4 characters, at the game's level (0.5)
+  --extra="..."  arguments added to every race (an A/B: the same --seed and --set with and without a switch)
 
 Speed (measured 8 November 2026 on the 8-core Ryzen 7 5800X3D, one board, the editor engine): 4.0x real time alone,
 4.2x each with 8 side by side on one logical processor per core (mask 0x5555; about 55 % CPU, 33x real time
@@ -57,6 +62,9 @@ TEMPLATES = ["LG2", "LR2", "O2", "I2", "US3", "US4", "PD3", "SD3", "PM1", "SM1"]
 # the fitter and the run is drawn again.
 LAKE_BOX = (0.0, 1100.0, -1150.0, 100.0)
 GENERAL_HEAD = ["--skippers=persona:hana", "--spread=0", "--steady_hands=1"]
+PERSONAS = ["aiko", "bruno", "elin", "greta", "hana", "ines", "jonas", "kofi", "lena", "liv", "mara", "marco", "noor", "pavel",
+            "pia", "ravi", "sven", "tobias", "tomas", "yusuf"]
+CHARACTERS = ["allrounder", "cautious", "gambler", "rookie"]
 TUNE_SEED_BASE = 1
 HOLDOUT_SEED_BASE = 700001
 REDRAWN_MARKS = ("COURSE_ILLEGAL", "WIND_TOO_LOW", "FIT_FAILED")
@@ -103,12 +111,17 @@ def limit_cpu(mask_text):
 
 # ---------------------------------------------------------------- the draw
 
-def draw_race(rng):
+def draw_race(rng, phase="A"):
     """One race's arguments for run_race.gd and a short description of what was drawn."""
-    args = list(GENERAL_HEAD) + ["--gear=1", "--finish_window=60", "--min_wind_kt=14"]
+    if phase == "B":
+        who = rng.choice(["persona:" + p for p in PERSONAS] + CHARACTERS)
+        args = ["--skippers=%s" % who, "--spread=0.5", "--gear=1", "--finish_window=60", "--min_wind_kt=14"]
+    else:
+        who = "general head"
+        args = list(GENERAL_HEAD) + ["--gear=1", "--finish_window=60", "--min_wind_kt=14"]
     seed = rng.randint(1, 10**6)
     args += ["--seed=%d" % seed]
-    d = {}
+    d = {"who": who}
     countdown = rng.choice([120, 180, 300])
     args.append("--prestart=%d" % countdown)
     d["countdown_s"] = countdown
@@ -315,7 +328,8 @@ def score(label, log_text, csv_dir, drawn):
         falls_allowed = max(1, int(race_s // FALL_EVERY_S))
         checks["falls"] = (r.get("falls", 0) <= falls_allowed, "%d (allowed %d)" % (r.get("falls", 0), falls_allowed))
         rounds = []
-        csv_path = os.path.join(csv_dir, re.sub(r"[^A-Za-z0-9]+", "_", r["board"]).strip("_").lower() + ".csv")
+        # The race tool names the file as RunRace._file_name() does: lower case, spaces as underscores.
+        csv_path = os.path.join(csv_dir, r["board"].lower().replace(" ", "_") + ".csv")
         if course and os.path.exists(csv_path):
             rounds = roundings(read_csv(csv_path), course, course.get("axis_deg", 0.0))
         boards.append({"board": r["board"], "checks": {k: {"ok": v[0], "what": v[1]} for k, v in checks.items()},
@@ -478,7 +492,8 @@ def main(argv):
             # Each race number (and each redraw of it) its own draw: the same races whatever the order, and a run that
             # is stopped and started again goes on with new races instead of repeating its first ones.
             attempt += 1
-            args, drawn = draw_race(random.Random(seed * 1000003 + number * 101 + attempt))
+            args, drawn = draw_race(random.Random(seed * 1000003 + number * 101 + attempt), options.get("phase", "A"))
+            args += options.get("extra", "").split()
             label = "r%04d" % number
             csv_dir = os.path.join(out_dir, label)
             full = args + ["--out_dir=%s" % csv_dir.replace("\\", "/")]
@@ -502,7 +517,8 @@ def main(argv):
                     state["redrawn"] += 1
                 continue
             result = score(label, log_text, csv_dir, drawn)
-            result["replay"] = "%s --headless --path Game -s res://dev/run_race.gd -- %s --trace=Hana" % ("godot", " ".join(args))
+            board = result["boards"][0]["board"].replace(" ", "_") if result["boards"] else "Hana"
+            result["replay"] = "godot --headless --path Game -s res://dev/run_race.gd -- %s --trace=%s" % (" ".join(args), board)
             with lock:
                 results.append(result)
                 with open(results_path, "a", encoding="utf-8") as handle:

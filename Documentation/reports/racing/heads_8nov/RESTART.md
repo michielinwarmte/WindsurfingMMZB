@@ -153,3 +153,35 @@ example `--course=iq_o2 --map=lake --time=14:00 --skippers=persona:hana,persona:
 --seed=5 --restart_after=60 --stop_after_gun=240 --spread=0.5`. The jobs files and logs of tonight are under
 `.sim_output/heads/` (restart, rsuite, anywhere, startany, runs, spread0, fleetcost, push). Keep the PC at about 75 %:
 the jobs on 10 of 16 logical processors (`ProcessorAffinity` 0x3FF).
+
+## 6. The late evening: the menu, and the new training method
+
+**The menu race.** Max played the play folder: from the launchers the AI raced, from the menu with 15 boards it did not.
+Not reproduced yet: the real game (the play folder's build, headless, sped up with `--fixed-fps 60`) with the menu's 15
+personas (Aiko to Pia, alphabetically: Noor, Pavel and Pia had never been in a test) raced normally on SM1, on T2 (the
+menu's first lake course) and on T1 (its first open-water course): every board started within 40 s, no falls, all racing
+at 4 minutes. The menu builds the same RaceSetup as the launchers; the difference must be one of Max's choices
+(characters or the trained brain under "Who", another course or hour, the race director during the race, a second race
+in the session). Waits on Max's choices (backlog E09.S24). The race page's countdowns are now 2, 3 and 5 minutes (Max;
+they were 30 s, 60 s and 3 minutes). Max's session's own log was lost: the race tool's runs share the game's log folder,
+which keeps five files.
+
+**The new training method** (agreed with Max; the steps in
+[../../../AI_TRAINING_METHOD.md](../../../AI_TRAINING_METHOD.md)): `tools/heads/random_suite.py` draws every race at
+random (water, course: saved, shifted and turned, or laid new by the course fitter; wind, only planing: 14 kt and up;
+countdown 2, 3 or 5 minutes; the start box, behind the line or anywhere; R in 20 %), sails it with one general head,
+judges every board by checks that must always hold, measures every mark rounding, keeps a hold-out set, and writes a
+live page Max can open and close (`Open the AI training viewer.bat`).
+
+**The speed** (one board, the race tool): 4.0 times real time alone; 8 side by side on one logical processor per core
+4.2 times each, 33 together, about 55 % CPU; 12 side by side 3.1 each, 37 together, 82 % CPU. The game's release engine
+is no faster (about 3 times with its scene, one board) and cannot run the race tool's script. **Five different full
+races** side by side (8 minutes in all): lake SM1 13:46 of racing in 2:54 (4.8x), lake O2 turned and shifted 14:47 in
+3:10, a new LG2 laid on the lake 37:36 in 7:57, open-water T1 9:52 in 1:41 (5.8x), open-water PD3 at full size with an R
+about 12 minutes in 2:04. Four passed every check; O2 turned and shifted started 87 s late from behind the line. Every
+race showed Max's complaints in numbers: out of the turn 21 to 75 m from the mark (limit 15), overstands of 36 to 123 m
+on the beats into a mark (limit 25), and on SM1 a gate with 691 degrees of extra turning (circling).
+
+**The first baseline** (phase A, the tune set, 300 races, from 21:19): at 43 races, 25 passed every check; the start
+failed in 16, a leg in 8; 156 roundings: out of the turn median 29 m (92 % over 15 m), overstand median 51 m (92 % over
+25 m). The roundings and the starts are the work (backlog E09.S23, E09.S21).
