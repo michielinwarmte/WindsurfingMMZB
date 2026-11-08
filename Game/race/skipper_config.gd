@@ -139,6 +139,12 @@ enum StartStyle { LOOP, HOLD }
 ## Before its start, farther than this beyond an end of the start line, metres, the course side of the line's
 ## extension does not count as over (Skipper._start_heading()); 0: it always does, as before.
 @export var start_free_beyond_ends_m: float = 0.0
+## A tack that does not go (Skipper._change_a_tack_that_does_not_go()): crawling upwind on one tack while the other
+## went well, it takes the other tack and keeps it for a while.
+@export var change_slow_tack: bool = false
+## Its speed against the polar's under which a tack counts as not going, and how long it keeps the other tack, seconds.
+@export var slow_tack_share: float = 0.45
+@export var slow_tack_keep_s: float = 45.0
 
 @export_group("Tactics")
 ## How big a header (a wind shift that forces it away from the mark) makes it tack, degrees.

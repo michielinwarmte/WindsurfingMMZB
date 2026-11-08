@@ -301,3 +301,24 @@ penalties. keep improving until 14:00".
   finish (flFinal with the slow-down: 38, 12 after), no fall, all 72 boards finished** (T2 too). Places: Liv 3.0,
   Mara 3.3, Hana 3.4, Lena 3.8, Kofi 4.2, Elin 5.3, Jonas (the rookie) 6.2, Bruno (lost when it is light) 6.7.
   Against last night's fleet set (h3, seed 60): 61. **End of the day session.**
+
+## The evening session (8 November, 14:50 to 19:30): R, dropped anywhere, the fleet's speed
+
+- 14:55 Max: after R "the AI lost their minds". Cause: `Skipper.setup()` reset `_time_s` to 0, kept `_manoeuvre_ended_s`;
+  `_ask_for_manoeuvre()` refused every tack and gybe for as long as the last race had lasted. Fixed (clock runs on,
+  timers forgotten); `--restart_after` and `--spawn=anywhere` in the race tool.
+- 15:00 Push experiment (Hana alone on SM1, 14:30, 3 seeds): polar 9:45, +0.2 off the wind 9:45, 90 % 9:44, 100 % 9:41
+  to 10:10. The push is not the gap to Max's 9:43.
+- 15:40 Old code, R at 10 min (SM1, O2) and after the finish (I2): 10, 10 and 11 of 11 never started, aground.
+- 16:10 Fixed: all 11 finish after R at 30 s and at 10 min on SM1; O2 and I2 racing normally when the busy CPU's
+  90-minute limit stopped them. Fleet-cost arms on SM1 (shadows/rules on and off) and each persona alone.
+- 16:30 The game uses `--spread` 0.5, every test used 1. Dirty air on the runs (switch) in an A/B of 8 pairs.
+- 17:00 Commit c96b611 (switches off), release build, play folder `-restart` (+ zip, strongest-fleet launcher).
+- 17:40 Max: CPU to 75 %: the jobs limited to 10 of 16 logical processors (76 %).
+- 18:20 Start suite (96 drops): 84 started within 4 minutes, none aground; the lake's north-east corner traps boards
+  on starboard. `start_free_beyond_ends_m`: flips 18 -> 8, no time gained, off. `change_slow_tack` at 45 % and 60 %:
+  1 of 32 corner drops rescued, off.
+- 18:40 Dirty air on the runs, 8 pairs: +0.6 s a board, off. Every AI at its best: hardly faster (about 10 s a
+  board). The fleet's loss is on the runs (30 to 55 s a board each).
+- 19:00 Restart suite (18 cases): every board started, none early, none aground; open: a rookie crawling after R in
+  2 cases (not in a fresh race from the same spot).

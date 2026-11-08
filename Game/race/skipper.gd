@@ -551,6 +551,13 @@ var _dirty_since_s: float = -1.0
 ## Waiting for traffic before a tack (tack_traffic_check): since when, and when it last had to.
 var _traffic_wait_from_s: float = -INF
 var _traffic_seen_s: float = -INF
+## A tack that does not go (SkipperConfig.change_slow_tack, _change_a_tack_that_does_not_go()): when each tack last
+## sailed upwind at WENT_SHARE of the polar or better (0 port, 1 starboard); since when this tack has crawled (-1:
+## not); the tack it keeps, and until when, after changing away from a tack that did not go.
+var _went_at_s: PackedFloat32Array = PackedFloat32Array([-INF, -INF])
+var _crawl_from_s: float = -1.0
+var _prefer_tack: float = 0.0
+var _prefer_until_s: float = -INF
 ## Whether the step it sails for is the finish (set at every decision, for the straight run in).
 var _to_the_finish: bool = false
 ## Since when it heads up to tack because it is too slow to gybe (-1: not).
@@ -714,6 +721,9 @@ func _forget_the_race() -> void:
 	_dirty_since_s = -1.0
 	_traffic_wait_from_s = -INF
 	_traffic_seen_s = -INF
+	_went_at_s = PackedFloat32Array([-INF, -INF])
+	_crawl_from_s = -1.0
+	_prefer_until_s = -INF
 	_holding_since_s = -1.0
 	_keeping_clear = false
 	_sharp_wanted = false
@@ -804,6 +814,7 @@ func _think(telemetry: Telemetry) -> void:
 	decided_deg = _look_ahead_keep_clear(telemetry, decided_deg)
 	if _keeping_clear:
 		note += ", keeping clear"
+	_change_a_tack_that_does_not_go(telemetry)
 	_last_wanted_deg = decided_deg
 	_delay_times.append(_time_s)
 	_delay_headings.append(decided_deg)
@@ -974,6 +985,49 @@ func _clear_air(telemetry: Telemetry, heading_deg: float) -> void:
 		return
 	note += ", out of dirty air (%.0f %% of the wind)%s" % [100.0 * here, " on the run" if on_run else ""]
 	_ask_for_manoeuvre(false)
+
+
+## A tack that does not go (SkipperConfig.change_slow_tack; the evening of 8 November 2026): in the lake's north-east
+## corner boards on starboard crawled at a close reach in 15 kt for minutes and fell off at a standstill, while on
+## port at the same spot they did 6 to 9 m/s; the skipper kept choosing starboard by its laylines. Upwind, sailing
+## steadily (not in a manoeuvre, a hold-back or a penalty), it watches its speed against the polar's on each tack.
+## Under SkipperConfig.slow_tack_share of it for CRAWL_S, with the other tack at WENT_SHARE or better within
+## WENT_RECENT_S, it changes to the other tack, and keeps it for slow_tack_keep_s (no tack back by the laylines; the
+## shore still decides).
+const CRAWL_S: float = 12.0
+const WENT_SHARE: float = 0.75
+const WENT_RECENT_S: float = 120.0
+
+
+func _change_a_tack_that_does_not_go(telemetry: Telemetry) -> void:
+	if not config.change_slow_tack:
+		return
+	var steady: bool = _sim.sailor_state == WindsurferSim.SailorState.SAILING and _controller.manoeuvre == PlayerController.Manoeuvre.NONE \
+			and not _settling and _hands.hold_speed_ms <= 0.0 and _penalty_phase == 0
+	if not steady or absf(telemetry.twa_deg) >= 90.0:
+		_crawl_from_s = -1.0
+		return
+	var slot: int = 1 if _tack() > 0.0 else 0
+	var share: float = telemetry.speed_ms / maxf(_polar_speed_ms(maxf(absf(telemetry.twa_deg), _beat_twa_deg())), 1.0)
+	if share >= WENT_SHARE:
+		_went_at_s[slot] = _time_s
+	if share >= config.slow_tack_share:
+		_crawl_from_s = -1.0
+		return
+	if _crawl_from_s < 0.0:
+		_crawl_from_s = _time_s
+	if _time_s - _crawl_from_s < CRAWL_S or _time_s - _went_at_s[1 - slot] > WENT_RECENT_S or _tack_due_s >= 0.0:
+		return
+	var position: Vector2 = _position(telemetry)
+	if shore != null and shore.water_ahead_m(position, 2.0 * telemetry.wind_from_bearing_deg - telemetry.heading_deg, SHORE_LOOK_TURNING_MIN_M) \
+			< SHORE_LOOK_TURNING_MIN_M:
+		return
+	note += ", this tack does not go (%.0f %% of the polar): the other one" % (100.0 * share)
+	_crawl_from_s = -1.0
+	_ask_for_manoeuvre(true, true)
+	if _tack_due_s >= 0.0:
+		_prefer_tack = -_tack()
+		_prefer_until_s = _time_s + config.slow_tack_keep_s
 
 
 ## The map's wind speed at a point (game X, Z), m/s, at the wind pattern's height: what a sailor reads on
@@ -2742,6 +2796,10 @@ func _near_a_mark(telemetry: Telemetry) -> bool:
 ## is too slow to point unless even_slow says so.
 func _ask_for_manoeuvre(needed: bool, even_slow: bool = false) -> void:
 	if _tack_due_s >= 0.0 or _controller.manoeuvre != PlayerController.Manoeuvre.NONE or _settling:
+		return
+	# Away from a tack that did not go (_change_a_tack_that_does_not_go()): it keeps this tack for a while, unless
+	# the shore says otherwise.
+	if _time_s < _prefer_until_s and _tack() == _prefer_tack and not note.contains("shore"):
 		return
 	if _time_s - _manoeuvre_ended_s < MIN_TACK_INTERVAL_S or not (_pointing or even_slow) and absf(_sim.telemetry.twa_deg) < 90.0:
 		return
