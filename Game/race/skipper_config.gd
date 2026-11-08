@@ -92,6 +92,10 @@ enum StartStyle { LOOP, HOLD }
 ## Another board this close, metres, and getting closer, makes it bear away to keep clear (when it
 ## is the one that must, under the rules). An aggressive skipper lets others come closer.
 @export_range(5.0, 30.0) var keep_clear_m: float = 15.0
+## It starts keeping clear this many seconds before a board closing on it would reach it (at least at
+## keep_clear_m): two boards crossing at 8 m/s close 15 m in a second, too late to duck behind (the
+## skipper's heads, 8 November 2026: port and starboard penalties in the fleet races). 0 is as before.
+@export_range(0.0, 8.0) var keep_clear_look_s: float = 0.0
 
 @export_group("Tactics")
 ## How big a header (a wind shift that forces it away from the mark) makes it tack, degrees.

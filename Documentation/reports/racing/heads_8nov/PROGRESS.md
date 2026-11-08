@@ -166,3 +166,23 @@ output folder); carry on with the next open step. Stop starting new work at 9:15
   clean, 39 penalties (33 windward), 2 OCS at the gun, median 3.8 s; by the rule everywhere 62, 37, 8 OCS;
   **by the rule after the gun only: 69 clean, 29 penalties (20 windward, 9 port), 2 OCS, median 3.8 s**.
   Penalties -26 %, the windward board's -39 %. Kept. The final check (seed 8) and the fleet races running.
+- 05:35 **head 5, the fleet races** (current code, 8 personas): the five short ones done (PD3, SD3, US3, US4,
+  T2): **all 40 boards finished, no falls, no groundings**, 22 penalties, a few OCS. The winners vary
+  (Hana, Mara, Hana, Lena, Jonas); Hana, the pro, was last twice (penalties and tacks). Mid-race penalties
+  are mostly port/starboard: the skipper only reacts inside its keep_clear_m (15 m), a second of closing
+  for two boards crossing at 8 m/s. `SkipperConfig.keep_clear_look_s` (0 = as before): it reacts that many
+  seconds of closing ahead; A/B at 4 s on the 22 start rounds running (h2la).
+- 06:00 the look-ahead's A/B (20 start rounds, 160 boards, against the kept keep-clear): 97 clean against 90,
+  late 27 against 30, OCS 2 and 2, but penalties 45 against 43 and port/starboard 18 against 17: its target
+  untouched. Bearing away a fixed 15 deg earlier is not a duck. **Port now ducks**: it bears away as far as
+  passing 10 m behind the starboard board's stern needs (`KEEP_CLEAR_DUCK_BEHIND_M`), or holds its course if
+  it passes behind already. A/B of the duck with the 4 s look-ahead running (h2duck).
+  The final check (seed 8) at 70 of 77: all 70 clean.
+- 06:00 **the final check (seed 8, never seen, everything to 05:35): 75 of 77 clean (97.4 %)**: all 33 races
+  on all 11 courses clean, 44 drops 42 clean, no groundings; the two failures are both on T2 (the old course,
+  kept) at its finish, stuck in the light patch (12:20 and 16:40).
+- 06:20 the duck's A/B (with the 4 s look-ahead, 22 start rounds, 176 boards): 101 clean against 97, but
+  penalties 51 against 46 (port/starboard 22 against 19); the look-ahead alone: 104 clean, 48 penalties (20).
+  Neither cuts the penalties: **the duck taken out again, the look-ahead left at 0** (measured, harmless).
+  The port/starboard penalties want a look at single incidents with full traces (the next step for head 3).
+  Unit tests and the load check on the final code running; then the play folder.

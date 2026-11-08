@@ -1447,9 +1447,12 @@ func _keep_clear_deg(telemetry: Telemetry, tack: float) -> float:
 			continue
 		var other: Vector2 = _race.board_position(j)
 		var apart: Vector2 = other - position
-		if apart.length() > config.keep_clear_m:
-			continue
 		var other_velocity: Vector2 = (other - _others_last[j]) / _others_dt_s
+		# It sees a board coming sooner the faster they close (its keep_clear_look_s of closing; 0: no), never later
+		# than its character's keep_clear_m.
+		var closing_ms: float = maxf(-apart.normalized().dot(other_velocity - _velocity), 0.0) if apart.length() > 0.01 else 0.0
+		if apart.length() > maxf(config.keep_clear_m, closing_ms * config.keep_clear_look_s):
+			continue
 		if apart.dot(other_velocity - _velocity) < 0.0:
 			_keeping_clear = true
 			var up_room_deg: float = clampf(absf(telemetry.twa_deg) - KEEP_CLEAR_CLOSEST_TWA_DEG, 0.0, KEEP_CLEAR_HEAD_UP_DEG)

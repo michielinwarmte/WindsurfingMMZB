@@ -37,7 +37,7 @@ Clean cases, the all-rounder alone, every Silvaplana course:
 | round 3 (seed 2, never seen) | + mark roundings from below | 109 / 121 (90.1 %) |
 | round 4 (seed 3, never seen) | + slow boards tack, tack past the layline | 115 / 121 (95.0 %), 0 falls |
 | more wind x1.3 (seed 7) | the same code | 86 / 99, **every race and drop finished**, 0 aground, 18 falls |
-| final (seed 8, never seen) | everything | (filled in at the end) |
+| **final (seed 8, never seen)** | everything | **75 / 77 (97.4 %)**: all 33 races clean, 0 aground, 0 falls in the races; the two failures are both T2 (the old course, kept) stuck in its light patch near the finish |
 
 ## What changed, by head
 
