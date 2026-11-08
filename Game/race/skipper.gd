@@ -163,6 +163,12 @@ const SHORE_SLOW_OPEN_M: float = 40.0
 const WIND_BETTER_SHARE: float = 1.2
 ## Closer than this to the next mark it no longer looks for holes, metres.
 const WIND_NEAR_MARK_M: float = 250.0
+## Nearer than this to the finish line it runs for, on the gybe that reaches it, it steers straight at it, no
+## deeper than DIRECT_RUN_DEEPEST_TWA_DEG: O2's 35 m finish line lay dead downwind of a board 47 m away, and
+## the run's 135 degrees carried it past the end of the line, again and again for two minutes (the
+## skipper's heads, 8 November 2026). Metres, degrees.
+const DIRECT_RUN_M: float = 80.0
+const DIRECT_RUN_DEEPEST_TWA_DEG: float = 175.0
 ## Past the layline by this much more than its margin, it tacks (or gybes) even when it is too slow to
 ## point, metres: on Silvaplana's O2 at 11:40 a board at 2 m/s sailed 280 m away from its mark for almost
 ## three minutes, past the layline, because a slow tack was refused (the skipper's heads, 8 November 2026).
@@ -498,6 +504,8 @@ var _others_dt_s: float = THINK_INTERVAL_S
 ## whether it is keeping clear of one this tick (for the note).
 var _others_last: PackedVector2Array = PackedVector2Array()
 var _keeping_clear: bool = false
+## Whether the step it sails for is the finish (set at every decision, for the straight run in).
+var _to_the_finish: bool = false
 ## Since when it heads up to tack because it is too slow to gybe (-1: not).
 var _slow_turn_from_s: float = -1.0
 ## The point it last sailed for (_course_to()), for the race tool's track (Vector2.INF: none yet).
@@ -703,6 +711,7 @@ func _think(telemetry: Telemetry) -> void:
 	_new_step_check()
 	_keeping_clear = false
 	_leg_turns = false
+	_to_the_finish = false
 	# A penalty from the judge is taken at once, while racing (not in the pre-start crowd, where
 	# a circle would be a danger to everyone; it is carried to the start and taken on the first leg).
 	if rules != null and _penalty_phase == 0 and state == State.RACING and rules.penalties(_index) > 0:
@@ -929,6 +938,7 @@ func _decide(telemetry: Telemetry) -> float:
 		note += " (%+.1f s to spare)" % start_spare_s
 		return start_deg
 	var position: Vector2 = _position(telemetry)
+	_to_the_finish = step.kind == RaceStep.Kind.FINISH
 	var target: Vector2 = _target_point(step, position)
 	# A mark at the end of a beat or a run is approached on the tack it can be gone round from (until
 	# the board is level with the mark and rounding it). At the end of a reach the board comes on the
@@ -1181,7 +1191,12 @@ func _course_to(telemetry: Telemetry, target: Vector2, arrive_tack: float = 0.0,
 		note = "run"
 		_leg_turns = true
 		heading_deg = wind_deg - tack * down_deg
-		if _past_layline_m(position, aim, wind_deg, tack, down_track_deg) >= margin_m:
+		if _to_the_finish and position.distance_to(aim) < DIRECT_RUN_M and (needed_side == tack or absf(needed_deg) > DIRECT_RUN_DEEPEST_TWA_DEG):
+			# Near and on this gybe's side: straight at it, as deep as it must (a run's angle is for long
+			# legs; on a short line dead downwind it swept past the end, again and again).
+			note = "run, straight in"
+			heading_deg = wind_deg - tack * minf(absf(needed_deg) - _leeway_deg, DIRECT_RUN_DEEPEST_TWA_DEG)
+		elif _past_layline_m(position, aim, wind_deg, tack, down_track_deg) >= margin_m:
 			_ask_for_manoeuvre(true)
 	elif needed_side == tack:
 		note = "reach"

@@ -128,3 +128,21 @@ output folder); carry on with the next open step. Stop starting new work at 9:15
   turning and crossed 37 s late. The sharp starters are the late ones: they aim close to the gun, and the
   acceleration from a hold was measured on the open water, not in the lake's chop and a crowd.
   `SkipperConfig.start_accel_share` (1.0 = as before); A/B at 0.7 on the 22 start rounds running (h2acc).
+- 04:20 unit tests 1007/1007 (before the keep-clear change); commit bfae9ce.
+- 04:35 **round 4 (seed 3, never seen, every fix to 03:55): 118 of 128 clean**, races 1.00 x expected (lighter
+  hours: 11:45), drops 1.14 x, aground 1, falls 5. Read:
+  - O2 at 15:30: its 35 m finish line lay dead downwind 47 m away; the run's 135 deg swept the board past the
+    end of the line again and again. **Near the finish (80 m), on the gybe that reaches it, it runs straight
+    in** (`DIRECT_RUN_M`, only for the finish: into a mark the deep run cost the plane). Now 10 s.
+  - T2 at 11:50 (the old T2, kept): mark 3 lies in a light patch by the shore; two drops crawl at 1.8 m/s and
+    one runs aground although the slow-tack rule fires: at that speed the board neither heads up nor gybes
+    (heading 311-322 for 16 s). The new T2 (250 m from the shallows) is in `courses_not_used/`, waiting for
+    the team (every yardstick and a unit test use T2).
+  - PD3 at 15:20 and PM1 at 16:00: the same crawl in light patches at the NE end (2 m/s on a broad reach in
+    15 kt). **A finding for the hands/physics (not changed): below about 2 m/s the board can hardly be steered
+    and the auto-sheet holds only the sail a standing sailor can hold (`_alpha_for_torque_deg`, 2-5 deg), so a
+    board that gets that slow stays that slow.** The skipper's defences: the wind lookout and the courses.
+- 04:45 round 4 complete: on its fresh seed 3, **115 of 121 clean (95.0 %), no falls**, 1 aground (old T2).
+  The trend on seeds never seen: baseline seed 1 111/121 (91.7 %), r3 seed 2 109/121 (90.1 %, before the
+  slow-turn and slow-tack rules), r4 seed 3 115/121 (95.0 %). The stronger-wind round (x1.3, seed 7: 33
+  races at 13:30/15:30/16:30 + 66 drops) running; unit tests on the newest code running.
