@@ -294,3 +294,10 @@ penalties. keep improving until 14:00".
   code before today against the shipping code), 6 rounds: penalties 14 -> 6, port and starboard 7 -> 0**, the
   starts the same. `pass_room_from_sheet` (the passing room from each character, 8 to 20 m) on the 22 rounds:
   7 against 2 on the first 7: stopped, off. The play folder zipped (292 MB).
+- 13:25 **kc7 complete (seed 7, 11 rounds never used today): penalties 28 -> 13**, port and starboard 12 -> 2, the
+  starts (median 3.1 s), OCS (10 and 10) and falls (0 and 0) the same. The gain is not tied to the rounds it was
+  measured on.
+- 13:30 **flFinal2 complete (the shipping code f2c722b, seed 61, 9 fleet races): 29 penalties, 1 of them after a
+  finish (flFinal with the slow-down: 38, 12 after), no fall, all 72 boards finished** (T2 too). Places: Liv 3.0,
+  Mara 3.3, Hana 3.4, Lena 3.8, Kofi 4.2, Elin 5.3, Jonas (the rookie) 6.2, Bruno (lost when it is light) 6.7.
+  Against last night's fleet set (h3, seed 60): 61. **End of the day session.**

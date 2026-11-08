@@ -49,13 +49,16 @@ those falls are gone: the same nine courses on a seed never used (61, with the s
 26 penalties while racing (and 12 more after the boards had finished, which do not count; a finished board now
 keeps clear too: T2 9 -> 2), 70 of 72 boards finished (two on the old T2 in the 16:30 light patch, as in the
 morning), and the places in the order of the levels: Hana 2.6, Liv 2.8, Kofi 3.1, Mara 3.4, Lena 4.8, Elin 5.4,
-Bruno 6.8, **Jonas 7.2, last**.
+Bruno 6.8, **Jonas 7.2, last**. **The shipping code** (f2c722b, the slow-down off, keeping clear after the finish)
+on the same seed 61: **29 penalties (1 after a finish), no fall, all 72 boards finished** (T2 too); places Liv
+("the light-wind magician", in the afternoon's lighter wind) 3.0, Mara 3.3, Hana 3.4, Lena 3.8, Kofi 4.2, Elin 5.3,
+Jonas 6.2, Bruno ("lost when it is light") 6.7.
 
 **The start rounds, the final set** (22 rounds, against the code before today): **penalties 46 -> 25**
 (port and starboard 19 -> 6, the windward board's 27 -> 18), the starts as before (median 4.5 s against 4.4),
 early starts 5 and 5, falls 1 and 1 (the same fall before the gun). **On start spots never used today** (seed 7,
-the code before today against the final set, 6 rounds so far): penalties 14 -> 6, port and starboard 7 -> 0, the
-starts the same. The passing room taken from each character (`pass_room_from_sheet`: 8 m bold to 20 m careful)
+11 rounds, the code before today against the final set): **penalties 28 -> 13**, port and starboard 12 -> 2, the
+starts, the early starts and the falls the same. The passing room taken from each character (`pass_room_from_sheet`: 8 m bold to 20 m careful)
 was worse (7 against 2 on 7 rounds): off.
 
 What is left: the windward board's incidents in the first seconds after the gun, when the boards going from
