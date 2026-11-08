@@ -26,7 +26,7 @@ Done when: the ten iQFOiL courses and the saved courses race clean (no grounding
 - [ ] T2 The south-east lee band: the skipper reads the wind field and avoids the band (the stronger lanes), not only escapes it
 - [ ] T3 The sweep at the three hours and three multipliers; the results table in `Documentation/reports/multiplayer/RACE_DIRECTOR.md` or a new report
 - [ ] T4 Running aground as physics (E01.S10 T2) when it exists; until then the scene's stop for the AI (RA2, built)
-Notes: 8 Nov 2026 night (`ai/skipper-heads-8nov`): the scripted skipper's heads trained on Silvaplana from random drops: 75 of 77 clean on the final seed, lake wind x1.3 86 of 99 finished, x0.8 95 of 99 (`Documentation/reports/racing/heads_8nov/README.md`). Evening: the lake's north-east corner traps boards on starboard (E01.S21).
+Notes: 8 Nov 2026 night (`ai/skipper-heads-8nov`): the scripted skipper's heads trained on Silvaplana from random drops: 75 of 77 clean on the final seed, lake wind x1.3 86 of 99 finished, x0.8 95 of 99 (`Documentation/reports/racing/heads_8nov/README.md`). Evening: the lake's north-east corner traps boards on starboard (E01.S21). 8 Nov 2026 late evening: in one suite race T2's last leg took 470 s against 29 s expected (the start's countdown 2 min, 15:54, x1.26).
 
 ### E09.S03 · The starts
 Status: todo | Size: M | Owner: the lead | Milestone: M2 | Needs: E09.S01 | Roadmap: RA27, RA20, RA23, RA11, RA16
@@ -115,6 +115,7 @@ Done when: a machine other than Max's runs training nights unattended (the stack
 - [ ] T1 The machine (Michiel's PC with 12 workers as before, or a rented box) and its access
 - [ ] T2 `tools/train.sh` from a remote session; the results pulled (`.logs/nights.log`, the brains) and committed
 - [ ] T3 The trainer's leftovers (RA9: the lake's wind and water in the stages, the idle steps of parked boards, the early-stage starts)
+Notes: 8 Nov 2026: measured on Max's PC: one board 4.0 to 5.8x real time on the race tool; 8 side by side on one logical processor per core 33x together at about 55 % CPU; the game's release engine is no faster and cannot run the race tool's script.
 
 ### E09.S14 · The brain learns the whole race
 Status: todo | Size: L | Owner: the lead | Milestone: M9 | Needs: E09.S09, E09.S13 | Roadmap: RA14, RA28, RA12
@@ -159,9 +160,13 @@ Notes: 8 Nov 2026 evening, branch `ai/skipper-heads-8nov`; report `Documentation
 Status: doing | Size: S | Owner: the lead | Milestone: M2 | Needs: — | Roadmap: —
 Done when: every change to the skipper is checked through R (`--restart_after`), at the game's level (`--spread=0.5`) and from drops anywhere round the course (`--spawn=anywhere`), by one suite command, and the regression gate (E09.S08) includes it.
 - [x] T1 The race tool's `--restart_after` and `--spawn=anywhere` (3ae30e9)
-- [ ] T2 One suite command (`tools/heads/`) for the restart, anywhere and level runs, with a score
+- [x] T2 One suite command: `tools/heads/random_suite.py` (every race drawn at random, the checks, the roundings, tune and hold-out sets, the live viewer; 9d8229f, 3657669, 60a73a0)
 - [ ] T3 In the regression gate (E09.S08)
-Notes: every training run before 8 Nov 2026 used fresh skippers and the sheets as written (spread 1, where the game uses 0.5), so the R bug was never seen.
+- [ ] T4 Phase A's gate: on a fresh hold-out of 200 races, 95 % pass every check, the roundings within E09.S23's limits
+- [ ] T5 Phase B, the personas (`--phase=B`): the same loop
+- [ ] T6 Phase C, fleets (when Max says): a `--fleet` draw (4 to 6 boards mostly, some 15 to 31) and the crowd's checks (penalties, starts in a crowd)
+- [ ] T7 The menu's own options in the draw (E09.S24)
+Notes: every training run before 8 Nov 2026 used fresh skippers and the sheets as written (spread 1, where the game uses 0.5), so the R bug was never seen. 8 Nov 2026 late evening: the method agreed with Max and written down (`Documentation/AI_TRAINING_METHOD.md`, the steps 0 to 11); the speed: 8 one-board races side by side on one logical processor per core, 4.2x real time each, 33x together, about 55 % CPU (about 100 to 150 races an hour); baseline_A (phase A, 300 races) started 21:19: at 43 races 25 passed every check, the start failed 16 times, a leg 8.
 
 ### E09.S20 · The fleet's runs
 Status: todo | Size: M | Owner: the lead | Milestone: M2 | Needs: — | Roadmap: RA20
@@ -177,7 +182,7 @@ Done when: a board dropped anywhere round the course before the start sails the 
 - [ ] T1 The way to the line as a route (beat up to the run-in, then the start's plan) instead of switching between "back behind the line" and the plan; a slalom line along the wind approached from its downwind side (`start_free_beyond_ends_m` cut the flips 18 -> 8, not the time)
 - [ ] T2 The slalom's wait no slower than the board stays up; a board at rest in its waiting spot gets going first (Bruno fell twice after R on PD3)
 - [ ] T3 A tack that does not go: take the other tack and keep it (`change_slow_tack`, off: 1 of 32 drops rescued); a fleet test
-Notes: 8 Nov 2026 evening: 96 single drops (6 courses), 84 started within 4 minutes, none aground; 5 fleet races of 11 dropped anywhere, 54 of 55 finished. The lake's north-east corner: E01.S21.
+Notes: 8 Nov 2026 evening: 96 single drops (6 courses), 84 started within 4 minutes, none aground; 5 fleet races of 11 dropped anywhere, 54 of 55 finished. The lake's north-east corner: E01.S21. 8 Nov 2026 late evening: the start check failed in 16 of the first 43 baseline races (the check itself to be checked first: the start need from the all-rounder's expected time); O2 turned and shifted started 87 s late from behind the line.
 
 ### E09.S22 · The AI carves its tacks and gybes with Shift
 Status: blocked | Size: S | Owner: Max (the OK for the controller change), the lead | Milestone: M2 | Needs: Max's OK | Roadmap: —
@@ -185,3 +190,21 @@ Done when: the AI's hands use the carve (Shift) inside their tacks and gybes as 
 - [ ] T1 The controller takes the AI hands' turn key in a manoeuvre (`PlayerController._turn_key_along()` returns 0 for AI hands today): a small controller change, Max's OK
 - [ ] T2 The skipper carves where it pays; an A/B on the drops and the fleet races
 Notes: 8 Nov 2026: the AI already uses Shift for its keep-clear turns, from 5 m/s (slower it threw sailors off).
+
+### E09.S23 · Mark roundings and laylines
+Status: next | Size: M | Owner: the lead | Milestone: M2 | Needs: E09.S19 | Roadmap: —
+Done when: on a hold-out of 200 random-suite races (`Documentation/AI_TRAINING_METHOD.md`) the distance out of the turn has a median of 15 m or less, the overstand on beats into a mark a median of 25 m or less, no gate turns more than 120 degrees beyond its way in and out, and no check gets worse.
+- [ ] T1 The wide exits: out of the turn median 29 m, 92 % over 15 m (baseline_A, the first 43 races): the turn's start, rate and the heading after it
+- [ ] T2 The overstands: median 51 m, up to 160 m (92 % over 25 m): the layline's margin, the lake wind's shifts, the tack's timing
+- [ ] T3 The gates: circling (691 degrees extra on SM1), the choice of the gate mark, the turn through it
+- [ ] T4 Each change behind a switch; on and off on the tune set, confirmed on the hold-out (the method's steps 4 to 7)
+Notes: Max, 8 November 2026: "weak point of the AI is now mark roundings: takes it very wide, overlays the layline by a lot, issues with gate roundings". Measured by `tools/heads/random_suite.py` at every mark and gate (closest approach, out of the turn, overstand, a gate's extra turning).
+
+### E09.S24 · The menu race that did not race
+Status: blocked | Size: S | Owner: the lead; Max for his menu choices | Milestone: M2 | Needs: Max's menu choices | Roadmap: —
+Done when: Max's race from the menu (15 boards) is reproduced, its cause fixed with a test, and the AI races from the menu as from the launchers, checked by Max.
+- [ ] T1 Max's choices on the race page: water, course, countdown, "Who", the level, whether R or the race director (M) was used, the first race of the session or not
+- [ ] T2 Reproduced through the menu's own setup (the RaceSetup as `race_page.gd` builds it) in the real game, headless and sped up (`--fixed-fps 60`)
+- [ ] T3 The cause fixed, with a test; the menu's options added to the random suite's draw
+- [x] T4 The race page's countdowns 2, 3 and 5 minutes (Max; they were 30 s, 60 s and 3 min)
+Notes: 8 November 2026, the late evening: from the launchers the AI raced, from the menu with 15 boards not (Max). Not reproduced: the real game with the menu's 15 personas (Aiko to Pia) raced normally on SM1, T2 and T1. The race page builds the same RaceSetup as the launchers. Max's session log was lost (the race tool's runs share the game's log folder of five files).
