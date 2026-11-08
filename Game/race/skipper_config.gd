@@ -134,6 +134,11 @@ enum StartStyle { LOOP, HOLD }
 ## Dirty air (Skipper._clear_air()): on a beat in another sail's wind shadow, the wind cut by this share or more for
 ## a few seconds, with clear air on the other tack, it tacks away. 0: it does not notice.
 @export_range(0.0, 0.5) var dirty_air_share: float = 0.15
+## Dirty air on the runs too (Skipper._clear_air()): it gybes out of the blanket of the boards behind.
+@export var dirty_air_on_runs: bool = false
+## Before its start, farther than this beyond an end of the start line, metres, the course side of the line's
+## extension does not count as over (Skipper._start_heading()); 0: it always does, as before.
+@export var start_free_beyond_ends_m: float = 0.0
 
 @export_group("Tactics")
 ## How big a header (a wind shift that forces it away from the mark) makes it tack, degrees.

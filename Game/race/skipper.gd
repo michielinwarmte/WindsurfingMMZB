@@ -943,9 +943,14 @@ func _avoid_the_holes(telemetry: Telemetry, heading_deg: float) -> void:
 ## the gun, sailing in other sails' wind shadows (the shadows' factor at its place under 1 - dirty_air_share) for
 ## DIRTY_AIR_S, with clearer air DIRTY_AIR_LOOK_M ahead on the other tack, it tacks away, as sailors do; not within
 ## DIRTY_AIR_NEAR_MARK_M of the mark, never toward the shore, within its tacks for the beat.
+## On a run too with SkipperConfig.dirty_air_on_runs (the evening of 8 November 2026: on a run the shadows lie
+## ahead of the sails, so the boards behind blanket the ones in front; in an 11-board fleet the first run cost
+## 40 to 110 s against the same skipper alone): it gybes away the same way, if it is fast enough to gybe.
 func _clear_air(telemetry: Telemetry, heading_deg: float) -> void:
 	var shadows: WindDisturbance = _sim.wind.disturbance if _sim.wind != null else null
-	if config.dirty_air_share <= 0.0 or shadows == null or not _leg_turns or state != State.RACING or absf(telemetry.twa_deg) > 90.0:
+	var on_run: bool = absf(telemetry.twa_deg) > 90.0
+	if config.dirty_air_share <= 0.0 or shadows == null or not _leg_turns or state != State.RACING \
+			or (on_run and (not config.dirty_air_on_runs or telemetry.speed_ms < SLOW_TURN_MS + 1.0)):
 		_dirty_since_s = -1.0
 		return
 	var position: Vector2 = _position(telemetry)
@@ -967,7 +972,7 @@ func _clear_air(telemetry: Telemetry, heading_deg: float) -> void:
 		return
 	if shore != null and shore.water_ahead_m(position, other_deg, SHORE_LOOK_TURNING_MIN_M) < SHORE_LOOK_TURNING_MIN_M:
 		return
-	note += ", out of dirty air (%.0f %% of the wind)" % (100.0 * here)
+	note += ", out of dirty air (%.0f %% of the wind)%s" % [100.0 * here, " on the run" if on_run else ""]
 	_ask_for_manoeuvre(false)
 
 
@@ -1914,7 +1919,15 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 	start_spare_s = spare_s
 	# On the course side of the line or its extensions, and not started: over early (OCS at the gun),
 	# or past an end of the line. A start counts only from behind the line.
-	if behind_m < 0.0:
+	# With SkipperConfig.start_free_beyond_ends_m (the evening of 8 November 2026, boards dropped anywhere): far
+	# out beyond an end the course side of the line's extension does not count as over. Beating up a slalom's
+	# line along the wind from 300 m beyond its pin, every tack crossed the extension; each time the board
+	# turned back behind it and dived again, and stalled at every turn. Over at the gun still counts.
+	var over: bool = behind_m < 0.0
+	if over and config.start_free_beyond_ends_m > 0.0 and _off_the_ends_m(step, position) > config.start_free_beyond_ends_m \
+			and not (_race.is_ocs(_index) and not before_gun):
+		over = false
+	if over:
 		_start_phase = StartPhase.BACK_BEHIND
 	if _start_phase != StartPhase.BACK_BEHIND and _race.course.starts_upwind_of_the_boat():
 		return _slalom_start_heading(telemetry, step, behind_m, spare_s)
@@ -1922,7 +1935,7 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 		if _race.is_ocs(_index) and _race.clock_s() >= 0.0:
 			# Over the line at the gun: back round the nearer end, as the rules say.
 			return _round_the_end_heading(telemetry, step)
-		if behind_m < 0.0:
+		if over:
 			var back_deg: float = _course_to(telemetry, _nearest_on_line(step, position) - forward * START_BACK_BEHIND_M)
 			note = "start: back behind the line"
 			return back_deg
