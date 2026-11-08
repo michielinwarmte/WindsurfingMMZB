@@ -79,6 +79,14 @@ enum StartStyle { LOOP, HOLD }
 ## 1.5 m/s the board cannot be steered and rounds up into the wind). A slower hold uses up more time
 ## on a shorter way in to the line.
 @export_range(1.5, 4.0) var hold_speed_ms: float = 2.5
+## The slowest it ever holds back to before the start, m/s; 0 is the controller's steerage speed (1.5).
+## Held back that slowly in Silvaplana's chop, boards stopped and fell at the start (the skipper's heads,
+## 8 November 2026); measured on the start suite (tools/heads).
+@export_range(0.0, 4.0) var hold_floor_ms: float = 0.0
+## How fast it reckons the board gains speed going from a hold, as a share of the open water's measured
+## rate (Skipper._acceleration_ms2()): below 1 it goes earlier. On Silvaplana the sharp starters, aiming
+## close to the gun, were the ones that crossed 30 to 50 s late (the skipper's heads, 8 November 2026).
+@export_range(0.4, 1.5) var start_accel_share: float = 1.0
 
 @export_group("Company")
 ## Another board this close, metres, and getting closer, makes it bear away to keep clear (when it

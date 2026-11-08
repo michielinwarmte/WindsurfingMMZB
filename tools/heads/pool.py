@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Runs many headless Godot jobs side by side (the skipper's heads, 8 November 2026).
 
-    python -I tools/heads/pool.py --jobs=<jobs.txt> --out=<folder> [--cores=14] [--script=res://dev/run_race.gd]
+    python -I tools/heads/pool.py --jobs=<jobs.txt> --out=<folder> [--cores=14] [--script=res://dev/run_race.gd] [--low=1]
 
 Each line of the jobs file is "<label> <arguments for the script>" (lines starting with # are skipped).
 Every job runs as one headless Godot process on the project in Game/ (Godot from $GODOT), its output in
@@ -17,6 +17,8 @@ import time
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DEFAULT_GODOT = "C:/Users/Max de Dikke/AppData/Local/Programs/Godot/4.7.2-stable/Godot_v4.7.2-stable_win64_console.exe"
 DONE_MARK = "HEADS_DONE"
+# --low=1: the jobs run below normal priority (Windows), so they only use what other pools leave free.
+LOW_PRIORITY = False
 
 
 def read_options(argv):
@@ -56,7 +58,8 @@ def run_one(godot, project, script, label, args, out_dir, timeout_s):
     command = [godot, "--headless", "--no-header", "--path", project, "-s", script, "--"] + args
     with open(log_path, "w", encoding="utf-8", errors="replace") as log:
         try:
-            result = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, timeout=timeout_s)
+            flags = getattr(subprocess, "BELOW_NORMAL_PRIORITY_CLASS", 0) if LOW_PRIORITY else 0
+            result = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, timeout=timeout_s, creationflags=flags)
             status = "exit %d" % result.returncode
         except subprocess.TimeoutExpired:
             status = "timeout"
@@ -72,6 +75,8 @@ def main():
     out_dir = options["out"]
     cores = int(options.get("cores", "14"))
     timeout_s = float(options.get("timeout", "5400"))
+    global LOW_PRIORITY
+    LOW_PRIORITY = options.get("low", "0") == "1"
     os.makedirs(out_dir, exist_ok=True)
     jobs = read_jobs(options["jobs"])
     print("%d jobs, %d at a time, logs in %s" % (len(jobs), cores, out_dir), flush=True)

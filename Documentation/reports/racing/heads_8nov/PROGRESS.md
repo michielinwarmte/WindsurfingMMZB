@@ -84,3 +84,47 @@ output folder); carry on with the next open step. Stop starting new work at 9:15
 - 02:55 the getting-going A/B (44 light-wind drops each, seeds 3 and 4, 11:30-12:30 and 16:30-17:30):
   off 44/44 clean (cost 1.159), 95 deg 43/44 (1.198), 115 deg 43/44 (1.228), 135 deg worse. On the refitted
   courses the light-wind trap mostly went away; the angle does not help: **left off** (0, the default).
+- 03:00 unit tests 1007/1007; commit 926b49e. Round 3 (r3: seed 2 fresh, races at 12:30/15:00/17:00 + 88
+  drops, and seed 1's 88 drops again) started, and its twin with the wind lookout off (r3off, seed 2) for the
+  lookout's A/B (head 4). The lookout fired in 44 of r2's 121 cases. Its numbers are now on the sheet
+  (`wind_look_m` 200, `wind_hole_share` 0.75; 0 m switches it off).
+- 03:15 r3's 33 races: 0.88 x expected, no groundings, 7 single falls, every one at a standstill (< 1 kt),
+  five of them in the start (holding back, reaching down onto a slalom line, waiting upwind of the boat).
+  r3off's LG2 12:30 ran aground on the lee shore at 1.5 m/s (the lookout-on twin was clean).
+- 03:20 the start: `SkipperConfig.hold_floor_ms` (0 = the controller's steerage, 1.5 m/s), the slowest the
+  start holds back to; A/B on 22 start rounds of 8 personas (seed 5) at 0 and 2.5 running (h2, h2f25).
+  The fleet races (h3: 11 courses, 8 personas, the whole race, seed 6) running at low priority
+  (`pool.py --low=1`). The slow escape now also takes a way with more water than straight on.
+- 03:43 **round 3 done: 195 of 209 clean** (seed 2 never seen + seed 1's drops), races 0.88 x expected,
+  drops 1.13 x; aground 3, not reached 5, falls 11 (all single falls at a standstill). Read and fixed:
+  - US3 and US4 at 17:20 aground on the east shore (the wind dies there late): the gybe at 1.5 m/s bore away,
+    stalled and came back, again and again. **Too slow to gybe, it heads up and tacks** (`_slow_turn()`,
+    `SLOW_TURN_*`: under 3 m/s, racing). The wind lookout's no-look zone near a mark 400 -> 250 m (it was
+    290 m from the mark when it should have seen the hole). Both drops now clean (1.3 x and 1.13 x).
+  - O2 at 11:40: at 2 m/s the board sailed 280 m away from its mark for three minutes, past the layline,
+    because a tack is refused while not "pointing" (under 5 m/s), and in light wind it never got there.
+    **Well past the layline (30 m beyond its margin) it tacks even slow** (`SLOW_TACK_PAST_M`; on a beat and
+    on a reach for the other tack). The drop now finishes (2.8 x, 6 tacks, a light patch).
+  - LR2 at 11:40 aground on the SE lee shore: now finishes (slowly, 1572 s, light wind).
+  - LG2 12:30 without the lookout still runs aground on the lee shore (with the lookout, the default, clean).
+- 03:55 round 4 (r4: seed 3 never seen, races 11:45/14:15/16:45 + 88 drops, + r3's failures) running with
+  every fix; unit tests running.
+- 04:05 **head 4 (tactics), the wind lookout's A/B** on seed 2 (121 cases each, same code otherwise): on 109
+  clean, cost 1.406, races 0.878 x, drops 1.062 x; off 109 clean, cost 1.405, races 0.902 x, drops 1.100 x.
+  As robust either way, ~3 % faster with it, and its two groundings are fixed since; without it LG2 12:30
+  ran aground. **Kept on.** (The slow-tack rule alone also saves that LG2 case now: it finishes.)
+- 04:05 **head 2 (the start)**, the slowest hold's A/B at half time (96 boards each): floor 0 59 clean, 27
+  penalties, median 3.8 s, 15 late; floor 2.5 m/s 48 clean, 37 penalties: **left at 0**. No falls and no
+  OCS in either. The start's trouble is penalties after the gun (17 of 22 "the windward board keeps clear")
+  and late starters (up to 50 s).
+- 04:10 **head 3 (the rules)**: keeping clear always bore away, which turns a windward board onto the
+  leeward one. Now by the rule: the windward board heads up (no closer than 38 deg), a board clear astern
+  or outside at a mark turns away from the side the other is on, port still bears away behind starboard
+  (`KEEP_CLEAR_HEAD_UP_DEG`, `KEEP_CLEAR_SIDE_DEG`). Its A/B on the 22 start rounds running (h2kc; h2's
+  jobs finished before the change are listed in h2/done_before_kc.txt).
+- 04:15 the start's late boards read: OCS at the gun is rare (2 of 120, from the start report; the result
+  line counted only boards still over at the end, now `was_ocs` too). Hana ("the pro, sharp starts") was
+  over by planing to the line faster than reckoned; Mara (timing 0.85) went at the last moment, lost speed
+  turning and crossed 37 s late. The sharp starters are the late ones: they aim close to the gun, and the
+  acceleration from a hold was measured on the open water, not in the lake's chop and a crowd.
+  `SkipperConfig.start_accel_share` (1.0 = as before); A/B at 0.7 on the 22 start rounds running (h2acc).

@@ -549,7 +549,7 @@ static func heads_result(entry: Entry, race: RaceSim, index: int, drop_index: in
 		"tacks": entry.tacks, "gybes": entry.gybes, "next_step": next_index,
 		"to_next_m": race.distance_to_next_m(index) if next_index < steps.size() else 0.0,
 		"splits": Array(race.splits_s(index)), "note": entry.skipper.note if entry.skipper != null else "autopilot",
-		"ocs": race.is_ocs(index)}
+		"ocs": race.is_ocs(index) or (entry.skipper is Skipper and (entry.skipper as Skipper).was_ocs)}
 
 
 ## The start of every skipper's board, one line each: how long after the gun it crossed the start
