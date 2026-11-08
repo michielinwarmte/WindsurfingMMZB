@@ -37,3 +37,30 @@ func test_a_skipper_set_up_again_after_a_long_race_tacks_at_once() -> void:
 	skipper._ask_for_manoeuvre(true, true)
 	assert_gte(skipper._tack_due_s, 0.0, "a manoeuvre asked for in the new race is due")
 	assert_lt(skipper._tack_due_s - skipper._time_s, 2.0, "after the reaction time, not minutes later")
+
+
+func test_the_games_r_lets_the_ai_tack_at_once() -> void:
+	var saved_values: SettingsValues = GameSettings.values
+	var saved_path: String = GameSettings.path
+	GameSettings.values = SettingsValues.new()
+	GameSettings.path = ""
+	RaceSetup.pending = RaceSetup.race("t1_loop", PackedStringArray(["allrounder"]))
+	var scene: SailingScene = (load("res://main.tscn") as PackedScene).instantiate()
+	add_child_autofree(scene)
+	var runner: RaceRunner = scene.get_node("RaceRunner")
+	await wait_physics_frames(2)
+	var skipper: Skipper = runner.opponents[0].skipper as Skipper
+	# As after ten minutes of racing, its last gybe just ended.
+	skipper._time_s = 600.0
+	skipper._manoeuvre_ended_s = 598.0
+	# R, as the player presses it (the scene's own restart: RaceRunner.restart() sets the skipper up again).
+	scene._restart_run()
+	assert_gte(skipper._time_s, 600.0, "its clock runs on")
+	assert_eq(skipper._manoeuvre_ended_s, -INF, "no manoeuvre of the race before")
+	skipper._ask_for_manoeuvre(true, true)
+	assert_gte(skipper._tack_due_s, 0.0, "after R a manoeuvre asked for is due")
+	assert_lt(skipper._tack_due_s - skipper._time_s, 2.0, "after the reaction time")
+	await wait_physics_frames(2)
+	GameSettings.values = saved_values
+	GameSettings.path = saved_path
+	get_tree().paused = false
