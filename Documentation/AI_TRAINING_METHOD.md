@@ -26,6 +26,8 @@ The rules that follow from it:
 8. **Only planing winds** (14 kt and up): below that the numbers say nothing (Max).
 9. **No play folder until Max sends the message to make one**, and only after the suite passes.
 10. **Keep the PC at about 55 to 75 % CPU** (8 jobs, one per physical core; below).
+11. **Take the loop the efficient way** ("The loop, efficiently" below): a fresh chat per loop, one wake-up per run,
+    summaries instead of logs, small batches when the effect is big.
 
 What does not change: nothing in `Game/sim/` (the physics, Michiel's), the controller or the autopilot (Max approved
 them on 7 November) without their OK; never delete data (move it, ask before a cleanup); English only; commit locally,
@@ -41,6 +43,7 @@ push only when Max asks.
 | The race tool | `Game/dev/run_race.gd` | New options: `--course=fit:<template> --fit_at=x,z` (a new course laid on the lake), `--course_turn=<deg>`, `--course_shift=dx,dz` (refused on land or near the shore: `COURSE_ILLEGAL`), `--min_wind_kt=14` (`WIND_TOO_LOW`), `--restart_after=<s>` (the game's R), `--spawn=anywhere`, `--spread`; it prints `COURSE_JSON` and per board `HEADS_RESULT` with `spawn`, `start_need_s`, `legs_expected` |
 | A frozen copy | `.sim_output/suite/frozen/Game` | The suite runs on a copy, so the working tree can be edited while it runs. Make or refresh it: copy `.sim_output/heads/frozenAny/Game` (it has the import cache), then `cp -r Game/<part>/. <copy>/Game/<part>/` for `race dev windsurfer ui maps/course maps/silvaplana/courses sim config` |
 | On and off tests | `--extra="--skipper.<switch>=1"` | The same `--seed` and `--set` with and without the switch: the same races, so the difference is the switch |
+| The summary | `tools/heads/suite_summary.py` | `<run>` (about 20 lines), `<run_off> <run_on>` (side by side, better / worse / same), `--failures=5`, `--wait` (waits until the run is complete: the one wake-up) |
 
 The Godot engine: `C:/Users/Max de Dikke/AppData/Local/Programs/Godot/4.7.2-stable/Godot_v4.7.2-stable_win64_console.exe`
 (the suite has it built in; the GODOT environment variable overrides it). The game's release engine cannot run the
@@ -90,6 +93,45 @@ about 55 to 60 % CPU, about 100 to 150 one-board races an hour. 12 side by side 
 together, 82 % CPU: not worth it. The suite sets its own mask (default 0x5555); every Godot it starts inherits it.
 Five different full races side by side took 1:41 (T1) to 7:57 (a new LG2 lasting 37 minutes).
 
+## The loop, efficiently (required from 8 November 2026)
+
+Max, 8 November 2026: "this loop needs to be documented and needs to be taken when training AI from now on". The loop
+is steps 2 to 7 below. It costs machine time (the races) and tokens (the session's reading and writing). Every session
+that trains the AI keeps both down this way:
+
+1. **A fresh chat per loop, or at least per day.** Everything a session needs is in this document, the backlog and
+   memory; a short conversation makes every step cheaper (each step re-reads the whole conversation).
+2. **One wake-up per run, never one per race.** Start a run, then wait for it with one background command that ends
+   when the run is complete and prints its summary:
+   `python -I tools/heads/suite_summary.py <run> --wait` (or both arms: `... <run_off> <run_on> --wait`).
+   No monitor that fires on every finished race, no polling, no waiting turn by turn in the chat. While the races run,
+   the session reads code and prepares the next step, or ends its turn.
+3. **Summaries, not logs.** Read `tools/heads/suite_summary.py` (about 20 lines a run; two runs side by side with
+   "better / worse / same"), and `--failures=5` for the newest failures with their replay commands. Open a board's CSV
+   or a replay's trace only for the two or three failures being diagnosed, and then only the rows that matter.
+4. **Read only the code that matters.** `Game/race/skipper.gd` is about 3,000 lines: search for the function, read that
+   function, not the file.
+5. **Small batches when the problem is big.** When most races fail a measure (92 % of the roundings in the baseline), a
+   real fix shows in 40 to 60 races a side; use 100 a side only for small effects, and 200 for phase A's final gate.
+6. **Run what can run at once at once.** The on and off arms side by side, and the hold-out pair alongside when the
+   tune pair already looks clear (8 jobs in all on mask 0x5555; two suites of 4 cores each, or one of 8).
+7. **Related fixes in one loop** (for example the exit and the overstand of a rounding), each behind its own switch, so
+   the numbers can still tell them apart.
+8. **Write down as you go, briefly**: the numbers of each loop in this document's log below and in the story's notes.
+
+**The budget of one loop** (estimates of 8 November 2026): machine time about 10 to 12 hours done one step after another
+(the suite does about 50 races an hour on 8 cores: about 12 minutes of sailing per race, the R races sailed twice,
+one draw in four redrawn), 5 to 8 hours with the arms side by side and small batches; tokens about 50 to 100 thousand
+new (read and written) plus the conversation re-read at every step (about 3 to 6 million cached tokens in a long chat,
+far less in a fresh one). Steps 1 to 8 in all: 3 to 4 days of running as first written, about 1.5 to 2 days with these
+rules, less with the second PC as a second pool.
+
+## The log of the loops
+
+| Loop | Date | What was fixed (switch) | Tune set (off -> on) | Hold-out (off -> on) | Taken |
+|---|---|---|---|---|---|
+| baseline | 8 Nov 2026 | none: baseline_A, phase A | at 67 races: 57 % pass every check; start 63 %, legs 81 %; out of the turn median 29 m (92 % over 15), overstand median 44 m (88 % over 25), gates over 120 deg 31 % | - | - |
+
 ## The steps
 
 **Step 0, before a run.** Fetch first (`git fetch --all --prune`; the two PCs hand over through GitHub). Work on
@@ -103,8 +145,9 @@ race number has its own draw). The first `baseline_A` began on 8 November at 21:
 every check; the start failed 16 times, a leg 8 times; 156 roundings: out of the turn median 29 m (92 % over 15 m),
 overstand median 51 m (92 % over 25 m).
 
-**Step 2, read the results.** The viewer for the overview. Then rank the failures by check and by what was drawn
-(course kind, water, start, R): `results.jsonl` with a few lines of Python. For each failure class, open two or three
+**Step 2, read the results.** `python -I tools/heads/suite_summary.py <run> --failures=5` (the viewer is Max's
+overview). Then rank the failures by check and by what was drawn (course kind, water, start, R): `results.jsonl` with a
+few lines of Python, printing counts only. For each failure class, open two or three
 failures: the board's CSV (`<run>/rNNNN/<board>.csv`: race time, place, heading, speed, next step, what the skipper was
 doing) and, when needed, replay with its `replay` command (it adds `--trace=<board>`: the whole telemetry). First check
 the check: a failure that is the check's fault (a wrong expected time, a start need that ignores the countdown's hold)
@@ -118,12 +161,14 @@ the change behind a switch in `SkipperConfig`, off by default, with a comment th
 failure it answers, the numbers).
 
 **Step 5, the on and off test on the tune set.** The same `--seed` and `--set`, 100 races or more, once with
-`--extra="--skipper.<switch>=1"`, once without (runs `<name>_off` and `<name>_on`). Compare: the pass rate per check,
-the roundings' medians and shares over the limits, falls, the legs' ratio to expected. A fleet test is not needed in
-phase A.
+`--extra="--skipper.<switch>=1"`, once without (runs `<name>_off` and `<name>_on`, side by side with `--cores=4` each).
+Wait for both with one background command: `python -I tools/heads/suite_summary.py <name>_off <name>_on --wait`. It
+compares the pass rate per check, the roundings' medians and shares over the limits, falls and the legs' ratio to
+expected, each marked better, worse or same. A fleet test is not needed in phase A.
 
 **Step 6, confirm on the hold-out.** The same pair with `--set=holdout`, 100 races. The switch goes on only when the
-hold-out gets better and no check gets worse. Write the numbers down (the report, the progress log).
+hold-out gets better and no check gets worse. Write the numbers down: a row in the log of the loops above, the story's
+notes, the progress log.
 
 **Step 7, take it.** The switch on by default; `tools/test.sh unit` (1009 tests on 8 November) and the race tool's smoke
 run; commit with the numbers in the message; the story's tasks ticked in the backlog; the dashboard rebuilt.
