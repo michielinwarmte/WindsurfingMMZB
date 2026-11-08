@@ -76,6 +76,13 @@ extends SceneTree
 ##                         controller (PlayerController) or its auto-sheet pilot (Autopilot, through
 ##                         the controller's pilot_overrides), for the autopilot's suite
 ##   [--trace=<board name>] that board's whole telemetry, a row every 0.05 s, to <out_dir>/trace_<name>.csv
+##   [--skipper.<field>=<n>] a number of every scripted skipper's character sheet (SkipperConfig)
+##   [--drop_step=<k|random> --drop_seed=<n> --goal_steps=2] a drop instead of a race (the skipper's heads,
+##                         8 November 2026): every board set down after the gun at a random open-water
+##                         spot on the leg to step k (random: any leg), heading roughly along it; the run
+##                         ends when the board has done goal_steps more steps (or after 2.5 times the
+##                         all-rounder's expected time plus 90 s). Every run prints a HEADS_RESULT line per
+##                         board (tools/heads/suite.py scores them)
 ##   [--sailor.<field>=<n>] a number of every skipper's sailor (SailorConfig, on its own gear too):
 ##                         the fall rule's, for the stay-on-the-board work
 ##   [--out_dir=<folder>: a CSV per board: race time, x, z, heading, speed, its next step, and what
@@ -107,6 +114,50 @@ const START_MARGIN_S: float = 3.0
 ## were put (their simulations are not stepped). A fixed-angle pilot sailing a long countdown would
 ## drift far from the spot it was aimed at.
 const SET_OFF_S: float = 10.0
+## --skipper.<field>=<n>: a number of every scripted skipper's character sheet (SkipperConfig), set after
+## the skippers are set up (a persona's sheet is drawn in its setup()), for the skipper's tuner.
+static func apply_skipper_overrides(entries: Array[Entry], options: Dictionary[String, String]) -> void:
+	for key: String in options:
+		if not key.begins_with("skipper."):
+			continue
+		var field: String = key.trim_prefix("skipper.")
+		for entry: Entry in entries:
+			var scripted: Skipper = entry.skipper as Skipper
+			if scripted == null:
+				continue
+			if field in scripted.config:
+				var current: Variant = scripted.config.get(field)
+				var value: float = options[key].to_float()
+				scripted.config.set(field, int(value) if current is int else value)
+			else:
+				push_error("No field 'skipper.%s' to override." % field)
+
+
+## The skipper's heads (8 November 2026): the boards are watched every this many ticks (_watch()).
+const WATCH_EVERY: int = 30
+## Under this speed on the board is stuck, under SLOW_MS slow, m/s; the first STUCK_GRACE_S after the
+## gun or a drop (getting going from rest) do not count as stuck.
+const STUCK_MS: float = 1.0
+const SLOW_MS: float = 2.5
+const STUCK_GRACE_S: float = 20.0
+## A drop's time: this many times the all-rounder's expected time (TrainingDrops.expected_leg_s())
+## plus DROP_TIME_EXTRA_S, unless --seconds says otherwise.
+const DROP_TIME_FACTOR: float = 2.5
+const DROP_TIME_EXTRA_S: float = 90.0
+## A drop's spot has at least this much open water round it (ShoreLookout.openness_m()), metres.
+const DROP_OPEN_M: float = 100.0
+## A drop's spot: along the leg between these shares of it, and to the side of it by a random amount
+## with this spread (a share of the leg, at most DROP_SIDE_MAX_M), metres.
+const DROP_ALONG_FROM: float = 0.1
+const DROP_ALONG_TO: float = 0.8
+const DROP_SIDE_SHARE: float = 0.25
+const DROP_SIDE_MAX_M: float = 250.0
+## A drop's heading: up to this far either side of the leg's course; one nearer the wind than
+## DROP_IRONS_DEG is turned to DROP_CLOSE_DEG off the wind on a random side.
+const DROP_HEADING_DEG: float = 70.0
+const DROP_IRONS_DEG: float = 40.0
+const DROP_CLOSE_DEG: float = 55.0
+
 ## The lake's shore grid, for the sailing area of a course on the lake (kept off the shore).
 const SHORE_GRID_PATH: String = "res://maps/silvaplana/terrain/shore_heights.json"
 ## The all-rounder's hands (Game/race/skippers/allrounder.tres), for --steady_hands=1.
@@ -155,6 +206,25 @@ class Entry:
 	var fall_log: FallLog = null
 	## The whole telemetry, a row every 3 ticks (--trace=<board name>), or null.
 	var trace_file: FileAccess = null
+	## What _watch() counts (the skipper's heads, 8 November 2026), from the gun until the goal: the
+	## race time the goal step was done (-1: not yet), the time watched, the time stuck (on the board
+	## but under STUCK_MS) in all and the longest spell with what the skipper was doing then, the time
+	## slow (under SLOW_MS), the least open water under it (ShoreLookout.openness_m()), and how far
+	## its heading has turned in all, degrees (circling shows as far more than its manoeuvres).
+	var goal_at_s: float = -1.0
+	var watch_s: float = 0.0
+	var stuck_s: float = 0.0
+	var stuck_run_s: float = 0.0
+	var longest_stuck_s: float = 0.0
+	var stuck_note: String = ""
+	var slow_s: float = 0.0
+	var min_open_m: float = INF
+	var turn_deg: float = 0.0
+	var last_heading_deg: float = NAN
+	## Where and why it ran aground, if it did.
+	var aground_note: String = ""
+	## Its falls before the gun (the start's head).
+	var falls_before_gun: int = 0
 
 
 func _initialize() -> void:
@@ -188,6 +258,11 @@ func _initialize() -> void:
 	var skipper_push: bool = options.get("skipper_push", "1") != "0"
 	var steady_hands: bool = options.get("steady_hands", "0") == "1"
 	var polar_path: String = options.get("polar", "")
+	# A drop (--drop_step): the boards are set down on a leg after the gun, with no countdown.
+	var drop_step_text: String = options.get("drop_step", "")
+	var dropping: bool = drop_step_text != ""
+	if dropping:
+		prestart_s = 0.0
 	if options.get("map", "open") == "lake":
 		_lake = load(LAKE_ENVIRONMENT_PATH)
 		var clock: PackedStringArray = options.get("time", "14:30").split(":")
@@ -252,6 +327,34 @@ func _initialize() -> void:
 				if entry.skipper != null:
 					entry.skipper.shore = lookout
 	var rules: RaceRules = give_rules(entries, race, course) if with_rules else null
+	# The drop: every board set down on the leg to the drop's step (the skipper's heads, 8 November).
+	var drop_index: int = 0
+	var goal_index: int = race.steps().size()
+	if dropping:
+		var drop_rng: RandomNumberGenerator = RandomNumberGenerator.new()
+		drop_rng.seed = options.get("drop_seed", "1").to_int()
+		drop_index = drop_step_text.to_int() if drop_step_text != "random" else drop_rng.randi_range(1, race.steps().size() - 1)
+		drop_index = clampi(drop_index, 1, race.steps().size() - 1)
+		goal_index = mini(drop_index + maxi(options.get("goal_steps", "2").to_int(), 1), race.steps().size())
+		var drop_lookout: ShoreLookout = ShoreLookout.for_lake(bottom, course.start_middle()) if bottom != null else null
+		var wind_from_deg: float = _lake.map_wind().lake_from_deg(_lake_time_s) if _lake != null else course.axis_deg
+		# The gun first (no countdown), then the boards set down: a board put on the course side
+		# before the gun would count as over the line early.
+		race.start()
+		for i: int in entries.size():
+			var spot: Vector3 = drop_spot(race, drop_index, wind_from_deg, drop_rng, drop_lookout)
+			entries[i].sim.reset(Vector3(spot.x, 0.0, spot.y), deg_to_rad(spot.z))
+			entries[i].controller.reset_controls(entries[i].controls)
+			race.place_board(i, Vector2(spot.x, spot.y), drop_index)
+		for i: int in entries.size():
+			if entries[i].skipper != null:
+				entries[i].skipper.setup(entries[i].sim, entries[i].controller, entries[i].hands, race, i)
+		var expected_s: float = expected_time_s(race, drop_index, goal_index, Vector2(entries[0].sim.telemetry.position.x, entries[0].sim.telemetry.position.z), course.axis_deg, wind_kt)
+		options["expected_s"] = str(expected_s)
+		if not options.has("seconds"):
+			seconds = DROP_TIME_FACTOR * expected_s + DROP_TIME_EXTRA_S
+		print("DROP on the way to step %d (%s), goal step %d, %.0f s expected, %.0f s allowed" % [
+			drop_index, race.steps()[drop_index].name, goal_index, expected_s, seconds])
 	if steady_hands:
 		steady_the_hands(entries)
 	if not tune_skippers(entries, skipper_push, polar_path):
@@ -276,12 +379,14 @@ func _initialize() -> void:
 			entry.trace_file = FileAccess.open(out_dir.path_join("trace_%s.csv" % file_name), FileAccess.WRITE)
 			if entry.trace_file != null:
 				entry.trace_file.store_line(Telemetry.csv_header())
+	apply_skipper_overrides(entries, options)
 	race.start_in(free_sail_s)
 
 	var outside_at_gun: PackedStringArray = PackedStringArray()
 	var gun_seen: bool = false
 	var ticks: int = roundi((free_sail_s + prestart_s + seconds) / DT)
 	var aground_count: int = 0
+	var watch_lookout: ShoreLookout = ShoreLookout.for_lake(bottom, course.start_middle()) if bottom != null else null
 	for tick: int in ticks:
 		step_race(race, entries, blind, rules)
 		if bottom != null:
@@ -289,11 +394,20 @@ func _initialize() -> void:
 		if tick % CSV_EVERY == 0:
 			for i: int in entries.size():
 				_write_row(entries[i], race, i)
+		if tick % WATCH_EVERY == 0:
+			for i: int in entries.size():
+				_watch(entries[i], race, i, goal_index, watch_lookout)
 		if not gun_seen and race.is_started() and race.clock_s() >= 0.0:
 			gun_seen = true
 			outside_at_gun = boards_outside(race, area)
 		if race.phase() == RaceSim.Phase.FINISHED or race.clock_s() >= stop_after_gun_s:
 			break
+		if dropping and entries.all(func(e: Entry) -> bool: return e.goal_at_s >= 0.0 or e.aground):
+			break
+	# The goal reached on the very last tick (the race over at the finish) still counts.
+	for i: int in entries.size():
+		if entries[i].goal_at_s < 0.0 and race.next_step_index(i) >= goal_index:
+			entries[i].goal_at_s = race.finish_time_s(i) if race.is_finished(i) else race.clock_s()
 	for entry: Entry in entries:
 		if entry.file != null:
 			entry.file.close()
@@ -315,6 +429,14 @@ func _initialize() -> void:
 		print(penalty_report(rules, entries))
 	if bottom != null:
 		print("Aground: %d of %d boards%s" % [aground_count, entries.size(), " (the skippers look out for the shore)" if shore_guard else " (no shore lookout)"])
+	var expected_all_s: float = expected_time_s(race, drop_index, goal_index, Vector2(INF, INF), course.axis_deg, wind_kt) if not dropping else 0.0
+	for i: int in entries.size():
+		var result: Dictionary = heads_result(entries[i], race, i, drop_index, goal_index, expected_all_s, options)
+		result["penalties"] = rules.penalties(i) + rules.turns_done(i) if rules != null else 0
+		if rules != null and result["penalties"] > 0:
+			result["penalty_note"] = "last at %.0f s: %s" % [rules.last_breach_s(i), rules.breach_text(i)]
+		result["falls_before_gun"] = entries[i].falls_before_gun
+		print("HEADS_RESULT " + JSON.stringify(result))
 	quit(0)
 
 
@@ -330,10 +452,104 @@ static func _check_the_bottom(bottom: TerrainGrid, race: RaceSim, entries: Array
 			entry.aground = true
 			count += 1
 			var at: Vector2 = _where(entry)
+			entry.aground_note = "%.0f s (%.0f, %.0f) to %s: %s" % [race.clock_s(), at.x, at.y, race.next_step_name(i),
+				entry.skipper.note if entry.skipper != null else "autopilot"]
 			print("AGROUND %s at race time %.1f s, (%.0f, %.0f), heading %.0f deg, %.1f m/s, sailing to %s: %s" % [
 				entry.name.replace(" ", "_"), race.clock_s(), at.x, at.y, entry.sim.telemetry.heading_deg, entry.sim.telemetry.speed_ms,
 				race.next_step_name(i), entry.skipper.note if entry.skipper != null else "autopilot"])
 	return count
+
+
+## A drop's spot and heading (--drop_step; the skipper's heads, 8 November 2026): somewhere on the leg
+## to step `step_index` (between DROP_ALONG_FROM and DROP_ALONG_TO of it, to the side of it by a random
+## amount), in open water (DROP_OPEN_M round it, when there is a lookout), heading roughly along the
+## leg but never in irons. Vector3(x, z, heading in degrees). Every seed gives another spot, so the
+## skipper is never tuned on one place (Max: "so they are not doing a one trick pony").
+static func drop_spot(race: RaceSim, step_index: int, wind_from_deg: float, rng: RandomNumberGenerator, lookout: ShoreLookout) -> Vector3:
+	var steps: Array[RaceStep] = race.steps()
+	var from: Vector2 = steps[step_index - 1].target()
+	var to: Vector2 = steps[step_index].target()
+	var leg: Vector2 = to - from
+	var across: Vector2 = leg.normalized().orthogonal()
+	var spot: Vector2 = from + leg * 0.5
+	for attempt: int in 80:
+		var side_m: float = clampf(rng.randfn(0.0, minf(DROP_SIDE_SHARE * leg.length(), DROP_SIDE_MAX_M)), -2.0 * DROP_SIDE_MAX_M, 2.0 * DROP_SIDE_MAX_M)
+		var candidate: Vector2 = from + leg * rng.randf_range(DROP_ALONG_FROM, DROP_ALONG_TO) + across * side_m
+		if lookout == null or lookout.openness_m(candidate) >= DROP_OPEN_M:
+			spot = candidate
+			break
+	var heading_deg: float = Course.bearing_deg(from, to) + rng.randf_range(-DROP_HEADING_DEG, DROP_HEADING_DEG)
+	var off_wind_deg: float = Course.turn_deg(wind_from_deg, heading_deg)
+	if absf(off_wind_deg) < DROP_IRONS_DEG:
+		var side: float = signf(off_wind_deg) if off_wind_deg != 0.0 else (1.0 if rng.randf() < 0.5 else -1.0)
+		heading_deg = wind_from_deg + side * DROP_CLOSE_DEG
+	return Vector3(spot.x, spot.y, fposmod(heading_deg, 360.0))
+
+
+## The all-rounder's expected time from a point (or, with Vector2(INF, INF), from the start line) through
+## the steps from `from_index` up to (not including) `goal_index`, seconds (TrainingDrops.expected_leg_s()).
+static func expected_time_s(race: RaceSim, from_index: int, goal_index: int, from: Vector2, axis_deg: float, wind_kt: float) -> float:
+	var steps: Array[RaceStep] = race.steps()
+	var at: Vector2 = from
+	var first: int = from_index
+	if from.x == INF:
+		at = steps[0].target()
+		first = 1
+	var total_s: float = 0.0
+	for k: int in range(first, mini(goal_index, steps.size())):
+		total_s += TrainingDrops.expected_leg_s(at, steps[k].target(), axis_deg, wind_kt)
+		at = steps[k].target()
+	return total_s
+
+
+## Every WATCH_EVERY ticks: whether the board has done its goal step, and, from the gun until then, how
+## long it is stuck and slow, the least open water under it and how far it has turned.
+static func _watch(entry: Entry, race: RaceSim, index: int, goal_index: int, lookout: ShoreLookout) -> void:
+	var now_s: float = race.clock_s()
+	if entry.goal_at_s < 0.0 and race.next_step_index(index) >= goal_index:
+		entry.goal_at_s = now_s
+	if entry.goal_at_s >= 0.0 or entry.aground or now_s < 0.0:
+		return
+	var dt: float = WATCH_EVERY * DT
+	var t: Telemetry = entry.sim.telemetry
+	entry.watch_s += dt
+	if entry.sim.sailor_state == WindsurferSim.SailorState.SAILING:
+		if t.speed_ms < STUCK_MS and entry.watch_s > STUCK_GRACE_S:
+			entry.stuck_s += dt
+			entry.stuck_run_s += dt
+			if entry.stuck_run_s > entry.longest_stuck_s:
+				entry.longest_stuck_s = entry.stuck_run_s
+				entry.stuck_note = entry.skipper.note if entry.skipper != null else "autopilot"
+		else:
+			entry.stuck_run_s = 0.0
+		if t.speed_ms < SLOW_MS:
+			entry.slow_s += dt
+	if lookout != null:
+		entry.min_open_m = minf(entry.min_open_m, lookout.openness_m(_where(entry)))
+	if not is_nan(entry.last_heading_deg):
+		entry.turn_deg += absf(wrapf(t.heading_deg - entry.last_heading_deg, -180.0, 180.0))
+	entry.last_heading_deg = t.heading_deg
+
+
+## One board's run as a dictionary for the HEADS_RESULT line (tools/heads/suite.py reads it).
+static func heads_result(entry: Entry, race: RaceSim, index: int, drop_index: int, goal_index: int, expected_all_s: float,
+		options: Dictionary[String, String]) -> Dictionary:
+	var reached: bool = entry.goal_at_s >= 0.0
+	var steps: Array[RaceStep] = race.steps()
+	var next_index: int = race.next_step_index(index)
+	return {
+		"course": options.get("course", "test"), "time": options.get("time", "-"), "wind_scale": options.get("lake_wind_scale", "1"),
+		"seed": options.get("seed", "0"), "spawn_seed": options.get("spawn_seed", "0"), "drop_seed": options.get("drop_seed", "-"),
+		"board": entry.name, "drop_step": drop_index, "goal_step": goal_index, "steps": steps.size(),
+		"reached": reached, "time_s": entry.goal_at_s if reached else -1.0,
+		"expected_s": expected_all_s if drop_index == 0 else options.get("expected_s", "0").to_float(),
+		"watched_s": entry.watch_s, "falls": entry.falls, "aground": entry.aground, "aground_note": entry.aground_note,
+		"stuck_s": entry.stuck_s, "longest_stuck_s": entry.longest_stuck_s, "stuck_note": entry.stuck_note,
+		"slow_s": entry.slow_s, "min_open_m": entry.min_open_m if entry.min_open_m != INF else -1.0, "turn_deg": entry.turn_deg,
+		"tacks": entry.tacks, "gybes": entry.gybes, "next_step": next_index,
+		"to_next_m": race.distance_to_next_m(index) if next_index < steps.size() else 0.0,
+		"splits": Array(race.splits_s(index)), "note": entry.skipper.note if entry.skipper != null else "autopilot",
+		"ocs": race.is_ocs(index)}
 
 
 ## The start of every skipper's board, one line each: how long after the gun it crossed the start
@@ -774,6 +990,9 @@ static func _sail(entry: Entry, counting: bool = true) -> void:
 	var fallen: bool = entry.sim.sailor_state == WindsurferSim.SailorState.FALLEN
 	if fallen and not entry.was_fallen and counting:
 		entry.falls += 1
+		var scripted: Skipper = entry.skipper as Skipper
+		if scripted != null and scripted.state == Skipper.State.PRE_START:
+			entry.falls_before_gun += 1
 	elif entry.was_fallen and not fallen:
 		# Up again after the waterstart (the simulation does it after a while): the sail eased, as at
 		# the start, and the controller starts afresh, as the game's board does (windsurfer.gd).

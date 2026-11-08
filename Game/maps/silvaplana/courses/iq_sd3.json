@@ -5,50 +5,51 @@
 	"template": "SD3",
 	"sequence": "Start-1-2-3-Finish",
 	"axis_deg": 207.0,
-	"size_percent": 90.0,
+	"size_percent": 80.0,
 	"boards": 12,
+	"race_type": "slalom",
 	"marks": [
 		{
 			"id": "start boat",
 			"side": "",
-			"east": 2780426.79,
-			"north": 1146823.72
+			"east": 2780492.75,
+			"north": 1146820.07
 		},
 		{
 			"id": "start pin",
 			"side": "",
-			"east": 2780464.92,
-			"north": 1146898.57
+			"east": 2780530.89,
+			"north": 1146894.91
 		},
 		{
 			"id": "1",
 			"side": "port",
-			"east": 2780944.16,
-			"north": 1146649.67
+			"east": 2780954.76,
+			"north": 1146669.51
 		},
 		{
 			"id": "2",
 			"side": "starboard",
-			"east": 2781284.68,
-			"north": 1147317.98
+			"east": 2781257.44,
+			"north": 1147263.56
 		},
 		{
 			"id": "3",
 			"side": "port",
-			"east": 2781633.21,
-			"north": 1147227.84
+			"east": 2781567.25,
+			"north": 1147183.44
 		},
 		{
 			"id": "finish boat",
 			"side": "",
-			"east": 2781344.3,
-			"north": 1147443.32
+			"east": 2781309.2,
+			"north": 1147373.48
 		},
 		{
 			"id": "finish pin",
 			"side": "",
-			"east": 2781366.56,
-			"north": 1147470.33
+			"east": 2781331.46,
+			"north": 1147400.49
 		}
 	]
 }

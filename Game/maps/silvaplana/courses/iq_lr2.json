@@ -4,51 +4,52 @@
 	"map": "Lake Silvaplana",
 	"template": "LR2",
 	"sequence": "Start-1-4S/4P-1-4P-Finish",
-	"axis_deg": 227.0,
+	"axis_deg": 232.0,
 	"size_percent": 100.0,
 	"boards": 12,
+	"race_type": "course",
 	"marks": [
 		{
 			"id": "start boat",
 			"side": "",
-			"east": 2781416.72,
-			"north": 1147125.24
+			"east": 2781423.13,
+			"north": 1147049.24
 		},
 		{
 			"id": "start pin",
 			"side": "",
-			"east": 2781470.74,
-			"north": 1147067.32
+			"east": 2781471.89,
+			"north": 1146986.83
 		},
 		{
 			"id": "1",
 			"side": "port",
-			"east": 2780089.26,
-			"north": 1145833.22
+			"east": 2779988.11,
+			"north": 1145877.83
 		},
 		{
 			"id": "4S",
 			"side": "starboard",
-			"east": 2781359.6,
-			"north": 1146966.55
+			"east": 2781352.39,
+			"north": 1146896.14
 		},
 		{
 			"id": "4P",
 			"side": "port",
-			"east": 2781308.45,
-			"north": 1147021.4
+			"east": 2781306.22,
+			"north": 1146955.24
 		},
 		{
 			"id": "finish boat",
 			"side": "",
-			"east": 2781017.61,
-			"north": 1147365.23
+			"east": 2781046.45,
+			"north": 1147323.11
 		},
 		{
 			"id": "finish pin",
 			"side": "",
-			"east": 2781045.19,
-			"north": 1147386.78
+			"east": 2781075.81,
+			"north": 1147342.17
 		}
 	]
 }

@@ -123,6 +123,36 @@ const SHORE_TURN_STEP_DEG: float = 10.0
 ## With less open water ahead than this (metres) the board is at the edge already: it heads for the
 ## most open water near it (_escape_the_shore()).
 const SHORE_ESCAPE_M: float = 25.0
+## On a leg sailed with tacks or gybes (a beat, a run) it looks at least this far ahead, metres: room
+## to make the manoeuvre and get going again before the shallows, where the wind often dies (the
+## skipper's heads, 8 November 2026: a run on Silvaplana's SD3 at 16:30 slowed from 6 to 1.5 m/s in the
+## last 100 m before the east shore and never made its gybe).
+const SHORE_LOOK_TURNING_MIN_M: float = 120.0
+## Slower than this at the edge, the board gets out on the tack it is on (up toward the wind or down
+## away from it, whichever has more water ahead) instead of waiting for a tack or gybe it is too slow
+## to make, m/s; it bears away no further than SHORE_SLOW_DOWN_TWA_DEG, which it can still steer slowly.
+const SHORE_SLOW_MS: float = 3.0
+const SHORE_SLOW_DOWN_TWA_DEG: float = 150.0
+## A way out on this tack counts when it has at least this much open water ahead, metres.
+const SHORE_SLOW_OPEN_M: float = 40.0
+## The wind ahead (_avoid_the_holes(); Max, 8 November 2026: "give them enough information about wind,
+## water and shore"): a sailor sees the dark water of more wind and the glassy patches where it dies.
+## On a beat or a run it looks this far ahead on both tacks, metres; when its own tack sails into wind
+## under WIND_HOLE_SHARE of the wind where it is and the other tack has at least WIND_BETTER_SHARE of
+## that, it tacks or gybes now (within its tacks for the leg) instead of sailing into the hole. Only with
+## a map's wind (the lake); the open water's wind is the same everywhere.
+const WIND_LOOK_M: float = 200.0
+const WIND_HOLE_SHARE: float = 0.75
+const WIND_BETTER_SHARE: float = 1.2
+## Closer than this to the next mark it no longer looks for holes, metres.
+const WIND_NEAR_MARK_M: float = 400.0
+## Getting going (SkipperConfig.get_going_twa_deg): slower than GET_GOING_BELOW_MS on the board for
+## GET_GOING_AFTER_S (not in a manoeuvre) it sails at its getting-going angle until it is faster than
+## GET_GOING_UNTIL_MS, or for GET_GOING_MAX_S at most (then the race's angle again for as long).
+const GET_GOING_BELOW_MS: float = 2.5
+const GET_GOING_AFTER_S: float = 6.0
+const GET_GOING_UNTIL_MS: float = 5.0
+const GET_GOING_MAX_S: float = 25.0
 ## The leeway and the speed it expects are smoothed over this long, seconds; the leeway is measured
 ## above MEASURE_LEEWAY_FROM_MS.
 const MEASURE_SMOOTH_S: float = 3.0
@@ -438,6 +468,13 @@ var _others_dt_s: float = THINK_INTERVAL_S
 ## whether it is keeping clear of one this tick (for the note).
 var _others_last: PackedVector2Array = PackedVector2Array()
 var _keeping_clear: bool = false
+## Getting going: how long it has been slow, whether it is getting going now and since when.
+var _slow_s: float = 0.0
+var _getting_going: bool = false
+var _getting_going_from_s: float = -INF
+## Whether the leg it is sailing is one of tacks or gybes (a beat, a run, or the target on the other
+## tack): set by _course_to() at every decision, read by _keep_off_the_shore().
+var _leg_turns: bool = false
 ## The penalty turn (F3, _penalty_turn_heading()): its phase (0 none; PENALTY_EASING,
 ## PENALTY_FIRST, PENALTY_BETWEEN, PENALTY_SECOND), when it began, whether it gybes first, when it
 ## last pressed for a manoeuvre, and how many turns it has taken.
@@ -564,6 +601,9 @@ func _forget_the_race() -> void:
 	_finish_going_back = false
 	_finish_missed = false
 	_penalty_phase = 0
+	_slow_s = 0.0
+	_getting_going = false
+	_getting_going_from_s = -INF
 	if _hands != null:
 		_hands.hold_speed_ms = 0.0
 
@@ -627,6 +667,7 @@ func _think(telemetry: Telemetry) -> void:
 	_going_from_hold = false
 	_new_step_check()
 	_keeping_clear = false
+	_leg_turns = false
 	# A penalty from the judge is taken at once, while racing (not in the pre-start crowd, where
 	# a circle would be a danger to everyone; it is carried to the start and taken on the first leg).
 	if rules != null and _penalty_phase == 0 and state == State.RACING and rules.penalties(_index) > 0:
@@ -634,6 +675,8 @@ func _think(telemetry: Telemetry) -> void:
 		_penalty_from_s = _time_s
 		_penalty_pressed_s = -INF
 	var decided_deg: float = _keep_off_the_shore(telemetry, _decide(telemetry))
+	_avoid_the_holes(telemetry, decided_deg)
+	decided_deg = _get_going(telemetry, decided_deg)
 	if _keeping_clear:
 		note += ", keeping clear"
 	_last_wanted_deg = decided_deg
@@ -657,7 +700,8 @@ func _keep_off_the_shore(telemetry: Telemetry, heading_deg: float) -> float:
 	if shore == null:
 		return heading_deg
 	var position: Vector2 = _position(telemetry)
-	var look_m: float = clampf(telemetry.speed_ms * SHORE_LOOK_S, SHORE_LOOK_MIN_M, SHORE_LOOK_MAX_M)
+	var look_m: float = clampf(telemetry.speed_ms * SHORE_LOOK_S, SHORE_LOOK_TURNING_MIN_M if _leg_turns else SHORE_LOOK_MIN_M,
+		SHORE_LOOK_MAX_M)
 	var wind_deg: float = telemetry.wind_from_bearing_deg
 	if _penalty_phase > 0:
 		# The circle is turned where it is, unless that is out of the open water already.
@@ -677,7 +721,11 @@ func _keep_off_the_shore(telemetry: Telemetry, heading_deg: float) -> float:
 		return heading_deg
 	note += ", the shore %.0f m ahead" % here_m
 	var twa_deg: float = absf(wrapf(wind_deg - heading_deg, -180.0, 180.0))
-	if (twa_deg < SHORE_REACH_FROM_DEG or twa_deg > SHORE_REACH_TO_DEG) and shore.water_ahead_m(position, other_deg, look_m) > here_m:
+	# A beat or a run tacks or gybes away from the shore whatever its angle of the moment: its leg is
+	# sailed in tacks anyway (the run at the polar's 130 degrees counted as a reach in a local wind a few
+	# degrees round, turned along the shore and never gybed).
+	var turning_leg: bool = _leg_turns or twa_deg < SHORE_REACH_FROM_DEG or twa_deg > SHORE_REACH_TO_DEG
+	if turning_leg and shore.water_ahead_m(position, other_deg, look_m) > here_m:
 		_ask_for_manoeuvre(true, true)
 		return heading_deg
 	# Turn away on this tack: the heading with the most water ahead, from as close to the wind as it
@@ -696,6 +744,69 @@ func _keep_off_the_shore(telemetry: Telemetry, heading_deg: float) -> float:
 	return best_deg
 
 
+## Getting going (SkipperConfig.get_going_twa_deg): how long the board has been slow on the board, and
+## whether it gets going now (after the gun, not before: the start holds back on purpose).
+func _watch_the_speed(telemetry: Telemetry, dt: float) -> void:
+	var sailing: bool = _sim.sailor_state == WindsurferSim.SailorState.SAILING
+	if not sailing or _controller.manoeuvre != PlayerController.Manoeuvre.NONE or telemetry.speed_ms >= GET_GOING_BELOW_MS:
+		_slow_s = 0.0
+	else:
+		_slow_s += dt
+	if _getting_going:
+		var over: bool = telemetry.speed_ms > GET_GOING_UNTIL_MS or _time_s - _getting_going_from_s > GET_GOING_MAX_S or not sailing
+		if over:
+			_getting_going = false
+			_slow_s = 0.0
+			# The same wait again before the next try.
+			_getting_going_from_s = _time_s
+	elif config.get_going_twa_deg > 0.0 and _slow_s > GET_GOING_AFTER_S and _race.clock_s() >= 0.0 and state != State.FINISHED 			and _time_s - _getting_going_from_s > GET_GOING_MAX_S:
+		_getting_going = true
+		_getting_going_from_s = _time_s
+
+
+## While getting going: the getting-going angle on the tack it is on. The shore, a penalty's turn and a
+## manoeuvre under way come first.
+func _get_going(telemetry: Telemetry, heading_deg: float) -> float:
+	if not _getting_going or _penalty_phase > 0 or note.contains("shore") or _controller.manoeuvre != PlayerController.Manoeuvre.NONE:
+		return heading_deg
+	note += ", getting going"
+	return telemetry.wind_from_bearing_deg - _tack() * config.get_going_twa_deg
+
+
+## The wind ahead (WIND_LOOK_M): on a beat or a run, when this tack sails into a light patch and the
+## other tack has more wind, it asks for the tack or gybe now. It never overrides the shore: a manoeuvre
+## the shore check already asked for or refused stands.
+func _avoid_the_holes(telemetry: Telemetry, heading_deg: float) -> void:
+	if not _leg_turns or _tack_due_s >= 0.0 or _controller.manoeuvre != PlayerController.Manoeuvre.NONE or note.contains("shore"):
+		return
+	var position: Vector2 = _position(telemetry)
+	# Near the mark the mark decides: a gybe away there only means a gybe back.
+	if position.distance_to(_race.next_target(_index)) < WIND_NEAR_MARK_M:
+		return
+	var here_ms: float = wind_speed_at(position)
+	if is_nan(here_ms) or here_ms < 0.5:
+		return
+	var wind_deg: float = telemetry.wind_from_bearing_deg
+	var other_deg: float = 2.0 * wind_deg - heading_deg
+	var ahead_ms: float = wind_speed_at(position + Course.direction_of(heading_deg) * WIND_LOOK_M)
+	var other_ms: float = wind_speed_at(position + Course.direction_of(other_deg) * WIND_LOOK_M)
+	if ahead_ms < WIND_HOLE_SHARE * here_ms and other_ms > WIND_BETTER_SHARE * ahead_ms:
+		if shore != null and shore.water_ahead_m(position, other_deg, SHORE_LOOK_TURNING_MIN_M) < SHORE_LOOK_TURNING_MIN_M:
+			return
+		note += ", away from the light patch (%.0f kt ahead, %.0f kt on the other tack)" % [ahead_ms / SimMath.KNOT_MS, other_ms / SimMath.KNOT_MS]
+		_ask_for_manoeuvre(false)
+
+
+## The map's wind speed at a point (game X, Z), m/s, at the wind pattern's height: what a sailor reads on
+## the water there (the lake's pattern, its lee and its gusts). NAN without a map's wind (the open water).
+func wind_speed_at(point: Vector2) -> float:
+	var field: MapWindField = _sim.wind as MapWindField
+	if field == null or field.map_wind == null or field.moment() == null:
+		return NAN
+	var velocity: Vector3 = field.map_wind.velocity_in(field.moment(), Vector3(point.x, 0.0, point.y))
+	return Vector2(velocity.x, velocity.z).length() if velocity.is_finite() else NAN
+
+
 ## Already at the edge of the open water (in the shallows, or close to the land: every heading looks
 ## the same from here, "0 m ahead"): it heads for the most open water near it (ShoreLookout.
 ## most_open_heading_deg()), as close to that heading as it can sail; when that water lies on the
@@ -712,6 +823,17 @@ func _escape_the_shore(telemetry: Telemetry, position: Vector2, heading_deg: flo
 	if out_tack == tack:
 		_tack_due_s = -1.0
 		return wind_deg - tack * out_abs
+	if telemetry.speed_ms < SHORE_SLOW_MS:
+		# Too slow for a tack or gybe to come off: out on this tack, up toward the wind or down away from
+		# it, whichever has more open water ahead.
+		var up_deg: float = wind_deg - tack * _upwind_twa_deg()
+		var down_deg: float = wind_deg - tack * SHORE_SLOW_DOWN_TWA_DEG
+		var up_m: float = shore.water_ahead_m(position, up_deg, ShoreLookout.ESCAPE_LOOK_M)
+		var down_m: float = shore.water_ahead_m(position, down_deg, ShoreLookout.ESCAPE_LOOK_M)
+		if maxf(up_m, down_m) >= SHORE_SLOW_OPEN_M:
+			_tack_due_s = -1.0
+			note += " (slow, on this tack)"
+			return up_deg if up_m >= down_m else down_deg
 	if _controller.manoeuvre == PlayerController.Manoeuvre.NONE:
 		_ask_for_manoeuvre(true, true)
 	# Until the tack or gybe: on this tack, as near to the way out as it sails (head up toward it if
@@ -978,6 +1100,7 @@ func _course_to(telemetry: Telemetry, target: Vector2, arrive_tack: float = 0.0,
 	var heading_deg: float
 	if absf(needed_deg) < up_track_deg:
 		note = "beat"
+		_leg_turns = true
 		heading_deg = wind_deg - tack * up_deg
 		if _past_layline_m(position, aim, wind_deg, tack, up_track_deg) >= margin_m:
 			_ask_for_manoeuvre(true)
@@ -986,6 +1109,7 @@ func _course_to(telemetry: Telemetry, target: Vector2, arrive_tack: float = 0.0,
 			_ask_for_manoeuvre(false)
 	elif absf(needed_deg) > down_track_deg:
 		note = "run"
+		_leg_turns = true
 		heading_deg = wind_deg - tack * down_deg
 		if _past_layline_m(position, aim, wind_deg, tack, down_track_deg) >= margin_m:
 			_ask_for_manoeuvre(true)
@@ -999,6 +1123,7 @@ func _course_to(telemetry: Telemetry, target: Vector2, arrive_tack: float = 0.0,
 		# downwind, its gybing line). It tacks or gybes once it is past by the margin, as on a beat or
 		# a run; until then it sails on at the beat's or the run's angle.
 		note = "reach, other tack"
+		_leg_turns = true
 		var upwind: bool = absf(needed_deg) < 90.0
 		heading_deg = wind_deg - tack * (up_deg if upwind else down_deg)
 		# Downwind the turn is a gybe, which the controller makes only from further off the wind than
@@ -2269,6 +2394,7 @@ func _measure(telemetry: Telemetry, dt: float) -> void:
 		_pointing = true
 	elif telemetry.speed_ms < pilot.pointing_speed_ms - 1.5:
 		_pointing = false
+	_watch_the_speed(telemetry, dt)
 	var steady: bool = _controller.manoeuvre == PlayerController.Manoeuvre.NONE and absf(telemetry.yaw_rate_dps) < 5.0
 	var share: float = clampf(dt / MEASURE_SMOOTH_S, 0.0, 1.0)
 	# The leeway is measured whenever the board sails steadily with some speed: in light wind a beat

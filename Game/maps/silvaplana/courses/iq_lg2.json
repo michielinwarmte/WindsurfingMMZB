@@ -7,48 +7,49 @@
 	"axis_deg": 222.0,
 	"size_percent": 100.0,
 	"boards": 12,
+	"race_type": "course",
 	"marks": [
 		{
 			"id": "start boat",
 			"side": "",
-			"east": 2781296.48,
-			"north": 1147486.4
+			"east": 2781221.48,
+			"north": 1147361.4
 		},
 		{
 			"id": "start pin",
 			"side": "",
-			"east": 2781355.34,
-			"north": 1147433.41
+			"east": 2781280.34,
+			"north": 1147308.41
 		},
 		{
 			"id": "1",
 			"side": "port",
-			"east": 2780086.68,
-			"north": 1146083.6
+			"east": 2780011.68,
+			"north": 1145958.6
 		},
 		{
 			"id": "4S",
 			"side": "starboard",
-			"east": 2781253.41,
-			"north": 1147323.34
+			"east": 2781178.41,
+			"north": 1147198.34
 		},
 		{
 			"id": "4P",
 			"side": "port",
-			"east": 2781197.67,
-			"north": 1147373.52
+			"east": 2781122.67,
+			"north": 1147248.52
 		},
 		{
 			"id": "finish boat",
 			"side": "",
-			"east": 2781602.26,
-			"north": 1147038.55
+			"east": 2781527.26,
+			"north": 1146913.55
 		},
 		{
 			"id": "finish pin",
 			"side": "",
-			"east": 2781623.32,
-			"north": 1147066.5
+			"east": 2781548.32,
+			"north": 1146941.5
 		}
 	]
 }

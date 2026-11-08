@@ -1,0 +1,54 @@
+{
+	"about": "A race course for the course maker (MAP_SILVAPLANA_PLAN.md, W4a). Positions are Swiss LV95 metres; sides are the side each mark is left on.",
+	"name": "iQFOiL Windward-leeward, finish left (LG2)",
+	"map": "Lake Silvaplana",
+	"template": "LG2",
+	"sequence": "Start-1-4S/4P-1-4S-Finish",
+	"axis_deg": 222.0,
+	"size_percent": 100.0,
+	"boards": 12,
+	"marks": [
+		{
+			"id": "start boat",
+			"side": "",
+			"east": 2781296.48,
+			"north": 1147486.4
+		},
+		{
+			"id": "start pin",
+			"side": "",
+			"east": 2781355.34,
+			"north": 1147433.41
+		},
+		{
+			"id": "1",
+			"side": "port",
+			"east": 2780086.68,
+			"north": 1146083.6
+		},
+		{
+			"id": "4S",
+			"side": "starboard",
+			"east": 2781253.41,
+			"north": 1147323.34
+		},
+		{
+			"id": "4P",
+			"side": "port",
+			"east": 2781197.67,
+			"north": 1147373.52
+		},
+		{
+			"id": "finish boat",
+			"side": "",
+			"east": 2781602.26,
+			"north": 1147038.55
+		},
+		{
+			"id": "finish pin",
+			"side": "",
+			"east": 2781623.32,
+			"north": 1147066.5
+		}
+	]
+}

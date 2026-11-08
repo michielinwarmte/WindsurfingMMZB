@@ -5,50 +5,51 @@
 	"template": "SM1",
 	"sequence": "Start-1-2S/2P-1-2S-Finish",
 	"axis_deg": 217.0,
-	"size_percent": 80.0,
+	"size_percent": 70.0,
 	"boards": 12,
+	"race_type": "hybrid",
 	"marks": [
 		{
 			"id": "start boat",
 			"side": "",
-			"east": 2780445.69,
-			"north": 1146860.98
+			"east": 2780541.57,
+			"north": 1146911.5
 		},
 		{
 			"id": "start pin",
 			"side": "",
-			"east": 2780496.25,
-			"north": 1146928.06
+			"east": 2780592.12,
+			"north": 1146978.59
 		},
 		{
 			"id": "1",
 			"side": "port",
-			"east": 2780874.54,
-			"north": 1146632.48
+			"east": 2780919.97,
+			"north": 1146715.76
 		},
 		{
 			"id": "2S",
 			"side": "starboard",
-			"east": 2781305.73,
-			"north": 1147142.38
+			"east": 2781301.0,
+			"north": 1147159.1
 		},
 		{
 			"id": "2P",
 			"side": "port",
-			"east": 2781245.83,
-			"north": 1147187.52
+			"east": 2781241.11,
+			"north": 1147204.24
 		},
 		{
 			"id": "finish boat",
 			"side": "",
-			"east": 2781595.76,
-			"north": 1146941.28
+			"east": 2781549.88,
+			"north": 1146984.11
 		},
 		{
 			"id": "finish pin",
 			"side": "",
-			"east": 2781614.31,
-			"north": 1146970.96
+			"east": 2781568.43,
+			"north": 1147013.79
 		}
 	]
 }

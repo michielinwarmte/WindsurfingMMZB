@@ -21,6 +21,7 @@ extends SceneTree
 ##                    them without going onto the shore, RACE_DIRECTOR.md)
 ##   --mark_margin=<m> --leg_margin=<m> --min_size=<percent>   another rule than CourseFitter's
 ##                    (200 m, 50 m, 40 %), to see what it would give; then also add --save=0
+##   --shallow_m=<m>  water shallower than this counts as land for the margins (0: the land only)
 
 const ENVIRONMENT_PATH: String = "res://maps/silvaplana/environment_silvaplana.tres"
 const MAP_CONFIG_PATH: String = "res://maps/silvaplana/map_config.tres"
@@ -60,7 +61,14 @@ func _initialize() -> void:
 	var start: Vector3 = config.lv95_to_game(START_LV95.x, START_LV95.y, config.lake_level_m)
 	var preferred: Vector2 = Vector2(start.x, start.z)
 
-	var fitter: CourseFitter = CourseFitter.from_heights(grid.height_at, preferred)
+	# --shallow_m=<m>: water shallower than this counts as land, so the margins are kept from the
+	# shallows (the deltas' flats reach far out from the shoreline) rather than from the land (Max, 8
+	# November 2026: "change the courses so they are not too close to the shore").
+	var shallow_m: float = options.get("shallow_m", "0").to_float()
+	var height_at: Callable = grid.height_at
+	if shallow_m > 0.0:
+		height_at = func(x: float, z: float) -> float: return grid.height_at(x, z) + shallow_m
+	var fitter: CourseFitter = CourseFitter.from_heights(height_at, preferred)
 	fitter.mark_margin_m = options.get("mark_margin", str(fitter.mark_margin_m)).to_float()
 	fitter.leg_margin_m = options.get("leg_margin", str(fitter.leg_margin_m)).to_float()
 	fitter.min_size_percent = options.get("min_size", str(fitter.min_size_percent)).to_float()

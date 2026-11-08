@@ -1,0 +1,121 @@
+Lake Silvaplana at 14:30: the lake's wind 16.9 kt from 222.1°, so the courses' axis is 222°
+Shore clearance: 228 x 261 points 10 m apart, built in 206 ms; the most open water is 567 m from the shore
+The rule: every mark 250 m and every leg 150 m from the shore, 25 % of the class's size at least, at most 15° off the wind
+
+T2 sprint slalom (PD3, 4 boards): 50 % of the class's size, axis 232° (10° right of the wind); 25260 tries in 27 ms
+  smallest clearance: the marks 253 m, the legs 254 m; the course maker's land warnings: none
+  Start → 1        300 m  324°  (102° from the wind)
+  1 → 2            417 m  052°  (170° from the wind)
+  2 → 3            200 m  335°  (113° from the wind)
+  3 → Finish       200 m  130°  ( 92° from the wind)
+  1.12 km in all
+  saved as res://maps/silvaplana/courses/t2_slalom.json
+
+The check, not saved:
+Windward-leeward, finish left (LG2) (LG2, 4 boards): 100 % of the class's size, axis 222° (square to the wind); 638 tries in 1 ms
+  smallest clearance: the marks 252 m, the legs 260 m; the course maker's land warnings: none
+  Start → 1       1852 m  222°  (  0° from the wind)
+  1 → 4S/4P       1702 m  042°  (180° from the wind)
+  4S/4P → 1       1702 m  222°  (  0° from the wind)
+  1 → 4S          1702 m  043°  (179° from the wind)
+  4S → Finish      450 m  127°  ( 95° from the wind)
+  7.41 km in all
+
+iQFOiL Windward-leeward, finish left (LG2) (LG2, 12 boards): 100 % of the class's size, axis 222° (square to the wind); 648 tries in 1 ms
+  smallest clearance: the marks 252 m, the legs 252 m; the course maker's land warnings: none
+  Start → 1       1852 m  222°  (  0° from the wind)
+  1 → 4S/4P       1702 m  042°  (180° from the wind)
+  4S/4P → 1       1702 m  222°  (  0° from the wind)
+  1 → 4S          1702 m  043°  (179° from the wind)
+  4S → Finish      450 m  127°  ( 95° from the wind)
+  7.41 km in all
+  saved as res://maps/silvaplana/courses/iq_lg2.json
+
+iQFOiL Windward-leeward, finish right (LR2) (LR2, 12 boards): 100 % of the class's size, axis 232° (10° right of the wind); 3055 tries in 6 ms
+  smallest clearance: the marks 250 m, the legs 153 m; the course maker's land warnings: none
+  Start → 1       1852 m  232°  ( 10° from the wind)
+  1 → 4S/4P       1702 m  052°  (170° from the wind)
+  4S/4P → 1       1702 m  232°  ( 10° from the wind)
+  1 → 4P          1702 m  051°  (171° from the wind)
+  4P → Finish      450 m  327°  (105° from the wind)
+  7.41 km in all
+  saved as res://maps/silvaplana/courses/iq_lr2.json
+
+iQFOiL Trapezoid, outer loop (O2) (O2, 12 boards): 30 % of the class's size, axis 227° (5° right of the wind); 31513 tries in 36 ms
+  smallest clearance: the marks 250 m, the legs 250 m; the course maker's land warnings: none
+  Start → 1        528 m  227°  (  5° from the wind)
+  1 → 2            417 m  137°  ( 85° from the wind)
+  2 → 3S/3P        528 m  047°  (175° from the wind)
+  3S/3P → 2        528 m  227°  (  5° from the wind)
+  2 → 3P           529 m  043°  (179° from the wind)
+  3P → Finish      113 m  354°  (132° from the wind)
+  2.64 km in all
+  saved as res://maps/silvaplana/courses/iq_o2.json
+
+iQFOiL Trapezoid, inner loop (I2) (I2, 12 boards): 30 % of the class's size, axis 227° (5° right of the wind); 31513 tries in 36 ms
+  smallest clearance: the marks 250 m, the legs 250 m; the course maker's land warnings: none
+  Start → 1        528 m  227°  (  5° from the wind)
+  1 → 4S/4P        483 m  047°  (175° from the wind)
+  4S/4P → 1        483 m  227°  (  5° from the wind)
+  1 → 2            417 m  137°  ( 85° from the wind)
+  2 → 3P           529 m  043°  (179° from the wind)
+  3P → Finish      113 m  354°  (132° from the wind)
+  2.55 km in all
+  saved as res://maps/silvaplana/courses/iq_i2.json
+
+iQFOiL Upwind sprint, 3 marks (US3) (US3, 12 boards): 40 % of the class's size, axis 222° (square to the wind); 26057 tries in 27 ms
+  smallest clearance: the marks 265 m, the legs 265 m; the course maker's land warnings: none
+  Start → 1        400 m  222°  (  0° from the wind)
+  1 → 2            491 m  113°  (109° from the wind)
+  2 → 3            276 m  042°  (180° from the wind)
+  3 → Finish       218 m  088°  (134° from the wind)
+  1.38 km in all
+  saved as res://maps/silvaplana/courses/iq_us3.json
+
+iQFOiL Upwind sprint, 4 marks (US4) (US4, 12 boards): 40 % of the class's size, axis 222° (square to the wind); 25958 tries in 26 ms
+  smallest clearance: the marks 272 m, the legs 272 m; the course maker's land warnings: none
+  Start → 1        400 m  222°  (  0° from the wind)
+  1 → 2            479 m  113°  (109° from the wind)
+  2 → 3            280 m  041°  (179° from the wind)
+  3 → 4            272 m  102°  (120° from the wind)
+  4 → Finish       413 m  327°  (105° from the wind)
+  1.85 km in all
+  saved as res://maps/silvaplana/courses/iq_us4.json
+
+iQFOiL Sprint slalom, start left (PD3, MR2) (PD3, 12 boards): 50 % of the class's size, axis 232° (10° right of the wind); 24914 tries in 27 ms
+  smallest clearance: the marks 252 m, the legs 252 m; the course maker's land warnings: none
+  Start → 1        301 m  326°  (104° from the wind)
+  1 → 2            417 m  052°  (170° from the wind)
+  2 → 3            200 m  335°  (113° from the wind)
+  3 → Finish       200 m  129°  ( 93° from the wind)
+  1.12 km in all
+  saved as res://maps/silvaplana/courses/iq_pd3.json
+
+iQFOiL Sprint slalom, start right (SD3, MR2) (SD3, 12 boards): 80 % of the class's size, axis 207° (15° left of the wind); 12893 tries in 14 ms
+  smallest clearance: the marks 253 m, the legs 254 m; the course maker's land warnings: none
+  Start → 1        481 m  113°  (109° from the wind)
+  1 → 2            667 m  027°  (165° from the wind)
+  2 → 3            320 m  105°  (117° from the wind)
+  3 → Finish       320 m  310°  ( 88° from the wind)
+  1.79 km in all
+  saved as res://maps/silvaplana/courses/iq_sd3.json
+
+iQFOiL Medal race MR1, finish right (PM1) (PM1, 12 boards): 50 % of the class's size, axis 237° (15° right of the wind); 25887 tries in 32 ms
+  smallest clearance: the marks 255 m, the legs 256 m; the course maker's land warnings: none
+  Start → 1        301 m  331°  (109° from the wind)
+  1 → 2S/2P        417 m  057°  (165° from the wind)
+  2S/2P → 1        417 m  237°  ( 15° from the wind)
+  1 → 2P           418 m  052°  (170° from the wind)
+  2P → Finish      206 m  332°  (110° from the wind)
+  1.76 km in all
+  saved as res://maps/silvaplana/courses/iq_pm1.json
+
+iQFOiL Medal race MR1, finish left (SM1) (SM1, 12 boards): 70 % of the class's size, axis 217° (5° left of the wind); 14774 tries in 26 ms
+  smallest clearance: the marks 257 m, the legs 265 m; the course maker's land warnings: none
+  Start → 1        421 m  123°  ( 99° from the wind)
+  1 → 2S/2P        583 m  037°  (175° from the wind)
+  2S/2P → 1        583 m  217°  (  5° from the wind)
+  1 → 2S           585 m  041°  (179° from the wind)
+  2S → Finish      304 m  122°  (100° from the wind)
+  2.48 km in all
+  saved as res://maps/silvaplana/courses/iq_sm1.json

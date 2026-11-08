@@ -1,0 +1,55 @@
+{
+	"about": "A race course for the course maker (MAP_SILVAPLANA_PLAN.md, W4a). Positions are Swiss LV95 metres; sides are the side each mark is left on.",
+	"name": "T2 sprint slalom",
+	"map": "Lake Silvaplana",
+	"template": "PD3",
+	"sequence": "Start-1-2-3-Finish",
+	"axis_deg": 232.0,
+	"size_percent": 50.0,
+	"boards": 4,
+	"race_type": "slalom",
+	"marks": [
+		{
+			"id": "start boat",
+			"side": "",
+			"east": 2781062.2,
+			"north": 1146664.03
+		},
+		{
+			"id": "start pin",
+			"side": "",
+			"east": 2781093.72,
+			"north": 1146688.66
+		},
+		{
+			"id": "1",
+			"side": "starboard",
+			"east": 2780901.14,
+			"north": 1146918.9
+		},
+		{
+			"id": "2",
+			"side": "port",
+			"east": 2781229.51,
+			"north": 1147175.45
+		},
+		{
+			"id": "3",
+			"side": "starboard",
+			"east": 2781143.4,
+			"north": 1147355.97
+		},
+		{
+			"id": "finish boat",
+			"side": "",
+			"east": 2781286.6,
+			"north": 1147215.25
+		},
+		{
+			"id": "finish pin",
+			"side": "",
+			"east": 2781308.86,
+			"north": 1147242.26
+		}
+	]
+}

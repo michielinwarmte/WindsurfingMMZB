@@ -52,6 +52,14 @@ enum StartStyle { LOOP, HOLD }
 ## deviation), slowly, degrees.
 @export_range(0.0, 6.0) var steering_noise_deg: float = 0.5
 
+@export_group("Getting going")
+## The wind angle it sails on its tack while it is stuck slow (Skipper.GET_GOING_*: on the board but
+## under 2.5 m/s for 6 s, after the gun), degrees, until it has speed again; 0 leaves the angle to the
+## race as before. Light wind on Silvaplana stopped boards on a beat or a slow broad reach, and there the
+## auto-sheet holds only as much sail as the sailor can hold at a standstill, so they never got going
+## and fell again and again (the skipper's heads, 8 November 2026). Measured by tools/heads.
+@export_range(0.0, 150.0) var get_going_twa_deg: float = 0.0
+
 @export_group("Start")
 ## Where on the start line it wants to cross: 0 = the pin end, 1 = the boat end.
 @export_range(0.0, 1.0) var start_spot: float = 0.5

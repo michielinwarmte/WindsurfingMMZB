@@ -1,0 +1,72 @@
+{
+	"about": "A race course for the course maker (MAP_SILVAPLANA_PLAN.md, W4a). Positions are Swiss LV95 metres; sides are the side each mark is left on.",
+	"name": "iQFOiL Trapezoid, inner loop (I2)",
+	"map": "Lake Silvaplana",
+	"template": "I2",
+	"sequence": "Start-1-4S/4P-1-2-3P-Finish",
+	"axis_deg": 237.0,
+	"size_percent": 40.0,
+	"boards": 12,
+	"marks": [
+		{
+			"id": "start boat",
+			"side": "",
+			"east": 2781267.03,
+			"north": 1147476.24
+		},
+		{
+			"id": "start pin",
+			"side": "",
+			"east": 2781310.17,
+			"north": 1147409.81
+		},
+		{
+			"id": "1",
+			"side": "port",
+			"east": 2780698.38,
+			"north": 1147059.73
+		},
+		{
+			"id": "2",
+			"side": "port",
+			"east": 2781000.98,
+			"north": 1146593.76
+		},
+		{
+			"id": "3S",
+			"side": "starboard",
+			"east": 2781611.62,
+			"north": 1146945.61
+		},
+		{
+			"id": "3P",
+			"side": "port",
+			"east": 2781570.78,
+			"north": 1147008.51
+		},
+		{
+			"id": "4S",
+			"side": "starboard",
+			"east": 2781258.7,
+			"north": 1147378.9
+		},
+		{
+			"id": "4P",
+			"side": "port",
+			"east": 2781217.85,
+			"north": 1147441.8
+		},
+		{
+			"id": "finish boat",
+			"side": "",
+			"east": 2781556.13,
+			"north": 1147168.48
+		},
+		{
+			"id": "finish pin",
+			"side": "",
+			"east": 2781591.09,
+			"north": 1147170.31
+		}
+	]
+}
