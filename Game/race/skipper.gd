@@ -2984,7 +2984,7 @@ func _steer_toward(telemetry: Telemetry, wanted_deg: float) -> void:
 		elif telemetry.speed_ms < config.crawl_no_head_up_ms and heading_up and absf(error_deg) > CRAWL_ERROR_DEG:
 			if _crawl_stuck_from_s < 0.0:
 				_crawl_stuck_from_s = _time_s
-			elif _time_s - _crawl_stuck_from_s >= config.crawl_stuck_s:
+			elif _time_s - _crawl_stuck_from_s >= (config.crawl_go_stuck_s if _going_from_hold and config.crawl_go_stuck_s >= 0.0 else config.crawl_stuck_s):
 				_crawling = true
 		else:
 			_crawl_stuck_from_s = -1.0

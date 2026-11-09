@@ -104,6 +104,11 @@ enum StartStyle { LOOP, HOLD }
 ## the trap lasted 75 to 80 s, while a head-up at a crawl that works (off the shore, back behind the line) turns the
 ## board in a few. 0: at once (the first on/off tests, s2 and s2b, which ran a board aground off the shore, r0017).
 @export_range(0.0, 30.0) var crawl_stuck_s: float = 4.0
+## In the go off its hold (Skipper._start_heading(): from the hold's speed, heading up for its crossing), how long the
+## crawl must last before crawl_no_head_up_ms lets go, seconds; below 0: crawl_stuck_s, as everywhere. Phase S (9 November
+## 2026, the crawl rule on, S3's off arms): 10 of 40 late starts still crawled at the gun, half of them 20 to 24 s late:
+## gone from the hold at 1.6 to 2 m/s some 33 m back, the 4 s of crawl_stuck_s and the climb out of the crawl made them late.
+@export_range(-1.0, 30.0) var crawl_go_stuck_s: float = -1.0
 ## On a slalom's dive down onto the line, early (about to cross before the gun), it keeps the dive's heading and only
 ## eases the sheet, and luffs up only in the last Skipper.SLALOM_LAST_LUFF_S before it would cross (Skipper.
 ## _slalom_start_heading()); false: it luffs up to Skipper.HOLD_LUFF_TWA_DEG at once, as before. Phase S's baseline

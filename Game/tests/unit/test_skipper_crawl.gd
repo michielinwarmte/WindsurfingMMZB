@@ -94,3 +94,21 @@ func test_on_it_stands_aside_while_the_shore_lookout_steers() -> void:
 	skipper._steer_toward(skipper._sim.telemetry, 320.0)
 	skipper._steer_toward(skipper._sim.telemetry, 320.0)
 	assert_gt(skipper._hands.steer, 0.9, "turned off the shore: it heads up as asked (let go, it ran aground: r0091)")
+
+
+func test_in_the_go_off_its_hold_it_can_let_go_at_once() -> void:
+	var skipper: Skipper = _crawling_skipper(2.0)
+	skipper.config.crawl_stuck_s = 4.0
+	skipper.config.crawl_go_stuck_s = 0.0
+	skipper._time_s = 100.0
+	skipper._going_from_hold = false
+	skipper._steer_toward(skipper._sim.telemetry, 320.0)
+	skipper._steer_toward(skipper._sim.telemetry, 320.0)
+	assert_gt(skipper._hands.steer, 0.9, "not in the go: the 4 s of crawl_stuck_s first")
+	skipper._going_from_hold = true
+	skipper._steer_toward(skipper._sim.telemetry, 320.0)
+	assert_eq(skipper._hands.steer, 0.0, "going off its hold: it lets go at once (crawl_go_stuck_s 0)")
+
+
+func test_crawl_go_stuck_s_is_off_by_default() -> void:
+	assert_lt(SkipperConfig.new().crawl_go_stuck_s, 0.0, "below 0: crawl_stuck_s in the go too")
