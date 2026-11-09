@@ -82,6 +82,13 @@ enum StartStyle { LOOP, HOLD }
 ## auto-sheet holds only as much sail as the sailor can hold at a standstill, so they never got going
 ## and fell again and again (the skipper's heads, 8 November 2026). Measured by tools/heads.
 @export_range(0.0, 150.0) var get_going_twa_deg: float = 0.0
+## At the start's go, slower than Skipper.GET_GOING_UNTIL_MS (just off its hold), it sails no closer to the wind than
+## this angle on its tack, degrees, until it has speed, and only then heads up for the line (Skipper._start_heading());
+## 0: straight onto the course for the line, as before. The suite (9 November 2026, r0007 of the hold-out, the lake,
+## 15 kt): off the hold at 2 m/s on a beam reach, the course for the line was higher; the stick held hard toward the
+## wind for 30 s did not turn the board at that speed and spilled the sail (angle of attack 3 to 5 deg): 2 m/s for 40 s,
+## 58 s late. get_going_twa_deg (after the gun, any slow board) measured too: start 70 -> 72 %, but legs 92 -> 88 %.
+@export_range(0.0, 150.0) var go_reach_twa_deg: float = 0.0
 
 @export_group("Start")
 ## Where on the start line it wants to cross: 0 = the pin end, 1 = the boat end.

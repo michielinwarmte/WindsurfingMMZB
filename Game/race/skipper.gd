@@ -2355,6 +2355,13 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 	_going_from_hold = true
 	var go_deg: float = _course_to(telemetry, _through(position, cross_at))
 	note = "start: go"
+	# go_reach_twa_deg: slow off the hold, it first gets speed on a reach (no closer to the wind than that) and heads
+	# up for the line once faster than GET_GOING_UNTIL_MS.
+	if config.go_reach_twa_deg > 0.0 and telemetry.speed_ms < GET_GOING_UNTIL_MS:
+		var go_twa: float = wrapf(wind_deg - go_deg, -180.0, 180.0)
+		if signf(go_twa) == _tack() and absf(go_twa) < config.go_reach_twa_deg:
+			go_deg = wind_deg - _tack() * config.go_reach_twa_deg
+			note = "start: go, getting speed first"
 	if not _crossing_on_this_tack:
 		# No point of the line can be reached on this tack: near the line, sailing on to the
 		# layline would take it past the end of the line. It tacks (or gybes) now.
