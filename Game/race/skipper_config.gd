@@ -33,6 +33,10 @@ enum StartStyle { LOOP, HOLD }
 ## How far past the layline it sails before tacking or gybing, metres. A small margin means a
 ## risk of not laying the mark (and two more tacks); a big one sails extra distance.
 @export_range(0.0, 60.0) var layline_margin_m: float = 10.0
+## The margin past the layline for the last tack of a beat into a mark only, metres (Skipper._course_to());
+## -1: layline_margin_m, as before. The suite's baseline_A (8-9 November 2026, 212 beats into a mark): the last tack
+## a median 31 m beyond the board's own layline (70 % over 25 m), of which layline_margin_m's 10 m is chosen.
+@export_range(-1.0, 60.0) var mark_layline_margin_m: float = -1.0
 ## How close it rounds a mark, metres.
 @export_range(4.0, 20.0) var mark_margin_m: float = 8.0
 ## Starts the turn round a mark or through a gate before it gets there, as a sailor goes wide in and tight out

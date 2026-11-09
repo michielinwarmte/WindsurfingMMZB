@@ -1588,8 +1588,13 @@ func _course_to(telemetry: Telemetry, target: Vector2, arrive_tack: float = 0.0,
 			note = "reach, other tack (getting going to tack)"
 			return wind_deg - tack * 90.0 + _keep_clear_deg(telemetry, tack)
 		var past_other_m: float = _past_layline_m(position, aim, wind_deg, tack, up_track_deg if upwind else down_track_deg)
-		if turn_ready and (turn_now or past_other_m >= margin_m):
-			_ask_for_manoeuvre(true, past_other_m >= margin_m + SLOW_TACK_PAST_M)
+		# Past the layline of a beat into a mark (the mark now a reach on the other tack): the last tack at
+		# mark_layline_margin_m, when it is set.
+		var other_margin_m: float = margin_m
+		if upwind and arrive_tack != 0.0 and layline_margin_m < 0.0 and config.mark_layline_margin_m >= 0.0:
+			other_margin_m = config.mark_layline_margin_m
+		if turn_ready and (turn_now or past_other_m >= other_margin_m):
+			_ask_for_manoeuvre(true, past_other_m >= other_margin_m + SLOW_TACK_PAST_M)
 	if aim != target:
 		note += " (for the layline)"
 	return heading_deg + _keep_clear_deg(telemetry, tack)
