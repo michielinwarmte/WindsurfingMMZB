@@ -90,6 +90,14 @@ extends SceneTree
 ##                         over): a new race with the same skippers set up again and every board at a new random
 ##                         spot (restart_race()); the results, the start report and --stop_after_gun are the
 ##                         second race's
+##   [--start_only=1 --start_watch_s=60] a start-only race (the training method's phase S, 9 November 2026): the
+##                         race ends once every board is over the start line (or aground), or start_watch_s after
+##                         the gun (the start check's limit is 20 s after it; the extra 40 s say how late a late
+##                         start was). HEADS_RESULT says start_only
+##   [--start_spare_s=30]  only reachable drops (phase S): a board whose way to the start line (start_need_s, the
+##                         start check's own estimate) takes longer than the countdown less this, at the countdown's
+##                         start or after an R, prints DROP_TOO_FAR and the tool quits (code 3), like COURSE_ILLEGAL,
+##                         so the random suite draws the race again
 ##   [--sailor.<field>=<n>] a number of every skipper's sailor (SailorConfig, on its own gear too):
 ##                         the fall rule's, for the stay-on-the-board work
 ##   [--out_dir=<folder>: a CSV per board: race time, x, z, heading, speed, its next step, and what
@@ -253,6 +261,12 @@ class Entry:
 	var penalties_seen: int = 0
 	## Where it was when the countdown began (the random suite's start check), and at every R.
 	var spawn_at: Vector2 = Vector2.INF
+	## At the gun (phase S's measures): its speed, how far behind the start line it was (perpendicular to the
+	## line; negative: over it), how far from the line's segment, and whether it was over early.
+	var gun_speed_ms: float = NAN
+	var gun_behind_m: float = NAN
+	var gun_to_line_m: float = NAN
+	var gun_ocs: bool = false
 
 
 func _initialize() -> void:
@@ -451,6 +465,17 @@ func _initialize() -> void:
 			if entry.trace_file != null:
 				entry.trace_file.store_line(Telemetry.csv_header())
 	apply_skipper_overrides(entries, options)
+	# Phase S (9 November 2026): start-only races from reachable drops.
+	var start_only: bool = options.get("start_only", "0") != "0"
+	var start_watch_s: float = options.get("start_watch_s", "60").to_float()
+	var start_spare_s: float = options["start_spare_s"].to_float() if options.has("start_spare_s") and not dropping else -INF
+	var timing_wind_kt: float = wind_kt * options.get("lake_wind_scale", "1").to_float()
+	if start_spare_s > -INF:
+		var too_far: String = drop_too_far(race, entries, course.axis_deg, timing_wind_kt, prestart_s, start_spare_s)
+		if too_far != "":
+			print("DROP_TOO_FAR " + too_far)
+			quit(3)
+			return
 	race.start_in(free_sail_s)
 	print("COURSE_JSON " + course_json(race, course.axis_deg))
 
@@ -481,6 +506,12 @@ func _initialize() -> void:
 			tick = 0
 			ticks = roundi((prestart_s + seconds) / DT)
 			print("RESTART (the game's R) at race time %.0f s: the same skippers set up again, new random spots" % restart_after_s)
+			if start_spare_s > -INF:
+				var too_far_after_r: String = drop_too_far(race, entries, course.axis_deg, timing_wind_kt, prestart_s, start_spare_s)
+				if too_far_after_r != "":
+					print("DROP_TOO_FAR after the R: " + too_far_after_r)
+					quit(3)
+					return
 		step_race(race, entries, blind, rules)
 		if bottom != null:
 			aground_count += _check_the_bottom(bottom, race, entries)
@@ -493,9 +524,13 @@ func _initialize() -> void:
 		if not gun_seen and race.is_started() and race.clock_s() >= 0.0:
 			gun_seen = true
 			outside_at_gun = boards_outside(race, area)
+			for i: int in entries.size():
+				note_the_gun(entries[i], race, i)
 		if restart_after_s < INF and not restarted:
 			continue  # the first race of a restart is sailed until the R
 		if race.phase() == RaceSim.Phase.FINISHED or race.clock_s() >= stop_after_gun_s:
+			break
+		if start_only and race.clock_s() >= 0.0 and (race.clock_s() >= start_watch_s or all_over_the_line(race, entries)):
 			break
 		if dropping and entries.all(func(e: Entry) -> bool: return e.goal_at_s >= 0.0 or e.aground):
 			break
@@ -524,7 +559,6 @@ func _initialize() -> void:
 		print(penalty_report(rules, entries))
 	if bottom != null:
 		print("Aground: %d of %d boards%s" % [aground_count, entries.size(), " (the skippers look out for the shore)" if shore_guard else " (no shore lookout)"])
-	var timing_wind_kt: float = wind_kt * options.get("lake_wind_scale", "1").to_float()
 	var legs_expected: Array = []
 	for k: int in range(1, race.steps().size()):
 		legs_expected.append(snappedf(TrainingDrops.expected_leg_s(race.steps()[k - 1].target(), race.steps()[k].target(), course.axis_deg, timing_wind_kt), 0.1))
@@ -541,8 +575,51 @@ func _initialize() -> void:
 		result["start_need_s"] = TrainingDrops.expected_leg_s(entries[i].spawn_at, race.steps()[0].target(), course.axis_deg, timing_wind_kt) if entries[i].spawn_at.x != INF else 0.0
 		result["legs_expected"] = legs_expected
 		result["prestart_s"] = prestart_s
+		# Phase S's measures: at the gun, and whether the race was start-only and restarted.
+		result["start_only"] = start_only
+		result["restarted"] = restarted
+		result["gun_speed_ms"] = snappedf(entries[i].gun_speed_ms, 0.01) if not is_nan(entries[i].gun_speed_ms) else -1.0
+		result["gun_behind_m"] = snappedf(entries[i].gun_behind_m, 0.1) if not is_nan(entries[i].gun_behind_m) else 0.0
+		result["gun_to_line_m"] = snappedf(entries[i].gun_to_line_m, 0.1) if not is_nan(entries[i].gun_to_line_m) else -1.0
+		result["ocs_at_gun"] = entries[i].gun_ocs
 		print("HEADS_RESULT " + JSON.stringify(result))
 	quit(0)
+
+
+## --start_spare_s (phase S, Max's choice of 9 November 2026: only drops that can reach the line with 30 s to spare):
+## the first board whose way to the start line (the start check's own estimate, TrainingDrops.expected_leg_s(), from
+## where it is now) takes longer than the countdown less spare_s, as "<board> needs <n> s of <countdown>"; "" when
+## every board can make it.
+static func drop_too_far(race: RaceSim, entries: Array[Entry], axis_deg: float, wind_kt: float, countdown_s: float, spare_s: float) -> String:
+	for entry: Entry in entries:
+		var need_s: float = TrainingDrops.expected_leg_s(_where(entry), race.steps()[0].target(), axis_deg, wind_kt)
+		if not start_reachable(need_s, countdown_s, spare_s):
+			return "%s needs %.0f s of %.0f (spare %.0f)" % [entry.name.replace(" ", "_"), need_s, countdown_s, spare_s]
+	return ""
+
+
+## A drop can reach the start line in time: its start need at most the countdown less the spare seconds.
+static func start_reachable(need_s: float, countdown_s: float, spare_s: float) -> bool:
+	return need_s <= countdown_s - spare_s
+
+
+## At the gun (phase S): the board's speed, how far behind the start line it is (negative: over it), how far from the
+## line's segment, and whether it is over early.
+static func note_the_gun(entry: Entry, race: RaceSim, index: int) -> void:
+	var line: RaceStep = race.steps()[0]
+	var at: Vector2 = _where(entry)
+	entry.gun_speed_ms = entry.sim.telemetry.speed_ms
+	entry.gun_behind_m = -RoundingCheck.over_line_m(at, line.points[0], line.points[1], line.in_dir)
+	entry.gun_to_line_m = Geometry2D.get_closest_point_to_segment(at, line.points[0], line.points[1]).distance_to(at)
+	entry.gun_ocs = race.is_ocs(index)
+
+
+## Every board over the start line (its start counted) or aground: a start-only race is over.
+static func all_over_the_line(race: RaceSim, entries: Array[Entry]) -> bool:
+	for i: int in entries.size():
+		if race.splits_s(i).is_empty() and not entries[i].aground:
+			return false
+	return true
 
 
 ## The boards whose fin has touched the lake's bottom this tick (ShoreCheck, as the game's): stopped

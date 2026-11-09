@@ -5,11 +5,16 @@ Every run draws its own race, so the skipper is never tuned to a few fixed ones,
 checks that must always hold (not by who wins), with every mark rounding measured:
 
     python -I tools/heads/random_suite.py --run=<name> [--count=200] [--seed=1] [--cores=8]
-        [--project=<a frozen copy>/Game] [--cpu_mask=0x5555] [--set=tune|holdout] [--phase=A|B]
+        [--project=<a frozen copy>/Game] [--cpu_mask=0x5555] [--set=tune|holdout] [--phase=A|B|S]
         [--extra="--skipper.<switch>=1 ..."]
 
   --phase=A      one general head on every board (the default): a persona at its best with steady hands
   --phase=B      the personas and characters: any of the 20 personas or the 4 characters, at the game's level (0.5)
+  --phase=S      the starts (Max, 9 November 2026): the general head, start-only races (run_race --start_only=1: the
+                 race ends once the board is over the line, or 60 s after the gun), only drops that reach the line
+                 with 30 s to spare (--start_spare_s=30; a drop too far prints DROP_TOO_FAR and is drawn again), R in
+                 20 % of the races in the countdown or up to 2 minutes after the gun; checks: start, stuck, aground,
+                 falls (none at all)
   --extra="..."  arguments added to every race (an A/B: the same --seed and --set with and without a switch)
 
 Speed (measured 8 November 2026 on the 8-core Ryzen 7 5800X3D, one board, the editor engine): 4.0x real time alone,
@@ -67,7 +72,11 @@ PERSONAS = ["aiko", "bruno", "elin", "greta", "hana", "ines", "jonas", "kofi", "
 CHARACTERS = ["allrounder", "cautious", "gambler", "rookie"]
 TUNE_SEED_BASE = 1
 HOLDOUT_SEED_BASE = 700001
-REDRAWN_MARKS = ("COURSE_ILLEGAL", "WIND_TOO_LOW", "FIT_FAILED")
+REDRAWN_MARKS = ("COURSE_ILLEGAL", "WIND_TOO_LOW", "FIT_FAILED", "DROP_TOO_FAR")
+# Phase S: only drops that reach the start line with this much to spare (Max, 9 November 2026), and how long after the
+# gun a start-only race is watched (the start check's limit is 20 s; the rest says how late a late start was).
+PHASE_S_SPARE_S = 30
+PHASE_S_WATCH_S = 60
 # The checks' limits.
 START_SPARE_S = 20.0
 STUCK_LIMIT_S = 20.0
@@ -121,9 +130,11 @@ def draw_race(rng, phase="A"):
     else:
         who = "general head"
         args = list(GENERAL_HEAD) + ["--gear=1", "--finish_window=60", "--min_wind_kt=14"]
+    if phase == "S":
+        args += ["--start_only=1", "--start_spare_s=%d" % PHASE_S_SPARE_S, "--start_watch_s=%d" % PHASE_S_WATCH_S]
     seed = rng.randint(1, 10**6)
     args += ["--seed=%d" % seed]
-    d = {"who": who}
+    d = {"who": who, "phase": phase}
     countdown = rng.choice([120, 180, 300])
     args.append("--prestart=%d" % countdown)
     d["countdown_s"] = countdown
@@ -180,7 +191,17 @@ def draw_race(rng, phase="A"):
         args += ["--spawn=anywhere", "--spawn_seed=%d" % seed]
         d["start"] = "anywhere"
     d["restart"] = "-"
-    if rng.random() < 0.2:
+    with_r = rng.random() < 0.2  # one draw whatever the phase: phase A's and B's races stay what they were
+    if with_r and phase == "S":
+        # Phase S: R in the countdown or up to 2 minutes after the gun; the start after the last R counts.
+        if rng.random() < 0.5:
+            at_s = -rng.uniform(5.0, countdown - 5.0)
+            d["restart"] = "countdown %.0f s" % at_s
+        else:
+            at_s = rng.uniform(0.0, 120.0)
+            d["restart"] = "after the gun %.0f s" % at_s
+        args.append("--restart_after=%.0f" % at_s)
+    elif with_r:
         when = rng.random()
         if when < 0.33:
             at_s = -rng.uniform(5.0, countdown - 5.0)
@@ -347,6 +368,20 @@ def score(label, log_text, csv_dir, drawn):
         checks["start"] = (splits[0] <= start_allowed, "%.0f s after the gun (allowed %.0f)" % (splits[0], start_allowed)) if splits else (False, "never started")
         checks["stuck"] = (r.get("longest_stuck_s", 0.0) <= STUCK_LIMIT_S, "longest %.0f s" % r.get("longest_stuck_s", 0.0))
         checks["aground"] = (not r.get("aground", False), r.get("aground_note", "") or "no")
+        if drawn.get("phase") == "S":
+            # Phase S: a start-only race. The checks are the start's; a fall anywhere from the countdown to the start
+            # counts (the measures that may not get worse: falls, stuck, aground, over early).
+            checks["falls"] = (r.get("falls", 0) == 0, "%d (none allowed in a start)" % r.get("falls", 0))
+            start = {"start_s": round(splits[0], 1) if splits else None, "allowed_s": round(start_allowed, 1),
+                     "need_s": round(r.get("start_need_s", 0.0), 1), "countdown_s": prestart,
+                     "gun_speed_ms": r.get("gun_speed_ms", -1.0), "gun_behind_m": r.get("gun_behind_m", 0.0),
+                     "gun_to_line_m": r.get("gun_to_line_m", -1.0), "ocs": bool(r.get("ocs", False)),
+                     "ocs_at_gun": bool(r.get("ocs_at_gun", False)), "falls_before_gun": r.get("falls_before_gun", 0),
+                     "restarted": bool(r.get("restarted", False)), "spawn": r.get("spawn", [])}
+            boards.append({"board": r["board"], "checks": {k: {"ok": v[0], "what": v[1]} for k, v in checks.items()},
+                           "pass": all(v[0] for v in checks.values()), "legs": [], "roundings": [],
+                           "falls": r.get("falls", 0), "note": r.get("note", ""), "start": start})
+            continue
         checks["finished"] = (bool(r.get("reached")), "%d of %d steps" % (len(splits), r.get("steps", 0)))
         legs = []
         leg_fail = []
@@ -379,6 +414,44 @@ def score(label, log_text, csv_dir, drawn):
 
 
 # ---------------------------------------------------------------- the viewer
+
+def start_card(results, e):
+    """Phase S's card: the starts' numbers, and the starts on time by water and course kind, by course, by start place."""
+    starts = [(r, b["start"]) for r in results for b in r["boards"] if "start" in b]
+    if not starts:
+        return ""
+    on_time = [st["start_s"] is not None and st["start_s"] <= st["allowed_s"] for _, st in starts]
+    after = sorted(st["start_s"] if st["start_s"] is not None else float("inf") for _, st in starts)
+    med = statistics.median(after)
+    speeds = [st["gun_speed_ms"] for _, st in starts if st["gun_speed_ms"] >= 0.0]
+    behind = [st["gun_behind_m"] for _, st in starts]
+    tiles = (
+        '<div class="tile"><div class="big">%d / %d</div><div class="dim">starts on time (under 20 s)</div></div>' % (sum(on_time), len(on_time)) +
+        '<div class="tile"><div class="big">%s</div><div class="dim">median seconds after the gun</div></div>' % ("%.1f s" % med if med != float("inf") else "over 60 s") +
+        '<div class="tile"><div class="big">%d</div><div class="dim">over early at the gun</div></div>' % sum(st["ocs_at_gun"] for _, st in starts) +
+        '<div class="tile"><div class="big">%d</div><div class="dim">fell before the start</div></div>' % sum(1 for r, _ in starts if r["boards"][0]["falls"] > 0) +
+        '<div class="tile"><div class="big">%s</div><div class="dim">median speed at the gun</div></div>' % ("%.1f m/s" % statistics.median(speeds) if speeds else "-") +
+        '<div class="tile"><div class="big">%s</div><div class="dim">median behind the line at the gun</div></div>' % ("%.0f m" % statistics.median(behind) if behind else "-"))
+
+    def table(key_of):
+        groups = {}
+        for (r, st), ok in zip(starts, on_time):
+            g = groups.setdefault(key_of(r), [0, 0])
+            g[0] += 1
+            g[1] += 1 if ok else 0
+        return "".join('<tr><td>%s</td><td class="num">%d</td><td class="num">%d</td><td class="num">%.0f %%</td></tr>' % (
+            e(k), v[0], v[0] - v[1], 100.0 * v[1] / v[0]) for k, v in sorted(groups.items(), key=lambda kv: -(kv[1][0] - kv[1][1])))
+    head = '<tr><th>what</th><th class="num">races</th><th class="num">late</th><th class="num">on time</th></tr>'
+    course_of = lambda r: r["drawn"].get("course", "?").split(" ")[0] if r["drawn"].get("course_kind") in ("saved", "shifted") else (
+        "new " + r["drawn"].get("course", "?").split(" ")[1] if r["drawn"].get("course_kind") == "new" else r["drawn"].get("course", "?").split(" ")[0])
+    return ('<div class="card"><h2>The starts (phase S)</h2><div class="tiles">%s</div></div><div class="grid">'
+            '<div class="card"><h2>Starts by water and course kind</h2><table>%s%s</table></div>'
+            '<div class="card"><h2>Starts by start place, countdown and R</h2><table>%s%s</table></div>'
+            '<div class="card"><h2>Starts by course</h2><table>%s%s</table></div></div>') % (
+        tiles, head, table(lambda r: "%s / %s" % (r["drawn"].get("water"), r["drawn"].get("course_kind"))),
+        head, table(lambda r: "%s, %d s%s" % (r["drawn"].get("start"), r["drawn"].get("countdown_s", 0), ", R" if r["drawn"].get("restart", "-") != "-" else "")),
+        head, table(course_of))
+
 
 def write_viewer(out_dir, state, results):
     done = len(results)
@@ -445,6 +518,7 @@ def write_viewer(out_dir, state, results):
         ("%.1f m" % statistics.median(exits)) if exits else "-", ROUND_EXIT_M, "bad" if share(lambda v: v > ROUND_EXIT_M, exits) > 20 else "dim", share(lambda v: v > ROUND_EXIT_M, exits),
         ("%.0f m" % statistics.median(overs)) if overs else "-", OVERSTAND_M, "bad" if share(lambda v: v > OVERSTAND_M, overs) > 20 else "dim", share(lambda v: v > OVERSTAND_M, overs),
         ("%.0f %%" % share(lambda v: v > GATE_EXTRA_TURN_DEG, gates)) if gates else "-", GATE_EXTRA_TURN_DEG)
+    starts_html = start_card(results, e)
     page = """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="refresh" content="15"><title>AI training viewer</title><style>
 :root{--bg:#f6f7f9;--card:#fff;--ink:#1d2330;--dim:#667085;--line:#e3e6eb;--good:#2e9d5b;--warn:#d9a21b;--bad:#d14343;--accent:#2f6fdb}
@@ -474,7 +548,7 @@ code{font-size:11px;word-break:break-all;color:var(--dim)}ul{margin:0;padding-le
   <div class="tile"><div class="big">%s</div><div class="dim">time left (about)</div></div>
   <div class="tile"><div class="big">%.0f s</div><div class="dim">per race, all cores together</div></div>
 </div><div style="margin-top:10px" class="progress"><div style="width:%.1f%%"></div></div></div>
-<div class="grid">
+%s<div class="grid">
 <div class="card"><h2>The checks (every board, every race)</h2><table>%s</table></div>
 <div class="card"><h2>Mark roundings</h2>%s</div>
 </div>
@@ -489,7 +563,7 @@ code{font-size:11px;word-break:break-all;color:var(--dim)}ul{margin:0;padding-le
         e(state["run"]), e(state["set"]), time.strftime("%H:%M", time.localtime(state["started"])),
         done, total, (100.0 * passed / done) if done else 0.0, len(state["running"]), state["redrawn"],
         time.strftime("%H:%M:%S", time.gmtime(eta)) if done else "-", per_run, 100.0 * done / max(total, 1),
-        rows_checks or "<tr><td class='dim'>no races yet</td></tr>", rnd_html, rows_kind, rows_start,
+        starts_html, rows_checks or "<tr><td class='dim'>no races yet</td></tr>", rnd_html, rows_kind, rows_start,
         running or "<li class='dim'>none</li>", rows_fail or "<tr><td class='dim' colspan=4>none</td></tr>",
         time.strftime("%H:%M:%S"), e(out_dir))
     for path in (os.path.join(out_dir, "viewer.html"), os.path.join(os.path.dirname(out_dir), "viewer.html")):

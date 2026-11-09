@@ -8,9 +8,19 @@ Read this instead of the logs (the efficient loop, Documentation/AI_TRAINING_MET
     python -I tools/heads/suite_summary.py <run> --wait          first wait until the run has all its races (one line when
                                                                  done: for a background command or a monitor)
 
+    python -I tools/heads/suite_summary.py <run> --classes       phase S: the late starts by class (water and course kind,
+                                                                 course, start place, countdown, R)
+
 Two runs are compared on the races both have (the same race numbers, so the same draws when the --seed and --set match).
+
+Phase S (the starts, Documentation/AI_TRAINING_METHOD.md): two runs are judged race by race. Per measure (the start on
+time, never stuck, never aground, no fall, not over early at the gun) a race is fixed (bad in the first run, good in the
+second), broken (the other way) or the same; the one-sided sign test says whether the fixed beat the broken by more than
+chance ("pass", p under 5 %) or not ("chance"); for the other measures "WORSE" when the broken beat the fixed by that
+test. The median seconds after the gun (never over the line counts as endless) may not go up.
 """
 import json
+import math
 import os
 import statistics
 import sys
@@ -26,6 +36,138 @@ def load(run):
     path = os.path.join(SUITE, run, "results.jsonl")
     with open(path, encoding="utf-8") as handle:
         return {r["label"]: r for r in (json.loads(line) for line in handle if line.strip())}
+
+
+# Phase S's measures per race, each True when good: the start on time, never stuck, never aground, no fall, not over
+# early at the gun.
+S_MEASURES = ["start", "stuck", "aground", "no fall", "not over early"]
+SIGN_LEVEL = 0.05
+
+
+def sign_test_p(wins, losses):
+    """The one-sided sign test: the chance of at least `wins` of wins + losses flips going one way if each way were
+    equally likely (a fair coin)."""
+    n = wins + losses
+    if n == 0:
+        return 1.0
+    return sum(math.comb(n, k) for k in range(wins, n + 1)) / 2.0 ** n
+
+
+def is_phase_s(results):
+    return any("start" in b for r in results.values() for b in r["boards"])
+
+
+def s_measures(race):
+    """A phase S race's measures (its first board's), each True when good."""
+    b = race["boards"][0] if race["boards"] else None
+    if b is None:
+        return {m: False for m in S_MEASURES}
+    st = b.get("start", {})
+    return {"start": b["checks"]["start"]["ok"], "stuck": b["checks"]["stuck"]["ok"], "aground": b["checks"]["aground"]["ok"],
+            "no fall": b["falls"] == 0, "not over early": not st.get("ocs_at_gun", False)}
+
+
+def start_s(race):
+    """Seconds after the gun it crossed the line; endless when it never did."""
+    b = race["boards"][0] if race["boards"] else None
+    value = b.get("start", {}).get("start_s") if b else None
+    return value if value is not None else float("inf")
+
+
+def s_numbers(results):
+    races = list(results.values())
+    out = {"races": len(races)}
+    for m in S_MEASURES:
+        out[m + " %"] = 100.0 * sum(s_measures(r)[m] for r in races) / max(len(races), 1)
+    out["start median s"] = statistics.median([start_s(r) for r in races]) if races else float("nan")
+    speeds = [r["boards"][0]["start"]["gun_speed_ms"] for r in races if r["boards"] and r["boards"][0]["start"]["gun_speed_ms"] >= 0.0]
+    out["gun speed median"] = statistics.median(speeds) if speeds else float("nan")
+    behind = [r["boards"][0]["start"]["gun_behind_m"] for r in races if r["boards"]]
+    out["gun behind median m"] = statistics.median(behind) if behind else float("nan")
+    return out
+
+
+def s_flips(off, on):
+    """Per measure: the races fixed and broken going from `off` to `on` (the race labels)."""
+    flips = {m: ([], []) for m in S_MEASURES}
+    for label in sorted(set(off) & set(on)):
+        a, b = s_measures(off[label]), s_measures(on[label])
+        for m in S_MEASURES:
+            if not a[m] and b[m]:
+                flips[m][0].append(label)
+            elif a[m] and not b[m]:
+                flips[m][1].append(label)
+    return flips
+
+
+def s_verdict(measure, fixed, broken):
+    """The sign test's verdict for one measure: for the start "pass" (fixed beat broken beyond chance), "chance" or
+    "no gain"; for the others "WORSE" (broken beat fixed beyond chance) or "ok"."""
+    if measure == "start":
+        p = sign_test_p(fixed, broken)
+        if fixed <= broken:
+            return p, "no gain"
+        return p, "pass" if p < SIGN_LEVEL else "chance"
+    p = sign_test_p(broken, fixed)
+    return p, "WORSE" if p < SIGN_LEVEL else "ok"
+
+
+def s_main(runs, data, flags):
+    nums = [s_numbers(d) for d in data]
+    for key in nums[0]:
+        vals = [n[key] for n in nums]
+        print("%-22s" % key + "".join("%10.1f" % v for v in vals))
+    if len(data) == 2:
+        flips = s_flips(data[0], data[1])
+        print("\nrace by race (fixed / broken, one-sided sign test):")
+        for m in S_MEASURES:
+            fixed, broken = flips[m]
+            p, verdict = s_verdict(m, len(fixed), len(broken))
+            print("  %-16s fixed %3d  broken %3d   p %.3f  %s" % (m, len(fixed), len(broken), p, verdict))
+        med = [n["start median s"] for n in nums]
+        print("  %-16s %.1f -> %.1f s  %s" % ("median after gun", med[0], med[1], "WORSE" if med[1] > med[0] else "ok"))
+        print("  start fixed:  %s" % (" ".join(flips["start"][0]) or "-"))
+        print("  start broken: %s" % (" ".join(flips["start"][1]) or "-"))
+        for m in S_MEASURES[1:]:
+            if flips[m][1]:
+                print("  %s broken: %s" % (m, " ".join(flips[m][1])))
+    if "classes" in flags:
+        print_classes(data[-1])
+    if "failures" in flags:
+        late = [r for r in data[-1].values() if not s_measures(r)["start"]][-int(flags["failures"]):]
+        for r in late:
+            print("\n%s %s\n  %s\n  %s" % (r["label"], json.dumps(r["drawn"]), json.dumps(r["boards"][0].get("start") if r["boards"] else None), r.get("replay", "")))
+
+
+def course_of(drawn):
+    kind = drawn.get("course_kind")
+    course = drawn.get("course", "?")
+    if kind in ("saved", "shifted"):
+        return course.split(" ")[0]
+    if kind == "new":
+        return "new " + course.split(" ")[1]
+    return course.split(" ")[0]
+
+
+def print_classes(results):
+    """The late starts by class, the biggest first."""
+    races = list(results.values())
+    classes = {
+        "water / course kind": lambda d: "%s / %s" % (d.get("water"), d.get("course_kind")),
+        "course": course_of,
+        "start place": lambda d: d.get("start", "?"),
+        "countdown": lambda d: "%d s" % d.get("countdown_s", 0),
+        "R": lambda d: d.get("restart", "-").split(" ")[0] if d.get("restart", "-") != "-" else "no R",
+    }
+    for name, key_of in classes.items():
+        groups = {}
+        for r in races:
+            g = groups.setdefault(key_of(r["drawn"]), [0, 0])
+            g[0] += 1
+            g[1] += 0 if s_measures(r)["start"] else 1
+        print("\nlate starts by %s:" % name)
+        for k, (n, late) in sorted(groups.items(), key=lambda kv: (-kv[1][1], -kv[1][0])):
+            print("  %-26s %3d late of %3d  (%3.0f %%)" % (k, late, n, 100.0 * late / n))
 
 
 def numbers(results):
@@ -81,6 +223,9 @@ def main(argv):
         common = sorted(set(data[0]) & set(data[1]))
         data = [{k: d[k] for k in common} for d in data]
         print("%s against %s, on the %d races both have" % (runs[1], runs[0], len(common)))
+    if data and all(is_phase_s(d) for d in data):
+        s_main(runs, data, flags)
+        return
     nums = [numbers(d) for d in data]
     keys = ["races", "pass"] + ["check " + c for c in CHECKS] + ["roundings"] + [k + s for k in LIMITS for s in (" median", " over %")] + ["falls per race", "leg/expected median"]
     for key in keys:

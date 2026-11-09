@@ -46,6 +46,7 @@ push only when Max asks.
 | On and off tests | `--extra="--skipper.<switch>=1"` | The same `--seed` and `--set` with and without the switch: the same races, so the difference is the switch |
 | Scoring again | `tools/heads/rescore.py` | `<run>` scores a finished run's roundings again with the present measures (the old `results.jsonl` kept as `results_before_<time>.jsonl`); `--dry` only prints the medians |
 | The summary | `tools/heads/suite_summary.py` | `<run>` (about 20 lines), `<run_off> <run_on>` (side by side, better / worse / same), `--failures=5`, `--wait` (waits until the run is complete: the one wake-up) |
+| Phase S (the starts) | the same three tools | `random_suite.py --phase=S` (start-only races from reachable drops; below); `suite_summary.py <off> <on>` judges phase S runs race by race (fixed / broken per measure, the sign test's verdict, the races' labels); `--classes` ranks the late starts by class; the race tool's `--start_only=1 --start_watch_s=60 --start_spare_s=30`; unit tests `python -I tools/heads/test_suite_summary.py` and `Game/tests/unit/test_run_race_start_only.gd` |
 
 The Godot engine: `C:/Users/Max de Dikke/AppData/Local/Programs/Godot/4.7.2-stable/Godot_v4.7.2-stable_win64_console.exe`
 (the suite has it built in; the GODOT environment variable overrides it). The game's release engine cannot run the
@@ -94,6 +95,10 @@ One board on the race tool: 4.0 to 5.8 times real time (the open water faster th
 about 55 to 60 % CPU, about 100 to 150 one-board races an hour. 12 side by side (mask 0x55FF): 3.1 times each, 37
 together, 82 % CPU: not worth it. The suite sets its own mask (default 0x5555); every Godot it starts inherits it.
 Five different full races side by side took 1:41 (T1) to 7:57 (a new LG2 lasting 37 minutes).
+
+**Start-only races (phase S, measured 9 November 2026):** 16 races on 8 cores (mask 0x5555) in 2:54, with 7 drops too
+far drawn again (each costs a Godot start-up of a few seconds): about 330 starts an hour, 6 to 7 times the full races'
+50. A run of 200 takes about 36 minutes, an on/off pair of 50 a side about 18, a hold-out pair of 100 a side about 36.
 
 ## The loop, efficiently (required from 8 November 2026)
 
@@ -211,6 +216,17 @@ switch that really breaks starts.
   (`pass` / `chance`); the same for falls, stuck, aground and over early; the median seconds after the gun.
 - Measure the speed of a start-only race and write it under "The speed".
 - Unit tests for the sign test and the drop rule; nothing in `Game/sim/`, the controller or the autopilot.
+
+**Done 9 November 2026 (evening)**, as listed, with three choices made on the way:
+- A start-only race is watched 60 s after the gun (`--start_watch_s=60`), not only to the check's 20 s, so a late start
+  says how late it was (never over within 60 s counts as endless in the median). It ends as soon as the board is over.
+- In phase S the falls check allows no fall at all from the countdown to the start (phase A allows one per 5 minutes:
+  a start is never that long), so a switch that makes the board fall shows in the sign test.
+- The R draw: one random number decides R whatever the phase, so phase A's and B's races are drawn exactly as before
+  (checked on 2,000 draws each).
+The judging measures per race: the start on time, never stuck, never aground, no fall, not over early at the gun.
+Smoke run `smoke_S` (seed 900, 16 races, not a phase S seed): 12 on time and clean; it showed the late classes to
+expect (over early at the gun at 2 m/s and back 45 s late; 1.7 m/s at the gun 25 m behind and never over in 60 s).
 
 **The loop in phase S** is steps 2 to 7 with these changes: step 1's baseline is `--phase=S`, 200 races on tune seed 11
 (`baseline_S`); step 3 takes the biggest class of late starts (by water, course kind, start place, countdown, R; first
