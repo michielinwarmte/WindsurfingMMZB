@@ -22,7 +22,8 @@ The rules that follow from it:
 4. **Measure every mark rounding** (below): Max's main pain.
 5. **Keep a set the AI never trains on** (the hold-out). A fix counts only if the hold-out gets better.
 6. **Fix causes, not cases**: no special rule for one course or one persona.
-7. **One general head first**, then the personas, then fleets (when Max says).
+7. **One general head first**, then the personas, then fleets (when Max says). From 9 November 2026 the starts come
+   first of all (phase S, below): one board per race until every start is under 20 s.
 8. **Only planing winds** (14 kt and up): below that the numbers say nothing (Max).
 9. **No play folder until Max sends the message to make one**, and only after the suite passes.
 10. **Keep the PC at about 55 to 75 % CPU** (8 jobs, one per physical core; below).
@@ -142,7 +143,86 @@ rules, less with the second PC as a second pool.
 | (for Max) | 9 Nov 2026 | `round_early` and `mark_layline_margin_m` = 3 together (a measurement for Max's decision, not a loop) | - | 100 races (against away_cap_hold_on): out of the turn 29.0 -> 20.4 m (93 -> 68 % over 15), overstand 31.3 -> 21.1 m (74 -> 38 % over 25), closest 7.8 -> 5.8 m, 858 s less racing (73 races faster, 21 slower), legs 90 -> 93 %; but pass 67 -> 64 %, start 72 -> 70 (2 better, 4 worse), falls 97 -> 94, stuck 99 -> 97, finished 99 -> 97, aground 100 -> 99: the same four races as round_early alone (the suite is deterministic: r0046 T2's mark 3, r0092 the north-east corner, r0019 a stall, r0060 broken in both arms) | Max's call |
 | 8 | 9 Nov 2026 | `gybe_at_mark` (written in loop 1: at a mark whose next leg is on the other gybe it bears away and asks for the gybe once the gybe's arc rounds the mark) | 50 races (seed 3, against away_cap_on): it acted in 38 of 50 races, not only at slalom marks (any mark with the next leg on the other gybe, windward marks into a run too); out of the turn 31.6 -> 29.2 m, 27 races faster and 5 slower (26 s more in all); pass 60 -> 52 %, start 70 -> 66 %, legs 92 -> 88 % | - | No |
 
-**Proposed for Max (9 November 2026, not agreed yet).** Step 6's "no check gets worse" on 100 races blocks a fix for one race's flip: a fix that changes the board's line changes which of the lake's known traps it meets (the north-east corner, T2's mark 3, the east shore), and a start after R depends on where the race before ended. Loops 1 and 2 each won clearly on the hold-out and lost one or two races on a check, every one traced to such chance. Proposed: a check counts as worse when it loses 3 or more races in 100 more than it gains, every flip traced in the log, and none of them during what the switch does.
+**Proposed for Max (9 November 2026, not agreed yet).** Step 6's "no check gets worse" on 100 races blocks a fix for one race's flip: a fix that changes the board's line changes which of the lake's known traps it meets (the north-east corner, T2's mark 3, the east shore), and a start after R depends on where the race before ended. Loops 1 and 2 each won clearly on the hold-out and lost one or two races on a check, every one traced to such chance. Proposed: a check counts as worse when it loses 3 or more races in 100 more than it gains, every flip traced in the log, and none of them during what the switch does. (In phase S the sign test below judges instead, explained to Max on 9 November; whether it also applies to the roundings later is his call.)
+
+## The start phase (phase S, from 9 November 2026: Max's order)
+
+Max, 9 November 2026, after racing the play build on an iQFOiL slalom course he had made more like a PWA slalom in the
+race director (one board of eleven started): "first train the AI to be really good at starting because that is the
+most important. because if you cant even start its already a disaster." Until the gate below, phase S comes before
+everything else in step 3: the roundings (`round_early`, `mark_layline_margin_m`) and phase B wait, and stay off.
+
+**Why the starts.** Loops 1 to 8's off arms (150 races, one board each): 43 boards late or never over the line; 38 of
+the 42 late ones could have made it in the countdown by the start check's own estimate, 25 from the start box or from
+right behind the line, some more than 2 minutes late. The lake is worse than the open water (55 to 69 % on time against
+89 to 100 %), and the slalom courses worst: T2 slalom 30 %, iQFOiL SD3 43 %, PD3 0 to 50 % (few races).
+
+**What phase S changes in a race (Max's decisions).**
+1. **One board per race.** The CPU goes to the rough training; fleets (phase C) are polishing and come only after the
+   gate ("if it starts 15 sec late its already 10x better then now").
+2. **Never the same start twice.** Every race is drawn at random as in phase A (water, course: saved, shifted and
+   turned, or new from the fitter; wind, countdown, start place, R), so the skipper learns a head for every start and
+   not the fastest way for one course. **Every loop draws new races**: a new tune seed per loop and a new hold-out seed
+   per confirmation, never one used before (the log records them). On 9 November tune seeds 1 to 3 and hold-out seed 1
+   were used; phase S starts at tune seed 11 and hold-out seed 21.
+3. **Only reachable drops.** A board is put only where it can reach the line with at least 30 s to spare: the start
+   need from its spot (`start_need_s`) at most the countdown less 30 s; after an R, against the countdown it then has.
+   A drop too far is drawn again, like a course on land (Max: "1 is better ... it also is faster in testing").
+4. **Start-only races.** A race ends once the board is over the line (or at the start check's limit), so a race costs
+   its countdown and a few seconds instead of a whole course: about 8 times more starts per hour than full races
+   (estimate, to be measured in the first run).
+5. **R** in 20 % of the races as before, in the countdown or up to 2 minutes after the gun; the start that counts is
+   the one after the last R.
+
+**The measures, per board.** The start check (over the line no later than 20 s after the gun), and alongside it: the
+seconds after the gun it crosses, its speed at the gun, how far behind the line it is at the gun, over early (and
+whether it went back), falls, stuck, aground.
+
+**How a switch is judged (replaces step 6's rule in phase S).** Both arms sail the same races (the same seed: the suite
+is deterministic), so per race the switch either **fixed** the start (late -> on time), **broke** it (on time -> late)
+or changed nothing. A late start from a spot it could never make is late in both arms and counts for neither.
+1. **Tune set**, 50 new races: it must fix more than it breaks; otherwise it stays off, with the reason in the log.
+2. **Hold-out**, 100 new races: the fixed must beat the broken by more than chance: a one-sided sign test under 5 %.
+   The fewest fixed that pass for each number broken:
+
+   | Broken | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+   |---|---|---|---|---|---|---|---|---|
+   | Fixed at least | 5 | 7 | 9 | 10 | 12 | 13 | 15 | 16 |
+
+   (8-2, 11-4 and 14-6 just fail.)
+3. **Nothing else worse by the same test**: falls, stuck, aground and over early may not lose by a margin that passes
+   the sign test the other way; the median seconds after the gun may not go up.
+4. **Every broken start traced** (its CSV, a replay when needed). If the switch's own action broke it, it is not taken,
+   whatever the numbers.
+
+Why not "no check worse": any change moves the board's path a little, which takes it into a lake trap here and out of
+one there by chance; that rule blocked loops 1 and 2 over one or two races. The sign test lets chance through, not a
+switch that really breaks starts.
+
+**Step S0, the tools (once, before the first loop).**
+- `Game/dev/run_race.gd`: `--start_only=1` (the race ends when every board is over the line, or at the start check's
+  limit; the result says so); `--start_spare_s=30` (a drop whose `start_need_s` is over the countdown less this prints
+  `DROP_TOO_FAR` and quits, like `COURSE_ILLEGAL`); in `HEADS_RESULT` the speed at the gun, the distance behind the line
+  at the gun and over early.
+- `tools/heads/random_suite.py`: `--phase=S` (one general head, start-only, the reachable drops, R in the countdown or
+  up to 2 minutes after the gun); `DROP_TOO_FAR` joins `REDRAWN_MARKS`; the start measures in the results and the
+  viewer.
+- `tools/heads/suite_summary.py <off> <on>`: per check the races fixed and broken, and the sign test's verdict
+  (`pass` / `chance`); the same for falls, stuck, aground and over early; the median seconds after the gun.
+- Measure the speed of a start-only race and write it under "The speed".
+- Unit tests for the sign test and the drop rule; nothing in `Game/sim/`, the controller or the autopilot.
+
+**The loop in phase S** is steps 2 to 7 with these changes: step 1's baseline is `--phase=S`, 200 races on tune seed 11
+(`baseline_S`); step 3 takes the biggest class of late starts (by water, course kind, start place, countdown, R; first
+the slalom courses and the lake); steps 5 and 6 use new seeds and the judging above.
+
+**The gate to fleets.** On a fresh hold-out of 100 races every start under 20 s. If the last few failures come from
+outside the head (the physics, a known lake trap), show them to Max: he decides. Then phase C (fleets: starts in a
+crowd), then back to the roundings.
+
+**Open: Max's PWA course.** A play build cannot save a course (its `res://` is inside the pack); when Max saves it
+from the course maker in the Godot editor, or describes it (the start line's angle to the wind, the marks and which
+side they are rounded), it joins phase S's draw.
 
 ## The steps
 
@@ -165,7 +245,8 @@ doing) and, when needed, replay with its `replay` command (it adds `--trace=<boa
 the check: a failure that is the check's fault (a wrong expected time, a start need that ignores the countdown's hold)
 is fixed in the suite, and said so.
 
-**Step 3, choose the biggest class.** In order now: (1) the roundings and laylines (Max's main pain: wide exits,
+**Step 3, choose the biggest class.** From 9 November 2026: phase S's late starts first, until its gate (above). The
+order before that: (1) the roundings and laylines (Max's main pain: wide exits,
 overstands, gates; E09.S23), (2) the starts (16 of 43; E09.S21), (3) the slow legs (E09.S02, E09.S20).
 
 **Step 4, find the cause in the skipper** (`Game/race/skipper.gd`, `skipper_config.gd`), never in the physics. Write
