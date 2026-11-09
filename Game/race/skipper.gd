@@ -409,6 +409,29 @@ const FINISH_BACK_REACHED_M: float = 20.0
 ## again: 45 gybes and no finish (18 kt, characters.md).
 const WRONG_WAY_COS: float = -0.5
 const WRONG_WAY_BACK_M: float = 30.0
+## round_early (_round_early_deg()): the arc it would sail turning onto the next leg now must pass the mark (or a
+## gate's marks) at least this far, metres, and cross a mark's rounding ray no further out than mark_margin_m plus
+## ROUND_EARLY_WIDE_M. It looks within ROUND_EARLY_LOOK_M of the mark, from ROUND_EARLY_FROM_MS, at a turn of at
+## least ROUND_EARLY_MIN_TURN_DEG, working the arc out ROUND_EARLY_STEP_S at a time for ROUND_EARLY_HORIZON_S.
+const ROUND_EARLY_CLEAR_M: float = 4.0
+const ROUND_EARLY_WIDE_M: float = 10.0
+const ROUND_EARLY_LOOK_M: float = 80.0
+const ROUND_EARLY_FROM_MS: float = 3.0
+const ROUND_EARLY_MIN_TURN_DEG: float = 10.0
+const ROUND_EARLY_STEP_S: float = 0.2
+const ROUND_EARLY_HORIZON_S: float = 14.0
+## gybe_at_mark: the gybe's arc must pass the mark at least this far, metres (wider than ROUND_EARLY_CLEAR_M, less than
+## mark_margin_m, which the way in passes the mark at: once the
+## controller has begun the gybe the skipper cannot steer, and a board slowing in the gybe turns tighter), and a turn
+## round the mark of at most ROUND_GYBE_MAX_TURN_DEG.
+const ROUND_GYBE_CLEAR_M: float = 5.0
+const ROUND_GYBE_MAX_TURN_DEG: float = 220.0
+## The rate the gybe's carve down to dead downwind is worked out at, degrees a second (out of it at the controller's
+## gybe_rate_dps). Measured in the suite's r0124 (SD3 at 50 %, 9 to 11 m/s): 52 degrees in 3.7 s, then 75 in 2.4 s;
+## but worked out at 14 the turn began too early: two roundings 1 to 2 m off the mark, and r0105's mark 2 not rounded
+## (the board came back round and fell: leg 2 in 146 s for 76). At 30 (the arc tighter than sailed, so it begins
+## later) r0124's mark 3 came out 39 m off instead of 59, the race 5 s faster.
+const ROUND_GYBE_ENTRY_DPS: float = 30.0
 ## Racing for the finish, within FINISH_EASE_WITHIN_S of the line at its speed, a board whose track
 ## over the ground would cross the line's extension more than FINISH_MISS_M beyond an end eases down
 ## to FINISH_EASE_SPEED_MS (the hold-back, as at the start), so that it can turn onto the line: at
@@ -467,6 +490,10 @@ var _time_s: float = 0.0
 ## The step it is sailing to, and what it decided about that step.
 var _step_seen: int = -1
 var _level_with_mark: bool = false
+## With round_early: it has begun the turn onto the next leg before the step counted (_round_early_deg()).
+var _rounding_early: bool = false
+## With gybe_at_mark: it is bearing away to gybe round this mark (_round_early_deg()).
+var _gybing_at_mark: bool = false
 var _gate_end: int = -1
 var _start_phase: StartPhase = StartPhase.TO_LINE
 ## The tack it runs in to the start line on, chosen at the first look (_start_run_in_tack()).
@@ -1110,6 +1137,12 @@ func _decide(telemetry: Telemetry) -> float:
 		return start_deg
 	var position: Vector2 = _position(telemetry)
 	_to_the_finish = step.kind == RaceStep.Kind.FINISH
+	if (config.round_early or config.gybe_at_mark) and (step.kind == RaceStep.Kind.MARK or step.kind == RaceStep.Kind.GATE):
+		var early_deg: float = _round_early_deg(telemetry, step, position)
+		if not is_nan(early_deg):
+			if not _gybing_at_mark:
+				note = "rounding early"
+			return early_deg + _keep_clear_deg(telemetry, _tack())
 	var target: Vector2 = _target_point(step, position)
 	# A mark at the end of a beat or a run is approached on the tack it can be gone round from (until
 	# the board is level with the mark and rounding it). At the end of a reach the board comes on the
@@ -1254,6 +1287,168 @@ func _gate_target(step: RaceStep, position: Vector2) -> Vector2:
 	var near: Vector2 = step.points[_gate_end]
 	var far: Vector2 = step.points[1 - _gate_end]
 	return near + (far - near).normalized() * config.mark_margin_m
+
+
+## round_early and gybe_at_mark: the heading to steer when it is time to start the turn onto the next leg before the
+## mark or the gate, NAN until then. It works out the track it would sail turning onto that leg now
+## (_predict_rounding()): the turn starts as soon as that track still rounds the mark (RoundingCheck: across the
+## rounding ray the right way, or through the gate between its ends) and passes every mark at least
+## ROUND_EARLY_CLEAR_M off (ROUND_GYBE_CLEAR_M for a gybe, which it cannot steer once begun). Until then, and when the
+## track would round wide (a mark's ray crossed beyond mark_margin_m + ROUND_EARLY_WIDE_M), it sails for the mark as
+## before. round_early turns on the same tack and goes on unless the track would no longer round the mark or would
+## touch it. gybe_at_mark, at a mark whose next leg is on the other gybe (a slalom mark): it bears away until it may
+## gybe (past the controller's tacking angle) and asks for the gybe then, instead of after the rounding.
+func _round_early_deg(telemetry: Telemetry, step: RaceStep, position: Vector2) -> float:
+	var speed_ms: float = telemetry.speed_ms
+	var marks: Array[Vector2] = []
+	var way: float
+	if step.kind == RaceStep.Kind.MARK:
+		marks.append(step.points[0])
+		way = RoundingCheck.turn_way(step.side)
+	else:
+		var _gate_aim: Vector2 = _gate_target(step, position)
+		marks.append(step.points[_gate_end])
+		marks.append(step.points[1 - _gate_end])
+		# A gate is done by crossing its line: the turn after it goes whichever way is shorter onto the next leg
+		# on this tack (round the nearer mark or away from it into the gate).
+		way = 1.0
+	if speed_ms < ROUND_EARLY_FROM_MS or position.distance_to(marks[0]) > ROUND_EARLY_LOOK_M:
+		return NAN
+	var wind_deg: float = telemetry.wind_from_bearing_deg
+	var heading_deg: float = telemetry.heading_deg
+	var tack: float = _tack()
+	var out_deg: float = _heading_after(step.out_dir, wind_deg, heading_deg, way)
+	if step.kind == RaceStep.Kind.GATE:
+		var other_deg: float = _heading_after(step.out_dir, wind_deg, heading_deg, -1.0)
+		var this_ok: bool = signf(wrapf(wind_deg - out_deg, -180.0, 180.0)) == tack and _turn_way_deg(heading_deg, out_deg, 1.0) <= 180.0
+		var other_ok: bool = signf(wrapf(wind_deg - other_deg, -180.0, 180.0)) == tack and _turn_way_deg(heading_deg, other_deg, -1.0) <= 180.0
+		if other_ok and (not this_ok or _turn_way_deg(heading_deg, other_deg, -1.0) < _turn_way_deg(heading_deg, out_deg, 1.0)):
+			out_deg = other_deg
+			way = -1.0
+	var turn_deg: float = _turn_way_deg(heading_deg, out_deg, way)
+	if signf(wrapf(wind_deg - out_deg, -180.0, 180.0)) != tack:
+		# The next leg is on the other tack: a gybe round a slalom mark (gybe_at_mark), never a tack.
+		var through_downwind: bool = _turn_way_deg(heading_deg, wind_deg + 180.0, way) < turn_deg \
+				and turn_deg < _turn_way_deg(heading_deg, wind_deg, way)
+		if not config.gybe_at_mark or step.kind != RaceStep.Kind.MARK or not through_downwind or turn_deg > ROUND_GYBE_MAX_TURN_DEG:
+			return NAN
+		var gybe_delay_s: float = config.reaction_time_s * 2.0 + 0.5 * THINK_INTERVAL_S
+		var gybe: PackedFloat32Array = _predict_rounding(step, marks, position, speed_ms, heading_deg, out_deg, tack, gybe_delay_s, way, wind_deg)
+		var gybe_rounds: bool = gybe[0] >= 0.0 and gybe[1] >= ROUND_GYBE_CLEAR_M
+		if _gybing_at_mark:
+			# Not gybing yet (refused: too soon after the last turn, too slow) and too late now: as before.
+			if not gybe_rounds and _tack_due_s < 0.0 and _controller.manoeuvre == PlayerController.Manoeuvre.NONE:
+				_gybing_at_mark = false
+				return NAN
+		elif not gybe_rounds or gybe[0] > config.mark_margin_m + ROUND_EARLY_WIDE_M:
+			return NAN
+		_gybing_at_mark = true
+		note = "gybing at the mark"
+		var may_gybe_deg: float = _controller.tack_up_to_twa_deg + 5.0
+		if absf(telemetry.twa_deg) > may_gybe_deg:
+			_ask_for_manoeuvre(true)
+		# Off the wind on this gybe until the controller takes the turn over.
+		return wind_deg - tack * maxf(may_gybe_deg + 5.0, _downwind_twa_deg())
+	if not config.round_early or turn_deg < ROUND_EARLY_MIN_TURN_DEG or turn_deg > 180.0:
+		return NAN
+	# Already turning: the heading it asked for is on its way to the hands, so no straight run first.
+	var delay_s: float = 0.0 if _rounding_early else config.reaction_time_s + 0.5 * THINK_INTERVAL_S
+	var track: PackedFloat32Array = _predict_rounding(step, marks, position, speed_ms, heading_deg, out_deg, tack, delay_s, 0.0)
+	var crossed_m: float = track[0]
+	var rounds: bool = crossed_m >= 0.0 and track[1] >= ROUND_EARLY_CLEAR_M
+	if step.kind == RaceStep.Kind.GATE:
+		rounds = rounds and crossed_m >= ROUND_EARLY_CLEAR_M
+	if _rounding_early:
+		# Begun: it goes on round unless the track no longer rounds the mark or comes too near it.
+		if not rounds:
+			_rounding_early = false
+			return NAN
+	elif not rounds or (step.kind == RaceStep.Kind.MARK and crossed_m > config.mark_margin_m + ROUND_EARLY_WIDE_M):
+		return NAN
+	_rounding_early = true
+	aim_point = Vector2(track[2], track[3])
+	return out_deg
+
+
+## The track it would sail from position turning onto out_deg after delay_s, as the controller turns: the bear-away at
+## turn_rate_dps, the head-up at its budget over the speed (gentler above GENTLE_HEAD_UP_FROM_MS), both easing in the
+## last FULL_STICK_ERROR_DEG; a gybe (gybe_way 1 clockwise, -1 anticlockwise; 0 steered) at ROUND_GYBE_ENTRY_DPS down
+## to dead downwind (wind_deg + 180) and the controller's gybe_rate_dps out of it. Worked out
+## ROUND_EARLY_STEP_S at a time for at most ROUND_EARLY_HORIZON_S, at the speed it has now. Returns how far from the
+## nearest mark it crosses the step (a mark's rounding ray the right way round, or the gate's line between its ends;
+## -1 when it does not, or goes round the wrong side first), the closest it passes any of the marks, and where it is
+## when round onto the new heading (x, z).
+func _predict_rounding(step: RaceStep, marks: Array[Vector2], position: Vector2, speed_ms: float, heading_deg: float,
+		out_deg: float, tack: float, delay_s: float, gybe_way: float, wind_deg: float = 0.0) -> PackedFloat32Array:
+	var head_up_dps: float = clampf(_controller.head_up_rate_budget_dps_ms / maxf(speed_ms, 0.1), _controller.head_up_rate_min_dps, _controller.turn_rate_dps)
+	if speed_ms > GENTLE_HEAD_UP_FROM_MS:
+		head_up_dps = minf(head_up_dps, GENTLE_HEAD_UP_STICK * _controller.turn_rate_dps)
+	var gybe: bool = gybe_way != 0.0
+	var p: Vector2 = position
+	var h: float = heading_deg
+	var left_deg: float = _turn_way_deg(heading_deg, out_deg, gybe_way) if gybe else 0.0
+	# The gybe's carve down to dead downwind is slower than its exit (ROUND_GYBE_ENTRY_DPS).
+	var to_downwind_deg: float = _turn_way_deg(heading_deg, wind_deg + 180.0, gybe_way) if gybe else 0.0
+	var t: float = 0.0
+	var crossed_m: float = -1.0
+	var closest_m: float = INF
+	var after_s: float = 0.0
+	while t < ROUND_EARLY_HORIZON_S:
+		if t >= delay_s:
+			if gybe:
+				var rate_dps: float = ROUND_GYBE_ENTRY_DPS if to_downwind_deg > 0.0 else _controller.gybe_rate_dps
+				var step_deg: float = minf(rate_dps * ROUND_EARLY_STEP_S, left_deg)
+				h += gybe_way * step_deg
+				left_deg -= step_deg
+				to_downwind_deg -= step_deg
+			else:
+				var error_deg: float = wrapf(out_deg - h, -180.0, 180.0)
+				if absf(error_deg) >= STEER_DEAD_BAND_DEG:
+					var rate_dps: float = minf(absf(error_deg) / FULL_STICK_ERROR_DEG, 1.0) * _controller.turn_rate_dps
+					if signf(error_deg) == tack:
+						rate_dps = minf(rate_dps, head_up_dps)
+					h += signf(error_deg) * minf(rate_dps * ROUND_EARLY_STEP_S, absf(error_deg))
+		var next: Vector2 = p + Course.direction_of(h) * speed_ms * ROUND_EARLY_STEP_S
+		for mark: Vector2 in marks:
+			closest_m = minf(closest_m, Geometry2D.get_closest_point_to_segment(mark, p, next).distance_to(mark))
+		if crossed_m < 0.0:
+			if step.kind == RaceStep.Kind.MARK:
+				var outcome: RoundingCheck.Outcome = RoundingCheck.round_mark(p, next, marks[0], step.in_dir, step.out_dir, step.side)
+				if outcome.wrong_side:
+					break
+				if outcome.done:
+					crossed_m = p.lerp(next, outcome.fraction).distance_to(marks[0])
+			else:
+				var fraction: float = RoundingCheck.across_line(p, next, step.points[0], step.points[1], step.in_dir)
+				if fraction >= 0.0:
+					var crossing: Vector2 = p.lerp(next, fraction)
+					crossed_m = minf(crossing.distance_to(step.points[0]), crossing.distance_to(step.points[1]))
+		p = next
+		t += ROUND_EARLY_STEP_S
+		# Past the step and round onto the new heading: a second more for the closest pass, then done.
+		var round_now: bool = left_deg <= 0.0 if gybe else absf(wrapf(out_deg - h, -180.0, 180.0)) < STEER_DEAD_BAND_DEG
+		if crossed_m >= 0.0 and round_now:
+			after_s += ROUND_EARLY_STEP_S
+			if after_s >= 1.0:
+				break
+	return PackedFloat32Array([crossed_m, closest_m, p.x, p.y])
+
+
+## The heading it will sail on a leg leaving in out_dir, reached turning way (1 clockwise, -1 anticlockwise) from
+## from_deg: on a beat its upwind angle and on a run its downwind angle, on the tack the turn reaches first; on a
+## reach the leg's own course, aimed up by the leeway (as _course_to() sails them).
+func _heading_after(out_dir: Vector2, wind_deg: float, from_deg: float, way: float) -> float:
+	var out_twa: float = wrapf(wind_deg - Course.bearing_deg(Vector2.ZERO, out_dir), -180.0, 180.0)
+	var sail_deg: float
+	if absf(out_twa) < _pointing_twa_deg() + _leeway_deg:
+		sail_deg = _upwind_twa_deg()
+	elif absf(out_twa) > _downwind_twa_deg() + _leeway_deg:
+		sail_deg = _downwind_twa_deg()
+	else:
+		return wind_deg - signf(out_twa) * maxf(absf(out_twa) - _leeway_deg, _upwind_twa_deg())
+	var starboard_deg: float = wind_deg - sail_deg
+	var port_deg: float = wind_deg + sail_deg
+	return starboard_deg if _turn_way_deg(from_deg, starboard_deg, way) <= _turn_way_deg(from_deg, port_deg, way) else port_deg
 
 
 ## The spot on the start line it makes for: its character's own spot (0 the pin, 1 the boat),
@@ -2928,9 +3123,13 @@ func _new_step_check() -> void:
 	if step != _step_seen:
 		_step_seen = step
 		_level_with_mark = false
+		_rounding_early = false
 		_gate_end = -1
-		# A tack decided for the last step is not one for this.
-		_tack_due_s = -1.0
+		# A tack decided for the last step is not one for this; but the gybe round a slalom mark (gybe_at_mark) is the
+		# turn onto the next leg, and the rounding counts while it waits for the hands.
+		if not _gybing_at_mark:
+			_tack_due_s = -1.0
+		_gybing_at_mark = false
 
 
 func _remember_others() -> void:

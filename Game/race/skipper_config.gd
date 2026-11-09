@@ -35,6 +35,21 @@ enum StartStyle { LOOP, HOLD }
 @export_range(0.0, 60.0) var layline_margin_m: float = 10.0
 ## How close it rounds a mark, metres.
 @export_range(4.0, 20.0) var mark_margin_m: float = 8.0
+## Starts the turn round a mark or through a gate before it gets there, as a sailor goes wide in and tight out
+## (Skipper._round_early_deg()): it works out the arc it would sail turning onto the next leg now, and turns as
+## soon as that arc still rounds the mark (or crosses the gate) with Skipper.ROUND_EARLY_CLEAR_M to spare. Only a
+## turn on the same tack (not the gybe round a slalom mark). Off: it turns only once the race has counted the
+## rounding. The suite's baseline_A (8 November 2026, 94 races): about 5 degrees of the turn before the mark and
+## the whole turn after it; out of the turn median 30 m (92 % over 15 m): 35 m at a windward mark, 51 m at a
+## leeward mark or gate onto a beat.
+@export var round_early: bool = false
+## At a mark whose next leg is on the other gybe (a slalom mark), it gybes round the mark instead of after it
+## (Skipper._round_early_deg()): once the gybe's arc (at the controller's gybe rate) would round the mark with
+## Skipper.ROUND_GYBE_CLEAR_M to spare, it bears away past the controller's tacking angle and asks for the gybe. Off:
+## after the rounding counted it bore away on the old gybe and gybed only past the gybing line by layline_margin_m.
+## baseline_A (8 November 2026): 35 slalom roundings, out of the turn median 48 m; one (r0014, SD3 at 50 %) came out
+## of the gybe 5 s after the mark at 1.3 m/s, from 10 m/s.
+@export var gybe_at_mark: bool = false
 ## The most tacks (or gybes) it makes on one leg. The layline tack is always allowed, so the cap
 ## limits the extra ones (for wind shifts).
 @export_range(2, 8) var max_tacks_per_beat: int = 4
