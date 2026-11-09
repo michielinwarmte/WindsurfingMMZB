@@ -567,10 +567,19 @@ code{font-size:11px;word-break:break-all;color:var(--dim)}ul{margin:0;padding-le
         running or "<li class='dim'>none</li>", rows_fail or "<tr><td class='dim' colspan=4>none</td></tr>",
         time.strftime("%H:%M:%S"), e(out_dir))
     for path in (os.path.join(out_dir, "viewer.html"), os.path.join(os.path.dirname(out_dir), "viewer.html")):
-        tmp = path + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as handle:
-            handle.write(page)
-        os.replace(tmp, path)
+        # A temporary file of this process's own, and a page in use (two suites side by side write the shared page;
+        # Windows refuses the rename while the other has it open: s2b_off crashed so on 9 November 2026) is left for
+        # the next write.
+        tmp = "%s.%d.tmp" % (path, os.getpid())
+        try:
+            with open(tmp, "w", encoding="utf-8") as handle:
+                handle.write(page)
+            os.replace(tmp, path)
+        except OSError:
+            try:
+                os.remove(tmp)
+            except OSError:
+                pass
     with open(os.path.join(out_dir, "status.json"), "w", encoding="utf-8") as handle:
         json.dump({"done": done, "count": total, "passed": passed, "redrawn": state["redrawn"], "running": list(state["running"].keys())}, handle)
 

@@ -139,6 +139,11 @@ const FULL_STICK_ERROR_DEG: float = 30.0
 ## 6 degrees per second): see _steer_toward().
 const GENTLE_HEAD_UP_FROM_MS: float = 12.0
 const GENTLE_HEAD_UP_STICK: float = 0.2
+## SkipperConfig.crawl_no_head_up_ms: once crawling it lets the board gather speed until it is this much faster than
+## that, m/s (so that heading up again, which costs speed, does not drop it straight back into the crawl).
+const CRAWL_RELEASE_EXTRA_MS: float = 1.5
+## ... and it counts as stuck in the crawl only while the stick asks to head up by more than this, degrees.
+const CRAWL_ERROR_DEG: float = 10.0
 ## The steering noise wanders on about this time scale, seconds: a slow wobble, not a shake.
 const NOISE_TIME_S: float = 4.0
 ## Racing toward a mark, it lets go of the push slider when the mark is this many seconds away at its
@@ -267,6 +272,11 @@ const SLALOM_SLOW_FROM_M: float = 60.0
 const SLALOM_GO_SPARE_S: float = 1.0
 const SLALOM_DIVE_CLOSEST_TWA_DEG: float = 60.0
 const SLALOM_DIVE_DEEPEST_TWA_DEG: float = 148.0
+## SkipperConfig.slalom_early_ease: early on the dive it luffs up only when it would cross the line within this many
+## seconds, metres apart at its speed (before that it eases and keeps the dive's heading).
+const SLALOM_LAST_LUFF_S: float = 2.5
+## SkipperConfig.slalom_dive_gybes: from this wind angle or deeper the dive turns onto the other tack by a gybe, degrees.
+const SLALOM_DIVE_GYBE_FROM_TWA_DEG: float = 70.0
 ## The run in is this much wider than the angle the board beats at (the polar's, for the wind and its
 ## character), and no wider than START_RUN_IN_WIDEST_TWA_DEG, degrees: its track, with the leeway, must
 ## lay the spot. 60 was 15 above the old beat of 45; at the polar's 55 to 59 a run in at 60 could not be
@@ -541,6 +551,12 @@ var _last_wanted_deg: float = 0.0
 var _last_manoeuvre: PlayerController.Manoeuvre = PlayerController.Manoeuvre.NONE
 var _manoeuvre_ended_s: float = -INF
 var _settling: bool = false
+## Crawling before its start (SkipperConfig.crawl_no_head_up_ms): no stick toward the wind until it has speed.
+var _crawling: bool = false
+## Since when it has crawled with the stick asking to head up (-1: not).
+var _crawl_stuck_from_s: float = -1.0
+## The shore lookout turned its last decided heading (_keep_off_the_shore()): crawl_no_head_up_ms stands aside.
+var _shore_steers: bool = false
 ## Pointing: a board without speed is sailed no closer than the autopilot's bear-away angle, as the
 ## autopilot does (Autopilot.pointing_speed_ms).
 var _pointing: bool = false
@@ -743,6 +759,9 @@ func _forget_the_race() -> void:
 	_last_manoeuvre = PlayerController.Manoeuvre.NONE
 	_manoeuvre_ended_s = -INF
 	_settling = false
+	_crawling = false
+	_crawl_stuck_from_s = -1.0
+	_shore_steers = false
 	_penalty_owed_s = -1.0
 	_penalty_pressed_s = -INF
 	_dirty_since_s = -1.0
@@ -833,7 +852,10 @@ func _think(telemetry: Telemetry) -> void:
 			_penalty_from_s = _time_s
 			_penalty_pressed_s = -INF
 			_penalty_owed_s = -1.0
-	var decided_deg: float = _keep_off_the_shore(telemetry, _decide(telemetry))
+	var course_deg: float = _decide(telemetry)
+	var decided_deg: float = _keep_off_the_shore(telemetry, course_deg)
+	# (For crawl_no_head_up_ms: the shore lookout turned it.)
+	_shore_steers = absf(wrapf(decided_deg - course_deg, -180.0, 180.0)) > 1.0
 	_avoid_the_holes(telemetry, decided_deg)
 	_clear_air(telemetry, decided_deg)
 	decided_deg = _get_going(telemetry, decided_deg)
@@ -2402,8 +2424,15 @@ func _slalom_start_heading(telemetry: Telemetry, step: RaceStep, behind_m: float
 		if before_gun:
 			if _too_early_at_the_line(telemetry, step, behind_m):
 				_hands.hold_speed_ms = _slowest_hold_ms()
-				go_deg = wind_deg - _tack() * (HOLD_LUFF_TWA_DEG + 2.0 * config.steering_noise_deg)
-				note += ", early: luffing up"
+				# slalom_early_ease: it keeps the dive's heading and only eases, luffing up only in the last
+				# SLALOM_LAST_LUFF_S before it would cross.
+				var toward_ms: float = _velocity.dot(step.in_dir)
+				var crossing_in_s: float = behind_m / toward_ms if toward_ms > 0.3 else INF
+				if config.slalom_early_ease and crossing_in_s > SLALOM_LAST_LUFF_S:
+					note += ", early: easing"
+				else:
+					go_deg = wind_deg - _tack() * (HOLD_LUFF_TWA_DEG + 2.0 * config.steering_noise_deg)
+					note += ", early: luffing up"
 			_keep_behind_the_line(telemetry, step, behind_m)
 		return go_deg
 	var slot: Vector2 = _slalom_slot()
@@ -2445,6 +2474,10 @@ func _slalom_dive_deg(telemetry: Telemetry, spot: Vector2) -> float:
 		return _course_to(telemetry, through)
 	if signf(needed_twa) != _tack():
 		# On the other tack: it turns onto the reach's tack now, not later on a run's layline.
+		# slalom_dive_gybes: from a reach or deeper by a gybe (bearing away first): asked for at once at a beam reach
+		# the controller tacked, and a tack at speed in a strong wind stopped in the wind's eye.
+		if config.slalom_dive_gybes and absf(telemetry.twa_deg) >= SLALOM_DIVE_GYBE_FROM_TWA_DEG:
+			return _gybe_now(telemetry)
 		_ask_for_manoeuvre(true)
 		return wind_deg - _tack() * absf(telemetry.twa_deg)
 	if absf(needed_twa) > SLALOM_DIVE_DEEPEST_TWA_DEG:
@@ -2923,6 +2956,31 @@ func _steer_toward(telemetry: Telemetry, wanted_deg: float) -> void:
 	var dead_band_deg: float = STEER_DEAD_BAND_FAST_DEG if telemetry.speed_ms > GENTLE_HEAD_UP_FROM_MS else STEER_DEAD_BAND_DEG
 	if absf(error_deg) < dead_band_deg:
 		return
+	# crawl_no_head_up_ms: before its start, not holding back, stuck in the crawl (slower than that, the stick asking to
+	# head up by more than CRAWL_ERROR_DEG for crawl_stuck_s) it lets go of the stick toward the wind until it has speed
+	# (bearing away it still may). A head-up at a crawl that works (off the shore, back behind the line) is left alone.
+	# Not on a slalom's start (waiting upwind of the boat, the dive down onto the line): its crawl comes after its own
+	# luff-up, and the first on/off test (s2) broke three slalom starts there. Not while the shore lookout steers: let
+	# go there, a board gathered speed on a heading into the shore (s2c's hold-out, r0091).
+	var heading_up: bool = signf(error_deg) == _tack()
+	if config.crawl_no_head_up_ms > 0.0 and state == State.PRE_START and _hands.hold_speed_ms <= 0.0 \
+			and not _race.course.starts_upwind_of_the_boat() and not _shore_steers:
+		if _crawling:
+			if telemetry.speed_ms > config.crawl_no_head_up_ms + CRAWL_RELEASE_EXTRA_MS:
+				_crawling = false
+				_crawl_stuck_from_s = -1.0
+		elif telemetry.speed_ms < config.crawl_no_head_up_ms and heading_up and absf(error_deg) > CRAWL_ERROR_DEG:
+			if _crawl_stuck_from_s < 0.0:
+				_crawl_stuck_from_s = _time_s
+			elif _time_s - _crawl_stuck_from_s >= config.crawl_stuck_s:
+				_crawling = true
+		else:
+			_crawl_stuck_from_s = -1.0
+		if _crawling and heading_up:
+			return
+	else:
+		_crawling = false
+		_crawl_stuck_from_s = -1.0
 	var stick_limit: float = 1.0
 	# Heading up turns right on starboard tack and left on port tack. At speed a sailor heads up
 	# gently, so the sheet keeps up with the growing pull (heading up from a broad reach at 13 m/s

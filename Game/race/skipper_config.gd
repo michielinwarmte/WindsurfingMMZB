@@ -89,6 +89,31 @@ enum StartStyle { LOOP, HOLD }
 ## wind for 30 s did not turn the board at that speed and spilled the sail (angle of attack 3 to 5 deg): 2 m/s for 40 s,
 ## 58 s late. get_going_twa_deg (after the gun, any slow board) measured too: start 70 -> 72 %, but legs 92 -> 88 %.
 @export_range(0.0, 150.0) var go_reach_twa_deg: float = 0.0
+## Before its start, while it is not holding back (going for the line, back to its spot) and not on a slalom's start,
+## stuck in a crawl (slower than this, m/s, with the stick asking to head up for crawl_stuck_s), it lets go of the stick
+## toward the wind: the board gathers speed on its heading (bearing away it still may) until
+## Skipper.CRAWL_RELEASE_EXTRA_MS faster, and only then heads up (Skipper._steer_toward()); 0: off, as before. Phase S's baseline (9 November 2026, 200 starts): 24 of the 54 late starts crawled at the gun and more of
+## the far ones crawled for minutes on their way back: a board at 1.5 to 2 m/s on a reach or a broad reach with the
+## stick held hard toward the wind does not turn, and its sail draws at 1.5 to 4 deg (r0002 of baseline_S, 2 m/s for
+## 75 s; r0007 of s1_on, 1.5 m/s on a broad reach in 16 kt for 80 s, 200 m behind the line at the gun).
+@export_range(0.0, 6.0) var crawl_no_head_up_ms: float = 0.0
+## How long a crawl with the stick asking to head up must last before crawl_no_head_up_ms lets go of the stick, seconds:
+## the trap lasted 75 to 80 s, while a head-up at a crawl that works (off the shore, back behind the line) turns the
+## board in a few. 0: at once (the first on/off tests, s2 and s2b, which ran a board aground off the shore, r0017).
+@export_range(0.0, 30.0) var crawl_stuck_s: float = 4.0
+## On a slalom's dive down onto the line, early (about to cross before the gun), it keeps the dive's heading and only
+## eases the sheet, and luffs up only in the last Skipper.SLALOM_LAST_LUFF_S before it would cross (Skipper.
+## _slalom_start_heading()); false: it luffs up to Skipper.HOLD_LUFF_TWA_DEG at once, as before. Phase S's baseline
+## (9 November 2026): on T2 the luff from the broad reach (5.9 m/s) to 45 deg plus twice its noise went on through the
+## wind and stopped the board dead in 5 s (r0024: 0.5 m/s at 258 deg in a 223 deg wind, then on the wrong side of its
+## dive, 52 s late; r0191 never over); on a line along the wind a track 45 deg off it still runs at the line.
+@export var slalom_early_ease: bool = false
+## On a slalom's dive down onto the line, its crossing on the other tack, from Skipper.SLALOM_DIVE_GYBE_FROM_TWA_DEG or
+## deeper it bears away and gybes (Skipper._gybe_now()) instead of asking for the turn at once (Skipper.
+## _slalom_dive_deg()); false: at once, as before. Asked for at a beam reach, the controller tacks (it tacks up to 100
+## deg): phase S's baseline (9 November 2026), r0024 on T2 at 6 m/s in 17 kt turned up through the wind's eye, stopped
+## (0.5 m/s), came out on the far side of its dive and started 52 s late.
+@export var slalom_dive_gybes: bool = false
 
 @export_group("Start")
 ## Where on the start line it wants to cross: 0 = the pin end, 1 = the boat end.
