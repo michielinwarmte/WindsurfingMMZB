@@ -2247,10 +2247,7 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 	# The timing loop: with more time to spare than the way in can use up, by more than a loop
 	# costs; one who loops (LOOP) has a short way in, one who holds (HOLD) a long one.
 	if _start_phase == StartPhase.RUN_IN and before_gun and not _reached_hold and not holds:
-		# loop_within_away_max: not from start_away_max_m or farther from its spot (it would turn back at once).
-		var beyond_away_max: bool = config.loop_within_away_max and config.start_away_max_m > 0.0 \
-				and position.distance_to(spot) >= config.start_away_max_m
-		if spare_s - START_GO_SPARE_S > at_wait_s + _loop_excess_s(track, forward) and not beyond_away_max:
+		if spare_s - START_GO_SPARE_S > at_wait_s + _loop_excess_s(track, forward) and not _too_far_to_loop(position, spot):
 			_start_phase = StartPhase.AWAY
 	if _start_phase == StartPhase.AWAY:
 		# The time it needs counts a turn (the way back is a reach on the other tack); a gybe from the
@@ -2522,6 +2519,12 @@ func _loop_excess_s(hold_track: Vector2, forward: Vector2) -> float:
 	if config.reaching_loop_excess_s > 0.0 and absf(hold_track.dot(forward)) >= REACHING_HOLD_ACROSS:
 		return config.reaching_loop_excess_s
 	return START_LOOP_EXCESS_S
+
+
+## SkipperConfig.loop_within_away_max: from start_away_max_m or farther from its spot it starts no timing loop (it would
+## turn back at once, start_away_max_m, and begin again on the way in).
+func _too_far_to_loop(position: Vector2, spot: Vector2) -> bool:
+	return config.loop_within_away_max and config.start_away_max_m > 0.0 and position.distance_to(spot) >= config.start_away_max_m
 
 
 ## The speed it holds back to, m/s: its character's hold speed, or what it has found it gets down to

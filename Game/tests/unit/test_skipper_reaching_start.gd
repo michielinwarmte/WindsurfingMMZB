@@ -29,3 +29,13 @@ func test_a_reaching_starts_hold_loops_with_less_to_spare() -> void:
 	assert_eq(skipper._loop_excess_s(at_the_line, forward), 5.0, "a hold straight at the line: the reaching start's excess")
 	assert_eq(skipper._loop_excess_s(along_the_line, forward), Skipper.START_LOOP_EXCESS_S,
 		"a hold along the line (an upwind start): as before")
+
+
+func test_no_timing_loop_from_beyond_start_away_max_m() -> void:
+	var skipper: Skipper = _skipper()
+	var spot: Vector2 = Vector2.ZERO
+	assert_false(skipper._too_far_to_loop(Vector2(0.0, 250.0), spot), "off: a loop from anywhere, as before")
+	skipper.config.loop_within_away_max = true
+	assert_true(skipper._too_far_to_loop(Vector2(0.0, 250.0), spot), "250 m out: no loop (it would turn back at once)")
+	assert_false(skipper._too_far_to_loop(Vector2(0.0, 150.0), spot), "150 m out: a loop")
+	assert_false(SkipperConfig.new().loop_within_away_max, "off by default until the suite says it wins")
