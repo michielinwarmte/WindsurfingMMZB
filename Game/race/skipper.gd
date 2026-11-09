@@ -2228,7 +2228,9 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 		# The time it needs counts a turn (the way back is a reach on the other tack); a gybe from the
 		# broad reach at speed costs START_GYBE_EXTRA_S more. It turns back with what the way in can
 		# use up still to spare.
-		if spare_s - START_GO_SPARE_S <= at_wait_s + START_LOOP_RETURN_S:
+		# With start_away_max_m it turns back too once that far from its spot, however much time it has to spare.
+		var too_far: bool = config.start_away_max_m > 0.0 and position.distance_to(spot) >= config.start_away_max_m
+		if too_far or spare_s - START_GO_SPARE_S <= at_wait_s + START_LOOP_RETURN_S:
 			_start_phase = StartPhase.TURNING
 			_turn_back_from_s = _time_s
 		else:

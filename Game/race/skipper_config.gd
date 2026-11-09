@@ -156,8 +156,18 @@ enum StartStyle { LOOP, HOLD }
 ## Dirty air on the runs too (Skipper._clear_air()): it gybes out of the blanket of the boards behind.
 @export var dirty_air_on_runs: bool = false
 ## Before its start, farther than this beyond an end of the start line, metres, the course side of the line's
-## extension does not count as over (Skipper._start_heading()); 0: it always does, as before.
+## extension does not count as over (Skipper._start_heading()); 0: it always does, as before. Measured in the random suite
+## (9 November 2026, 100 m, the tune set's 50 races of seed 3): 5 races changed, starts even (one better, one worse after
+## a mid-race R), one leg and one race time worse, 95 s more racing: off.
 @export var start_free_beyond_ends_m: float = 0.0
+## In a long countdown, sailing away to use up the time to spare (Skipper._start_heading(), AWAY), it turns back once
+## this far from its spot on the line, metres, whatever the time to spare says; 0: only by the time, as before 9 November. The
+## suite's baseline_A (8-9 November 2026), lake races: the start failed in 45 % of the 44 that sailed away more than
+## 300 m (r0137 went 520 m, to the shore, with 52 s to spare by its reckoning and came back 42 s short) against 22 %
+## of the 58 that went 150 to 300 m. On since 9 November 2026 at 200 m (loop 3 of AI_TRAINING_METHOD.md): tune set 50
+## races, start 66 -> 70 %, pass 56 -> 60 %; hold-out 100 races, start 69 -> 72 %, pass 63 -> 67 %, legs 89 -> 90 %,
+## no check worse.
+@export_range(0.0, 2000.0) var start_away_max_m: float = 200.0
 ## A tack that does not go (Skipper._change_a_tack_that_does_not_go()): crawling upwind on one tack while the other
 ## went well, it takes the other tack and keeps it for a while.
 @export var change_slow_tack: bool = false
