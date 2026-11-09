@@ -25,12 +25,17 @@ func _crawling_skipper(speed_ms: float) -> Skipper:
 	return skipper
 
 
-func test_it_is_off_unless_switched_on() -> void:
-	assert_eq(SkipperConfig.new().crawl_no_head_up_ms, 0.0, "off by default until the suite says it wins")
+func test_it_is_on_by_default() -> void:
+	assert_eq(SkipperConfig.new().crawl_no_head_up_ms, 2.5, "taken in loop S2d (9 November 2026)")
+	assert_eq(SkipperConfig.new().crawl_stuck_s, 4.0)
 
 
 func test_off_it_steers_hard_toward_the_wind_at_a_crawl() -> void:
 	var skipper: Skipper = _crawling_skipper(2.0)
+	skipper.config.crawl_no_head_up_ms = 0.0
+	skipper._time_s = 100.0
+	skipper._steer_toward(skipper._sim.telemetry, 320.0)
+	skipper._time_s = 110.0
 	# Heading up on the +1 tack is a turn to the right (Skipper: heading = wind - tack * TWA): wanted 320 deg.
 	skipper._steer_toward(skipper._sim.telemetry, 320.0)
 	assert_gt(skipper._hands.steer, 0.9, "the old way: the full stick toward the wind")

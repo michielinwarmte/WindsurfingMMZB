@@ -95,8 +95,11 @@ enum StartStyle { LOOP, HOLD }
 ## Skipper.CRAWL_RELEASE_EXTRA_MS faster, and only then heads up (Skipper._steer_toward()); 0: off, as before. Phase S's baseline (9 November 2026, 200 starts): 24 of the 54 late starts crawled at the gun and more of
 ## the far ones crawled for minutes on their way back: a board at 1.5 to 2 m/s on a reach or a broad reach with the
 ## stick held hard toward the wind does not turn, and its sail draws at 1.5 to 4 deg (r0002 of baseline_S, 2 m/s for
-## 75 s; r0007 of s1_on, 1.5 m/s on a broad reach in 16 kt for 80 s, 200 m behind the line at the gun).
-@export_range(0.0, 6.0) var crawl_no_head_up_ms: float = 0.0
+## 75 s; r0007 of s1_on, 1.5 m/s on a broad reach in 16 kt for 80 s, 200 m behind the line at the gun). Taken (loop S2d,
+## 9 November 2026, with crawl_stuck_s 4 and standing aside while the shore lookout steers): tune 50 starts (seed 16)
+## on time 64 -> 78 %, 7 fixed, 0 broken; hold-out 100 (seed 23) 78 -> 83 %, 5 fixed, 0 broken (p 0.031), the median
+## after the gun 5.8 -> 5.7 s, nothing else worse.
+@export_range(0.0, 6.0) var crawl_no_head_up_ms: float = 2.5
 ## How long a crawl with the stick asking to head up must last before crawl_no_head_up_ms lets go of the stick, seconds:
 ## the trap lasted 75 to 80 s, while a head-up at a crawl that works (off the shore, back behind the line) turns the
 ## board in a few. 0: at once (the first on/off tests, s2 and s2b, which ran a board aground off the shore, r0017).
@@ -114,6 +117,14 @@ enum StartStyle { LOOP, HOLD }
 ## deg): phase S's baseline (9 November 2026), r0024 on T2 at 6 m/s in 17 kt turned up through the wind's eye, stopped
 ## (0.5 m/s), came out on the far side of its dive and started 52 s late.
 @export var slalom_dive_gybes: bool = false
+## On a start line its hold's track runs at (Skipper.REACHING_HOLD_ACROSS or more of it toward the line: a reaching
+## start, the line along the wind), a skipper who loops sails its timing loop once its time to spare beats what the way
+## in can use up by this much, seconds, instead of Skipper.START_LOOP_EXCESS_S's 35; 0: always 35, as before. On an
+## upwind start the leftover time is held back along the line; on a reaching start it brought the board to the line
+## early: phase S (9 November 2026), the PM1 and SM1 templates, the line along the wind, held back at 1.6 to 1.9 m/s
+## straight at the line from 150 m with 67 s to spare, 12 to 18 s early at the go point, over before the gun (s2b_on
+## r0010, r0037; baseline_S r0045, r0049, r0166).
+@export_range(0.0, 60.0) var reaching_loop_excess_s: float = 0.0
 
 @export_group("Start")
 ## Where on the start line it wants to cross: 0 = the pin end, 1 = the boat end.

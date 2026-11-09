@@ -277,6 +277,9 @@ const SLALOM_DIVE_DEEPEST_TWA_DEG: float = 148.0
 const SLALOM_LAST_LUFF_S: float = 2.5
 ## SkipperConfig.slalom_dive_gybes: from this wind angle or deeper the dive turns onto the other tack by a gybe, degrees.
 const SLALOM_DIVE_GYBE_FROM_TWA_DEG: float = 70.0
+## SkipperConfig.reaching_loop_excess_s: a hold whose track runs at least this much across the start line (the share
+## of its direction toward the line) counts as a reaching start's: holding back brings it nearer the line.
+const REACHING_HOLD_ACROSS: float = 0.7
 ## The run in is this much wider than the angle the board beats at (the polar's, for the wind and its
 ## character), and no wider than START_RUN_IN_WIDEST_TWA_DEG, degrees: its track, with the leeway, must
 ## lay the spot. 60 was 15 above the old beat of 45; at the polar's 55 to 59 a run in at 60 could not be
@@ -2244,7 +2247,7 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 	# The timing loop: with more time to spare than the way in can use up, by more than a loop
 	# costs; one who loops (LOOP) has a short way in, one who holds (HOLD) a long one.
 	if _start_phase == StartPhase.RUN_IN and before_gun and not _reached_hold and not holds:
-		if spare_s - START_GO_SPARE_S > at_wait_s + START_LOOP_EXCESS_S:
+		if spare_s - START_GO_SPARE_S > at_wait_s + _loop_excess_s(track, forward):
 			_start_phase = StartPhase.AWAY
 	if _start_phase == StartPhase.AWAY:
 		# The time it needs counts a turn (the way back is a reach on the other tack); a gybe from the
@@ -2507,6 +2510,15 @@ func _late_for_the_spot_deg(telemetry: Telemetry, step: RaceStep, spot: Vector2,
 	var beat_deg: float = _course_to(telemetry, spot, 0.0, true, 0.0)
 	note = "start: for the spot, beating (%s)" % note
 	return beat_deg
+
+
+## How much more time to spare than the way in can use up makes a skipper who loops sail its timing loop, seconds:
+## START_LOOP_EXCESS_S; with SkipperConfig.reaching_loop_excess_s, that on a line its hold's track runs at (a reaching
+## start: the line along the wind), where the time the way in cannot use up brings it to the line early.
+func _loop_excess_s(hold_track: Vector2, forward: Vector2) -> float:
+	if config.reaching_loop_excess_s > 0.0 and absf(hold_track.dot(forward)) >= REACHING_HOLD_ACROSS:
+		return config.reaching_loop_excess_s
+	return START_LOOP_EXCESS_S
 
 
 ## The speed it holds back to, m/s: its character's hold speed, or what it has found it gets down to
