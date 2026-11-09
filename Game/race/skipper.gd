@@ -2247,7 +2247,10 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 	# The timing loop: with more time to spare than the way in can use up, by more than a loop
 	# costs; one who loops (LOOP) has a short way in, one who holds (HOLD) a long one.
 	if _start_phase == StartPhase.RUN_IN and before_gun and not _reached_hold and not holds:
-		if spare_s - START_GO_SPARE_S > at_wait_s + _loop_excess_s(track, forward):
+		# loop_within_away_max: not from start_away_max_m or farther from its spot (it would turn back at once).
+		var beyond_away_max: bool = config.loop_within_away_max and config.start_away_max_m > 0.0 \
+				and position.distance_to(spot) >= config.start_away_max_m
+		if spare_s - START_GO_SPARE_S > at_wait_s + _loop_excess_s(track, forward) and not beyond_away_max:
 			_start_phase = StartPhase.AWAY
 	if _start_phase == StartPhase.AWAY:
 		# The time it needs counts a turn (the way back is a reach on the other tack); a gybe from the

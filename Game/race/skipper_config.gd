@@ -216,6 +216,11 @@ enum StartStyle { LOOP, HOLD }
 ## races, start 66 -> 70 %, pass 56 -> 60 %; hold-out 100 races, start 69 -> 72 %, pass 63 -> 67 %, legs 89 -> 90 %,
 ## no check worse.
 @export_range(0.0, 2000.0) var start_away_max_m: float = 200.0
+## A skipper who loops starts its timing loop only nearer its spot than start_away_max_m (Skipper._start_heading());
+## false: wherever it is, as before. From farther out the loop turned back at once (start_away_max_m) and on the way in
+## began again: phase S (9 November 2026), r0099 of s3_hold_on on the lake flipped between away, turning back and to the
+## waiting point for two minutes, each turn costing its speed, and came to the line 93 m short at the gun.
+@export var loop_within_away_max: bool = false
 ## A tack that does not go (Skipper._change_a_tack_that_does_not_go()): crawling upwind on one tack while the other
 ## went well, it takes the other tack and keeps it for a while.
 @export var change_slow_tack: bool = false
