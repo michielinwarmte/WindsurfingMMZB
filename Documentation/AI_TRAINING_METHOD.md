@@ -26,7 +26,8 @@ The rules that follow from it:
    first of all (phase S, below): one board per race until every start is under 20 s.
 8. **Only planing winds** (14 kt and up): below that the numbers say nothing (Max).
 9. **No play folder until Max sends the message to make one**, and only after the suite passes.
-10. **Keep the PC at about 55 to 75 % CPU** (8 jobs, one per physical core; below).
+10. **Keep the PC at about 80 % CPU, give or take 5** (Max, 10 November 2026; until then 55 to 75 %): 12 jobs on
+    mask 0x55FF (below).
 11. **Take the loop the efficient way** ("The loop, efficiently" below): a fresh chat per loop, one wake-up per run,
     summaries instead of logs, small batches when the effect is big.
 
@@ -344,28 +345,59 @@ second board is `r0007/1`), so a race gives three starts.
 
 **Speed (measured 10 November 2026).** A three-board lake race runs at about real time on one core (3.5 minutes for a 2
 minute countdown and 60 s watched, start-up included): about 55 races an hour per 4 cores, 110 (330 board starts) on 8.
-An on/off pair of 100 races a side on 4 cores each takes about 1.8 hours.
+An on/off pair of 100 races a side on 4 cores each takes about 1.8 hours. At 12 jobs (mask 0x55FF, Max's 80 % CPU)
+each job runs slower (two share a physical core), about 13 % more races in all (8 November's one-board measure):
+about 125 races an hour, four runs of 100 in about 3.2 hours (an estimate: measure it).
 
 **Seeds.** Phase S3 starts at tune seed 31 and hold-out seed 41 (new seeds per loop, as in phase S). A first pair with
 three personas instead of the general head (tune seed 31) was started at 20:13 on 10 November and stopped at 20:40
 (Max: the night; then "do we not use 3x the general head"): kept as `s3_base_personas_stopped` and
 `s3_felt60_personas_stopped`, one race each, not to be resumed.
 
-**The night's plan (10-11 November 2026)**, the efficient loop (a fresh chat; one wake-up per pair):
-1. Step 0: fetch; branch `ai/starts-fleet-10nov`; nothing else running (`Get-Process Godot*`); the frozen copy is
-   `.sim_output/suite/frozen_S3/Game` (refresh: `cp -r Game/<part>/. .sim_output/suite/frozen_S3/Game/<part>/` for race
-   dev windsurfer ui maps/course maps/silvaplana/courses sim config; after a new `class_name`, run
-   `godot --headless --path .sim_output/suite/frozen_S3/Game --import` once).
-2. Pair 1, tune (about 1.8 h):
-   `python -I tools/heads/random_suite.py --run=s3_base --count=100 --cores=4 --seed=31 --set=tune --phase=S3 --project=$PWD/.sim_output/suite/frozen_S3/Game`
-   and the same with `--run=s3_felt60 --extra="--skipper.felt_wind_s=60"`; wait with
-   `python -I tools/heads/suite_summary.py s3_base s3_felt60 --wait`; then `--classes` on `s3_base` (the baseline's
-   classes of bad starts).
-3. Pair 2, hold-out (seed 41, `s3_hold_base` / `s3_hold_felt60`) when pair 1 wins the score and breaks nothing.
-4. Pair 3 and 4: `start_gust_lead=1` the same way (tune seed 32, hold-out seed 42), against the arm taken.
-5. Log each pair in the log of the loops; take a switch only by the rules above; commit locally; nothing pushed.
-   Then the biggest class of bad starts from the baseline (the tangles, the slalom's shared waiting spot, the lulls) is
-   for Max and the lead to look at together ("then we will improve").
+**The night's plan (10-11 November 2026, until 08:30)**, the efficient loop (a fresh chat; one wake-up per block).
+Max, 10 November 2026: "you can use about 80% cpu +-5%. and you are stopping early every day. is there a reson for?.
+this round should be done at around 8:30 in the morining."
+
+*The night's rules* (they come before anything else in this document for this night):
+- **CPU 80 % ± 5 %**: 12 jobs on the 12 logical processors of mask 0x55FF (8 November: 12 one-board jobs there were 82 %
+  CPU). Four runs at once, `--cores=3 --cpu_mask=0x55FF` each. A minute after each block starts, check
+  `Get-Counter '\Processor(_Total)\% Processor Time'` (a few samples); under 75 % add a job (`--cores=4` on the next
+  block), over 85 % take one off. Never touch sc-tuner (Max's wheel software).
+- **No early stop. The pool is never idle until the last block.** Before reading a finished block, start the next one.
+  End a turn only with a block running and its `--wait` pending. When the queue below is used up, take the next class
+  of bad starts from the baseline (`--classes`, the most worse boards), write a switch for it and test it; with no idea
+  that fits the rules, run the switches' other values (below) on new seeds. A run that only confirms is still useful.
+- **Done at 08:30.** The last block starts when it can still finish by about 08:15 (measure block 1's speed and size
+  the later blocks to fit); 08:15 to 08:30: the log of the loops, the morning report for Max (what was taken, the
+  numbers, the most worse boards traced, what to look at together), commit locally, nothing pushed.
+
+*Why the loops stopped early before* (9 and 10 November): the queue of planned tests ran out (phase S on 10 November at
+05:15, with "no switch-sized idea left the rules could take"), and the chat chose to stop rather than run tests it did
+not believe in; and a chat only goes on when something wakes it (a background `--wait`): a turn ended without a run
+going stops the night. Both are fixed by the two rules above.
+
+*Step 0*: fetch; branch `ai/starts-fleet-10nov`; nothing else running (`Get-Process Godot*`); the frozen copy is
+`.sim_output/suite/frozen_S3/Game` (refresh: `cp -r Game/<part>/. .sim_output/suite/frozen_S3/Game/<part>/` for race
+dev windsurfer ui maps/course maps/silvaplana/courses sim config; after a new `class_name`, run
+`godot --headless --path .sim_output/suite/frozen_S3/Game --import` once).
+
+*The queue* (each run 100 races; four runs at once; one block about 3 h at 12 jobs, an estimate from 10 November's
+speed: measure it in block 1):
+1. **Block 1, `felt_wind_s` 60, tune and hold-out together** (21:00 to about 00:00): `s3_base` and `s3_felt60` (tune
+   seed 31), `s3_hold_base` and `s3_hold_felt60` (hold-out seed 41):
+   `python -I tools/heads/random_suite.py --run=s3_base --count=100 --cores=3 --cpu_mask=0x55FF --seed=31 --set=tune --phase=S3 --project=$PWD/.sim_output/suite/frozen_S3/Game`,
+   the others the same with `--run=`, `--seed=41 --set=holdout`, and `--extra="--skipper.felt_wind_s=60"` on the on
+   arms. Wait once: `python -I tools/heads/suite_summary.py s3_base s3_felt60 --wait` (then the hold-out pair the
+   same, and `--classes` on `s3_base` and `s3_hold_base`: the baseline's classes of bad starts).
+2. **Block 2, `start_gust_lead` 1** (about 00:00 to 03:00): on top of `felt_wind_s` 60 if block 1 took it (otherwise
+   alone); off and on arms on tune seed 32 and hold-out seed 42 (the off arm is the defaults after block 1).
+3. **Block 3, the biggest class of bad starts** (about 03:00 to 06:00): from block 1's baselines (the tangles, the
+   slalom's shared waiting spot, the over-early, the lulls): a switch written for it, off by default, tune seed 33 and
+   hold-out seed 43. With no switch that fits: `felt_wind_s` 120 and 20, `start_gust_lead` 0.5 and 2 (tune seed 33).
+4. **Block 4, the final check** (about 06:00 to 08:15): a fresh hold-out (seed 44), the defaults taken tonight against
+   the defaults of the evening (79580d0's: both switches off), 100 a side or what fits by 08:15.
+5. Log each block in the log of the loops; take a switch only by the S3 rules above; commit locally; nothing pushed.
+   What is left is for Max and the lead to look at together ("then we will improve").
 
 ## The steps
 
