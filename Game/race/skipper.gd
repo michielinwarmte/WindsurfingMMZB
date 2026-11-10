@@ -2562,6 +2562,12 @@ func _time_to_cross_s(telemetry: Telemetry, target: Vector2) -> float:
 	var expected_ms: float = maxf(_speed_ratio * _polar_speed_ms(sail_deg), 1.0)
 	var speed_ms: float = clampf(telemetry.speed_ms, 0.5, expected_ms)
 	var gain_ms2: float = _acceleration_ms2()
+	# crawl_in_timing: crawling with the course toward the wind of its heading, crawl_no_head_up_ms waits crawl_stuck_s
+	# before it lets the board gather speed: that wait counts.
+	var crawl_wait_s: float = 0.0
+	if config.crawl_in_timing and config.crawl_no_head_up_ms > 0.0 and telemetry.speed_ms < config.crawl_no_head_up_ms \
+			and absf(needed_twa) < absf(telemetry.twa_deg) - CRAWL_ERROR_DEG and not _race.course.starts_upwind_of_the_boat():
+		crawl_wait_s = config.crawl_stuck_s
 	var gaining_s: float = (expected_ms - speed_ms) / gain_ms2
 	var gaining_m: float = speed_ms * gaining_s + 0.5 * gain_ms2 * gaining_s * gaining_s
 	var takes_s: float
@@ -2570,7 +2576,7 @@ func _time_to_cross_s(telemetry: Telemetry, target: Vector2) -> float:
 	else:
 		takes_s = gaining_s + (distance_m - gaining_m) / expected_ms
 	# (No time for the turn onto the course: from a hold the board bears away as it gains speed.)
-	return takes_s
+	return takes_s + crawl_wait_s
 
 
 ## How fast the board gains speed when it sheets in from a hold, m/s2, in the wind of the moment:

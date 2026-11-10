@@ -112,3 +112,25 @@ func test_in_the_go_off_its_hold_it_can_let_go_at_once() -> void:
 
 func test_crawl_go_stuck_s_is_off_by_default() -> void:
 	assert_lt(SkipperConfig.new().crawl_go_stuck_s, 0.0, "below 0: crawl_stuck_s in the go too")
+
+
+func test_crawl_in_timing_counts_the_wait_before_gathering_speed() -> void:
+	var skipper: Skipper = _crawling_skipper(2.0)
+	var telemetry: Telemetry = skipper._sim.telemetry
+	telemetry.position = Vector3.ZERO
+	telemetry.wind_from_bearing_deg = 0.0
+	telemetry.tws_10m_kt = 15.0
+	# The crossing 60 deg off the wind on its tack (heading 300): 30 deg toward the wind of its heading (270).
+	var target: Vector2 = Course.direction_of(300.0) * 60.0
+	skipper.config.crawl_in_timing = false
+	var plain_s: float = skipper._time_to_cross_s(telemetry, target)
+	skipper.config.crawl_in_timing = true
+	var counted_s: float = skipper._time_to_cross_s(telemetry, target)
+	assert_almost_eq(counted_s - plain_s, skipper.config.crawl_stuck_s, 0.01, "the crawl rule's wait counted")
+	telemetry.speed_ms = 4.0
+	assert_almost_eq(skipper._time_to_cross_s(telemetry, target), skipper._time_to_cross_s(telemetry, target), 0.01)
+	skipper.config.crawl_in_timing = false
+	var fast_plain_s: float = skipper._time_to_cross_s(telemetry, target)
+	skipper.config.crawl_in_timing = true
+	assert_almost_eq(skipper._time_to_cross_s(telemetry, target), fast_plain_s, 0.01, "not crawling: nothing added")
+	assert_false(SkipperConfig.new().crawl_in_timing, "off by default until the suite says it wins")

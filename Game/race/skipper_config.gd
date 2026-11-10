@@ -109,6 +109,13 @@ enum StartStyle { LOOP, HOLD }
 ## 2026, the crawl rule on, S3's off arms): 10 of 40 late starts still crawled at the gun, half of them 20 to 24 s late:
 ## gone from the hold at 1.6 to 2 m/s some 33 m back, the 4 s of crawl_stuck_s and the climb out of the crawl made them late.
 @export_range(-1.0, 30.0) var crawl_go_stuck_s: float = -1.0
+## The time it reckons it needs to cross the start line (Skipper._time_to_cross_s()) counts crawl_stuck_s more when it is
+## crawling (slower than crawl_no_head_up_ms) and the course to the line is more than Skipper.CRAWL_ERROR_DEG toward the
+## wind of its heading: crawl_no_head_up_ms waits that long before it lets the board gather speed, so it goes that much
+## sooner; false: not counted, as before. Phase S (10 November 2026, S7's off arms): boards gone from a hold along the
+## line at about 2 m/s gathered speed along it after the wait, ran out of line ("the line is on the other tack"), crossed
+## its extension and started 20 to 47 s late (r0017, r0034, r0050 of s7_off).
+@export var crawl_in_timing: bool = false
 ## On a slalom's dive down onto the line, early (about to cross before the gun), it keeps the dive's heading and only
 ## eases the sheet, and luffs up only in the last Skipper.SLALOM_LAST_LUFF_S before it would cross (Skipper.
 ## _slalom_start_heading()); false: it luffs up to Skipper.HOLD_LUFF_TWA_DEG at once, as before. Phase S's baseline
