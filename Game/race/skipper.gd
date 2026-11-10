@@ -2494,7 +2494,11 @@ func _slalom_dive_deg(telemetry: Telemetry, spot: Vector2) -> float:
 
 ## Its spot in a slalom's waiting row upwind of the committee boat, inside the sailing area.
 func _slalom_slot() -> Vector2:
-	return _inside_area(RaceCourses.slalom_slot(_race.course, config.start_spot))
+	var slot: Vector2 = RaceCourses.slalom_slot(_race.course, config.start_spot)
+	# slalom_slot_back_m: further behind the line (and its extension past the boat).
+	if config.slalom_slot_back_m > 0.0 and not _race.steps().is_empty():
+		slot -= _race.steps()[0].in_dir.normalized() * config.slalom_slot_back_m
+	return _inside_area(slot)
 
 
 ## Late for its start, or with no time to spare: for its spot. When the spot is a reach on this tack

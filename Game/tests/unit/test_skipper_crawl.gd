@@ -110,8 +110,8 @@ func test_in_the_go_off_its_hold_it_can_let_go_at_once() -> void:
 	assert_eq(skipper._hands.steer, 0.0, "going off its hold: it lets go at once (crawl_go_stuck_s 0)")
 
 
-func test_crawl_go_stuck_s_is_off_by_default() -> void:
-	assert_lt(SkipperConfig.new().crawl_go_stuck_s, 0.0, "below 0: crawl_stuck_s in the go too")
+func test_crawl_go_stuck_s_is_on_by_default() -> void:
+	assert_eq(SkipperConfig.new().crawl_go_stuck_s, 0.0, "taken in loop S9 (10 November 2026): at once in the go")
 
 
 func test_crawl_in_timing_counts_the_wait_before_gathering_speed() -> void:
@@ -136,5 +136,5 @@ func test_crawl_in_timing_counts_the_wait_before_gathering_speed() -> void:
 	assert_false(SkipperConfig.new().crawl_in_timing, "off by default until the suite says it wins")
 
 
-func test_early_unlatches_go_is_off_by_default() -> void:
-	assert_false(SkipperConfig.new().early_unlatches_go, "off by default until the suite says it wins")
+func test_early_unlatches_go_is_on_by_default() -> void:
+	assert_true(SkipperConfig.new().early_unlatches_go, "taken in loop S9 (10 November 2026) with crawl_go_stuck_s 0")

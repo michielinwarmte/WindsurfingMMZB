@@ -108,7 +108,10 @@ enum StartStyle { LOOP, HOLD }
 ## crawl must last before crawl_no_head_up_ms lets go, seconds; below 0: crawl_stuck_s, as everywhere. Phase S (9 November
 ## 2026, the crawl rule on, S3's off arms): 10 of 40 late starts still crawled at the gun, half of them 20 to 24 s late:
 ## gone from the hold at 1.6 to 2 m/s some 33 m back, the 4 s of crawl_stuck_s and the climb out of the crawl made them late.
-@export_range(-1.0, 30.0) var crawl_go_stuck_s: float = -1.0
+## Taken at 0 with early_unlatches_go (loop S9, 10 November 2026): tune 50 starts (seed 24) 1 fixed, 0 broken; hold-out
+## 100 (seed 28) on time 74 -> 81 %, 7 fixed, 0 broken (p 0.008), the median after the gun 7.2 -> 5.5 s, the speed at the
+## gun 5.1 -> 6.2 m/s, nothing else worse. (Alone, S5: hold-out 9 fixed, 1 broken by an early arrival at speed.)
+@export_range(-1.0, 30.0) var crawl_go_stuck_s: float = 0.0
 ## The time it reckons it needs to cross the start line (Skipper._time_to_cross_s()) counts crawl_stuck_s more when it is
 ## crawling (slower than crawl_no_head_up_ms) and the course to the line is more than Skipper.CRAWL_ERROR_DEG toward the
 ## wind of its heading: crawl_no_head_up_ms waits that long before it lets the board gather speed, so it goes that much
@@ -121,7 +124,8 @@ enum StartStyle { LOOP, HOLD }
 ## once gone, as before, so the moment it has turned away from the line and is no longer early it heads for it again.
 ## Phase S (10 November 2026): boards at the line early at 7 to 8 m/s flipped between going and holding back hard every
 ## think and were over at the gun (r0018 of s8_hold_on, r0001 of s5_hold_on); the faster goes of S5 and S8 lost on it.
-@export var early_unlatches_go: bool = false
+## Taken with crawl_go_stuck_s 0 (loop S9: the faster go and its safety, judged together; see there).
+@export var early_unlatches_go: bool = true
 ## On a slalom's dive down onto the line, early (about to cross before the gun), it keeps the dive's heading and only
 ## eases the sheet, and luffs up only in the last Skipper.SLALOM_LAST_LUFF_S before it would cross (Skipper.
 ## _slalom_start_heading()); false: it luffs up to Skipper.HOLD_LUFF_TWA_DEG at once, as before. Phase S's baseline
@@ -135,6 +139,12 @@ enum StartStyle { LOOP, HOLD }
 ## deg): phase S's baseline (9 November 2026), r0024 on T2 at 6 m/s in 17 kt turned up through the wind's eye, stopped
 ## (0.5 m/s), came out on the far side of its dive and started 52 s late.
 @export var slalom_dive_gybes: bool = false
+## On a slalom's start, its waiting spot upwind of the boat moved this much further behind the line, metres (Skipper.
+## _slalom_slot()); 0: where RaceCourses.slalom_slot() puts it, as before. That spot lies about 20 m from the line's
+## extension past the boat, the parking circle's radius: boards on the way there or parked crossed the extension, turned
+## back behind the line and were over at the gun or late (phase S, 10 November 2026: "to its spot upwind of the boat;
+## off the line's extension", then "back behind the line", in 4 of 8 over-early slalom starts of the tune sets).
+@export_range(0.0, 100.0) var slalom_slot_back_m: float = 0.0
 ## On a start line its hold's track runs at (Skipper.REACHING_HOLD_ACROSS or more of it toward the line: a reaching
 ## start, the line along the wind), a skipper who loops sails its timing loop once its time to spare beats what the way
 ## in can use up by this much, seconds, instead of Skipper.START_LOOP_EXCESS_S's 35; 0: always 35, as before. On an
