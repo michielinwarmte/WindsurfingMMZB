@@ -115,13 +115,15 @@ class PhaseS3(unittest.TestCase):
         self.assertEqual(flips["no penalty"], (["r1/0"], []))
         self.assertEqual(flips["untangled"], (["r1/1"], []))
 
-    def test_the_draw_has_three_personas_and_follows_the_start(self):
+    def test_the_draw_has_three_general_heads_and_follows_the_start(self):
         for k in range(200):
             args, drawn = random_suite.draw_race(random.Random(k), "S3")
-            who = [a for a in args if a.startswith("--skippers=")][0].split("=", 1)[1].split(",")
-            self.assertEqual(len(who), 3)
-            self.assertEqual(len(set(who)), 3, "three different personas")
-            self.assertIn("--spread=0.5", args)
+            for head in random_suite.GENERAL_HEAD:
+                self.assertIn(head, args, "the general head (Max: the fastest skipper)")
+            self.assertIn("--boards=3", args)
+            spots = [a for a in args if a.startswith("--start_spots=")][0].split("=", 1)[1].split(",")
+            self.assertEqual(len(spots), 3, "each its own start spot")
+            self.assertTrue(all(0.0 <= float(x) <= 1.0 for x in spots))
             self.assertIn("--start_follow_s=30", args)
             self.assertIn("--start_only=1", args)
 

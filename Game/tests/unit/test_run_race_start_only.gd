@@ -105,3 +105,15 @@ func test_boards_close_together_count_as_tangled_only_round_the_start() -> void:
 	entries[1].sim.reset(Vector3(30.0, 0.0, 60.0), 0.0)
 	RunRace.note_the_crowd(race, entries, 0.5)
 	assert_eq(entries[0].near_s, 0.5, "30 m apart: clear")
+
+
+## Phase S3's three copies of the general head each want their own place on the line (--start_spots), dealt round.
+func test_each_board_gets_its_own_start_spot() -> void:
+	var course: Course = RaceCourses.t1_loop(270.0, Vector2.ZERO)
+	var race: RaceSim = RaceSim.new(course, 3, 60.0)
+	var entries: Array[RunRace.Entry] = RunRace.make_entries(race, course, PackedStringArray(["allrounder", "allrounder", "allrounder"]), 15.0, 50.0, 1)
+	var options: Dictionary[String, String] = {"start_spots": "0.1,0.55,2"}
+	RunRace.apply_skipper_overrides(entries, options)
+	assert_almost_eq((entries[0].skipper as Skipper).config.start_spot, 0.1, 1e-4)
+	assert_almost_eq((entries[1].skipper as Skipper).config.start_spot, 0.55, 1e-4)
+	assert_almost_eq((entries[2].skipper as Skipper).config.start_spot, 1.0, 1e-4, "kept on the line")

@@ -16,10 +16,11 @@ checks that must always hold (not by who wins), with every mark rounding measure
                  20 % of the races in the countdown or up to 2 minutes after the gun; checks: start, stuck, aground,
                  falls (none at all)
   --phase=S3     the starts in company (Max, 10 November 2026: "train with 3 players because now sometimes in testing
-                 they get stuck in eachother. and to train with dirty wind from the other players"): phase S's races
-                 with three personas drawn at random from the 20, at the game's level (0.5) and gear, the rules and the
-                 wind shadows on (the race tool's defaults), each watched to 30 s after the gun (--start_follow_s=30) for
-                 the start's score: how far up the course it is then (score_m); every board judged on its own
+                 they get stuck in eachother. and to train with dirty wind from the other players"; "we want the
+                 fastest skipper"): phase S's races with three copies of the general head, each with its own start spot
+                 drawn at random (--start_spots), the rules and the wind shadows on (the race tool's defaults), each
+                 watched to 30 s after the gun (--start_follow_s=30) for the start's score: how far up the course it is
+                 then (score_m); every board judged on its own
   --extra="..."  arguments added to every race (an A/B: the same --seed and --set with and without a switch)
 
 Speed (measured 8 November 2026 on the 8-core Ryzen 7 5800X3D, one board, the editor engine): 4.0x real time alone,
@@ -133,10 +134,12 @@ def limit_cpu(mask_text):
 def draw_race(rng, phase="A"):
     """One race's arguments for run_race.gd and a short description of what was drawn."""
     if phase == "S3":
-        trio = rng.sample(PERSONAS, PHASE_S3_BOARDS)
-        who = ", ".join(trio)
-        args = ["--skippers=" + ",".join("persona:" + p for p in trio), "--spread=0.5", "--gear=1", "--finish_window=60",
-                "--min_wind_kt=14"]
+        # Three copies of the general head (Max: "we want the fastest skipper"), each with its own start spot drawn
+        # at random (the head's sheet has one: all three aimed at the same point).
+        spots = [rng.random() for _ in range(PHASE_S3_BOARDS)]
+        who = "general head x%d, spots %s" % (PHASE_S3_BOARDS, " ".join("%.2f" % x for x in spots))
+        args = list(GENERAL_HEAD) + ["--boards=%d" % PHASE_S3_BOARDS, "--start_spots=" + ",".join("%.2f" % x for x in spots),
+                                     "--gear=1", "--finish_window=60", "--min_wind_kt=14"]
     elif phase == "B":
         who = rng.choice(["persona:" + p for p in PERSONAS] + CHARACTERS)
         args = ["--skippers=%s" % who, "--spread=0.5", "--gear=1", "--finish_window=60", "--min_wind_kt=14"]

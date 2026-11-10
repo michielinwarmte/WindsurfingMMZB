@@ -47,7 +47,7 @@ push only when Max asks.
 | Scoring again | `tools/heads/rescore.py` | `<run>` scores a finished run's roundings again with the present measures (the old `results.jsonl` kept as `results_before_<time>.jsonl`); `--dry` only prints the medians |
 | The summary | `tools/heads/suite_summary.py` | `<run>` (about 20 lines), `<run_off> <run_on>` (side by side, better / worse / same), `--failures=5`, `--wait` (waits until the run is complete: the one wake-up) |
 | Phase S (the starts) | the same three tools | `random_suite.py --phase=S` (start-only races from reachable drops; below); `suite_summary.py <off> <on>` judges phase S runs race by race (fixed / broken per measure, the sign test's verdict, the races' labels); `--classes` ranks the late starts by class; the race tool's `--start_only=1 --start_watch_s=60 --start_spare_s=30`; unit tests `python -I tools/heads/test_suite_summary.py` and `Game/tests/unit/test_run_race_start_only.gd` |
-| Phase S3 (the starts in company) | the same three tools | `random_suite.py --phase=S3` (three personas at the game's level, the rules and shadows on, watched to 30 s after the gun); `suite_summary.py <off> <on>` judges every board on its own and adds the start's score (better / worse by more than 5 m, the sign test), no penalty, untangled; the race tool's `--start_follow_s=30` and `HEADS_RESULT`'s `score_m`, `cross_speed_ms`, `near_s`, `gun_felt_*`; unit tests `Game/tests/unit/test_felt_wind.gd`, `test_run_race_start_only.gd`, `tools/heads/test_suite_summary.py` |
+| Phase S3 (the starts in company) | the same three tools | `random_suite.py --phase=S3` (three copies of the general head, each its own random start spot, the rules and shadows on, watched to 30 s after the gun); `suite_summary.py <off> <on>` judges every board on its own and adds the start's score (better / worse by more than 5 m, the sign test), no penalty, untangled; the race tool's `--start_follow_s=30` and `HEADS_RESULT`'s `score_m`, `cross_speed_ms`, `near_s`, `gun_felt_*`; unit tests `Game/tests/unit/test_felt_wind.gd`, `test_run_race_start_only.gd`, `tools/heads/test_suite_summary.py` |
 
 The Godot engine: `C:/Users/Max de Dikke/AppData/Local/Programs/Godot/4.7.2-stable/Godot_v4.7.2-stable_win64_console.exe`
 (the suite has it built in; the GODOT environment variable overrides it). The game's release engine cannot run the
@@ -306,9 +306,12 @@ row), and the acceleration law is measured from 12 kt up (0.65 m/s2 at 12 kt and
 in 8 to 11 kt felt winds failing, measure 8 and 10 kt rows with `tools/push_check.sh` (Measure, don't guess).
 
 **What a race is in phase S3.** Phase S's draw (water, course, wind, countdown, start place, R; start-only, reachable
-drops) with three personas drawn from the 20 (all different), at the game's level (`--spread=0.5`) and gear, the rules
-and the wind shadows on (the race tool's defaults), each watched to 30 s after the gun (`--start_follow_s=30`). Every
-board is judged on its own (race r0007's second board is `r0007/1`), so a race gives three starts.
+drops) with three copies of the general head (Hana at her best, `--spread=0 --steady_hands=1 --boards=3`; Max: "we want
+the fastest skipper"; the personas come later, phase B), each with its own start spot drawn at random per race
+(`--start_spots`: the head's sheet has one spot, 0.5, and all three aimed at the same point; drawn, they sometimes
+spread along the line and sometimes want the same place), the rules and the wind shadows on (the race tool's
+defaults), each watched to 30 s after the gun (`--start_follow_s=30`). Every board is judged on its own (race r0007's
+second board is `r0007/1`), so a race gives three starts.
 
 **The measures, per board** (the race tool's `HEADS_RESULT`, the suite's `start`, the summary):
 - **The start's score** (`score_m`): how far up the course it is 30 s after the gun, metres: how much nearer the first
@@ -343,9 +346,10 @@ board is judged on its own (race r0007's second board is `r0007/1`), so a race g
 minute countdown and 60 s watched, start-up included): about 55 races an hour per 4 cores, 110 (330 board starts) on 8.
 An on/off pair of 100 races a side on 4 cores each takes about 1.8 hours.
 
-**Seeds.** Phase S3 starts at tune seed 31 and hold-out seed 41 (new seeds per loop, as in phase S). The first pair
-(`s3_base` off, `s3_felt60` on, tune seed 31) was started at 20:13 on 10 November and stopped at 20:40 (Max: the night);
-each has its first race; started again with the same command it goes on from there.
+**Seeds.** Phase S3 starts at tune seed 31 and hold-out seed 41 (new seeds per loop, as in phase S). A first pair with
+three personas instead of the general head (tune seed 31) was started at 20:13 on 10 November and stopped at 20:40
+(Max: the night; then "do we not use 3x the general head"): kept as `s3_base_personas_stopped` and
+`s3_felt60_personas_stopped`, one race each, not to be resumed.
 
 **The night's plan (10-11 November 2026)**, the efficient loop (a fresh chat; one wake-up per pair):
 1. Step 0: fetch; branch `ai/starts-fleet-10nov`; nothing else running (`Get-Process Godot*`); the frozen copy is

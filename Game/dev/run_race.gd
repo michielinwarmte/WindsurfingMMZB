@@ -80,6 +80,8 @@ extends SceneTree
 ##                         the controller's pilot_overrides), for the autopilot's suite
 ##   [--trace=<board name>] that board's whole telemetry, a row every 0.05 s, to <out_dir>/trace_<name>.csv
 ##   [--skipper.<field>=<n>] a number of every scripted skipper's character sheet (SkipperConfig)
+##   [--start_spots=a,b,c] each board's own start spot (0 the pin end, 1 the boat end), dealt round the boards:
+##                         phase S3's three copies of the general head each want their own place on the line
 ##   [--drop_step=<k|random> --drop_seed=<n> --goal_steps=2] a drop instead of a race (the skipper's heads,
 ##                         8 November 2026): every board set down after the gun at a random open-water
 ##                         spot on the leg to step k (random: any leg), heading roughly along it; the run
@@ -156,6 +158,15 @@ static func apply_skipper_overrides(entries: Array[Entry], options: Dictionary[S
 				scripted.config.set(field, (value != 0.0) if current is bool else (int(value) if current is int else value))
 			else:
 				push_error("No field 'skipper.%s' to override." % field)
+	# --start_spots=a,b,c: board i's own start spot (SkipperConfig.start_spot, 0 the pin end, 1 the boat end), dealt
+	# round the boards. Phase S3 races three copies of the general head (Max, 10 November 2026: "we want the fastest
+	# skipper"), whose sheet has one spot (0.5): without this all three aimed at the same point every race.
+	var spots: PackedStringArray = options.get("start_spots", "").split(",", false)
+	if not spots.is_empty():
+		for i: int in entries.size():
+			var scripted_board: Skipper = entries[i].skipper as Skipper
+			if scripted_board != null:
+				scripted_board.config.start_spot = clampf(spots[i % spots.size()].to_float(), 0.0, 1.0)
 
 
 ## The skipper's heads (8 November 2026): the boards are watched every this many ticks (_watch()).
