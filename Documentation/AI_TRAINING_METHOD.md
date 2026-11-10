@@ -367,9 +367,12 @@ this round should be done at around 8:30 in the morining."
   End a turn only with a block running and its `--wait` pending. When the queue below is used up, take the next class
   of bad starts from the baseline (`--classes`, the most worse boards), write a switch for it and test it; with no idea
   that fits the rules, run the switches' other values (below) on new seeds. A run that only confirms is still useful.
-- **Done at 08:30.** The last block starts when it can still finish by about 08:15 (measure block 1's speed and size
-  the later blocks to fit); 08:15 to 08:30: the log of the loops, the morning report for Max (what was taken, the
-  numbers, the most worse boards traced, what to look at together), commit locally, nothing pushed.
+- **Aim to be done at 08:30; if not ready, keep going until ready** (Max: "and if not ready for 8:30 keep going till
+  ready"). The last block is sized to finish by about 08:15 (measure block 1's speed and size the later blocks to fit);
+  then the log of the loops, the morning report for Max (what was taken, the numbers, the most worse boards traced,
+  what to look at together), commit locally, nothing pushed. If a block runs late or the final check (block 4) has not
+  been done by 08:30, nothing is cut short or skipped: the running block finishes, the final check runs, then the
+  report. "Ready" is the whole queue judged, the final check done and the report written.
 
 *Why the loops stopped early before* (9 and 10 November): the queue of planned tests ran out (phase S on 10 November at
 05:15, with "no switch-sized idea left the rules could take"), and the chat chose to stop rather than run tests it did
