@@ -2353,6 +2353,10 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 		# (Out past an end of the line it is not near the line: 134 m past T1's end, 2 m behind the
 		# extension, the rookie kept going at 12 m/s with 4 s to spare and slid over the line early.)
 		_going = false
+	# early_unlatches_go: about to cross early, it stops going until its own timing says go again (near the line it
+	# kept going, so turned away from the line it headed for it again at once: going, early, going, every think).
+	if config.early_unlatches_go and early_at_line and go_spare_s > HOLD_GO_SPARE_S:
+		_going = false
 	if before_gun and (not _going or early_at_line):
 		if _tack() != run_in_tack:
 			# On the other tack (it has just come to its waiting point, say): it turns onto the run-in

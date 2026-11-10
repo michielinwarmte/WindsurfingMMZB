@@ -134,3 +134,7 @@ func test_crawl_in_timing_counts_the_wait_before_gathering_speed() -> void:
 	skipper.config.crawl_in_timing = true
 	assert_almost_eq(skipper._time_to_cross_s(telemetry, target), fast_plain_s, 0.01, "not crawling: nothing added")
 	assert_false(SkipperConfig.new().crawl_in_timing, "off by default until the suite says it wins")
+
+
+func test_early_unlatches_go_is_off_by_default() -> void:
+	assert_false(SkipperConfig.new().early_unlatches_go, "off by default until the suite says it wins")

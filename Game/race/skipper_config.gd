@@ -116,6 +116,12 @@ enum StartStyle { LOOP, HOLD }
 ## line at about 2 m/s gathered speed along it after the wait, ran out of line ("the line is on the other tack"), crossed
 ## its extension and started 20 to 47 s late (r0017, r0034, r0050 of s7_off).
 @export var crawl_in_timing: bool = false
+## Going for the line and about to cross it early (Skipper._too_early_at_the_line()), with time to spare by its own
+## timing, it stops going until that timing says go again (Skipper._start_heading()); false: near the line it keeps going
+## once gone, as before, so the moment it has turned away from the line and is no longer early it heads for it again.
+## Phase S (10 November 2026): boards at the line early at 7 to 8 m/s flipped between going and holding back hard every
+## think and were over at the gun (r0018 of s8_hold_on, r0001 of s5_hold_on); the faster goes of S5 and S8 lost on it.
+@export var early_unlatches_go: bool = false
 ## On a slalom's dive down onto the line, early (about to cross before the gun), it keeps the dive's heading and only
 ## eases the sheet, and luffs up only in the last Skipper.SLALOM_LAST_LUFF_S before it would cross (Skipper.
 ## _slalom_start_heading()); false: it luffs up to Skipper.HOLD_LUFF_TWA_DEG at once, as before. Phase S's baseline
