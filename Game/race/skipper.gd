@@ -2236,10 +2236,15 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 			# hold speed, rather than sailing off on a reach to tack or gybe for a point behind the line.
 			if config.start_dip and before_gun and -behind_m < START_WALL_M and _off_the_ends_m(step, position) <= START_WALL_ENDS_M:
 				var dip_back_deg: float = _dip_deg(telemetry, step)
+				_hands.hold_speed_ms = maxf(config.hold_speed_ms, _slowest_hold_ms())
 				if not is_nan(dip_back_deg):
-					_hands.hold_speed_ms = maxf(config.hold_speed_ms, _slowest_hold_ms())
 					note = "start: dipping back behind the line"
 					return dip_back_deg + _keep_clear_deg(telemetry, _tack())
+				# No angle on this tack runs away from the line (a reaching start): it tacks or gybes now, slow or not,
+				# keeping its angle meanwhile; on the other tack it dips back.
+				_ask_for_manoeuvre(true, true)
+				note = "start: back behind the line, turning now"
+				return telemetry.wind_from_bearing_deg - _tack() * absf(telemetry.twa_deg)
 			var back_deg: float = _course_to(telemetry, _nearest_on_line(step, position) - forward * START_BACK_BEHIND_M)
 			note = "start: back behind the line"
 			return back_deg
@@ -2411,6 +2416,10 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 				if not is_nan(dip_deg):
 					note = "start: dipping, early at a crawl (%+.1f s to spare)" % go_spare_s
 					return dip_deg + _keep_clear_deg(telemetry, _tack())
+				# No angle on this tack runs away from the line (a reaching start, the line along the wind: the PM1 and
+				# SM1 templates): it turns away onto the other tack, slow or not, as the way to the waiting point does.
+				_ask_for_manoeuvre(true, true)
+				note = "start: turning away, early at a crawl (%+.1f s to spare)" % go_spare_s
 		var hold_deg: float = _hold_heading(telemetry, hold_twa, run_in_tack, on_way + track * HOLD_CARROT_M)
 		_keep_behind_the_line(telemetry, step, behind_m)
 		return hold_deg

@@ -170,7 +170,9 @@ enum StartStyle { LOOP, HOLD }
 ## The dip at the start (Skipper._dip_deg()): before the gun, a board at a crawl that is early at the line (holding back
 ## hard cannot stop it: it creeps on and slides over), or one just over the line itself, bears away on its tack to the
 ## wind angle closest to the wind whose track runs away from the line, instead of creeping on (the hold) or sailing off
-## on a reach to tack or gybe for a point behind the line (the way back). Phase S3, the night of 10-11 November 2026: of
+## on a reach to tack or gybe for a point behind the line (the way back). Where no angle on its tack runs away from the
+## line (a reaching start, the line along the wind) it tacks or gybes away at once, slow or not. Phase S3, the night of
+## 10-11 November 2026: of
 ## the 47 boards over early in the two baselines (s3_base, s3_hold_base), 19 slid over from "holding back hard, early"
 ## at 1.5 to 1.9 m/s, and 8 of those were 20 to 47 m over at the gun after the way back sailed off on a reach
 ## (s3_hold_base r0001/1: at the line at 1.7 m/s 12 s before the gun, 37.7 m over at it). Off until the suite has
