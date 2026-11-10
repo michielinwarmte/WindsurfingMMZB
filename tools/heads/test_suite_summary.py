@@ -75,5 +75,62 @@ class PhaseSDraw(unittest.TestCase):
         self.assertNotIn("--start_only=1", args_a)
 
 
+def s3_board(name, score_m, start_ok=True, penalties=0, near_s=0.0):
+    return {"board": name, "falls": 0,
+            "checks": {"start": {"ok": start_ok, "what": ""}, "stuck": {"ok": True, "what": ""},
+                       "aground": {"ok": True, "what": ""}, "falls": {"ok": True, "what": ""}},
+            "start": {"start_s": 5.0 if start_ok else 40.0, "allowed_s": 20.0, "gun_speed_ms": 5.0, "gun_behind_m": 10.0,
+                      "ocs_at_gun": False, "score_m": score_m, "cross_speed_ms": 6.0, "near_s": near_s,
+                      "penalties": penalties, "gun_mean_kt": 16.0, "gun_felt_60s_kt": 12.0}}
+
+
+def s3_race(label, boards):
+    return {"label": label, "drawn": {"phase": "S3"}, "pass": True, "boards": boards}
+
+
+class PhaseS3(unittest.TestCase):
+    """Phase S3 (10 November 2026): three boards a race, each judged on its own, and the start's score."""
+
+    def test_every_board_is_a_start_of_its_own(self):
+        results = {"r1": s3_race("r1", [s3_board("A", 100.0), s3_board("B", 50.0), s3_board("C", -10.0, start_ok=False)])}
+        self.assertEqual(sorted(suite_summary.units(results)), ["r1/0", "r1/1", "r1/2"])
+        numbers = suite_summary.s_numbers(results)
+        self.assertEqual(numbers["boards"], 3)
+        self.assertAlmostEqual(numbers["start %"], 200.0 / 3.0)
+        self.assertEqual(numbers["score median m"], 50.0)
+        self.assertAlmostEqual(numbers["felt/mean wind"], 0.75)
+
+    def test_the_score_flips_by_more_than_the_tie(self):
+        off = {"r1": s3_race("r1", [s3_board("A", 100.0), s3_board("B", 50.0), s3_board("C", 0.0)])}
+        on = {"r1": s3_race("r1", [s3_board("A", 104.0), s3_board("B", 70.0), s3_board("C", -20.0)])}
+        better, worse, diffs = suite_summary.score_flips(off, on)
+        self.assertEqual(better, ["r1/1"])  # +20 m
+        self.assertEqual(worse, ["r1/2"])  # -20 m; A's +4 m is the same start
+        self.assertEqual(len(diffs), 3)
+
+    def test_penalties_and_tangles_are_measures(self):
+        off = {"r1": s3_race("r1", [s3_board("A", 10.0, penalties=1), s3_board("B", 10.0, near_s=8.0)])}
+        on = {"r1": s3_race("r1", [s3_board("A", 10.0), s3_board("B", 10.0)])}
+        flips = suite_summary.s_flips(off, on)
+        self.assertEqual(flips["no penalty"], (["r1/0"], []))
+        self.assertEqual(flips["untangled"], (["r1/1"], []))
+
+    def test_the_draw_has_three_personas_and_follows_the_start(self):
+        for k in range(200):
+            args, drawn = random_suite.draw_race(random.Random(k), "S3")
+            who = [a for a in args if a.startswith("--skippers=")][0].split("=", 1)[1].split(",")
+            self.assertEqual(len(who), 3)
+            self.assertEqual(len(set(who)), 3, "three different personas")
+            self.assertIn("--spread=0.5", args)
+            self.assertIn("--start_follow_s=30", args)
+            self.assertIn("--start_only=1", args)
+
+    def test_phase_s_draws_unchanged(self):
+        # Phase S3 must not move phase S's draws (the old seeds stay the same races).
+        args_s, _ = random_suite.draw_race(random.Random(5), "S")
+        self.assertIn("--skippers=persona:hana", args_s)
+        self.assertNotIn("--start_follow_s=30", args_s)
+
+
 if __name__ == "__main__":
     unittest.main()

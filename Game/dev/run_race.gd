@@ -94,6 +94,13 @@ extends SceneTree
 ##                         race ends once every board is over the start line (or aground), or start_watch_s after
 ##                         the gun (the start check's limit is 20 s after it; the extra 40 s say how late a late
 ##                         start was). HEADS_RESULT says start_only
+##   [--start_follow_s=30] (phase S3, 10 November 2026) the start-only race goes on at least this long after the gun,
+##                         so every board's start score is taken (START_SCORE_AT_S). Every race's HEADS_RESULT has
+##                         the start's score: score_m (how far up the course it was 30 s after the gun, metres:
+##                         start_score_m()), cross_speed_ms (its speed when its start counted), near_s (seconds
+##                         within 5 m of another board from 30 s before the gun to 30 s after), and the wind at the
+##                         gun: gun_mean_kt (the race's 10 m mean), gun_felt_kt, gun_felt_60s_kt, gun_felt_spread_kt
+##                         (what its sail felt: FeltWind)
 ##   [--start_spare_s=30]  only reachable drops (phase S): a board whose way to the start line (start_need_s, the
 ##                         start check's own estimate) takes longer than the countdown less this, at the countdown's
 ##                         start or after an R, prints DROP_TOO_FAR and the tool quits (code 3), like COURSE_ILLEGAL,
@@ -153,6 +160,12 @@ static func apply_skipper_overrides(entries: Array[Entry], options: Dictionary[S
 
 ## The skipper's heads (8 November 2026): the boards are watched every this many ticks (_watch()).
 const WATCH_EVERY: int = 30
+## Phase S3 (10 November 2026): the start's score is taken this long after the gun (start_score_m()); boards within
+## NEAR_M of another (centre to centre; RaceRules.CONTACT_M is 2) count as tangled from START_NEAR_FROM_S before the
+## gun until then (note_the_crowd()).
+const START_SCORE_AT_S: float = 30.0
+const NEAR_M: float = 5.0
+const START_NEAR_FROM_S: float = 30.0
 ## Under this speed on the board is stuck, under SLOW_MS slow, m/s; the first STUCK_GRACE_S after the
 ## gun or a drop (getting going from rest) do not count as stuck.
 const STUCK_MS: float = 1.0
@@ -267,6 +280,19 @@ class Entry:
 	var gun_behind_m: float = NAN
 	var gun_to_line_m: float = NAN
 	var gun_ocs: bool = false
+	## Phase S3's measures (Max, 10 November 2026: "a measuring feature that will award the players to go as fast over
+	## the line as possible"): its speed when its start counted, and how far up the course it was START_SCORE_AT_S
+	## after the gun (start_score_m()); the time it spent within NEAR_M of another board from START_NEAR_FROM_S before
+	## the gun to START_SCORE_AT_S after it (boards tangled up in each other); and the wind at the gun: the race's 10 m
+	## mean (the telemetry, on the lake the lake's mean) and what its own sail felt (FeltWind: now, the last 60 s's mean
+	## and spread), to see the lulls the start was sailed in.
+	var cross_speed_ms: float = NAN
+	var score_m: float = NAN
+	var near_s: float = 0.0
+	var gun_mean_kt: float = NAN
+	var gun_felt_kt: float = NAN
+	var gun_felt_60s_kt: float = NAN
+	var gun_felt_spread_kt: float = NAN
 
 
 func _initialize() -> void:
@@ -468,6 +494,8 @@ func _initialize() -> void:
 	# Phase S (9 November 2026): start-only races from reachable drops.
 	var start_only: bool = options.get("start_only", "0") != "0"
 	var start_watch_s: float = options.get("start_watch_s", "60").to_float()
+	# Phase S3: the start-only race goes on this long after the gun even when every board is over (the score at 30 s).
+	var start_follow_s: float = options.get("start_follow_s", "0").to_float()
 	var start_spare_s: float = options["start_spare_s"].to_float() if options.has("start_spare_s") and not dropping else -INF
 	var timing_wind_kt: float = wind_kt * options.get("lake_wind_scale", "1").to_float()
 	if start_spare_s > -INF:
@@ -515,12 +543,15 @@ func _initialize() -> void:
 		step_race(race, entries, blind, rules)
 		if bottom != null:
 			aground_count += _check_the_bottom(bottom, race, entries)
+		for i: int in entries.size():
+			note_the_start(entries[i], race, i)
 		if tick % CSV_EVERY == 0:
 			for i: int in entries.size():
 				_write_row(entries[i], race, i)
 		if tick % WATCH_EVERY == 0:
 			for i: int in entries.size():
 				_watch(entries[i], race, i, goal_index, watch_lookout)
+			note_the_crowd(race, entries, WATCH_EVERY * DT)
 		if not gun_seen and race.is_started() and race.clock_s() >= 0.0:
 			gun_seen = true
 			outside_at_gun = boards_outside(race, area)
@@ -530,7 +561,7 @@ func _initialize() -> void:
 			continue  # the first race of a restart is sailed until the R
 		if race.phase() == RaceSim.Phase.FINISHED or race.clock_s() >= stop_after_gun_s:
 			break
-		if start_only and race.clock_s() >= 0.0 and (race.clock_s() >= start_watch_s or all_over_the_line(race, entries)):
+		if start_only and race.clock_s() >= 0.0 and (race.clock_s() >= start_watch_s or (all_over_the_line(race, entries) and race.clock_s() >= start_follow_s)):
 			break
 		if dropping and entries.all(func(e: Entry) -> bool: return e.goal_at_s >= 0.0 or e.aground):
 			break
@@ -582,6 +613,14 @@ func _initialize() -> void:
 		result["gun_behind_m"] = snappedf(entries[i].gun_behind_m, 0.1) if not is_nan(entries[i].gun_behind_m) else 0.0
 		result["gun_to_line_m"] = snappedf(entries[i].gun_to_line_m, 0.1) if not is_nan(entries[i].gun_to_line_m) else -1.0
 		result["ocs_at_gun"] = entries[i].gun_ocs
+		# Phase S3's measures (-1 or null when not reached: the race ended before 30 s after the gun, or no start).
+		result["cross_speed_ms"] = snappedf(entries[i].cross_speed_ms, 0.01) if not is_nan(entries[i].cross_speed_ms) else -1.0
+		result["score_m"] = snappedf(entries[i].score_m, 0.1) if not is_nan(entries[i].score_m) else null
+		result["near_s"] = snappedf(entries[i].near_s, 0.1)
+		result["boards"] = entries.size()
+		for key: String in ["gun_mean_kt", "gun_felt_kt", "gun_felt_60s_kt", "gun_felt_spread_kt"]:
+			var value: float = entries[i].get(key)
+			result[key] = snappedf(value, 0.1) if not is_nan(value) else null
 		print("HEADS_RESULT " + JSON.stringify(result))
 	quit(0)
 
@@ -612,6 +651,52 @@ static func note_the_gun(entry: Entry, race: RaceSim, index: int) -> void:
 	entry.gun_behind_m = -RoundingCheck.over_line_m(at, line.points[0], line.points[1], line.in_dir)
 	entry.gun_to_line_m = Geometry2D.get_closest_point_to_segment(at, line.points[0], line.points[1]).distance_to(at)
 	entry.gun_ocs = race.is_ocs(index)
+	entry.gun_mean_kt = entry.sim.telemetry.tws_10m_kt
+	var scripted: Skipper = entry.skipper as Skipper
+	if scripted != null and scripted.felt.count() > 0:
+		entry.gun_felt_kt = scripted.felt.now_kt()
+		entry.gun_felt_60s_kt = scripted.felt.mean_kt(60.0)
+		entry.gun_felt_spread_kt = scripted.felt.spread_kt(60.0)
+
+
+## The start's score (phase S3, Max, 10 November 2026: "award the players to go as fast over the line as possible ...
+## this way you have the best start"): how far up the course the board is START_SCORE_AT_S after the gun, metres: how
+## much nearer the first mark (or gate) it is than the start line's middle. A late start, a slow crossing, a crossing
+## at the far end, dirty air or a tangle after the gun all cost metres; over early it must come back, which costs more.
+## Not started yet (late, or over early and not back): minus its distance from the line, whichever side it is on.
+static func start_score_m(race: RaceSim, index: int, at: Vector2) -> float:
+	var steps: Array[RaceStep] = race.steps()
+	var line: RaceStep = steps[0]
+	if race.next_step_index(index) == 0 or steps.size() < 2:
+		return -absf(RoundingCheck.over_line_m(at, line.points[0], line.points[1], line.in_dir))
+	return steps[1].distance_from(line.target()) - steps[1].distance_from(at)
+
+
+## The start's measures each tick after the gun (phase S3): the speed when its start counted, and the score at
+## START_SCORE_AT_S.
+static func note_the_start(entry: Entry, race: RaceSim, index: int) -> void:
+	var now_s: float = race.clock_s()
+	if now_s < 0.0:
+		return
+	if is_nan(entry.cross_speed_ms) and race.next_step_index(index) > 0:
+		entry.cross_speed_ms = entry.sim.telemetry.speed_ms
+	if is_nan(entry.score_m) and now_s >= START_SCORE_AT_S:
+		entry.score_m = start_score_m(race, index, _where(entry))
+
+
+## Boards tangled up in each other round the start (phase S3; Max, 10 November 2026: "sometimes in testing they get
+## stuck in each other"; the boards pass through each other, so a tangle shows as time spent close): each board within
+## NEAR_M of another from START_NEAR_FROM_S before the gun to START_SCORE_AT_S after it counts dt_s.
+static func note_the_crowd(race: RaceSim, entries: Array[Entry], dt_s: float) -> void:
+	var now_s: float = race.clock_s()
+	if not race.is_started() or now_s < -START_NEAR_FROM_S or now_s > START_SCORE_AT_S or entries.size() < 2:
+		return
+	for i: int in entries.size():
+		var here: Vector2 = _where(entries[i])
+		for j: int in entries.size():
+			if j != i and here.distance_to(_where(entries[j])) <= NEAR_M:
+				entries[i].near_s += dt_s
+				break
 
 
 ## Every board over the start line (its start counted) or aground: a start-only race is over.
@@ -676,6 +761,10 @@ static func restart_race(old: RaceSim, course: Course, laps: int, prestart_s: fl
 		entry.last_heading_deg = NAN
 		entry.falls_before_gun = 0
 		entry.penalties_seen = 0
+		# The start's measures are the new race's (the gun's are taken again at its gun).
+		entry.cross_speed_ms = NAN
+		entry.score_m = NAN
+		entry.near_s = 0.0
 		race.add_board(entry.name)
 		race.update_board(i, _where(entry))
 	for i: int in entries.size():

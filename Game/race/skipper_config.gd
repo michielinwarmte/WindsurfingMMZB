@@ -153,6 +153,20 @@ enum StartStyle { LOOP, HOLD }
 ## straight at the line from 150 m with 67 s to spare, 12 to 18 s early at the go point, over before the gun (s2b_on
 ## r0010, r0037; baseline_S r0045, r0049, r0166).
 @export_range(0.0, 60.0) var reaching_loop_excess_s: float = 0.0
+## The wind it reckons with, from its own sail (Skipper.wind_kt(), FeltWind): the mean of what its sail has felt over
+## the last this many seconds, put on 10 m; 0: the telemetry's tws_10m_kt, as before, which on the lake is the lake's
+## MEAN wind, not the wind where the board is. It sets the polar's speeds and best angles, the acceleration it reckons
+## with off a hold and the push. Max, 10 November 2026, watching the AI start PD3 in the lull of the lake: "if the AIs
+## do not have info about the current wind and average wind felt in the last minute or 2 ... give them that so they can
+## adapt to wind speed in sail". Off until the suite has judged it (phase S3).
+@export_range(0.0, 120.0) var felt_wind_s: float = 0.0
+## Safe or risky at the start (Skipper._gust_lead_s()): in a wind that varies it goes for the line earlier, by this
+## share of its reckoned time to the line for every unit of the felt wind's spread over its mean (FeltWind over the
+## last 60 s: standard deviation / mean). A lull on the way in makes a board late and slow; going earlier with the early
+## guard (_too_early_at_the_line()) to ease it costs a little speed at the line but not the start. 0: no lead, as
+## before; 1 with a spread of 20 % of the mean and 10 s to the line goes 2 s earlier. Max, 10 November 2026: "in tricky
+## situations they have to learn to be risky or safe". Off until the suite has judged it (phase S3).
+@export_range(0.0, 4.0) var start_gust_lead: float = 0.0
 
 @export_group("Start")
 ## Where on the start line it wants to cross: 0 = the pin end, 1 = the boat end.

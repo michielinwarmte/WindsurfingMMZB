@@ -390,6 +390,13 @@ const START_SLOW_FOR_TURN_M: float = 50.0
 ## getting going again, counted generously: early is put right by holding back, late is not).
 const LOOP_AWAY_SPEED_MS: float = 5.0
 const START_LOOP_RETURN_S: float = 20.0
+## SkipperConfig.start_gust_lead (_gust_lead_s()): the felt wind's spread over this many seconds, once it has felt
+## GUST_LEAD_LEAST_S; the spread's share of the mean counted up to GUST_LEAD_MOST_SHARE, and the run in up to
+## GUST_LEAD_LONGEST_RUN_S (a long way in from far off is not the go off a hold).
+const GUST_LEAD_WINDOW_S: float = 60.0
+const GUST_LEAD_LEAST_S: float = 10.0
+const GUST_LEAD_MOST_SHARE: float = 0.5
+const GUST_LEAD_LONGEST_RUN_S: float = 30.0
 ## Free sailing (D4): legs on these points of sail (wind angles, degrees; never deeper than the
 ## angle it runs at), each sailed this long (seconds, at random between the two), then a tack (from
 ## closer to the wind than FREE_GYBE_FROM_TWA_DEG) or a gybe.
@@ -578,6 +585,9 @@ var _going_from_hold: bool = false
 var _leeway_deg: float = 5.0
 var _speed_ratio: float = 1.0
 var _wind_memory_deg: float = 0.0
+## The wind its own sail has felt lately (FeltWind: now, the last minute or two, how much it varied); what it reckons
+## with when SkipperConfig.felt_wind_s is set (wind_kt()). Public for the race tool's start report and the HUDs.
+var felt: FeltWind = FeltWind.new()
 var _last_position: Vector2 = Vector2.ZERO
 var _velocity: Vector2 = Vector2.ZERO
 ## The head's turns (THINK_INTERVAL_S): when it thinks next, its moment within the interval, and
@@ -776,6 +786,8 @@ func _forget_the_race() -> void:
 	_holding_since_s = -1.0
 	_keeping_clear = false
 	_sharp_wanted = false
+	# A new race puts the board somewhere else (R: a new random spot): the wind felt at the old one says little there.
+	felt.clear()
 	if _hands != null:
 		_hands.hold_speed_ms = 0.0
 		_hands.sharp = false
@@ -1714,7 +1726,7 @@ func _beat_twa_deg() -> float:
 
 ## The polar's best wind angle to beat at in the wind of the moment, degrees (SkipperPolar).
 func _best_upwind_twa_deg() -> float:
-	return SkipperPolar.per_wind(_polar_winds, _polar_upwind, _sim.telemetry.tws_10m_kt)
+	return SkipperPolar.per_wind(_polar_winds, _polar_upwind, wind_kt())
 
 
 ## The wind angle it sails downwind (rule 4: its gybe angle read from the polar, not a constant):
@@ -1735,7 +1747,7 @@ func _run_twa_deg() -> float:
 
 ## The polar's best wind angle to run at in the wind of the moment, degrees (SkipperPolar).
 func _best_downwind_twa_deg() -> float:
-	return SkipperPolar.per_wind(_polar_winds, _polar_downwind, _sim.telemetry.tws_10m_kt)
+	return SkipperPolar.per_wind(_polar_winds, _polar_downwind, wind_kt())
 
 
 ## The penalty turn: a full circle, one tack and one gybe turning the same way round, so that the
@@ -2339,7 +2351,8 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 	# from its speed now and how fast it gains speed): then it goes, so as to cross at the time it
 	# aims for (HOLD_GO_SPARE_S). Past the go point, or about to cross the line before the gun, it
 	# holds back as slow as it steers.
-	var go_spare_s: float = aim_s - _time_to_cross_s(telemetry, cross_at)
+	var cross_need_s: float = _time_to_cross_s(telemetry, cross_at)
+	var go_spare_s: float = aim_s - cross_need_s - _gust_lead_s(cross_need_s)
 	start_spare_s = go_spare_s
 	var early_at_line: bool = before_gun and _too_early_at_the_line(telemetry, step, behind_m)
 	# Once it has gone near the line it keeps going (its spare time jumps about as it gains speed),
@@ -2421,7 +2434,8 @@ func _slalom_start_heading(telemetry: Telemetry, step: RaceStep, behind_m: float
 	var wind_deg: float = telemetry.wind_from_bearing_deg
 	var spot: Vector2 = _start_spot(step)
 	var before_gun: bool = _race.clock_s() < 0.0
-	var spare_s: float = -_race.clock_s() + config.start_timing_error_s - _time_to_cross_s(telemetry, spot)
+	var dive_need_s: float = _time_to_cross_s(telemetry, spot)
+	var spare_s: float = -_race.clock_s() + config.start_timing_error_s - dive_need_s - _gust_lead_s(dive_need_s)
 	start_spare_s = spare_s
 	if spare_s <= SLALOM_GO_SPARE_S or not before_gun:
 		_going = true
@@ -2587,10 +2601,10 @@ func _time_to_cross_s(telemetry: Telemetry, target: Vector2) -> float:
 	return takes_s + crawl_wait_s
 
 
-## How fast the board gains speed when it sheets in from a hold, m/s2, in the wind of the moment:
+## How fast the board gains speed when it sheets in from a hold, m/s2, in the wind it reckons with (wind_kt()):
 ## measured on the open water's sea from 2.5 to 6 m/s, 5.5 s at 12 kt, 2.4 s at 18, 2 s at 24.
 func _acceleration_ms2() -> float:
-	return clampf(lerpf(0.65, 1.45, (_sim.telemetry.tws_10m_kt - 12.0) / 6.0), 0.65, 1.75) * config.start_accel_share
+	return clampf(lerpf(0.65, 1.45, (wind_kt() - 12.0) / 6.0), 0.65, 1.75) * config.start_accel_share
 
 
 ## True when the board, at the speed it has toward the start line, would cross it within
@@ -2941,11 +2955,34 @@ func _turn_time_s(telemetry: Telemetry, to_twa_deg: float) -> float:
 	return lost * absf(turn_deg) / rate_dps
 
 
-## The polar's speed at a wind angle (degrees, either tack) in the wind the board sails in now, m/s:
+## The polar's speed at a wind angle (degrees, either tack) in the wind it reckons with (wind_kt()), m/s:
 ## between the table's angles and between its winds (below 12 kt the 12 kt row, above 24 kt the
 ## 24 kt row).
 func _polar_speed_ms(twa_deg: float) -> float:
-	return SkipperPolar.value_at(_polar_winds, _polar_twa, _polar_speeds, _sim.telemetry.tws_10m_kt, twa_deg)
+	return SkipperPolar.value_at(_polar_winds, _polar_twa, _polar_speeds, wind_kt(), twa_deg)
+
+
+## The wind it reckons with, knots at 10 m: with SkipperConfig.felt_wind_s the mean of what its own sail has felt over
+## that many seconds (FeltWind: on the lake the wind where it sails, its lulls, the lee and the other sails' shadows);
+## otherwise, and before its sail has felt anything, the telemetry's tws_10m_kt (on the lake the lake's mean).
+func wind_kt() -> float:
+	if config.felt_wind_s > 0.0 and felt.count() > 0:
+		return felt.mean_kt(config.felt_wind_s)
+	return _sim.telemetry.tws_10m_kt
+
+
+## SkipperConfig.start_gust_lead: how much earlier it goes for the line in a wind that varies, seconds, for a run in it
+## reckons takes need_s: the share start_gust_lead of need_s for every unit of the felt wind's spread over its mean in
+## the last GUST_LEAD_WINDOW_S (Max, 10 November 2026: "in tricky situations they have to learn to be risky or safe").
+## 0 when off, or before it has felt GUST_LEAD_LEAST_S of wind.
+func _gust_lead_s(need_s: float) -> float:
+	if config.start_gust_lead <= 0.0 or felt.span_s() < GUST_LEAD_LEAST_S or not is_finite(need_s):
+		return 0.0
+	var mean: float = felt.mean_kt(GUST_LEAD_WINDOW_S)
+	if not (mean > 1.0):
+		return 0.0
+	var share: float = clampf(felt.spread_kt(GUST_LEAD_WINDOW_S) / mean, 0.0, GUST_LEAD_MOST_SHARE)
+	return config.start_gust_lead * share * clampf(need_s, 0.0, GUST_LEAD_LONGEST_RUN_S)
 
 
 # ---------------------------------------------------------------- the hands
@@ -3048,7 +3085,7 @@ func _push_level(telemetry: Telemetry) -> float:
 		return NAN
 	if config.push_everywhere >= 0.0:
 		return clampf(config.push_everywhere, 0.0, 1.0)
-	var level: float = SkipperPolar.push_at(_polar_winds, _polar_twa, _polar_push, telemetry.tws_10m_kt, telemetry.twa_deg)
+	var level: float = SkipperPolar.push_at(_polar_winds, _polar_twa, _polar_push, wind_kt(), telemetry.twa_deg)
 	if is_nan(level):
 		if config.push_offset == 0.0 or absf(telemetry.twa_deg) < PUSH_UPWIND_TWA_DEG or _turning_onto_a_course(telemetry):
 			return NAN
@@ -3184,6 +3221,8 @@ func _measure(telemetry: Telemetry, dt: float) -> void:
 	var position: Vector2 = _position(telemetry)
 	_velocity = (position - _last_position) / maxf(dt, 1e-6)
 	_last_position = position
+	if _sim.sailor_state == WindsurferSim.SailorState.SAILING:
+		felt.add(_time_s, FeltWind.felt_10m_kt(telemetry, _sim.wind))
 	var pilot: Autopilot = _controller.auto_sheet_pilot
 	if telemetry.speed_ms > pilot.pointing_speed_ms:
 		_pointing = true

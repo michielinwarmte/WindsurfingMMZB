@@ -5,7 +5,7 @@ Every run draws its own race, so the skipper is never tuned to a few fixed ones,
 checks that must always hold (not by who wins), with every mark rounding measured:
 
     python -I tools/heads/random_suite.py --run=<name> [--count=200] [--seed=1] [--cores=8]
-        [--project=<a frozen copy>/Game] [--cpu_mask=0x5555] [--set=tune|holdout] [--phase=A|B|S]
+        [--project=<a frozen copy>/Game] [--cpu_mask=0x5555] [--set=tune|holdout] [--phase=A|B|S|S3]
         [--extra="--skipper.<switch>=1 ..."]
 
   --phase=A      one general head on every board (the default): a persona at its best with steady hands
@@ -15,6 +15,11 @@ checks that must always hold (not by who wins), with every mark rounding measure
                  with 30 s to spare (--start_spare_s=30; a drop too far prints DROP_TOO_FAR and is drawn again), R in
                  20 % of the races in the countdown or up to 2 minutes after the gun; checks: start, stuck, aground,
                  falls (none at all)
+  --phase=S3     the starts in company (Max, 10 November 2026: "train with 3 players because now sometimes in testing
+                 they get stuck in eachother. and to train with dirty wind from the other players"): phase S's races
+                 with three personas drawn at random from the 20, at the game's level (0.5) and gear, the rules and the
+                 wind shadows on (the race tool's defaults), each watched to 30 s after the gun (--start_follow_s=30) for
+                 the start's score: how far up the course it is then (score_m); every board judged on its own
   --extra="..."  arguments added to every race (an A/B: the same --seed and --set with and without a switch)
 
 Speed (measured 8 November 2026 on the 8-core Ryzen 7 5800X3D, one board, the editor engine): 4.0x real time alone,
@@ -77,6 +82,9 @@ REDRAWN_MARKS = ("COURSE_ILLEGAL", "WIND_TOO_LOW", "FIT_FAILED", "DROP_TOO_FAR")
 # gun a start-only race is watched (the start check's limit is 20 s; the rest says how late a late start was).
 PHASE_S_SPARE_S = 30
 PHASE_S_WATCH_S = 60
+# Phase S3 (10 November 2026): three boards a race, each watched to 30 s after the gun for the start's score.
+PHASE_S3_BOARDS = 3
+PHASE_S3_FOLLOW_S = 30
 # The checks' limits.
 START_SPARE_S = 20.0
 STUCK_LIMIT_S = 20.0
@@ -124,14 +132,21 @@ def limit_cpu(mask_text):
 
 def draw_race(rng, phase="A"):
     """One race's arguments for run_race.gd and a short description of what was drawn."""
-    if phase == "B":
+    if phase == "S3":
+        trio = rng.sample(PERSONAS, PHASE_S3_BOARDS)
+        who = ", ".join(trio)
+        args = ["--skippers=" + ",".join("persona:" + p for p in trio), "--spread=0.5", "--gear=1", "--finish_window=60",
+                "--min_wind_kt=14"]
+    elif phase == "B":
         who = rng.choice(["persona:" + p for p in PERSONAS] + CHARACTERS)
         args = ["--skippers=%s" % who, "--spread=0.5", "--gear=1", "--finish_window=60", "--min_wind_kt=14"]
     else:
         who = "general head"
         args = list(GENERAL_HEAD) + ["--gear=1", "--finish_window=60", "--min_wind_kt=14"]
-    if phase == "S":
+    if phase in ("S", "S3"):
         args += ["--start_only=1", "--start_spare_s=%d" % PHASE_S_SPARE_S, "--start_watch_s=%d" % PHASE_S_WATCH_S]
+    if phase == "S3":
+        args += ["--start_follow_s=%d" % PHASE_S3_FOLLOW_S]
     seed = rng.randint(1, 10**6)
     args += ["--seed=%d" % seed]
     d = {"who": who, "phase": phase}
@@ -192,7 +207,7 @@ def draw_race(rng, phase="A"):
         d["start"] = "anywhere"
     d["restart"] = "-"
     with_r = rng.random() < 0.2  # one draw whatever the phase: phase A's and B's races stay what they were
-    if with_r and phase == "S":
+    if with_r and phase in ("S", "S3"):
         # Phase S: R in the countdown or up to 2 minutes after the gun; the start after the last R counts.
         if rng.random() < 0.5:
             at_s = -rng.uniform(5.0, countdown - 5.0)
@@ -368,7 +383,7 @@ def score(label, log_text, csv_dir, drawn):
         checks["start"] = (splits[0] <= start_allowed, "%.0f s after the gun (allowed %.0f)" % (splits[0], start_allowed)) if splits else (False, "never started")
         checks["stuck"] = (r.get("longest_stuck_s", 0.0) <= STUCK_LIMIT_S, "longest %.0f s" % r.get("longest_stuck_s", 0.0))
         checks["aground"] = (not r.get("aground", False), r.get("aground_note", "") or "no")
-        if drawn.get("phase") == "S":
+        if drawn.get("phase") in ("S", "S3"):
             # Phase S: a start-only race. The checks are the start's; a fall anywhere from the countdown to the start
             # counts (the measures that may not get worse: falls, stuck, aground, over early).
             checks["falls"] = (r.get("falls", 0) == 0, "%d (none allowed in a start)" % r.get("falls", 0))
@@ -377,7 +392,13 @@ def score(label, log_text, csv_dir, drawn):
                      "gun_speed_ms": r.get("gun_speed_ms", -1.0), "gun_behind_m": r.get("gun_behind_m", 0.0),
                      "gun_to_line_m": r.get("gun_to_line_m", -1.0), "ocs": bool(r.get("ocs", False)),
                      "ocs_at_gun": bool(r.get("ocs_at_gun", False)), "falls_before_gun": r.get("falls_before_gun", 0),
-                     "restarted": bool(r.get("restarted", False)), "spawn": r.get("spawn", [])}
+                     "restarted": bool(r.get("restarted", False)), "spawn": r.get("spawn", []),
+                     # Phase S3: the start's score (metres up the course 30 s after the gun), the speed when the start
+                     # counted, the seconds tangled within 5 m of another board, the penalties, and the wind at the gun.
+                     "score_m": r.get("score_m"), "cross_speed_ms": r.get("cross_speed_ms", -1.0),
+                     "near_s": r.get("near_s", 0.0), "penalties": r.get("penalties", 0), "boards": r.get("boards", 1),
+                     "gun_mean_kt": r.get("gun_mean_kt"), "gun_felt_kt": r.get("gun_felt_kt"),
+                     "gun_felt_60s_kt": r.get("gun_felt_60s_kt"), "gun_felt_spread_kt": r.get("gun_felt_spread_kt")}
             boards.append({"board": r["board"], "checks": {k: {"ok": v[0], "what": v[1]} for k, v in checks.items()},
                            "pass": all(v[0] for v in checks.values()), "legs": [], "roundings": [],
                            "falls": r.get("falls", 0), "note": r.get("note", ""), "start": start})
@@ -418,6 +439,11 @@ def score(label, log_text, csv_dir, drawn):
 def start_card(results, e):
     """Phase S's card: the starts' numbers, and the starts on time by water and course kind, by course, by start place."""
     starts = [(r, b["start"]) for r in results for b in r["boards"] if "start" in b]
+    falls_before = sum(1 for r in results for b in r["boards"] if "start" in b and b["falls"] > 0)
+    scores = [st["score_m"] for _, st in starts if st.get("score_m") is not None]
+    crossing = [st["cross_speed_ms"] for _, st in starts if st.get("cross_speed_ms", -1.0) >= 0.0]
+    tangled = sum(1 for _, st in starts if st.get("near_s", 0.0) > 5.0)
+    penalties = sum(st.get("penalties", 0) for _, st in starts)
     if not starts:
         return ""
     on_time = [st["start_s"] is not None and st["start_s"] <= st["allowed_s"] for _, st in starts]
@@ -429,9 +455,15 @@ def start_card(results, e):
         '<div class="tile"><div class="big">%d / %d</div><div class="dim">starts on time (under 20 s)</div></div>' % (sum(on_time), len(on_time)) +
         '<div class="tile"><div class="big">%s</div><div class="dim">median seconds after the gun</div></div>' % ("%.1f s" % med if med != float("inf") else "over 60 s") +
         '<div class="tile"><div class="big">%d</div><div class="dim">over early at the gun</div></div>' % sum(st["ocs_at_gun"] for _, st in starts) +
-        '<div class="tile"><div class="big">%d</div><div class="dim">fell before the start</div></div>' % sum(1 for r, _ in starts if r["boards"][0]["falls"] > 0) +
+        '<div class="tile"><div class="big">%d</div><div class="dim">fell before the start</div></div>' % falls_before +
         '<div class="tile"><div class="big">%s</div><div class="dim">median speed at the gun</div></div>' % ("%.1f m/s" % statistics.median(speeds) if speeds else "-") +
         '<div class="tile"><div class="big">%s</div><div class="dim">median behind the line at the gun</div></div>' % ("%.0f m" % statistics.median(behind) if behind else "-"))
+    if scores:
+        tiles += (
+            '<div class="tile"><div class="big">%.0f m</div><div class="dim">median start score: up the course 30 s after the gun</div></div>' % statistics.median(scores) +
+            '<div class="tile"><div class="big">%s</div><div class="dim">median speed over the line</div></div>' % ("%.1f m/s" % statistics.median(crossing) if crossing else "-") +
+            '<div class="tile"><div class="big">%d</div><div class="dim">boards tangled (over 5 s within 5 m of another)</div></div>' % tangled +
+            '<div class="tile"><div class="big">%d</div><div class="dim">penalties</div></div>' % penalties)
 
     def table(key_of):
         groups = {}

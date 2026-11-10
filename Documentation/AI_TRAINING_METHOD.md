@@ -47,6 +47,7 @@ push only when Max asks.
 | Scoring again | `tools/heads/rescore.py` | `<run>` scores a finished run's roundings again with the present measures (the old `results.jsonl` kept as `results_before_<time>.jsonl`); `--dry` only prints the medians |
 | The summary | `tools/heads/suite_summary.py` | `<run>` (about 20 lines), `<run_off> <run_on>` (side by side, better / worse / same), `--failures=5`, `--wait` (waits until the run is complete: the one wake-up) |
 | Phase S (the starts) | the same three tools | `random_suite.py --phase=S` (start-only races from reachable drops; below); `suite_summary.py <off> <on>` judges phase S runs race by race (fixed / broken per measure, the sign test's verdict, the races' labels); `--classes` ranks the late starts by class; the race tool's `--start_only=1 --start_watch_s=60 --start_spare_s=30`; unit tests `python -I tools/heads/test_suite_summary.py` and `Game/tests/unit/test_run_race_start_only.gd` |
+| Phase S3 (the starts in company) | the same three tools | `random_suite.py --phase=S3` (three personas at the game's level, the rules and shadows on, watched to 30 s after the gun); `suite_summary.py <off> <on>` judges every board on its own and adds the start's score (better / worse by more than 5 m, the sign test), no penalty, untangled; the race tool's `--start_follow_s=30` and `HEADS_RESULT`'s `score_m`, `cross_speed_ms`, `near_s`, `gun_felt_*`; unit tests `Game/tests/unit/test_felt_wind.gd`, `test_run_race_start_only.gd`, `tools/heads/test_suite_summary.py` |
 
 The Godot engine: `C:/Users/Max de Dikke/AppData/Local/Programs/Godot/4.7.2-stable/Godot_v4.7.2-stable_win64_console.exe`
 (the suite has it built in; the GODOT environment variable overrides it). The game's release engine cannot run the
@@ -280,6 +281,87 @@ the baseline's 200 starts 73.0 -> 83.5 % on time (22 fixed, 1 broken), S1's hold
 **Open: Max's PWA course.** A play build cannot save a course (its `res://` is inside the pack); when Max saves it
 from the course maker in the Godot editor, or describes it (the start line's angle to the wind, the marks and which
 side they are rounded), it joins phase S's draw.
+
+## The starts in company (phase S3, from 10 November 2026: Max's order)
+
+Max, 10 November 2026, watching the AI race in the watch mode ("they have improved significantly"): on the lake, on the
+sprint slalom PD3, the wind at the start is very light because the start lies in the lake's lull, so a board must be
+close to the line. He asked for:
+1. **A measure that rewards going over the line as fast as possible**: "this way you have the best start. but in tricky
+   situations they have to learn to be risky or safe."
+2. **Three boards a race**: "now sometimes in testing they get stuck in eachother", and **dirty wind** from the others.
+3. **The wind the AI feels**: "if the ai's do not have info about the current wind and average wind felt in the last
+   minute or 2 ... give them that so they can adapt to wind speed in sail."
+4. **Still the start, and the 30 s after it**: "the rest is quite ok".
+5. **Get the suite ready first; the training runs at night** (Max stopped the first runs at 20:40: "i want to do that in
+   the night").
+
+**What was found (10 November 2026).** On the lake the telemetry's `tws_10m_kt`, which the skipper used for its polar's
+speeds and angles, the acceleration it reckons with off a hold, and the push, is the lake's MEAN wind of the moment
+(`MapWindField`: the mean carries the "where is the wind from" decisions), not the wind where the board is. The sail
+feels the local wind (the map's pattern, the lulls, the lee, the other sails' shadows). A start in a lull was timed with
+the mean's speed and acceleration, so the board went too late and crossed slow. In the smoke race (PD3, 14:30) the mean
+was 18.2 kt and the sails felt 14.5 to 15.8 kt. Also: the polar has no rows below 12 kt (below that it uses the 12 kt
+row), and the acceleration law is measured from 12 kt up (0.65 m/s2 at 12 kt and below); if the baseline shows starts
+in 8 to 11 kt felt winds failing, measure 8 and 10 kt rows with `tools/push_check.sh` (Measure, don't guess).
+
+**What a race is in phase S3.** Phase S's draw (water, course, wind, countdown, start place, R; start-only, reachable
+drops) with three personas drawn from the 20 (all different), at the game's level (`--spread=0.5`) and gear, the rules
+and the wind shadows on (the race tool's defaults), each watched to 30 s after the gun (`--start_follow_s=30`). Every
+board is judged on its own (race r0007's second board is `r0007/1`), so a race gives three starts.
+
+**The measures, per board** (the race tool's `HEADS_RESULT`, the suite's `start`, the summary):
+- **The start's score** (`score_m`): how far up the course it is 30 s after the gun, metres: how much nearer the first
+  mark (or gate) than the start line's middle. Late, slow over the line, the far end, dirty air, a tangle, all cost
+  metres; over early it must come back, which costs more; not started by then it scores minus its distance from the
+  line. This is the measure that rewards the fastest start, and it judges risky against safe: too risky (over early,
+  or a dive into a lull) and too safe (late, slow) both lose metres.
+- `cross_speed_ms`: its speed when its start counted.
+- `near_s`: seconds within 5 m of another board from 30 s before the gun to 30 s after (the boards pass through each
+  other, so a tangle shows as time close); "untangled" is 5 s or less.
+- `penalties` (the rules), and phase S's: on time, stuck, aground, no fall, over early at the gun.
+- The wind at the gun: `gun_mean_kt` (the race's 10 m mean), `gun_felt_kt`, `gun_felt_60s_kt`, `gun_felt_spread_kt`
+  (what its sail felt, FeltWind). The summary prints `felt/mean wind` (the median share: the lulls the starts are in).
+
+**How a switch is judged in phase S3** (phase S's rules, per board):
+1. **The start's score**: per board better or worse by more than 5 m; the better must beat the worse by the one-sided
+   sign test (under 5 %) on the hold-out (`pass`), and win on the tune set.
+2. **Nothing worse by the sign test the other way**: on time, stuck, aground, no fall, over early, no penalty,
+   untangled (`WORSE` in the summary blocks it).
+3. **The most worse boards traced** (the summary prints the six; their CSV, a replay when needed). If the switch's own
+   action made a start worse, it is not taken, whatever the numbers.
+
+**The switches waiting to be judged** (in `SkipperConfig`, off by default):
+- `felt_wind_s` (0 = off): the wind the skipper reckons with is the mean of what its own sail felt over that many
+  seconds (`Skipper.wind_kt()`, `FeltWind`), for the polar's speeds and angles, the acceleration and the push, all
+  race long. Try 60 first, then 120 or 20 if 60 wins.
+- `start_gust_lead` (0 = off): risky or safe. In a wind that varies it goes for the line earlier, by this share of its
+  reckoned time to the line for each unit of the felt wind's spread over its mean (last 60 s). Try 1 (on top of
+  `felt_wind_s` if that is taken), then 0.5 or 2.
+
+**Speed (measured 10 November 2026).** A three-board lake race runs at about real time on one core (3.5 minutes for a 2
+minute countdown and 60 s watched, start-up included): about 55 races an hour per 4 cores, 110 (330 board starts) on 8.
+An on/off pair of 100 races a side on 4 cores each takes about 1.8 hours.
+
+**Seeds.** Phase S3 starts at tune seed 31 and hold-out seed 41 (new seeds per loop, as in phase S). The first pair
+(`s3_base` off, `s3_felt60` on, tune seed 31) was started at 20:13 on 10 November and stopped at 20:40 (Max: the night);
+each has its first race; started again with the same command it goes on from there.
+
+**The night's plan (10-11 November 2026)**, the efficient loop (a fresh chat; one wake-up per pair):
+1. Step 0: fetch; branch `ai/starts-fleet-10nov`; nothing else running (`Get-Process Godot*`); the frozen copy is
+   `.sim_output/suite/frozen_S3/Game` (refresh: `cp -r Game/<part>/. .sim_output/suite/frozen_S3/Game/<part>/` for race
+   dev windsurfer ui maps/course maps/silvaplana/courses sim config; after a new `class_name`, run
+   `godot --headless --path .sim_output/suite/frozen_S3/Game --import` once).
+2. Pair 1, tune (about 1.8 h):
+   `python -I tools/heads/random_suite.py --run=s3_base --count=100 --cores=4 --seed=31 --set=tune --phase=S3 --project=$PWD/.sim_output/suite/frozen_S3/Game`
+   and the same with `--run=s3_felt60 --extra="--skipper.felt_wind_s=60"`; wait with
+   `python -I tools/heads/suite_summary.py s3_base s3_felt60 --wait`; then `--classes` on `s3_base` (the baseline's
+   classes of bad starts).
+3. Pair 2, hold-out (seed 41, `s3_hold_base` / `s3_hold_felt60`) when pair 1 wins the score and breaks nothing.
+4. Pair 3 and 4: `start_gust_lead=1` the same way (tune seed 32, hold-out seed 42), against the arm taken.
+5. Log each pair in the log of the loops; take a switch only by the rules above; commit locally; nothing pushed.
+   Then the biggest class of bad starts from the baseline (the tangles, the slalom's shared waiting spot, the lulls) is
+   for Max and the lead to look at together ("then we will improve").
 
 ## The steps
 
