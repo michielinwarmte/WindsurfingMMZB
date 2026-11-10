@@ -270,6 +270,10 @@ const START_RUN_IN_TWA_DEG: float = 60.0
 const SLALOM_PARK_RADIUS_M: float = 20.0
 const SLALOM_SLOW_FROM_M: float = 60.0
 const SLALOM_GO_SPARE_S: float = 1.0
+## SkipperConfig.slalom_wait_moving (_slalom_wait_twa_deg()): waiting upwind of the boat, luffed up from this speed up,
+## m/s, and borne away to a beam reach at SLALOM_WAIT_STALL_MS and below.
+const SLALOM_WAIT_LUFF_FROM_MS: float = 2.5
+const SLALOM_WAIT_STALL_MS: float = 0.8
 const SLALOM_DIVE_CLOSEST_TWA_DEG: float = 60.0
 const SLALOM_DIVE_DEEPEST_TWA_DEG: float = 148.0
 ## SkipperConfig.slalom_early_ease: early on the dive it luffs up only when it would cross the line within this many
@@ -2498,7 +2502,10 @@ func _slalom_start_heading(telemetry: Telemetry, step: RaceStep, behind_m: float
 		# bear-away, not a gybe at a crawl: waiting on the other tack, Greta gybed late, ran off on
 		# the wrong gybe and started 17 s late on iq_pd3).
 		_hands.hold_speed_ms = _slowest_hold_ms()
-		heading_deg = wind_deg - _tack() * (HOLD_LUFF_TWA_DEG + 2.0 * config.steering_noise_deg) + _keep_clear_deg(telemetry, _tack())
+		var wait_twa: float = HOLD_LUFF_TWA_DEG + 2.0 * config.steering_noise_deg
+		if config.slalom_wait_moving:
+			wait_twa = _slalom_wait_twa_deg(wait_twa, telemetry.speed_ms)
+		heading_deg = wind_deg - _tack() * wait_twa + _keep_clear_deg(telemetry, _tack())
 		note = "start: waiting upwind of the boat"
 		var dive_tack: float = signf(Navigation.wind_angle_deg(position, spot, wind_deg))
 		if dive_tack != 0.0 and _tack() != dive_tack and behind_m > START_WALL_M:
@@ -2506,6 +2513,15 @@ func _slalom_start_heading(telemetry: Telemetry, step: RaceStep, behind_m: float
 			note += ", onto the tack of its reach down"
 	_keep_behind_the_line(telemetry, step, behind_m)
 	return heading_deg
+
+
+## SkipperConfig.slalom_wait_moving: the wind angle it waits at upwind of a slalom's committee boat, degrees: its
+## luffed-up angle (luff_twa) from SLALOM_WAIT_LUFF_FROM_MS up, a beam reach (HOLD_WIDEST_TWA_DEG) at
+## SLALOM_WAIT_STALL_MS and below, in between in proportion. Luffed up at a standstill the sailor fell (54 of 88 falls
+## in phase S3's baselines); borne away the sail draws and the board keeps steerage.
+static func _slalom_wait_twa_deg(luff_twa: float, speed_ms: float) -> float:
+	var slow_share: float = clampf((SLALOM_WAIT_LUFF_FROM_MS - speed_ms) / (SLALOM_WAIT_LUFF_FROM_MS - SLALOM_WAIT_STALL_MS), 0.0, 1.0)
+	return lerpf(luff_twa, maxf(HOLD_WIDEST_TWA_DEG, luff_twa), slow_share)
 
 
 ## The heading of a slalom's reach down onto the line: straight through its crossing when that is

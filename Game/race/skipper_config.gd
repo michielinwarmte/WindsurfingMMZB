@@ -178,6 +178,12 @@ enum StartStyle { LOOP, HOLD }
 ## (s3_hold_base r0001/1: at the line at 1.7 m/s 12 s before the gun, 37.7 m over at it). Off until the suite has
 ## judged it.
 @export var start_dip: bool = false
+## Moving while it waits upwind of a slalom's committee boat (Skipper._slalom_wait_twa_deg()): the slower it goes, the
+## further it bears away, from its luffed-up angle at Skipper.SLALOM_WAIT_LUFF_FROM_MS down to a beam reach at
+## Skipper.SLALOM_WAIT_STALL_MS, instead of always luffed up as slow as it steers. Phase S3, the night of 10-11 November
+## 2026: 54 of the 88 falls in the two baselines (s3_base, s3_hold_base) came while waiting there, at 0.2 to 0.4 m/s,
+## most in 20 kt or more and often all three boards of a race (iq_pd3, iq_sd3). Off until the suite has judged it.
+@export var slalom_wait_moving: bool = false
 
 @export_group("Start")
 ## Where on the start line it wants to cross: 0 = the pin end, 1 = the boat end.
