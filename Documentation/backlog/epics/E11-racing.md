@@ -71,3 +71,17 @@ Status: todo | Size: M | Owner: the lead | Milestone: later | Needs: E07.S08 | R
 Done when: a race can be replayed from its saved states with the free camera, and a time trial can be sailed against the ghost of your best.
 - [ ] T1 The state recording per race (the LAN's snapshot layout as the format)
 - [ ] T2 The replay viewer; the ghost board
+
+### E11.S09 · Watching and filming the AI races as their race director
+Status: review | Size: M | Owner: Max (the look and the feel), the lead | Milestone: M2 | Needs: — | Roadmap: —
+Done when: on one PC the player can watch the AI race as their race director, with the keys to film a race for the team (a TV camera that picks the boards and shots by itself, slow motion and fast forward, a frozen frame, a screen without cards) and to test the AI (what the watched AI is thinking, the same race again), and Max has checked it on his screen.
+- [x] T1 The watch mode (`Game/race/watch_mode.gd`): T the TV camera, 5 the helicopter, - + 0 the speeds (1/4 to 8x, every tick still 1/60 s), P freeze, H full / TV / clean, N names, I the AI's head, Shift+R the same dice; `--tv`, `--screen`, `--speed`, `--head` (f2b949c)
+- [x] T2 The race director while watching; the Race page's "Watch: the AI races, you direct" button; the play folder's watch and film launchers (`WindsurfingMMZB-play-10nov2026-watch`)
+- [x] T3 The waves on the screen stood still while spectating (the parked board's clock): fixed, also for LAN spectators
+- [ ] T4 Max's look on his screen: the TV camera's shots and pace, the cards at 3137 x 1263, the slow motion, how fast 4x and 8x really go with 11 boards
+- [ ] T5 The in-game Controls page lists the watch keys
+- [ ] T6 A film straight to a file with Godot's Movie Maker (`--write-movie`): does it work in the release build, how big are the files
+- [ ] T7 Fixed cameras at the marks and on the start boat for the TV camera
+- [ ] T8 Shift+R with the gusts too (the wind's clock set back with the dice): an exact replay of a start
+- [ ] T9 The AI's head for a learned brain (`LearnedSkipper` writes no note); the watch keys for a LAN spectator (without the speeds)
+Notes: 10 Nov 2026 evening (Max: "a version only for AI watching and spectating, where I'm the race director. I want to video a few races so I can broadcast them to Michiel"), branch `watch/broadcast-10nov` (pushed, from `ai/skipper-heads-8nov` 372fb72). Report `Documentation/reports/racing/watch_mode_10nov.md`. Unit tests green after two fixes (1039 of 1041 first: the Race page's height, the spectate test's clock check); no screenshots judged (Max asked to skip them). Filming: Win+Alt+R (Game Bar) or OBS.
