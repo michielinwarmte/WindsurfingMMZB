@@ -367,6 +367,11 @@ const HOLD_LUFF_MOST_DEG: float = 15.0
 ## keeps going (further back, or further out past an end than START_WALL_M, it may still
 ## change its mind), metres; nearly stopped it does not go unless it is late by more than
 ## START_STALLED_GO_S, seconds.
+## SkipperConfig.start_dip (_dip_deg()): a crawl, where holding back cannot stop the board, is slower than the
+## controller's steerage speed plus DIP_CRAWL_EXTRA_MS; the dip's track runs away from the line by at least
+## DIP_AWAY_SHARE of the board's speed; over the line by less than START_WALL_M before the gun it dips back.
+const DIP_CRAWL_EXTRA_MS: float = 1.0
+const DIP_AWAY_SHARE: float = 0.3
 const START_GO_LATCH_M: float = 40.0
 const START_STALLED_GO_S: float = 3.0
 ## Further back, gone, it holds back again only with more than this to spare, seconds (as it gains
@@ -2227,6 +2232,14 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 			# Over the line at the gun: back round the nearer end, as the rules say.
 			return _round_the_end_heading(telemetry, step)
 		if over:
+			# start_dip: just over the line itself before the gun, it dips back at once on its tack, held back to its
+			# hold speed, rather than sailing off on a reach to tack or gybe for a point behind the line.
+			if config.start_dip and before_gun and -behind_m < START_WALL_M and _off_the_ends_m(step, position) <= START_WALL_ENDS_M:
+				var dip_back_deg: float = _dip_deg(telemetry, step)
+				if not is_nan(dip_back_deg):
+					_hands.hold_speed_ms = maxf(config.hold_speed_ms, _slowest_hold_ms())
+					note = "start: dipping back behind the line"
+					return dip_back_deg + _keep_clear_deg(telemetry, _tack())
 			var back_deg: float = _course_to(telemetry, _nearest_on_line(step, position) - forward * START_BACK_BEHIND_M)
 			note = "start: back behind the line"
 			return back_deg
@@ -2391,6 +2404,13 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 		if past_go_point or early_at_line:
 			_hands.hold_speed_ms = _slowest_hold_ms()
 			note = "start: holding back hard, early (%+.1f s to spare)" % go_spare_s
+			# start_dip: at a crawl holding back cannot stop it (it creeps on and slides over the line): it dips, bearing
+			# away on its tack to a track away from the line, until it is no longer early.
+			if config.start_dip and early_at_line and telemetry.speed_ms < _controller.hold_back_steerage_ms + DIP_CRAWL_EXTRA_MS:
+				var dip_deg: float = _dip_deg(telemetry, step)
+				if not is_nan(dip_deg):
+					note = "start: dipping, early at a crawl (%+.1f s to spare)" % go_spare_s
+					return dip_deg + _keep_clear_deg(telemetry, _tack())
 		var hold_deg: float = _hold_heading(telemetry, hold_twa, run_in_tack, on_way + track * HOLD_CARROT_M)
 		_keep_behind_the_line(telemetry, step, behind_m)
 		return hold_deg
@@ -2671,6 +2691,32 @@ static func _hold_twa_deg(wind_deg: float, tack: float, forward: Vector2) -> flo
 			best_twa = twa
 		twa += 5.0
 	return best_twa
+
+
+## SkipperConfig.start_dip: the heading of the dip, degrees: on its present tack, the wind angle closest to the wind
+## whose track runs away from the start line (_dip_twa_deg()); NAN when none does on this tack (a line along the wind,
+## on the tack that runs at it): then it does what it did before.
+func _dip_deg(telemetry: Telemetry, step: RaceStep) -> float:
+	var wind_deg: float = telemetry.wind_from_bearing_deg
+	var tack: float = _tack()
+	var twa: float = _dip_twa_deg(wind_deg, tack, step.in_dir, _downwind_twa_deg())
+	if is_nan(twa):
+		return NAN
+	return wind_deg - tack * twa
+
+
+## The dip's wind angle on a tack, degrees: of HOLD_TWA_DEG to deepest_twa (in 5 degree steps), the first, closest to
+## the wind, whose track (HOLD_LEEWAY_DEG further off the wind than the bow) runs away from the line by at least
+## DIP_AWAY_SHARE of the board's speed (`forward` is the direction across the line to the course side); NAN when none.
+## On an upwind start (the line square to the wind) a broad reach of about 100 degrees, on either tack.
+static func _dip_twa_deg(wind_deg: float, tack: float, forward: Vector2, deepest_twa: float) -> float:
+	var twa: float = HOLD_TWA_DEG
+	while twa <= maxf(deepest_twa, HOLD_TWA_DEG) + 0.01:
+		var track: Vector2 = Course.direction_of(wind_deg - tack * (twa + HOLD_LEEWAY_DEG))
+		if track.dot(forward) <= -DIP_AWAY_SHARE:
+			return twa
+		twa += 5.0
+	return NAN
 
 
 ## The heading of a board holding back on the run-in tack: for a point `ahead` on its way in (so
