@@ -43,6 +43,12 @@
 
 ## Progress log (newest first)
 
+### 10 November 2026, evening: the race director while watching
+- A player who watches an AI race on one PC (`--spectate=1`, the Race page's "Watch" button) is now its race
+  director too (`main.gd`'s `_add_race_director()` left a lone spectator out); the view gives no autopilot to a
+  parked board. With the watch mode's keys for filming and testing: `Documentation/reports/racing/watch_mode_10nov.md`
+  (backlog E11.S09).
+
 ### 6 November 2026, afternoon: the AI and the lake's shore (Max: "be sure that the ai can race all the iq courses on silvaplana without going onto the shore")
 - **Every iQFOiL course on the lake:** `tools/fit_courses.sh --all=1` lays each template of `CourseTemplates.ALL` (LG2, LR2, O2, I2, US3, US4, PD3, SD3, PM1, SM1) square to the lake's mean wind at 14:30 (222°) for 12 boards and fits it to the water (CourseFitter: every mark 200 m and every leg 50 m from the shore; LG2 and LR2 at full size, the trapezoids at 40 %). Saved as the team's courses `Game/maps/silvaplana/courses/iq_*.json`, so the Race page and the LAN lobby offer them on the lake (under their names, `RaceCourses.saved_title()`), and the race director can load them in the course maker.
 - **The AI's lookout** (`Game/race/shore_lookout.gd`, `Skipper._keep_off_the_shore()`): before every decision a scripted skipper looks along the heading it wants as far as it sails in 14 s (70 to 160 m); open water is at least 2 m deep and 40 m from the land. A tack or gybe that would point it at the shore sooner is not made; the shore ahead on a beat or a run makes it tack or gybe now; on a reach it turns away on the same tack toward the most water. The game's RaceRunner gives every AI skipper the lookout on the lake (and the race director's autopilot).

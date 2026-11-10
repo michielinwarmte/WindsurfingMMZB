@@ -246,10 +246,14 @@ func test_spectate_retires_the_board_and_the_next_start_takes_it_back_unless_it_
 	assert_false(player.visible, "off the water")
 	assert_true(scene._is_spectating())
 	assert_eq(scene.spectate_entry_text(), "Stay a spectator (also the next races)")
-	var time_s: float = player.sim.time_s
+	var where: Vector3 = player.sim.telemetry.position
+	var heading_deg: float = player.sim.telemetry.heading_deg
 	await wait_physics_frames(3)
 	await wait_process_frames(2)
-	assert_eq(player.sim.time_s, time_s, "not stepped")
+	assert_eq(player.sim.telemetry.position, where, "not stepped")
+	assert_eq(player.sim.telemetry.heading_deg, heading_deg, "not stepped")
+	# Its clock keeps the race's: the water on the screen runs on it (RaceRunner._keep_the_parked_boards_clock()).
+	assert_eq(player.sim.time_s, runner.opponents[0].sim.time_s, "the parked board's clock is the race's")
 	assert_true(runner.opponents.has(scene._shown_board()), "the camera on an AI board")
 	scene.step_watched(1)
 	assert_true(runner.opponents.has(scene._shown_board()), "Tab: the other AI board")

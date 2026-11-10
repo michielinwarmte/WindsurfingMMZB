@@ -88,6 +88,12 @@ var _results_texts: Array[Label] = []
 ## The board watched while spectating ("" when racing yourself), and whether the camera follows the
 ## leader by itself.
 var _watching: String = ""
+## The title without the spectator's keys ("Hana, 3rd"): the TV screen of a watched race (WatchMode).
+var plain_title: bool = false:
+	set(value):
+		if value != plain_title:
+			plain_title = value
+			_watching = ""  # the next set_watching() writes the title again
 var _follows_leader: bool = true
 var _watch_place: String = ""
 ## The results stay on the screen while this is set, whichever board the cards are about: the
@@ -317,16 +323,19 @@ func set_watching(board_name: String, follows_leader: bool, place_text: String =
 	_follows_leader = follows_leader
 	_watch_place = place_text
 	_title.visible = not board_name.is_empty()
-	_title.text = watch_title(board_name, place_text, follows_leader)
+	_title.text = watch_title(board_name, place_text, follows_leader, plain_title)
 	if new_board:
 		# A new board: its own splits from now on, and the fleet list marks it at once.
 		_splits_seen = -1
 		_fleet_refresh_at_s = -INF
 
 
-## The line above the race card while spectating: "Spectating Hana, 3rd   ·   Tab: next   L: the leader".
-static func watch_title(board_name: String, place_text: String, follows_leader: bool) -> String:
+## The line above the race card while spectating: "Spectating Hana, 3rd   ·   Tab: next   L: the leader";
+## plain (the TV screen of a watched race, WatchMode): "Hana, 3rd".
+static func watch_title(board_name: String, place_text: String, follows_leader: bool, plain: bool = false) -> String:
 	var who: String = board_name if place_text.is_empty() else "%s, %s" % [board_name, place_text]
+	if plain:
+		return who
 	var keys: String = "the leader   ·   Tab: next board" if follows_leader else "Tab: next   L: the leader"
 	return "Spectating %s   ·   %s" % [who, keys]
 

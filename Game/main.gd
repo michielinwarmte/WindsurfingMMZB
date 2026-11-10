@@ -118,6 +118,9 @@ var _screenshot_run: bool = false
 ## The board being watched whose floating name is hidden (the HUD's title names it; above the board
 ## it would sit behind the race card at the top of the screen); null for none.
 var _unlabelled: WindsurferNode = null
+## Watching the AI race on this PC as their race director, with the keys for filming and testing
+## (WatchMode); null when racing, and in a LAN game.
+var _watch: WatchMode = null
 
 
 func _enter_tree() -> void:
@@ -228,12 +231,18 @@ func push_with_the_mouse(button: InputEventMouseButton) -> bool:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	# Behind the start menu, and while paused, the menus have the keys.
-	if _in_menu or get_tree().paused or _net_menu_open:
+	# Behind the start menu, and while paused, the menus have the keys; a watched race frozen with P
+	# (WatchMode) is paused without a menu, and its keys go on.
+	var frozen: bool = _watch != null and _watch.frozen
+	if _in_menu or (get_tree().paused and not frozen) or _net_menu_open:
 		return
 	if _director_view != null and _director_view.is_open:
 		# The race director's view has the keys and the mouse (M or Esc closes it).
 		_director_view.handle_input(event)
+		return
+	if _watch != null and _watch.handle_input(event):
+		# Watching the AI race: the filming and testing keys (WatchMode).
+		get_viewport().set_input_as_handled()
 		return
 	var pressed_key: InputEventKey = event as InputEventKey
 	if pressed_key != null and pressed_key.pressed and not pressed_key.echo and pressed_key.physical_keycode == KEY_M:
@@ -1082,13 +1091,14 @@ func _start_race_runner() -> void:
 	if _net != null:
 		_net.attach_runner(_race_runner)
 	_add_race_director()
+	_add_watch_mode()
 
 
 ## The race director for this race (RACE_DIRECTOR.md): the next race after this one, the live
-## course; its line on the HUD.
+## course; its line on the HUD. Also while the player watches (a LAN host who spectates, and the
+## watcher of an AI race on this PC: Max, 10 November 2026, "where I'm the race director").
 func _add_race_director() -> void:
-	# Watching a night's generations (--spectate) has none; a LAN host who spectates still directs.
-	if (_race_runner.spectating and _net == null) or _director != null:
+	if _director != null:
 		return
 	_director = RaceDirector.new()
 	add_child(_director)
@@ -1096,6 +1106,26 @@ func _add_race_director() -> void:
 	_director.course_published.connect(_on_course_published)
 	if _net != null:
 		_net.director = _director
+
+
+## Watching the AI race on this PC (the Race page's "You: Watch", --spectate=1; not in a LAN game):
+## the keys for filming and testing (WatchMode).
+func _add_watch_mode() -> void:
+	if _watch != null or _net != null or not _race_runner.spectating:
+		return
+	_watch = WatchMode.new()
+	add_child(_watch)
+	_watch.setup(self, _race_runner, _hud, _camera_rig)
+
+
+## Whether the race director's view is open (M).
+func director_view_open() -> bool:
+	return _director_view != null and _director_view.is_open
+
+
+## A new race from the start, as R (WatchMode's Shift+R, after it asked for the same dice).
+func restart_race() -> void:
+	_restart_run()
 
 
 ## M: the race director's view (the host of a race, or a race alone; RACE_DIRECTOR.md R5). The

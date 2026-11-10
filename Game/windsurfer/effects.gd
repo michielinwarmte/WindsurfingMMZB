@@ -292,7 +292,8 @@ func _unhandled_input(event: InputEvent) -> void:
 func _process(_delta: float) -> void:
 	if _sim == null:
 		return
-	var tick_s: float = 1.0 / float(Engine.physics_ticks_per_second)
+	# A tick's length in the simulation's time (as the water's, ocean.gd).
+	var tick_s: float = Engine.time_scale / float(Engine.physics_ticks_per_second)
 	var time_s: float = _sim.time_s + Engine.get_physics_interpolation_fraction() * tick_s
 	var board: Transform3D = get_global_transform_interpolated()
 	var forward: Vector3 = -board.basis.z

@@ -158,6 +158,10 @@ var kept_places: bool = false
 var shore_lookout: ShoreLookout = null
 ## Which board the camera follows while the player's board is parked.
 var choice: SpectateChoice = SpectateChoice.new()
+## The dice of the last start (each skipper's day and the AI boards' spots); a watcher's Shift+R sets
+## repeat_dice to it, and the next start (only that one) throws the same (WatchMode).
+var last_dice: int = 0
+var repeat_dice: int = -1
 ## The race's number of the first AI board: 1 after the player's, 0 while spectating.
 var _first_ai: int = 1
 ## The AI boards that ran aground on a map's shore (ROADMAP RA2): 1 for each such board, one per
@@ -283,8 +287,11 @@ func restart(keep_places: bool = false) -> void:
 	start_heading_deg = heading_deg
 	remote_spots = spots.slice(1, 1 + remote_players.size())
 	spots = PackedVector2Array([spots[0]]) + spots.slice(1 + remote_players.size())
-	# New dice at every start unless the setup fixes them (--seed): each skipper's day and the spots.
-	var dice: int = setup.race_seed if setup.race_seed >= 0 else randi_range(1, 999999)
+	# New dice at every start unless the setup fixes them (--seed) or the watcher asks for the last race
+	# again (WatchMode, Shift+R): each skipper's day and the spots.
+	var dice: int = setup.race_seed if setup.race_seed >= 0 else (repeat_dice if repeat_dice >= 0 else randi_range(1, 999999))
+	repeat_dice = -1
+	last_dice = dice
 	if keep_places:
 		# Only a board that ran aground leaves where it is: back to a spot in the sailing area.
 		var aground_places: Array[Vector3] = _area.spawn_places(opponents.size(), dice, spots[0])
@@ -482,6 +489,7 @@ func _physics_process(delta: float) -> void:
 		for i: int in _boards.size():
 			_step_board(i, delta, stopped)
 	var t1: int = Time.get_ticks_usec()
+	_keep_the_parked_boards_clock(stopped, delta)
 	_read_the_wind_clock(stopped, delta)
 	_check_the_shore(scene.shore_grid if scene != null else null)
 	_pose_boards(player_stopped)
@@ -497,6 +505,21 @@ func _physics_process(delta: float) -> void:
 	if _report_every_s > 0.0 and race.clock_s() >= _report_at_s:
 		_report_at_s = race.clock_s() + _report_every_s
 		_print_report()
+
+
+## The parked board's simulation is not stepped, but the water on the screen runs on its clock
+## (main.gd gives the ocean the player's board's simulation): while it is parked it takes the clock of
+## a board that sails, so the waves drawn move, and are the waves the AI boards float on (before, they
+## stood still while watching; found for Max's films, 10 November 2026). No board sailing here (a LAN
+## race of other PCs' boards only): its clock runs on by itself.
+func _keep_the_parked_boards_clock(stopped: PackedByteArray, delta: float) -> void:
+	if not player_parked or player == null:
+		return
+	for i: int in _boards.size():
+		if stopped[i] == 0 and not _boards[i].is_puppet and _boards[i] != player:
+			player.sim.time_s = _boards[i].sim.time_s
+			return
+	player.sim.time_s += delta
 
 
 ## The race's wind clock onto every board's wind field (RA13), on this thread before the sailors
@@ -781,6 +804,14 @@ func step_followed(by: int) -> void:
 func follow_leader() -> void:
 	if player_parked and race != null:
 		choice.follow_leader(watch_order())
+
+
+## The TV camera's cut while watching (WatchMode): the camera to this board, which it keeps following
+## (not the leader by itself) until told otherwise. A board not on the water is not taken.
+func watch_board(index: int) -> void:
+	if player_parked and race != null and watch_order().has(index):
+		choice.followed = index
+		choice.follows_leader = false
 
 
 ## The menu's Spectate (LAN multiplayer): the player stops racing and watches. A board in the race

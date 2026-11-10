@@ -211,7 +211,9 @@ func _exit_tree() -> void:
 ## An all-rounder sails and races this PC's board while the view is open (as the AI boards are
 ## sailed: its hands on the controller).
 func _give_the_board_to_the_pilot() -> void:
-	if _own == null or _own.skipper != null:
+	# A board off the water (watching) is not stepped: nobody needs to sail it, and while watching the
+	# race's first board is an AI board's, not this one's.
+	if _own == null or _own.skipper != null or director.runner.player_parked:
 		return
 	_pilot = Skippers.make(PILOT)
 	if _pilot == null:
@@ -460,7 +462,9 @@ func _build_panel() -> void:
 	_button("Abandon it", race_row).pressed.connect(func() -> void: director.abandon())
 	_button("Everyone to the line", race_row).pressed.connect(func() -> void: director.everyone_to_the_line())
 	column.add_child(HSeparator.new())
-	var help: Label = _label("Your board races on the autopilot while this view is open.\nM or Esc: back to your board.\nW A S D, wheel, right mouse: move the map." + ("\nC wind speed colours; V streaks (their direction is still being checked)." if scene.map_wind_field() != null else ""), column)
+	var whose: String = "You are watching: only the AI boards race.\nM or Esc: back to the race." if director.runner.spectating \
+		else "Your board races on the autopilot while this view is open.\nM or Esc: back to your board."
+	var help: Label = _label(whose + "\nW A S D, wheel, right mouse: move the map." + ("\nC wind speed colours; V streaks (their direction is still being checked)." if scene.map_wind_field() != null else ""), column)
 	help.modulate = Color(1.0, 1.0, 1.0, 0.75)
 
 
@@ -487,6 +491,9 @@ func _update_status() -> void:
 		if not order.is_empty():
 			lines.append("Leading: %s" % race.board_name(order[0]))
 	lines.append("%d laps, %s countdown, then %s between races." % [director.runner.setup.laps, RaceDirector.minutes(director.runner.setup.prestart_s), RaceDirector.minutes(director.gap_s)])
+	if director.runner.spectating and race != null:
+		# Watching (WatchMode): the start's dice, which Shift+R throws again.
+		lines.append("This start's dice: %d (Shift+R in the race: the same start again)." % director.runner.last_dice)
 	_status.text = "\n".join(lines)
 
 

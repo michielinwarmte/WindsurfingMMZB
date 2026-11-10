@@ -25,10 +25,14 @@ var follow_smoothing_s: float = 0.35
 var _follow_position: Vector3 = Vector3.ZERO
 var _follow_initialised: bool = false
 
-## Orbit camera.
+## Orbit camera. The wheel zooms it out as far as orbit_max_m (watching an AI race: further, WatchMode);
+## orbit_drift_rad_s circles it round the board by itself (the watcher's helicopter and TV shots; 0:
+## still). The circling goes on while a watched race is frozen (WatchMode's P).
 var orbit_azimuth_rad: float = 0.6
 var orbit_elevation_rad: float = 0.35
 var orbit_distance_m: float = 9.0
+var orbit_max_m: float = 60.0
+var orbit_drift_rad_s: float = 0.0
 
 ## Top-down camera.
 var top_down_height_m: float = 45.0
@@ -119,7 +123,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			orbit_distance_m = maxf(orbit_distance_m * 0.9, 3.0)
 			top_down_height_m = maxf(top_down_height_m * 0.9, 10.0)
 		elif button.pressed and button.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			orbit_distance_m = minf(orbit_distance_m * 1.1, 60.0)
+			orbit_distance_m = minf(orbit_distance_m * 1.1, maxf(orbit_max_m, orbit_distance_m))
 			top_down_height_m = minf(top_down_height_m * 1.1, 300.0)
 
 
@@ -151,6 +155,7 @@ func _process(delta: float) -> void:
 				look_point = origin + forward_h * FOLLOW_CLOSE_LOOK_AHEAD_M + Vector3(0.0, FOLLOW_CLOSE_LOOK_UP_M, 0.0)
 			camera.look_at(look_point, Vector3.UP)
 		Mode.ORBIT:
+			orbit_azimuth_rad += orbit_drift_rad_s * delta
 			var offset: Vector3 = Vector3(
 				cos(orbit_elevation_rad) * sin(orbit_azimuth_rad),
 				sin(orbit_elevation_rad),

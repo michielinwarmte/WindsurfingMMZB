@@ -154,6 +154,11 @@ var _course_line: Label = null
 var clock_text: String = ""
 ## A race is on: the free-sailing card is hidden and the keys are the racing keys (set_race_mode).
 var _race_mode: bool = false
+## The race is watched, not sailed (set_race_mode's spectating).
+var _spectating: bool = false
+## Watching an AI race on this PC (WatchMode): its keys, and whether its TV screen is on.
+var watch_keys: Array[Array] = []
+var tv_screen: bool = false
 ## Whether the card shows a fall now (its line in orange).
 var _fall_shown: bool = false
 ## The UI scale in use (Settings > Graphics), and the control every part of the screen sits in.
@@ -455,11 +460,28 @@ func toggle_detail() -> void:
 	set_detail_visible(not detail_visible)
 
 
-## Shows or hides the detail panel and, while sailing free, the keys (F1).
+## Shows or hides the detail panel and, while sailing free, the keys (F1). The TV screen has neither.
 func set_detail_visible(shown: bool) -> void:
 	detail_visible = shown
-	_panel.visible = shown
-	_hints.visible = shown or _race_mode
+	_panel.visible = shown and not tv_screen
+	_hints.visible = (shown or _race_mode) and not tv_screen
+
+
+## The TV screen of a watched race (WatchMode's H): what a viewer needs (the race card, the standings,
+## the minimap, the compass, the speed card), without the keys along the bottom, the push and body
+## gauges and the detail panel (F1). Off: everything as before.
+func set_tv_screen(on: bool) -> void:
+	tv_screen = on
+	_gauges.visible = not on
+	set_detail_visible(detail_visible)
+
+
+## The keys along the bottom while watching an AI race on this PC (WatchMode.KEYS; empty: the plain
+## spectator's keys).
+func set_watch_keys(keys: Array[Array]) -> void:
+	watch_keys = keys
+	if _race_mode and _spectating:
+		_show_keys(watch_keys if not watch_keys.is_empty() else SPECTATE_KEYS)
 
 
 ## The keys along the bottom, as one line of text (for tests): "W S push   ↑ ↓ sheet ...".
@@ -718,11 +740,14 @@ func set_other_boards(positions: PackedVector3Array) -> void:
 ## spectating (the player's board parked) the keys that pick the board to watch.
 func set_race_mode(on: bool, spectating: bool = false) -> void:
 	_race_mode = on
+	_spectating = on and spectating
 	_status_card.visible = not on
 	_place_message()
 	if on:
 		set_detail_visible(false)
-		if spectating:
+		if spectating and not watch_keys.is_empty():
+			_show_keys(watch_keys)
+		elif spectating:
 			_show_keys(GUEST_SPECTATE_KEYS if Lan.in_game and not Lan.is_host() else SPECTATE_KEYS)
 		elif Lan.in_game and not Lan.is_host():
 			# The guest of a network game: only the host restarts the race (main.gd, _net_reset()).

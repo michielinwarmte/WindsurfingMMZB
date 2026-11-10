@@ -278,7 +278,8 @@ func _physics_process(_delta: float) -> void:
 func _process(_delta: float) -> void:
 	if not lines_visible or _clock.is_null():
 		return
-	var tick_s: float = 1.0 / float(Engine.physics_ticks_per_second)
+	# A tick's length in the simulation's time (as the water's, ocean.gd).
+	var tick_s: float = Engine.time_scale / float(Engine.physics_ticks_per_second)
 	var time_s: float = _clock.call() + Engine.get_physics_interpolation_fraction() * tick_s
 	_line_material.set_shader_parameter("water_time_s", time_s)
 

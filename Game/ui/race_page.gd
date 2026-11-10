@@ -29,6 +29,8 @@ enum Who { PERSONAS, CHARACTERS, MIXED, BRAIN_AND_PERSONAS }
 ## the page races is the latest stage's (latest_brain()).
 const BRAIN_STAGES: PackedStringArray = ["c2", "c1", "s6", "s5", "s4", "s3", "s2", "s1"]
 const WHO_NAMES: PackedStringArray = ["The personas, rookie to pro", "The four characters", "Personas and characters", "The trained brain and the personas"]
+## Watching with "You alone" chosen in the fleet row: this many AI boards instead.
+const WATCH_FLEET_IF_ALONE: int = 11
 
 ## The choices, kept for the session.
 static var chosen_lake: bool = false
@@ -41,11 +43,15 @@ static var chosen_rules: bool = true
 ## The personas sail their own gear from the catalogue (RaceSetup.gear).
 static var chosen_gear: bool = RaceSetup.new().gear
 static var chosen_level: int = 0
+## You race (Start), or you watch the AI race as their race director (Watch; WatchMode, Max,
+## 10 November 2026): the button pressed last.
+static var chosen_watch: bool = false
 
 @onready var _rows: GridContainer = %Rows
 @onready var _start_button: Button = %StartButton
 @onready var _back_button: Button = %BackButton
 @onready var _who_card: Label = %WhoCard
+var _watch_button: Button = null
 
 var _water_list: OptionButton
 var _course_list: OptionButton
@@ -55,13 +61,29 @@ var _course_names: PackedStringArray = PackedStringArray()
 
 
 func _ready() -> void:
-	_start_button.pressed.connect(_on_start_pressed)
+	_start_button.pressed.connect(_on_start_pressed.bind(false))
 	_back_button.pressed.connect(close)
+	_add_watch_button()
 	_build_rows()
 
 
+## "Watch: the AI races, you direct" beside "Start the race" (a button, not a row: the page has to fit
+## the menu's height): the same race, with your board ashore and you as its race director (WatchMode).
+func _add_watch_button() -> void:
+	_watch_button = Button.new()
+	_watch_button.name = "WatchButton"
+	_watch_button.text = "Watch: the AI races, you direct"
+	_watch_button.custom_minimum_size = Vector2(220.0, 0.0)
+	_watch_button.tooltip_text = "Your board stays ashore. M race director, T TV camera, H hides the screen, - and + slow motion and fast forward."
+	_start_button.add_sibling(_watch_button)
+	_start_button.get_parent().move_child(_watch_button, _start_button.get_index())
+	_watch_button.pressed.connect(_on_start_pressed.bind(true))
+
+
+## The Start button first; --watch=1 (the play folder's "Watch AI races - start menu" launcher) the
+## Watch button.
 func first_focus() -> Control:
-	return _start_button
+	return _watch_button if OS.get_cmdline_user_args().has("--watch=1") else _start_button
 
 
 ## Opens the page on a water (the menu's two race buttons).
@@ -218,17 +240,26 @@ static func fleet_names(who: Who, count: int) -> PackedStringArray:
 	return names
 
 
-func _on_start_pressed() -> void:
+func _on_start_pressed(watch: bool) -> void:
+	chosen_watch = watch
+	var setup: RaceSetup = make_setup(_course_names[clampi(chosen_course, 0, _course_names.size() - 1)])
+	hide()
+	start_race.emit(setup, chosen_lake)
+
+
+## The race the page's choices make on this course.
+static func make_setup(course: String) -> RaceSetup:
 	var count: int = FLEET_SIZES[clampi(chosen_fleet, 0, FLEET_SIZES.size() - 1)]
-	var course: String = _course_names[clampi(chosen_course, 0, _course_names.size() - 1)]
+	if chosen_watch and count == 0:
+		count = WATCH_FLEET_IF_ALONE  # nobody to watch otherwise
 	var setup: RaceSetup = RaceSetup.race(course, fleet_names(chosen_who, count), 1, COUNTDOWNS_S[chosen_countdown])
+	setup.spectate = chosen_watch
 	setup.time_trial = count == 0
 	setup.shadows = chosen_shadows
 	setup.rules = chosen_rules
 	setup.gear = chosen_gear
 	setup.level_spread = RaceSetup.LEVEL_CLOSE if chosen_level == 0 else 1.0
-	hide()
-	start_race.emit(setup, chosen_lake)
+	return setup
 
 
 # ---------------------------------------------------------------- the rows' making (as the settings page)

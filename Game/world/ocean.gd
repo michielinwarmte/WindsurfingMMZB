@@ -247,7 +247,9 @@ func _process(_delta: float) -> void:
 	if _sim == null or _camera == null:
 		return
 	_follow_camera()
-	var tick_s: float = 1.0 / float(Engine.physics_ticks_per_second)
+	# A tick's length in the simulation's time: time_scale / ticks (1 / 60 s also when a watched race runs
+	# slower or faster, WatchMode, or a LAN guest keeps the host's pace: both change the two together).
+	var tick_s: float = Engine.time_scale / float(Engine.physics_ticks_per_second)
 	var time_s: float = _sim.time_s + Engine.get_physics_interpolation_fraction() * tick_s
 	_near_material.set_shader_parameter("water_time_s", time_s)
 	if _lake:
