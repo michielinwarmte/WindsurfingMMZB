@@ -177,6 +177,8 @@ rules, less with the second PC as a second pool.
 | S3-3 | 11 Nov 2026 | `start_dip` (new, the biggest class: over early): before the gun, at a crawl early at the line, or just over the line itself, it bears away on its tack to the angle closest to the wind whose track runs away from the line (where none does, a reaching start, it tacks or gybes away at once) instead of creeping on or sailing off on a reach to tack or gybe back. Frozen copy `frozen_S3b`. Smoke race (hold-out 41 r0001): one board no longer over, one over by 2.9 m instead of 11.5 | 96 of 100 races (seed 33): score median 67.5 -> 65.1 m, mean 80.7 -> 77.0; 44 boards better, 52 worse (no gain); on time 78.8 -> 77.4 % (14 fixed, 18 broken), not over early 90.6 -> 89.6 % (7 fixed, 10 broken), no penalty 94.4 -> 96.5 % | 96 of 100 races (seed 43): score median 62.2 -> 64.8 m, mean 85.6 -> 86.1; 56 better, 53 worse (chance); not over early 89.9 -> 93.1 % (**15 fixed, 6 broken**), untangled 77.4 -> 80.9 % (17 fixed, 7 broken), on time 79.9 = 79.9 % | **No** (the score: no gain on either set; over early fixed on the hold-out but not on tune) |
 | S3-4 | 11 Nov 2026 | `slalom_wait_moving` (new, the second class: falls; 54 of the baselines' 88 falls came waiting upwind of a slalom's committee boat, luffed up at 0.2 to 0.4 m/s, mostly in 20 kt or more): the slower it goes while waiting there, the further it bears away, from its luffed-up angle at 2.5 m/s to a beam reach at 0.8 m/s. Frozen copy `frozen_S3c`. Replays of four hold-out fall races: falls 29 -> 2, the score mixed. Traced (hold-out 45 r0016/0): waiting at 1.6 m/s instead of 0.5 it went from 50 m elsewhere 3.5 s later and was at the line 1 s early: the slalom dive's timing, the knife edge | 100 races (seed 34): **no fall 91.0 -> 94.7 % (12 fixed, 1 broken)**; score median 73.4 -> 71.0 m, mean 85.6 -> 82.5, 27 boards better, 26 worse (chance); on time 76.7 -> 74.3 % (6 fixed, 13 broken), not over early 91.0 -> 89.0 % (4 fixed, 10 broken) | 100 races (seed 45): **no fall 88.0 -> 94.0 % (18 fixed, 0 broken)**; score median 70.2 -> 67.8 m, mean 93.5 -> 84.7, 29 better, 38 worse (no gain); not over early 92.3 -> 91.0 % (6 fixed, 10 broken) | **No** (the score no gain; for Max: the falls fixed beyond chance, the cost is the slalom dive's timing) |
 | S3-5 | 11 Nov 2026 | `start_accel_share` = 0.8 (an existing setting, never judged; Max's risky or safe): it reckons with 80 % of the measured acceleration off a hold, so it goes for the line earlier. At the gun the boards were a median 12 to 18 m behind the line and 4 to 8 s late | 100 races (seed 35): score median 64.4 -> 65.3 m, mean 84.5 -> 83.4; 61 boards better, 67 worse (no gain); behind the line at the gun 14.9 -> 14.6 m; on time 78.3 -> 77.7 % (4 fixed, 6 broken) | 100 races (seed 46): score median 62.9 -> 60.3 m, mean 59.4 -> 55.8; 56 better, 49 worse (chance); behind at the gun 18.3 -> 16.1 m; on time 76.0 -> 73.0 % (**1 fixed, 10 broken**) | **No** (chance; going earlier by the reckoning barely moves the boards) |
+| S3-6 | 11 Nov 2026 | `slalom_wait_moving` gentler (S3-4's switch with its new settings `slalom_wait_luff_from_ms` = 1.5, `slalom_wait_widest_twa_deg` = 70: luffed up from 1.5 m/s, at a stall no wider than 70 deg, so it waits slower, nearer the old wait). Frozen copy `frozen_S3d`; the last block, sized to end by 08:15 | 45 races (seed 34, against S3-4's off arm `s3bA_base`): no fall 92.6 -> 95.6 % (4 fixed, 0 broken); score 7 boards better, 15 worse (no gain), mean 79.0 -> 73.2 m; on time 76.3 -> 73.3 % (2 fixed, 6 broken). Against S3-4's on arm: over early 5 fixed, 1 broken; falls 0 fixed, 3 broken | 55 races (seed 47): **no fall 90.3 -> 95.2 % (8 fixed, 0 broken)**; score 20 better, 15 worse (chance), median 68.2 -> 71.9 m; on time 75.8 -> 79.4 % (9 fixed, 3 broken, p 0.07), not over early 89.7 -> 91.5 % (7 fixed, 4 broken) | **No** (the score: no gain on tune, chance on the hold-out); the falls fixed again, without S3-4's over-early cost on the hold-out: the direction for the slalom's redesign |
+| S3-7 | 11 Nov 2026 | `start_accel_share` = 0.65 (S3-5 further: goes earlier still). Tune only (the last block had room for one hold-out pair, given to S3-6) | 45 races (seed 35, against S3-5's off arm `s3bB_base`): score 35 boards better, 25 worse (p 0.12, chance), median 80.8 -> 84.0 m, mean 107.8 -> 112.1; behind the line at the gun 10.3 -> 8.1 m; on time 85.2 -> 83.7 % (0 fixed, 2 broken), over early 1 fixed, 2 broken | - | Not judged (no hold-out); a lead: the first value that moved the boards nearer the line |
 
 **Proposed for Max (9 November 2026, not agreed yet).** Step 6's "no check gets worse" on 100 races blocks a fix for one race's flip: a fix that changes the board's line changes which of the lake's known traps it meets (the north-east corner, T2's mark 3, the east shore), and a start after R depends on where the race before ended. Loops 1 and 2 each won clearly on the hold-out and lost one or two races on a check, every one traced to such chance. Proposed: a check counts as worse when it loses 3 or more races in 100 more than it gains, every flip traced in the log, and none of them during what the switch does. (In phase S the sign test below judges instead, explained to Max on 9 November; whether it also applies to the roundings later is his call.)
 
@@ -409,6 +411,60 @@ speed: measure it in block 1):
    the defaults of the evening (79580d0's: both switches off), 100 a side or what fits by 08:15.
 5. Log each block in the log of the loops; take a switch only by the S3 rules above; commit locally; nothing pushed.
    What is left is for Max and the lead to look at together ("then we will improve").
+
+**The night's report (10-11 November 2026, for Max).** Run 20:43 to 08:16, 12 jobs on mask 0x55FF, 79 to 82 % CPU
+all night, the pool never idle (each next run chained to start the moment a run finished). 2200 races (6600 board
+starts) in six blocks: the suite ran 200 races an hour, twice the estimate, so there was room for two more blocks than
+planned. Nothing pushed; committed locally on `ai/starts-fleet-10nov`.
+
+1. **Taken: nothing.** Seven tests (six judged; 0.65 on tune only), by the S3 rules (the start's score must win on
+   tune and pass the sign test on the hold-out); none did. The log of the loops has every number (S3-1 to S3-7).
+
+   | Test | Tune: score boards better / worse | Hold-out: better / worse | Also |
+   |---|---|---|---|
+   | `felt_wind_s` 60 (the wind its sail felt) | 93 / 128 (WORSE) | 111 / 120 | |
+   | `start_gust_lead` 1 (earlier in a varying wind) | 76 / 72 | 84 / 69 | |
+   | `start_dip` (new: a crawling board early at the line bears away) | 44 / 52 | 56 / 53 | over early on the hold-out 15 fixed / 6 broken, on tune 7 / 10 |
+   | `slalom_wait_moving` (new: keeps moving while waiting at the slalom boat) | 27 / 26 | 29 / 38 | **falls 12 fixed / 1 broken and 18 / 0** |
+   | `start_accel_share` 0.8 (risky: goes earlier) | 61 / 67 | 56 / 49 | on time on the hold-out 1 fixed / 10 broken |
+   | `slalom_wait_moving` gentler (luffed up from 1.5 m/s, at most 70 deg; the last block, 45 and 55 races) | 7 / 15 | 20 / 15 | **falls 4 fixed / 0 broken and 8 / 0**; on the hold-out on time 9 fixed / 3 broken, over early 7 / 4 |
+   | `start_accel_share` 0.65 (riskier still; tune only, 45 races) | 35 / 25 (p 0.12) | - | 2.2 m nearer the line at the gun; not judged without a hold-out |
+
+2. **Where the bad starts are** (the ten off arms of the night, 1000 races, 3000 board starts on the evening's defaults):
+   on time 76.9 %, over early at the gun 9.1 %, fell before the gun 9.6 %, the start's score median 67.5 m, a median
+   15 m behind the line at the gun and 5.7 s late. The lake 72.5 % on time, the open water 87.4 %. **The slalom
+   starts** (upwind of the committee boat) are 24 % of the starts but **57 % on time, 15.6 % over early, 26.6 %
+   fell**; the other starts 83.2 %, 7.0 % and 4.2 %. Of the 88 falls in the first two baselines, 54 came while waiting
+   upwind of the boat, luffed up at 0.2 to 0.4 m/s; of the 169 boards more than 60 m from the line at the gun (no fall,
+   not over early) 93 were in the slalom's dive. The wind at the gun is mostly not a lull (felt / mean median 1.0).
+
+3. **The most worse boards traced.** `start_dip`: hold-out 41 r0001 (iq_pm1, a line along the wind): no angle on the
+   run-in tack runs away from that line, so the first version did nothing; with a tack away added, board 1 was no longer
+   over (-32 -> +18 m). `slalom_wait_moving`: hold-out 45 r0016/0: waiting at 1.6 m/s instead of 0.5 it went for the
+   line from 50 m elsewhere, 3.5 s later, and was at the line 1 s early: the dive's timing (phase S measured the dive at
+   1.44 to 1.73 times the skipper's reckoning), not the wait itself.
+
+4. **To look at together.**
+   1. The slalom start's redesign (open since 10 November): it is where most bad starts are. The night showed the
+      falls can be fixed (keep the board moving while waiting: 30 fixed, 1 broken at the first try; 12 fixed, 0 broken
+      at the gentler try), and the gentler wait did not bring the boards early on its hold-out (over early 7 fixed,
+      4 broken; on time 9 fixed, 3 broken), but neither try won the start's score. Next: the gentler wait together
+      with the dive's timing (the dive takes 1.44 to 1.73 times the skipper's reckoning).
+   2. A rule: may a switch be taken that fixes a check beyond chance (falls) while the start's score stays at chance?
+      `slalom_wait_moving` is that case (and `start_dip` nearly, for over early on one set).
+   3. `felt_wind_s`: off (worse on tune). The starts are mostly not in lulls at the gun, so the lake's mean wind was not
+      what made them late.
+   4. Risky or safe: `start_accel_share` 0.8 did nothing; 0.65 was the first value that moved the boards nearer the
+      line at the gun (2.2 m) and leaned better on tune (35 / 25, chance). Worth a tune and hold-out pair next night?
+   5. The final check (block 4) was not run: nothing was taken, and the suite is deterministic, so tonight's defaults
+      against the evening's would have raced the same code to the same result. Its time went to blocks A, B and the last block (C).
+
+5. **Housekeeping.** Frozen copies `frozen_S3` (the evening's code), `frozen_S3b` (+ `start_dip`), `frozen_S3c`
+   (+ `slalom_wait_moving`), `frozen_S3d` (+ its two settings); all switches off by default, so each copy's defaults
+   race the evening's code. Runs: `s3_*`, `s3b2_*`, `s3b3_*`, `s3bA_*`, `s3bB_*`, `s3bC_*` (seeds used: tune 31 to
+   35, hold-out 41 to 43 and 45 to 47; 44 kept fresh for a final check); smoke and replays `smoke_dip_hold41*`,
+   `replays/`. A slip at 20:40: `random_suite.py --help` started a default run (the tool has no help option); stopped
+   after two minutes and kept as `void_help_accident_10Nov_2040`. Unit tests 1056/1056.
 
 ## The steps
 
