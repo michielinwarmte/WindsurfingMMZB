@@ -293,17 +293,18 @@ const SLALOM_DIVE_DEEPEST_TWA_DEG: float = 148.0
 ## spot (within SLALOM_RUN_REACHED_M); the way out is SLALOM_RUN_LONGEST_M at most, inside the sailing area; on the way in
 ## with time for a loop (two gybes and SLALOM_RUN_SHORTEST_LEG_S each way) it sails on through the line and gybes
 ## at the latest SLALOM_RUN_COURSE_SIDE_M beyond it; early on a long way in it eases to the speed that brings it on time, never slower than
-## SLALOM_RUN_SLOWEST_MS, and sails the last SLALOM_RUN_FULL_SPEED_M at full speed; the speed out is averaged over
+## SLALOM_RUN_SLOWEST_MS, and sails the last SLALOM_RUN_FULL_SPEED_S at full speed (Max: "slow down 10-20 s before
+## if you notice it and then in the last 10 s accelerate"); the speed out is averaged over
 ## SLALOM_RUN_SPEED_S.
 const SLALOM_RUN_CLOSEST_TWA_DEG: float = 75.0
 const SLALOM_RUN_DEEPEST_TWA_DEG: float = 125.0
 const SLALOM_RUN_JOIN_M: float = 30.0
 const SLALOM_RUN_REACHED_M: float = 20.0
 const SLALOM_RUN_LONGEST_M: float = 300.0
-const SLALOM_RUN_SHORTEST_LEG_S: float = 8.0
+const SLALOM_RUN_SHORTEST_LEG_S: float = 4.0
 const SLALOM_RUN_COURSE_SIDE_M: float = 150.0
-const SLALOM_RUN_SLOWEST_MS: float = 4.0
-const SLALOM_RUN_FULL_SPEED_M: float = 30.0
+const SLALOM_RUN_SLOWEST_MS: float = 3.0
+const SLALOM_RUN_FULL_SPEED_S: float = 8.0
 const SLALOM_RUN_SPEED_S: float = 3.0
 ## SkipperConfig.slalom_early_ease: early on the dive it luffs up only when it would cross the line within this many
 ## seconds, metres apart at its speed (before that it eases and keeps the dive's heading).
@@ -2608,7 +2609,7 @@ func _slalom_early_deg(telemetry: Telemetry, step: RaceStep, behind_m: float, go
 ## the course side as the sailors do before the gun (no fault then), gybes there once the time left is what the run
 ## behind the line can use up (at the latest SLALOM_RUN_COURSE_SIDE_M beyond the line), and comes back through its spot
 ## onto the run again; out on the run with the far end coming before its gybe is due, it eases; with less to spare it eases to the speed that brings it on time, the
-## last SLALOM_RUN_FULL_SPEED_M at full speed. It never waits at a crawl: waiting upwind of the boat luffed up, the boards
+## last SLALOM_RUN_FULL_SPEED_S at full speed. It aims SkipperConfig.slalom_run_aim_late_s after the gun. It never waits at a crawl: waiting upwind of the boat luffed up, the boards
 ## fell (54 of 88 falls in phase S3's baselines), and the dive from there took 1.4 to 1.8 times what the skipper reckoned.
 ## The run times itself by its own speed out, as the sailors do.
 func _slalom_run_heading(telemetry: Telemetry, step: RaceStep, behind_m: float) -> float:
@@ -2616,7 +2617,8 @@ func _slalom_run_heading(telemetry: Telemetry, step: RaceStep, behind_m: float) 
 	var wind_deg: float = telemetry.wind_from_bearing_deg
 	var spot: Vector2 = _start_spot(step)
 	var before_gun: bool = _race.clock_s() < 0.0
-	var time_left_s: float = -_race.clock_s() + config.start_timing_error_s
+	# Aimed a little after the gun (Max: "i prefer 3 seconds late at full speed than 0.2 sec but at half speed").
+	var time_left_s: float = -_race.clock_s() + config.start_timing_error_s + config.slalom_run_aim_late_s
 	var run_in: Vector2 = _slalom_run_in(step, wind_deg)
 	var across: float = maxf(run_in.dot(step.in_dir), 0.3)
 	var way_in_m: float = maxf(behind_m, 0.0) / across
@@ -2720,9 +2722,14 @@ func _slalom_run_heading(telemetry: Telemetry, step: RaceStep, behind_m: float) 
 	var go_deg: float = _slalom_dive_deg(telemetry, spot)
 	note = "start: slalom run, in"
 	if before_gun:
-		if behind_m > SLALOM_RUN_FULL_SPEED_M and extra_s > SLALOM_GO_SPARE_S:
+		var full_m: float = SLALOM_RUN_FULL_SPEED_S * out_ms * ratio
+		if way_in_m > full_m and extra_s > SLALOM_GO_SPARE_S:
 			# Early on a long way in: eased to the speed that brings it to the line on time; the last part at full speed.
-			_hands.hold_speed_ms = clampf(way_in_m / maxf(time_left_s, 1.0), SLALOM_RUN_SLOWEST_MS, maxf(out_ms * ratio, SLALOM_RUN_SLOWEST_MS))
+			# Eased so that it comes to the last SLALOM_RUN_FULL_SPEED_S of the way with that time (and 2 s to get up to
+			# speed) still left: eased all the way in, it came to the line early, luffed up and crept over (the
+			# night of 11-12 November, block 1: 1 board in 4 over early, there 15 to 35 s before the gun).
+			var eased_ms: float = (way_in_m - full_m) / maxf(time_left_s - SLALOM_RUN_FULL_SPEED_S - 2.0, 1.0)
+			_hands.hold_speed_ms = clampf(eased_ms, SLALOM_RUN_SLOWEST_MS, maxf(out_ms * ratio, SLALOM_RUN_SLOWEST_MS))
 			note += ", easing (%.0f s early)" % extra_s
 		go_deg = _slalom_early_deg(telemetry, step, behind_m, go_deg)
 		_keep_behind_the_line(telemetry, step, behind_m)

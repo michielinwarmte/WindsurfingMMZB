@@ -11,7 +11,7 @@ const DT: float = 1.0 / 60.0
 func test_it_is_off_unless_switched_on() -> void:
 	var config: SkipperConfig = SkipperConfig.new()
 	assert_false(config.slalom_timed_run, "off by default until the suite says it wins")
-	assert_eq(config.slalom_run_turn_s, Skipper.START_TURN_S + Skipper.START_GYBE_EXTRA_S, "the gybe's cost the game's starts measured")
+	assert_eq(config.slalom_run_turn_s, 12.0, "the gybe's cost measured on the run (the night of 11-12 November)")
 
 
 func test_maxs_example_the_gybe_falls_just_after_half_time() -> void:

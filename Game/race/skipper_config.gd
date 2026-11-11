@@ -210,9 +210,13 @@ enum StartTack { EITHER, STARBOARD, PORT }
 ## and back at full speed; with more time than one run, out and back again. Off until the suite has judged it.
 @export var slalom_timed_run: bool = false
 ## With slalom_timed_run: what the gybe at the far end costs, seconds: the turn and getting back to speed (Max's "add
-## 5 s" on the water). 15.5 is what the game's starts measured for a gybe from a broad reach at 10 m/s (the board came
-## out of it at 1 to 2 m/s; Skipper.START_TURN_S + START_GYBE_EXTRA_S); to be measured again on the run.
-@export_range(0.0, 30.0) var slalom_run_turn_s: float = 15.5
+## 5 s" on the water). 12: measured on the run (the night of 11-12 November, block 1): with 15.5 (what the game's
+## course starts measured for a gybe from a broad reach at 10 m/s) the boards that timed their last gybe came to the line
+## some 3.5 s early (luffing up a median 6 s before the gun, 2.5 s before they would cross).
+@export_range(0.0, 30.0) var slalom_run_turn_s: float = 12.0
+## With slalom_timed_run: it aims to cross this long after the gun, seconds (Max, 11 November 2026: "i prefer 3 seconds
+## late at full speed than 0.2 sec but at half speed"; behind the pack the wind is dirty, so not much more).
+@export_range(0.0, 5.0) var slalom_run_aim_late_s: float = 2.0
 
 @export_group("Start")
 ## Where on the start line it wants to cross: 0 = the pin end, 1 = the boat end.
