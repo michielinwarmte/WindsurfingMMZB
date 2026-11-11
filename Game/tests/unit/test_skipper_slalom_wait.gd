@@ -26,3 +26,7 @@ func test_a_gentler_wait_luffs_up_from_a_lower_speed_and_bears_away_less() -> vo
 	var config: SkipperConfig = SkipperConfig.new()
 	assert_eq(config.slalom_wait_luff_from_ms, Skipper.SLALOM_WAIT_LUFF_FROM_MS, "the default is the first try's 2.5 m/s")
 	assert_eq(config.slalom_wait_widest_twa_deg, Skipper.HOLD_WIDEST_TWA_DEG, "the default is the first try's beam reach")
+
+
+func test_the_dive_time_share_is_off_by_default() -> void:
+	assert_eq(SkipperConfig.new().slalom_dive_time_share, 1.0, "1: the dive timed as reckoned, until the suite says the share wins")

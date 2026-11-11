@@ -376,6 +376,10 @@ const HOLD_LUFF_MOST_DEG: float = 15.0
 ## DIP_AWAY_SHARE of the board's speed; over the line by less than START_WALL_M before the gun it dips back.
 const DIP_CRAWL_EXTRA_MS: float = 1.0
 const DIP_AWAY_SHARE: float = 0.3
+## SkipperConfig.start_go_lag_s: the whole lag at START_LAG_CRAWL_MS and slower, none from START_LAG_AT_SPEED_MS up
+## (phase S3's starts from a hold, 11 November 2026: on time from 5 m/s up).
+const START_LAG_CRAWL_MS: float = 2.0
+const START_LAG_AT_SPEED_MS: float = 5.0
 const START_GO_LATCH_M: float = 40.0
 const START_STALLED_GO_S: float = 3.0
 ## Further back, gone, it holds back again only with more than this to spare, seconds (as it gains
@@ -2373,7 +2377,7 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 	# from its speed now and how fast it gains speed): then it goes, so as to cross at the time it
 	# aims for (HOLD_GO_SPARE_S). Past the go point, or about to cross the line before the gun, it
 	# holds back as slow as it steers.
-	var cross_need_s: float = _time_to_cross_s(telemetry, cross_at)
+	var cross_need_s: float = _time_to_cross_s(telemetry, cross_at) + _go_lag_s(config.start_go_lag_s, telemetry.speed_ms)
 	var go_spare_s: float = aim_s - cross_need_s - _gust_lead_s(cross_need_s)
 	start_spare_s = go_spare_s
 	var early_at_line: bool = before_gun and _too_early_at_the_line(telemetry, step, behind_m)
@@ -2467,7 +2471,8 @@ func _slalom_start_heading(telemetry: Telemetry, step: RaceStep, behind_m: float
 	var wind_deg: float = telemetry.wind_from_bearing_deg
 	var spot: Vector2 = _start_spot(step)
 	var before_gun: bool = _race.clock_s() < 0.0
-	var dive_need_s: float = _time_to_cross_s(telemetry, spot)
+	# slalom_dive_time_share: the dive takes longer than reckoned (the lake's lull at the start, a slower reach down).
+	var dive_need_s: float = _time_to_cross_s(telemetry, spot) * config.slalom_dive_time_share
 	var spare_s: float = -_race.clock_s() + config.start_timing_error_s - dive_need_s - _gust_lead_s(dive_need_s)
 	start_spare_s = spare_s
 	if spare_s <= SLALOM_GO_SPARE_S or not before_gun:
@@ -3049,6 +3054,17 @@ func wind_kt() -> float:
 ## reckons takes need_s: the share start_gust_lead of need_s for every unit of the felt wind's spread over its mean in
 ## the last GUST_LEAD_WINDOW_S (Max, 10 November 2026: "in tricky situations they have to learn to be risky or safe").
 ## 0 when off, or before it has felt GUST_LEAD_LEAST_S of wind.
+## SkipperConfig.start_go_lag_s (safe but fast, Max, 11 November 2026): the time getting going from a hold takes beyond
+## _time_to_cross_s(), seconds: lag_s at START_LAG_CRAWL_MS and slower, nothing from START_LAG_AT_SPEED_MS up, in
+## proportion between. Held back at 1 to 3 m/s the board must bear away from its hold, sheet in and gain speed, and on
+## phase S3's starts it crossed 2.8 to 3.7 s (median) later than it reckoned; already going at 5 m/s it was on time.
+static func _go_lag_s(lag_s: float, speed_ms: float) -> float:
+	if lag_s <= 0.0:
+		return 0.0
+	var slow_share: float = clampf((START_LAG_AT_SPEED_MS - speed_ms) / (START_LAG_AT_SPEED_MS - START_LAG_CRAWL_MS), 0.0, 1.0)
+	return lag_s * slow_share
+
+
 func _gust_lead_s(need_s: float) -> float:
 	if config.start_gust_lead <= 0.0 or felt.span_s() < GUST_LEAD_LEAST_S or not is_finite(need_s):
 		return 0.0

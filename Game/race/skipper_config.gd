@@ -189,6 +189,12 @@ enum StartStyle { LOOP, HOLD }
 ## went for the line from elsewhere and came early); lower and narrower keep it slower, nearer the old wait.
 @export_range(1.0, 4.0) var slalom_wait_luff_from_ms: float = 2.5
 @export_range(45.0, 90.0) var slalom_wait_widest_twa_deg: float = 90.0
+## Safe but fast on a slalom (Max, 11 November 2026): the time it reckons its dive down onto the line takes is stretched
+## by this share (1 is off). Measured on phase S3's slalom starts (the night of 10-11 November), dives not held back
+## early: open water 1.18 to 1.35 times the reckoning (median), the lake 1.56 to 1.87 (its slalom start lies in a lull,
+## and the board reached down at 7 to 8 m/s in 24 kt where it reckoned on 11 to 12). A little under the median is the
+## safe side.
+@export_range(1.0, 2.5) var slalom_dive_time_share: float = 1.0
 
 @export_group("Start")
 ## Where on the start line it wants to cross: 0 = the pin end, 1 = the boat end.
@@ -217,6 +223,12 @@ enum StartStyle { LOOP, HOLD }
 ## rate (Skipper._acceleration_ms2()): below 1 it goes earlier. On Silvaplana the sharp starters, aiming
 ## close to the gun, were the ones that crossed 30 to 50 s late (the skipper's heads, 8 November 2026).
 @export_range(0.4, 1.5) var start_accel_share: float = 1.0
+## Safe but fast (Max, 11 November 2026: "going a little more safe but fast over the startline is better in real
+## life"): the time getting going from a hold takes beyond its reckoning, seconds, added to the time it reckons it needs
+## to cross (Skipper._go_lag_s()): the whole of it at 2 m/s and slower, none from 5 m/s up. 0 is off. Measured on phase
+## S3's 1661 starts from a hold (the night of 10-11 November): going at 1 to 3 m/s the board crossed a median 2.8 to 3.7 s
+## later than it reckoned, at 3 to 5 m/s 1.9 s, from 5 m/s up on time. A little under the median is the safe side.
+@export_range(0.0, 8.0) var start_go_lag_s: float = 0.0
 
 @export_group("Company")
 ## Another board this close, metres, and getting closer, makes it bear away to keep clear (when it
