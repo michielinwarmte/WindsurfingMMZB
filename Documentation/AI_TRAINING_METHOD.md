@@ -466,7 +466,7 @@ planned. Nothing pushed; committed locally on `ai/starts-fleet-10nov`.
    `replays/`. A slip at 20:40: `random_suite.py --help` started a default run (the tool has no help option); stopped
    after two minutes and kept as `void_help_accident_10Nov_2040`. Unit tests 1056/1056.
 
-**The day's run (11 November 2026, 10:45 to 19:00).** Max, the morning after the night's report: "going to school
+**The day's run (11 November 2026, 10:00 to 19:00).** Max, the morning after the night's report: "going to school
 so try to fix it. going a little more safe but fast over the startline is better in real life. try again and see you
 around 19:00". The same loop as the night (12 jobs on mask 0x55FF, about 80 % CPU, the pool never idle), on the
 frozen copies `frozen_S4` (+ `start_go_lag_s`) and `frozen_S4b` (+ `slalom_dive_time_share`); all switches off by
@@ -501,11 +501,11 @@ it needed, the gun's time left less its spare in the note, against the time it t
 
 *The queue* (each run 100 races, 3 cores; the tune sets reuse the night's off arms, which the suite's determinism
 allows; the hold-out is fresh, seed 48, because the lag and the share were measured on the night's hold-out sets):
-1. Block 1 (10:45 to about 12:45): `d1_lag3` (tune 31, against `s3_base`), `d1_hold_base` and `d1_hold_lag3`
+1. Block 1 (10:00 to about 12:15): `d1_lag3` (tune 31, against `s3_base`), `d1_hold_base` and `d1_hold_lag3`
    (hold-out 48), `d1_det31` then `d1_hold_wait2` (the gentler wait alone on hold-out 48).
-2. Block 2 (about 12:45 to 14:45): `d2_slalom` (tune 32, the package, against `s3b2_base`), `d2_hold_slalom`
+2. Block 2 (about 12:15 to 14:30): `d2_slalom` (tune 32, the package, against `s3b2_base`), `d2_hold_slalom`
    (hold-out 48), `d2_lag3_t32` (tune 32), `d2_hold_dive14` (the share alone, hold-out 48).
-3. Block 3 (about 14:45 to 16:45): what block 1 and 2 leave open (another value, or the two together).
+3. Block 3 (about 14:30 to 16:45): what block 1 and 2 leave open (another value, or the two together).
 4. Block 4, the final check (to about 18:30): the day's defaults against the evening's on the fresh hold-out 44.
 5. The log, the report for Max, commit locally, nothing pushed.
 
