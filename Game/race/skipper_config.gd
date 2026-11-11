@@ -8,6 +8,8 @@ extends Resource
 
 ## The start plans (start_style below).
 enum StartStyle { LOOP, HOLD }
+## The tack it comes in to a course race's start on (start_tack below): EITHER by where it is, or its own choice.
+enum StartTack { EITHER, STARBOARD, PORT }
 
 ## Shown on the label, the results and the mini-map. The four shipped characters have placeholder
 ## names; the team names them.
@@ -200,6 +202,17 @@ enum StartStyle { LOOP, HOLD }
 ## and the board reached down at 7 to 8 m/s in 24 kt where it reckoned on 11 to 12). A little under the median is the
 ## safe side.
 @export_range(1.0, 2.5) var slalom_dive_time_share: float = 1.0
+## Max's slalom start (Max, 11 November 2026: "in a real slalom start ... we take the same direction as mark one ... then
+## cross the line at a time ... if that is for example 100 s, we know that at around 50 s if we go back at the same speed
+## we get a perfect start. But we have to gybe, so ... we add 5 s"): instead of waiting upwind of the committee boat and
+## diving down, it sails a timed run behind its spot (Skipper._slalom_run_heading()): away from the line on the reciprocal
+## of the reach to mark 1, a gybe when the time left is the way back at the speed it sailed out plus slalom_run_turn_s,
+## and back at full speed; with more time than one run, out and back again. Off until the suite has judged it.
+@export var slalom_timed_run: bool = false
+## With slalom_timed_run: what the gybe at the far end costs, seconds: the turn and getting back to speed (Max's "add
+## 5 s" on the water). 15.5 is what the game's starts measured for a gybe from a broad reach at 10 m/s (the board came
+## out of it at 1 to 2 m/s; Skipper.START_TURN_S + START_GYBE_EXTRA_S); to be measured again on the run.
+@export_range(0.0, 30.0) var slalom_run_turn_s: float = 15.5
 
 @export_group("Start")
 ## Where on the start line it wants to cross: 0 = the pin end, 1 = the boat end.
@@ -212,6 +225,12 @@ enum StartStyle { LOOP, HOLD }
 ## end once the line is skewed by Skipper.FULL_BIAS_DEG or more (less of the way on a line that is
 ## nearly square to the wind, where the ends are nearly as good).
 @export_range(0.0, 1.0) var favoured_end_bias: float = 0.5
+## The tack it comes in to the line on at a course race's start (Skipper._start_run_in_tack(); Max, 11 November 2026: "i
+## want the skippers decide starboard start and port start, so some will start the one way and others the other way";
+## the most common start is on starboard, with right of way, just under the line, steering up at the gun). EITHER is the
+## tack from its side of its spot, so that it does not cross the others' way in (as before); a reaching start keeps the
+## first leg's tack whatever this says. EITHER until the suite has judged the others.
+@export var start_tack: StartTack = StartTack.EITHER
 ## Its start plan (AI_FLEET_PLAN.md, D4): a timing loop (sail away from the line on a reach and
 ## turn back to reach it at the gun at full speed), or a hold (come to the line early, luff and
 ## ease the sheet near it to wait without stopping, then bear away and sheet in for the gun).

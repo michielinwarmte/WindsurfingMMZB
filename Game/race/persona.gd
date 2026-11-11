@@ -50,6 +50,8 @@ extends Resource
 ## Where on the start line it likes to cross: 0 the pin end, 1 the boat end.
 @export_range(0.0, 1.0) var start_spot: float = 0.5
 @export var start_style: SkipperConfig.StartStyle = SkipperConfig.StartStyle.LOOP
+## The tack it comes in to a course race's start on (SkipperConfig.start_tack): either, starboard or port.
+@export var start_tack: SkipperConfig.StartTack = SkipperConfig.StartTack.EITHER
 ## Points high (negative) or sails low and fast (positive), degrees off the polar's best angle.
 @export_range(-3.0, 3.0) var pointing_offset_deg: float = 0.0
 
@@ -180,6 +182,7 @@ func to_skipper_config(seed: int, wind_kt: float = 15.0, level_spread: float = 1
 	config.start_spot = clampf(start_spot, 0.0, 1.0)
 	config.favoured_end_bias = nerve
 	config.start_style = start_style
+	config.start_tack = start_tack
 	config.hold_speed_ms = lerpf(3.5, 2.5, nerve)
 	var spread_s: float = lerpf(8.0, 0.5, timing)
 	config.start_timing_error_s = clampf(rng.randfn(0.0, spread_s) + lerpf(1.5, -1.0, risky), -3.0, 6.0)

@@ -30,6 +30,8 @@ The game's release engine is no faster (about 3x with its scene) and cannot run 
 
   --set=tune     draws from the seeds the skipper may be tuned on (the default)
   --set=holdout  draws from seeds that are never used for tuning: a fix counts only if these get better
+  --kind=slalom  only the slaloms (PD3, SD3, T2), or --kind=course only the others: a race of the other kind is drawn
+                 again, so a pair's arms with the same kind and seed race the same races (11 November 2026)
 
 What a run draws (the plan agreed with Max, 8 November 2026):
   water        lake 80 %, open water 20 %
@@ -130,6 +132,20 @@ def limit_cpu(mask_text):
 
 
 # ---------------------------------------------------------------- the draw
+
+SLALOM_COURSE_MARKS = ("slalom", "pd3", "sd3", "PD3", "SD3")
+
+
+def kind_matches(drawn, kind):
+    """--kind=slalom draws only slaloms (the sprint slaloms PD3 and SD3 and T2), --kind=course only the others (Max,
+    11 November 2026: the slalom start and the course start judged each on its own races); no --kind, every race. The
+    draw stays the suite's: a race of the other kind is drawn again (the next attempt), so the arms of a pair with the
+    same --kind and seed race the same races."""
+    if kind not in ("slalom", "course"):
+        return True
+    slalom = any(mark in str(drawn.get("course", "")) for mark in SLALOM_COURSE_MARKS)
+    return slalom == (kind == "slalom")
+
 
 def draw_race(rng, phase="A"):
     """One race's arguments for run_race.gd and a short description of what was drawn."""
@@ -650,6 +666,8 @@ def main(argv):
             # is stopped and started again goes on with new races instead of repeating its first ones.
             attempt += 1
             args, drawn = draw_race(random.Random(seed * 1000003 + number * 101 + attempt), options.get("phase", "A"))
+            if not kind_matches(drawn, options.get("kind", "")):
+                continue
             args += options.get("extra", "").split()
             label = "r%04d" % number
             csv_dir = os.path.join(out_dir, label)

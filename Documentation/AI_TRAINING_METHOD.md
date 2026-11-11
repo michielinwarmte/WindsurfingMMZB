@@ -613,6 +613,39 @@ hold-out 48 pick has its check on 44 too. The lag is chosen on tune and hold-out
    its final check ran, and undone at 18:48 when the check failed (the diff kept outside the repo). The analysis tools
    are in `tools/heads/s3_analysis/` (README there).
 
+**The night of 11-12 November 2026 (Max's go at 20:10: "do the ai training till tomorrow morning 8 o clock").** After
+the day's report Max described the real starts: "in a real slalom start ... we take the same direction as mark one, jibe
+or tack depending on the position of the line you want to start, then cross the line at a time (different depending on
+the room behind the starting line), and if that is for example 100 s, we know that at around 50 s if we go back at the
+same speed we get a perfect start. But we have to gybe, so that will take some time, so we add 5 s, because the last part
+of the reach toward the line [has] to be full speed. In a real course race start there are many different strategies, but
+the most common is on starboard, where we have right of way: sail just under the line and steer up at 0 s." His answers:
+(1) the slalom start his way; (2) the course starts are quite good, but the skippers should choose starboard or port, so
+that some start one way and some the other; (3) reuse the lag parts. Built (all off by default; frozen copy `frozen_S5b`):
+- `slalom_timed_run` (`Skipper._slalom_run_heading()`, `test_skipper_slalom_run.gd`): no more waiting upwind of the
+  committee boat. The run lies on the reach toward mark 1 through its spot; away from the line on the reciprocal, a gybe
+  when the time left is the way back at the speed it sailed out (scaled by the polar's two reaches) plus
+  `slalom_run_turn_s` (15.5 s: the game's gybe from 10 m/s, held back to 5 m/s through it as the course loop is), then
+  back at full speed. T2's sailing area leaves only some 80 m behind the line, so with time for a loop it sails on
+  through the line onto the course side (no fault before the gun), gybes 80 m beyond and comes back through its spot;
+  with less time it eases on the way in, the last 30 m at full speed. Smoke (T2, 18 kt, 120 s): out, two loops, the
+  last gybe at the far end, crossed 0.7 s after the gun at 9 m/s.
+- `start_tack` (`SkipperConfig.StartTack`: `EITHER` as before, `STARBOARD`, `PORT`; also on the personas;
+  `test_skipper_start_tack.gd`) and the race tool's `--start_tacks=a,b,c` (each board its own).
+- The suite's `--kind=slalom|course`: only that kind of race (a race of the other kind is drawn again), so each start
+  is judged on its own races.
+
+How they are judged: by the S3 rule; and, because Max chose them, also taken when nothing is `WORSE` on either set
+(the score and every check, by the sign test the other way), said so in the log. The plan (100 races a run, 3 cores, 12
+jobs on 0x55FF, each block chained so the pool never idles; fresh seeds: tune 36 slalom, 37 course; hold-out 49 slalom,
+50 course; 51 kept for the final checks):
+1. `n1_sl_base` / `n1_sl_run` (tune 36) and `n1_hsl_base` / `n1_hsl_run` (hold-out 49): the slalom run.
+2. `n2_c_base` / `n2_c_tacks` (tune 37) and `n2_hc_base` / `n2_hc_tacks` (hold-out 50): `--start_tacks=1,2,0`.
+3. `n3_c_lag2`, `n3_c_lag2tacks` (tune 37), `n3_hc_lag2`, `n3_hc_lag2tacks` (hold-out 50): the lag-2 package (S3-14)
+   alone and with the tacks, against block 2's off arms.
+4. Chosen after block 1 (the slalom run's gybe cost from what the boards did, or more races).
+5. The final checks on hold-out 51 of what is taken, against the off arm on the same races; to 08:00.
+
 ## The steps
 
 **Step 0, before a run.** Fetch first (`git fetch --all --prune`; the two PCs hand over through GitHub). Work on

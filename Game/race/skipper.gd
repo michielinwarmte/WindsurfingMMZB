@@ -57,6 +57,18 @@ enum StartPhase {
 	BACK_BEHIND,
 }
 
+## The legs of Max's slalom start (SkipperConfig.slalom_timed_run, _slalom_run_heading()).
+enum SlalomRun {
+	## Sailing to its run, SLALOM_RUN_JOIN_M behind its spot on the line.
+	JOIN,
+	## Away from the line, on the reciprocal of the reach in.
+	AWAY,
+	## The gybe at an end of the run.
+	TURN,
+	## The reach in through its spot toward mark 1, to cross at the gun at full speed.
+	IN,
+}
+
 ## A line is aimed at this far beyond it, metres (see _target_point()).
 const THROUGH_LINE_M: float = 30.0
 ## A mark that can be gone round without a tack or gybe from one tack only is approached on that
@@ -276,6 +288,23 @@ const SLALOM_WAIT_LUFF_FROM_MS: float = 2.5
 const SLALOM_WAIT_STALL_MS: float = 0.8
 const SLALOM_DIVE_CLOSEST_TWA_DEG: float = 60.0
 const SLALOM_DIVE_DEEPEST_TWA_DEG: float = 148.0
+## SkipperConfig.slalom_timed_run (_slalom_run_heading(), Max's slalom start): the reach in toward mark 1 is sailed between
+## these wind angles (the way out, its reciprocal, between 180 less them); it joins its run SLALOM_RUN_JOIN_M behind its
+## spot (within SLALOM_RUN_REACHED_M); the way out is SLALOM_RUN_LONGEST_M at most, inside the sailing area; on the way in
+## with time for a loop (two gybes and SLALOM_RUN_SHORTEST_LEG_S each way) it sails on through the line and gybes
+## SLALOM_RUN_COURSE_SIDE_M beyond it; early on a long way in it eases to the speed that brings it on time, never slower than
+## SLALOM_RUN_SLOWEST_MS, and sails the last SLALOM_RUN_FULL_SPEED_M at full speed; the speed out is averaged over
+## SLALOM_RUN_SPEED_S.
+const SLALOM_RUN_CLOSEST_TWA_DEG: float = 75.0
+const SLALOM_RUN_DEEPEST_TWA_DEG: float = 125.0
+const SLALOM_RUN_JOIN_M: float = 30.0
+const SLALOM_RUN_REACHED_M: float = 20.0
+const SLALOM_RUN_LONGEST_M: float = 300.0
+const SLALOM_RUN_SHORTEST_LEG_S: float = 8.0
+const SLALOM_RUN_COURSE_SIDE_M: float = 80.0
+const SLALOM_RUN_SLOWEST_MS: float = 4.0
+const SLALOM_RUN_FULL_SPEED_M: float = 30.0
+const SLALOM_RUN_SPEED_S: float = 3.0
 ## SkipperConfig.slalom_early_ease: early on the dive it luffs up only when it would cross the line within this many
 ## seconds, metres apart at its speed (before that it eases and keeps the dive's heading).
 const SLALOM_LAST_LUFF_S: float = 2.5
@@ -541,6 +570,13 @@ var _going: bool = false
 var _crossing_on_this_tack: bool = true
 ## When it decided to turn back toward the line (the start's TURNING phase).
 var _turn_back_from_s: float = 0.0
+## SkipperConfig.slalom_timed_run: the leg of its run, the leg after the gybe it is in, and the speed it sails out at (m/s,
+## averaged; 0 until it has sailed out).
+var _run_leg: SlalomRun = SlalomRun.JOIN
+var _run_after_turn: SlalomRun = SlalomRun.IN
+var _run_out_ms: float = 0.0
+## Early with time for a loop: on through the line onto the course side and back (no fault before the gun).
+var _run_through: bool = false
 ## Over the line at the gun: the end of the line it goes back round (0 the pin, 1 the boat; -1 not
 ## chosen yet), and whether it is out past that end.
 var _round_end: int = -1
@@ -764,6 +800,10 @@ func _forget_the_race() -> void:
 	_run_in_twa = 0.0
 	_reached_hold = false
 	_going = false
+	_run_leg = SlalomRun.JOIN
+	_run_after_turn = SlalomRun.IN
+	_run_out_ms = 0.0
+	_run_through = false
 	_crossing_on_this_tack = true
 	_round_end = -1
 	_past_the_end = false
@@ -2231,8 +2271,14 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 	if over and config.start_free_beyond_ends_m > 0.0 and _off_the_ends_m(step, position) > config.start_free_beyond_ends_m \
 			and not (_race.is_ocs(_index) and not before_gun):
 		over = false
+	# Max's slalom start: early, on a loop through the line onto the course side, as the sailors sail before the gun.
+	if over and before_gun and _run_through and config.slalom_timed_run:
+		over = false
 	if over:
 		_start_phase = StartPhase.BACK_BEHIND
+		# (Max's slalom start begins its run again once back behind the line.)
+		_run_leg = SlalomRun.JOIN
+		_run_through = false
 	if _start_phase != StartPhase.BACK_BEHIND and _race.course.starts_upwind_of_the_boat():
 		return _slalom_start_heading(telemetry, step, behind_m, spare_s)
 	if _start_phase == StartPhase.BACK_BEHIND:
@@ -2475,6 +2521,8 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 ## one (_time_to_cross_s()): steered by the navigation it was a run (deeper than the polar's best
 ## downwind angle in 17 kt), sailed off on the wrong gybe, and on T2 the fleet started 19 to 119 s late.
 func _slalom_start_heading(telemetry: Telemetry, step: RaceStep, behind_m: float, _spare_s: float) -> float:
+	if config.slalom_timed_run:
+		return _slalom_run_heading(telemetry, step, behind_m)
 	var position: Vector2 = _position(telemetry)
 	var wind_deg: float = telemetry.wind_from_bearing_deg
 	var spot: Vector2 = _start_spot(step)
@@ -2489,17 +2537,7 @@ func _slalom_start_heading(telemetry: Telemetry, step: RaceStep, behind_m: float
 		var go_deg: float = _slalom_dive_deg(telemetry, spot)
 		note = "start: slalom, reaching down onto the line"
 		if before_gun:
-			if _too_early_at_the_line(telemetry, step, behind_m):
-				_hands.hold_speed_ms = _slowest_hold_ms()
-				# slalom_early_ease: it keeps the dive's heading and only eases, luffing up only in the last
-				# SLALOM_LAST_LUFF_S before it would cross.
-				var toward_ms: float = _velocity.dot(step.in_dir)
-				var crossing_in_s: float = behind_m / toward_ms if toward_ms > 0.3 else INF
-				if config.slalom_early_ease and crossing_in_s > SLALOM_LAST_LUFF_S:
-					note += ", early: easing"
-				else:
-					go_deg = wind_deg - _tack() * (HOLD_LUFF_TWA_DEG + 2.0 * config.steering_noise_deg)
-					note += ", early: luffing up"
+			go_deg = _slalom_early_deg(telemetry, step, behind_m, go_deg)
 			_keep_behind_the_line(telemetry, step, behind_m)
 		return go_deg
 	var slot: Vector2 = _slalom_slot()
@@ -2538,6 +2576,149 @@ static func _slalom_wait_twa_deg(luff_twa: float, speed_ms: float, luff_from_ms:
 	var from_ms: float = maxf(luff_from_ms, SLALOM_WAIT_STALL_MS + 0.1)
 	var slow_share: float = clampf((from_ms - speed_ms) / (from_ms - SLALOM_WAIT_STALL_MS), 0.0, 1.0)
 	return lerpf(luff_twa, maxf(widest_twa, luff_twa), slow_share)
+
+
+## Early on a slalom's reach down (or in) before the gun, about to cross the line: held back hard, and the heading for it.
+## With slalom_early_ease it keeps the reach's heading and only eases, luffing up only in the last SLALOM_LAST_LUFF_S
+## before it would cross; otherwise it luffs right up.
+func _slalom_early_deg(telemetry: Telemetry, step: RaceStep, behind_m: float, go_deg: float) -> float:
+	if not _too_early_at_the_line(telemetry, step, behind_m):
+		return go_deg
+	_hands.hold_speed_ms = _slowest_hold_ms()
+	var toward_ms: float = _velocity.dot(step.in_dir)
+	var crossing_in_s: float = behind_m / toward_ms if toward_ms > 0.3 else INF
+	if config.slalom_early_ease and crossing_in_s > SLALOM_LAST_LUFF_S:
+		note += ", early: easing"
+		return go_deg
+	note += ", early: luffing up"
+	return telemetry.wind_from_bearing_deg - _tack() * (HOLD_LUFF_TWA_DEG + 2.0 * config.steering_noise_deg)
+
+
+## Max's slalom start (SkipperConfig.slalom_timed_run; Max, 11 November 2026: "we take the same direction as mark one ...
+## then cross the line at a time ... if that is for example 100 s, we know that at around 50 s if we go back at the same
+## speed we get a perfect start. But we have to gybe, so that will take some time, so we add 5 s, because the last part of
+## the reach toward the line [has] to be full speed"). Its run lies on the reach in through its spot toward mark 1
+## (_slalom_run_in()). It joins the run SLALOM_RUN_JOIN_M behind its spot. Away from the line on the run's reciprocal, it
+## gybes when the time left is the way back at the speed it sailed out (scaled by its polar from the way out's angle to the
+## way in's) plus SkipperConfig.slalom_run_turn_s, or at the far end of the room behind the line; then it reaches in at
+## full speed. With time for a loop (two gybes and SLALOM_RUN_SHORTEST_LEG_S each way) it sails on through the line onto
+## the course side as the sailors do before the gun (no fault then), gybes SLALOM_RUN_COURSE_SIDE_M beyond the line, and
+## comes back through its spot onto the run again; with less to spare it eases to the speed that brings it on time, the
+## last SLALOM_RUN_FULL_SPEED_M at full speed. It never waits at a crawl: waiting upwind of the boat luffed up, the boards
+## fell (54 of 88 falls in phase S3's baselines), and the dive from there took 1.4 to 1.8 times what the skipper reckoned.
+## The run times itself by its own speed out, as the sailors do.
+func _slalom_run_heading(telemetry: Telemetry, step: RaceStep, behind_m: float) -> float:
+	var position: Vector2 = _position(telemetry)
+	var wind_deg: float = telemetry.wind_from_bearing_deg
+	var spot: Vector2 = _start_spot(step)
+	var before_gun: bool = _race.clock_s() < 0.0
+	var time_left_s: float = -_race.clock_s() + config.start_timing_error_s
+	var run_in: Vector2 = _slalom_run_in(step, wind_deg)
+	var across: float = maxf(run_in.dot(step.in_dir), 0.3)
+	var way_in_m: float = maxf(behind_m, 0.0) / across
+	if _run_leg == SlalomRun.AWAY and behind_m > 0.0:
+		var share: float = minf(THINK_INTERVAL_S / SLALOM_RUN_SPEED_S, 1.0)
+		_run_out_ms = telemetry.speed_ms if _run_out_ms <= 0.0 else lerpf(_run_out_ms, telemetry.speed_ms, share)
+	# The way in at the speed it sailed out (Max: "if we go back at the same speed"), scaled by its polar from the way
+	# out's wind angle to the way in's; before it has sailed out, at the speed it has now (at least 3 m/s).
+	var in_twa: float = absf(Navigation.wind_angle_deg(Vector2.ZERO, run_in, wind_deg))
+	var ratio: float = clampf(_polar_speed_ms(in_twa) / maxf(_polar_speed_ms(180.0 - in_twa), 0.5), 0.7, 1.4)
+	var out_ms: float = _run_out_ms if _run_out_ms > 1.0 else maxf(telemetry.speed_ms, 3.0)
+	var in_s: float = way_in_m / (out_ms * ratio)
+	var extra_s: float = time_left_s - in_s
+	start_spare_s = extra_s
+	var turn_s: float = config.slalom_run_turn_s
+	var loop_s: float = 2.0 * turn_s + 2.0 * SLALOM_RUN_SHORTEST_LEG_S
+	# The run's two ends, inside the sailing area: the far end of the room behind the line, the turn on the course side.
+	var far: Vector2 = _inside_area(spot - run_in * SLALOM_RUN_LONGEST_M)
+	var course_end: Vector2 = _inside_area(spot + run_in * SLALOM_RUN_COURSE_SIDE_M)
+	var along_m: float = (position - spot).dot(run_in)
+	if not before_gun:
+		_run_leg = SlalomRun.IN
+		_run_through = false
+	if _run_leg == SlalomRun.JOIN:
+		var join: Vector2 = _inside_area(spot - run_in * SLALOM_RUN_JOIN_M)
+		if time_left_s <= _time_to_s(telemetry, spot) + SLALOM_GO_SPARE_S:
+			_run_leg = SlalomRun.IN
+		elif position.distance_to(join) <= SLALOM_RUN_REACHED_M:
+			# On its run: away if it is sailing away from the line with time for the gybe and both legs; else in (and on
+			# through the line for a loop if it has the time).
+			if _velocity.dot(run_in) < 0.0 and extra_s >= turn_s + 2.0 * SLALOM_RUN_SHORTEST_LEG_S:
+				_run_leg = SlalomRun.AWAY
+				_run_out_ms = 0.0
+			else:
+				_run_leg = SlalomRun.IN
+		else:
+			note = "start: slalom run, to its run behind the spot"
+			var join_deg: float = _course_to(telemetry, join, 0.0, true)
+			_keep_behind_the_line(telemetry, step, behind_m)
+			return join_deg + _keep_clear_deg(telemetry, _tack())
+	if _run_leg == SlalomRun.AWAY:
+		if behind_m > 0.0:
+			# Back behind the line from a loop on the course side.
+			_run_through = false
+		var at_far_end: bool = along_m <= (far - spot).dot(run_in) + SLALOM_RUN_REACHED_M
+		if (time_left_s <= in_s + turn_s and behind_m > 0.0) or at_far_end:
+			_run_leg = SlalomRun.TURN
+			_run_after_turn = SlalomRun.IN
+		else:
+			var away_deg: float = _course_to(telemetry, far, 0.0, true)
+			note = "start: slalom run, away (the gybe in %.0f s)" % (time_left_s - in_s - turn_s)
+			return away_deg + _keep_clear_deg(telemetry, _tack())
+	if _run_leg == SlalomRun.TURN:
+		# Onto the tack of the leg after it, by a gybe (bearing away first); done once on that tack and out of the turn.
+		var after_dir: Vector2 = -run_in if _run_after_turn == SlalomRun.AWAY else run_in
+		var after_tack: float = signf(Navigation.wind_angle_deg(Vector2.ZERO, after_dir, wind_deg))
+		var turning: bool = _tack_due_s >= 0.0 or _controller.manoeuvre != PlayerController.Manoeuvre.NONE
+		if turning or _tack() != after_tack:
+			# Held back through the gybe, as on the course start's loop: at 10 m/s the board swung 60 m downwind off its
+			# run and came out at 1 to 3 m/s (T2, 18 kt).
+			_hands.hold_speed_ms = LOOP_AWAY_SPEED_MS
+			note = "start: slalom run, gybing"
+			return _last_wanted_deg if turning else _gybe_now(telemetry)
+		_run_leg = _run_after_turn
+		if _run_leg == SlalomRun.AWAY:
+			_run_out_ms = 0.0
+			var out_deg: float = _course_to(telemetry, far, 0.0, true)
+			note = "start: slalom run, away"
+			return out_deg
+	# In: the reach through its spot.
+	_going = true
+	if before_gun and (_run_through or extra_s >= loop_s):
+		# Time for a loop: on through the line onto the course side, a gybe there, and back through its spot.
+		_run_through = true
+		if along_m >= (course_end - spot).dot(run_in) - SLALOM_RUN_REACHED_M:
+			_run_leg = SlalomRun.TURN
+			_run_after_turn = SlalomRun.AWAY
+			_going = false
+			_hands.hold_speed_ms = LOOP_AWAY_SPEED_MS
+			note = "start: slalom run, gybing on the course side"
+			return _gybe_now(telemetry)
+		var loop_deg: float = _course_to(telemetry, course_end, 0.0, true)
+		note = "start: slalom run, a loop through the line (%.0f s early)" % extra_s
+		return loop_deg + _keep_clear_deg(telemetry, _tack())
+	var go_deg: float = _slalom_dive_deg(telemetry, spot)
+	note = "start: slalom run, in"
+	if before_gun:
+		if behind_m > SLALOM_RUN_FULL_SPEED_M and extra_s > SLALOM_GO_SPARE_S:
+			# Early on a long way in: eased to the speed that brings it to the line on time; the last part at full speed.
+			_hands.hold_speed_ms = clampf(way_in_m / maxf(time_left_s, 1.0), SLALOM_RUN_SLOWEST_MS, maxf(out_ms * ratio, SLALOM_RUN_SLOWEST_MS))
+			note += ", easing (%.0f s early)" % extra_s
+		go_deg = _slalom_early_deg(telemetry, step, behind_m, go_deg)
+		_keep_behind_the_line(telemetry, step, behind_m)
+	return go_deg
+
+
+## SkipperConfig.slalom_timed_run: the direction of the reach in through its spot (one metre long): toward mark 1, between
+## SLALOM_RUN_CLOSEST_TWA_DEG and SLALOM_RUN_DEEPEST_TWA_DEG from the wind on that tack; the slalom's dive direction
+## (RaceCourses.slalom_dive_direction()) when that does not cross the line toward the course.
+func _slalom_run_in(step: RaceStep, wind_deg: float) -> Vector2:
+	var twa: float = wrapf(wind_deg - _first_leg_deg(step), -180.0, 180.0)
+	var tack: float = 1.0 if twa >= 0.0 else -1.0
+	var run_in: Vector2 = Course.direction_of(wind_deg - tack * clampf(absf(twa), SLALOM_RUN_CLOSEST_TWA_DEG, SLALOM_RUN_DEEPEST_TWA_DEG))
+	if run_in.dot(step.in_dir) <= 0.3:
+		return RaceCourses.slalom_dive_direction(_race.course)
+	return run_in
 
 
 ## The heading of a slalom's reach down onto the line: straight through its crossing when that is
@@ -2958,6 +3139,11 @@ func _start_run_in_tack(step: RaceStep, wind_deg: float) -> float:
 		var on_starboard: float = from_spot.dot(Course.direction_of(wind_deg - _run_in_twa_deg()))
 		var on_port: float = from_spot.dot(Course.direction_of(wind_deg + _run_in_twa_deg()))
 		_run_in_tack = 1.0 if on_starboard <= on_port else -1.0
+		# start_tack: its own choice (Max: some start on starboard, others on port).
+		if config.start_tack == SkipperConfig.StartTack.STARBOARD:
+			_run_in_tack = 1.0
+		elif config.start_tack == SkipperConfig.StartTack.PORT:
+			_run_in_tack = -1.0
 		if Course.direction_of(wind_deg - _run_in_tack * _run_in_twa_deg()).dot(step.in_dir) <= 0.3:
 			_run_in_tack = -_run_in_tack
 	return _run_in_tack

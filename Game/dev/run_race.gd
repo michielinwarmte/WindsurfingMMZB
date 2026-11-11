@@ -82,6 +82,7 @@ extends SceneTree
 ##   [--skipper.<field>=<n>] a number of every scripted skipper's character sheet (SkipperConfig)
 ##   [--start_spots=a,b,c] each board's own start spot (0 the pin end, 1 the boat end), dealt round the boards:
 ##                         phase S3's three copies of the general head each want their own place on the line
+##   [--start_tacks=a,b,c] each board's own tack for a course race's start (0 either, 1 starboard, 2 port), dealt round
 ##   [--drop_step=<k|random> --drop_seed=<n> --goal_steps=2] a drop instead of a race (the skipper's heads,
 ##                         8 November 2026): every board set down after the gun at a random open-water
 ##                         spot on the leg to step k (random: any leg), heading roughly along it; the run
@@ -167,6 +168,14 @@ static func apply_skipper_overrides(entries: Array[Entry], options: Dictionary[S
 			var scripted_board: Skipper = entries[i].skipper as Skipper
 			if scripted_board != null:
 				scripted_board.config.start_spot = clampf(spots[i % spots.size()].to_float(), 0.0, 1.0)
+	# --start_tacks=a,b,c: board i's own tack for a course race's start (SkipperConfig.start_tack: 0 either, 1 starboard,
+	# 2 port), dealt round the boards (Max, 11 November 2026: some start on starboard, others on port).
+	var tacks: PackedStringArray = options.get("start_tacks", "").split(",", false)
+	if not tacks.is_empty():
+		for i: int in entries.size():
+			var tack_board: Skipper = entries[i].skipper as Skipper
+			if tack_board != null:
+				tack_board.config.start_tack = clampi(tacks[i % tacks.size()].to_int(), 0, 2) as SkipperConfig.StartTack
 
 
 ## The skipper's heads (8 November 2026): the boards are watched every this many ticks (_watch()).
