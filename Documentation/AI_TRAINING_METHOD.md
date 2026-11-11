@@ -466,6 +466,49 @@ planned. Nothing pushed; committed locally on `ai/starts-fleet-10nov`.
    `replays/`. A slip at 20:40: `random_suite.py --help` started a default run (the tool has no help option); stopped
    after two minutes and kept as `void_help_accident_10Nov_2040`. Unit tests 1056/1056.
 
+**The day's run (11 November 2026, 10:45 to 19:00).** Max, the morning after the night's report: "going to school
+so try to fix it. going a little more safe but fast over the startline is better in real life. try again and see you
+around 19:00". The same loop as the night (12 jobs on mask 0x55FF, about 80 % CPU, the pool never idle), on the
+frozen copies `frozen_S4` (+ `start_go_lag_s`) and `frozen_S4b` (+ `slalom_dive_time_share`); all switches off by
+default, so each copy's defaults race the evening's code (checked: `d1_det31`, 12 races of tune seed 31, against
+`s3_base`: every board the same).
+
+*How the message is read (the day's rule; Max may overrule it at 19:00).* Max's answer to the report's question
+"risky or safe" is "a little more safe", and the start should cross the line fast. So a switch is taken by the S3
+rules above (the start's score wins on tune and passes the sign test on the hold-out), **or** when it is safer at no
+cost: the start's score not `WORSE` on either set (the sign test the other way), falls and over early together fewer
+beyond chance on the hold-out (`pass`) and not worse on tune, and nothing else `WORSE`. The second way is this chat's
+reading of "a little more safe"; each switch taken by it says so in the log of the loops.
+
+*What was measured first* (the night's ten off arms, the board CSVs: at the moment a board went, the time it reckoned
+it needed, the gun's time left less its spare in the note, against the time it took to cross):
+- **Starts from a hold** (1661): taken / reckoned a median 1.40 (quartiles 1.18 to 1.89). By the speed it went at:
+  1 to 3 m/s a median 2.8 to 3.7 s late (the lake from 1 to 2 m/s 7.5 s), 3 to 5 m/s 1.9 s, from 5 m/s up on time
+  (0.1 s). A board held back at a crawl must bear away from its hold, sheet in and gain speed, and the reckoning
+  (the open water's acceleration from 2.5 m/s, no time for the turn) leaves part of that out.
+- **Slalom dives** (413): a median 1.84 times the reckoning; dives not held back early: the open water 1.18 to 1.35,
+  the lake 1.56 to 1.87 (its slalom start lies in a lull). In 24 kt on the open water the broad reach down was sailed
+  at 7 to 8 m/s where the reckoning counted 11 to 12. 398 of the 724 slalom boards went straight from "to its spot"
+  (drifted more than 20 m from the spot while waiting luffed up, and sailing back to it when it was time).
+
+*The switches* (in `SkipperConfig`, off by default; unit tests in `test_skipper_go_lag.gd` and
+`test_skipper_slalom_wait.gd`):
+- `start_go_lag_s` (0 = off): the lag added to the time it reckons it needs to cross from a hold, the whole of it at
+  2 m/s and slower, none from 5 m/s up (`Skipper._go_lag_s()`). Try 3 (a little under the median: the safe side).
+- `slalom_dive_time_share` (1 = off): the slalom dive's reckoned time stretched by this share. Try 1.4 (a little
+  under the median), with the gentler wait (`slalom_wait_moving`, luffed up from 1.5 m/s, at most 70 degrees: the
+  night's falls 12 fixed, 0 broken) as one package, and alone.
+
+*The queue* (each run 100 races, 3 cores; the tune sets reuse the night's off arms, which the suite's determinism
+allows; the hold-out is fresh, seed 48, because the lag and the share were measured on the night's hold-out sets):
+1. Block 1 (10:45 to about 12:45): `d1_lag3` (tune 31, against `s3_base`), `d1_hold_base` and `d1_hold_lag3`
+   (hold-out 48), `d1_det31` then `d1_hold_wait2` (the gentler wait alone on hold-out 48).
+2. Block 2 (about 12:45 to 14:45): `d2_slalom` (tune 32, the package, against `s3b2_base`), `d2_hold_slalom`
+   (hold-out 48), `d2_lag3_t32` (tune 32), `d2_hold_dive14` (the share alone, hold-out 48).
+3. Block 3 (about 14:45 to 16:45): what block 1 and 2 leave open (another value, or the two together).
+4. Block 4, the final check (to about 18:30): the day's defaults against the evening's on the fresh hold-out 44.
+5. The log, the report for Max, commit locally, nothing pushed.
+
 ## The steps
 
 **Step 0, before a run.** Fetch first (`git fetch --all --prune`; the two PCs hand over through GitHub). Work on
