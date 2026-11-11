@@ -2504,7 +2504,7 @@ func _slalom_start_heading(telemetry: Telemetry, step: RaceStep, behind_m: float
 		_hands.hold_speed_ms = _slowest_hold_ms()
 		var wait_twa: float = HOLD_LUFF_TWA_DEG + 2.0 * config.steering_noise_deg
 		if config.slalom_wait_moving:
-			wait_twa = _slalom_wait_twa_deg(wait_twa, telemetry.speed_ms)
+			wait_twa = _slalom_wait_twa_deg(wait_twa, telemetry.speed_ms, config.slalom_wait_luff_from_ms, config.slalom_wait_widest_twa_deg)
 		heading_deg = wind_deg - _tack() * wait_twa + _keep_clear_deg(telemetry, _tack())
 		note = "start: waiting upwind of the boat"
 		var dive_tack: float = signf(Navigation.wind_angle_deg(position, spot, wind_deg))
@@ -2516,12 +2516,15 @@ func _slalom_start_heading(telemetry: Telemetry, step: RaceStep, behind_m: float
 
 
 ## SkipperConfig.slalom_wait_moving: the wind angle it waits at upwind of a slalom's committee boat, degrees: its
-## luffed-up angle (luff_twa) from SLALOM_WAIT_LUFF_FROM_MS up, a beam reach (HOLD_WIDEST_TWA_DEG) at
-## SLALOM_WAIT_STALL_MS and below, in between in proportion. Luffed up at a standstill the sailor fell (54 of 88 falls
-## in phase S3's baselines); borne away the sail draws and the board keeps steerage.
-static func _slalom_wait_twa_deg(luff_twa: float, speed_ms: float) -> float:
-	var slow_share: float = clampf((SLALOM_WAIT_LUFF_FROM_MS - speed_ms) / (SLALOM_WAIT_LUFF_FROM_MS - SLALOM_WAIT_STALL_MS), 0.0, 1.0)
-	return lerpf(luff_twa, maxf(HOLD_WIDEST_TWA_DEG, luff_twa), slow_share)
+## luffed-up angle (luff_twa) from luff_from_ms up (SkipperConfig.slalom_wait_luff_from_ms, 2.5 m/s), widest_twa
+## (SkipperConfig.slalom_wait_widest_twa_deg, a beam reach) at SLALOM_WAIT_STALL_MS and below, in between in
+## proportion. Luffed up at a standstill the sailor fell (54 of 88 falls in phase S3's baselines); borne away the sail
+## draws and the board keeps steerage.
+static func _slalom_wait_twa_deg(luff_twa: float, speed_ms: float, luff_from_ms: float = SLALOM_WAIT_LUFF_FROM_MS,
+		widest_twa: float = HOLD_WIDEST_TWA_DEG) -> float:
+	var from_ms: float = maxf(luff_from_ms, SLALOM_WAIT_STALL_MS + 0.1)
+	var slow_share: float = clampf((from_ms - speed_ms) / (from_ms - SLALOM_WAIT_STALL_MS), 0.0, 1.0)
+	return lerpf(luff_twa, maxf(widest_twa, luff_twa), slow_share)
 
 
 ## The heading of a slalom's reach down onto the line: straight through its crossing when that is

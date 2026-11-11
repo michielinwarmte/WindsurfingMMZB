@@ -184,6 +184,11 @@ enum StartStyle { LOOP, HOLD }
 ## 2026: 54 of the 88 falls in the two baselines (s3_base, s3_hold_base) came while waiting there, at 0.2 to 0.4 m/s,
 ## most in 20 kt or more and often all three boards of a race (iq_pd3, iq_sd3). Off until the suite has judged it.
 @export var slalom_wait_moving: bool = false
+## With slalom_wait_moving: the speed from which it waits luffed up, m/s, and the widest angle it bears away to at a
+## stall, degrees. 2.5 and 90 (the first try, 11 November 2026: the falls fixed beyond chance, but waiting at 1.6 m/s it
+## went for the line from elsewhere and came early); lower and narrower keep it slower, nearer the old wait.
+@export_range(1.0, 4.0) var slalom_wait_luff_from_ms: float = 2.5
+@export_range(45.0, 90.0) var slalom_wait_widest_twa_deg: float = 90.0
 
 @export_group("Start")
 ## Where on the start line it wants to cross: 0 = the pin end, 1 = the boat end.

@@ -17,3 +17,12 @@ func test_luffed_up_with_speed_and_borne_away_at_a_stall() -> void:
 	var middle_ms: float = 0.5 * (Skipper.SLALOM_WAIT_LUFF_FROM_MS + Skipper.SLALOM_WAIT_STALL_MS)
 	assert_almost_eq(Skipper._slalom_wait_twa_deg(luff, middle_ms), 0.5 * (luff + Skipper.HOLD_WIDEST_TWA_DEG), 0.01,
 		"half way between the speeds: half way between the angles")
+
+
+func test_a_gentler_wait_luffs_up_from_a_lower_speed_and_bears_away_less() -> void:
+	var luff: float = Skipper.HOLD_LUFF_TWA_DEG
+	assert_eq(Skipper._slalom_wait_twa_deg(luff, 2.0, 1.5, 70.0), luff, "2 m/s, luffed up from 1.5: luffed up")
+	assert_eq(Skipper._slalom_wait_twa_deg(luff, 0.3, 1.5, 70.0), 70.0, "nearly stopped: no wider than 70 degrees")
+	var config: SkipperConfig = SkipperConfig.new()
+	assert_eq(config.slalom_wait_luff_from_ms, Skipper.SLALOM_WAIT_LUFF_FROM_MS, "the default is the first try's 2.5 m/s")
+	assert_eq(config.slalom_wait_widest_twa_deg, Skipper.HOLD_WIDEST_TWA_DEG, "the default is the first try's beam reach")
