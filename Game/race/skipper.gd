@@ -2647,9 +2647,13 @@ func _slalom_run_heading(telemetry: Telemetry, step: RaceStep, behind_m: float) 
 		if time_left_s <= _time_to_s(telemetry, spot) + SLALOM_GO_SPARE_S:
 			_run_leg = SlalomRun.IN
 		elif position.distance_to(join) <= SLALOM_RUN_REACHED_M:
-			# On its run: away if it is sailing away from the line with time for the gybe and both legs; else in (and on
-			# through the line for a loop if it has the time).
-			if _velocity.dot(run_in) < 0.0 and extra_s >= turn_s + 2.0 * SLALOM_RUN_SHORTEST_LEG_S:
+			# On its run: away if it is sailing away from the line with time for the gybe and both legs, and no more time
+			# than the run behind the line can use up (out to its far end eased at the slowest, the gybe, and in at full
+			# speed); else in, and on through the line for a loop if it has the time. (With 90 s left and 80 m of room on
+			# T2, it eased out at 3 m/s for 30 s, still came to the far end early, and crept in over the line.)
+			var room_m: float = absf((far - spot).dot(run_in))
+			var run_most_s: float = room_m / SLALOM_RUN_SLOWEST_MS + turn_s + room_m / (out_ms * ratio)
+			if _velocity.dot(run_in) < 0.0 and extra_s >= turn_s + 2.0 * SLALOM_RUN_SHORTEST_LEG_S and time_left_s <= run_most_s:
 				_run_leg = SlalomRun.AWAY
 				_run_out_ms = 0.0
 			else:
