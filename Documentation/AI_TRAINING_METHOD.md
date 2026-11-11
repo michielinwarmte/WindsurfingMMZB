@@ -188,6 +188,7 @@ rules, less with the second PC as a second pool.
 | S3-14 | 11 Nov 2026 | The fast package with the lag at 2 s (`start_go_lag_s` = 2, `early_holds_its_tack`, `start_dip`): "a little more safe". The evening's goes from a crawl were a median 2.7 s late (quartiles 1.7 to 4.5), so with 3 s about half the boards came early and braked at the line. Frozen copy `frozen_S4d` | 100 races (seed 31, against `s3_base`): **score 110 boards better, 73 worse (p 0.004, pass)**, median 71.8 -> 74.5 m, mean 82.3 -> 82.2; behind the line at the gun 16.5 -> 10.1 m, speed at the gun 5.8 -> 6.1 m/s, start median 6.0 -> 3.8 s after the gun; **on time 22 fixed, 11 broken (p 0.040, pass)**; not over early 7 fixed, 7 broken; no fall 3 fixed, 6 broken; untangled 23 fixed, 23 broken; penalties 27 -> 22. Against S3-10 (lag 3) on the same races: score 60 better, 63 worse; over early 4 fixed, 1 broken | 100 races (seed 48, against `d1_hold_base`): **score 114 better, 73 worse (p 0.002, pass)**, median 65.2 -> 65.8 m, mean 70.9 -> 73.7; behind at the gun 15.4 -> 11.6 m; on time 16 fixed, 16 broken; not over early 14 fixed, 17 broken; untangled 14 fixed, 16 broken; falls or over early 12 fixed, 17 broken (chance). Against S3-10: score 45 better, 64 worse (lag 3 scores more here), untangled 15 fixed, 6 broken | **Yes** by the S3 rule (the score passes on both sets, nothing `WORSE`, untangled even on both), to the final check on hold-out 44 (S3-15) |
 | S3-15 | 11 Nov 2026 | The final check of S3-14 (lag 2) together with the gentler wait (S3-12) on hold-out 44: `d4_hold44_lag2` against `d4_hold44_base` | - | 100 races (seed 44): score 111 boards better, 89 worse (p 0.069, chance), median 64.5 -> 66.2 m, mean 92.7 -> 87.0; behind the line at the gun 16.8 -> 10.1 m, speed at the gun 5.9 = 5.9 m/s; no fall 22 fixed, 3 broken; not over early 18 fixed, 20 broken; **falls or over early 35 fixed, 20 broken (p 0.029, pass)**; **untangled 89.0 -> 81.3 % (10 fixed, 33 broken, `WORSE`)**. Against S3-13 (lag 3 and the wait) on the same races: score 53 better, 54 worse; untangled 14 fixed, 13 broken; falls or over early 5 fixed, 2 broken | **No** by the S3 rule (the score at chance, untangled `WORSE`) |
 | S3-16 | 11 Nov 2026 | The final check of the gentler wait alone (S3-12) on hold-out 44: `d4_hold44_wait2` against `d4_hold44_base` (70 races, the last half hour of the day) | - | 70 races (seed 44): **no fall 86.2 -> 92.4 % (13 fixed, 0 broken)**, falls or over early 13 fixed, 4 broken (p 0.025, pass); **score 20 boards better, 35 worse (`WORSE`)**, median 59.2 -> 52.7 m, mean 86.0 -> 71.0; on time 8 fixed, 16 broken (no gain), start median 6.9 -> 7.7 s after the gun; untangled 1 fixed, 2 broken. Against it on the same races, S3-15 (lag 2 and the wait): score 77 better, 45 worse (pass), untangled 5 fixed, 20 broken (`WORSE`); S3-13 (lag 3 and the wait): 85 better, 53 worse, untangled 1 fixed, 16 broken (`WORSE`) | **No** (the score `WORSE` on 44, so not safer at no cost; the default change made for it was undone). The falls fixed on all three sets (10 / 0, 16 / 2, 13 / 0), but its slalom starts come later. And it splits S3-13 and S3-15: the wait does not tangle the boards, the lag does (on 44; on tune 31 and hold-out 48 lag 2 did not); the score the lag gains is there on 44 too. A unit test showed one such late start: `test_rules_in_race.gd`'s penalty test (one board, t2_slalom, 24 kt) was still reaching down onto the line 15 s after the gun with the wait on |
+| S3-17 | 11 Nov 2026 | Max's slalom start, version 3 (`slalom_timed_run`, `frozen_S5c`; the night's block 1, slalom races only, `--kind=slalom`) | 100 races (seed 36, against `n1_sl_base`): **no fall 70.3 -> 96.7 % (84 fixed, 5 broken)**; **score 175 boards better, 113 worse (pass)**, median 87.0 -> 215.8 m, mean 113.0 -> 150.6; behind the line at the gun 20.7 -> 3.2 m; on time 58.0 -> 62.7 % (72 fixed, 58 broken); **not over early 86.7 -> 70.7 % (29 fixed, 77 broken, `WORSE`)**; no penalty 16 fixed, 6 broken | 100 races (seed 49, against `n1_hsl_base`): **no fall 78.7 -> 99.0 % (61 fixed, 0 broken)**; **score 208 better, 78 worse (pass)**, median 47.4 -> 247.2 m, mean 91.5 -> 173.9; behind at the gun 23.4 -> 3.3 m; **on time 53.7 -> 70.7 % (91 fixed, 40 broken, pass)**; **not over early 85.0 -> 73.0 % (31 fixed, 67 broken, `WORSE`)** | **No** (over early `WORSE` on both sets); everything else far better. 127 of the 135 newly over came in early and luffed up at the line; next versions 4, 5 and 5b |
 
 **Proposed for Max (9 November 2026, not agreed yet).** Step 6's "no check gets worse" on 100 races blocks a fix for one race's flip: a fix that changes the board's line changes which of the lake's known traps it meets (the north-east corner, T2's mark 3, the east shore), and a start after R depends on where the race before ended. Loops 1 and 2 each won clearly on the hold-out and lost one or two races on a check, every one traced to such chance. Proposed: a check counts as worse when it loses 3 or more races in 100 more than it gains, every flip traced in the log, and none of them during what the switch does. (In phase S the sign test below judges instead, explained to Max on 9 November; whether it also applies to the roundings later is his call.)
 
@@ -645,6 +646,31 @@ jobs on 0x55FF, each block chained so the pool never idles; fresh seeds: tune 36
    alone and with the tacks, against block 2's off arms.
 4. Chosen after block 1 (the slalom run's gybe cost from what the boards did, or more races).
 5. The final checks on hold-out 51 of what is taken, against the off arm on the same races; to 08:00.
+
+*Block 1 and the versions (20:20 to 23:50).* The first version (v2, `frozen_S5b`) was stopped 23 minutes in and kept as
+`void_replaced_11Nov_n1_*_v2`: its smoke (8 slalom races of tune 32, `s3b2_base`, 24 boards) had 9 boards over early
+against 5. Version 3 (`frozen_S5c`: eased out when the far end comes before its gybe is due; the course side's gybe
+timed) raced block 1 (`n1_sl_run3`, `n1_hsl_run3`), logged as S3-17: the falls nearly gone, the score far better, and
+over early `WORSE` on both sets. What the newly over boards did (`over_how.py`): 127 of 135 came in "early: luffing up";
+those over at the gun were luffing a median 22 to 26 s before it (they came in with too much time for easing and too
+little for another loop), those not over a median 6 s (2.5 s before they would cross: so the timed last gybe came some
+3.5 s early, and the gybe's cost is some 12 s, not 15.5). Max then (23:10): early, slow down 10 to 20 s before and
+accelerate in the last 10 s; "i prefer 3 seconds late at full speed than 0.2 sec but at half speed"; the basics first.
+The versions, smoked on the same 24 boards (boards that fell / over early / the score better and worse than the old
+start's; the old start: 7 fell, 5 over):
+
+| Version | Frozen copy | What changed | Fell | Over early | Better / worse |
+|---|---|---|---|---|---|
+| v2 | `frozen_S5b` | the run with the loop through the line | 0 | 9 | - |
+| v3 | `frozen_S5c` | eased out; the course side's gybe timed | 1 | 5 | 17 / 7 |
+| v4 | `frozen_S5d` | the gybe's cost 12 s; a shorter loop (legs of 4 s); eased down to 3 m/s, the last 30 m at full speed | 0 | 3 | 17 / 5 |
+| v5 | `frozen_S5e` | Max's: aims 2 s after the gun (`slalom_run_aim_late_s`); full speed for the last 8 s | 0 | 4 | 18 / 6 |
+| v5b | `frozen_S5f` | away from the join only when the run behind the line can use up the time left | 0 | 3 | 17 / 6 |
+
+v5b fixed the one unit test v5 failed (one board on T2 in 18 kt: with 90 s left and 80 m of room it eased out at 3 m/s
+for 30 s, still came to the far end early, and crept over). Block 3's two slalom slots race v5b (`n3_sl_run5`,
+`n3_hsl_run5`, against block 1's off arms); the lag-2 package with the tacks moved to block 4 (`n4_c_lag2tacks`,
+`n4_hc_lag2tacks`), with the final checks' off arms on hold-out 51 (`n4_hsl51_base`, `n4_hc51_base`).
 
 ## The steps
 
