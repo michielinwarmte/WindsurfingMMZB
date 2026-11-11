@@ -540,6 +540,22 @@ over early 18 boards fixed, 7 broken, p 0.022, the score 35 better, 37 worse: th
 agrees) after `d2_fast`; `d3_hold_dive14` (the dive's share alone) after `d2_hold_fast`. The day's safer-at-no-cost
 measure is `safe_test.py` (per board: no fall and not over early at the gun; fixed against broken, the sign test).
 
+*After blocks 2 and 3 (16:10; the queue as changed).* The slalom package was not taken (S3-9: against the gentler wait
+alone the dive's share brought 14 boards newly over early against the wait's 8), so the share alone (`d3_hold_dive14`)
+was not run; its slot went to the final check's off arm, `d4_hold44_base` (`frozen_S4d`, every switch off, hold-out 44).
+**The fast package was taken by the S3 rule** (S3-10: the score passed on both sets, nothing `WORSE`), but it is fast,
+not safer: falls and over early together at chance against the evening. Why: the lag of 3 s is about the median of how
+late the evening's goes from a crawl were (reckoned 6 to 12 s: 2.7 s late, quartiles 1.7 to 4.5; reckoned under 6 s:
+2.4, quartiles 0.6 to 4.4), so about half the boards come to the line early and must brake there, where a few creep
+over. A lag of 2 s is "a little more safe": the package with it, `d4_lag2` (tune 31) and `d4_hold_lag2` (hold-out 48),
+judged against the same off arms and against S3-10 on the same races. `start_cross_room_deg` 15 was not taken (S3-11).
+The gentler wait on tune 32 (`d3_wait2_t32`, 86 of 100 races at 16:08): falls or over early 16 fixed, 4 broken
+(p 0.006), the score 30 boards better, 20 worse (chance); with hold-out 48's 18 fixed, 7 broken it is taken by the
+day's safer-at-no-cost rule, if its last races agree. **The final check** on hold-out 44 (6 cores each, the tool
+`chain.py` now waits for several runs): `d4_hold44_fast`, the fast package and the gentler wait, against
+`d4_hold44_base`, from about 16:30; then `d4_hold44_lag2`, the same with the lag at 2, so that whichever lag tune 31 and
+hold-out 48 pick has its check on 44 too. The lag is chosen on tune and hold-out 48, not on 44.
+
 ## The steps
 
 **Step 0, before a run.** Fetch first (`git fetch --all --prune`; the two PCs hand over through GitHub). Work on
