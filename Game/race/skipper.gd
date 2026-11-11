@@ -2361,7 +2361,9 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 	var spot_twa: float = Navigation.wind_angle_deg(position, spot, wind_deg)
 	var cross_at: Vector2 = spot
 	var at_speed_track_deg: float = _beat_twa_deg() + _leeway_deg
-	if signf(spot_twa) != _tack() or absf(spot_twa) < at_speed_track_deg:
+	# start_cross_room_deg: a spot closer to the wind than that much below its beat's track is chosen again
+	# (_choose_crossing() prefers a point with that room, and falls back on this spot's kind when there is none).
+	if signf(spot_twa) != _tack() or absf(spot_twa) < at_speed_track_deg + config.start_cross_room_deg:
 		cross_at = _choose_crossing(telemetry, step, aim_s)
 	elif absf(spot_twa) > START_GO_SHALLOWEST_TWA_DEG:
 		# Far along the line from its spot: a run in that shallow would slide along the line and,
@@ -2397,7 +2399,13 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 	if config.early_unlatches_go and early_at_line and go_spare_s > HOLD_GO_SPARE_S:
 		_going = false
 	if before_gun and (not _going or early_at_line):
-		if _tack() != run_in_tack:
+		# early_holds_its_tack: early at the line on the other tack, it holds back hard on this one (a turn onto the way
+		# in's tack, a few metres from the line and often at speed, took it over).
+		var hold_tack: float = run_in_tack
+		if config.early_holds_its_tack and early_at_line and _tack() != run_in_tack:
+			hold_tack = _tack()
+			hold_twa = _hold_twa_deg(wind_deg, hold_tack, forward)
+		if _tack() != hold_tack:
 			# On the other tack (it has just come to its waiting point, say): it turns onto the run-in
 			# tack first, keeping its speed for the turn.
 			note = "start: turning onto the way in (%+.1f s to spare)" % go_spare_s
@@ -2428,7 +2436,7 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 				# SM1 templates): it turns away onto the other tack, slow or not, as the way to the waiting point does.
 				_ask_for_manoeuvre(true, true)
 				note = "start: turning away, early at a crawl (%+.1f s to spare)" % go_spare_s
-		var hold_deg: float = _hold_heading(telemetry, hold_twa, run_in_tack, on_way + track * HOLD_CARROT_M)
+		var hold_deg: float = _hold_heading(telemetry, hold_twa, hold_tack, on_way + track * HOLD_CARROT_M)
 		_keep_behind_the_line(telemetry, step, behind_m)
 		return hold_deg
 	_going_from_hold = true
@@ -2858,29 +2866,37 @@ func _choose_crossing(telemetry: Telemetry, step: RaceStep, aim_s: float) -> Vec
 	var inset: float = _line_inset(step)
 	_crossing_on_this_tack = true
 	var on_other_tack: bool = false
-	var on_time: Vector2 = Vector2.INF
-	var on_time_s: float = INF
-	var latest: Vector2 = Vector2.INF
-	var latest_s: float = -INF
-	for i: int in START_CROSSING_SAMPLES:
-		var point: Vector2 = step.points[1].lerp(step.points[0], lerpf(inset, 1.0 - inset, float(i) / (START_CROSSING_SAMPLES - 1)))
-		var needed_twa: float = wrapf(wind_deg - Course.bearing_deg(position, point), -180.0, 180.0)
-		if absf(needed_twa) < up_track_deg:
-			continue  # a beat: neither tack reaches it straight
-		if signf(needed_twa) != tack:
-			on_other_tack = true
-			continue
-		var need_s: float = _time_to_cross_s(telemetry, point)
-		if need_s >= aim_s and need_s < on_time_s:
-			on_time = point
-			on_time_s = need_s
-		if need_s > latest_s:
-			latest = point
-			latest_s = need_s
-	if on_time_s < INF:
-		return on_time
-	if latest_s > -INF:
-		return latest
+	# start_cross_room_deg: first only the points that much further off the wind than its beat's track (a slow board
+	# sails wider until it has speed); with none of those, any point it reaches on this tack, as before.
+	var rooms_deg: Array[float] = [0.0]
+	if config.start_cross_room_deg > 0.0:
+		rooms_deg = [config.start_cross_room_deg, 0.0]
+	for room_deg: float in rooms_deg:
+		var on_time: Vector2 = Vector2.INF
+		var on_time_s: float = INF
+		var latest: Vector2 = Vector2.INF
+		var latest_s: float = -INF
+		for i: int in START_CROSSING_SAMPLES:
+			var point: Vector2 = step.points[1].lerp(step.points[0], lerpf(inset, 1.0 - inset, float(i) / (START_CROSSING_SAMPLES - 1)))
+			var needed_twa: float = wrapf(wind_deg - Course.bearing_deg(position, point), -180.0, 180.0)
+			if absf(needed_twa) < up_track_deg:
+				continue  # a beat: neither tack reaches it straight
+			if signf(needed_twa) != tack:
+				on_other_tack = true
+				continue
+			if absf(needed_twa) < up_track_deg + room_deg:
+				continue  # reachable at speed, but with less room than start_cross_room_deg
+			var need_s: float = _time_to_cross_s(telemetry, point)
+			if need_s >= aim_s and need_s < on_time_s:
+				on_time = point
+				on_time_s = need_s
+			if need_s > latest_s:
+				latest = point
+				latest_s = need_s
+		if on_time_s < INF:
+			return on_time
+		if latest_s > -INF:
+			return latest
 	# None on this tack. If the other tack reaches the line, the line needs the other tack (said by
 	# _crossing_on_this_tack); if neither does, it is a beat, sailed as any beat is.
 	_crossing_on_this_tack = not on_other_tack

@@ -179,6 +179,7 @@ rules, less with the second PC as a second pool.
 | S3-5 | 11 Nov 2026 | `start_accel_share` = 0.8 (an existing setting, never judged; Max's risky or safe): it reckons with 80 % of the measured acceleration off a hold, so it goes for the line earlier. At the gun the boards were a median 12 to 18 m behind the line and 4 to 8 s late | 100 races (seed 35): score median 64.4 -> 65.3 m, mean 84.5 -> 83.4; 61 boards better, 67 worse (no gain); behind the line at the gun 14.9 -> 14.6 m; on time 78.3 -> 77.7 % (4 fixed, 6 broken) | 100 races (seed 46): score median 62.9 -> 60.3 m, mean 59.4 -> 55.8; 56 better, 49 worse (chance); behind at the gun 18.3 -> 16.1 m; on time 76.0 -> 73.0 % (**1 fixed, 10 broken**) | **No** (chance; going earlier by the reckoning barely moves the boards) |
 | S3-6 | 11 Nov 2026 | `slalom_wait_moving` gentler (S3-4's switch with its new settings `slalom_wait_luff_from_ms` = 1.5, `slalom_wait_widest_twa_deg` = 70: luffed up from 1.5 m/s, at a stall no wider than 70 deg, so it waits slower, nearer the old wait). Frozen copy `frozen_S3d`; the last block, sized to end by 08:15 | 45 races (seed 34, against S3-4's off arm `s3bA_base`): no fall 92.6 -> 95.6 % (4 fixed, 0 broken); score 7 boards better, 15 worse (no gain), mean 79.0 -> 73.2 m; on time 76.3 -> 73.3 % (2 fixed, 6 broken). Against S3-4's on arm: over early 5 fixed, 1 broken; falls 0 fixed, 3 broken | 55 races (seed 47): **no fall 90.3 -> 95.2 % (8 fixed, 0 broken)**; score 20 better, 15 worse (chance), median 68.2 -> 71.9 m; on time 75.8 -> 79.4 % (9 fixed, 3 broken, p 0.07), not over early 89.7 -> 91.5 % (7 fixed, 4 broken) | **No** (the score: no gain on tune, chance on the hold-out); the falls fixed again, without S3-4's over-early cost on the hold-out: the direction for the slalom's redesign |
 | S3-7 | 11 Nov 2026 | `start_accel_share` = 0.65 (S3-5 further: goes earlier still). Tune only (the last block had room for one hold-out pair, given to S3-6) | 45 races (seed 35, against S3-5's off arm `s3bB_base`): score 35 boards better, 25 worse (p 0.12, chance), median 80.8 -> 84.0 m, mean 107.8 -> 112.1; behind the line at the gun 10.3 -> 8.1 m; on time 85.2 -> 83.7 % (0 fixed, 2 broken), over early 1 fixed, 2 broken | - | Not judged (no hold-out); a lead: the first value that moved the boards nearer the line |
+| S3-8 | 11 Nov 2026 | `start_go_lag_s` = 3 (new; the day's run, Max: "a little more safe but fast over the startline"): the time getting going from a hold takes beyond its reckoning, added to the time it reckons it needs, the whole of it at 2 m/s and slower, none from 5 m/s up (measured on the night's off arms: going at 1 to 3 m/s a median 2.8 to 3.7 s late). Frozen copy `frozen_S4`; the day's block 1 | 100 races (seed 31, against `s3_base`): score 90 boards better, 66 worse (p 0.033, pass), median 71.8 -> 70.2 m, mean 82.3 -> 76.1; behind the line at the gun 16.5 -> 5.2 m, start median 6.0 -> 2.8 s after the gun; **over early 1 fixed, 7 broken (WORSE)**; on time 7 fixed, 11 broken | 100 races (seed 48, fresh, against `d1_hold_base`): score 75 better, 48 worse (p 0.009, pass), mean 70.9 -> 66.4 m; behind at the gun 15.4 -> 6.0 m; **over early 2 fixed, 13 broken (WORSE)**; on time 2 fixed, 15 broken | **No** (over early `WORSE` on both sets). Nearer and earlier, but of the 20 boards newly over early 5 crept over holding back hard at a crawl (`start_dip`'s case) and 8 were turning onto the way in at speed in the last seconds; next with `start_dip` (S3-9) |
 
 **Proposed for Max (9 November 2026, not agreed yet).** Step 6's "no check gets worse" on 100 races blocks a fix for one race's flip: a fix that changes the board's line changes which of the lake's known traps it meets (the north-east corner, T2's mark 3, the east shore), and a start after R depends on where the race before ended. Loops 1 and 2 each won clearly on the hold-out and lost one or two races on a check, every one traced to such chance. Proposed: a check counts as worse when it loses 3 or more races in 100 more than it gains, every flip traced in the log, and none of them during what the switch does. (In phase S the sign test below judges instead, explained to Max on 9 November; whether it also applies to the roundings later is his call.)
 
@@ -508,6 +509,33 @@ allows; the hold-out is fresh, seed 48, because the lag and the share were measu
 3. Block 3 (about 14:30 to 16:45): what block 1 and 2 leave open (another value, or the two together).
 4. Block 4, the final check (to about 18:30): the day's defaults against the evening's on the fresh hold-out 44.
 5. The log, the report for Max, commit locally, nothing pushed.
+
+*After block 1 (12:05; the queue as changed).* `start_go_lag_s` 3 was not taken (S3-8: over early `WORSE` on both
+sets). What the boards newly over early were doing just before they went over (`over_how.py`, the night's twelve off
+arms for comparison: 320 of 3465 boards over early, 121 creeping over holding back hard, 115 on a slalom's dive, 14
+turning onto the way in): with the lag the creep (3.5 % of boards) and the dives (3.3 %) stayed as they were, and the
+turn onto the way in's tack, a few metres from the line at 5 to 7 m/s in the last seconds, went from 0.4 % to 1.5 %.
+And the night's clean starts from a hold, by what happened after the go (`go_grid.py`, `go_turn_when.py`): of 1710,
+**615 tacked or gybed on the way** ("the line is on the other tack") and crossed a median 8 to 10 s later than they
+reckoned, the straight goes 1.5 to 3 s (from a crawl) or on time (from 5 m/s up). 446 of those found it a median 9 s
+after going: the point it made for was reachable at the angle it points once it has speed, but from a crawl the board
+sails wider until it has speed and sagged below it (its track ran a median 34 degrees off its aim in the first 6 s;
+the straight goes 13). Two new switches (off by default; `test_skipper_cross_room.gd`, `test_skipper_early_holds.gd`):
+- `start_cross_room_deg` (0 = off): of the points of the line it can reach on its tack, it makes for one at least this
+  much further off the wind than its beat's track when there is one, else as before (never a new tack). Try 15.
+  Frozen copy `frozen_S4c`; smoke `smoke_room15_t31` (3 races of tune 31): 4 starts changed, none over early.
+- `early_holds_its_tack`: early at the line on the other tack than its way in's, it holds back hard on the tack it is on
+  instead of turning. Replays of 4 races of `d1_hold_lag3` with it: 4 of the 5 boards over early no longer over
+  (r0030/0 -5 -> 75 m, r0030/2 -13 -> 96, r0037/1 -32 -> 79, r0065/1 no longer over), r0064/1 still over, the other
+  boards the same or within 3 m. Frozen copy `frozen_S4d` (both switches).
+The pair `d2_lag3_t32` and the lag with `start_dip` (`d2_hold_lagdip`, `d2_lagdip`) were stopped minutes in and kept
+as `void_replaced_11Nov_*`; in their place **the fast and safe package** (the lag for the speed at the line, the hold on
+its tack and the dip for the safety): `d2_fast` (tune 31) and `d2_hold_fast` (hold-out 48), `start_go_lag_s` 3 with
+`early_holds_its_tack` and `start_dip`. Block 3 chained: `d3_room15` (tune 31) and `d3_hold_room15` (hold-out 48)
+after the slalom pair; `d3_wait2_t32` (the gentler wait alone on tune 32: on hold-out 48, `d1_hold_wait2`, falls or
+over early 18 boards fixed, 7 broken, p 0.022, the score 35 better, 37 worse: the day's safer-at-no-cost case if tune
+agrees) after `d2_fast`; `d3_hold_dive14` (the dive's share alone) after `d2_hold_fast`. The day's safer-at-no-cost
+measure is `safe_test.py` (per board: no fall and not over early at the gun; fixed against broken, the sign test).
 
 ## The steps
 

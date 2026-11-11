@@ -126,6 +126,11 @@ enum StartStyle { LOOP, HOLD }
 ## think and were over at the gun (r0018 of s8_hold_on, r0001 of s5_hold_on); the faster goes of S5 and S8 lost on it.
 ## Taken with crawl_go_stuck_s 0 (loop S9: the faster go and its safety, judged together; see there).
 @export var early_unlatches_go: bool = true
+## Early at the line (Skipper._too_early_at_the_line()) on the other tack than its way in's, it holds back hard on the
+## tack it is on (Skipper._start_heading()); false: it turns onto the way in's tack first, as before, a tack or gybe a few
+## metres from the line, often at speed. Phase S3's day run (11 November 2026): with start_go_lag_s 3, 8 of the 20 boards
+## newly over early were turning onto the way in in the last seconds (13 of the night's 3465 boards without it).
+@export var early_holds_its_tack: bool = false
 ## On a slalom's dive down onto the line, early (about to cross before the gun), it keeps the dive's heading and only
 ## eases the sheet, and luffs up only in the last Skipper.SLALOM_LAST_LUFF_S before it would cross (Skipper.
 ## _slalom_start_heading()); false: it luffs up to Skipper.HOLD_LUFF_TWA_DEG at once, as before. Phase S's baseline
@@ -229,6 +234,14 @@ enum StartStyle { LOOP, HOLD }
 ## S3's 1661 starts from a hold (the night of 10-11 November): going at 1 to 3 m/s the board crossed a median 2.8 to 3.7 s
 ## later than it reckoned, at 3 to 5 m/s 1.9 s, from 5 m/s up on time. A little under the median is the safe side.
 @export_range(0.0, 8.0) var start_go_lag_s: float = 0.0
+## Fast over the line (Max, 11 November 2026): of the points of the line it can reach on its tack, it makes for one at
+## least this many degrees further off the wind than its beat's track, when there is one (a close reach, with room for a
+## slow board's wider angle while it gets going); else as before (the angle it points once it has speed). 0 is off.
+## Measured on phase S3's 1710 clean starts from a hold (the night of 10-11 November): 446 found the line on the other tack
+## a median 9 s after they went (going from a crawl the board sails wider than its beat until it has speed, and sagged
+## below the point it made for), tacked, and crossed a median 10 s later than they reckoned; the straight goes 1.5 to 3 s.
+## Going from a crawl the board's track ran a median 13 degrees off its aim in the first 6 s.
+@export_range(0.0, 40.0) var start_cross_room_deg: float = 0.0
 
 @export_group("Company")
 ## Another board this close, metres, and getting closer, makes it bear away to keep clear (when it
