@@ -21,6 +21,7 @@ aggression = 0.1
 consistency = 0.4
 start_spot = 0.5
 start_style = 1
+start_tack = 1
 pointing_offset_deg = 2.0
 light_wind = 0.45
 strong_wind = 0.2

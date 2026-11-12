@@ -193,6 +193,8 @@ rules, less with the second PC as a second pool.
 | S3-19 | 12 Nov 2026 | `--start_tacks=1,2,0` (`start_tack`: board 0 starboard, 1 port, 2 either; Max: some start one way, some the other); the night's block 2, course races only (`--kind=course`), `frozen_S5b` | 100 races (seed 37, against `n2_c_base`): score 47 boards better, 46 worse (chance); on time 3 fixed, 5 broken; not over early 3 fixed, 2 broken; untangled 10 fixed, 10 broken; nothing `WORSE` | 100 races (seed 50, against `n2_hc_base`): score 51 better, 49 worse (chance); not over early 4 fixed, 0 broken; untangled 18 fixed, 7 broken; nothing `WORSE` | **Yes as Max's choice** (nothing `WORSE` on either set; no gain either: a mixed fleet starts as well as the old one); to the final check on hold-out 51 |
 | S3-20 | 12 Nov 2026 | The lag-2 package (S3-14) on course races only: `start_go_lag_s` 2, `early_holds_its_tack`, `start_dip`; the night's block 3 | 100 races (seed 37, against `n2_c_base`): **score 126 boards better, 54 worse (pass)**, median 65.3 -> 74.2 m; behind the line at the gun 14.7 -> 9.6 m; not over early 12 fixed, 5 broken; **no fall 0 fixed, 5 broken (`WORSE`)**; untangled 12 fixed, 22 broken | 100 races (seed 50, against `n2_hc_base`): **score 137 better, 62 worse (pass)**, median 58.5 -> 66.4 m; **on time 25 fixed, 13 broken (pass)**; not over early 18 fixed, 10 broken; no fall 4 fixed, 1 broken; untangled 12 fixed, 21 broken; **falls or over early 22 fixed, 11 broken (pass)** | **No** by the S3 rule (5 boards newly fell on tune, none fixed); on the hold-out faster and safer. For Max: the falls on tune, to trace |
 | S3-21 | 12 Nov 2026 | The lag-2 package (S3-20) with `--start_tacks=1,2,0` (S3-19) on course races only; the night's block 4, `frozen_S5b` | 100 races (seed 37, against `n2_c_base`): **score 130 boards better, 78 worse (pass)**, median 65.3 -> 73.4 m; behind the line at the gun 14.7 -> 9.6 m; not over early 13 fixed, 5 broken; no fall 2 fixed, 4 broken (ok); **untangled 19 fixed, 34 broken (`WORSE`)**; falls or over early 14 fixed, 8 broken (chance). Against the tacks alone (`n2_c_tacks`): score 123 better, 58 worse (pass); untangled 13 fixed, 28 broken (`WORSE`) | 100 races (seed 50, against `n2_hc_base`): **score 147 better, 74 worse (pass)**, median 58.5 -> 66.6 m; **on time 25 fixed, 13 broken (pass)**; not over early 18 fixed, 9 broken; no fall 5 fixed, 5 broken; untangled 23 fixed, 21 broken; falls or over early 23 fixed, 14 broken (chance) | **No** by the S3 rule (more boards tangled on tune); the fall S3-20 saw on tune is gone, and the score gain (some 8 m) holds on both sets in both tries. For Max: lag-2 on course races is faster every time, but each try broke one safety check on tune (falls in S3-20, crowding here); to trace before it goes on |
+| S3-22 | 12 Nov 2026 | The final checks of Max's slalom start, version 5b (S3-18; `frozen_S5f`; slalom races only) | - | 125 races (seed 51, `n5_hsl51_run5` against `n4_hsl51_base`): **score 268 boards better, 89 worse (pass)**, median 40.6 -> 243.4 m; **on time 51.2 -> 78.1 % (143 fixed, 42 broken, pass)**; **no fall 72.8 -> 97.9 % (99 fixed, 5 broken)**; not over early 56 fixed, 42 broken; untangled 18 fixed, 27 broken (ok); **falls or over early 125 fixed, 39 broken (pass)**. 160 races (seed 52, `n5_hsl52_run5` against `n5_hsl52_base`): **score 347 better, 108 worse (pass)**, median 80.0 -> 259.6 m; **on time 58.1 -> 82.7 % (157 fixed, 39 broken, pass)**; no fall 88 fixed, 5 broken; not over early 60 fixed, 39 broken; **untangled 94.4 -> 88.8 % (24 fixed, 51 broken, `WORSE`)**; falls or over early 128 fixed, 33 broken (pass) | **Passes on 51, not on 52** (more boards close together; the same way, short of chance, on every set: 82 fixed, 129 broken over all four). Not switched on by me; for Max (the morning report, question 1) |
+| S3-23 | 12 Nov 2026 | The final check of `--start_tacks=1,2,0` (S3-19; `frozen_S5b`; course races only) | - | 120 races (seed 51, `n5_hc51_tacks` against `n4_hc51_base`): score 42 boards better, 45 worse (no gain); on time 6 fixed, 7 broken; not over early 1 fixed, 2 broken; no fall 2 fixed, 3 broken; untangled 19 fixed, 7 broken; nothing `WORSE` | **Yes as Max's choice**: the personas get their own tack (`start_tack` in `race/personas/*.tres`: 13 starboard, 4 port, 3 either) |
 
 **Proposed for Max (9 November 2026, not agreed yet).** Step 6's "no check gets worse" on 100 races blocks a fix for one race's flip: a fix that changes the board's line changes which of the lake's known traps it meets (the north-east corner, T2's mark 3, the east shore), and a start after R depends on where the race before ended. Loops 1 and 2 each won clearly on the hold-out and lost one or two races on a check, every one traced to such chance. Proposed: a check counts as worse when it loses 3 or more races in 100 more than it gains, every flip traced in the log, and none of them during what the switch does. (In phase S the sign test below judges instead, explained to Max on 9 November; whether it also applies to the roundings later is his call.)
 
@@ -675,6 +677,61 @@ v5b fixed the one unit test v5 failed (one board on T2 in 18 kt: with 90 s left 
 for 30 s, still came to the far end early, and crept over). Block 3's two slalom slots race v5b (`n3_sl_run5`,
 `n3_hsl_run5`, against block 1's off arms); the lag-2 package with the tacks moved to block 4 (`n4_c_lag2tacks`,
 `n4_hc_lag2tacks`), with the final checks' off arms on hold-out 51 (`n4_hsl51_base`, `n4_hc51_base`).
+
+
+*The morning report (12 November 2026, 08:20).* The pool ran at about 80 % from 20:20 to 08:05, never idle (the
+last 50 minutes were extra races on the final checks).
+
+1. **In one line.** Max's slalom start is far better: boards are some 250 m up the course 30 s after the gun instead
+   of 40 to 80 m, three in four are on time instead of one in two, and the falls are nearly gone. One thing got worse:
+   boards end up close together a little more often. By our rule that keeps it from being switched on by me, so it
+   waits for Max's yes (question 1). The start tacks are in: each persona now starts a course race on its own tack.
+
+2. **The slalom start, version 5b.** Old start -> new start, on four sets of races. *Tune*: the races I was allowed
+   to adjust the start on. *Check*: fresh races I never adjusted on, to see that it holds. Close together: boards
+   within 5 m of each other for more than 5 s around the start.
+
+   | Races | How many | On time | Fell | Over early | Metres up the course 30 s after the gun | Close together |
+   |---|---|---|---|---|---|---|
+   | Tune (seed 36) | 100 | 58 -> 75 % | 30 -> 2 % | 13 -> 15 % | 87 -> 236 | 7 -> 8 % |
+   | Check (seed 49) | 100 | 54 -> 80 % | 21 -> 1 % | 15 -> 11 % | 47 -> 245 | 9 -> 11 % |
+   | Final check (seed 51) | 125 | 51 -> 78 % | 27 -> 2 % | 18 -> 14 % | 41 -> 243 | 5 -> 8 % |
+   | Final check (seed 52) | 160 | 58 -> 83 % | 19 -> 2 % | 14 -> 10 % | 80 -> 260 | 6 -> 11 % |
+
+   On time, fell and metres are better beyond chance on every set; over early is no worse anywhere; penalties did not
+   go up. Close together got worse on every set, and beyond chance on the last (24 boards fixed, 51 broken). A likely
+   cause, not measured yet: the suite races three copies of Hana, all aiming at the middle of the line at the same
+   second; the old start spread them by luck, the timed run brings all three in together at full speed. Max's point 4
+   (spread them along the line) would be the fix.
+
+3. **The course start: starboard or port.** Tested with a third of the boards on each tack and a third choosing:
+   nothing better or worse beyond chance on all three sets (tune 37, check 50, final check 51 with 120 races);
+   close together was a little better on the final check (19 fixed, 7 broken). Taken as Max's choice. The personas
+   now: 13 start on starboard; 4 on port (the bold ones: Marco, Tomas, Lena, Yusuf); 3 choose by where they are on
+   the line (Hana, Mara, Pavel; Hana keeps the suite's races as they were). That split is mine and not tested as such
+   (question 2).
+
+4. **Lag-2 on course races (Max's question 3, the parts of lag 1-2-3).** Faster every time: some 8 m further up the
+   course 30 s after the gun, on both sets in both tries. But each try broke one safety check on the tune races:
+   5 boards newly fell (S3-20), then more boards close together (S3-21). Not taken; the boards that broke are the
+   thing to trace.
+
+5. **Questions for Max.**
+   1. The slalom start: switch it on now, with boards close together about 1 in 9 instead of 1 in 18? Or first spread
+      the boards along the line (a day's work and one night of checks)? My advice: switch it on now. The gain is large,
+      penalties did not go up, and you said close quarters need not be policed much yet. Then do the spread next. The
+      change is one line plus its test; with it on, all 1072 unit tests pass.
+   2. The tack split, 13 starboard, 4 port and 3 choosing: right for now?
+   3. Lag-2: trace its falls and crowding next, or park it?
+   4. A play folder only on your message.
+
+6. **Housekeeping.** Frozen copies `frozen_S5` to `frozen_S5f` (see block 1's table; `frozen_S5f` is the code as
+   committed). Runs `n1_*` to `n5_*`; the final checks' runs were resumed to more races in the morning, with the same
+   races numbered on. Seeds now used: tune 31 to 37, hold-out 41 to 52; a next check needs 53 or up. Slips, all kept:
+   version 2 was stopped 23 minutes in (`void_replaced_11Nov_n1_*_v2`); commit `0beb62b` went in with one unit test
+   failing (the command chain did not check the test's exit code), fixed an hour later by `401e547`; at 05:10 two
+   waiting fill chains were stopped and re-timed before they had started anything. The patch that switches the slalom
+   start on is saved (`.sim_output/suite/slalom_on_12nov.patch`: `slalom_timed_run = true` and its test; `git apply` it).
 
 ## The steps
 
