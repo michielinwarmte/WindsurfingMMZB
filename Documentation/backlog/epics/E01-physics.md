@@ -51,7 +51,10 @@ Done when: the shadow's numbers in `config/wind_shadow_default.tres` come from a
 - [ ] T2 `WindDisturbance.factor_at()` returns a wind change (speed and direction), not a scalar: the interface change for Michiel
 - [ ] T3 The shadow's edge: a wake that widens and weakens over a few lengths; the sheet and the stance meet the returning wind (PH42, RA20's eight crowd catapults)
 - [ ] T4 Max's crowd race (RA1's F3 Stop): does the shadow feel right, is 20 s the right penalty
-Notes: Max, 5 November: "simulate the numbers". Research in `Documentation/reports/research/ph6_ventilation_ph15_wind_shadow.md` (section PH15).
+- [x] T5 The shadow along the casting board's apparent wind, as a trail of puffs drifting with the true wind, bent 7° toward its stern (Richards et al. 2012 wind tunnel); length 20 m (Max, 13 November 2026: "this needs to be less, make it 20m"); `Game/race/wind_shadow_trail.gd`, `follows_apparent_wind` in the config; branch `ai/roundings-13nov` (not merged)
+- [ ] T6 The more scientific model for later (Max, 13 November 2026: "a backlog add for more scientific approach for later"): the deficit and its decay from T1's simulation or a measurement instead of the books (deficit ∝ 1/√distance, Roncin and Kobus 2004); the header in the wake (about 5° close, T2); the safe-leeward and lee-bow gains (+2 to 3 % within a mast height); several shadows multiplied instead of added; the wake's drift speed (0.9 to 1.0 of the true wind); and checked against a windsurf sail, not only yachts (no wake data exist for windsurf, foil or kite rigs)
+- [ ] T7 The skippers adapt to the trail (Max: "the skippers need to adapt. but that is for later"): `WindShadows.factor_from()`, the slalom start's clean-wind spot and the dirty-air tactics still guess the old cone straight down the true wind
+Notes: Max, 5 November: "simulate the numbers". Research in `Documentation/reports/research/ph6_ventilation_ph15_wind_shadow.md` (section PH15). 13 November 2026: the research for the trail, with the recommended numbers per source, in `Documentation/reports/racing/dirty_wind_13nov/RESEARCH.md` (branch `ai/roundings-13nov`).
 
 ### E01.S05 · The dive after a crest checked against video
 Status: blocked | Size: S | Owner: Michiel, Max for the videos | Milestone: M2 | Needs: Max's videos | Roadmap: PH43
