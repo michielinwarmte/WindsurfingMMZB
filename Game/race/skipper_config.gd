@@ -207,8 +207,9 @@ enum StartTack { EITHER, STARBOARD, PORT }
 ## we get a perfect start. But we have to gybe, so ... we add 5 s"): instead of waiting upwind of the committee boat and
 ## diving down, it sails a timed run behind its spot (Skipper._slalom_run_heading()): away from the line on the reciprocal
 ## of the reach to mark 1, a gybe when the time left is the way back at the speed it sailed out plus slalom_run_turn_s,
-## and back at full speed; with more time than one run, out and back again. Off until the suite has judged it.
-@export var slalom_timed_run: bool = false
+## and back at full speed; with more time than one run, out and back again. On since Max's choice (12 November 2026:
+## with slalom_run_clean_wind, version 6b; S3-18, S3-26, S3-27, S3-29).
+@export var slalom_timed_run: bool = true
 ## With slalom_timed_run: what the gybe at the far end costs, seconds: the turn and getting back to speed (Max's "add
 ## 5 s" on the water). 12: measured on the run (the night of 11-12 November, block 1): with 15.5 (what the game's
 ## course starts measured for a gybe from a broad reach at 10 m/s) the boards that timed their last gybe came to the line
@@ -218,10 +219,10 @@ enum StartTack { EITHER, STARBOARD, PORT }
 ## late at full speed than 0.2 sec but at half speed"; behind the pack the wind is dirty, so not much more).
 @export_range(0.0, 5.0) var slalom_run_aim_late_s: float = 2.0
 ## Max's slalom start in clean wind (Max, 12 November 2026: "it's not wrong if they are close together but there is one
-## with dirty wind"): on the run in it moves its spot along the line, to leeward first, when it would cross level just
-## to leeward of a board coming in, in that board's dirty wind (Skipper._slalom_pick_gap()). Off until the suite has
-## judged it.
-@export var slalom_run_clean_wind: bool = false
+## with dirty wind"): on the run in it moves its spot along the line to leeward when a board coming in, crossing level
+## with it, would put it in dirty wind (Skipper._slalom_pick_gap(), version 6b). On since Max's choice (12 November
+## 2026: "6b"; it passed 2 of 4 sets on clean wind, every set on the rest; S3-26, S3-27, S3-29).
+@export var slalom_run_clean_wind: bool = true
 
 @export_group("Start")
 ## Where on the start line it wants to cross: 0 = the pin end, 1 = the boat end.

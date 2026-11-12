@@ -8,9 +8,9 @@ const RunRace: GDScript = preload("res://dev/run_race.gd")
 const DT: float = 1.0 / 60.0
 
 
-func test_it_is_off_unless_switched_on() -> void:
+func test_it_is_on_by_default() -> void:
 	var config: SkipperConfig = SkipperConfig.new()
-	assert_false(config.slalom_timed_run, "off by default until the suite says it wins")
+	assert_true(config.slalom_timed_run, "on since Max's choice (12 November 2026)")
 	assert_eq(config.slalom_run_turn_s, 12.0, "the gybe's cost measured on the run (the night of 11-12 November)")
 
 
