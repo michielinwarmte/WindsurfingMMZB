@@ -418,6 +418,11 @@ def score(label, log_text, csv_dir, drawn):
                      "near_s": r.get("near_s", 0.0), "penalties": r.get("penalties", 0), "boards": r.get("boards", 1),
                      "gun_mean_kt": r.get("gun_mean_kt"), "gun_felt_kt": r.get("gun_felt_kt"),
                      "gun_felt_60s_kt": r.get("gun_felt_60s_kt"), "gun_felt_spread_kt": r.get("gun_felt_spread_kt")}
+            # From 12 November 2026: the seconds in dirty wind round the start and the wind lost there (only when the
+            # race tool measured them, so that older frozen copies' runs are not judged on them).
+            if "dirty_s" in r:
+                start["dirty_s"] = r["dirty_s"]
+                start["wind_lost_s"] = r.get("wind_lost_s", 0.0)
             boards.append({"board": r["board"], "checks": {k: {"ok": v[0], "what": v[1]} for k, v in checks.items()},
                            "pass": all(v[0] for v in checks.values()), "legs": [], "roundings": [],
                            "falls": r.get("falls", 0), "note": r.get("note", ""), "start": start})

@@ -217,6 +217,11 @@ enum StartTack { EITHER, STARBOARD, PORT }
 ## With slalom_timed_run: it aims to cross this long after the gun, seconds (Max, 11 November 2026: "i prefer 3 seconds
 ## late at full speed than 0.2 sec but at half speed"; behind the pack the wind is dirty, so not much more).
 @export_range(0.0, 5.0) var slalom_run_aim_late_s: float = 2.0
+## Max's slalom start in clean wind (Max, 12 November 2026: "it's not wrong if they are close together but there is one
+## with dirty wind"): on the run in it moves its spot along the line, to leeward first, when it would cross level just
+## to leeward of a board coming in, in that board's dirty wind (Skipper._slalom_pick_gap()). Off until the suite has
+## judged it.
+@export var slalom_run_clean_wind: bool = false
 
 @export_group("Start")
 ## Where on the start line it wants to cross: 0 = the pin end, 1 = the boat end.

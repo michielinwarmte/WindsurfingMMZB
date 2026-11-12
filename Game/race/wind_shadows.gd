@@ -97,3 +97,29 @@ func factor_at(point: Vector3, undisturbed: Vector3) -> float:
 		var share: float = side / width
 		deficit += _deficit * strength * (1.0 - share * share)
 	return 1.0 - minf(deficit, _most_deficit)
+
+
+## The share of the wind left at a point (X, Z) from sails at other places than the fleet's now, all up, the air moving
+## along `downwind` (a skipper's guess where the boards coming in will be: Skipper.clean_gap_m()). The same cone as
+## factor_at().
+func factor_from(point: Vector2, downwind: Vector2, sails: PackedVector2Array) -> float:
+	if downwind.length_squared() < 1e-6:
+		return 1.0
+	var along_dir: Vector2 = downwind.normalized()
+	var across: Vector2 = Vector2(-along_dir.y, along_dir.x)
+	var deficit: float = 0.0
+	for sail: Vector2 in sails:
+		var apart: Vector2 = point - sail
+		var along: float = apart.dot(along_dir)
+		if along <= 0.0 or along >= _length_m:
+			continue
+		var width: float = _half_width_m + along * _tan_spread
+		var side: float = absf(apart.dot(across))
+		if side >= width:
+			continue
+		var strength: float = 1.0
+		if along > _full_until_m:
+			strength = 1.0 - (along - _full_until_m) / (_length_m - _full_until_m)
+		var share: float = side / width
+		deficit += _deficit * strength * (1.0 - share * share)
+	return 1.0 - minf(deficit, _most_deficit)

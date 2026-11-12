@@ -186,6 +186,12 @@ const WATCH_EVERY: int = 30
 const START_SCORE_AT_S: float = 30.0
 const NEAR_M: float = 5.0
 const START_NEAR_FROM_S: float = 30.0
+## Dirty wind at the start (Max, 12 November 2026: "it's not wrong if they are close together but there is one with
+## dirty wind"): from START_DIRTY_FROM_S before the gun to START_SCORE_AT_S after it, a board whose sail has under
+## DIRTY_FACTOR of the wind (the other sails' shadows; SkipperConfig.dirty_air_share's default 0.15) counts dt_s
+## (note_dirty_wind()).
+const START_DIRTY_FROM_S: float = 10.0
+const DIRTY_FACTOR: float = 0.85
 ## Under this speed on the board is stuck, under SLOW_MS slow, m/s; the first STUCK_GRACE_S after the
 ## gun or a drop (getting going from rest) do not count as stuck.
 const STUCK_MS: float = 1.0
@@ -309,6 +315,9 @@ class Entry:
 	var cross_speed_ms: float = NAN
 	var score_m: float = NAN
 	var near_s: float = 0.0
+	## Seconds in dirty wind round the start, and the wind it lost there (seconds of the whole wind; note_dirty_wind()).
+	var dirty_s: float = 0.0
+	var wind_lost_s: float = 0.0
 	var gun_mean_kt: float = NAN
 	var gun_felt_kt: float = NAN
 	var gun_felt_60s_kt: float = NAN
@@ -572,6 +581,7 @@ func _initialize() -> void:
 			for i: int in entries.size():
 				_watch(entries[i], race, i, goal_index, watch_lookout)
 			note_the_crowd(race, entries, WATCH_EVERY * DT)
+			note_dirty_wind(race, entries, WATCH_EVERY * DT)
 		if not gun_seen and race.is_started() and race.clock_s() >= 0.0:
 			gun_seen = true
 			outside_at_gun = boards_outside(race, area)
@@ -637,6 +647,8 @@ func _initialize() -> void:
 		result["cross_speed_ms"] = snappedf(entries[i].cross_speed_ms, 0.01) if not is_nan(entries[i].cross_speed_ms) else -1.0
 		result["score_m"] = snappedf(entries[i].score_m, 0.1) if not is_nan(entries[i].score_m) else null
 		result["near_s"] = snappedf(entries[i].near_s, 0.1)
+		result["dirty_s"] = snappedf(entries[i].dirty_s, 0.1)
+		result["wind_lost_s"] = snappedf(entries[i].wind_lost_s, 0.01)
 		result["boards"] = entries.size()
 		for key: String in ["gun_mean_kt", "gun_felt_kt", "gun_felt_60s_kt", "gun_felt_spread_kt"]:
 			var value: float = entries[i].get(key)
@@ -719,6 +731,24 @@ static func note_the_crowd(race: RaceSim, entries: Array[Entry], dt_s: float) ->
 				break
 
 
+## Dirty wind round the start (phase S3; Max, 12 November 2026): each board with its sail up whose wind the other sails'
+## shadows leave under DIRTY_FACTOR, from START_DIRTY_FROM_S before the gun to START_SCORE_AT_S after it, counts dt_s;
+## and every board adds the wind it lost (1 less the shadows' factor) times dt_s. Read only: the races stay the same.
+static func note_dirty_wind(race: RaceSim, entries: Array[Entry], dt_s: float) -> void:
+	var now_s: float = race.clock_s()
+	if not race.is_started() or now_s < -START_DIRTY_FROM_S or now_s > START_SCORE_AT_S or entries.size() < 2:
+		return
+	for entry: Entry in entries:
+		if entry.shadows == null or entry.sim.sailor_state != WindsurferSim.SailorState.SAILING:
+			continue
+		var telemetry: Telemetry = entry.sim.telemetry
+		var downwind: Vector2 = Course.direction_of(telemetry.wind_from_bearing_deg + 180.0)
+		var factor: float = entry.shadows.factor_at(telemetry.position, Vector3(downwind.x, 0.0, downwind.y))
+		entry.wind_lost_s += (1.0 - factor) * dt_s
+		if factor < DIRTY_FACTOR:
+			entry.dirty_s += dt_s
+
+
 ## Every board over the start line (its start counted) or aground: a start-only race is over.
 static func all_over_the_line(race: RaceSim, entries: Array[Entry]) -> bool:
 	for i: int in entries.size():
@@ -785,6 +815,8 @@ static func restart_race(old: RaceSim, course: Course, laps: int, prestart_s: fl
 		entry.cross_speed_ms = NAN
 		entry.score_m = NAN
 		entry.near_s = 0.0
+		entry.dirty_s = 0.0
+		entry.wind_lost_s = 0.0
 		race.add_board(entry.name)
 		race.update_board(i, _where(entry))
 	for i: int in entries.size():

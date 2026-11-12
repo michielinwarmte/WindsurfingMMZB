@@ -107,6 +107,35 @@ func test_boards_close_together_count_as_tangled_only_round_the_start() -> void:
 	assert_eq(entries[0].near_s, 0.5, "30 m apart: clear")
 
 
+
+## Dirty wind round the start (Max, 12 November 2026: "it's not wrong if they are close together but there is one with
+## dirty wind"): only the board in the other's shadow counts, from START_DIRTY_FROM_S before the gun; close abreast is clean.
+func test_only_the_board_in_the_others_shadow_counts_dirty_wind() -> void:
+	var setup: Array = _two_boards_at(Vector2(0.0, 60.0), Vector2(0.0, 60.0), 60.0)
+	var race: RaceSim = setup[0]
+	var entries: Array[RunRace.Entry] = setup[1]
+	var wind_deg: float = entries[0].sim.telemetry.wind_from_bearing_deg
+	var leeward: Vector2 = Vector2(0.0, 60.0) + Course.direction_of(wind_deg + 180.0) * 10.0
+	entries[1].sim.reset(Vector3(leeward.x, 0.0, leeward.y), 0.0)
+	race.update_board(1, leeward)
+	RunRace.give_shadows(entries)
+	RunRace.cast_shadows(entries)
+	race.start_in(0.0)
+	RunRace.note_dirty_wind(race, entries, 0.5)
+	assert_eq(entries[1].dirty_s, 0.0, "60 s before the gun: too early to count")
+	for k: int in roundi(55.0 / RunRace.DT):
+		race.step(RunRace.DT)
+	assert_almost_eq(race.clock_s(), -5.0, 0.1)
+	RunRace.note_dirty_wind(race, entries, 0.5)
+	assert_eq(entries[1].dirty_s, 0.5, "10 m to leeward of the other's sail, 5 s before the gun")
+	assert_gt(entries[1].wind_lost_s, 0.0)
+	assert_eq(entries[0].dirty_s, 0.0, "the board to windward has clean wind")
+	var abreast: Vector2 = Vector2(0.0, 60.0) + Course.direction_of(wind_deg + 90.0) * 10.0
+	entries[1].sim.reset(Vector3(abreast.x, 0.0, abreast.y), 0.0)
+	RunRace.cast_shadows(entries)
+	RunRace.note_dirty_wind(race, entries, 0.5)
+	assert_eq(entries[1].dirty_s, 0.5, "10 m abreast, across the wind: close but clean")
+
 ## Phase S3's three copies of the general head each want their own place on the line (--start_spots), dealt round.
 func test_each_board_gets_its_own_start_spot() -> void:
 	var course: Course = RaceCourses.t1_loop(270.0, Vector2.ZERO)

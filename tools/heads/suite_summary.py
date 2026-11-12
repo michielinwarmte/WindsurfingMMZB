@@ -22,6 +22,10 @@ Phase S3 (the starts in company, 10 November 2026): every board of a race is jud
 board is r0007/1), with two more measures (no penalty; untangled: at most 5 s within 5 m of another board round the
 start), and the start's score (metres up the course 30 s after the gun): per board better or worse by more than 5 m,
 with the same sign test ("pass" when the better beat the worse beyond chance, "WORSE" the other way).
+From 12 November 2026 (Max: "it's not wrong if they are close together but there is one with dirty wind") a board is
+judged on clean wind instead (at most 3 s in another sail's dirty wind from 10 s before the gun to 30 s after it);
+untangled is still shown, not judged. A pair is judged only on the measures both runs have (older runs have no dirty
+wind numbers).
 """
 import json
 import math
@@ -45,9 +49,12 @@ def load(run):
 # Phase S's measures per race, each True when good: the start on time, never stuck, never aground, no fall, not over
 # early at the gun.
 S_MEASURES = ["start", "stuck", "aground", "no fall", "not over early"]
-# Phase S3's two more: no penalty, and not tangled up with another board round the start.
-S3_MEASURES = S_MEASURES + ["no penalty", "untangled"]
+# Phase S3's more: no penalty; clean wind round the start (12 November 2026); and, shown but not judged, not tangled
+# up with another board round the start.
+S3_MEASURES = S_MEASURES + ["no penalty", "clean wind", "untangled"]
+NOT_JUDGED = ("untangled",)
 TANGLED_S = 5.0
+CLEAN_S = 3.0
 # The start's score: a board better or worse by more than this, metres (less is the same start).
 SCORE_TIE_M = 5.0
 SIGN_LEVEL = 0.05
@@ -70,8 +77,14 @@ def is_s3(results):
     return any(r["drawn"].get("phase") == "S3" for r in results.values())
 
 
+def has_dirty_wind(results):
+    return any("dirty_s" in b.get("start", {}) for r in results.values() for b in r["boards"] if b)
+
+
 def measures_of(results):
-    return S3_MEASURES if is_s3(results) else S_MEASURES
+    if not is_s3(results):
+        return S_MEASURES
+    return [m for m in S3_MEASURES if m != "clean wind" or has_dirty_wind(results)]
 
 
 def units(results):
@@ -95,7 +108,8 @@ def board_measures(b):
     st = b.get("start", {})
     return {"start": b["checks"]["start"]["ok"], "stuck": b["checks"]["stuck"]["ok"], "aground": b["checks"]["aground"]["ok"],
             "no fall": b["falls"] == 0, "not over early": not st.get("ocs_at_gun", False),
-            "no penalty": st.get("penalties", 0) == 0, "untangled": st.get("near_s", 0.0) <= TANGLED_S}
+            "no penalty": st.get("penalties", 0) == 0, "untangled": st.get("near_s", 0.0) <= TANGLED_S,
+            "clean wind": st.get("dirty_s", 0.0) <= CLEAN_S}
 
 
 def s_measures(race):
@@ -139,6 +153,9 @@ def s_numbers(results):
         crossing = [st.get("cross_speed_ms", -1.0) for st in starts if st.get("cross_speed_ms", -1.0) >= 0.0]
         out["cross speed median"] = statistics.median(crossing) if crossing else float("nan")
         out["near s mean"] = statistics.fmean([st.get("near_s", 0.0) for st in starts]) if starts else float("nan")
+        if has_dirty_wind(results):
+            out["dirty s mean"] = statistics.fmean([st.get("dirty_s", 0.0) for st in starts]) if starts else float("nan")
+            out["wind lost s mean"] = statistics.fmean([st.get("wind_lost_s", 0.0) for st in starts]) if starts else float("nan")
         out["penalties"] = sum(st.get("penalties", 0) for st in starts)
         felt = [st["gun_felt_60s_kt"] / st["gun_mean_kt"] for st in starts if st.get("gun_felt_60s_kt") and st.get("gun_mean_kt")]
         out["felt/mean wind"] = statistics.median(felt) if felt else float("nan")
@@ -148,7 +165,7 @@ def s_numbers(results):
 def s_flips(off, on):
     """Per measure: the starts fixed and broken going from `off` to `on` (the labels)."""
     a_units, b_units = units(off), units(on)
-    measures = measures_of(on)
+    measures = [m for m in measures_of(on) if m in measures_of(off)]
     flips = {m: ([], []) for m in measures}
     for label in sorted(set(a_units) & set(b_units)):
         a, b = board_measures(a_units[label]), board_measures(b_units[label])
@@ -180,6 +197,8 @@ def score_flips(off, on):
 def s_verdict(measure, fixed, broken):
     """The sign test's verdict for one measure: for the start "pass" (fixed beat broken beyond chance), "chance" or
     "no gain"; for the others "WORSE" (broken beat fixed beyond chance) or "ok"."""
+    if measure in NOT_JUDGED:
+        return sign_test_p(broken, fixed), "not judged"
     if measure == "start":
         p = sign_test_p(fixed, broken)
         if fixed <= broken:
@@ -197,7 +216,7 @@ def s_main(runs, data, flags):
     if len(data) == 2:
         flips = s_flips(data[0], data[1])
         print("\nrace by race (fixed / broken, one-sided sign test):")
-        for m in measures_of(data[1]):
+        for m in flips:
             fixed, broken = flips[m]
             p, verdict = s_verdict(m, len(fixed), len(broken))
             print("  %-16s fixed %3d  broken %3d   p %.3f  %s" % (m, len(fixed), len(broken), p, verdict))
@@ -205,7 +224,7 @@ def s_main(runs, data, flags):
         print("  %-16s %.1f -> %.1f s  %s" % ("median after gun", med[0], med[1], "WORSE" if med[1] > med[0] else "ok"))
         print("  start fixed:  %s" % (" ".join(flips["start"][0]) or "-"))
         print("  start broken: %s" % (" ".join(flips["start"][1]) or "-"))
-        for m in measures_of(data[1])[1:]:
+        for m in list(flips)[1:]:
             if flips[m][1]:
                 print("  %s broken: %s" % (m, " ".join(flips[m][1])))
         if is_s3(data[1]):
