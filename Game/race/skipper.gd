@@ -2284,6 +2284,8 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 	var run_in_tack: float = _start_run_in_tack(step, wind_deg)
 	var holds: bool = config.start_style == SkipperConfig.StartStyle.HOLD
 	var before_gun: bool = _race.clock_s() < 0.0
+	# The lag package (start_go_lag_s, early_holds_its_tack, start_dip) only on course starts (lag_applies()).
+	var lag_on: bool = lag_applies(_race.course.starts_upwind_of_the_boat())
 	# How far behind the line (or its extensions) it is, metres; negative over it.
 	var behind_m: float = -RoundingCheck.over_line_m(position, step.points[0], step.points[1], forward)
 	# The seconds until it wants to cross: the gun plus its timing error (after the gun it counts down
@@ -2319,7 +2321,7 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 		if over:
 			# start_dip: just over the line itself before the gun, it dips back at once on its tack, held back to its
 			# hold speed, rather than sailing off on a reach to tack or gybe for a point behind the line.
-			if config.start_dip and before_gun and -behind_m < START_WALL_M and _off_the_ends_m(step, position) <= START_WALL_ENDS_M:
+			if config.start_dip and lag_on and before_gun and -behind_m < START_WALL_M and _off_the_ends_m(step, position) <= START_WALL_ENDS_M:
 				var dip_back_deg: float = _dip_deg(telemetry, step)
 				_hands.hold_speed_ms = maxf(config.hold_speed_ms, _slowest_hold_ms())
 				if not is_nan(dip_back_deg):
@@ -2456,7 +2458,7 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 	# from its speed now and how fast it gains speed): then it goes, so as to cross at the time it
 	# aims for (HOLD_GO_SPARE_S). Past the go point, or about to cross the line before the gun, it
 	# holds back as slow as it steers.
-	var cross_need_s: float = _time_to_cross_s(telemetry, cross_at) + _go_lag_s(config.start_go_lag_s, telemetry.speed_ms)
+	var cross_need_s: float = _time_to_cross_s(telemetry, cross_at) + _go_lag_s(config.start_go_lag_s if lag_on else 0.0, telemetry.speed_ms)
 	var go_spare_s: float = aim_s - cross_need_s - _gust_lead_s(cross_need_s)
 	start_spare_s = go_spare_s
 	var early_at_line: bool = before_gun and _too_early_at_the_line(telemetry, step, behind_m)
@@ -2479,7 +2481,7 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 		# early_holds_its_tack: early at the line on the other tack, it holds back hard on this one (a turn onto the way
 		# in's tack, a few metres from the line and often at speed, took it over).
 		var hold_tack: float = run_in_tack
-		if config.early_holds_its_tack and early_at_line and _tack() != run_in_tack:
+		if config.early_holds_its_tack and lag_on and early_at_line and _tack() != run_in_tack:
 			hold_tack = _tack()
 			hold_twa = _hold_twa_deg(wind_deg, hold_tack, forward)
 		if _tack() != hold_tack:
@@ -2504,7 +2506,7 @@ func _start_heading(telemetry: Telemetry, step: RaceStep) -> float:
 			note = "start: holding back hard, early (%+.1f s to spare)" % go_spare_s
 			# start_dip: at a crawl holding back cannot stop it (it creeps on and slides over the line): it dips, bearing
 			# away on its tack to a track away from the line, until it is no longer early.
-			if config.start_dip and early_at_line and telemetry.speed_ms < _controller.hold_back_steerage_ms + DIP_CRAWL_EXTRA_MS:
+			if config.start_dip and lag_on and early_at_line and telemetry.speed_ms < _controller.hold_back_steerage_ms + DIP_CRAWL_EXTRA_MS:
 				var dip_deg: float = _dip_deg(telemetry, step)
 				if not is_nan(dip_deg):
 					note = "start: dipping, early at a crawl (%+.1f s to spare)" % go_spare_s
@@ -3402,10 +3404,14 @@ func wind_kt() -> float:
 	return _sim.telemetry.tws_10m_kt
 
 
-## SkipperConfig.start_gust_lead: how much earlier it goes for the line in a wind that varies, seconds, for a run in it
-## reckons takes need_s: the share start_gust_lead of need_s for every unit of the felt wind's spread over its mean in
-## the last GUST_LEAD_WINDOW_S (Max, 10 November 2026: "in tricky situations they have to learn to be risky or safe").
-## 0 when off, or before it has felt GUST_LEAD_LEAST_S of wind.
+## Whether the lag package (SkipperConfig.start_go_lag_s, early_holds_its_tack, start_dip) acts on this start: on a
+## course start only, not on a slalom start (Course.start_type; Max, 12 November 2026: "no lag on slalom / lag on
+## course"). A slalom start's timed run (SkipperConfig.slalom_timed_run) comes to the line at full speed, not from a
+## hold, and the package was judged on course starts (the training method's S3-28).
+static func lag_applies(slalom_start: bool) -> bool:
+	return not slalom_start
+
+
 ## SkipperConfig.start_go_lag_s (safe but fast, Max, 11 November 2026): the time getting going from a hold takes beyond
 ## _time_to_cross_s(), seconds: lag_s at START_LAG_CRAWL_MS and slower, nothing from START_LAG_AT_SPEED_MS up, in
 ## proportion between. Held back at 1 to 3 m/s the board must bear away from its hold, sheet in and gain speed, and on
@@ -3417,6 +3423,10 @@ static func _go_lag_s(lag_s: float, speed_ms: float) -> float:
 	return lag_s * slow_share
 
 
+## SkipperConfig.start_gust_lead: how much earlier it goes for the line in a wind that varies, seconds, for a run in it
+## reckons takes need_s: the share start_gust_lead of need_s for every unit of the felt wind's spread over its mean in
+## the last GUST_LEAD_WINDOW_S (Max, 10 November 2026: "in tricky situations they have to learn to be risky or safe").
+## 0 when off, or before it has felt GUST_LEAD_LEAST_S of wind.
 func _gust_lead_s(need_s: float) -> float:
 	if config.start_gust_lead <= 0.0 or felt.span_s() < GUST_LEAD_LEAST_S or not is_finite(need_s):
 		return 0.0

@@ -8,6 +8,7 @@
 	"size_percent": 80.0,
 	"boards": 12,
 	"race_type": "slalom",
+	"start_type": "slalom",
 	"marks": [
 		{
 			"id": "start boat",

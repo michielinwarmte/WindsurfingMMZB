@@ -132,7 +132,8 @@ enum StartTack { EITHER, STARBOARD, PORT }
 ## tack it is on (Skipper._start_heading()); false: it turns onto the way in's tack first, as before, a tack or gybe a few
 ## metres from the line, often at speed. Phase S3's day run (11 November 2026): with start_go_lag_s 3, 8 of the 20 boards
 ## newly over early were turning onto the way in in the last seconds (13 of the night's 3465 boards without it).
-@export var early_holds_its_tack: bool = false
+## On since Max's choice (12 November 2026: "lag on course"), on course starts only (Skipper.lag_applies()).
+@export var early_holds_its_tack: bool = true
 ## On a slalom's dive down onto the line, early (about to cross before the gun), it keeps the dive's heading and only
 ## eases the sheet, and luffs up only in the last Skipper.SLALOM_LAST_LUFF_S before it would cross (Skipper.
 ## _slalom_start_heading()); false: it luffs up to Skipper.HOLD_LUFF_TWA_DEG at once, as before. Phase S's baseline
@@ -182,9 +183,9 @@ enum StartTack { EITHER, STARBOARD, PORT }
 ## 10-11 November 2026: of
 ## the 47 boards over early in the two baselines (s3_base, s3_hold_base), 19 slid over from "holding back hard, early"
 ## at 1.5 to 1.9 m/s, and 8 of those were 20 to 47 m over at the gun after the way back sailed off on a reach
-## (s3_hold_base r0001/1: at the line at 1.7 m/s 12 s before the gun, 37.7 m over at it). Off until the suite has
-## judged it.
-@export var start_dip: bool = false
+## (s3_hold_base r0001/1: at the line at 1.7 m/s 12 s before the gun, 37.7 m over at it). On since Max's choice
+## (12 November 2026: "lag on course"), on course starts only (Skipper.lag_applies()).
+@export var start_dip: bool = true
 ## Moving while it waits upwind of a slalom's committee boat (Skipper._slalom_wait_twa_deg()): the slower it goes, the
 ## further it bears away, from its luffed-up angle at Skipper.SLALOM_WAIT_LUFF_FROM_MS down to a beam reach at
 ## Skipper.SLALOM_WAIT_STALL_MS, instead of always luffed up as slow as it steers. Phase S3, the night of 10-11 November
@@ -262,7 +263,9 @@ enum StartTack { EITHER, STARBOARD, PORT }
 ## to cross (Skipper._go_lag_s()): the whole of it at 2 m/s and slower, none from 5 m/s up. 0 is off. Measured on phase
 ## S3's 1661 starts from a hold (the night of 10-11 November): going at 1 to 3 m/s the board crossed a median 2.8 to 3.7 s
 ## later than it reckoned, at 3 to 5 m/s 1.9 s, from 5 m/s up on time. A little under the median is the safe side.
-@export_range(0.0, 8.0) var start_go_lag_s: float = 0.0
+## 2 since Max's choice (12 November 2026: "lag on course"; passed on tune 37 and hold-out 50, S3-28), on course
+## starts only (Skipper.lag_applies()).
+@export_range(0.0, 8.0) var start_go_lag_s: float = 2.0
 ## Fast over the line (Max, 11 November 2026): of the points of the line it can reach on its tack, it makes for one at
 ## least this many degrees further off the wind than its beat's track, when there is one (a close reach, with room for a
 ## slow board's wider angle while it gets going); else as before (the angle it points once it has speed). 0 is off.

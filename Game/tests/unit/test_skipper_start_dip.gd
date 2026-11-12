@@ -5,8 +5,8 @@ extends GutTest
 ## back hard, early" at 1.5 to 1.9 m/s, and 8 were then 20 to 47 m over at the gun.
 
 
-func test_it_is_off_unless_switched_on() -> void:
-	assert_false(SkipperConfig.new().start_dip, "off by default until the suite says it wins")
+func test_it_is_on_by_default() -> void:
+	assert_true(SkipperConfig.new().start_dip, "since Max's choice (12 November 2026: \"lag on course\")")
 
 
 func test_an_upwind_start_dips_on_a_broad_reach_on_either_tack() -> void:

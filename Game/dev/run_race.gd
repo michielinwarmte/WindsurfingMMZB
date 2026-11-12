@@ -64,6 +64,8 @@ extends SceneTree
 ##   [--stop_after_gun=<s>] stop the race this long after the gun (to look at the start only)
 ##   [--race_type=<type>]  race the course as slalom, course or hybrid (Course.RaceType; a slalom's
 ##                         boards wait upwind of the committee boat); without it the course's own type
+##   [--start_type=<type>] start as slalom or course (Course.StartType: the skippers' timed run, or waiting
+##                         behind the line with lag); without it the course's own start
 ##   [--map=lake]          the boards sail on Lake Silvaplana as the game sails it there: the lake's
 ##                         air and water, the map's wind of the hour (its gusts, lulls, shifts and lee)
 ##                         and the lake's own waves (PHYSICS_SPEC.md 9.17, 9.18), at --time=14:30 (any
@@ -411,6 +413,9 @@ func _initialize() -> void:
 	if options.has("race_type"):
 		# --race_type=slalom|course|hybrid|free: the course raced as that type (Course.RaceType).
 		course.race_type = Course.race_type_from_name(options["race_type"])
+	if options.has("start_type"):
+		# --start_type=slalom|course: the course started that way (Course.StartType).
+		course.start_type = Course.start_type_from_name(options["start_type"])
 	var race: RaceSim = RaceSim.new(course, laps, prestart_s)
 	race.finish_window_s = finish_window_s
 	# The race's own time limit for its course and wind, as the game sets it; --seconds raises it.

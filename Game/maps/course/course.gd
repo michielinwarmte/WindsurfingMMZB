@@ -42,6 +42,19 @@ enum RaceType { COURSE, SLALOM, HYBRID, FREE }
 ## The race types in the order the course makers list them, and their names in the course files.
 const RACE_TYPES: Array[RaceType] = [RaceType.SLALOM, RaceType.COURSE, RaceType.HYBRID, RaceType.FREE]
 const RACE_TYPE_NAMES: PackedStringArray = ["course", "slalom", "hybrid", "free"]
+## How the boards start (Max, 12 November 2026: "do the courses have a clear tag on when its a slalom start and when
+## its a course race start? in the course maker make this an option so the skippers know which to choose"). The AI
+## skippers start the way it says:
+## - SLALOM: a slalom start: the boards wait upwind of the committee boat and reach down onto the line at the gun
+##   (the skippers' timed run, SkipperConfig.slalom_timed_run; no lag). Only on a line that runs along the wind
+##   (starts_upwind_of_the_boat()); on a line across the wind the boards wait behind it, and the course maker warns;
+## - COURSE: a course start: the boards wait behind the line and go at the gun (with lag, SkipperConfig.start_go_lag_s);
+## - FROM_RACE_TYPE: the race type's own start (a slalom race a slalom start, the others a course start): every course
+##   saved before the tag, a template, and a course whose race type was just chosen in the course maker.
+enum StartType { FROM_RACE_TYPE, SLALOM, COURSE }
+## The start types the course makers list, and their names in the course files.
+const START_TYPES: Array[StartType] = [StartType.SLALOM, StartType.COURSE]
+const START_TYPE_NAMES: PackedStringArray = ["", "slalom", "course"]
 
 ## How finely a leg is checked for land, metres.
 const LAND_CHECK_STEP_M: float = 10.0
@@ -62,6 +75,8 @@ var size_percent: float = 100.0
 var boards: int = 40
 ## What kind of racing it is for (RaceType): the start, the AI's plan, or free sailing.
 var race_type: RaceType = RaceType.COURSE
+## How the boards start (StartType).
+var start_type: StartType = StartType.FROM_RACE_TYPE
 var marks: Array[CourseMark] = []
 
 
@@ -402,6 +417,7 @@ func copy() -> Course:
 	result.size_percent = size_percent
 	result.boards = boards
 	result.race_type = race_type
+	result.start_type = start_type
 	for each: CourseMark in marks:
 		result.add_mark(each.id, each.position, each.side)
 	return result
@@ -433,6 +449,7 @@ func to_dict(config: MapConfig) -> Dictionary:
 		"size_percent": size_percent,
 		"boards": boards,
 		"race_type": race_type_name(race_type),
+		"start_type": start_type_name(chosen_start()),
 		"marks": mark_list,
 	}
 
@@ -457,6 +474,7 @@ func _to_game_frame_dict() -> Dictionary:
 		"size_percent": size_percent,
 		"boards": boards,
 		"race_type": race_type_name(race_type),
+		"start_type": start_type_name(chosen_start()),
 		"marks": mark_list,
 	}
 
@@ -477,6 +495,8 @@ static func from_dict(data: Dictionary, config: MapConfig) -> Course:
 	course.boards = int(data.get("boards", 40))
 	# A file saved before the race types: the type its template has (CourseTemplates.race_type_of()).
 	course.race_type = race_type_from_name(str(data.get("race_type", race_type_name(CourseTemplates.race_type_of(course.template)))))
+	# A file saved before the start types: the race type's own start.
+	course.start_type = start_type_from_name(str(data.get("start_type", "")))
 	for item: Dictionary in data.get("marks", []):
 		var side: CourseMark.Rounding = CourseMark.side_from_name(str(item.get("side", "")))
 		if in_game_metres:
@@ -512,12 +532,27 @@ func is_raced() -> bool:
 	return race_type != RaceType.FREE
 
 
-## Whether the boards start on a reach from upwind of the committee boat: a slalom whose start line
-## runs more along the wind than across it (a reaching start, the committee boat its upwind end). A
-## slalom laid with a line across the wind (an upwind start) cannot be reached down onto from upwind
-## of its boat: its boards wait behind the line, as for a course race.
+## Whether the course is set for a slalom start (start_type; FROM_RACE_TYPE: a slalom race).
+func slalom_start() -> bool:
+	match start_type:
+		StartType.SLALOM:
+			return true
+		StartType.COURSE:
+			return false
+	return race_type == RaceType.SLALOM
+
+
+## The start the course has, as the course maker shows it and the file saves it: SLALOM or COURSE.
+func chosen_start() -> StartType:
+	return StartType.SLALOM if slalom_start() else StartType.COURSE
+
+
+## Whether the boards start on a reach from upwind of the committee boat: a slalom start (start_type) on a
+## start line that runs more along the wind than across it (a reaching start, the committee boat its upwind
+## end). A slalom start on a line across the wind (an upwind start) cannot be reached down onto from upwind
+## of its boat: its boards wait behind the line, as for a course start (the course maker warns).
 func starts_upwind_of_the_boat() -> bool:
-	if race_type != RaceType.SLALOM:
+	if not slalom_start():
 		return false
 	var boat: CourseMark = mark(CourseMark.START_BOAT)
 	var pin: CourseMark = mark(CourseMark.START_PIN)
@@ -536,6 +571,22 @@ static func race_type_name(type: RaceType) -> String:
 static func race_type_from_name(text: String) -> RaceType:
 	var index: int = RACE_TYPE_NAMES.find(text.strip_edges().to_lower())
 	return index as RaceType if index >= 0 else RaceType.COURSE
+
+
+## The start type's name in the course files: "slalom" or "course" ("" for FROM_RACE_TYPE).
+static func start_type_name(type: StartType) -> String:
+	return START_TYPE_NAMES[type]
+
+
+## The start type from its name in a course file (anything else, or none: FROM_RACE_TYPE).
+static func start_type_from_name(text: String) -> StartType:
+	var index: int = START_TYPE_NAMES.find(text.strip_edges().to_lower())
+	return index as StartType if index > 0 else StartType.FROM_RACE_TYPE
+
+
+## The start type as the course makers show it.
+static func start_type_title(type: StartType) -> String:
+	return "Slalom start" if type == StartType.SLALOM else "Course start"
 
 
 ## The race type as the course makers and the HUD show it.

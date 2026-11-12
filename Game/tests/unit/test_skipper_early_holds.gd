@@ -4,8 +4,8 @@ extends GutTest
 ## a few metres from the line. With start_go_lag_s 3, 8 of the 20 boards newly over early were turning so.
 
 
-func test_it_is_off_unless_switched_on() -> void:
-	assert_false(SkipperConfig.new().early_holds_its_tack, "off by default until the suite says it wins")
+func test_it_is_on_by_default() -> void:
+	assert_true(SkipperConfig.new().early_holds_its_tack, "since Max's choice (12 November 2026: \"lag on course\")")
 
 
 func test_the_hold_angle_on_either_tack_keeps_its_track_off_the_wind() -> void:

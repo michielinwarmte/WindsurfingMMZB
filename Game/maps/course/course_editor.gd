@@ -109,6 +109,7 @@ func setup(layer: CanvasLayer, panels: Control, config: MapConfig, height_at: Ca
 	_panel.template_chosen.connect(_on_template_chosen)
 	_panel.boards_changed.connect(_on_boards_changed)
 	_panel.race_type_chosen.connect(set_race_type)
+	_panel.start_type_chosen.connect(set_start_type)
 	_panel.size_changed.connect(_on_size_changed)
 	_panel.axis_changed.connect(_on_axis_changed)
 	_panel.square_to_wind_pressed.connect(_on_square_to_wind)
@@ -411,6 +412,17 @@ func set_race_type(type: Course.RaceType) -> void:
 		return
 	_remember()
 	course.race_type = type
+	# A race type chosen: its own start (a slalom race a slalom start, the others a course start), until a start is chosen.
+	course.start_type = Course.StartType.FROM_RACE_TYPE
+	_changed()
+
+
+## How the boards start (Course.StartType; Max, 12 November 2026): the AI skippers start the way it says.
+func set_start_type(type: Course.StartType) -> void:
+	if course == null or course.start_type == type:
+		return
+	_remember()
+	course.start_type = type
 	_changed()
 
 
@@ -688,6 +700,8 @@ func _update_panel() -> void:
 		course.template, Course.race_type_title(course.race_type), total_m / 1000.0, wind.y, wind.x, absf(off_axis),
 		"right" if off_axis >= 0.0 else "left", course.axis_deg]
 	var warnings: PackedStringArray = course.problems(_height_at)
+	if course.is_raced() and course.slalom_start() and not course.starts_upwind_of_the_boat():
+		warnings.append("Slalom start on a line across the wind: the boards can't reach in from upwind of the committee boat, so they wait behind the line as on a course start. Turn the line to run along the wind, the committee boat upwind.")
 	var lone: PackedStringArray = course.marks_not_in_order()
 	if not lone.is_empty():
 		warnings.append("Not in the order yet: %s (type it into the Order field)" % ", ".join(lone))

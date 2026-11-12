@@ -9,6 +9,7 @@ extends PanelContainer
 
 signal template_chosen(id: String)
 signal race_type_chosen(type: Course.RaceType)
+signal start_type_chosen(type: Course.StartType)
 signal boards_changed(boards: int)
 signal size_changed(percent: float)
 signal axis_changed(degrees: float)
@@ -32,6 +33,7 @@ const MUTED: Color = Color(1.0, 1.0, 1.0, 0.65)
 
 var _template: OptionButton
 var _race_type: OptionButton
+var _start_type: OptionButton
 var _boards: SpinBox
 var _size: SpinBox
 var _axis: SpinBox
@@ -92,6 +94,21 @@ func _ready() -> void:
 		_race_type.add_item(Course.race_type_title(type))
 	_race_type.item_selected.connect(func(index: int) -> void: race_type_chosen.emit(Course.RACE_TYPES[index]))
 	kind.add_child(_race_type)
+
+	# How the boards start (Course.StartType; Max, 12 November 2026): the AI skippers start the way it says.
+	var start: HBoxContainer = _row(box)
+	var start_label: Label = Label.new()
+	start_label.text = "Start"
+	start.add_child(start_label)
+	_start_type = OptionButton.new()
+	_start_type.name = "StartType"
+	_start_type.focus_mode = Control.FOCUS_NONE
+	_start_type.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_start_type.tooltip_text = "Slalom start: the boards wait upwind of the committee boat and reach down onto the line at the gun (the line runs along the wind). Course start: the boards wait behind the line and go at the gun. The AI skippers start the way this says; choosing a race type sets its usual start."
+	for type: Course.StartType in Course.START_TYPES:
+		_start_type.add_item(Course.start_type_title(type))
+	_start_type.item_selected.connect(func(index: int) -> void: start_type_chosen.emit(Course.START_TYPES[index]))
+	start.add_child(_start_type)
 
 	var turning: HBoxContainer = _row(box)
 	_axis = _spin_box(turning, "Axis °", 0.0, 359.0, 1.0, "The wind direction the course is set for: mark 1 lies this way from the start")
@@ -204,8 +221,11 @@ func show_course(course: Course, summary: String, legs_header: PackedStringArray
 		elif control is LineEdit:
 			(control as LineEdit).editable = course != null
 	_race_type.disabled = course == null
+	# Free sailing has no start.
+	_start_type.disabled = course == null or not course.is_raced()
 	if course != null:
 		_race_type.select(Course.RACE_TYPES.find(course.race_type))
+		_start_type.select(Course.START_TYPES.find(course.chosen_start()))
 		_axis.set_value_no_signal(roundf(course.axis_deg))
 		_size.set_value_no_signal(course.size_percent)
 		_boards.set_value_no_signal(course.boards)
@@ -226,6 +246,17 @@ func show_course(course: Course, summary: String, legs_header: PackedStringArray
 ## The race type the selector shows (for tests): its title.
 func race_type_text() -> String:
 	return _race_type.get_item_text(_race_type.selected) if _race_type.selected >= 0 else ""
+
+
+## The start the selector shows (for tests): its title.
+func start_type_text() -> String:
+	return _start_type.get_item_text(_start_type.selected) if _start_type.selected >= 0 else ""
+
+
+## Picks a start as if it were chosen in the selector (for tests and scripts).
+func choose_start_type(type: Course.StartType) -> void:
+	_start_type.select(Course.START_TYPES.find(type))
+	start_type_chosen.emit(type)
 
 
 ## Picks a race type as if it were chosen in the selector (for tests and scripts).

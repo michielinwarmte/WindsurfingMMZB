@@ -3,8 +3,10 @@ extends GutTest
 ## beyond the reckoning, the whole lag at a crawl, none from 5 m/s up. Measured on phase S3's 1661 starts from a hold.
 
 
-func test_it_is_off_unless_switched_on() -> void:
-	assert_eq(SkipperConfig.new().start_go_lag_s, 0.0, "off by default until the suite says it wins")
+func test_it_is_2_s_by_default_and_for_course_starts_only() -> void:
+	assert_eq(SkipperConfig.new().start_go_lag_s, 2.0, "since Max's choice (12 November 2026: \"lag on course\")")
+	assert_true(Skipper.lag_applies(false), "lag on a course start")
+	assert_false(Skipper.lag_applies(true), "no lag on a slalom start")
 	assert_eq(Skipper._go_lag_s(0.0, 1.0), 0.0, "off: no lag, however slow")
 
 

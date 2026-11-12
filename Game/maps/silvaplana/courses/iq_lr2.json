@@ -8,6 +8,7 @@
 	"size_percent": 100.0,
 	"boards": 12,
 	"race_type": "course",
+	"start_type": "course",
 	"marks": [
 		{
 			"id": "start boat",

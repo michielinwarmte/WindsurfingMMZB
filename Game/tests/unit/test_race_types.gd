@@ -39,6 +39,11 @@ func test_the_saved_courses_have_their_types() -> void:
 		assert_not_null(course, saved)
 		if course != null:
 			assert_eq(course.race_type, expected[saved], saved)
+			# Every lake course file carries its start as a clear tag (12 November 2026): a slalom's a slalom start.
+			var start: Course.StartType = Course.StartType.SLALOM if expected[saved] == Course.RaceType.SLALOM else Course.StartType.COURSE
+			if not saved.begins_with("t2"):
+				assert_eq(course.start_type, start, saved + "'s file says its start")
+			assert_eq(course.chosen_start(), start, saved)
 
 
 func test_the_type_is_saved_copied_and_read_back() -> void:
@@ -71,6 +76,55 @@ func test_the_course_maker_chooses_the_type() -> void:
 	panel.choose_race_type(Course.RaceType.FREE)
 	assert_eq(chosen, [Course.RaceType.FREE] as Array[Course.RaceType], "the choice goes to the course maker")
 	assert_eq(panel.race_type_text(), "Free sailing")
+
+
+# ---------------------------------------------------------------- the start type (12 November 2026)
+
+func test_the_start_follows_the_race_type_until_one_is_chosen() -> void:
+	var course: Course = CourseTemplates.build("PD3", _rules(), 15.0, 24, 0.0, Vector2.ZERO)
+	assert_eq(course.start_type, Course.StartType.FROM_RACE_TYPE, "a template: its race type's start")
+	assert_eq(course.chosen_start(), Course.StartType.SLALOM, "a slalom race: a slalom start")
+	assert_true(course.starts_upwind_of_the_boat())
+	course.start_type = Course.StartType.COURSE
+	assert_false(course.slalom_start(), "the start chosen wins over the race type")
+	assert_false(course.starts_upwind_of_the_boat(), "a course start: the boards wait behind the line")
+	var windward: Course = CourseTemplates.build("LG2", _rules(), 15.0, 24, 0.0, Vector2.ZERO)
+	assert_eq(windward.chosen_start(), Course.StartType.COURSE, "a course race: a course start")
+	# A slalom start on a line across the wind: they can't reach in, so they wait behind it (the course maker warns).
+	windward.start_type = Course.StartType.SLALOM
+	assert_true(windward.slalom_start())
+	assert_false(windward.starts_upwind_of_the_boat())
+
+
+func test_the_start_is_saved_copied_and_read_back() -> void:
+	var course: Course = CourseTemplates.build("PD3", _rules(), 15.0, 24, 0.0, Vector2.ZERO)
+	course.start_type = Course.StartType.COURSE
+	assert_eq(course.copy().start_type, Course.StartType.COURSE, "a copy keeps it (undo, the director's course)")
+	var data: Dictionary = course.to_dict(null)
+	assert_eq(data["start_type"], "course", "a clear tag in the file")
+	var back: Course = Course.from_dict(JSON.parse_string(JSON.stringify(data)), null)
+	assert_eq(back.start_type, Course.StartType.COURSE, "it travels through JSON")
+	# A template's start is saved as the start it has.
+	assert_eq(CourseTemplates.build("SD3", _rules(), 15.0, 24, 0.0, Vector2.ZERO).to_dict(null)["start_type"], "slalom")
+	# A file from before the start types: its race type's start.
+	data.erase("start_type")
+	assert_eq(Course.from_dict(data, null).start_type, Course.StartType.FROM_RACE_TYPE)
+	assert_true(Course.from_dict(data, null).slalom_start(), "a slalom race: a slalom start")
+	for type: Course.StartType in Course.START_TYPES:
+		assert_eq(Course.start_type_from_name(Course.start_type_name(type)), type, Course.start_type_title(type))
+
+
+func test_the_course_maker_chooses_the_start() -> void:
+	var panel: CoursePanel = CoursePanel.new()
+	add_child_autofree(panel)
+	var course: Course = CourseTemplates.build("PD3", _rules(), 15.0, 24, 0.0, Vector2.ZERO)
+	panel.show_course(course, "", PackedStringArray(["a", "b", "c", "d"]), [], PackedStringArray())
+	assert_eq(panel.start_type_text(), "Slalom start", "the selector shows the course's start")
+	var chosen: Array[Course.StartType] = []
+	panel.start_type_chosen.connect(func(type: Course.StartType) -> void: chosen.append(type))
+	panel.choose_start_type(Course.StartType.COURSE)
+	assert_eq(chosen, [Course.StartType.COURSE] as Array[Course.StartType], "the choice goes to the course maker")
+	assert_eq(panel.start_type_text(), "Course start")
 
 
 # ---------------------------------------------------------------- the slalom's start
