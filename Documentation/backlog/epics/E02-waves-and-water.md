@@ -69,6 +69,7 @@ Done when: the sea's whitecaps, foam streaks, spray off crests, the swell's grou
 - [ ] T3 The colour by depth and the bottom (sand, reef, rocks) through the water: Bonaire's lagoon, Sotavento's, the lake's shallows
 - [ ] T4 The graphics card's budget: 2 ms at 1280 by 720 for the water in a 20-board race (today about 1.4 ms more than 0.1 after shading and wind on water)
 - [ ] T5 The team's look (GR6): the colour, the foam, the far edge, the spray, the wake, the splash; Max's eye on the lake's whitecap amount at x0.44, 1.0 and 1.65
+- [x] T6 The open water's far edge: the square of waves round the camera gone, the far water shades the same waves per pixel (E11.S11 T4, GR14, 12 Nov 2026; Max's look open)
 
 ### E02.S08 · The lake's waves finished
 Status: todo | Size: S | Owner: the lead, Michiel | Milestone: M2 | Needs: E01.S01, E02.S01 | Roadmap: PH44

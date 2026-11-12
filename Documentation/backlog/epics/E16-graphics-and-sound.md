@@ -21,7 +21,7 @@ Done when: the team has looked at the water's colour, the foam, the far edge, th
 Status: todo | Size: M | Owner: the lead, Max's screen | Milestone: M2 | Needs: E16.S01 | Roadmap: GR9, GR4
 Done when: the rig camera is steady on Max's screen on waves and flat water (GR9 verified, his refresh rate known), the follow camera's look point is smoothed against heave and yaw, a spectator camera (TV-style, from the committee boat and a drone) exists for watching and replays, and an onboard view is an option.
 - [ ] T1 GR9 on Max's screen; the look point's smoothing
-- [ ] T2 The spectator cameras (with E12.S01's spectating and E11.S08's replays)
+- [ ] T2 The spectator cameras (with E12.S01's spectating and E11.S08's replays); the watch mode's TV camera (drones, helicopter, committee boat) is E11.S11 (review, 12 Nov 2026)
 - [ ] T3 The onboard view (the helmet camera)
 
 ### E16.S03 · The look per spot
