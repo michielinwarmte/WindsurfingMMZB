@@ -309,17 +309,24 @@ const SLALOM_RUN_SPEED_S: float = 3.0
 ## SkipperConfig.slalom_run_clean_wind (Max, 12 November 2026: "it's not wrong if they are close together but there is
 ## one with dirty wind"; _slalom_pick_gap()): it looks at where the boards coming in will cross from this long before
 ## its own crossing, and may move its spot until this long before it, seconds; along the line in steps of this, at
-## most this far from its own spot, metres; a place with at least this share of the wind is clean (the suite's dirty
-## wind is under 0.85); never within this of another board's crossing, metres (two boards side by side touch at 2 m).
+## most this far from its own spot, metres; it moves only when its spot would have less than this share of the wind
+## (dirty: the suite's measure, run_race.gd DIRTY_FACTOR), to a place with at least this share (clean), never within
+## this of another board's crossing, metres (two boards side by side touch at 2 m). Close is not dirty (Max): a board
+## that only crosses near it is no reason to move (version 6 also moved for that, and half its boards moved).
 const SLALOM_GAP_LOOK_S: float = 20.0
 const SLALOM_GAP_HOLD_S: float = 3.0
 const SLALOM_GAP_STEP_M: float = 5.0
 const SLALOM_GAP_MOST_M: float = 50.0
+const SLALOM_GAP_DIRTY: float = 0.85
 const SLALOM_GAP_CLEAN: float = 0.92
 const SLALOM_GAP_APART_M: float = 8.0
 ## A board counts as coming in when it closes on the line at this speed or more, m/s, to cross within this, seconds.
 const SLALOM_GAP_INBOUND_MS: float = 1.5
 const SLALOM_GAP_HORIZON_S: float = 30.0
+## ... and level with it: within this of its own crossing, seconds. A board that crosses the same place a few seconds
+## earlier is some 30 m across the wind on its reach by then, its dirty wind behind it (version 6 counted every board
+## coming in, whenever it crossed).
+const SLALOM_GAP_LEVEL_S: float = 2.0
 ## Its spot moved no nearer an end of the line than this, metres (as _line_inset()).
 const SLALOM_GAP_ENDS_M: float = 6.0
 ## SkipperConfig.slalom_early_ease: early on the dive it luffs up only when it would cross the line within this many
@@ -2767,10 +2774,11 @@ func _slalom_run_heading(telemetry: Telemetry, step: RaceStep, behind_m: float) 
 
 ## SkipperConfig.slalom_run_clean_wind (Max, 12 November 2026: "it's not wrong if they are close together but there is
 ## one with dirty wind"): on the run in, from SLALOM_GAP_LOOK_S before it crosses until SLALOM_GAP_HOLD_S before, it
-## looks at where the boards coming in will cross the line (on their course at their speed now). When its spot would lie
-## in one's dirty wind as they cross level, it moves its spot along the line to the nearest clean place (clean_gap_m()):
-## to leeward first, as the leeward board is the one in dirty wind (and two boards both going to windward of each other
-## would leapfrog); to windward only when the line ends first. Without the wind shadows (--shadows=0) nothing moves.
+## looks at where the boards coming in will cross the line level with it (on their course at their speed now, within
+## SLALOM_GAP_LEVEL_S of its own crossing). When its spot would lie in one's dirty wind, it moves its spot along the line
+## to leeward, to the nearest clean place (clean_gap_m()). Only to leeward: the leeward board is the one in dirty wind,
+## and moved to windward it became the board that must keep clear (version 6 did, and lost some 18 m up the course
+## there: one gybed away just after the gun, check 49 r0059). Without the wind shadows (--shadows=0) nothing moves.
 func _slalom_pick_gap(telemetry: Telemetry, step: RaceStep, spot: Vector2, time_left_s: float) -> void:
 	var shadows: WindShadows = null
 	if _sim.wind != null:
@@ -2781,8 +2789,13 @@ func _slalom_pick_gap(telemetry: Telemetry, step: RaceStep, spot: Vector2, time_
 	var length_m: float = pin.distance_to(step.points[0])
 	var at_m: float = (spot - pin).dot(_slalom_line_dir(step))
 	var downwind: Vector2 = Course.direction_of(telemetry.wind_from_bearing_deg + 180.0)
+	# Its own crossing as the others' are reckoned: on its course at its speed now; the time it aims at while it is not
+	# yet closing on the line.
+	var behind_m: float = -RoundingCheck.over_line_m(_position(telemetry), step.points[0], step.points[1], step.in_dir)
+	var closing_ms: float = _velocity.dot(step.in_dir)
+	var own_s: float = behind_m / closing_ms if closing_ms >= SLALOM_GAP_INBOUND_MS else time_left_s
 	_run_gap_m = clean_gap_m(shadows, pin, _slalom_line_dir(step), at_m, _run_gap_m, SLALOM_GAP_ENDS_M, length_m - SLALOM_GAP_ENDS_M,
-		_inbound_crossings(step), downwind)
+		_inbound_crossings(step, own_s), downwind)
 
 
 ## The start line's direction from the pin end to the boat end, one metre long.
@@ -2790,10 +2803,10 @@ func _slalom_line_dir(step: RaceStep) -> Vector2:
 	return (step.points[0] - step.points[1]).normalized()
 
 
-## Where the other boards coming in to the line will cross it, on their course at their speed now (from their places at
-## this look and the last): boards behind the line closing on it at SLALOM_GAP_INBOUND_MS or more, to cross within
-## SLALOM_GAP_HORIZON_S.
-func _inbound_crossings(step: RaceStep) -> PackedVector2Array:
+## Where the other boards coming in to the line level with it will cross it, on their course at their speed now (from
+## their places at this look and the last): boards behind the line closing on it at SLALOM_GAP_INBOUND_MS or more, to
+## cross within SLALOM_GAP_HORIZON_S, and within SLALOM_GAP_LEVEL_S of `own_s` (its own crossing, seconds from now).
+func _inbound_crossings(step: RaceStep, own_s: float) -> PackedVector2Array:
 	var out: PackedVector2Array = PackedVector2Array()
 	for j: int in _race.board_count():
 		if j == _index or j >= _others_last.size():
@@ -2804,28 +2817,34 @@ func _inbound_crossings(step: RaceStep) -> PackedVector2Array:
 		var behind_m: float = -RoundingCheck.over_line_m(other, step.points[0], step.points[1], step.in_dir)
 		if closing_ms < SLALOM_GAP_INBOUND_MS or behind_m <= 0.0 or behind_m / closing_ms > SLALOM_GAP_HORIZON_S:
 			continue
+		if not crosses_level(behind_m / closing_ms, own_s):
+			continue
 		out.append(other + velocity * (behind_m / closing_ms))
 	return out
 
 
-## The gap along the start line from its own spot, metres, that puts it in clean wind when the boards coming in cross at
-## `crossings` level with it. The line runs from `pin` along `line_dir`; its spot is `at_m` along it; `gap_m` its gap now,
-## kept while that is clean; else the nearest clean gap in steps of SLALOM_GAP_STEP_M, at most SLALOM_GAP_MOST_M from its
-## spot, to leeward first and then to windward, between `lo_m` and `hi_m` along the line and never within
-## SLALOM_GAP_APART_M of a crossing. No clean place: the gap it has.
+## Whether a board crossing the line in `cross_s` crosses level with one crossing in `own_s` (within SLALOM_GAP_LEVEL_S).
+static func crosses_level(cross_s: float, own_s: float) -> bool:
+	return absf(cross_s - own_s) <= SLALOM_GAP_LEVEL_S
+
+
+## The gap along the start line from its own spot, metres, that keeps it out of dirty wind when the boards coming in cross
+## at `crossings` level with it. The line runs from `pin` along `line_dir`; its spot is `at_m` along it; `gap_m` its gap
+## now, kept while that is not dirty (SLALOM_GAP_DIRTY or more of the wind); else the nearest clean gap to leeward in
+## steps of SLALOM_GAP_STEP_M, at most SLALOM_GAP_MOST_M from its spot, no further than `hi_m` (or `lo_m`) along the line
+## and never within SLALOM_GAP_APART_M of a crossing. No clean place to leeward: the gap it has.
 static func clean_gap_m(shadows: WindShadows, pin: Vector2, line_dir: Vector2, at_m: float, gap_m: float, lo_m: float,
 		hi_m: float, crossings: PackedVector2Array, downwind: Vector2) -> float:
-	if _clean_at(shadows, pin + line_dir * (at_m + gap_m), crossings, downwind):
+	if shadows.factor_from(pin + line_dir * (at_m + gap_m), downwind, crossings) >= SLALOM_GAP_DIRTY:
 		return gap_m
 	var leeward: float = 1.0 if line_dir.dot(downwind) >= 0.0 else -1.0
-	var steps: int = roundi(SLALOM_GAP_MOST_M / SLALOM_GAP_STEP_M)
-	for side: float in [leeward, -leeward]:
-		for k: int in range(1, 2 * steps + 1):
-			var gap: float = gap_m + side * k * SLALOM_GAP_STEP_M
-			if absf(gap) > SLALOM_GAP_MOST_M or at_m + gap < lo_m or at_m + gap > hi_m:
-				break
-			if _clean_at(shadows, pin + line_dir * (at_m + gap), crossings, downwind):
-				return gap
+	var steps: int = roundi(2.0 * SLALOM_GAP_MOST_M / SLALOM_GAP_STEP_M)
+	for k: int in range(1, steps + 1):
+		var gap: float = gap_m + leeward * k * SLALOM_GAP_STEP_M
+		if absf(gap) > SLALOM_GAP_MOST_M or at_m + gap < lo_m or at_m + gap > hi_m:
+			break
+		if _clean_at(shadows, pin + line_dir * (at_m + gap), crossings, downwind):
+			return gap
 	return gap_m
 
 
