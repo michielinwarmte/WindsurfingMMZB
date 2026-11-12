@@ -49,6 +49,8 @@ extends SceneTree
 ##   [--closest_twa_deg=<deg>] the closest to the wind the learned brains' hands steer; without it each
 ##                         keeps its own (none for the brains before RA14)
 ##   [--shadows=1]         the sails cast wind shadows on each other (F3, WindShadows); 0 turns them off
+##   [--shadow_trail=1]    the shadows lie along each sail's trail of disturbed air, its apparent wind (WindShadowTrail,
+##                         13 November 2026); 0: the cone straight down the true wind, as before (to compare)
 ##   [--rules=1]           the racing rules are kept (F3, RaceRules): a scripted skipper turns a circle for a
 ##                         penalty, a learned one carries 20 s to the finish; 0 turns them off
 ##   [--gear=1]            each persona sails its own board, sail and fin from the gear catalogue, sized
@@ -110,6 +112,18 @@ extends SceneTree
 ##                         start check's own estimate) takes longer than the countdown less this, at the countdown's
 ##                         start or after an R, prints DROP_TOO_FAR and the tool quits (code 3), like COURSE_ILLEGAL,
 ##                         so the random suite draws the race again
+##   [--round_drill=gybe|top --round_seed=<n> --round_from_m=<a>,<b> --round_together_s=<s>] the rounding drill (Max,
+##                         12 November 2026: "training mark roundings from every angle. for slalom gybing and rounding
+##                         for going from upwind to downwind ... just as the beginning of the starts"): a drop after the
+##                         gun at one mark of that kind (round_drill_marks(): gybe, a slalom's gybe mark; top, a mark
+##                         reached on a beat and left downwind), every board set down a random a to b metres before it
+##                         from a random angle (round_drill_spot(); top: anywhere below the mark, inside or outside the
+##                         laylines, on a random tack). With more boards (--boards), each one's expected time to the
+##                         mark within round_together_s of the first's (the laylines in company). The run ends
+##                         at ROUND_SCORE_FACTOR times the first board's expected time to the mark plus ROUND_SCORE_AFTER_S, when every board's
+##                         score is taken (Max: "a way to calculate which was the fastest gybe"): how far down the
+##                         course past the mark it is then, metres (course_progress_m()). A course without such a mark
+##                         prints DRILL_NONE and quits (code 3): the random suite draws again. HEADS_RESULT has "drill"
 ##   [--sailor.<field>=<n>] a number of every skipper's sailor (SailorConfig, on its own gear too):
 ##                         the fall rule's, for the stay-on-the-board work
 ##   [--out_dir=<folder>: a CSV per board: race time, x, z, heading, speed, its next step, and what
@@ -216,6 +230,46 @@ const DROP_SIDE_MAX_M: float = 250.0
 const DROP_HEADING_DEG: float = 70.0
 const DROP_IRONS_DEG: float = 40.0
 const DROP_CLOSE_DEG: float = 55.0
+## The rounding drill (--round_drill; 12 November 2026). Which marks: a gybe mark's legs in and out both at least
+## ROUND_REACH_TWA_DEG off the wind, on opposite tacks, the turn between them through downwind; a top mark's leg in
+## within ROUND_BEAT_TWA_DEG of the wind and its leg out at least ROUND_AWAY_TWA_DEG off it (a bear-away onto a reach or
+## a run).
+const ROUND_REACH_TWA_DEG: float = 60.0
+const ROUND_BEAT_TWA_DEG: float = 60.0
+const ROUND_AWAY_TWA_DEG: float = 80.0
+## How far before the mark a board is set down by default, metres (it starts from rest: far enough to be going at the
+## mark), and how wide the fan it may come from: a gybe mark's either side of the leg in, a top mark's either side of
+## straight downwind of it (beyond the laylines too: overstood, or from the wrong side).
+const ROUND_GYBE_FROM_M: float = 120.0
+const ROUND_GYBE_TO_M: float = 260.0
+const ROUND_TOP_FROM_M: float = 100.0
+const ROUND_TOP_TO_M: float = 300.0
+const ROUND_GYBE_FAN_DEG: float = 35.0
+const ROUND_TOP_FAN_DEG: float = 80.0
+## A gybe mark's legs and a gybe drill's way in are reaches, this far off the wind at most (deeper is a run).
+const ROUND_GYBE_DEEPEST_TWA_DEG: float = 160.0
+## A drill's spot keeps this much open water round it (the marks lie nearer the shore than the legs' middles).
+const ROUND_OPEN_M: float = 60.0
+## A drill's spot lies no further out than this share of the leg in (it must not start behind the mark before), and a
+## gybe drill's board heads at the mark give or take ROUND_GYBE_HEADING_DEG.
+const ROUND_LEG_SHARE: float = 0.9
+const ROUND_GYBE_HEADING_DEG: float = 15.0
+## The drill in company: a board's spot is drawn again up to this many times to be together with the first board's
+## and apart from the others.
+const ROUND_TOGETHER_TRIES: int = 60
+## The boards of a drill in company are set down at least this far apart.
+const ROUND_APART_M: float = 15.0
+## The score is taken at ROUND_SCORE_FACTOR times the first board's expected time to the mark plus ROUND_SCORE_AFTER_S:
+## about 25 s down the next leg (the smoke drills of 12 November 2026 reached the mark at 1.2 to 1.3 times the expected
+## time, starting from rest; a beat's tacks cost the most). The same moment for every arm of a pair, so a pair compares
+## the same seconds.
+const ROUND_SCORE_FACTOR: float = 1.3
+const ROUND_SCORE_AFTER_S: float = 25.0
+## Speeds round the mark: in, when it first comes within ROUND_NEAR_M of it; the least from then until ROUND_MIN_UNTIL_S
+## after the rounding counted; out, ROUND_OUT_AFTER_S after it counted.
+const ROUND_NEAR_M: float = 30.0
+const ROUND_MIN_UNTIL_S: float = 10.0
+const ROUND_OUT_AFTER_S: float = 8.0
 ## --spawn=anywhere (anywhere_places()): the box round the course's marks and lines is this much wider each way,
 ## and a spot keeps this much open water round it (metres).
 const ANYWHERE_MARGIN_M: float = 300.0
@@ -247,6 +301,8 @@ static var _lake_time_s: float = 14.5 * 3600.0
 static var _controller_overrides: Dictionary[String, float] = {}
 ## --sailor.<field> for every skipper's sailor.
 static var _sailor_overrides: Dictionary[String, float] = {}
+## The sails' trails of disturbed air (WindShadowTrail; the shadows lie along them), made at the first tick with shadows.
+static var _trail: WindShadowTrail = null
 static var _overrides_read: bool = false
 
 
@@ -324,6 +380,19 @@ class Entry:
 	var gun_felt_kt: float = NAN
 	var gun_felt_60s_kt: float = NAN
 	var gun_felt_spread_kt: float = NAN
+	## The rounding drill's measures (note_the_drill()): the race time the rounding counted (-1: not yet), the speeds
+	## in, through (the least) and out, and the score (course_progress_m() past the mark at the drill's score time).
+	var drill_rounded_s: float = -1.0
+	var drill_in_ms: float = NAN
+	var drill_min_ms: float = NAN
+	var drill_out_ms: float = NAN
+	var drill_score_m: float = NAN
+	## Where it was set down, its distance to the mark then, the wind angle of the straight way in, and the tacks and
+	## gybes up to the rounding.
+	var drill_drop_m: float = 0.0
+	var drill_approach_twa_deg: float = 0.0
+	var drill_tacks_in: int = -1
+	var drill_gybes_in: int = -1
 
 
 func _initialize() -> void:
@@ -359,7 +428,12 @@ func _initialize() -> void:
 	var polar_path: String = options.get("polar", "")
 	# A drop (--drop_step): the boards are set down on a leg after the gun, with no countdown.
 	var drop_step_text: String = options.get("drop_step", "")
-	var dropping: bool = drop_step_text != ""
+	# The rounding drill (--round_drill=gybe|top): a drop at one mark of that kind, scored ROUND_SCORE_AFTER_S after the
+	# expected time to it.
+	var drill_kind: String = options.get("round_drill", "")
+	var drilling: bool = drill_kind != ""
+	var drill_score_at_s: float = INF
+	var dropping: bool = drop_step_text != "" or drilling
 	if dropping:
 		prestart_s = 0.0
 	if options.get("map", "open") == "lake":
@@ -446,7 +520,7 @@ func _initialize() -> void:
 			if learned != null:
 				learned.closest_twa_deg = clampf(options["closest_twa_deg"].to_float(), 0.0, 90.0)
 	if shadows:
-		give_shadows(entries)
+		give_shadows(entries, options.get("shadow_trail", "1") != "0")
 	# The lake's bottom: where a board runs aground, and what the skippers see of the shore.
 	var bottom: TerrainGrid = null
 	if _lake != null:
@@ -478,28 +552,58 @@ func _initialize() -> void:
 	if dropping:
 		var drop_rng: RandomNumberGenerator = RandomNumberGenerator.new()
 		drop_rng.seed = options.get("drop_seed", "1").to_int()
-		drop_index = drop_step_text.to_int() if drop_step_text != "random" else drop_rng.randi_range(1, race.steps().size() - 1)
-		drop_index = clampi(drop_index, 1, race.steps().size() - 1)
-		goal_index = mini(drop_index + maxi(options.get("goal_steps", "2").to_int(), 1), race.steps().size())
 		var drop_lookout: ShoreLookout = ShoreLookout.for_lake(bottom, course.start_middle()) if bottom != null else null
 		var wind_from_deg: float = _lake.map_wind().lake_from_deg(_lake_time_s) if _lake != null else course.axis_deg
+		# The drill reckons its times in the wind the race is sailed in (the lake's mean times --lake_wind_scale).
+		var drill_wind_kt: float = wind_kt * (options.get("lake_wind_scale", "1").to_float() if _lake != null else 1.0)
+		var drill_rng: RandomNumberGenerator = RandomNumberGenerator.new()
+		drill_rng.seed = options.get("round_seed", "1").to_int()
+		if drilling:
+			var drill_marks: Array[int] = round_drill_marks(race, wind_from_deg, drill_kind)
+			if drill_marks.is_empty():
+				print("DRILL_NONE no %s mark on %s" % [drill_kind, course.name])
+				quit(3)
+				return
+			drop_index = drill_marks[drill_rng.randi_range(0, drill_marks.size() - 1)]
+			goal_index = drop_index + 1
+		else:
+			drop_index = drop_step_text.to_int() if drop_step_text != "random" else drop_rng.randi_range(1, race.steps().size() - 1)
+			drop_index = clampi(drop_index, 1, race.steps().size() - 1)
+			goal_index = mini(drop_index + maxi(options.get("goal_steps", "2").to_int(), 1), race.steps().size())
 		# The gun first (no countdown), then the boards set down: a board put on the course side
 		# before the gun would count as over the line early.
 		race.start()
-		for i: int in entries.size():
-			var spot: Vector3 = drop_spot(race, drop_index, wind_from_deg, drop_rng, drop_lookout)
-			entries[i].sim.reset(Vector3(spot.x, 0.0, spot.y), deg_to_rad(spot.z))
-			entries[i].controller.reset_controls(entries[i].controls)
-			race.place_board(i, Vector2(spot.x, spot.y), drop_index)
+		if drilling:
+			var top: bool = drill_kind == "top"
+			var range_m: PackedStringArray = options.get("round_from_m", "").split(",")
+			var from_m: float = range_m[0].to_float() if range_m.size() == 2 else (ROUND_TOP_FROM_M if top else ROUND_GYBE_FROM_M)
+			var to_m: float = range_m[1].to_float() if range_m.size() == 2 else (ROUND_TOP_TO_M if top else ROUND_GYBE_TO_M)
+			place_drill(race, entries, drop_index, drill_kind, wind_from_deg, drill_rng, drop_lookout, from_m, to_m,
+				options.get("round_together_s", "0").to_float(), course.axis_deg, drill_wind_kt)
+		else:
+			for i: int in entries.size():
+				var spot: Vector3 = drop_spot(race, drop_index, wind_from_deg, drop_rng, drop_lookout)
+				entries[i].sim.reset(Vector3(spot.x, 0.0, spot.y), deg_to_rad(spot.z))
+				entries[i].controller.reset_controls(entries[i].controls)
+				race.place_board(i, Vector2(spot.x, spot.y), drop_index)
 		for i: int in entries.size():
 			if entries[i].skipper != null:
 				entries[i].skipper.setup(entries[i].sim, entries[i].controller, entries[i].hands, race, i)
-		var expected_s: float = expected_time_s(race, drop_index, goal_index, Vector2(entries[0].sim.telemetry.position.x, entries[0].sim.telemetry.position.z), course.axis_deg, wind_kt)
+		var expected_s: float = expected_time_s(race, drop_index, goal_index, Vector2(entries[0].sim.telemetry.position.x, entries[0].sim.telemetry.position.z), course.axis_deg,
+			drill_wind_kt if drilling else wind_kt)
 		options["expected_s"] = str(expected_s)
-		if not options.has("seconds"):
-			seconds = DROP_TIME_FACTOR * expected_s + DROP_TIME_EXTRA_S
-		print("DROP on the way to step %d (%s), goal step %d, %.0f s expected, %.0f s allowed" % [
-			drop_index, race.steps()[drop_index].name, goal_index, expected_s, seconds])
+		if drilling:
+			drill_score_at_s = ROUND_SCORE_FACTOR * expected_s + ROUND_SCORE_AFTER_S
+			if not options.has("seconds"):
+				seconds = drill_score_at_s + 1.0
+			print("DRILL %s at step %d (%s), %d board%s, the first %.0f m out, %.0f s expected to the mark, scored at %.0f s" % [
+				drill_kind, drop_index, race.steps()[drop_index].name, entries.size(), "" if entries.size() == 1 else "s",
+				entries[0].drill_drop_m, expected_s, drill_score_at_s])
+		else:
+			if not options.has("seconds"):
+				seconds = DROP_TIME_FACTOR * expected_s + DROP_TIME_EXTRA_S
+			print("DROP on the way to step %d (%s), goal step %d, %.0f s expected, %.0f s allowed" % [
+				drop_index, race.steps()[drop_index].name, goal_index, expected_s, seconds])
 	if steady_hands:
 		steady_the_hands(entries)
 	if not tune_skippers(entries, skipper_push, polar_path):
@@ -579,14 +683,20 @@ func _initialize() -> void:
 			aground_count += _check_the_bottom(bottom, race, entries)
 		for i: int in entries.size():
 			note_the_start(entries[i], race, i)
+			if drilling:
+				note_the_drill(entries[i], race, i, drop_index, drill_score_at_s)
 		if tick % CSV_EVERY == 0:
 			for i: int in entries.size():
 				_write_row(entries[i], race, i)
 		if tick % WATCH_EVERY == 0:
 			for i: int in entries.size():
 				_watch(entries[i], race, i, goal_index, watch_lookout)
-			note_the_crowd(race, entries, WATCH_EVERY * DT)
-			note_dirty_wind(race, entries, WATCH_EVERY * DT)
+			# A drill is watched from the drop to its score; a race round its start.
+			var watch_from_s: float = 0.0 if drilling else -START_NEAR_FROM_S
+			var dirty_from_s: float = 0.0 if drilling else -START_DIRTY_FROM_S
+			var watch_until_s: float = drill_score_at_s if drilling else START_SCORE_AT_S
+			note_the_crowd(race, entries, WATCH_EVERY * DT, watch_from_s, watch_until_s)
+			note_dirty_wind(race, entries, WATCH_EVERY * DT, dirty_from_s, watch_until_s)
 		if not gun_seen and race.is_started() and race.clock_s() >= 0.0:
 			gun_seen = true
 			outside_at_gun = boards_outside(race, area)
@@ -598,8 +708,16 @@ func _initialize() -> void:
 			break
 		if start_only and race.clock_s() >= 0.0 and (race.clock_s() >= start_watch_s or (all_over_the_line(race, entries) and race.clock_s() >= start_follow_s)):
 			break
-		if dropping and entries.all(func(e: Entry) -> bool: return e.goal_at_s >= 0.0 or e.aground):
+		if drilling and race.clock_s() >= drill_score_at_s:
 			break
+		if dropping and not drilling and entries.all(func(e: Entry) -> bool: return e.goal_at_s >= 0.0 or e.aground):
+			break
+	# A drill that ended before its score time (every board over the finish soon after the mark): the score as it is now,
+	# the whole course for a board that finished.
+	if drilling:
+		for i: int in entries.size():
+			if is_nan(entries[i].drill_score_m):
+				entries[i].drill_score_m = course_progress_m(race, i) - step_progress_m(race, drop_index)
 	# The goal reached on the very last tick (the race over at the finish) still counts.
 	for i: int in entries.size():
 		if entries[i].goal_at_s < 0.0 and race.next_step_index(i) >= goal_index:
@@ -655,6 +773,8 @@ func _initialize() -> void:
 		result["dirty_s"] = snappedf(entries[i].dirty_s, 0.1)
 		result["wind_lost_s"] = snappedf(entries[i].wind_lost_s, 0.01)
 		result["boards"] = entries.size()
+		if drilling:
+			result["drill"] = drill_result(entries[i], race, drop_index, drill_kind, drill_score_at_s)
 		for key: String in ["gun_mean_kt", "gun_felt_kt", "gun_felt_60s_kt", "gun_felt_spread_kt"]:
 			var value: float = entries[i].get(key)
 			result[key] = snappedf(value, 0.1) if not is_nan(value) else null
@@ -724,9 +844,10 @@ static func note_the_start(entry: Entry, race: RaceSim, index: int) -> void:
 ## Boards tangled up in each other round the start (phase S3; Max, 10 November 2026: "sometimes in testing they get
 ## stuck in each other"; the boards pass through each other, so a tangle shows as time spent close): each board within
 ## NEAR_M of another from START_NEAR_FROM_S before the gun to START_SCORE_AT_S after it counts dt_s.
-static func note_the_crowd(race: RaceSim, entries: Array[Entry], dt_s: float) -> void:
+static func note_the_crowd(race: RaceSim, entries: Array[Entry], dt_s: float, from_s: float = -START_NEAR_FROM_S,
+		until_s: float = START_SCORE_AT_S) -> void:
 	var now_s: float = race.clock_s()
-	if not race.is_started() or now_s < -START_NEAR_FROM_S or now_s > START_SCORE_AT_S or entries.size() < 2:
+	if not race.is_started() or now_s < from_s or now_s > until_s or entries.size() < 2:
 		return
 	for i: int in entries.size():
 		var here: Vector2 = _where(entries[i])
@@ -739,9 +860,10 @@ static func note_the_crowd(race: RaceSim, entries: Array[Entry], dt_s: float) ->
 ## Dirty wind round the start (phase S3; Max, 12 November 2026): each board with its sail up whose wind the other sails'
 ## shadows leave under DIRTY_FACTOR, from START_DIRTY_FROM_S before the gun to START_SCORE_AT_S after it, counts dt_s;
 ## and every board adds the wind it lost (1 less the shadows' factor) times dt_s. Read only: the races stay the same.
-static func note_dirty_wind(race: RaceSim, entries: Array[Entry], dt_s: float) -> void:
+static func note_dirty_wind(race: RaceSim, entries: Array[Entry], dt_s: float, from_s: float = -START_DIRTY_FROM_S,
+		until_s: float = START_SCORE_AT_S) -> void:
 	var now_s: float = race.clock_s()
-	if not race.is_started() or now_s < -START_DIRTY_FROM_S or now_s > START_SCORE_AT_S or entries.size() < 2:
+	if not race.is_started() or now_s < from_s or now_s > until_s or entries.size() < 2:
 		return
 	for entry: Entry in entries:
 		if entry.shadows == null or entry.sim.sailor_state != WindsurferSim.SailorState.SAILING:
@@ -959,6 +1081,155 @@ static func drop_spot(race: RaceSim, step_index: int, wind_from_deg: float, rng:
 	return Vector3(spot.x, spot.y, fposmod(heading_deg, 360.0))
 
 
+## The marks a rounding drill of `kind` can be sailed at (--round_drill), as step indexes; never the start or the
+## finish. "gybe": a slalom's gybe mark, its legs in and out both reaches (ROUND_REACH_TWA_DEG to
+## ROUND_GYBE_DEEPEST_TWA_DEG off the wind: a leg out nearer dead downwind is a run, sailed at the run's angle with a
+## gybe on its layline, not at the mark), on opposite tacks, the shorter turn between them through downwind. "top": reached on a beat (the leg in within ROUND_BEAT_TWA_DEG
+## of the wind) and left downwind (the leg out at least ROUND_AWAY_TWA_DEG off it): the bear-away.
+static func round_drill_marks(race: RaceSim, wind_from_deg: float, kind: String) -> Array[int]:
+	var steps: Array[RaceStep] = race.steps()
+	var marks: Array[int] = []
+	for k: int in range(1, steps.size() - 1):
+		if steps[k].kind != RaceStep.Kind.MARK and steps[k].kind != RaceStep.Kind.GATE:
+			continue
+		var in_deg: float = Course.turn_deg(wind_from_deg, Course.bearing_deg(steps[k - 1].target(), steps[k].target()))
+		var out_deg: float = Course.turn_deg(wind_from_deg, Course.bearing_deg(steps[k].target(), steps[k + 1].target()))
+		var gybe: bool = absf(in_deg) >= ROUND_REACH_TWA_DEG and absf(out_deg) >= ROUND_REACH_TWA_DEG \
+			and absf(in_deg) <= ROUND_GYBE_DEEPEST_TWA_DEG and absf(out_deg) <= ROUND_GYBE_DEEPEST_TWA_DEG \
+			and signf(in_deg) != signf(out_deg) and absf(in_deg) + absf(out_deg) > 180.0
+		var top: bool = absf(in_deg) <= ROUND_BEAT_TWA_DEG and absf(out_deg) >= ROUND_AWAY_TWA_DEG
+		if (kind == "gybe" and gybe) or (kind == "top" and top):
+			marks.append(k)
+	return marks
+
+
+## A drill's spot and heading before the mark of step k, as Vector3(x, z, heading in degrees): from_m to to_m metres
+## from the mark (no further than ROUND_LEG_SHARE of the leg in), from a random angle. A gybe mark: within
+## ROUND_GYBE_FAN_DEG either side of the leg in, the straight way in a reach on the leg in's tack (not deeper than
+## ROUND_GYBE_DEEPEST_TWA_DEG), heading at the mark give or take ROUND_GYBE_HEADING_DEG. A top mark: within
+## ROUND_TOP_FAN_DEG either side of straight downwind of it (so beyond the laylines too: overstood, or from the wrong
+## side), close-hauled on a random tack (half of them heading away: "coming from the wrong way"). In open water
+## (ROUND_OPEN_M round it, when there is a lookout).
+static func round_drill_spot(race: RaceSim, k: int, kind: String, wind_from_deg: float, rng: RandomNumberGenerator, lookout: ShoreLookout,
+		from_m: float, to_m: float) -> Vector3:
+	var steps: Array[RaceStep] = race.steps()
+	var mark: Vector2 = steps[k].target()
+	var before: Vector2 = steps[k - 1].target()
+	var in_deg: float = Course.turn_deg(wind_from_deg, Course.bearing_deg(before, mark))
+	var far_m: float = maxf(minf(to_m, before.distance_to(mark) * ROUND_LEG_SHARE), from_m * 0.5)
+	var near_m: float = minf(from_m, far_m)
+	var spot: Vector2 = mark + (before - mark).normalized() * near_m
+	for attempt: int in 80:
+		var out_deg: float = wind_from_deg + 180.0 + rng.randf_range(-ROUND_TOP_FAN_DEG, ROUND_TOP_FAN_DEG) if kind == "top" \
+			else Course.bearing_deg(mark, before) + rng.randf_range(-ROUND_GYBE_FAN_DEG, ROUND_GYBE_FAN_DEG)
+		var candidate: Vector2 = mark + Course.direction_of(out_deg) * rng.randf_range(near_m, far_m)
+		if kind != "top":
+			var way_in_deg: float = Course.turn_deg(wind_from_deg, Course.bearing_deg(candidate, mark))
+			if signf(way_in_deg) != signf(in_deg) or absf(way_in_deg) < ROUND_REACH_TWA_DEG or absf(way_in_deg) > ROUND_GYBE_DEEPEST_TWA_DEG:
+				continue
+		if lookout != null and lookout.openness_m(candidate) < ROUND_OPEN_M:
+			continue
+		spot = candidate
+		break
+	var heading_deg: float = Course.bearing_deg(spot, mark) + rng.randf_range(-ROUND_GYBE_HEADING_DEG, ROUND_GYBE_HEADING_DEG)
+	if kind == "top":
+		var side: float = 1.0 if rng.randf() < 0.5 else -1.0
+		heading_deg = wind_from_deg + side * DROP_CLOSE_DEG
+	return Vector3(spot.x, spot.y, fposmod(heading_deg, 360.0))
+
+
+## The rounding drill's boards set down after the gun (--round_drill): each at its own round_drill_spot() before the
+## mark of step mark_index, at least ROUND_APART_M from the others, and, with together_s above 0 (the laylines in
+## company), each one's expected time to the mark within together_s of the first board's. Each board's distance to the
+## mark and the wind angle of its straight way in are kept for its HEADS_RESULT.
+static func place_drill(race: RaceSim, entries: Array[Entry], mark_index: int, kind: String, wind_from_deg: float, rng: RandomNumberGenerator,
+		lookout: ShoreLookout, from_m: float, to_m: float, together_s: float, axis_deg: float, wind_kt: float) -> void:
+	var mark: Vector2 = race.steps()[mark_index].target()
+	var first_s: float = -1.0
+	var placed: PackedVector2Array = PackedVector2Array()
+	for i: int in entries.size():
+		var spot: Vector3 = round_drill_spot(race, mark_index, kind, wind_from_deg, rng, lookout, from_m, to_m)
+		for attempt: int in ROUND_TOGETHER_TRIES:
+			var at: Vector2 = Vector2(spot.x, spot.y)
+			var apart: bool = true
+			for other: Vector2 in placed:
+				apart = apart and at.distance_to(other) >= ROUND_APART_M
+			var together: bool = first_s < 0.0 or together_s <= 0.0 \
+				or absf(TrainingDrops.expected_leg_s(at, mark, axis_deg, wind_kt) - first_s) <= together_s
+			if apart and together:
+				break
+			spot = round_drill_spot(race, mark_index, kind, wind_from_deg, rng, lookout, from_m, to_m)
+		var where: Vector2 = Vector2(spot.x, spot.y)
+		if first_s < 0.0:
+			first_s = TrainingDrops.expected_leg_s(where, mark, axis_deg, wind_kt)
+		placed.append(where)
+		entries[i].sim.reset(Vector3(spot.x, 0.0, spot.y), deg_to_rad(spot.z))
+		entries[i].controller.reset_controls(entries[i].controls)
+		race.place_board(i, where, mark_index)
+		entries[i].drill_drop_m = where.distance_to(mark)
+		entries[i].drill_approach_twa_deg = Course.turn_deg(wind_from_deg, Course.bearing_deg(where, mark))
+
+
+## The rounding drill's measures each tick: the speed when the board first comes within ROUND_NEAR_M of the mark, the
+## least from then until ROUND_MIN_UNTIL_S after its rounding counted, the speed ROUND_OUT_AFTER_S after it, the race
+## time it counted with the tacks and gybes up to it, and the score at score_at_s (course_progress_m() past the mark:
+## Max, "a way to calculate which was the fastest gybe"; minus the way still to the mark when it has not rounded yet).
+static func note_the_drill(entry: Entry, race: RaceSim, index: int, mark_index: int, score_at_s: float) -> void:
+	var now_s: float = race.clock_s()
+	var speed_ms: float = entry.sim.telemetry.speed_ms
+	var next: int = race.next_step_index(index)
+	if next == mark_index and is_nan(entry.drill_in_ms) and race.distance_to_next_m(index) <= ROUND_NEAR_M:
+		entry.drill_in_ms = speed_ms
+		entry.drill_min_ms = speed_ms
+	if next > mark_index and entry.drill_rounded_s < 0.0:
+		entry.drill_rounded_s = now_s
+		entry.drill_tacks_in = entry.tacks
+		entry.drill_gybes_in = entry.gybes
+	if not is_nan(entry.drill_min_ms) and (entry.drill_rounded_s < 0.0 or now_s <= entry.drill_rounded_s + ROUND_MIN_UNTIL_S):
+		entry.drill_min_ms = minf(entry.drill_min_ms, speed_ms)
+	if entry.drill_rounded_s >= 0.0 and is_nan(entry.drill_out_ms) and now_s >= entry.drill_rounded_s + ROUND_OUT_AFTER_S:
+		entry.drill_out_ms = speed_ms
+	if is_nan(entry.drill_score_m) and now_s >= score_at_s:
+		entry.drill_score_m = course_progress_m(race, index) - step_progress_m(race, mark_index)
+
+
+## How far along the course a board is, metres: the straight legs between the steps' targets up to its next step, less
+## its distance to that step. Past the finish: the whole course.
+static func course_progress_m(race: RaceSim, index: int) -> float:
+	var next: int = race.next_step_index(index)
+	if next >= race.steps().size():
+		return step_progress_m(race, race.steps().size() - 1)
+	return step_progress_m(race, next) - race.distance_to_next_m(index)
+
+
+## The straight legs between the steps' targets from the start to step k, metres.
+static func step_progress_m(race: RaceSim, k: int) -> float:
+	var steps: Array[RaceStep] = race.steps()
+	var total: float = 0.0
+	for j: int in range(1, mini(k, steps.size() - 1) + 1):
+		total += steps[j - 1].target().distance_to(steps[j].target())
+	return total
+
+
+## A board's rounding drill for its HEADS_RESULT line (tools/heads/random_suite.py reads it). Numbers not reached are
+## null (no rounding, never near the mark).
+static func drill_result(entry: Entry, race: RaceSim, mark_index: int, kind: String, score_at_s: float) -> Dictionary:
+	return {"kind": kind, "mark_step": mark_index, "mark": race.steps()[mark_index].name,
+		"drop_m": snappedf(entry.drill_drop_m, 0.1), "approach_twa_deg": snappedf(entry.drill_approach_twa_deg, 0.1),
+		"score_at_s": snappedf(score_at_s, 0.1), "score_m": _snapped_or_null(entry.drill_score_m, 0.1),
+		"rounded_s": snappedf(entry.drill_rounded_s, 0.1) if entry.drill_rounded_s >= 0.0 else null,
+		"in_ms": _snapped_or_null(entry.drill_in_ms, 0.01), "min_ms": _snapped_or_null(entry.drill_min_ms, 0.01),
+		"out_ms": _snapped_or_null(entry.drill_out_ms, 0.01),
+		"tacks_in": entry.drill_tacks_in if entry.drill_tacks_in >= 0 else entry.tacks,
+		"gybes_in": entry.drill_gybes_in if entry.drill_gybes_in >= 0 else entry.gybes,
+		"tacks": entry.tacks, "gybes": entry.gybes}
+
+
+## A number for a JSON line, or null when it was never measured (NAN).
+static func _snapped_or_null(value: float, step: float) -> Variant:
+	return null if is_nan(value) else snappedf(value, step)
+
+
 ## The all-rounder's expected time from a point (or, with Vector2(INF, INF), from the start line) through
 ## the steps from `from_index` up to (not including) `goal_index`, seconds (TrainingDrops.expected_leg_s()).
 static func expected_time_s(race: RaceSim, from_index: int, goal_index: int, from: Vector2, axis_deg: float, wind_kt: float) -> float:
@@ -1134,9 +1405,13 @@ static func make_entries(race: RaceSim, course: Course, who: PackedStringArray, 
 
 ## The other sails' wind shadows on every board's wind (F3): one WindShadows per board, its own
 ## copy of the fleet's places each tick (cast_shadows()).
-static func give_shadows(entries: Array[Entry]) -> void:
+static func give_shadows(entries: Array[Entry], trail: bool = true) -> void:
+	var config: WindShadowConfig = (load("res://config/wind_shadow_default.tres") as WindShadowConfig).duplicate()
+	config.follows_apparent_wind = config.follows_apparent_wind and trail
+	# A new race: new trails.
+	_trail = null
 	for entry: Entry in entries:
-		entry.shadows = WindShadows.make()
+		entry.shadows = WindShadows.make(config)
 		entry.sim.wind.disturbance = entry.shadows
 
 
@@ -1231,14 +1506,22 @@ static func cast_shadows(entries: Array[Entry]) -> void:
 	var xs: PackedFloat32Array = PackedFloat32Array()
 	var zs: PackedFloat32Array = PackedFloat32Array()
 	var casts: PackedByteArray = PackedByteArray()
+	var sims: Array[WindsurferSim] = []
 	for entry: Entry in entries:
 		var position: Vector3 = entry.sim.telemetry.position
 		xs.append(position.x)
 		zs.append(position.z)
 		casts.append(1 if entry.sim.sailor_state == WindsurferSim.SailorState.SAILING else 0)
+		sims.append(entry.sim)
+	# The sails' trails of disturbed air (WindShadowTrail): the shadows lie along them.
+	if _trail == null:
+		_trail = WindShadowTrail.make()
+	_trail.update(DT, sims, casts)
+	var points: PackedFloat32Array = _trail.points()
 	for i: int in entries.size():
 		if entries[i].shadows != null:
 			entries[i].shadows.set_fleet(xs, zs, casts, i)
+			entries[i].shadows.set_trail(points, i)
 
 
 ## One tick of the race: every board (its sailor, the physics, the falls and the manoeuvres

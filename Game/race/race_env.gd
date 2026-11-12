@@ -230,6 +230,8 @@ var time_s: float = 0.0
 var ticks: int = 0
 var _board_count: int = 1
 var _boards: Array[Board] = []
+## The sails' trails of disturbed air (WindShadowTrail; the shadows lie along them), made at the first tick with shadows.
+var _trail: WindShadowTrail = null
 ## The area the boards must stay in: the marks' box grown by bounds_margin_m.
 var _bounds: Rect2 = Rect2()
 ## Where the wind comes from, degrees: the course's axis and the options' bias.
@@ -577,14 +579,22 @@ func _cast_shadows() -> void:
 	var xs: PackedFloat32Array = PackedFloat32Array()
 	var zs: PackedFloat32Array = PackedFloat32Array()
 	var casts: PackedByteArray = PackedByteArray()
+	var sims: Array[WindsurferSim] = []
 	for b: Board in _boards:
 		var position: Vector3 = b.sim.telemetry.position
 		xs.append(position.x)
 		zs.append(position.z)
 		casts.append(1 if not b.done and b.sim.sailor_state == WindsurferSim.SailorState.SAILING else 0)
+		sims.append(b.sim)
+	# The sails' trails of disturbed air (WindShadowTrail): the shadows lie along them.
+	if _trail == null:
+		_trail = WindShadowTrail.make()
+	_trail.update(DT, sims, casts)
+	var points: PackedFloat32Array = _trail.points()
 	for i: int in _boards.size():
 		if _boards[i].shadows != null:
 			_boards[i].shadows.set_fleet(xs, zs, casts, i)
+			_boards[i].shadows.set_trail(points, i)
 
 
 ## The judge told where everyone is (a parked board is in the water for the rules: kept clear of

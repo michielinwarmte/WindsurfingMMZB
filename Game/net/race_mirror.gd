@@ -40,6 +40,8 @@ var _net: NetBoards = null
 var _ids: Array[int] = []
 var _my_index: int = -1
 var _shadows: WindShadows = null
+## The sails' trails of disturbed air (WindShadowTrail), made with the shadows.
+var _trail: WindShadowTrail = null
 ## The start's signals of the host's current start (SO3).
 var _start_signals: RaceStartSignals = null
 ## What the host's race director decided (RaceDirector.info()), and its line on the screen.
@@ -278,23 +280,30 @@ func _physics_process(delta: float) -> void:
 	race.mirror_step(delta)
 	for kind: RaceStartSignals.Kind in _start_signals.update(race.is_started(), race.clock_s()):
 		start_signal.emit(kind)
-	_cast_shadows_on_own_board()
+	_cast_shadows_on_own_board(delta)
 
 
 ## Every other sail's shadow on this PC's board (WindShadows, AI_FLEET_PLAN.md D5).
-func _cast_shadows_on_own_board() -> void:
+func _cast_shadows_on_own_board(delta: float) -> void:
 	if _shadows == null or _my_index < 0:
 		return
+	if _trail == null:
+		_trail = WindShadowTrail.make()
 	var xs: PackedFloat32Array = PackedFloat32Array()
 	var zs: PackedFloat32Array = PackedFloat32Array()
 	var casts: PackedByteArray = PackedByteArray()
+	var sims: Array[WindsurferSim] = []
 	for i: int in _ids.size():
 		var node: WindsurferNode = _node_of(i)
 		var at: Vector3 = node.sim.telemetry.position if node != null else Vector3.INF
 		xs.append(at.x)
 		zs.append(at.z)
 		casts.append(1 if node != null and node.visible and node.sim.sailor_state == WindsurferSim.SailorState.SAILING else 0)
+		sims.append(node.sim if node != null else null)
 	_shadows.set_fleet(xs, zs, casts, _my_index)
+	# The sails' trails of disturbed air (WindShadowTrail): every board's, from its puppet's place, speed and wind.
+	_trail.update(delta, sims, casts)
+	_shadows.set_trail(_trail.points(), _my_index)
 	_own.sim.wind.disturbance = _shadows
 
 

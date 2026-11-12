@@ -1,6 +1,6 @@
 extends GutTest
 ## The wind shadows of a fleet (AI_FLEET_PLAN.md, D5): behind a sail the wind is 30 % less close
-## by, fading to nothing at 30 m, in a cone 2.5 m wide at the sail that widens at 8 degrees; nothing
+## by, fading to nothing at 20 m (Max, 13 November 2026; 30 m before), in a cone 2.5 m wide at the sail that widens at 8 degrees; nothing
 ## upwind of the sail or outside the cone; shadows add up to at most half the wind; a board's own
 ## sail and a sail in the water cast none; the cone lies along the wind wherever it blows from; and a
 ## wind field with the shadows set gives less wind at a shadowed point (the physics' hook).
@@ -29,13 +29,13 @@ func test_nothing_without_a_fleet_or_wind() -> void:
 	assert_eq(one.factor_at(_at(0.0, 2.0), Vector3.ZERO), 1.0, "no wind, no shadow")
 
 
-func test_30_percent_less_close_behind_the_sail_fading_to_nothing_at_30_m() -> void:
+func test_30_percent_less_close_behind_the_sail_fading_to_nothing_at_20_m() -> void:
 	var one: WindShadows = _shadows([0.0], [0.0])
 	assert_almost_eq(one.factor_at(_at(0.0, 2.0), SOUTH_10), 0.7, 1e-6, "2 m downwind: the full deficit")
 	assert_almost_eq(one.factor_at(_at(0.0, 5.0), SOUTH_10), 0.7, 1e-6, "still full at 5 m")
-	# 20 m: 15 of the remaining 25 m into the fade: 40 % of the deficit left.
-	assert_almost_eq(one.factor_at(_at(0.0, 20.0), SOUTH_10), 1.0 - 0.3 * 0.4, 1e-6)
-	assert_eq(one.factor_at(_at(0.0, 35.0), SOUTH_10), 1.0, "beyond 30 m: nothing")
+	# 15 m: 10 of the remaining 15 m into the fade: a third of the deficit left.
+	assert_almost_eq(one.factor_at(_at(0.0, 15.0), SOUTH_10), 1.0 - 0.3 / 3.0, 1e-6)
+	assert_eq(one.factor_at(_at(0.0, 25.0), SOUTH_10), 1.0, "beyond 20 m: nothing")
 	assert_eq(one.factor_at(_at(0.0, -2.0), SOUTH_10), 1.0, "upwind of the sail: nothing")
 	assert_eq(one.factor_at(_at(0.0, 0.0), SOUTH_10), 1.0, "at the sail itself: nothing (it is not downwind)")
 
@@ -47,17 +47,17 @@ func test_the_cone_is_2_5_m_wide_at_the_sail_widening_at_8_degrees_with_a_smooth
 	var share: float = 2.0 / width
 	assert_almost_eq(one.factor_at(_at(2.0, 2.0), SOUTH_10), 1.0 - 0.3 * (1.0 - share * share), 1e-6, "inside, less than on the axis")
 	assert_eq(one.factor_at(_at(3.0, 2.0), SOUTH_10), 1.0, "outside the cone")
-	# 25 m downwind the cone is 2.5 + 25 tan 8 = 6.0 m wide either side.
-	assert_true(one.factor_at(_at(5.5, 25.0), SOUTH_10) < 1.0, "inside the widened cone")
-	assert_eq(one.factor_at(_at(6.5, 25.0), SOUTH_10), 1.0, "outside it")
+	# 15 m downwind the cone is 2.5 + 15 tan 8 = 4.6 m wide either side.
+	assert_true(one.factor_at(_at(4.3, 15.0), SOUTH_10) < 1.0, "inside the widened cone")
+	assert_eq(one.factor_at(_at(4.9, 15.0), SOUTH_10), 1.0, "outside it")
 
 
 func test_shadows_add_up_to_at_most_half_the_wind() -> void:
 	var two: WindShadows = _shadows([0.0, 0.0], [0.0, 1.0])
 	assert_almost_eq(two.factor_at(_at(0.0, 3.0), SOUTH_10), 0.5, 1e-6, "two full shadows: 60 % capped at 50")
-	var apart: WindShadows = _shadows([0.0, 0.0], [0.0, -20.0])
-	# The sail 20 m further upwind has 40 % of its deficit left at 23 m: 0.3 + 0.12.
-	assert_almost_eq(apart.factor_at(_at(0.0, 3.0), SOUTH_10), 1.0 - 0.3 - 0.3 * (1.0 - 18.0 / 25.0), 1e-6)
+	var apart: WindShadows = _shadows([0.0, 0.0], [0.0, -10.0])
+	# The sail 10 m further upwind has 7 of 15 m of its fade left at 13 m.
+	assert_almost_eq(apart.factor_at(_at(0.0, 3.0), SOUTH_10), 1.0 - 0.3 - 0.3 * (1.0 - 8.0 / 15.0), 1e-6)
 
 
 func test_a_boards_own_sail_and_a_sail_in_the_water_cast_no_shadow() -> void:

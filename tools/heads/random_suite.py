@@ -21,6 +21,18 @@ checks that must always hold (not by who wins), with every mark rounding measure
                  drawn at random (--start_spots), the rules and the wind shadows on (the race tool's defaults), each
                  watched to 30 s after the gun (--start_follow_s=30) for the start's score: how far up the course it is
                  then (score_m); every board judged on its own
+  --phase=R      the rounding drill (Max, 12 November 2026: "1 head (80% cpu) training mark roundings from every angle.
+                 for slalom gybing and rounding for going from upwind to downwind. this way you can test fast just as the
+                 beginning of the starts"; "just as with the start a way to calculate which was the fastest gybe"): the
+                 general head alone, set down after the gun before one mark of the drawn course (run_race --round_drill):
+                 half of the races a slalom's gybe mark, half a top mark (a beat in, downwind out), from a random angle
+                 and distance; scored at a fixed time after the drop (how far down the course past the mark, metres);
+                 checks: rounded, stuck, aground, falls (none at all). A course without such a mark is drawn again
+  --phase=L      the laylines in company (Max, 12 November 2026: "when coming from the wrong way when going upwind they
+                 over-lay the layline"; "layline training with other sailors"): phase R's top-mark drill with three
+                 copies of the general head, set down 150 to 400 m below the mark from both sides and on either tack, each
+                 expected at the mark within 8 s of the first; the rules and the wind shadows on; the same score, and the
+                 penalties, the dirty wind and the overstand of the layline
   --extra="..."  arguments added to every race (an A/B: the same --seed and --set with and without a switch)
 
 Speed (measured 8 November 2026 on the 8-core Ryzen 7 5800X3D, one board, the editor engine): 4.0x real time alone,
@@ -80,7 +92,14 @@ PERSONAS = ["aiko", "bruno", "elin", "greta", "hana", "ines", "jonas", "kofi", "
 CHARACTERS = ["allrounder", "cautious", "gambler", "rookie"]
 TUNE_SEED_BASE = 1
 HOLDOUT_SEED_BASE = 700001
-REDRAWN_MARKS = ("COURSE_ILLEGAL", "WIND_TOO_LOW", "FIT_FAILED", "DROP_TOO_FAR")
+REDRAWN_MARKS = ("COURSE_ILLEGAL", "WIND_TOO_LOW", "FIT_FAILED", "DROP_TOO_FAR", "DRILL_NONE")
+# Phase R and L (12 November 2026): the rounding drill's kinds, and the laylines in company's boards, how close in time
+# they reach the mark, and how far out they are set down (metres).
+PHASE_R_KINDS = ("gybe", "top")
+PHASE_L_BOARDS = 3
+PHASE_L_TOGETHER_S = 8
+PHASE_L_FROM_M = "150,400"
+DRILL_PHASES = ("R", "L")
 # Phase S: only drops that reach the start line with this much to spare (Max, 9 November 2026), and how long after the
 # gun a start-only race is watched (the start check's limit is 20 s; the rest says how late a late start was).
 PHASE_S_SPARE_S = 30
@@ -149,7 +168,16 @@ def kind_matches(drawn, kind):
 
 def draw_race(rng, phase="A"):
     """One race's arguments for run_race.gd and a short description of what was drawn."""
-    if phase == "S3":
+    if phase == "L":
+        # Three copies of the general head on the top mark's drill, set down together below it.
+        who = "general head x%d, top mark" % PHASE_L_BOARDS
+        args = list(GENERAL_HEAD) + ["--boards=%d" % PHASE_L_BOARDS, "--gear=1", "--min_wind_kt=14", "--round_drill=top",
+                                     "--round_together_s=%d" % PHASE_L_TOGETHER_S, "--round_from_m=%s" % PHASE_L_FROM_M]
+    elif phase == "R":
+        kind = rng.choice(PHASE_R_KINDS)
+        who = "general head, %s mark" % kind
+        args = list(GENERAL_HEAD) + ["--gear=1", "--min_wind_kt=14", "--round_drill=%s" % kind]
+    elif phase == "S3":
         # Three copies of the general head (Max: "we want the fastest skipper"), each with its own start spot drawn
         # at random (the head's sheet has one: all three aimed at the same point).
         spots = [rng.random() for _ in range(PHASE_S3_BOARDS)]
@@ -169,6 +197,9 @@ def draw_race(rng, phase="A"):
     seed = rng.randint(1, 10**6)
     args += ["--seed=%d" % seed]
     d = {"who": who, "phase": phase}
+    if phase in DRILL_PHASES:
+        # The drill's own seed: which mark of the course and where the boards are set down.
+        args += ["--round_seed=%d" % seed]
     countdown = rng.choice([120, 180, 300])
     args.append("--prestart=%d" % countdown)
     d["countdown_s"] = countdown
@@ -226,7 +257,12 @@ def draw_race(rng, phase="A"):
         d["start"] = "anywhere"
     d["restart"] = "-"
     with_r = rng.random() < 0.2  # one draw whatever the phase: phase A's and B's races stay what they were
-    if with_r and phase in ("S", "S3"):
+    if phase in DRILL_PHASES:
+        # A drill has no countdown and no R: the race tool drops the boards after the gun (the start drawn above is not
+        # used).
+        d["start"] = "drill"
+        d["drill"] = "top" if phase == "L" else who.split(", ")[1].split(" ")[0]
+    elif with_r and phase in ("S", "S3"):
         # Phase S: R in the countdown or up to 2 minutes after the gun; the start after the last R counts.
         if rng.random() < 0.5:
             at_s = -rng.uniform(5.0, countdown - 5.0)
@@ -385,6 +421,15 @@ def roundings(rows, course, axis_deg, axis_is_wind=True):
     return out
 
 
+def board_file(name, earlier):
+    """The CSV file the race tool wrote for a board: RunRace._file_name() (lower case, spaces as underscores), a second
+    board of the same name with _2, a third with _3 (the phase S3 and L copies of the general head). `earlier` are the
+    boards already read from the same race."""
+    base = name.lower().replace(" ", "_")
+    same = sum(1 for b in earlier if b["board"] == name)
+    return base + ("_%d" % (same + 1) if same else "") + ".csv"
+
+
 def score(label, log_text, csv_dir, drawn):
     """The run's result: per board the checks and the roundings."""
     course = None
@@ -402,6 +447,28 @@ def score(label, log_text, csv_dir, drawn):
         checks["start"] = (splits[0] <= start_allowed, "%.0f s after the gun (allowed %.0f)" % (splits[0], start_allowed)) if splits else (False, "never started")
         checks["stuck"] = (r.get("longest_stuck_s", 0.0) <= STUCK_LIMIT_S, "longest %.0f s" % r.get("longest_stuck_s", 0.0))
         checks["aground"] = (not r.get("aground", False), r.get("aground_note", "") or "no")
+        if drawn.get("phase") in DRILL_PHASES and "drill" in r:
+            # Phase R and L: a rounding drill. Its checks: rounded, never stuck, never aground, no fall. Its numbers: the
+            # score (metres down the course past the mark at the drill's score time), the speeds in, through and out,
+            # the tacks and gybes to the mark, the penalties and dirty wind (in company), and the rounding of the mark
+            # as the suite measures every rounding (closest, out of the turn, overstand on a beat into it).
+            drill = dict(r["drill"])
+            del checks["start"]
+            checks["rounded"] = (drill.get("rounded_s") is not None, "at %s s" % drill.get("rounded_s"))
+            checks["falls"] = (r.get("falls", 0) == 0, "%d (none allowed in a drill)" % r.get("falls", 0))
+            drill.update({"penalties": r.get("penalties", 0), "dirty_s": r.get("dirty_s", 0.0),
+                          "wind_lost_s": r.get("wind_lost_s", 0.0), "near_s": r.get("near_s", 0.0), "boards": r.get("boards", 1)})
+            rounds = []
+            csv_path = os.path.join(csv_dir, board_file(r["board"], boards))
+            if course and os.path.exists(csv_path):
+                rounds = [x for x in roundings(read_csv(csv_path), course, course.get("axis_deg", 0.0), drawn.get("water") != "lake")
+                          if x["step"] == drill.get("mark_step")]
+            if rounds:
+                drill.update({k: rounds[0][k] for k in ("closest_m", "exit_m", "overstand_m")})
+            boards.append({"board": r["board"], "checks": {k: {"ok": v[0], "what": v[1]} for k, v in checks.items()},
+                           "pass": all(v[0] for v in checks.values()), "legs": [], "roundings": rounds,
+                           "falls": r.get("falls", 0), "note": r.get("note", ""), "drill": drill})
+            continue
         if drawn.get("phase") in ("S", "S3"):
             # Phase S: a start-only race. The checks are the start's; a fall anywhere from the countdown to the start
             # counts (the measures that may not get worse: falls, stuck, aground, over early).

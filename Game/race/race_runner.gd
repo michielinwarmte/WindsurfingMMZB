@@ -102,6 +102,8 @@ var _boards: Array[WindsurferNode] = []
 ## The other sails' wind shadows on each board's wind (one per board of _boards, its own copy of
 ## the fleet's places each tick; AI_FLEET_PLAN.md D5), empty with the setup's shadows off.
 var _shadows: Array[WindShadows] = []
+## The sails' trails of disturbed air (WindShadowTrail; the shadows lie along them), made with the shadows.
+var _trail: WindShadowTrail = null
 ## The race's one wind clock (ROADMAP RA13): every board's wind field is handed it before every
 ## tick, so the player and the fleet sail in the same gusts. Taken from the player's field at each
 ## restart (its gusts are the ones drawn on the water), then read back after every tick.
@@ -477,7 +479,7 @@ func _physics_process(delta: float) -> void:
 	for i: int in _boards.size():
 		if stopped[i] == 0:
 			_boards[i].sail(delta)
-	_cast_shadows()
+	_cast_shadows(delta)
 	var t0: int = Time.get_ticks_usec()
 	if setup.threads > 0:
 		# One element per board, pulled by at most setup.threads worker tasks as each finishes its
@@ -585,24 +587,32 @@ func is_aground(node: WindsurferNode) -> bool:
 
 ## Every board's place and whether its sail is up, into every board's shadows (each its own copy),
 ## on this thread before the physics; and each board's wind field told its shadows (set_sea()
-## gives a board a new field, so it is told every tick: one field write).
-func _cast_shadows() -> void:
+## gives a board a new field, so it is told every tick: one field write). The sails' trails move on
+## by the tick's time first (WindShadowTrail: the shadows lie along them).
+func _cast_shadows(delta: float) -> void:
 	if not setup.shadows:
 		return
 	if _shadows.size() != _boards.size():
 		_shadows.clear()
 		for _node: WindsurferNode in _boards:
 			_shadows.append(WindShadows.make())
+	if _trail == null:
+		_trail = WindShadowTrail.make()
 	var xs: PackedFloat32Array = PackedFloat32Array()
 	var zs: PackedFloat32Array = PackedFloat32Array()
 	var casts: PackedByteArray = PackedByteArray()
+	var sims: Array[WindsurferSim] = []
 	for node: WindsurferNode in _boards:
 		var position: Vector3 = node.sim.telemetry.position
 		xs.append(position.x)
 		zs.append(position.z)
 		casts.append(1 if node.sim.sailor_state == WindsurferSim.SailorState.SAILING and node.visible else 0)
+		sims.append(node.sim)
+	_trail.update(delta, sims, casts)
+	var points: PackedFloat32Array = _trail.points()
 	for i: int in _boards.size():
 		_shadows[i].set_fleet(xs, zs, casts, i)
+		_shadows[i].set_trail(points, i)
 		_boards[i].sim.wind.disturbance = _shadows[i]
 
 

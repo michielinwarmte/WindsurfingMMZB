@@ -119,7 +119,12 @@ func test_only_the_board_in_the_others_shadow_counts_dirty_wind() -> void:
 	entries[1].sim.reset(Vector3(leeward.x, 0.0, leeward.y), 0.0)
 	race.update_board(1, leeward)
 	RunRace.give_shadows(entries)
-	RunRace.cast_shadows(entries)
+	# The sails' trails of disturbed air are laid over a few seconds (WindShadowTrail, 13 November 2026), drifting with
+	# the wind each sail feels (the telemetry's, filled when a board is sailed; these two are not).
+	for entry: RunRace.Entry in entries:
+		entry.sim.telemetry.tws_at_sail_kt = 15.0
+	for k: int in roundi(4.0 / RunRace.DT):
+		RunRace.cast_shadows(entries)
 	race.start_in(0.0)
 	RunRace.note_dirty_wind(race, entries, 0.5)
 	assert_eq(entries[1].dirty_s, 0.0, "60 s before the gun: too early to count")
@@ -132,7 +137,8 @@ func test_only_the_board_in_the_others_shadow_counts_dirty_wind() -> void:
 	assert_eq(entries[0].dirty_s, 0.0, "the board to windward has clean wind")
 	var abreast: Vector2 = Vector2(0.0, 60.0) + Course.direction_of(wind_deg + 90.0) * 10.0
 	entries[1].sim.reset(Vector3(abreast.x, 0.0, abreast.y), 0.0)
-	RunRace.cast_shadows(entries)
+	for k: int in roundi(4.0 / RunRace.DT):
+		RunRace.cast_shadows(entries)
 	RunRace.note_dirty_wind(race, entries, 0.5)
 	assert_eq(entries[1].dirty_s, 0.5, "10 m abreast, across the wind: close but clean")
 

@@ -10,6 +10,13 @@ Read this instead of the logs (the efficient loop, Documentation/AI_TRAINING_MET
 
     python -I tools/heads/suite_summary.py <run> --classes       phase S: the late starts by class (water and course kind,
                                                                  course, start place, countdown, R)
+    python -I tools/heads/suite_summary.py <run> --worst=5       phase R and L: the five lowest drill scores with their
+                                                                 replay commands
+
+Phase R and L (the rounding drills, 12 November 2026): every board judged on its own (r0007/0), on the drill's score
+(metres down the course past the mark at the drill's score time; better or worse by more than 5 m, the same sign test)
+and on its measures: rounded, never stuck, never aground, no fall, no penalty, clean wind (at most 5 s in dirty wind over
+the drill), not overstood (a top mark's layline by at most 25 m).
 
 Two runs are compared on the races both have (the same race numbers, so the same draws when the --seed and --set match).
 
@@ -309,6 +316,128 @@ for key in LIMITS:
     BETTER[key + " over %"] = -1
 
 
+# ---------------------------------------------------------------- phase R and L: the rounding drills (12 November 2026)
+
+# A drill board's measures, each True when good: the mark rounded by the score time, never stuck, never aground, no
+# fall; in company (phase L) no penalty and clean wind (at most DRILL_CLEAN_S in another sail's dirty wind over the
+# whole drill); a top mark's layline not overstood by more than OVERSTAND_M (where the suite could measure it).
+DRILL_MEASURES = ["rounded", "stuck", "aground", "no fall", "no penalty", "clean wind", "not overstood"]
+DRILL_CLEAN_S = 5.0
+OVERSTAND_M = 25.0
+
+
+def is_drill(results):
+    return any("drill" in b for r in results.values() for b in r["boards"])
+
+
+def drill_units(results):
+    """Every board of every drill race, as label/index (a race with no result counts as one failed board)."""
+    out = {}
+    for label, r in results.items():
+        if not r["boards"]:
+            out[label + "/0"] = None
+        for i, b in enumerate(r["boards"]):
+            out["%s/%d" % (label, i)] = b
+    return out
+
+
+def drill_measures(b):
+    if b is None or "drill" not in b:
+        return {m: False for m in DRILL_MEASURES}
+    d = b["drill"]
+    over = d.get("overstand_m")
+    return {"rounded": b["checks"]["rounded"]["ok"], "stuck": b["checks"]["stuck"]["ok"], "aground": b["checks"]["aground"]["ok"],
+            "no fall": b["falls"] == 0, "no penalty": d.get("penalties", 0) == 0, "clean wind": d.get("dirty_s", 0.0) <= DRILL_CLEAN_S,
+            "not overstood": over is None or over <= OVERSTAND_M}
+
+
+def drill_score(b):
+    return b["drill"].get("score_m") if b and "drill" in b else None
+
+
+def median_of(values):
+    values = [v for v in values if v is not None]
+    return statistics.median(values) if values else float("nan")
+
+
+def drill_numbers(results):
+    boards = [b for b in drill_units(results).values()]
+    drills = [b["drill"] for b in boards if b and "drill" in b]
+    out = {"races": len(results), "boards": len(boards)}
+    for m in DRILL_MEASURES:
+        out[m + " %"] = 100.0 * sum(drill_measures(b)[m] for b in boards) / max(len(boards), 1)
+    out["score median m"] = median_of([d.get("score_m") for d in drills])
+    scores = [d["score_m"] for d in drills if d.get("score_m") is not None]
+    out["score mean m"] = statistics.fmean(scores) if scores else float("nan")
+    for kind in ("gybe", "top"):
+        out[kind + " score median"] = median_of([d.get("score_m") for d in drills if d.get("kind") == kind])
+    out["speed in median"] = median_of([d.get("in_ms") for d in drills])
+    out["speed least median"] = median_of([d.get("min_ms") for d in drills])
+    out["speed out median"] = median_of([d.get("out_ms") for d in drills])
+    out["closest median m"] = median_of([d.get("closest_m") for d in drills])
+    out["out of turn median m"] = median_of([d.get("exit_m") for d in drills])
+    out["overstand median m"] = median_of([d.get("overstand_m") for d in drills])
+    out["tacks to mark mean"] = statistics.fmean([d.get("tacks_in", 0) for d in drills]) if drills else float("nan")
+    out["dirty s mean"] = statistics.fmean([d.get("dirty_s", 0.0) for d in drills]) if drills else float("nan")
+    out["penalties"] = sum(d.get("penalties", 0) for d in drills)
+    return out
+
+
+def drill_main(runs, data, flags):
+    """Phase R and L: one run's numbers, or two side by side, judged board by board: the score (better or worse by more
+    than SCORE_TIE_M, the one-sided sign test: "pass" when the better beat the worse beyond chance) and every measure
+    (fixed or broken; "WORSE" when the broken beat the fixed beyond chance)."""
+    nums = [drill_numbers(d) for d in data]
+    for key in nums[0]:
+        vals = [n[key] for n in nums]
+        print("%-22s" % key + "".join("%10.1f" % v for v in vals) + ("   %+8.1f" % (vals[1] - vals[0]) if len(vals) == 2 else ""))
+    if len(data) == 2:
+        a_units, b_units = drill_units(data[0]), drill_units(data[1])
+        common = sorted(set(a_units) & set(b_units))
+        print("\nboard by board (fixed / broken, one-sided sign test):")
+        for m in DRILL_MEASURES:
+            fixed = [l for l in common if not drill_measures(a_units[l])[m] and drill_measures(b_units[l])[m]]
+            broken = [l for l in common if drill_measures(a_units[l])[m] and not drill_measures(b_units[l])[m]]
+            p = sign_test_p(len(broken), len(fixed))
+            print("  %-16s fixed %3d  broken %3d   p %.3f  %s%s" % (m, len(fixed), len(broken), p, "WORSE" if p < SIGN_LEVEL else "ok",
+                                                                   ("   broken: " + " ".join(broken[:8])) if broken else ""))
+        diffs = []
+        for l in common:
+            a, b = drill_score(a_units[l]), drill_score(b_units[l])
+            if a is not None and b is not None:
+                diffs.append((b - a, l))
+        better = [l for d, l in diffs if d > SCORE_TIE_M]
+        worse = [l for d, l in diffs if d < -SCORE_TIE_M]
+        p = sign_test_p(len(better), len(worse))
+        verdict = ("pass" if p < SIGN_LEVEL else "chance") if len(better) > len(worse) else (
+            "WORSE" if sign_test_p(len(worse), len(better)) < SIGN_LEVEL else "no gain")
+        changes = [d for d, _ in diffs]
+        print("\nthe drill's score, board by board (better / worse by more than %.0f m):" % SCORE_TIE_M)
+        print("  better %3d  worse %3d   p %.3f  %s;  mean change %+.1f m, median %+.1f m" % (
+            len(better), len(worse), p, verdict, statistics.fmean(changes) if changes else 0.0, statistics.median(changes) if changes else 0.0))
+        for kind in ("gybe", "top"):
+            kd = [(d, l) for d, l in diffs if b_units[l] and b_units[l].get("drill", {}).get("kind") == kind]
+            kb, kw = sum(1 for d, _ in kd if d > SCORE_TIE_M), sum(1 for d, _ in kd if d < -SCORE_TIE_M)
+            if kd:
+                print("  %-5s better %3d  worse %3d   p %.3f;  mean change %+.1f m" % (kind, kb, kw, sign_test_p(kb, kw) if kb > kw else 1.0,
+                                                                                  statistics.fmean([d for d, _ in kd])))
+        print("  most worse: %s" % " ".join("%s %+.0f" % (l, d) for d, l in sorted(diffs)[:6] if d < -SCORE_TIE_M))
+        print("  most better: %s" % " ".join("%s %+.0f" % (l, d) for d, l in sorted(diffs, reverse=True)[:6] if d > SCORE_TIE_M))
+    if "failures" in flags:
+        bad = [(l, b) for l, b in drill_units(data[-1]).items() if b is None or not b["pass"]][-int(flags["failures"]):]
+        for l, b in bad:
+            r = data[-1][l.split("/")[0]]
+            what = "; ".join("%s: %s" % (k, c["what"]) for k, c in b["checks"].items() if not c["ok"]) if b else "no result"
+            print("\n%s %s %s\n  %s\n  %s\n  %s" % (l, b["board"] if b else "-", json.dumps(r["drawn"]), what,
+                                                json.dumps(b.get("drill") if b else None), r.get("replay", "")))
+    if "worst" in flags:
+        scored = sorted(((b["drill"].get("score_m"), l) for l, b in drill_units(data[-1]).items()
+                         if b and "drill" in b and b["drill"].get("score_m") is not None))[:int(flags["worst"])]
+        for s, l in scored:
+            r = data[-1][l.split("/")[0]]
+            print("\n%s score %.0f m %s\n  %s\n  %s" % (l, s, json.dumps(r["drawn"]), json.dumps(drill_units(data[-1])[l]["drill"]), r.get("replay", "")))
+
+
 def wait(run):
     status = os.path.join(SUITE, run, "status.json")
     while True:
@@ -333,6 +462,9 @@ def main(argv):
         common = sorted(set(data[0]) & set(data[1]))
         data = [{k: d[k] for k in common} for d in data]
         print("%s against %s, on the %d races both have" % (runs[1], runs[0], len(common)))
+    if data and all(is_drill(d) for d in data):
+        drill_main(runs, data, flags)
+        return
     if data and all(is_phase_s(d) for d in data):
         s_main(runs, data, flags)
         return
