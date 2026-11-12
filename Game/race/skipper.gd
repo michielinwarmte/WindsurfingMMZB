@@ -2777,8 +2777,10 @@ func _slalom_run_heading(telemetry: Telemetry, step: RaceStep, behind_m: float) 
 ## looks at where the boards coming in will cross the line level with it (on their course at their speed now, within
 ## SLALOM_GAP_LEVEL_S of its own crossing). When its spot would lie in one's dirty wind, it moves its spot along the line
 ## to leeward, to the nearest clean place (clean_gap_m()). Only to leeward: the leeward board is the one in dirty wind,
-## and moved to windward it became the board that must keep clear (version 6 did, and lost some 18 m up the course
-## there: one gybed away just after the gun, check 49 r0059). Without the wind shadows (--shadows=0) nothing moves.
+## to windward it would be the board that must keep clear (the racing rules), and two boards each going to windward of
+## the other would leapfrog. Version 6 moved half the boards' spots where one in seven had dirty wind, and the boards it
+## moved lost 5 to 20 m up the course on average (check 49 r0059: its spot 30 m along the line 2 s before it crossed;
+## it gybed away after the gun). Without the wind shadows (--shadows=0) nothing moves.
 func _slalom_pick_gap(telemetry: Telemetry, step: RaceStep, spot: Vector2, time_left_s: float) -> void:
 	var shadows: WindShadows = null
 	if _sim.wind != null:

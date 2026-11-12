@@ -41,7 +41,7 @@ func test_a_clean_gap_already_taken_is_kept() -> void:
 
 func test_at_the_leeward_end_of_the_line_it_keeps_its_spot() -> void:
 	# No room to leeward (the line ends 6 m from the boat end). Not to windward: there it would be the board that must keep
-	# clear (version 6 went there, and lost some 18 m up the course on it).
+	# clear (the racing rules).
 	assert_eq(_gap(190.0, [Vector2(180.0, 0.0)]), 0.0)
 
 
