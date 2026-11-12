@@ -85,3 +85,14 @@ Done when: on one PC the player can watch the AI race as their race director, wi
 - [ ] T8 Shift+R with the gusts too (the wind's clock set back with the dice): an exact replay of a start
 - [ ] T9 The AI's head for a learned brain (`LearnedSkipper` writes no note); the watch keys for a LAN spectator (without the speeds)
 Notes: 10 Nov 2026 evening (Max: "a version only for AI watching and spectating, where I'm the race director. I want to video a few races so I can broadcast them to Michiel"), branch `watch/broadcast-10nov` (pushed, from `ai/skipper-heads-8nov` 372fb72). Report `Documentation/reports/racing/watch_mode_10nov.md`. Unit tests green after two fixes (1039 of 1041 first: the Race page's height, the spectate test's clock check); no screenshots judged (Max asked to skip them). Filming: Win+Alt+R (Game Bar) or OBS.
+
+### E11.S10 · The start on the course: a slalom start or a course start
+Status: review | Size: S | Owner: Max (the look), the lead | Milestone: M2 | Needs: — | Roadmap: RA30
+Done when: every course says how its boards start, the course maker chooses it, and the AI starts the way it says.
+- [x] T1 `Course.start_type` (slalom start, course start; older files and the templates: the race type's own start), saved as `"start_type"` in the course files and sent with the director's course; `--start_type=` for `run_race.gd` (af969cc)
+- [x] T2 The course maker's "Start" choice under "Race type" (the wind viewer's and the race director's course maker); a warning for a slalom start on a line across the wind
+- [x] T3 The ten lake course files tagged (PD3 and SD3 slalom; the rest course)
+- [x] T4 The AI follows it: a slalom start the timed run without lag, a course start the hold with lag (E09.S25)
+- [ ] T5 Max's look in the play folder `WindsurfingMMZB-play-12nov2026-starts6b` (M in a race, change "Start", then R)
+- [ ] T6 The open water's courses (T1, T2) tagged in their files; `--start_type=` for the game like `--race_type=`
+Notes: Max, 12 Nov 2026: "do the courses have a clear tag on when its a slalom start and wen its a course race start? in the course maker make this an option so the skippers know witch to choose". Before, the start followed from the race type and the line's direction (RA27). A slalom start needs the line along the wind (the committee boat upwind); on a line across the wind the boards wait behind it. 3 new tests (`test_race_types.gd`). In the play build the course maker cannot save to a file; the race director puts the choice into the race at once.

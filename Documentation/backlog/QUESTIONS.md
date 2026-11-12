@@ -187,6 +187,18 @@ Answer:
 Recommendation: fixed levels for 1.0, with a small day-form draw (± a few per cent) so the same name does not win every race; ageing and careers after 1.0.
 Answer:
 
+### Q47 · Course starts: a timed run like the slalom's 6b, or the hold with lag?
+Why it matters: Max, 12 November 2026: "the 6b version is miles better". On a course start (the line across the wind) the AI waits near the line and goes from slow; with lag it goes 2 s earlier (about 5 m further up the course, nothing worse; E09.S25). A timed run would come in at full speed at the gun as the slalom start does. In fleet racing boats usually hold near the line and accelerate in the last seconds; a timed run is the slalom way.
+Options: a) Keep the hold with lag (on now). b) Build a timed approach for course starts and judge it against the hold on fresh races (a day and a night of runs). c) Later, after race training (E09.S26).
+Recommendation: c: the course start passes its checks today and dirty wind on the reach is the bigger gain; b if the course starts look slow on your screen.
+Answer:
+
+### Q48 · The start's dirty-wind check: until 30 s after the gun, or until the boards are over the line?
+Why it matters: the start training judges dirty wind from 10 s before the gun to 30 s after it, so the first reach counts. Max, 12 November 2026: dirty wind on the reach "is for race training and not start training". With the slalom start on (6b), a third of the dirty seconds left are 10 to 30 s after the gun, where the start's code does not reach.
+Options: a) Keep 30 s (the start judged with its first reach). b) Stop at about 5 s after the gun (the start only); the reach judged in race training (E09.S26).
+Recommendation: b, so that each training judges its own part.
+Answer:
+
 ---
 
 ## G. Racing
