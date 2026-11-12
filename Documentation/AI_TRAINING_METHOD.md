@@ -195,6 +195,11 @@ rules, less with the second PC as a second pool.
 | S3-21 | 12 Nov 2026 | The lag-2 package (S3-20) with `--start_tacks=1,2,0` (S3-19) on course races only; the night's block 4, `frozen_S5b` | 100 races (seed 37, against `n2_c_base`): **score 130 boards better, 78 worse (pass)**, median 65.3 -> 73.4 m; behind the line at the gun 14.7 -> 9.6 m; not over early 13 fixed, 5 broken; no fall 2 fixed, 4 broken (ok); **untangled 19 fixed, 34 broken (`WORSE`)**; falls or over early 14 fixed, 8 broken (chance). Against the tacks alone (`n2_c_tacks`): score 123 better, 58 worse (pass); untangled 13 fixed, 28 broken (`WORSE`) | 100 races (seed 50, against `n2_hc_base`): **score 147 better, 74 worse (pass)**, median 58.5 -> 66.6 m; **on time 25 fixed, 13 broken (pass)**; not over early 18 fixed, 9 broken; no fall 5 fixed, 5 broken; untangled 23 fixed, 21 broken; falls or over early 23 fixed, 14 broken (chance) | **No** by the S3 rule (more boards tangled on tune); the fall S3-20 saw on tune is gone, and the score gain (some 8 m) holds on both sets in both tries. For Max: lag-2 on course races is faster every time, but each try broke one safety check on tune (falls in S3-20, crowding here); to trace before it goes on |
 | S3-22 | 12 Nov 2026 | The final checks of Max's slalom start, version 5b (S3-18; `frozen_S5f`; slalom races only) | - | 125 races (seed 51, `n5_hsl51_run5` against `n4_hsl51_base`): **score 268 boards better, 89 worse (pass)**, median 40.6 -> 243.4 m; **on time 51.2 -> 78.1 % (143 fixed, 42 broken, pass)**; **no fall 72.8 -> 97.9 % (99 fixed, 5 broken)**; not over early 56 fixed, 42 broken; untangled 18 fixed, 27 broken (ok); **falls or over early 125 fixed, 39 broken (pass)**. 160 races (seed 52, `n5_hsl52_run5` against `n5_hsl52_base`): **score 347 better, 108 worse (pass)**, median 80.0 -> 259.6 m; **on time 58.1 -> 82.7 % (157 fixed, 39 broken, pass)**; no fall 88 fixed, 5 broken; not over early 60 fixed, 39 broken; **untangled 94.4 -> 88.8 % (24 fixed, 51 broken, `WORSE`)**; falls or over early 128 fixed, 33 broken (pass) | **Passes on 51, not on 52** (more boards close together; the same way, short of chance, on every set: 82 fixed, 129 broken over all four). Not switched on by me; for Max (the morning report, question 1) |
 | S3-23 | 12 Nov 2026 | The final check of `--start_tacks=1,2,0` (S3-19; `frozen_S5b`; course races only) | - | 120 races (seed 51, `n5_hc51_tacks` against `n4_hc51_base`): score 42 boards better, 45 worse (no gain); on time 6 fixed, 7 broken; not over early 1 fixed, 2 broken; no fall 2 fixed, 3 broken; untangled 19 fixed, 7 broken; nothing `WORSE` | **Yes as Max's choice**: the personas get their own tack (`start_tack` in `race/personas/*.tres`: 13 starboard, 4 port, 3 either) |
+| S3-24 | 12 Nov 2026 | The dirty-wind measure (`dirty_s`, `wind_lost_s` in `run_race.gd`; `frozen_S6`) and the rule's new check, clean wind for untangled (Max: "it its not wrong if they are close togeter but there is one with dirty wind") | - | The measure does not change the races: the night's arms raced again (`w1_sl_base`, `w1_sl_run5` on tune 36, `w1_hsl_base`, `w1_hsl_run5` on check 49), every board's score the same as the night's. Version 5b against the old start under the new check: tune clean wind 93.3 -> 88.0 % (17 fixed, 33 broken, `WORSE`); check 94.3 -> 84.7 % (15 fixed, 44 broken, `WORSE`): the timed run brings the boards in level, one in another's dirty wind. Most dirty boards were not close (`near_s` 0) | Rule changed; version 5b fails it the same way as before (now on dirty wind, not on close) |
+| S3-25 | 12 Nov 2026 | Version 6: `slalom_run_clean_wind` with the timed run (`frozen_S6b`; slalom races only): 20 s to 3 s before it crosses, its spot moved along the line out of the dirty wind of boards coming in | - | Against the old start, tune 36 (`w1_sl_clean` against `w1_sl_base`, 100 races): **score 196 better, 97 worse (pass)**; on time 90 fixed, 36 broken; no fall 88 fixed, 6 broken; clean wind 93.3 -> 91.3 % (19 fixed, 25 broken, ok); nothing `WORSE`. Check 49 (`w1_hsl_clean` against `w1_hsl_base`): **score 201 better, 85 worse (pass)**; on time 107 fixed, 26 broken; no fall 63 fixed, 1 broken; clean wind 94.3 -> 91.7 % (16 fixed, 24 broken, ok); nothing `WORSE`. Against version 5b: clean wind 88.0 -> 91.3 % on tune (21 fixed, 11 broken), 84.7 -> 91.7 % on check (27 fixed, 6 broken); score on tune 72 better, 64 worse (chance), **on check 58 better, 84 worse (`WORSE`, p 0.988)**. Traced: half the boards moved their spot (148 of 300 on check) where 43 had dirty wind; the boards it moved lost 5 to 21 m up the course on average, either way along the line (check r0059/0: its spot 30 m to leeward 2 s before it crossed, gybed away after the gun: 321 -> 31 m). (A first trace had the moves' sides the wrong way round, read from the sign of the gap; the side is the sign times the line's way to leeward, from the log's `COURSE_JSON` and wind) | Passes against the old start; costs score against 5b on check. Its final checks started (seeds 53, 54: `w2_hsl53_clean`, `w2_hsl54_clean` against `w2_hsl53_base`, `w2_hsl54_base`); version 6b made from the trace |
+| S3-26 | 12 Nov 2026 | Version 6b (`frozen_S6c`): moves only when its spot would be in dirty wind (under 85 %, not when a board is merely close), only for boards crossing within 2 s of it (level), and only to leeward (never to windward, where it must keep clear by the rules; and no leapfrogging) | - | Against the old start: tune 36 (`w3_sl_clean6b` against `w1_sl_base`, 100 races) **score 197 better, 93 worse (pass)**, on time 89 fixed, 36 broken, no fall 88 fixed, 5 broken, clean wind 93.3 -> 92.3 % (19 fixed, 22 broken), nothing `WORSE`; check 49 (`w3_hsl_clean6b`) **score 208 better, 73 worse (pass)**, on time 109 fixed, 28 broken, **clean wind 94.3 -> 88.3 % (15 fixed, 33 broken, `WORSE`)**. Against 5b: clean wind 14 fixed, 1 broken (tune), 15 fixed, 4 broken (check); score by chance. Against 6: on check score 82 better, 50 worse (pass) but clean wind 8 fixed, 18 broken (`WORSE`): it moved the spots of 38 boards of 300 on check where 6 moved 148, and leaves more dirty wind | Fails on check 49; not taken. Its final checks run anyway to fill the pool (S3-27). Its code reverted (`290b6a3`): the repo holds version 6 |
+| S3-27 | 12 Nov 2026 | The final checks of versions 6 and 6b (slalom races only; `frozen_S6b`, `frozen_S6c`) | - | Seed 53 (100 races; `w2_hsl53_clean`, `w3_hsl53_clean6b` against `w2_hsl53_base`): version 6 **score 200 better, 88 worse (pass)**, on time 90 fixed, 36 broken, no fall 65 fixed, 1 broken, **clean wind 94.3 -> 90.3 % (16 fixed, 28 broken, `WORSE`)**; version 6b the same way: score 206 better, 87 worse (pass), **clean wind 94.3 -> 90.3 % (16 fixed, 28 broken, `WORSE`)**. Seed 54 (`w2_hsl54_clean`, `w3_hsl54_clean6b` against `w2_hsl54_base`): version 6 **score 185 better, 105 worse (pass)**, on time 89 fixed, 42 broken, clean wind 14 fixed, 17 broken, nothing `WORSE`; version 6b score 188 better, 97 worse (pass), clean wind 13 fixed, 15 broken, nothing `WORSE`. 6b against 6 on both: by chance. Where the dirty wind left comes from (rebuilt from the tracks, `dirty_when.py` in the day's scratchpad; check 49 and seed 53): about a third on the run in before the gun, a fifth to a third in the first 10 s after it, a third 10 to 30 s after it with both boards on the same heading on the reach | Version 6 passes 3 sets of 4, version 6b 2 of 4; neither switched on by me. For Max: version 6 now as his choice, or version 7 (out of dirty wind on the reach after the gun) first (the day report, question 1) |
+| S3-28 | 12 Nov 2026 | The lag-2 package with the start tacks (S3-14, S3-21; `frozen_S6b`; course races only) under the new rule | - | 60 races each (paused at 12:35 for version 6b, resumed 15:21). Tune 37 (`w2_c_lag2tacks` against `w2_c_base`, 59 races both have): **score 71 better, 49 worse (pass)**, median 62.2 -> 67.1 m; on time 7 fixed, 6 broken; not over early 7 fixed, 4 broken; no penalty 9 fixed, 10 broken; clean wind 10 fixed, 14 broken; untangled 13 fixed, 20 broken (info); nothing `WORSE`. Hold-out 50 (`w2_hc_lag2tacks` against `w2_hc_base`): **score 89 better, 46 worse (pass)**, median 57.8 -> 62.2 m; on time 8 fixed, 8 broken; no fall 2 fixed, 3 broken; no penalty 12 fixed, 17 broken; clean wind 11 fixed, 15 broken; nothing `WORSE` | **Passes** (on 60 races a set). Its final check (a fresh seed, 55 or up) next; for Max (the day report, question 3) |
 
 **Proposed for Max (9 November 2026, not agreed yet).** Step 6's "no check gets worse" on 100 races blocks a fix for one race's flip: a fix that changes the board's line changes which of the lake's known traps it meets (the north-east corner, T2's mark 3, the east shore), and a start after R depends on where the race before ended. Loops 1 and 2 each won clearly on the hold-out and lost one or two races on a check, every one traced to such chance. Proposed: a check counts as worse when it loses 3 or more races in 100 more than it gains, every flip traced in the log, and none of them during what the switch does. (In phase S the sign test below judges instead, explained to Max on 9 November; whether it also applies to the roundings later is his call.)
 
@@ -348,7 +353,11 @@ second board is `r0007/1`), so a race gives three starts.
   or a dive into a lull) and too safe (late, slow) both lose metres.
 - `cross_speed_ms`: its speed when its start counted.
 - `near_s`: seconds within 5 m of another board from 30 s before the gun to 30 s after (the boards pass through each
-  other, so a tangle shows as time close); "untangled" is 5 s or less.
+  other, so a tangle shows as time close); "untangled" is 5 s or less. Shown, not judged, from 12 November 2026.
+- `dirty_s` (from 12 November 2026): seconds in another board's dirty wind (its sail's wind shadow leaves under 85 %
+  of the wind) from 10 s before the gun to the score's 30 s after; "clean wind" is 3 s or less. `wind_lost_s` adds up
+  the share of the wind lost each second. Max, 12 November 2026: "it its not wrong if they are close togeter but there
+  is one with dirty wind".
 - `penalties` (the rules), and phase S's: on time, stuck, aground, no fall, over early at the gun.
 - The wind at the gun: `gun_mean_kt` (the race's 10 m mean), `gun_felt_kt`, `gun_felt_60s_kt`, `gun_felt_spread_kt`
   (what its sail felt, FeltWind). The summary prints `felt/mean wind` (the median share: the lulls the starts are in).
@@ -357,7 +366,8 @@ second board is `r0007/1`), so a race gives three starts.
 1. **The start's score**: per board better or worse by more than 5 m; the better must beat the worse by the one-sided
    sign test (under 5 %) on the hold-out (`pass`), and win on the tune set.
 2. **Nothing worse by the sign test the other way**: on time, stuck, aground, no fall, over early, no penalty,
-   untangled (`WORSE` in the summary blocks it).
+   clean wind (`WORSE` in the summary blocks it). Untangled, judged until 12 November 2026, is shown as `(info)`:
+   close together is not a fault (Max, above), dirty wind is.
 3. **The most worse boards traced** (the summary prints the six; their CSV, a replay when needed). If the switch's own
    action made a start worse, it is not taken, whatever the numbers.
 
@@ -732,6 +742,85 @@ last 50 minutes were extra races on the final checks).
    failing (the command chain did not check the test's exit code), fixed an hour later by `401e547`; at 05:10 two
    waiting fill chains were stopped and re-timed before they had started anything. The patch that switches the slalom
    start on is saved (`.sim_output/suite/slalom_on_12nov.patch`: `slalom_timed_run = true` and its test; `git apply` it).
+
+*The day report (12 November 2026, 18:00).* Max's order at 08:30: "train again and fix that they are to close to
+getter. it its not wrong if they are close togeter but there is one with dirty wind".
+
+1. **In one line.** The suite now measures dirty wind and judges it instead of "close together". I taught the
+   slalom start to aim for clean wind: a third to a half less dirty wind than last night's version, with all its gains
+   kept. It is not yet as clean as the old, slow start, which spread the boards out by being late. Most of the
+   dirty wind that is left comes after the gun, on the reach, where the start code does not reach.
+
+2. **What changed in the judging.** Each board's seconds in another board's dirty wind (its sail's shadow leaves under
+   85 % of the wind), from 10 s before the gun to 30 s after, are now measured. A board with more than 3 s is "dirty".
+   This check replaces "close together", which is still shown but no longer judged. Adding the measure changes no race:
+   last night's races, run again, gave the same scores.
+
+3. **The slalom start, four versions.** *Old start*: the start in the game now. *5b*: Max's timed run, last night's
+   version. *6*: 5b, plus each board moves its aim along the line out of a board coming in that would shade it.
+   *6b*: 6, but it moves only when the board would really be in dirty wind, only for boards that cross at the same
+   moment, and only to leeward. *Tune*: races I may adjust on. *Check* and *final check*: fresh races, never adjusted on.
+
+   | Races (100 each) | Version | On time | Fell | Over early | Metres up the course 30 s after the gun | Close together | Dirty wind |
+   |---|---|---|---|---|---|---|---|
+   | Tune (seed 36) | old start | 58 % | 30 % | 13 % | 87 | 7 % | 7 % |
+   | | 5b | 75 % | 2 % | 15 % | 236 | 8 % | 12 % (worse) |
+   | | 6 | 76 % | 2 % | 14 % | 243 | 8 % | 9 % |
+   | | 6b | 76 % | 2 % | 14 % | 240 | 8 % | 8 % |
+   | Check (seed 49) | old start | 54 % | 21 % | 15 % | 47 | 9 % | 6 % |
+   | | 5b | 80 % | 1 % | 11 % | 245 | 11 % | 15 % (worse) |
+   | | 6 | 81 % | 1 % | 12 % | 244 | 8 % | 8 % |
+   | | 6b | 81 % | 1 % | 11 % | 243 | 10 % | 12 % (worse) |
+   | Final check (seed 53) | old start | 60 % | 22 % | 15 % | 74 | 7 % | 6 % |
+   | | 6 | 78 % | 1 % | 16 % | 233 | 6 % | 10 % (worse) |
+   | | 6b | 79 % | 1 % | 16 % | 235 | 8 % | 10 % (worse) |
+   | Final check (seed 54) | old start | 60 % | 28 % | 14 % | 82 | 7 % | 5 % |
+   | | 6 | 76 % | 4 % | 14 % | 243 | 3 % | 6 % |
+   | | 6b | 78 % | 3 % | 13 % | 247 | 6 % | 5 % |
+
+   "(worse)": more boards in dirty wind than with the old start, beyond chance. That blocks a version by our rule.
+   Every version is far better than the old start on on time, falls and metres, on every set. Penalties did not go up.
+   Version 6 passes three sets of four and fails the final check on seed 53 by a small margin (16 boards fixed, 28
+   broken). Version 6b fails two (check 49 and seed 53): it moves fewer boards, so it scores a little better than 6 on
+   the check set (82 boards better, 50 worse) but leaves more dirty wind. Neither passes everywhere, so I have not
+   switched either one on. Version 6 is the better of the two.
+
+4. **Where the dirty wind that is left comes from.** Rebuilt from the boards' tracks, the seconds in another board's
+   shadow split roughly into thirds: on the run in before the gun, the first 10 s after it, and 10 to 30 s after it,
+   both boards on the same heading on the reach. The start code works only up to the line, so the last third needs the
+   reach itself to change: a board in another's dirty wind on the reach should bear away to clear its wind, or the
+   faster board should sail through. That is version 7, a day's work and a night of checks.
+
+5. **Course races: lag 2 again, under the new rule.** Your lag 1-2-3 start (question 3 of this morning) with the
+   start tacks, 60 races on each set. Tune (seed 37): 71 boards better, 49 worse (better beyond chance), about 5 m
+   further up the course, nothing worse. Check (seed 50): 89 better, 46 worse (better beyond chance), about 4 m
+   further, nothing worse.
+   Last night it was blocked twice: once on falls, once on "close together". Close together no longer counts, and dirty
+   wind did not get worse beyond chance (tune 10 boards fixed, 14 broken; check 11 fixed, 15 broken). It passes now.
+   What is left is its final check, on a fresh seed (an hour or two of runs).
+
+6. **Questions for Max.**
+   1. The slalom start: switch on version 6 now? Boards are on time 76 to 81 % instead of 54 to 60 %, falls go from about
+      1 in 4 to about 1 in 50, and boards are 160 to 200 m further up the course. In exchange, dirty wind is about 1
+      board in 12 instead of 1 in 17. Or wait for version 7 (the reach), with a night of checks? My advice: switch on version 6 now
+      and build version 7 next. The gain is very large, and there is a third to a half less dirty wind than last night's version had.
+   2. Version 7, getting out of dirty wind on the reach after the start: build it next, and check it in a night run on
+      your go?
+   3. Lag 2 on course races passes now: run its final check (seed 55, one to two hours), and switch it on if that
+      passes?
+   4. A play folder only on your message.
+
+7. **Housekeeping.** Frozen copies: `frozen_S6` (the dirty-wind measure), `frozen_S6b` (version 6), `frozen_S6c`
+   (version 6b). Runs `w1_*` to `w3_*`. Seeds now used: tune 31 to 37, hold-out 41 to 54; a next check needs 55 or up.
+   Commits (local, not pushed): `8e9d421` (the measure, the new check, version 6), `16647ac` (version 6b), `ae4f96b`
+   (a correction to its comments), `290b6a3` (version 6b reverted: the code is version 6 again, the same as at
+   `8e9d421`, where all 1080 unit tests passed), and this report. Your yes to question 1 is one patch:
+   `.sim_output/suite/slalom_v6_on_12nov.patch` switches on the timed run and clean wind, with their two tests. Slips, all kept: at 12:35 I paused the four course runs to make
+   room for version 6b, and resumed them at 15:21 (one race of `w2_c_base`, r0020, was lost to the pause, and r0021 is
+   in it twice, which is harmless). From 15:07 to 15:22 the pool ran below 80 %: my wait reported only when the last
+   of six runs had finished. All runs ended at 17:25, and nothing has run since, as the day ended at 18:00. My first
+   trace of version 6 read the sides of the moves the wrong way round. It is
+   corrected in the log (S3-25) and in commit `ae4f96b`.
 
 ## The steps
 
