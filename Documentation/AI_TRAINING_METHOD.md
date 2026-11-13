@@ -212,6 +212,7 @@ rules, less with the second PC as a second pool.
 | L-2 | 13 Nov 2026 | The same with `--round_group_deg=20` (all three from one side of the mark: one layline) | Tune 92: **124 / 90 (pass)**, mean -0.2 m; rounded 7 / 8; not overstood 16 / 4; overstand median 20 -> 18 m | Hold-out 102: **144 / 82 (pass)**, mean +6.8 m, median 118 -> 124 m; rounded 16 / 3; not overstood 12 / 6; penalties 9 -> 10; dirty wind 0.2 -> 0.3 s | Margin 0 passes the count on all seven sets (R-3, L-1, L-2); the gain is a few metres a board, the tail mixed |
 | R-5 | 13 Nov 2026 | The full-race check of the three switches (`gybe_at_mark`, `round_early`, `mark_layline_margin_m` 3), phase A, `frozen_L1` (the new dirty wind), against all off; 9 Nov `gybe_at_mark` alone had lowered pass 60 -> 52 % | Tune 3 (`ra_t3_off` / `ra_t3_pkg`, 60 races): **pass 70.0 -> 73.3 %**, start 78 -> 80 %, no check worse; out of the turn median 31 -> 19 m (over 15 m 90 -> 63 %), overstand median 26 -> 18 m (over 25 m 52 -> 34 %), closest 7.7 -> 5.5 m | Tune 4 (40 races): pass 77.5 -> 80.0 %, legs 95 -> 100 %, nothing worse; tune 5 (24): pass the same, legs 88 -> 92 %, nothing worse; tune 7 (6): the same, nothing worse; tune 6 (10): pass 50 -> 60 %, legs 70 -> 90 %, falls 0.5 -> 0.1 a race, but **r0009 aground** on the last beat at (1231, -1028), the north-east corner (heading up to tack, too slow to gybe), so aground and finished one race worse | Recommended to Max, not switched on (his word) |
 | R-6 | 13 Nov 2026 | The same with margin 0 instead of 3 | Tune 3 (60): pass 70 -> 70 %, legs 90 -> 88 %, race time 97 -> 93 %; against margin 3: pass 73.3 -> 70 % | Tune 4 (40): pass the same, stuck one race worse; tune 5 (24): pass the same, legs 88 -> 92 %, race time one race worse; overstand median 13 to 16 m (margin 3: 17 to 21 m); pass never better, a check one or two races worse on every seed | No: margin 0 wins the drills by a few metres but loses races; margin 3 |
+| R-7 | 13 Nov 2026 | Max's choice ("okay if its better with the switches on than do it"): `gybe_at_mark`, `round_early` and `mark_layline_margin_m` 3 on by default | - | `SkipperConfig` defaults true, true, 3.0 (-1 before: layline_margin_m's 10 m); `test_skipper_round_early.gd` checks all three on; unit tests 1093 of 1093, `tools/check.sh` 516 files, 0 failed. The numbers: R-1 to R-6, L-1, L-2 | **Yes** |
 
 **Proposed for Max (9 November 2026, not agreed yet).** Step 6's "no check gets worse" on 100 races blocks a fix for one race's flip: a fix that changes the board's line changes which of the lake's known traps it meets (the north-east corner, T2's mark 3, the east shore), and a start after R depends on where the race before ended. Loops 1 and 2 each won clearly on the hold-out and lost one or two races on a check, every one traced to such chance. Proposed: a check counts as worse when it loses 3 or more races in 100 more than it gains, every flip traced in the log, and none of them during what the switch does. (In phase S the sign test below judges instead, explained to Max on 9 November; whether it also applies to the roundings later is his call.)
 
@@ -221,6 +222,7 @@ Max, 9 November 2026, after racing the play build on an iQFOiL slalom course he 
 race director (one board of eleven started): "first train the AI to be really good at starting because that is the
 most important. because if you cant even start its already a disaster." Until the gate below, phase S comes before
 everything else in step 3: the roundings (`round_early`, `mark_layline_margin_m`) and phase B wait, and stay off.
+(The roundings were taken up on 13 November 2026 with their own drill and switched on: phases R and L, R-7.)
 
 **Why the starts.** Loops 1 to 8's off arms (150 races, one board each): 43 boards late or never over the line; 38 of
 the 42 late ones could have made it in the countdown by the start check's own estimate, 25 from the start box or from
@@ -911,14 +913,20 @@ board (`suite_summary.py`: the score's sign test, ties within 5 m, and the check
    reaching in at the score time (about 50 m short, the drop's far end on a slow leg); the score judges them fairly
    (both arms the same drops), the rounded check alone would not.
 
-**Why not switched on yet.** On 9 November `gybe_at_mark` lowered the pass rate of full races (60 -> 52 %, loop 5);
+**Switched on (Max's choice, 13 November 2026, R-7).** On 9 November `gybe_at_mark` lowered the pass rate of full races (60 -> 52 %, loop 5);
 the drills test the rounding alone. The full-race check of the night (`ra_t3_off` against `ra_t3_pkg` and
 `ra_t3_pkg0`, phase A, tune 3, 60 races each; `ra_t4_*`, tune 4, 40 each) decides it with Max: R-5, R-6. With margin 3 the package passes full races as often or more on all five seeds
 (140 races; tune 3: 70 -> 73 %, tune 4: 77.5 -> 80 %), the roundings much tighter (out of the turn 31 -> 19 m, overstand 26 -> 18 m), one
 race aground in the north-east corner on seed 6 (a known trap the changed line met, as in the proposal of 9
 November above). With margin 0 the full races get worse (pass never better, and on every seed a check one or two
 races worse: legs, race time or stuck), though it wins the drills by a few metres: the drills judge the rounding, the full race the
-whole leg. **Recommended: the three switches on with margin 3** (Max's word first).
+whole leg. Recommended to Max: the three switches on with margin 3. Max: "okay if its better with the switches on than do
+it": **on by default since 13 November 2026** (`SkipperConfig`: `gybe_at_mark` and `round_early` true,
+`mark_layline_margin_m` 3; R-7).
+
+**Left open** (backlog E09.S23): out of the turn is 19 m, the story's goal 15 m; the gates' extra turning was not
+worked on (over 120 degrees 35 -> 38 % of the gates on tune 3's full races, the package on); the north-east corner
+(E01.S21); the skippers' guess of the new dirty wind (E01.S04 T7).
 
 ## The steps
 

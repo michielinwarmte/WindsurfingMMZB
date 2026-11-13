@@ -30,8 +30,13 @@ func _arc(skipper: Skipper, step: RaceStep, before_m: float) -> PackedFloat32Arr
 	return skipper._predict_rounding(step, marks, position, 10.0, heading_deg, out_deg, 1.0, 0.0, 0.0)
 
 
-func test_it_is_off_unless_switched_on() -> void:
-	assert_false(SkipperConfig.new().round_early, "off by default until the suite says it wins")
+func test_the_rounding_switches_are_on_by_default() -> void:
+	# Max's choice, 13 November 2026 ("if its better with the switches on than do it"): the rounding drills and 140
+	# full races (AI_TRAINING_METHOD.md rows R-1 to R-7).
+	var config: SkipperConfig = SkipperConfig.new()
+	assert_true(config.round_early, "the turn begins before the mark")
+	assert_true(config.gybe_at_mark, "the slalom gybe through the mark")
+	assert_eq(config.mark_layline_margin_m, 3.0, "the last tack into a mark 3 m past its layline")
 
 
 func test_turning_far_before_the_mark_does_not_round_it() -> void:

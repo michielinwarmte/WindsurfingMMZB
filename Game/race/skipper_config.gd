@@ -38,7 +38,9 @@ enum StartTack { EITHER, STARBOARD, PORT }
 ## The margin past the layline for the last tack of a beat into a mark only, metres (Skipper._course_to());
 ## -1: layline_margin_m, as before. The suite's baseline_A (8-9 November 2026, 212 beats into a mark): the last tack
 ## a median 31 m beyond the board's own layline (70 % over 25 m), of which layline_margin_m's 10 m is chosen.
-@export_range(-1.0, 60.0) var mark_layline_margin_m: float = -1.0
+## 3 m since Max's choice (13 November 2026: the rounding drills and 140 full races, AI_TRAINING_METHOD.md rows R-3,
+## R-5 to R-7; 0 m won the drills by a few metres but lost full races, R-6).
+@export_range(-1.0, 60.0) var mark_layline_margin_m: float = 3.0
 ## How close it rounds a mark, metres.
 @export_range(4.0, 20.0) var mark_margin_m: float = 8.0
 ## Starts the turn round a mark or through a gate before it gets there, as a sailor goes wide in and tight out
@@ -47,15 +49,18 @@ enum StartTack { EITHER, STARBOARD, PORT }
 ## turn on the same tack (not the gybe round a slalom mark). Off: it turns only once the race has counted the
 ## rounding. The suite's baseline_A (8 November 2026, 94 races): about 5 degrees of the turn before the mark and
 ## the whole turn after it; out of the turn median 30 m (92 % over 15 m): 35 m at a windward mark, 51 m at a
-## leeward mark or gate onto a beat.
-@export var round_early: bool = false
+## leeward mark or gate onto a beat. On since Max's choice (13 November 2026, AI_TRAINING_METHOD.md rows R-2, R-5 to
+## R-7).
+@export var round_early: bool = true
 ## At a mark whose next leg is on the other gybe (a slalom mark), it gybes round the mark instead of after it
 ## (Skipper._round_early_deg()): once the gybe's arc (at the controller's gybe rate) would round the mark with
 ## Skipper.ROUND_GYBE_CLEAR_M to spare, it bears away past the controller's tacking angle and asks for the gybe. Off:
 ## after the rounding counted it bore away on the old gybe and gybed only past the gybing line by layline_margin_m.
 ## baseline_A (8 November 2026): 35 slalom roundings, out of the turn median 48 m; one (r0014, SD3 at 50 %) came out
-## of the gybe 5 s after the mark at 1.3 m/s, from 10 m/s.
-@export var gybe_at_mark: bool = false
+## of the gybe 5 s after the mark at 1.3 m/s, from 10 m/s. On since Max's choice (13 November 2026, AI_TRAINING_METHOD.md
+## rows R-1, R-5 to R-7; on 9 November alone it had lowered full races' pass 60 -> 52 %, with round_early and the 3 m
+## mark margin on 13 November it raised it).
+@export var gybe_at_mark: bool = true
 ## The most tacks (or gybes) it makes on one leg. The layline tack is always allowed, so the cap
 ## limits the extra ones (for wind shifts).
 @export_range(2, 8) var max_tacks_per_beat: int = 4
