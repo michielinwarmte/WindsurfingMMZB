@@ -38,6 +38,11 @@ func _ready() -> void:
 		var parts: PackedStringArray = options["twa_at"].split(",")
 		_twa_at_s = parts[0].to_float()
 		_twa_deg = parts[1].to_float() if parts.size() > 1 else 150.0
+	if options.has("native_sea_bench"):
+		# The wave query's test in the release engine (NativeSeaBench; 13 November 2026).
+		NativeSeaBench.run(options["native_sea_bench"].to_float())
+		get_tree().quit()
+		return
 	if not options.has("screenshot"):
 		if _side_view == "" and _twa_at_s < 0.0:
 			queue_free()

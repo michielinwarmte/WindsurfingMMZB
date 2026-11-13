@@ -16,7 +16,7 @@ Done when: a race of fifty boards with the full lake waves runs at 60 fps on Max
 - [ ] T1 The +2.3 ms per tick found (E01.S01 T5)
 - [ ] T2 The remaining engine locks in the physics (about 85 field reads and 25 Basis values per substep, the telemetry per tick) removed (the no_wait method)
 - [ ] T3 The hands' cost (PH19) and the fin's sea queries (PH20)
-- [ ] T4 A native sea function (GDExtension) if the sea's cost demands it (E02.S03 T4); the LAN contract kept
+- [ ] T4 A native sea function (GDExtension) if the sea's cost demands it (E02.S03 T4); the LAN contract kept (13 November 2026: the tools and the wave test done on `tech/native-sea-test`, the waves in C++ the same to the last bit and 7.5 to 12 times faster; Max wants 0.2 in C++; the next steps, the hull and the buoyancy first, wait for Max and Michiel: [wave_test_13nov.md](../../reports/native/wave_test_13nov.md))
 - [x] T5 The catch-up cap (2 instead of 8 ticks; Max's gameplay choice: a slowed clock instead of a collapse): **no** (Max, 13 November 2026, after trying it at 25 and 31 boards: "full speed or nothing"). The race clock never slows; the fleet is held to what runs at full speed (this story's done-when: the measured maximum is the fleet limit)
 - [x] T6 The budget table in `Documentation/reports/racing/fleet_frame.md` (13 November 2026, with three speed-ups that leave the race the same: 17 AI boards at 60 fps on the lake instead of 15, 23 at 33 fps instead of 8)
 - [ ] T7 From 32 to 50: the sea's cost per board, the snapshot and telemetry per board, the render of fifty rigs; the measured maximum written in 1.0.md if 50 is out of reach

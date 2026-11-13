@@ -33,7 +33,7 @@ Done when: a sea spot's water is a sum of bands (swell from far away by period a
 - [ ] T1 The swell as a band set from a spectrum (JONSWAP for the wind sea, a swell peak by period and direction), grouped by a slow envelope; the shader's slots extended or the sum moved to a texture
 - [ ] T2 The open water's chop as the default sea, airtime off a crest and the landing (PH11)
 - [ ] T3 The wind sea follows the wind of the last hours (a slow rebuild, not per gust); LAN keeps both seas equal (the contract)
-- [ ] T4 Cost measured with `tools/sea_bench.sh` and a 20-board race; a native sea (E17.S01) only if the budget breaks
+- [ ] T4 Cost measured with `tools/sea_bench.sh` and a 20-board race; a native sea (E17.S01) only if the budget breaks (13 November 2026: the lake's waves are 22 to 30 % of a board's physics; the native wave query is tested, E17.S01 T4)
 - [ ] T5 Max's eye: the crest spacing, the height, the groups
 
 ### E02.S04 · The bottom: shoaling, refraction and breaking, per spot, offline
