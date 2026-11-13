@@ -928,6 +928,23 @@ it": **on by default since 13 November 2026** (`SkipperConfig`: `gybe_at_mark` a
 worked on (over 120 degrees 35 -> 38 % of the gates on tune 3's full races, the package on); the north-east corner
 (E01.S21); the skippers' guess of the new dirty wind (E01.S04 T7).
 
+## Real races as a yardstick (from 13 November 2026)
+
+Real race tracks (GPS, one point a second) are read with Max and measured by fixed criteria, and the head is measured by
+the same criteria on its own runs: [reports/real_races/](reports/real_races/) (the report and
+[HEAD_PLAN.md](reports/real_races/HEAD_PLAN.md)); the tools in `tools/real_races/`.
+- **Read with Max first**: a tracks-only picture (`read_gpx_race.py --marks=0 --size_px=1600`); he draws the marks and
+  says what happened (the start, recalls, waits); then a course file (`tools/real_races/courses/*.json`) and
+  `analyse_roundings.py`.
+- **The head the same way**: `python -I tools/real_races/ai_suite_measure.py <run> [...] --what=starts|roundings|legs
+  --csv=<out>` on any suite run.
+- **Foil against fin**: the first race is iQFOiL, and foils turn wider (Max): compare only the measures that carry over
+  (seconds, shares, sides, counts, metres in the board's own turn radius), never the foil's metres or knots. How soon a
+  board is out of a turn depends on the race's own tactic (Max), so exits are compared only between like situations.
+- **What it found** (13 November): over the start line at 0.58 of its top speed against the riders' 0.93 to 1.00; the
+  gybe at a mark keeps 0.29 of its speed against the foils' 0.70; the plan P0 to P4 is in HEAD_PLAN.md (backlog E09.S27,
+  E09.S28, E09.S22 T3, E09.S23 T9; questions Q49, Q50).
+
 ## The steps
 
 **Step 0, before a run.** Fetch first (`git fetch --all --prune`; the two PCs hand over through GitHub). Work on

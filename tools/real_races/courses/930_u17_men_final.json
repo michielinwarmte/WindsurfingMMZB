@@ -1,0 +1,29 @@
+{
+  "race": "Metasail event 930 (2026 iQFOiL Youth & Junior European Championships, Varkiza), race 56582: IQFoil Under 17 Men FINAL, 31 October 2026",
+  "board": "foil (iQFOiL). Not a fin board: the turns are wider on a foil (Max, 13 November 2026); use the measures marked as carrying over to fins.",
+  "source": "Marks A, B and C drawn by Max in yellow on the tracks-only picture (u17_final_tracks_race_max_yellow.png), the start line his yellow line, checked by playing the tracks back (all four riders in one line along the wind just before they cross it). The drawing is accurate to about 20 m. Every rider rounds each mark on the same side (checked 13 November 2026).",
+  "wind_from_deg": 47,
+  "wind_source": "the downwind leg: the riders sail 180 and 274 degrees, so dead downwind is 227 degrees",
+  "time_zero_utc": "2026-10-31T08:09:27Z",
+  "start_line": {
+    "end_1": {"lat": 37.8003783, "lon": 23.8251116},
+    "end_2": {"lat": 37.8024737, "lon": 23.8289927},
+    "note": "Max's line as drawn (413 m long); the real ends are not known. The boards cross it heading south-east (to mark A)."
+  },
+  "starts": [
+    {"label": "start 1", "search_from_s": 600, "search_to_s": 660, "over_early": true, "counted": false,
+     "note": "over early (Max): the whole fleet over the line before the gun, back, then the wait for the race director to start the countdown again"},
+    {"label": "start 2", "search_from_s": 930, "search_to_s": 970, "over_early": false, "counted": true}
+  ],
+  "marks": [
+    {"name": "A", "lat": 37.7987416, "lon": 23.8303585, "rounding": "starboard",
+     "note": "the end of the reach from the start; the turn down into the downwind leg"},
+    {"name": "B", "lat": 37.7939931, "lon": 23.827092, "rounding": "port",
+     "note": "the bottom of the downwind leg; the turn onto the reach to C"},
+    {"name": "C", "lat": 37.7912502, "lon": 23.8297781, "rounding": "starboard",
+     "note": "the far south mark; a full turn back north-west"}
+  ],
+  "finish": {"lat": 37.7930941, "lon": 23.8257530, "provisional": true,
+             "note": "NOT drawn by Max: where the riders slow down after mark C. Used only for the direction of the last leg and its rough time."},
+  "race_end_s": 1240
+}
