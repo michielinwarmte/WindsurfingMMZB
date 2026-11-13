@@ -1,16 +1,30 @@
 extends GutTest
-## The wind shadows of a fleet (AI_FLEET_PLAN.md, D5): behind a sail the wind is 30 % less close
-## by, fading to nothing at 20 m (Max, 13 November 2026; 30 m before), in a cone 2.5 m wide at the sail that widens at 8 degrees; nothing
-## upwind of the sail or outside the cone; shadows add up to at most half the wind; a board's own
-## sail and a sail in the water cast none; the cone lies along the wind wherever it blows from; and a
-## wind field with the shadows set gives less wind at a shadowed point (the physics' hook).
+## The wind shadows of a fleet (AI_FLEET_PLAN.md, D5). The cone's shape is tested on a test cone with round numbers
+## (the game's shadow until 13 November 2026): behind a sail the wind is 30 % less close by, fading to nothing at
+## 20 m, in a cone 2.5 m wide at the sail that widens at 8 degrees; nothing upwind of the sail or outside the cone;
+## shadows add up to at most half the wind; a board's own sail and a sail in the water cast none; the cone lies along
+## the wind wherever it blows from; and a wind field with the shadows set gives less wind at a shadowed point (the
+## physics' hook). The game's own numbers are the wind tunnel's (PH15): 7.5 % less right behind the sail, fading
+## from 1 m to nothing at 20 m (test_the_default_is_the_wind_tunnels_shadow()).
 
 ## The air moving south at 10 m/s: the wind from the north.
 const SOUTH_10: Vector3 = Vector3(0.0, 0.0, 10.0)
 
 
+## The test cone: round numbers that make the shape easy to check.
+static func _test_cone() -> WindShadowConfig:
+	var config: WindShadowConfig = WindShadowConfig.new()
+	config.deficit = 0.3
+	config.full_until_m = 5.0
+	config.length_m = 20.0
+	config.half_width_m = 2.5
+	config.spread_deg = 8.0
+	config.most_deficit = 0.5
+	return config
+
+
 static func _shadows(xs: Array[float], zs: Array[float], casting: Array[int] = [], own: int = -1) -> WindShadows:
-	var shadows: WindShadows = WindShadows.make()
+	var shadows: WindShadows = WindShadows.make(_test_cone())
 	var casts: PackedByteArray = PackedByteArray()
 	for i: int in xs.size():
 		casts.append(1 if casting.is_empty() else casting[i])
@@ -20,6 +34,24 @@ static func _shadows(xs: Array[float], zs: Array[float], casting: Array[int] = [
 
 static func _at(x: float, z: float) -> Vector3:
 	return Vector3(x, 2.0, z)
+
+
+func test_the_default_is_the_wind_tunnels_shadow() -> void:
+	# PH15 (Documentation/reports/ph15_wind_tunnel/wind_tunnel.md, option A): the wind tunnel measured about 5 % less
+	# wind 5 m behind, 4 % at 10 m and 3 % at 20 m; the game's straight fade over Max's 20 m comes within 1.5 points.
+	var config: WindShadowConfig = load("res://config/wind_shadow_default.tres") as WindShadowConfig
+	assert_almost_eq(config.deficit, 0.075, 1e-6)
+	assert_almost_eq(config.full_until_m, 1.0, 1e-6)
+	assert_almost_eq(config.length_m, 20.0, 1e-6)
+	assert_almost_eq(config.half_width_m, 2.5, 1e-6)
+	assert_almost_eq(config.spread_deg, 8.0, 1e-6)
+	assert_almost_eq(config.stern_bend_deg, 3.0, 1e-6)
+	var one: WindShadows = WindShadows.make()
+	one.set_fleet(PackedFloat32Array([0.0]), PackedFloat32Array([0.0]), PackedByteArray([1]), -1)
+	var at_5: float = 1.0 - one.factor_at(_at(0.0, 5.0), SOUTH_10)
+	var at_10: float = 1.0 - one.factor_at(_at(0.0, 10.0), SOUTH_10)
+	assert_almost_eq(at_5, 0.075 * (1.0 - 4.0 / 19.0), 1e-6, "5 m behind: about 6 % less (the tunnel: 4 to 7)")
+	assert_almost_eq(at_10, 0.075 * (1.0 - 9.0 / 19.0), 1e-6, "10 m behind: about 4 % less (the tunnel: 3 to 5)")
 
 
 func test_nothing_without_a_fleet_or_wind() -> void:

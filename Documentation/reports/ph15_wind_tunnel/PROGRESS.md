@@ -21,6 +21,7 @@ The tools: `tools/wind_tunnel.sh` (the tunnel), `tools/cfd/` (the solver `lbm.py
 | 5 | The production runs: 15 cm cells, a tunnel 8 + 50 m long, 40 m wide, 16 m tall (10.9 M cells), gusty air (10 % at the rig) averaged over 17 to 19 flow-throughs (about 45 minutes a case); the analysis by bell curves across the at-rest deficit (the noise floor kept out) | the 18 kt beam reach done (46 min): a board at rest behind loses 8.2 % of its wind at 2 m, 4.7 at 5, 3.4 at 10, 2.7 at 20, 2.3 at 40 m (about 1 / sqrt(distance), as Roncin and Kobus 2004 found for yachts); half-width 1.5 to 3.4 m; bent 3.6° toward the caster's stern; a same-tack follower at its speed headed 3.9° at 2 m, 1.9 at 10, 0.6 at 40 m; the game now: 30 % to 5 m, nothing beyond 20 m. Then the other five (41 to 43 min each; paused at 17:25 for a restart of Michiel's PC, the batch resumed at 17:51 on the new NVIDIA driver 620.70) | about 60k |
 | 6 | All six together, the smooth-air bound, the cost and the proposal: at rest 10.6 / 5.3 / 3.7 / 2.9 / 2.3 / 2.0 % at 2 / 5 / 10 / 20 / 30 / 40 m (mean of six; smooth air 5.0 % at 5 m); the "same-speed" share dropped (it magnifies the gusts' noise about four times for a planing board); the game's factor gives most of the header (`header_check.py`); what it costs a board in the game (`reach_check.sh` at 12.6 to 18 kt); a 20-board race timed with the trail at 20 m and 55 m (+25 % and +124 % against no shadows); the options' error over 2 to 20 m (now 15.5 points, A 1.5, B 1.0, C 0.8); the thresholds on the factor (0.85, 0.92) found to need moving with it; the report `wind_tunnel.md` | done | about 90k |
 | 7 | The cells' check (smooth air, the 18 kt beam reach, 15 against 10 cm) | done, 18:30: at rest 4.9 against 4.9 % at 5 m, 3.6 against 3.5 at 10, 3.0 against 2.7 at 20; widths within 0.25 m; 15 cm is fine enough. The pictures copied to `pictures/` | about 15k |
+| 8 | Option A built (Michiel: "Please implement the option without extra cpu. Also implement the other changes, update the documentation and push to git"): the config and its script's defaults; the thresholds on the factor scaled a quarter (`DIRTY_FACTOR`, `SLALOM_GAP_DIRTY`, `SLALOM_GAP_CLEAN`, `dirty_air_share`, the personas' poor and best sense, the HUD from 2 %); the tests (the cone's shape on a test cone, the default pinned, the trail's "in the shadow" at 3 %, the slalom gap 5 m instead of 10, the new `test_dirty_wind_thresholds.gd`); PHYSICS_SPEC.md 8.11, the report, the roadmap, the training method's log, the changelog, the progress log; committed and pushed | see the progress log's entry for the tests | about 60k |
 
 Found on the way, not this work's: `test_feet_press.gd` (two runs pinned to 5 decimals) and `test_windsurfer_sim.gd`
 (the catapulted board rolls over, 180° against below 90) fail on this PC on `ai/roundings-13nov` as pulled, before
@@ -29,14 +30,12 @@ Linux floating point in chaotic runs (the numbers were pinned on Max's PC); not 
 
 ## Ledger
 
-The lead (Claude Opus 5.5 in Claude Code, on Michiel's PC) works alone: no agents. About 425k tokens over the steps.
+The lead (Claude Opus 5.5 in Claude Code, on Michiel's PC) works alone: no agents. About 500k tokens over the steps (estimates).
 The GPU runs: about 6 hours of GPU time (six cases at about 42 minutes, the bound, the checks, the tries).
 
 ## To continue (for an AI session)
 
-"Read CLAUDE.md, then Documentation/reports/ph15_wind_tunnel/PROGRESS.md and wind_tunnel.md. If Michiel and Max take
-option A (section 7): change the six numbers in Game/config/wind_shadow_default.tres together with the thresholds on
-the factor (DIRTY_FACTOR in Game/dev/run_race.gd, SLALOM_GAP_DIRTY and SLALOM_GAP_CLEAN in Game/race/skipper.gd,
-SkipperConfig.dirty_air_share), run tools/test.sh and tools/check.sh, then measure the start suite on and off by
-Documentation/AI_TRAINING_METHOD.md and the fleet of twenty for PH42 (section 8). The tunnel itself:
+"Read CLAUDE.md, then Documentation/reports/ph15_wind_tunnel/PROGRESS.md and wind_tunnel.md. Option A is built
+(section 7, Built). Next: Max's play-test; the start suite's and the full races' baselines again by
+Documentation/AI_TRAINING_METHOD.md (row PH15); the fleet of twenty for PH42 (section 8). The tunnel itself:
 tools/cfd/run_all.sh (about 45 minutes a case on the GPU)."

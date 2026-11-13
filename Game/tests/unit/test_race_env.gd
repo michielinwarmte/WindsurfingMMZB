@@ -456,7 +456,9 @@ func test_with_the_shadows_on_a_board_in_anothers_wind_shadow_is_slower() -> voi
 		if shadows:
 			var wind_at_sail: float = env.board(1).sim.sail.true_wind_at_ce_world.length()
 			var clear_wind: float = env.board(0).sim.sail.true_wind_at_ce_world.length()
-			assert_true(wind_at_sail < 0.95 * clear_wind, "less wind at the shadowed sail: %.2f against %.2f m/s" % [wind_at_sail, clear_wind])
+			# The wind tunnel's shadow (PH15, 13 November 2026) takes about 5.5 % at 6 m (under 95 % with the 30 % shadow
+			# before): at least 2 % less is clearly in it.
+			assert_true(wind_at_sail < 0.98 * clear_wind, "less wind at the shadowed sail: %.2f against %.2f m/s" % [wind_at_sail, clear_wind])
 	assert_true(absf(speeds[0]) < 0.2, "without shadows the two are as fast: %.2f m/s apart" % speeds[0])
 	assert_true(speeds[1] < speeds[0] - 0.1, "in the shadow the second board is slower: %.2f m/s against %.2f without shadows" % [speeds[1], speeds[0]])
 

@@ -320,8 +320,9 @@ enum StartTack { EITHER, STARBOARD, PORT }
 ## slows while crossing ahead is the one that gets hit). Off.
 @export var pass_slow_down: bool = false
 ## Dirty air (Skipper._clear_air()): on a beat in another sail's wind shadow, the wind cut by this share or more for
-## a few seconds, with clear air on the other tack, it tacks away. 0: it does not notice.
-@export_range(0.0, 0.5) var dirty_air_share: float = 0.15
+## a few seconds, with clear air on the other tack, it tacks away. 0: it does not notice. Half a shadow's full
+## strength: 0.0375 since the wind tunnel's shadow (PH15, 13 November 2026: at most 7.5 % less); 0.15 before.
+@export_range(0.0, 0.5) var dirty_air_share: float = 0.0375
 ## Dirty air on the runs too (Skipper._clear_air()): it gybes out of the blanket of the boards behind.
 @export var dirty_air_on_runs: bool = false
 ## Before its start, farther than this beyond an end of the start line, metres, the course side of the line's

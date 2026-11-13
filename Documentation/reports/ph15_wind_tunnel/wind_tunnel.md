@@ -1,7 +1,8 @@
 # The wind tunnel: a windsurfer's wind shadow measured on the GPU (PH15)
 
 13 November 2026, branch `ph15/wind-tunnel` (from `ai/roundings-13nov`). For Michiel (the physics) and Max.
-Nothing in `Game/` is changed: the numbers at the end are a proposal.
+The measurement changed nothing in `Game/`; Michiel then took option A (section 7), built the same day with the
+thresholds that read the shadow (section 7, "Built"). Nothing in `Game/sim/` changed.
 
 ## In short
 
@@ -23,10 +24,10 @@ Nothing in `Game/` is changed: the numbers at the end are a proposal.
   No physics change is needed for it.
 - **What it costs a board in the game:** at the tunnel's 5 %, a steady beam reach loses about 2 % of its speed, a
   beat 6 % and a broad reach (on the hump) 8 %. At the game's 30 %: 19, 31 and 39 %.
-- **Proposed** (`Game/config/wind_shadow_default.tres`, for Michiel and Max to decide; section 7): `deficit` 0.30 →
+- **Built (Michiel's OK, 13 November 2026; section 7):** in `Game/config/wind_shadow_default.tres` `deficit` 0.30 →
   0.075, `full_until_m` 5 → 1, `stern_bend_deg` 7 → 3; Max's 20 m length and the widths stay (within 20 m the
-  tunnel's widths match them). Its error against the tunnel: 1.5 points of the wind, against 15.5 now. No code
-  changes and no extra CPU. A 55 m trail would fit the tail better but more than doubles a 20-board race's CPU time.
+  tunnel's widths match them). Its error against the tunnel: 1.5 points of the wind, against 15.5 before. No extra
+  CPU (a 55 m trail more than doubled a 20-board race's CPU time). The thresholds that read the shadow moved with it.
 
 ## 1. Why
 
@@ -220,7 +221,7 @@ wind; the six cases differ among themselves by 0.8):
   seven boards in a line to reach it, and adding against multiplying differs by under half a point for two.
 - `follows_apparent_wind` stays on: the tunnel confirms the trail along the apparent wind.
 
-Option A is a change of six numbers in one config file that is outside the physics (`Game/race/`'s resource), so
+Option A is a change of three numbers in one config file that is outside the physics (`Game/race/`'s resource), so
 it does not need `tools/test.sh validation`. **But it must not go in alone:** the races and the AI read this factor
 against fixed thresholds made for the 30 % shadow. A board counts as in dirty wind below 0.85 of the wind (15 %
 lost: `DIRTY_FACTOR` in `dev/run_race.gd`, the start suite's dirty-wind seconds; `SLALOM_GAP_DIRTY` in
@@ -229,6 +230,36 @@ one shadow takes at most 7.5 %, so no board would ever count as dirty unless two
 start's clean-wind spot would be found everywhere. Those thresholds would move with the numbers (0.96 dirty and 0.98
 clean are the same shares of a 7.5 % peak as 0.85 and 0.92 are of 30 %: a half and about a quarter), and the start
 suite would be measured again on and off by Max's method.
+
+### Built (13 November 2026)
+
+Michiel: "Please implement the option without extra cpu. Also implement the other changes". Option A, with every
+threshold that reads the factor scaled to the new strength (a quarter of before: dirty is half a full shadow, clean
+about a quarter of one), each with a comment saying why:
+
+| Where | What it is | Before | Now |
+|---|---|---|---|
+| `config/wind_shadow_default.tres` (and the script's defaults, `race/wind_shadow_config.gd`) | `deficit`, `full_until_m`, `stern_bend_deg` | 0.30, 5, 7 | 0.075, 1, 3 |
+| `dev/run_race.gd` `DIRTY_FACTOR` | the start suite's dirty-wind seconds (`dirty_s`, the training method's "clean wind" check) | 0.85 | 0.9625 |
+| `race/skipper.gd` `SLALOM_GAP_DIRTY`, `SLALOM_GAP_CLEAN` | the slalom start's spot out of dirty wind | 0.85, 0.92 | 0.9625, 0.98 |
+| `race/skipper_config.gd` `dirty_air_share` | the scripted skipper tacking out of dirty air | 0.15 | 0.0375 |
+| `race/persona.gd` `DIRTY_AIR_SHARE_POOR`, `_BEST` | the same, by persona (the poor sense notices only a full shadow) | 0.3, 0.12 | 0.075, 0.03 |
+| `race/race_hud.gd` | "in a wind shadow: n % less" shown from | 3 % | 2 % |
+
+The tests: `test_wind_shadows.gd` checks the cone's shape on a test cone with the old round numbers and pins the
+default to the tunnel's (`test_the_default_is_the_wind_tunnels_shadow`); `test_wind_shadow_trail.gd` asks for "in
+the shadow" as at least 3 % less (it was under 85 %); `test_skipper_slalom_clean_wind.gd`: a board level just to
+leeward of another now moves 5 m to leeward instead of 10 (the real shadow fades sooner); new,
+`test_dirty_wind_thresholds.gd` ties every threshold to the config's `deficit`, so a later change of the shadow's
+strength fails until they move with it; `test_race_env.gd`: the board 6 m behind another loses 4.6 % of its wind
+and is still the slower one (it asked for 5 % or more, now 2). Unit tests 1095 of 1097 (the two that fail are
+TE8's, failing on this PC before the change too); `tools/check.sh` 517 files, 0 failed. Not done: the start
+suite on and off and the fleet of twenty (below); the trained brains (`Game/race/brains/`) learned with the 30 %
+shadow and now meet a weaker one.
+
+**For the play-test:** in a race, sail behind and beside other boards: the HUD's "in a wind shadow" shows 2 to 8 %
+now (up to 30 before); does dirty wind still feel worth avoiding, especially upwind? Do the AI boards still pick
+clean spots at the slalom start, and fall less in the crowd at the start of T1 in 18 and 24 kt (PH42)?
 
 ## 8. What was not done, and the next steps
 

@@ -129,10 +129,12 @@ const WIND_HOLE_MIDDLE: float = 0.75
 const WIND_HOLE_GUST: float = 0.85
 ## Dirty air (SkipperConfig.dirty_air_share): an upwind sense under DIRTY_AIR_SENSE_FROM does not notice another
 ## sail's shadow; from there it tacks out of one that cuts the wind by DIRTY_AIR_SHARE_POOR, the best sense out of
-## one that cuts it by DIRTY_AIR_SHARE_BEST.
+## one that cuts it by DIRTY_AIR_SHARE_BEST. A quarter of the numbers before the wind tunnel's shadow (PH15, 13
+## November 2026: at most 7.5 % less, 30 % before; 0.3 and 0.12 then): the poor sense still notices only a full
+## shadow, the best one two fifths of it.
 const DIRTY_AIR_SENSE_FROM: float = 0.4
-const DIRTY_AIR_SHARE_POOR: float = 0.3
-const DIRTY_AIR_SHARE_BEST: float = 0.12
+const DIRTY_AIR_SHARE_POOR: float = 0.075
+const DIRTY_AIR_SHARE_BEST: float = 0.03
 
 
 ## The character sheet for one race: the skills, each moved by its form in this wind (wind_form())
