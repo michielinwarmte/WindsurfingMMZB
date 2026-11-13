@@ -119,7 +119,9 @@ extends SceneTree
 ##                         reached on a beat and left downwind), every board set down a random a to b metres before it
 ##                         from a random angle (round_drill_spot(); top: anywhere below the mark, inside or outside the
 ##                         laylines, on a random tack). With more boards (--boards), each one's expected time to the
-##                         mark within round_together_s of the first's (the laylines in company). The run ends
+##                         mark within round_together_s of the first's (the laylines in company), and with
+##                         --round_group_deg=<deg> from within that angle of the first as seen from the mark (one
+##                         layline, each other's dirty wind: 13 November 2026). The run ends
 ##                         at ROUND_SCORE_FACTOR times the first board's expected time to the mark plus ROUND_SCORE_AFTER_S, when every board's
 ##                         score is taken (Max: "a way to calculate which was the fastest gybe"): how far down the
 ##                         course past the mark it is then, metres (course_progress_m()). A course without such a mark
@@ -579,7 +581,7 @@ func _initialize() -> void:
 			var from_m: float = range_m[0].to_float() if range_m.size() == 2 else (ROUND_TOP_FROM_M if top else ROUND_GYBE_FROM_M)
 			var to_m: float = range_m[1].to_float() if range_m.size() == 2 else (ROUND_TOP_TO_M if top else ROUND_GYBE_TO_M)
 			place_drill(race, entries, drop_index, drill_kind, wind_from_deg, drill_rng, drop_lookout, from_m, to_m,
-				options.get("round_together_s", "0").to_float(), course.axis_deg, drill_wind_kt)
+				options.get("round_together_s", "0").to_float(), course.axis_deg, drill_wind_kt, options.get("round_group_deg", "0").to_float())
 		else:
 			for i: int in entries.size():
 				var spot: Vector3 = drop_spot(race, drop_index, wind_from_deg, drop_rng, drop_lookout)
@@ -1143,9 +1145,10 @@ static func round_drill_spot(race: RaceSim, k: int, kind: String, wind_from_deg:
 ## company), each one's expected time to the mark within together_s of the first board's. Each board's distance to the
 ## mark and the wind angle of its straight way in are kept for its HEADS_RESULT.
 static func place_drill(race: RaceSim, entries: Array[Entry], mark_index: int, kind: String, wind_from_deg: float, rng: RandomNumberGenerator,
-		lookout: ShoreLookout, from_m: float, to_m: float, together_s: float, axis_deg: float, wind_kt: float) -> void:
+		lookout: ShoreLookout, from_m: float, to_m: float, together_s: float, axis_deg: float, wind_kt: float, group_deg: float = 0.0) -> void:
 	var mark: Vector2 = race.steps()[mark_index].target()
 	var first_s: float = -1.0
+	var first_from_deg: float = 0.0
 	var placed: PackedVector2Array = PackedVector2Array()
 	for i: int in entries.size():
 		var spot: Vector3 = round_drill_spot(race, mark_index, kind, wind_from_deg, rng, lookout, from_m, to_m)
@@ -1156,12 +1159,17 @@ static func place_drill(race: RaceSim, entries: Array[Entry], mark_index: int, k
 				apart = apart and at.distance_to(other) >= ROUND_APART_M
 			var together: bool = first_s < 0.0 or together_s <= 0.0 \
 				or absf(TrainingDrops.expected_leg_s(at, mark, axis_deg, wind_kt) - first_s) <= together_s
+			# --round_group_deg: the boards come in from one side, within group_deg of the first as seen from the mark
+			# (the laylines in company: the same layline, each other's dirty wind).
+			if first_s >= 0.0 and group_deg > 0.0:
+				together = together and absf(Course.turn_deg(first_from_deg, Course.bearing_deg(mark, at))) <= group_deg
 			if apart and together:
 				break
 			spot = round_drill_spot(race, mark_index, kind, wind_from_deg, rng, lookout, from_m, to_m)
 		var where: Vector2 = Vector2(spot.x, spot.y)
 		if first_s < 0.0:
 			first_s = TrainingDrops.expected_leg_s(where, mark, axis_deg, wind_kt)
+			first_from_deg = Course.bearing_deg(mark, where)
 		placed.append(where)
 		entries[i].sim.reset(Vector3(spot.x, 0.0, spot.y), deg_to_rad(spot.z))
 		entries[i].controller.reset_controls(entries[i].controls)
