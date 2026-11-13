@@ -202,6 +202,16 @@ rules, less with the second PC as a second pool.
 | S3-28 | 12 Nov 2026 | The lag-2 package with the start tacks (S3-14, S3-21; `frozen_S6b`; course races only) under the new rule | - | 60 races each (paused at 12:35 for version 6b, resumed 15:21). Tune 37 (`w2_c_lag2tacks` against `w2_c_base`, 59 races both have): **score 71 better, 49 worse (pass)**, median 62.2 -> 67.1 m; on time 7 fixed, 6 broken; not over early 7 fixed, 4 broken; no penalty 9 fixed, 10 broken; clean wind 10 fixed, 14 broken; untangled 13 fixed, 20 broken (info); nothing `WORSE`. Hold-out 50 (`w2_hc_lag2tacks` against `w2_hc_base`): **score 89 better, 46 worse (pass)**, median 57.8 -> 62.2 m; on time 8 fixed, 8 broken; no fall 2 fixed, 3 broken; no penalty 12 fixed, 17 broken; clean wind 11 fixed, 15 broken; nothing `WORSE` | **Passes** (on 60 races a set). On for course starts as Max's choice, without a final check (S3-30) |
 | S3-29 | 12 Nov 2026 | Max's choice: version 6b of the slalom start on ("6b is good i think") | - | Version 6b brought back (`git revert 290b6a3`) and switched on: `slalom_timed_run` and `slalom_run_clean_wind` default to true, their tests flipped. Its numbers: S3-26, S3-27 (against the old start: score passes on all four sets, on time and falls far better on all four; clean wind `WORSE` on check 49 and final check 53, 10 to 12 % of boards in dirty wind against 6 %) | **On as Max's choice.** The old start is now the switches off. Dirty wind on the reach after the start goes to race training (Max: "this is for race training and not start training") |
 | S3-30 | 12 Nov 2026 | Max's choice: "no lag on slalom / lag on course"; and the start as a tag on the course ("in the course maker make this an option so the skippers know witch to choose") | - | `start_go_lag_s` 2, `early_holds_its_tack` and `start_dip` on by default, acting only on a course start (`Skipper.lag_applies()`). `Course.start_type` (slalom start, course start, or the race type's own for older files), the course maker's "Start" choice, `"start_type"` in the course files (the ten lake courses tagged: PD3, SD3 slalom; the rest course), `--start_type=` for `run_race.gd`. A slalom start reaches in from upwind of the committee boat only on a line along the wind; on a line across the wind the boards wait behind it, and the course maker warns. Unit tests 1086 of 1086 | **On as Max's choice** (lag without its final check on a fresh seed; S3-28's 60 races a set are its numbers) |
+| R-0 | 13 Nov 2026 | The rounding drill (`run_race.gd --round_drill=gybe\|top`, `random_suite.py --phase=R`; `frozen_R1`, the old dirty wind): one head dropped before a gybe mark (120-260 m) or a top mark (100-300 m, fanned 80 deg: from every angle); score = metres down the next leg at 1.3 x expected + 25 s (Max's "fastest gybe") | Base on tune 71 (240 drills): rounded 81 %, not overstood 79 %, no fall 99.6 %, score median 95 m (gybe 136, top 87) | Hold-out 81 (240): rounded 84 %, not overstood 86 %; check 82 (200): rounded 88 %, not overstood 84 % | The suite for phases R and L |
+| R-1 | 13 Nov 2026 | `gybe_at_mark` at the marks (gybe drills only change) | Tune 71: **score 40 better, 2 worse (pass)**, gybe median 136 -> 152 m, mean +30 m; rounded 1 fixed, no fall 1 fixed | Hold-out 81: **59 / 0 (pass)**, 159 -> 199 m; check 82: **48 / 1 (pass)**, 139 -> 181 m; no check broken | Wins at the mark; on in full races waits for the full-race check (R-5) and Max |
+| R-2 | 13 Nov 2026 | `round_early` at the marks (top drills only change) | Tune 71: **92 / 8 (pass)**, top median 87 -> 96 m; no check broken | Hold-out 81: **85 / 10 (pass)**, 89 -> 103 m; check 82: **83 / 8 (pass)**, 71 -> 79 m; not overstood 1 fixed, 1 broken | As R-1 |
+| R-3 | 13 Nov 2026 | `mark_layline_margin_m` 3 and 0 (instead of 10) at the top marks: Max's ask 3, overstanding | Tune 71: margin 3 **92 / 12**, not overstood 79 -> 93 % (34 fixed, 0 broken), rounded 10 fixed, 2 broken; margin 0 **105 / 8**, not overstood -> 96 % (40 / 0), rounded 10 / 3 | Hold-out 81: 3 **100 / 10**, 0 **109 / 10**, not overstood 86 -> 98 %; check 82: 3 **84 / 12**, 0 **90 / 8**; margin 0 against 3 alone: 51 / 9, 50 / 16, 33 / 17 (pass, 1 to 3 m a board), one rounding broken on each set | As R-1; which margin: L-1 to L-3 |
+| R-4 | 13 Nov 2026 | All three together (margin 3) | - | Check 82 (200 drills): **score 164 better, 8 worse (pass)**, median 98 -> 141 m (+43); rounded 2 fixed, 0 broken; not overstood 26 fixed, 2 broken; no fall, penalty or dirty wind changed | As R-1 |
+| L-0 | 13 Nov 2026 | The layline drill in company (`--phase=L`; `frozen_L1`, the new dirty wind, the trail): three heads dropped 150-400 m from a top mark, due there within 8 s of each other; both arms with `gybe_at_mark` and `round_early` on, margin 3 against margin 0 | - | Margin 3 on hold-out 102 (grouped): rounded 78 %, not overstood 89 %, no penalty 98 %, clean wind 99.6 %, dirty wind 0.2 s a board | The suite for the laylines in company |
+| L-1 | 13 Nov 2026 | Margin 0 against margin 3 in company, spread round the mark (150 drills, 3 boards each) | Tune 91: **138 better, 79 worse (pass)**, mean +0.1 m; rounded 5 fixed, 8 broken; not overstood 15 / 6; penalties 11 and 11 | Hold-out 101: **124 / 80 (pass)**, mean -2.2 m; rounded 4 fixed, 10 broken (p 0.09); not overstood 8 / 3; penalties 7 -> 9 | Count passes, the mean does not move: many boards a little better, a few much worse (a rounding lost) |
+| L-2 | 13 Nov 2026 | The same with `--round_group_deg=20` (all three from one side of the mark: one layline) | Tune 92: **124 / 90 (pass)**, mean -0.2 m; rounded 7 / 8; not overstood 16 / 4; overstand median 20 -> 18 m | Hold-out 102: **144 / 82 (pass)**, mean +6.8 m, median 118 -> 124 m; rounded 16 / 3; not overstood 12 / 6; penalties 9 -> 10; dirty wind 0.2 -> 0.3 s | Margin 0 passes the count on all seven sets (R-3, L-1, L-2); the gain is a few metres a board, the tail mixed |
+| R-5 | 13 Nov 2026 | The full-race check of the three switches (`gybe_at_mark`, `round_early`, `mark_layline_margin_m` 3), phase A, `frozen_L1` (the new dirty wind), against all off; 9 Nov `gybe_at_mark` alone had lowered pass 60 -> 52 % | Tune 3 (`ra_t3_off` / `ra_t3_pkg`, 60 races): **pass 70.0 -> 73.3 %**, start 78 -> 80 %, no check worse; out of the turn median 31 -> 19 m (over 15 m 90 -> 63 %), overstand median 26 -> 18 m (over 25 m 52 -> 34 %), closest 7.7 -> 5.5 m | Tune 4 (33 races both have): pass the same, legs 97 -> 100 %, nothing worse; tune 5 (20): pass the same, legs 90 -> 95 %; tune 6 (10): pass 50 -> 60 %, legs 70 -> 90 %, falls 0.5 -> 0.1 a race, but **r0009 aground** on the last beat at (1231, -1028), the north-east corner (heading up to tack, too slow to gybe), so aground and finished one race worse | Recommended to Max, not switched on (his word) |
+| R-6 | 13 Nov 2026 | The same with margin 0 instead of 3 | Tune 3 (60): pass 70 -> 70 %, legs 90 -> 88 %, race time 97 -> 93 %; against margin 3: pass 73.3 -> 70 % | Tune 4 (33): pass 79 -> 76 %, stuck and legs one race worse; tune 5 (20): pass 80 -> 75 %, race time one race worse; overstand median 13 to 16 m (margin 3: 18 to 21 m) | No: margin 0 wins the drills by a few metres but loses races; margin 3 |
 
 **Proposed for Max (9 November 2026, not agreed yet).** Step 6's "no check gets worse" on 100 races blocks a fix for one race's flip: a fix that changes the board's line changes which of the lake's known traps it meets (the north-east corner, T2's mark 3, the east shore), and a start after R depends on where the race before ended. Loops 1 and 2 each won clearly on the hold-out and lost one or two races on a check, every one traced to such chance. Proposed: a check counts as worse when it loses 3 or more races in 100 more than it gains, every flip traced in the log, and none of them during what the switch does. (In phase S the sign test below judges instead, explained to Max on 9 November; whether it also applies to the roundings later is his call.)
 
@@ -844,6 +854,71 @@ training and not start training 3. what is lag?"
    course race start? in the course maker make this an option so the skippers know witch to choose". The course
    maker's new "Start" choice (slalom start or course start, `Course.start_type`), saved in every course file
    (`"start_type"`); the AI skippers start the way it says (S3-30).
+
+## The mark roundings and the laylines (phases R and L, 13 November 2026)
+
+Max, 12 November 2026, after the start training: "mark roundings are terrible" and "when comming from the wrong way
+when going upwind the over-lay the layline". His order for the night: first the dirty wind (it now trails behind a
+moving board along its apparent wind: `Documentation/reports/racing/dirty_wind_13nov/RESEARCH.md`, backlog E01.S04),
+then "1 head (80% cpu) training mark roundings from every angle. for slalom gybing and rounding for going from upwind
+to downwind. this way you can test fast just as the beginning of the starts", "just as with the start a way to
+calculate whitch was the fastest gybe", and "put the laylines in this night after 50% of point 2 is done".
+
+**The drill** (`run_race.gd --round_drill=gybe|top`, like the start drill of phase S). A course from the race maker
+is drawn as in phase A, one of its marks picked, and a board dropped on the leg into it, already sailing, at speed:
+- **gybe**: a mark the course turns through downwind at (both legs 60 to 160 degrees off the wind, on opposite tacks:
+  the slalom gybe), the board dropped 120 to 260 m before it, fanned 35 degrees either side of the leg;
+- **top**: a mark at the top of a beat (the leg in within 60 degrees of the wind, the leg out at least 80 degrees off
+  it: from upwind to downwind), the board dropped 100 to 300 m from it, fanned 80 degrees either side, so it comes in
+  from every angle, also "from the wrong way" (on the tack that has to tack again, or past the layline).
+
+The score is Max's "fastest gybe": the metres down the course past the mark (along the next leg) at a fixed time,
+1.3 times the leg's expected time plus 25 s after the drop, the same for both arms. A board that rounds faster, or
+comes out of the turn closer and on course, is further down the next leg then. Checks every board must pass: it
+rounds the mark, is never stuck or aground, does not fall, takes no penalty, has clean wind (at most 5 s in dirty
+wind) and does not overstand (at most 25 m beyond its layline: Max's ask 3). The summary judges the drill board by
+board (`suite_summary.py`: the score's sign test, ties within 5 m, and the checks fixed against broken).
+
+- **Phase R** (`random_suite.py --phase=R`): one head, the general skipper, gybe or top drawn at random; the old
+  dirty wind (`frozen_R1`). About 1000 drills an hour on 12 jobs.
+- **Phase L** (`--phase=L`): the laylines in company. Three heads dropped 150 to 400 m from a top mark, each due there
+  within 8 s of the first (`--round_together_s=8`); with `--round_group_deg=20` all three from within 20 degrees of
+  the first as seen from the mark (one layline, each other's dirty wind; without it they spread round the mark and
+  barely meet: dirty wind 0.2 s a board). The new dirty wind, the trail (`frozen_L1`).
+
+**What the drills found** (R-1 to R-5, L-1 to L-3 in the log):
+1. Three switches that already exist, each made for full races on 9 November, are clear wins at the marks on tune
+   71, hold-out 81 and the final check 82, alone and together:
+   - `gybe_at_mark` (the gybe through the mark instead of before or after it): the gybe drills alone change, score
+     40 better / 2 worse, 59 / 0, 48 / 1; the gybe score's median 136 -> 152, 159 -> 199, 139 -> 181 m (mean change
+     +30, +40, +39 m).
+   - `round_early` (the turn begins before the mark as soon as the arc still rounds it): the top drills, 92 / 8,
+     85 / 10, 83 / 8.
+   - `mark_layline_margin_m` = 3 or 0 (the last tack into a mark 3 m or 0 m past its layline, instead of 10): not
+     overstood 79 -> 93 (3) or 96 % (0) on tune, 86 -> 98 % on hold-out 81; score 92 / 12, 100 / 10, 84 / 12 (3) and
+     105 / 8, 109 / 10, 90 / 8 (0); rounded 10 fixed against 2 or 3 broken on tune.
+   - All three together (margin 3; final check 82, 200 drills): **score 164 better, 8 worse**, the median +43 m;
+     rounded 2 fixed, 0 broken; not overstood 26 fixed, 2 broken; no fall, penalty or dirty wind changed.
+   - Margin 0 against margin 3, alone: 51 / 9, 50 / 16, 33 / 17, all pass, by 1 to 3 m a board (mean); one rounding
+     broken on each set (not looked into board by board; likely the board laying the mark exactly, then below it).
+2. In company (phase L, `gybe_at_mark` and `round_early` on in both arms, margin 3 against 0): margin 0 passes the
+   count on all four sets (138 / 79, 124 / 80, 124 / 90, 144 / 82), but the mean change swings from -2.2 to +6.8 m and
+   the roundings from 4 fixed / 10 broken to 16 / 3: many boards a metre or two better, a few much worse (a rounding
+   lost; not looked into board by board: likely laying the mark exactly leaves no room for the others or a lull). Dirty wind hardly comes into play at
+   the top mark (0.2 s a board, even all from one side): with the 20 m shadow the boards seldom sail in each
+   other's wind there. Overstanding in company: about 89 to 90 % not overstood with either margin (84 % on tune 92).
+3. A drill that does not round is mostly not a bad rounding: most of the 12 to 19 % unrounded boards are still
+   reaching in at the score time (about 50 m short, the drop's far end on a slow leg); the score judges them fairly
+   (both arms the same drops), the rounded check alone would not.
+
+**Why not switched on yet.** On 9 November `gybe_at_mark` lowered the pass rate of full races (60 -> 52 %, loop 5);
+the drills test the rounding alone. The full-race check of the night (`ra_t3_off` against `ra_t3_pkg` and
+`ra_t3_pkg0`, phase A, tune 3, 60 races each; `ra_t4_*`, tune 4, 40 each) decides it with Max: R-5, R-6. With margin 3 the package passes full races as often or more on all four seeds
+(123 races; tune 3: 70 -> 73 %), the roundings much tighter (out of the turn 31 -> 19 m, overstand 26 -> 18 m), one
+race aground in the north-east corner on seed 6 (a known trap the changed line met, as in the proposal of 9
+November above). With margin 0 the full races get worse (pass the same or 3 to 5 points lower, legs and race time
+one or two races worse), though it wins the drills by a few metres: the drills judge the rounding, the full race the
+whole leg. **Recommended: the three switches on with margin 3** (Max's word first).
 
 ## The steps
 
