@@ -45,9 +45,9 @@ Done when: pushing too hard on a reach can end in a sudden spin-out with warning
 Notes: Max, 5 November: "this must be done". The catapult, the other risk of pushing, exists already.
 
 ### E01.S04 · The wind shadow simulated
-Status: todo | Size: M | Owner: Michiel, the lead for the simulation | Milestone: M2 | Needs: — | Roadmap: PH15, PH42, RA31
+Status: doing | Size: M | Owner: Michiel, the lead for the simulation | Milestone: M2 | Needs: — | Roadmap: PH15, PH42, RA31
 Done when: the shadow's numbers in `config/wind_shadow_default.tres` come from a simulation, the shadow follows the casting board's apparent wind and turns the wind, and a board leaving a shadow at planing speed no longer catapults for no reason.
-- [ ] T1 A vortex-lattice run (AeroSandbox) of a sail's wake at the race's apparent winds; OpenFOAM only if the lattice disagrees with the books
+- [x] T1 A vortex-lattice run (AeroSandbox) of a sail's wake at the race's apparent winds; OpenFOAM only if the lattice disagrees with the books (done 13 November 2026 another way: a GPU wind tunnel, lattice-Boltzmann with the game's rig as its forces on the air, `tools/wind_tunnel.sh`; a board behind loses about 5 % of its wind at 5 m, 4 % at 10, 3 % at 20; the config set to it on Michiel's OK, option A: `deficit` 0.075, `full_until_m` 1, `stern_bend_deg` 3; [wind_tunnel.md](../../reports/ph15_wind_tunnel/wind_tunnel.md); PH15, in main since `merge/main-13nov-evening`)
 - [ ] T2 `WindDisturbance.factor_at()` returns a wind change (speed and direction), not a scalar: the interface change for Michiel
 - [ ] T3 The shadow's edge: a wake that widens and weakens over a few lengths; the sheet and the stance meet the returning wind (PH42, RA20's eight crowd catapults)
 - [ ] T4 Max's crowd race (RA1's F3 Stop): does the shadow feel right, is 20 s the right penalty
