@@ -25,6 +25,8 @@ Version numbers: `0.x` while the team still changes the physics freely. A patch 
 
 - **Merged into `main` (Session 71, 5 November 2026):** everything above, through pull request #5, `gear/lead`, `gp/sea-follows-wind`, `mp/lan` and `ph43/airtime-fin`, after Michiel's OK on the physics and Max's tests of the waves and of LAN on two PCs. The version stays 0.2.0-beta.3; 0.2.0 is not released yet.
 
+- **The wind shadow measured in a wind tunnel (PH15, PH42)** (13 November 2026; on the branch `ph15/wind-tunnel`, from `ai/roundings-13nov`; [the report](Documentation/reports/ph15_wind_tunnel/wind_tunnel.md)): a wind tunnel that runs on the graphics card (`tools/wind_tunnel.sh`) put the game's own sail and sailor in gusty air at six points of sail and measured the wind behind them. A board behind another loses about 5 % of its wind 5 m back, 4 % at 10 m and 3 % at 20 m, not the 30 % the game took from the sailing books; Max's trail along the apparent wind is confirmed. The game's dirty wind is now 7.5 % right behind a sail, fading to nothing at 20 m, bent 3° toward the sail's stern; the AI's sense of dirty wind, the slalom start's clean spot, the training's dirty-wind measure and the HUD's "in a wind shadow" moved with it. Dirty wind still costs a board 2 to 8 % of its speed, but it is no longer a wall, and sailing out of a shadow no longer hits the board with a gust three times an ordinary one (a likely cause of the AI's falls in a crowd).
+
 ## 0.1.0 — 21 October 2026
 
 The first release: the state of the game after Session 53, merged into `main` from `feature/p9-racing` (which carried U1, U2, Phase 9 and the AI fleet's F1 to F5). The first version that can be downloaded and played without Godot.

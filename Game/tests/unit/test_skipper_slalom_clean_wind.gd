@@ -21,9 +21,9 @@ func test_no_boards_coming_in_keeps_its_spot() -> void:
 
 
 func test_level_just_to_leeward_of_a_board_it_drops_to_leeward_out_of_its_dirty_wind() -> void:
-	# The shadow 20 m long (Max, 13 November 2026; 30 m before): 10 m to leeward it leaves 80 % of the wind, 15 m 90 %,
-	# 20 m all of it (clean from 92 %).
-	assert_eq(_gap(100.0, [Vector2(90.0, 0.0)]), 10.0, "to 20 m to leeward of the other board's crossing")
+	# The wind tunnel's shadow (PH15, 13 November 2026), 20 m long: 10 m to leeward it leaves 96 % of the wind (dirty
+	# under 96.25 %), 15 m 98 % (clean from 98 %). With the 30 % shadow before it moved 10 m, to 20 m to leeward.
+	assert_eq(_gap(100.0, [Vector2(90.0, 0.0)]), 5.0, "to 15 m to leeward of the other board's crossing")
 
 
 func test_close_but_across_the_wind_is_clean() -> void:

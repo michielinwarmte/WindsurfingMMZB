@@ -216,7 +216,7 @@ const WIND_BETTER_SHARE: float = 1.2
 ## Closer than this to the next mark it no longer looks for holes, metres.
 const WIND_NEAR_MARK_M: float = 250.0
 ## Dirty air (_clear_air(), SkipperConfig.dirty_air_share): in the shadow this long, seconds, before it tacks away;
-## the other tack's air looked at this far ahead, metres (the shadows reach 30 m); not within this of the mark.
+## the other tack's air looked at this far ahead, metres (the shadows reach 20 m); not within this of the mark.
 const DIRTY_AIR_S: float = 3.0
 const DIRTY_AIR_LOOK_M: float = 25.0
 const DIRTY_AIR_NEAR_MARK_M: float = 120.0
@@ -313,12 +313,14 @@ const SLALOM_RUN_SPEED_S: float = 3.0
 ## (dirty: the suite's measure, run_race.gd DIRTY_FACTOR), to a place with at least this share (clean), never within
 ## this of another board's crossing, metres (two boards side by side touch at 2 m). Close is not dirty (Max): a board
 ## that only crosses near it is no reason to move (version 6 also moved for that, and half its boards moved).
+## Dirty is half a shadow's full strength and clean about a quarter of it: 0.9625 and 0.98 since the wind tunnel's
+## shadow (PH15, 13 November 2026: at most 7.5 % less); 0.85 and 0.92 with the 30 % shadow before.
 const SLALOM_GAP_LOOK_S: float = 20.0
 const SLALOM_GAP_HOLD_S: float = 3.0
 const SLALOM_GAP_STEP_M: float = 5.0
 const SLALOM_GAP_MOST_M: float = 50.0
-const SLALOM_GAP_DIRTY: float = 0.85
-const SLALOM_GAP_CLEAN: float = 0.92
+const SLALOM_GAP_DIRTY: float = 0.9625
+const SLALOM_GAP_CLEAN: float = 0.98
 const SLALOM_GAP_APART_M: float = 8.0
 ## A board counts as coming in when it closes on the line at this speed or more, m/s, to cross within this, seconds.
 const SLALOM_GAP_INBOUND_MS: float = 1.5

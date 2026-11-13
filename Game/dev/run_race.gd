@@ -206,10 +206,11 @@ const NEAR_M: float = 5.0
 const START_NEAR_FROM_S: float = 30.0
 ## Dirty wind at the start (Max, 12 November 2026: "it's not wrong if they are close together but there is one with
 ## dirty wind"): from START_DIRTY_FROM_S before the gun to START_SCORE_AT_S after it, a board whose sail has under
-## DIRTY_FACTOR of the wind (the other sails' shadows; SkipperConfig.dirty_air_share's default 0.15) counts dt_s
-## (note_dirty_wind()).
+## DIRTY_FACTOR of the wind (the other sails' shadows; SkipperConfig.dirty_air_share's default 0.0375) counts dt_s
+## (note_dirty_wind()). Half a shadow's full strength: 0.9625 since the wind tunnel's shadow (PH15, 13 November 2026:
+## at most 7.5 % less); 0.85 with the 30 % shadow before, so runs before and after do not compare on this measure.
 const START_DIRTY_FROM_S: float = 10.0
-const DIRTY_FACTOR: float = 0.85
+const DIRTY_FACTOR: float = 0.9625
 ## Under this speed on the board is stuck, under SLOW_MS slow, m/s; the first STUCK_GRACE_S after the
 ## gun or a drop (getting going from rest) do not count as stuck.
 const STUCK_MS: float = 1.0

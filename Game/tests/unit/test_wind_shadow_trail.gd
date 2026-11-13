@@ -6,6 +6,9 @@ extends GutTest
 ## leaves no new puffs and its old ones fade; a board's own trail never shades it; with follows_apparent_wind off the
 ## cone straight down the true wind as before.
 
+## In another sail's shadow: at least 3 % less wind (the default shadow, the wind tunnel's, takes at most 7.5 % right
+## behind the sail and 4 % at 10 m: PH15; under 85 % with the 30 % shadow before 13 November 2026).
+const IN_THE_SHADOW: float = 0.97
 ## The wind from the north at 10 m/s: the air moves south (+Z). Ticks of 1/60 s.
 const WIND_FROM_DEG: float = 0.0
 const WIND_MS: float = 10.0
@@ -36,22 +39,22 @@ func test_a_board_at_rest_casts_its_shadow_straight_downwind() -> void:
 	var trail: WindShadowTrail = WindShadowTrail.make()
 	var at: Vector2 = _sail(trail, Vector2.ZERO, Vector2.ZERO, 90.0, 6.0)
 	var behind: float = _left_at(trail, at, Vector2(0.0, 10.0))
-	assert_true(behind < 0.85 and behind > 0.7, "10 m downwind: in the shadow (%.3f)" % behind)
+	assert_true(behind < IN_THE_SHADOW and behind > 0.925, "10 m downwind: in the shadow (%.3f)" % behind)
 	assert_eq(_left_at(trail, at, Vector2(0.0, -5.0)), 1.0, "upwind of the sail: clean")
 	assert_eq(_left_at(trail, at, Vector2(4.0, 0.0)), 1.0, "beside the sail: clean")
-	assert_eq(_left_at(trail, at, Vector2(0.0, 40.0)), 1.0, "beyond 30 m: clean")
+	assert_eq(_left_at(trail, at, Vector2(0.0, 40.0)), 1.0, "beyond 20 m: clean")
 
 
 func test_a_fast_board_on_a_reach_casts_its_shadow_behind_along_its_apparent_wind() -> void:
 	# Going east at 15 m/s in 10 m/s from the north: its apparent wind blows toward the west-south-west, 34 degrees to
-	# leeward of straight astern (27 with the wake's bend toward the stern).
+	# leeward of straight astern (31 with the wake's bend toward the stern, 3 degrees since the wind tunnel, PH15).
 	var trail: WindShadowTrail = WindShadowTrail.make()
 	var at: Vector2 = _sail(trail, Vector2.ZERO, Vector2(15.0, 0.0), 90.0, 6.0)
 	assert_eq(_left_at(trail, at, Vector2(0.0, 10.0)), 1.0, "10 m straight downwind, abeam to leeward: clean (Max's slalom start)")
 	assert_eq(_left_at(trail, at, Vector2(5.0, 8.0)), 1.0, "ahead and to leeward: clean")
-	var axis: Vector2 = Vector2(-cos(deg_to_rad(27.0)), sin(deg_to_rad(27.0)))
+	var axis: Vector2 = Vector2(-cos(deg_to_rad(31.0)), sin(deg_to_rad(31.0)))
 	var wake: float = _left_at(trail, at, axis * 10.0)
-	assert_true(wake < 0.85, "10 m down its wake, behind and to leeward: in the shadow (%.3f)" % wake)
+	assert_true(wake < IN_THE_SHADOW, "10 m down its wake, behind and to leeward: in the shadow (%.3f)" % wake)
 
 
 func test_the_old_cone_shades_abeam_to_leeward_of_the_fast_board() -> void:
@@ -60,14 +63,14 @@ func test_the_old_cone_shades_abeam_to_leeward_of_the_fast_board() -> void:
 	var shadows: WindShadows = WindShadows.make(cone)
 	shadows.set_fleet(PackedFloat32Array([0.0]), PackedFloat32Array([0.0]), PackedByteArray([1]), -1)
 	shadows.set_trail(PackedFloat32Array([0.0, 0.0, 0.0, 0.0, 0.0, -8.0, 0.0, 10.0]), -1)
-	assert_true(shadows.factor_at(Vector3(0.0, 2.0, 10.0), Vector3(0.0, 0.0, WIND_MS)) < 0.85,
+	assert_true(shadows.factor_at(Vector3(0.0, 2.0, 10.0), Vector3(0.0, 0.0, WIND_MS)) < IN_THE_SHADOW,
 		"follows_apparent_wind off: the cone straight down the true wind, whatever the trail")
 
 
 func test_the_shadow_swings_back_as_the_board_speeds_up() -> void:
 	var trail: WindShadowTrail = WindShadowTrail.make()
 	var at: Vector2 = _sail(trail, Vector2.ZERO, Vector2.ZERO, 90.0, 6.0)
-	assert_true(_left_at(trail, at, Vector2(0.0, 8.0)) < 0.85, "waiting: 8 m downwind is dirty")
+	assert_true(_left_at(trail, at, Vector2(0.0, 8.0)) < IN_THE_SHADOW, "waiting: 8 m downwind is dirty")
 	at = _sail(trail, at, Vector2(6.0, 0.0), 90.0, 1.0)
 	at = _sail(trail, at, Vector2(15.0, 0.0), 90.0, 4.0)
 	assert_eq(_left_at(trail, at, Vector2(0.0, 8.0)), 1.0, "going fast: 8 m downwind of it is clean")
@@ -91,7 +94,7 @@ func test_a_sail_in_the_water_leaves_no_puffs_and_its_old_ones_fade() -> void:
 	assert_lt(trail.puff_count(0), count, "no new puffs, the oldest forgotten")
 	assert_true(_left_at(trail, at, Vector2(0.0, 15.0)) < 1.0, "just after the fall its old puffs still shade")
 	_sail(trail, at, Vector2.ZERO, 90.0, 4.0, false)
-	assert_eq(trail.puff_count(0), 0, "after 30 m of wind all gone")
+	assert_eq(trail.puff_count(0), 0, "after 20 m of wind all gone")
 	assert_eq(_left_at(trail, at, Vector2(0.0, 15.0)), 1.0)
 
 

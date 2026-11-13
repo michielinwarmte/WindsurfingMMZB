@@ -5,11 +5,11 @@
 [resource]
 script = ExtResource("1")
 length_m = 20.0
-deficit = 0.3
+deficit = 0.075
 half_width_m = 2.5
 spread_deg = 8.0
-full_until_m = 5.0
+full_until_m = 1.0
 most_deficit = 0.5
 follows_apparent_wind = true
 puff_every_s = 0.25
-stern_bend_deg = 7.0
+stern_bend_deg = 3.0

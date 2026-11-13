@@ -367,7 +367,8 @@ func update_from(race: RaceSim, index: int, t: Telemetry, shadow_deficit: float 
 	if fallen != _fall_shown:
 		_fall_shown = fallen
 		_status.add_theme_color_override("font_color", HudStyle.HIGHLIGHT_COLOR if fallen else TEXT_COLOR)
-	var shadow: String = "   ·   in a wind shadow: %d %% less" % roundi(100.0 * shadow_deficit) if shadow_deficit >= 0.03 else ""
+	# Shown from 2 % (3 % with the 30 % shadow before the wind tunnel, PH15; it now takes at most 7.5 %).
+	var shadow: String = "   ·   in a wind shadow: %d %% less" % roundi(100.0 * shadow_deficit) if shadow_deficit >= 0.02 else ""
 	_wind.text = "wind %.0f kt from %s%s" % [t.tws_10m_kt, compass_name(t.wind_from_bearing_deg), shadow]
 	if race.phase() == RaceSim.Phase.PRE_START:
 		var left: float = race.countdown_s()
