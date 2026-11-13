@@ -114,6 +114,16 @@ uniform float open_look_wind_ms = 7.95;
 // faded out where a wavelength covers fewer than 3 to 6 pixels; the slopes faded out roughen the
 // mirror instead. The far plane (lake_displace off) shows them all as slope only.
 uniform bool lake_displace = true;
+// The open sea's waves past the near mesh (Max, 12 November 2026, watching from the TV camera's
+// drone: "there is a square around the camera which is ugly"). The near mesh moves the surface out to
+// its edge; the far plane (sea_displace off) is flat and used to show no waves at all, so from high up
+// the near mesh showed as a square of waves in a flat, glassy sea. Now the far plane draws the same
+// waves as shading (their exact normal at each pixel, sea_pixel_surface(), and their whitecaps), and
+// across the near mesh's outer part the shading turns from its vertices' to the same per-pixel shading
+// (sea_near_half_m: half the near mesh's width; the shape fades out only in its last few metres), so
+// near and far meet with nothing to see.
+uniform bool sea_displace = true;
+uniform float sea_near_half_m = 200.0;
 uniform vec2 lake_lod_centre = vec2(0.0);
 uniform float lake_lod_height_m = 0.0;
 uniform float lake_lod_reach = 20.0;
@@ -134,6 +144,7 @@ varying vec3 world_position;
 varying float crest_factor;  // -1 in a trough to +1 on a crest
 varying float crest_steepness;  // the sum of steepness x sin(phase): the surface slope at a crest
 varying vec2 rest_xz;  // the rest point of what is drawn here (the lake's per-pixel slopes)
+varying float sea_far_share;  // the open sea: 0 where the near mesh's own shading is drawn, 1 the far shading
 
 // How much of each lake train the mesh shows as shape at a rest point (see lake_displace).
 vec4 lake_shape_weights(vec2 rest) {
@@ -154,10 +165,33 @@ void vertex() {
 	vec3 tangent_z;
 	float crest;
 	float total_steepness;
+	sea_far_share = 0.0;
 	if (lake_waves_on) {
 		lake_wave_surface(rest, lake_shape_weights(rest), displacement, tangent_x, tangent_z, crest, total_steepness);
-	} else {
+	} else if (sea_displace) {
 		wave_surface(rest, displacement, tangent_x, tangent_z, crest, total_steepness);
+		// How far out on the near mesh (its middle 0, its edge 1; the mesh is a square round its node).
+		float out_share = max(abs(VERTEX.x), abs(VERTEX.z)) / max(sea_near_half_m, 1.0);
+		// From high up (the TV camera's drone, an orbit camera wheeled out) all of the mesh is shaded per
+		// pixel: its vertices' shading (1 m apart, so the shorter waves show as broad bands) and the per-pixel
+		// shading look different, and from up there the change would show as a softer square. The sailing
+		// cameras, a few metres up, keep the vertices' shading round the board.
+		float eye_m = CAMERA_POSITION_WORLD.y - MODEL_MATRIX[3].y;
+		sea_far_share = max(smoothstep(0.5, 0.8, out_share), smoothstep(8.0, 30.0, eye_m));
+		// The shape flattens in the mesh's last tenth, where the shading is the far plane's already, so
+		// the edge of the mesh lies flat like the far plane.
+		float shape = 1.0 - smoothstep(0.9, 0.99, out_share);
+		displacement *= shape;
+		tangent_x = mix(vec3(1.0, 0.0, 0.0), tangent_x, shape);
+		tangent_z = mix(vec3(0.0, 0.0, 1.0), tangent_z, shape);
+	} else {
+		// The far plane of the open sea: flat, the waves drawn as shading (fragment()).
+		displacement = vec3(0.0);
+		tangent_x = vec3(1.0, 0.0, 0.0);
+		tangent_z = vec3(0.0, 0.0, 1.0);
+		crest = 0.0;
+		total_steepness = 0.0;
+		sea_far_share = 1.0;
 	}
 	VERTEX = VERTEX + displacement;
 	NORMAL = normalize(cross(tangent_z, tangent_x));
@@ -337,6 +371,26 @@ void lake_pixel_surface(vec2 rest, float pixel_m, out vec3 tangent_x, out vec3 t
 	trains_mss += 0.5 * look_slope * look_slope;
 }
 
+// The open sea's waves as shading at a pixel (see sea_displace): each wave's exact normal at the rest
+// point, faded out where its wavelength covers fewer than 3 to 6 pixels (as the lake's trains,
+// lake_pixel_surface()); the slope of the waves faded out roughens the mirror instead (faded_slope2,
+// their mean square slope: half of (k A) squared a wave).
+void sea_pixel_surface(vec2 rest, float pixel_m, out vec3 tangent_x, out vec3 tangent_z, out float crest, out float total_steepness, out float faded_slope2) {
+	vec4 lengths = vec4(wave_a.w, wave_b.w, wave_c.w, wave_d.w);
+	vec4 shown = vec4(1.0) - smoothstep(lengths / 6.0, lengths / 3.0, vec4(pixel_m));
+	vec3 displacement = vec3(0.0);
+	tangent_x = vec3(1.0, 0.0, 0.0);
+	tangent_z = vec3(0.0, 0.0, 1.0);
+	crest = 0.0;
+	total_steepness = 0.0;
+	gerstner(vec4(wave_a.xy, wave_a.z * shown.x, wave_a.w), wave_amplitudes.x * shown.x, rest, water_time_s, displacement, tangent_x, tangent_z, crest, total_steepness);
+	gerstner(vec4(wave_b.xy, wave_b.z * shown.y, wave_b.w), wave_amplitudes.y * shown.y, rest, water_time_s, displacement, tangent_x, tangent_z, crest, total_steepness);
+	gerstner(vec4(wave_c.xy, wave_c.z * shown.z, wave_c.w), wave_amplitudes.z * shown.z, rest, water_time_s, displacement, tangent_x, tangent_z, crest, total_steepness);
+	gerstner(vec4(wave_d.xy, wave_d.z * shown.w, wave_d.w), wave_amplitudes.w * shown.w, rest, water_time_s, displacement, tangent_x, tangent_z, crest, total_steepness);
+	vec4 slopes = wave_amplitudes * 2.0 * PI / max(lengths, vec4(0.5));
+	faded_slope2 = dot((vec4(1.0) - shown * shown) * slopes * slopes, vec4(0.5));
+}
+
 float grid_line(vec2 p, float cell, float width) {
 	vec2 to_line = abs(fract(p / cell - 0.5) - 0.5) * cell;
 	float d = min(to_line.x, to_line.y);
@@ -386,6 +440,23 @@ void fragment() {
 		BINORMAL = normalize(to_view * -normalize(tangent_z));
 		pixel_crest_factor = total_steepness > 0.0 ? crest / total_steepness : -1.0;
 		pixel_crest_steepness = crest;
+	} else if (sea_far_share > 0.001) {
+		// The open sea past the near mesh's middle: the waves' shading per pixel (see sea_displace).
+		vec2 footprint = fwidth(rest_xz);
+		float pixel_m = max(footprint.x, footprint.y);
+		vec3 tangent_x;
+		vec3 tangent_z;
+		float crest;
+		float total_steepness;
+		float faded_slope2;
+		sea_pixel_surface(rest_xz, pixel_m, tangent_x, tangent_z, crest, total_steepness, faded_slope2);
+		mat3 to_view = mat3(VIEW_MATRIX);
+		NORMAL = normalize(mix(NORMAL, to_view * normalize(cross(tangent_z, tangent_x)), sea_far_share));
+		TANGENT = normalize(mix(TANGENT, to_view * normalize(tangent_x), sea_far_share));
+		BINORMAL = normalize(mix(BINORMAL, to_view * -normalize(tangent_z), sea_far_share));
+		pixel_crest_factor = mix(crest_factor, total_steepness > 0.0 ? crest / total_steepness : -1.0, sea_far_share);
+		pixel_crest_steepness = mix(crest_steepness, crest, sea_far_share);
+		waves_faded_slope2 = faded_slope2 * sea_far_share;
 	}
 	float wind = wind_ripple_factor(world_position.xz);
 	// The open sea in the wind (lake_look.gdshaderinc, 5. to 7.; OceanNode hands it the mean wind as
@@ -464,7 +535,8 @@ void fragment() {
 	albedo = mix(albedo, foam_color, foam);
 	emission *= 1.0 - foam;
 	float distance_fade = clamp(1.0 - distance_m / grid_fade_distance_m, 0.0, 1.0);
-	float lines = grid_line(world_position.xz, cell_m, line_width_m) * distance_fade * grid_strength;
+	// The grid is on the near mesh only: it fades out before the mesh's edge (sea_far_share), or that edge shows.
+	float lines = grid_line(world_position.xz, cell_m, line_width_m) * distance_fade * grid_strength * (1.0 - sea_far_share);
 
 	ALBEDO = mix(albedo, line_color, lines);
 	EMISSION = emission * (1.0 - lines);
@@ -479,6 +551,10 @@ void fragment() {
 	if (lake_waves_on) {
 		float alpha = roughness_value * roughness_value;
 		roughness = clamp(sqrt(sqrt(alpha * alpha + waves_faded_slope2)) + lake_gust_roughness * gust, 0.0, 1.0);
+	} else if (waves_faded_slope2 > 0.0) {
+		// The open sea's waves too small for the pixels far out (sea_pixel_surface()) roughen it the same way.
+		float alpha = roughness * roughness;
+		roughness = clamp(sqrt(sqrt(alpha * alpha + waves_faded_slope2)), 0.0, 1.0);
 	}
 	ROUGHNESS = clamp(mix(roughness, 0.5, foam), 0.0, 1.0);
 	METALLIC = 0.0;

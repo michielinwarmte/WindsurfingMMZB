@@ -10,11 +10,14 @@ extends Node
 ## - H: the screen: full (every card and the keys), TV (what a viewer needs: the race card, the
 ##   standings, the minimap, the speed card), clean (nothing: the water and the boards alone).
 ## - N: the names above the boards on or off.
-## - T: the TV camera: it cuts by itself every SHOT_MIN_S to SHOT_MAX_S between the boards worth
-##   watching (the leader, boards close together, a board coming to a mark, the start line in the
-##   last half minute) and between shots (behind, beside, in front, high, overhead, the helicopter).
-##   A camera key, Tab or L takes the camera back by hand.
-## - 5: the helicopter: high and far, circling the board slowly (5 again: the circling stops or goes on).
+## - T: the TV camera's director (TvCamera; Max, 12 November 2026: "more tv like"): drones and a
+##   helicopter only, the committee boat's view down the start line at the start (who is over early),
+##   the finish line as the leader comes in, and between them cuts to the front of the fleet, the
+##   fights, the mark roundings. T again, or a camera key 1 to 4: your own camera again.
+## - 5 to 9: one TV shot by hand, on the board watched (Tab and L change the board, the shot stays):
+##   5 the helicopter (5 again: the circling stops or goes on), 6 the committee boat down the start
+##   line, 7 the chase drone, 8 the drone beside the board, 9 the drone overhead. The wheel brings the
+##   drone nearer or farther.
 ## - minus and plus: slower and faster (SPEEDS), 0 the normal speed. Every physics tick stays 1/60 s
 ##   of the race (Engine.physics_ticks_per_second and Engine.time_scale change together, as NetBoards
 ##   slows a LAN guest), so the race is the same race at any speed; only the PC's work per second
@@ -30,35 +33,28 @@ extends Node
 ## Command line: --tv=1 (the TV camera from the start), --screen=full|tv|clean, --speed=<x>, --head=1.
 
 enum Screen { FULL, TV, CLEAN }
-## The TV camera's shots (_apply_shot()).
-enum Shot { FOLLOW, BEHIND_HIGH, BESIDE, FRONT, HELICOPTER, OVERHEAD }
 
 ## The speeds offered, times real time; NORMAL is the index of 1.
 const SPEEDS: Array[float] = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0]
 const NORMAL: int = 2
-## How long the TV camera stays on a shot, real seconds (the same pace in slow motion).
-const SHOT_MIN_S: float = 6.0
-const SHOT_MAX_S: float = 12.0
-## The start on the TV camera: from this long before the gun until START_AFTER_S after it, one wide
-## shot of the line.
-const START_FROM_S: float = 30.0
-const START_AFTER_S: float = 12.0
-## What makes a board worth watching: another board this close (metres), its next mark this close.
-const CLOSE_M: float = 25.0
-const MARK_M: float = 70.0
-## The helicopter (5, and the TV camera's widest shot): how far, how high (the angle above the
-## water) and how fast it circles.
-const HELICOPTER_M: float = 110.0
-const HELICOPTER_ELEVATION_RAD: float = 0.55
-const HELICOPTER_DRIFT_RAD_S: float = 0.04
+## The TV shots on the keys 5 to 9 (TvCamera.hold()), and what the full screen says of each.
+const HAND_SHOTS: Dictionary[Key, TvCamera.Shot] = {
+	KEY_5: TvCamera.Shot.ORBIT, KEY_6: TvCamera.Shot.COMMITTEE, KEY_7: TvCamera.Shot.CHASE,
+	KEY_8: TvCamera.Shot.TRACK, KEY_9: TvCamera.Shot.OVERHEAD}
+const SHOT_NAMES: Dictionary[TvCamera.Shot, String] = {
+	TvCamera.Shot.ORBIT: "the helicopter (5 again: circling on or off)",
+	TvCamera.Shot.COMMITTEE: "the committee boat, down the start line",
+	TvCamera.Shot.CHASE: "the chase drone", TvCamera.Shot.TRACK: "the drone beside the board",
+	TvCamera.Shot.OVERHEAD: "the drone overhead"}
 ## How far the orbit camera may be wheeled out while watching, metres (sailing: CameraRig's 60).
 const ORBIT_MAX_M: float = 400.0
 ## The keys along the bottom of the full screen.
 const KEYS: Array[Array] = [
 	["Tab", "next board"],
 	["L", "leader"],
-	["1-5", "camera"],
-	["T", "TV camera"],
+	["1-4", "camera"],
+	["5-9", "TV shots"],
+	["T", "TV director"],
 	["- + 0", "speed"],
 	["P", "freeze"],
 	["H", "screen"],
@@ -84,11 +80,8 @@ var head_shown: bool = false
 ## The project's ticks a second and steps a frame, put back when the watching ends.
 var _normal_ticks: int = 60
 var _normal_max_steps: int = 8
-## The TV camera: the shot now, how long it has left (real seconds), whether the start's shot is on.
-var _shot: Shot = Shot.FOLLOW
-var _shot_left_s: float = 0.0
-var _start_shot: bool = false
-var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
+## The TV camera (its director with T, one shot by hand with 5 to 9).
+var tv: TvCamera = TvCamera.new()
 ## The cameras as they were before the TV camera took them (put back when it stops).
 var _camera_before: Dictionary[String, Variant] = {}
 ## The race's real pace: the race clock and the real clock at the last look, and the pace measured.
@@ -115,7 +108,7 @@ func setup(sailing_scene: SailingScene, race_runner: RaceRunner, hud_layer: Hud,
 	runner = race_runner
 	hud = hud_layer
 	rig = camera_rig
-	_rng.randomize()
+	tv.setup(race_runner, camera_rig, sailing_scene)
 	_normal_ticks = int(ProjectSettings.get_setting("physics/common/physics_ticks_per_second", 60))
 	_normal_max_steps = int(ProjectSettings.get_setting("physics/common/max_physics_steps_per_frame", 8))
 	rig.orbit_max_m = ORBIT_MAX_M
@@ -166,7 +159,7 @@ func handle_input(event: InputEvent) -> bool:
 			_say("Names above the boards: %s" % ("on" if names_shown else "off"))
 		KEY_T:
 			set_tv(not tv_on)
-			_say("TV camera on: it picks the boards and the shots. A camera key, Tab or L: back to your own." if tv_on else "TV camera off.")
+			_say("TV director on: it picks the boards and the shots. T again or 1-4: your own camera; 5-9 one shot by hand." if tv_on else "TV director off.")
 		KEY_P:
 			set_frozen(not frozen)
 		KEY_MINUS, KEY_KP_SUBTRACT:
@@ -177,22 +170,23 @@ func handle_input(event: InputEvent) -> bool:
 			set_speed(NORMAL)
 		KEY_I:
 			head_shown = not head_shown
-		KEY_5, KEY_KP_5:
-			_stop_tv_by_hand()
-			if rig.mode == CameraRig.Mode.ORBIT and rig.orbit_distance_m >= HELICOPTER_M * 0.9:
-				# The helicopter already: 5 stops or starts its circling.
-				rig.orbit_drift_rad_s = 0.0 if rig.orbit_drift_rad_s != 0.0 else HELICOPTER_DRIFT_RAD_S
-			else:
-				_helicopter(_followed_yaw() + PI * 0.25, HELICOPTER_DRIFT_RAD_S)
+		KEY_5, KEY_6, KEY_7, KEY_8, KEY_9:
+			hold_shot(HAND_SHOTS[key.physical_keycode])
 		KEY_R:
 			set_frozen(false)
 			if not key.shift_pressed:
 				return false  # the scene's R: a new race
 			same_race_again()
-		KEY_1, KEY_2, KEY_3, KEY_4, KEY_TAB, KEY_L:
-			# The camera by hand again; the scene does the rest.
+		KEY_1, KEY_2, KEY_3, KEY_4:
+			# Your own camera again; the scene sets it.
 			_stop_tv_by_hand()
+			tv.end()
 			rig.orbit_drift_rad_s = 0.0
+			return false
+		KEY_TAB, KEY_L:
+			# Another board by hand: the director stops, its shot stays on the board you pick.
+			if tv_on:
+				_stop_tv_by_hand()
 			return false
 		KEY_ESCAPE, KEY_M:
 			# The menu or the race director: the race goes on first.
@@ -261,31 +255,60 @@ func set_frozen(on: bool) -> void:
 	get_tree().paused = on
 
 
+## T: the TV camera's director on (it cuts by itself) or off (your own camera as it was before).
 func set_tv(on: bool) -> void:
 	if on == tv_on:
 		return
 	tv_on = on
 	if on:
-		_camera_before = {"mode": rig.mode, "azimuth": rig.orbit_azimuth_rad, "elevation": rig.orbit_elevation_rad,
-			"distance": rig.orbit_distance_m, "height": rig.top_down_height_m}
-		_shot_left_s = 0.0
-		_start_shot = false
+		_remember_the_camera()
+		tv.begin_auto()
 	else:
-		rig.orbit_drift_rad_s = 0.0
-		if not _camera_before.is_empty():
-			rig.orbit_azimuth_rad = _camera_before["azimuth"]
-			rig.orbit_elevation_rad = _camera_before["elevation"]
-			rig.orbit_distance_m = _camera_before["distance"]
-			rig.top_down_height_m = _camera_before["height"]
-			rig.set_mode(_camera_before["mode"])
+		tv.end()
+		_camera_back()
 		runner.follow_leader()
 
 
+## 5 to 9: one TV shot by hand on the board watched (the director stops). 5 on the helicopter already:
+## its circling stops or goes on.
+func hold_shot(shot: TvCamera.Shot) -> void:
+	if shot == TvCamera.Shot.ORBIT and tv.is_on() and not tv.auto and tv.shot == TvCamera.Shot.ORBIT:
+		tv.circling = not tv.circling
+		_say("The helicopter: %s." % ("circling" if tv.circling else "standing still"))
+		return
+	_remember_the_camera()
+	tv_on = false
+	tv.hold(shot)
+	_say("TV shot: %s. T: the director; 1-4: your own camera." % SHOT_NAMES[shot])
+
+
+## The camera as it was before the TV camera took it (not again while the TV camera has it).
+func _remember_the_camera() -> void:
+	if tv.is_on():
+		return
+	_camera_before = {"mode": rig.mode, "azimuth": rig.orbit_azimuth_rad, "elevation": rig.orbit_elevation_rad,
+		"distance": rig.orbit_distance_m, "height": rig.top_down_height_m}
+
+
+func _camera_back() -> void:
+	rig.orbit_drift_rad_s = 0.0
+	if _camera_before.is_empty():
+		rig.set_mode(CameraRig.Mode.ORBIT)
+		return
+	rig.orbit_azimuth_rad = _camera_before["azimuth"]
+	rig.orbit_elevation_rad = _camera_before["elevation"]
+	rig.orbit_distance_m = _camera_before["distance"]
+	rig.top_down_height_m = _camera_before["height"]
+	rig.set_mode(_camera_before["mode"])
+	_camera_before = {}
+
+
+## The director stops by hand (Tab, L, a camera key): the shot on the screen stays until the scene changes it.
 func _stop_tv_by_hand() -> void:
 	if tv_on:
 		tv_on = false
-		_camera_before = {}
-		_say("TV camera off (T: on again).")
+		tv.auto = false
+		_say("TV director off (T: on again).")
 
 
 ## Shift+R: this race again with the same dice.
@@ -295,8 +318,7 @@ func same_race_again() -> void:
 
 
 func _on_new_race() -> void:
-	_start_shot = false
-	_shot_left_s = 0.0
+	tv.new_race()
 	_pace_clock_s = NAN
 	print("WATCH: race %d, dice %d (--seed=%d repeats its start spots and the skippers' day)" % [runner.race_number, runner.last_dice, runner.last_dice])
 
@@ -316,8 +338,9 @@ func _process(_delta: float) -> void:
 	_apply_screen()
 	_show_names()
 	_measure_pace(now_us)
+	tv.keep_the_camera()
 	if tv_on and not frozen and not scene.director_view_open():
-		_tv_step(real_dt)
+		tv.step(real_dt)
 	_update_cards()
 
 
@@ -388,7 +411,9 @@ func _update_cards() -> void:
 		lines.append(pace)
 	if screen == Screen.FULL:
 		if tv_on:
-			lines.append("TV camera")
+			lines.append("TV director")
+		elif tv.is_on():
+			lines.append("TV shot (by hand)")
 		lines.append("Race %d   ·   dice %d" % [runner.race_number, runner.last_dice])
 	_corner.text = "\n".join(lines)
 	_corner_card.visible = not lines.is_empty()
@@ -419,142 +444,3 @@ func head_text() -> String:
 	if scripted != null:
 		lines.append("Tacks %d   ·   gybes %d   ·   penalty turns %d" % [scripted.tacks, scripted.gybes, scripted.penalty_turns])
 	return "\n".join(lines)
-
-
-# ---------------------------------------------------------------- the TV camera
-
-func _tv_step(real_dt: float) -> void:
-	var race: RaceSim = runner.race
-	if race == null or runner.watch_order().is_empty():
-		return
-	_shot_left_s -= real_dt
-	var at_start: bool = race.is_started() and race.clock_s() >= -START_FROM_S and race.clock_s() <= START_AFTER_S
-	if at_start and not _start_shot:
-		_start_shot = true
-		_cut_to_the_start(race)
-		return
-	if at_start:
-		return  # the start's shot holds until START_AFTER_S after the gun
-	var watched: int = runner.followed_index()
-	var gone: bool = watched < 0 or not runner.watch_order().has(watched)
-	if _shot_left_s > 0.0 and not gone:
-		return
-	_cut(race)
-
-
-## The start: the board nearest the middle of the line, from high behind the line (the fleet and the
-## line in the picture), until just after the gun.
-func _cut_to_the_start(race: RaceSim) -> void:
-	var middle: Vector2 = runner.course.start_middle()
-	var best: int = -1
-	var best_m: float = INF
-	for index: int in runner.watch_order():
-		var m: float = race.board_position(index).distance_to(middle)
-		if m < best_m:
-			best_m = m
-			best = index
-	if best < 0:
-		return
-	runner.watch_board(best)
-	_shot = Shot.HELICOPTER
-	_helicopter(_yaw_of(runner.board_node(best)) + PI * 0.2, HELICOPTER_DRIFT_RAD_S * 0.5)
-	rig.orbit_distance_m = HELICOPTER_M * 0.8
-	# It holds while the start is on (_tv_step()); the next shot comes as soon as it is over.
-	_shot_left_s = 0.0
-
-
-## A new shot: a board worth watching (story_weights()) and a way to look at it.
-func _cut(race: RaceSim) -> void:
-	var order: Array[int] = runner.watch_order()
-	var positions: PackedVector2Array = PackedVector2Array()
-	var to_mark: PackedFloat32Array = PackedFloat32Array()
-	var finished: PackedByteArray = PackedByteArray()
-	for index: int in order:
-		positions.append(race.board_position(index))
-		to_mark.append(race.distance_to_next_m(index) if race.phase() == RaceSim.Phase.RACING else INF)
-		finished.append(1 if race.is_finished(index) or race.is_retired(index) else 0)
-	var weights: PackedFloat32Array = story_weights(positions, to_mark, finished, order.find(runner.followed_index()))
-	var pick: int = order[_rng.rand_weighted(weights)]
-	runner.watch_board(pick)
-	var at: int = order.find(pick)
-	var near_mark: bool = to_mark[at] < MARK_M
-	_shot = _pick_shot(near_mark, _shot)
-	_apply_shot(_shot, runner.board_node(pick))
-	_shot_left_s = _rng.randf_range(SHOT_MIN_S, SHOT_MAX_S)
-
-
-## How much each board (in the watch order, the leader first) is worth a shot: the leader, a board
-## close to another, a board near its next mark more; a finished board little; the board on the screen
-## now little (the camera moves on). Plain numbers in, so the tests can drive it.
-static func story_weights(positions: PackedVector2Array, to_mark: PackedFloat32Array, finished: PackedByteArray, shown: int) -> PackedFloat32Array:
-	var weights: PackedFloat32Array = PackedFloat32Array()
-	for i: int in positions.size():
-		var weight: float = 1.0
-		if i == 0:
-			weight += 2.0
-		for j: int in positions.size():
-			if j != i and finished[j] == 0 and positions[i].distance_to(positions[j]) < CLOSE_M:
-				weight += 3.0
-				break
-		if to_mark[i] < MARK_M:
-			weight += 4.0
-		if finished[i] != 0:
-			weight = 0.2
-		if i == shown and positions.size() > 1:
-			weight *= 0.15
-		weights.append(weight)
-	return weights
-
-
-## The next shot, not the same as the last; near a mark one that shows the mark too (from high or above).
-func _pick_shot(near_mark: bool, last: Shot) -> Shot:
-	var shots: Array[Shot] = [Shot.FOLLOW, Shot.BEHIND_HIGH, Shot.BESIDE, Shot.FRONT, Shot.HELICOPTER, Shot.OVERHEAD]
-	var weights: PackedFloat32Array = PackedFloat32Array([2.0, 2.0, 3.0, 1.5, 1.0, 1.0])
-	if near_mark:
-		weights = PackedFloat32Array([0.5, 3.0, 1.0, 0.5, 2.0, 2.0])
-	weights[shots.find(last)] = 0.0
-	return shots[_rng.rand_weighted(weights)]
-
-
-func _apply_shot(shot: Shot, node: WindsurferNode) -> void:
-	var yaw: float = _yaw_of(node)
-	var side: float = 1.0 if _rng.randf() < 0.5 else -1.0
-	rig.orbit_drift_rad_s = 0.0
-	match shot:
-		Shot.FOLLOW:
-			rig.set_mode(CameraRig.Mode.FOLLOW)
-		Shot.BEHIND_HIGH:
-			_orbit(yaw + side * _rng.randf_range(0.2, 0.6), 0.45, 30.0, side * 0.04)
-		Shot.BESIDE:
-			_orbit(yaw + side * PI * 0.5, 0.12, 16.0, side * 0.03)
-		Shot.FRONT:
-			_orbit(yaw + PI + side * _rng.randf_range(0.3, 0.7), 0.18, 14.0, 0.0)
-		Shot.HELICOPTER:
-			_helicopter(yaw + side * PI * 0.25, side * HELICOPTER_DRIFT_RAD_S)
-		Shot.OVERHEAD:
-			rig.top_down_height_m = 80.0
-			rig.set_mode(CameraRig.Mode.TOP_DOWN)
-
-
-func _orbit(azimuth_rad: float, elevation_rad: float, distance_m: float, drift_rad_s: float) -> void:
-	rig.set_mode(CameraRig.Mode.ORBIT)
-	rig.orbit_azimuth_rad = azimuth_rad
-	rig.orbit_elevation_rad = elevation_rad
-	rig.orbit_distance_m = distance_m
-	rig.orbit_drift_rad_s = drift_rad_s
-
-
-func _helicopter(azimuth_rad: float, drift_rad_s: float) -> void:
-	_orbit(azimuth_rad, HELICOPTER_ELEVATION_RAD, HELICOPTER_M, drift_rad_s)
-
-
-## The board's heading as the orbit camera's azimuth: this azimuth puts the camera right behind it.
-static func _yaw_of(node: WindsurferNode) -> float:
-	if node == null:
-		return 0.0
-	var forward: Vector3 = -node.global_transform.basis.z
-	return atan2(-forward.x, -forward.z)
-
-
-func _followed_yaw() -> float:
-	return _yaw_of(runner.followed_node())

@@ -15,8 +15,8 @@ default). On top of the spectator's Tab, Shift+Tab and L, keys for filming and f
 
 | Key | What it does |
 |---|---|
-| T | The TV camera: it cuts every 6 to 12 s (real seconds) between the boards worth watching and between shots. In the last 30 s of the countdown it holds one wide shot of the start line until 12 s after the gun. A camera key, Tab or L takes the camera back by hand. |
-| 5 | The helicopter: the orbit camera 110 m out, 0.55 rad up, circling at 0.04 rad/s. 5 again stops or restarts the circling. |
+| T | The TV camera. **Changed on 12 November 2026:** the TV director, drones and the committee boat only, the front first: [tv_camera_12nov.md](tv_camera_12nov.md). |
+| 5 | The helicopter. **From 12 November 2026** keys 5 to 9 are TV shots by hand: [tv_camera_12nov.md](tv_camera_12nov.md). |
 | - + 0 | Slower, faster, normal: 1/4, 1/2, 1, 2, 4, 8 times. |
 | P | The race frozen, without a menu; the camera still moves (right mouse, wheel, the circling). P, Esc, R or M go on. |
 | H | The screen: full (every card, the keys) -> TV (the race card, the standings, the minimap, the compass, the speed card; no keys, no gauges, no F1 panel; the title "Hana, 3rd" without the keys) -> clean (no HUD at all). |
