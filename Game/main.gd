@@ -14,6 +14,7 @@ extends Node3D
 ## --fall=<seconds> (the sailor is catapulted at that time), --pause=<seconds> (the pause
 ## menu opens at that time), --page=settings/<tab>|controls|howto (and that page of it).
 ## --settings=<file.cfg> or --settings=defaults: see ui/game_settings.gd.
+## --measure=<seconds>: the frame rate and where the frame's time goes, then quits (FrameBudget).
 ## --body=<side>,<back> turns the body on the mouse on (package B) and holds it there by script,
 ## each from -1 to 1 (MouseBody.side and back; the mouse is then not captured); with it --burst=1
 ## holds the push's burst (the left mouse button of "Push on the mouse") by script, for screenshots.
@@ -1325,6 +1326,9 @@ func _measure_frame_rate(seconds: float) -> void:
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	var viewport_rid: RID = get_viewport().get_viewport_rid()
 	RenderingServer.viewport_set_measure_render_time(viewport_rid, true)
+	var budget: FrameBudget = FrameBudget.new()
+	budget.name = "FrameBudget"
+	add_child(budget)
 	for i: int in 180:
 		await get_tree().process_frame
 	var frames: int = 0
@@ -1332,6 +1336,12 @@ func _measure_frame_rate(seconds: float) -> void:
 	var physics_ms: float = 0.0
 	var process_ms: float = 0.0
 	var gpu_ms: float = 0.0
+	var render_cpu_ms: float = 0.0  # the processor's drawing of the main view
+	var setup_cpu_ms: float = 0.0  # the processor's frame setup for drawing
+	var draw_calls: float = 0.0
+	var objects: float = 0.0
+	var primitives: float = 0.0
+	budget.reset()
 	_windsurfer.cost_text()  # the warm-up's numbers are dropped
 	if _race_runner != null:
 		_race_runner.cost_text()
@@ -1346,8 +1356,14 @@ func _measure_frame_rate(seconds: float) -> void:
 		physics_ms += Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0
 		process_ms += Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0
 		gpu_ms += RenderingServer.viewport_get_measured_render_time_gpu(viewport_rid)
+		render_cpu_ms += RenderingServer.viewport_get_measured_render_time_cpu(viewport_rid)
+		setup_cpu_ms += RenderingServer.get_frame_setup_time_cpu()
+		draw_calls += Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
+		objects += Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)
+		primitives += Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)
 		frames += 1
 	var total_s: float = (Time.get_ticks_usec() - start_us) / 1e6
+	_print_frame_budget(budget, frames, total_s, [render_cpu_ms, setup_cpu_ms, gpu_ms], [draw_calls, objects, primitives])
 	# The boards sailing: the player's (unless parked by --spectate) and the AI boards.
 	var boards: int = (0 if _is_spectating() else 1) + (_race_runner.opponents.size() if _race_runner != null else 0)
 	print("Measured %.0f s with %d boards: %.0f fps; a frame %.1f ms on average, %.1f ms at worst; physics %.1f ms and the rest %.1f ms of a frame" % [
@@ -1360,6 +1376,25 @@ func _measure_frame_rate(seconds: float) -> void:
 	if _race_runner != null:
 		print("  the race runner: %s" % _race_runner.cost_text())
 	get_tree().quit()
+
+
+## --measure's budget lines (FrameBudget): the main thread's frame split into the physics ticks,
+## the frame's scripts, the processor's drawing and the rest (the engine, and waiting for the
+## graphics card), each on average per frame; then the draw calls the processor hands the card.
+## The line above it ("physics ... and the rest") is Godot's own monitor: the worst tick and the
+## worst frame of each second, not an average.
+func _print_frame_budget(budget: FrameBudget, frames: int, total_s: float, times_ms: Array[float], counts: Array[float]) -> void:
+	var frame_ms: float = 1000.0 * total_s / frames
+	var physics_ms: float = budget.physics_us / 1000.0 / frames
+	var scripts_ms: float = budget.process_us / 1000.0 / frames
+	var drawing_ms: float = times_ms[0] / frames
+	var setup_ms: float = times_ms[1] / frames
+	var rest_ms: float = frame_ms - physics_ms - scripts_ms - drawing_ms - setup_ms
+	print("  the budget of a %.2f ms frame (main thread, averages): physics ticks %.2f (%.2f ticks a frame, %.2f ms a tick), the frame's scripts %.2f, the processor's drawing %.2f, its frame setup %.2f, the rest (engine, waiting) %.2f; the graphics card %.2f" % [
+		frame_ms, physics_ms, float(budget.physics_ticks) / frames, budget.physics_us / 1000.0 / maxi(budget.physics_ticks, 1),
+		scripts_ms, drawing_ms, setup_ms, rest_ms, times_ms[2] / frames])
+	print("  drawn a frame: %.0f draw calls, %.0f objects, %.0f thousand triangles" % [
+		counts[0] / frames, counts[1] / frames, counts[2] / frames / 1000.0])
 
 
 ## The gust patches on the water (OpenGustMap, GR2): the open water's wind drawn around the

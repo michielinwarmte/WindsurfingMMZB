@@ -66,6 +66,16 @@ static func threads_for_this_pc() -> int:
 ## The physics and the skipper are never leveled: only what is drawn. This is the Normal draw distance;
 ## Settings > Graphics > Draw distance moves it (DrawDistance.full_detail_m(), which the boards use).
 const FAR_DETAIL_M: float = 300.0
+## An opponent out of the camera's view is posed on every this-many ticks (_pose_boards()): when the
+## camera turns or cuts to it, its sailor and rig are at most this many ticks old for one frame.
+const OUT_OF_VIEW_POSE_TICKS: int = 8
+## How far outside the camera's view a board still counts as seen: its mast (up to 5.4 m), its
+## boom and its sailor reach out from the board's own point.
+const VIEW_MARGIN_M: float = 10.0
+## A board this near the camera counts as seen even out of view: its sail's shadow may fall into the
+## picture (the water takes shadows), and when the camera turns the near boards come in first and
+## largest.
+const ALWAYS_POSED_M: float = 50.0
 ## A LAN player who has finished watches the others this many seconds after crossing the line (first
 ## the finish on the screen: the place and the time).
 const WATCH_AFTER_FINISH_S: float = 4.0
@@ -117,6 +127,11 @@ var rules: RaceRules = null
 var _us_physics: int = 0
 var _us_race: int = 0
 var _ticks_counted: int = 0
+## The tick's parts on the main thread, for --measure (FrameBudget, 13 November 2026): the time
+## spent in each since the last cost_text(), in the order of PART_NAMES.
+const PART_NAMES: PackedStringArray = ["skippers (and the player's controls)", "dirty wind", "physics with the posing beside it", "clocks and shore", "telling the race", "race step", "judging"]
+var _in_view_count: int = 0  ## boards in the camera's view, summed over the ticks (--measure)
+var _us_parts: PackedInt64Array = PackedInt64Array([0, 0, 0, 0, 0, 0, 0])
 ## The ticks since the race was built, for posing the far boards on alternate ticks.
 var _tick: int = 0
 ## --race_report=<s>: every this many seconds of the race clock, one line per AI board on the console
@@ -476,30 +491,44 @@ func _physics_process(delta: float) -> void:
 	var player_stopped: bool = not spectating and (player_parked or (scene != null and scene.is_aground()))
 	var stopped: PackedByteArray = _stopped_boards(player_stopped)
 	_hand_the_wind_clock()
+	var p0: int = Time.get_ticks_usec()
+	# The skippers think here, one after the other: they read the race and the other boards. An AI
+	# board's controller then sets its controls on its own worker thread, just before its physics
+	# (_step_board); the player's on this thread now.
+	var controls_there: PackedByteArray = _controls_on_worker_threads(stopped)
 	for i: int in _boards.size():
 		if stopped[i] == 0:
-			_boards[i].sail(delta)
+			_boards[i].think(delta)
+			if controls_there[i] == 0:
+				_boards[i].set_the_controls(delta)
+	var p1: int = Time.get_ticks_usec()
 	_cast_shadows(delta)
 	var t0: int = Time.get_ticks_usec()
+	# The physics, and the visuals beside it: each board's step is a task of its own on the worker
+	# threads, and this thread poses each board as soon as its step is done, while the threads go
+	# on with the others (13 November 2026; before, this thread waited for all of them and then
+	# posed every board). Posing reads only the board's own simulation.
+	var steps: PackedInt64Array = PackedInt64Array()
 	if setup.threads > 0:
-		# One element per board, pulled by at most setup.threads worker tasks as each finishes its
-		# board (the pool hands out the elements one by one), so a task on a slow core takes fewer
-		# boards and the tick waits for nobody's fixed share.
-		var group: int = WorkerThreadPool.add_group_task(_step_board.bind(delta, stopped), _boards.size(), setup.threads, true, "race physics")
-		WorkerThreadPool.wait_for_group_task_completion(group)
+		steps = _start_the_steps(delta, stopped, controls_there)
 	else:
 		for i: int in _boards.size():
-			_step_board(i, delta, stopped)
+			_step_board(i, delta, stopped, controls_there)
+	_pose_boards(player_stopped, steps)
 	var t1: int = Time.get_ticks_usec()
 	_keep_the_parked_boards_clock(stopped, delta)
 	_read_the_wind_clock(stopped, delta)
 	_check_the_shore(scene.shore_grid if scene != null else null)
-	_pose_boards(player_stopped)
+	var p4: int = Time.get_ticks_usec()
 	_tell_the_race()
+	var p5: int = Time.get_ticks_usec()
 	race.step(delta)
 	for kind: RaceStartSignals.Kind in _start_signals.update(race.is_started(), race.clock_s()):
 		start_signal.emit(kind)
+	var p6: int = Time.get_ticks_usec()
 	_judge(delta)
+	var p7: int = Time.get_ticks_usec()
+	_add_part_times([p0, p1, t0, t1, p4, p5, p6, p7])
 	_us_physics += t1 - t0
 	_us_race += Time.get_ticks_usec() - t1
 	_ticks_counted += 1
@@ -507,6 +536,12 @@ func _physics_process(delta: float) -> void:
 	if _report_every_s > 0.0 and race.clock_s() >= _report_at_s:
 		_report_at_s = race.clock_s() + _report_every_s
 		_print_report()
+
+
+## Adds the time between each pair of the tick's marks to its part (PART_NAMES).
+func _add_part_times(marks: Array[int]) -> void:
+	for i: int in PART_NAMES.size():
+		_us_parts[i] += marks[i + 1] - marks[i]
 
 
 ## The parked board's simulation is not stepped, but the water on the screen runs on its clock
@@ -650,27 +685,82 @@ func shadow_deficit(node: WindsurferNode) -> float:
 
 
 ## Board i's physics (a worker task's element, or the loop's); not for a stopped board.
-func _step_board(i: int, delta: float, stopped: PackedByteArray) -> void:
+func _step_board(i: int, delta: float, stopped: PackedByteArray, controls_there: PackedByteArray) -> void:
 	if stopped[i] == 1:
 		return
+	if controls_there[i] == 1:
+		_boards[i].set_the_controls(delta)
 	_boards[i].step_physics(delta)
+
+
+## Every board's step (_step_board) as a task of its own on the worker threads, in the boards' order;
+## the ids, for _wait_for_steps(). The pool's threads take the tasks in turn as each finishes one,
+## so a thread on a slow core takes fewer boards and the tick waits for nobody's fixed share.
+func _start_the_steps(delta: float, stopped: PackedByteArray, controls_there: PackedByteArray) -> PackedInt64Array:
+	var steps: PackedInt64Array = PackedInt64Array()
+	for i: int in _boards.size():
+		steps.append(WorkerThreadPool.add_task(_step_board.bind(i, delta, stopped, controls_there), true, "race physics"))
+	return steps
+
+
+## Waits until the steps of the boards from `first` up to (not including) `end` are done (each task
+## is waited for once). No steps (the boards stepped on this thread): nothing to wait for.
+func _wait_for_steps(steps: PackedInt64Array, first: int, end: int) -> void:
+	for i: int in range(first, mini(end, steps.size())):
+		WorkerThreadPool.wait_for_task_completion(steps[i])
+
+
+## Which boards' controllers run in _step_board (1) rather than on this thread before it (0): the AI
+## boards' when the boards are stepped on worker threads (WindsurferNode.controls_on_worker_thread()).
+## Each board still runs its skipper, its controller and its physics in that order, with the same
+## inputs, so the race is the same to the last bit (checked with --race_report's state hash).
+func _controls_on_worker_threads(stopped: PackedByteArray) -> PackedByteArray:
+	var there: PackedByteArray = PackedByteArray()
+	there.resize(_boards.size())
+	for i: int in _boards.size():
+		there[i] = 1 if setup.threads > 0 and stopped[i] == 0 and _boards[i].controls_on_worker_thread() else 0
+	return there
 
 
 
 ## After the physics, on this thread: every board's visuals. An opponent farther than
 ## FAR_DETAIL_M from the camera is posed on alternate ticks (half of them on the even ticks, half
-## on the odd, so the cost is even); its place on the water is set every tick.
-func _pose_boards(player_stopped: bool) -> void:
+## on the odd, so the cost is even); its place on the water is set every tick. An opponent out of the
+## camera's view, and farther than ALWAYS_POSED_M, is posed on every OUT_OF_VIEW_POSE_TICKS-th tick
+## only (13 November 2026): nobody sees its sailor and rig, and the board itself still moves every tick.
+func _pose_boards(player_stopped: bool, steps: PackedInt64Array) -> void:
+	# The opponents are the last boards (the player's, when it sails here, the first).
+	var first_opponent: int = _boards.size() - opponents.size()
+	_wait_for_steps(steps, 0, first_opponent)
 	if not player_stopped and not spectating and not player_parked:
 		player.after_step()
 	# The other players' boards (LAN multiplayer) are posed by NetBoards as their states come in.
 	var camera: Camera3D = get_viewport().get_camera_3d()
 	var eye: Vector3 = camera.global_position if camera != null else player.global_position
+	var view: Array[Plane] = []
+	if camera != null:
+		view = camera.get_frustum()
 	for i: int in opponents.size():
+		_wait_for_steps(steps, first_opponent + i, first_opponent + i + 1)
 		var node: WindsurferNode = opponents[i]
-		var far: bool = node.global_position.distance_to(eye) > DrawDistance.full_detail_m()
-		node.set_far_away(far)
-		node.after_step(not far or (_tick + i) % 2 == 0)
+		var distance_m: float = node.global_position.distance_to(eye)
+		var far: bool = distance_m > DrawDistance.full_detail_m()
+		var seen: bool = distance_m < ALWAYS_POSED_M or in_view(view, node.global_position)
+		# Out of view the rig's frame-by-frame work (the fin's bend) stops too, as far away.
+		node.set_far_away(far or not seen)
+		var pose: bool = (not far or (_tick + i) % 2 == 0) if seen else (_tick + i) % OUT_OF_VIEW_POSE_TICKS == 0
+		node.after_step(pose)
+		_in_view_count += 1 if seen else 0
+
+
+## Whether a board at `at` may show in the picture: inside the camera's view (its six planes,
+## Camera3D.get_frustum(), facing out) or within VIEW_MARGIN_M of it, so a mast, a sail or a
+## sailor reaching in from a board just outside counts as seen. No view (no camera): seen.
+static func in_view(view: Array[Plane], at: Vector3) -> bool:
+	for plane: Plane in view:
+		if plane.distance_to(at) > VIEW_MARGIN_M:
+			return false
+	return true
 
 
 ## What a tick of the runner costs on average since the last call, milliseconds (--measure).
@@ -679,6 +769,13 @@ func cost_text() -> String:
 	var how: String = "side by side, %d tasks" % setup.threads if setup.threads > 0 else "one after the other"
 	var text: String = "all boards' physics %.2f ms (%s), the race's checks and the visuals %.2f ms per tick" % [
 		_us_physics / ticks / 1000.0, how, _us_race / ticks / 1000.0]
+	var parts: PackedStringArray = PackedStringArray()
+	for i: int in PART_NAMES.size():
+		parts.append("%s %.2f" % [PART_NAMES[i], _us_parts[i] / ticks / 1000.0])
+		_us_parts[i] = 0
+	text += "\n  the tick's parts (ms per tick): " + ", ".join(parts)
+	text += "\n  AI boards in the camera's view: %.1f of %d on average" % [_in_view_count / ticks, opponents.size()]
+	_in_view_count = 0
 	_us_physics = 0
 	_us_race = 0
 	_ticks_counted = 0
@@ -700,7 +797,7 @@ func opponents_cost_text() -> String:
 		visuals.append(cost.z)
 		if node.is_far_away():
 			far += 1
-	return "%d, %d of them beyond %d m: physics median %.2f, worst %.2f; sailor median %.2f, worst %.2f; visuals median %.2f, worst %.2f ms per tick" % [
+	return "%d, %d of them beyond %d m or out of view: physics median %.2f, worst %.2f; sailor median %.2f, worst %.2f; visuals median %.2f, worst %.2f ms per tick" % [
 		opponents.size(), far, roundi(DrawDistance.full_detail_m()), median(physics), worst(physics), median(sailor), worst(sailor), median(visuals), worst(visuals)]
 
 
@@ -960,4 +1057,18 @@ func _print_report() -> void:
 			node.skipper.board_name().left(10) if node.skipper != null else node.name, WindsurferSim.SailorState.keys()[node.sim.sailor_state],
 			t.speed_ms, t.heading_deg, t.twa_deg, node.hands.steer if node.hands != null else NAN, node.controls.sheet,
 			node.use_autopilot, node.controller.hands != null, note])
+	print("  the fleet's state: %d" % _fleet_state_hash())
 	_reported_polars = true
+
+
+## One number for every board's exact state (place, speed, attitude, turn, controls), so two runs
+## can be compared to the last bit: the same number, the same race (a change that should leave the
+## race alone, such as where a board's controller runs, 13 November 2026).
+func _fleet_state_hash() -> int:
+	var numbers: PackedFloat64Array = PackedFloat64Array()
+	for node: WindsurferNode in _boards:
+		var body: SimRigidBody = node.sim.body
+		for v: Vector3 in [body.position, body.velocity, body.angular_velocity, body.basis.x, body.basis.y, body.basis.z]:
+			numbers.append_array([v.x, v.y, v.z])
+		numbers.append_array([node.controls.sheet, node.controls.rake, node.controls.lean, node.controls.boom_across, node.sim.time_s])
+	return hash(numbers)
