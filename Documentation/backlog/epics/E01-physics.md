@@ -45,7 +45,7 @@ Done when: pushing too hard on a reach can end in a sudden spin-out with warning
 Notes: Max, 5 November: "this must be done". The catapult, the other risk of pushing, exists already.
 
 ### E01.S04 · The wind shadow simulated
-Status: todo | Size: M | Owner: Michiel, the lead for the simulation | Milestone: M2 | Needs: — | Roadmap: PH15, PH42
+Status: todo | Size: M | Owner: Michiel, the lead for the simulation | Milestone: M2 | Needs: — | Roadmap: PH15, PH42, RA31
 Done when: the shadow's numbers in `config/wind_shadow_default.tres` come from a simulation, the shadow follows the casting board's apparent wind and turns the wind, and a board leaving a shadow at planing speed no longer catapults for no reason.
 - [ ] T1 A vortex-lattice run (AeroSandbox) of a sail's wake at the race's apparent winds; OpenFOAM only if the lattice disagrees with the books
 - [ ] T2 `WindDisturbance.factor_at()` returns a wind change (speed and direction), not a scalar: the interface change for Michiel
@@ -54,7 +54,7 @@ Done when: the shadow's numbers in `config/wind_shadow_default.tres` come from a
 - [x] T5 The shadow along the casting board's apparent wind, as a trail of puffs drifting with the true wind, bent 7° toward its stern (Richards et al. 2012 wind tunnel); length 20 m (Max, 13 November 2026: "this needs to be less, make it 20m"); `Game/race/wind_shadow_trail.gd`, `follows_apparent_wind` in the config; branch `ai/roundings-13nov` (not merged)
 - [ ] T6 The more scientific model for later (Max, 13 November 2026: "a backlog add for more scientific approach for later"): the deficit and its decay from T1's simulation or a measurement instead of the books (deficit ∝ 1/√distance, Roncin and Kobus 2004); the header in the wake (about 5° close, T2); the safe-leeward and lee-bow gains (+2 to 3 % within a mast height); several shadows multiplied instead of added; the wake's drift speed (0.9 to 1.0 of the true wind); and checked against a windsurf sail, not only yachts (no wake data exist for windsurf, foil or kite rigs)
 - [ ] T7 The skippers adapt to the trail (Max: "the skippers need to adapt. but that is for later"): `WindShadows.factor_from()`, the slalom start's clean-wind spot and the dirty-air tactics still guess the old cone straight down the true wind
-Notes: Max, 5 November: "simulate the numbers". Research in `Documentation/reports/research/ph6_ventilation_ph15_wind_shadow.md` (section PH15). 13 November 2026: the research for the trail, with the recommended numbers per source, in `Documentation/reports/racing/dirty_wind_13nov/RESEARCH.md` (branch `ai/roundings-13nov`).
+Notes: Max, 5 November: "simulate the numbers". Research in `Documentation/reports/research/ph6_ventilation_ph15_wind_shadow.md` (section PH15). 13 November 2026: the research for the trail, with the recommended numbers per source, in `Documentation/reports/racing/dirty_wind_13nov/RESEARCH.md` (branch `ai/roundings-13nov`, pushed 13 November). The trail is on by default there (`follows_apparent_wind`), described in the physics spec's 8.11; Michiel to look at the length, the bend and the puffs' spacing (PH15).
 
 ### E01.S05 · The dive after a crest checked against video
 Status: blocked | Size: S | Owner: Michiel, Max for the videos | Milestone: M2 | Needs: Max's videos | Roadmap: PH43
