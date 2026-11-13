@@ -1,0 +1,24 @@
+#!/usr/bin/env python
+# The game's native library (the test of 13 November 2026), built with SCons on godot-cpp:
+#   scons godot_cpp=<the godot-cpp folder> platform=windows use_mingw=yes target=template_release
+# Use tools/native.sh, which finds the compiler and godot-cpp and does the rest.
+#
+# The physics must give the same answers as the GDScript to the last bit, so the compiler may not
+# fuse a multiplication and an addition into one rounding (-ffp-contract=off), and must call sin and
+# cos one by one, as GDScript does, instead of one combined sincos (-fno-builtin-...).
+import os
+
+godot_cpp = ARGUMENTS.get("godot_cpp", os.environ.get("GODOT_CPP", ""))
+if not godot_cpp or not os.path.isfile(os.path.join(godot_cpp, "SConstruct")):
+    print("Give the godot-cpp folder: scons godot_cpp=<folder> (or the GODOT_CPP environment variable).")
+    Exit(1)
+
+env = SConscript(os.path.join(godot_cpp, "SConstruct"))
+env.Append(CPPPATH=["src/"])
+env.Append(CCFLAGS=["-ffp-contract=off", "-fno-builtin-sin", "-fno-builtin-cos", "-fno-builtin-sincos"])
+
+library = env.SharedLibrary(
+    "../Game/native/bin/windsurf_native{}{}".format(env["suffix"], env["SHLIBSUFFIX"]),
+    source=Glob("src/*.cpp"),
+)
+Default(library)
