@@ -233,11 +233,29 @@ func _physics_process(delta: float) -> void:
 ## The sailor's part of a tick: the skipper (who keeps watching from the water too: its clock
 ## runs, its hands come off) and the controller or the autopilot set the controls.
 func sail(delta: float) -> void:
+	think(delta)
+	set_the_controls(delta)
+
+
+## The skipper's turn: the race read, the other boards watched, the hands set. On the main thread,
+## because it reads the race and the other boards.
+func think(delta: float) -> void:
 	if is_puppet:
 		return
 	var t0: int = Time.get_ticks_usec()
 	if skipper != null:
 		skipper.update(sim.telemetry, delta)
+	_us_sailor += Time.get_ticks_usec() - t0
+
+
+## The controller (or the autopilot) sets the controls from the hands, the keys or its own aim. It
+## reads only this board (its simulation, its hands, its own copies of the configs), so a race runs
+## an AI board's on that board's worker thread just before its physics (controls_on_worker_thread():
+## the same answers as on the main thread, 13 November 2026).
+func set_the_controls(delta: float) -> void:
+	if is_puppet:
+		return
+	var t0: int = Time.get_ticks_usec()
 	if sim.sailor_state == WindsurferSim.SailorState.SAILING:
 		if use_autopilot:
 			if not is_nan(autopilot_push_level):
@@ -248,6 +266,13 @@ func sail(delta: float) -> void:
 		else:
 			controller.update(sim.telemetry, controls, delta)
 	_us_sailor += Time.get_ticks_usec() - t0
+
+
+## Whether a race may set this board's controls on a worker thread: an AI board's (its skipper's
+## hands, its own config copies). The player's controller reads the keyboard and the mouse, so it
+## stays on the main thread.
+func controls_on_worker_thread() -> bool:
+	return hands != null and own_config_copies and not is_puppet
 
 
 ## The physics of a tick. It touches only this board's simulation, so a race may run several

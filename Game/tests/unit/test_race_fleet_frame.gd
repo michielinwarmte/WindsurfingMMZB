@@ -65,3 +65,35 @@ func _big_race() -> RaceSim:
 	race.start()
 	race.step(0.1)
 	return race
+
+
+# ---------------------------------------------------------------- the boards in the camera's view
+
+# An opponent out of the camera's view is posed only now and then (RaceRunner._pose_boards(),
+# 13 November 2026); one just outside the picture still counts as seen, as its mast may reach in.
+func test_a_board_ahead_is_seen_and_one_behind_is_not() -> void:
+	var view: Array[Plane] = _view_along_minus_z()
+	assert_true(RaceRunner.in_view(view, Vector3(0.0, 0.0, -50.0)), "ahead of the camera")
+	assert_false(RaceRunner.in_view(view, Vector3(0.0, 0.0, 50.0)), "behind the camera")
+
+
+func test_a_board_just_outside_the_edge_counts_as_seen() -> void:
+	var view: Array[Plane] = _view_along_minus_z()
+	var left: Plane = view[2]  # Camera3D.get_frustum(): near, far, left, top, right, bottom
+	var on_the_edge: Vector3 = left.project(Vector3(0.0, 0.0, -50.0))
+	var inside_margin: Vector3 = on_the_edge + left.normal * (RaceRunner.VIEW_MARGIN_M - 2.0)
+	var outside_margin: Vector3 = on_the_edge + left.normal * (RaceRunner.VIEW_MARGIN_M + 2.0)
+	assert_true(RaceRunner.in_view(view, inside_margin), "within the margin outside the edge")
+	assert_false(RaceRunner.in_view(view, outside_margin), "beyond the margin")
+
+
+func test_without_a_camera_every_board_is_seen() -> void:
+	var no_view: Array[Plane] = []
+	assert_true(RaceRunner.in_view(no_view, Vector3(1000.0, 0.0, 1000.0)))
+
+
+## A camera at the origin looking along -Z (Godot's forward), its view's six planes.
+func _view_along_minus_z() -> Array[Plane]:
+	var camera: Camera3D = Camera3D.new()
+	add_child_autofree(camera)
+	return camera.get_frustum()
