@@ -23,7 +23,7 @@ Done when: `play/6nov-evening` (with the night run's reds fixed) is merged into 
 - [ ] T1 The night run's reds fixed (E09.S01)
 - [ ] T2 Michiel's OKs (E01.S01) and Max's checks (E02.S09, E03.S01, E06.S01, E07.S01, E08.S01, E12.S01, E15.S01, E16.S01)
 - [ ] T3 The roadmap rows and the progress log for the 6 November work (the agents left them to the lead)
-- [ ] T4 The merge into main; the release build played; the 0.2.0 release (E17.S05 T1 for the steps)
+- [ ] T4 The merge into main (done 13 Nov 2026: `merge/main-13nov`, everything since 485eae5, pushed to main on the team's word with Michiel's OKs of E01.S01 still open; validation: the eight known reds and the old fleet-start test, E09.S25 T11); the release build played; the 0.2.0 release (E17.S05 T1 for the steps)
 - [ ] T5 PR2 checked
 
 ### E18.S03 · The sprint rhythm and the backlog adopted
@@ -40,7 +40,7 @@ Status: todo | Size: S | Owner: the lead; Max decides on the folders | Milestone
 Done when: the four unpushed branches are pushed, the night and play-test integration branches are marked archived in their names or a list, the stash is dropped or archived, the old play folders and zips in `source/` are kept or removed as Max decides (never without asking), and the worktrees are reduced to what the next sprint needs.
 - [ ] T1 Push `gr/sailor-polish`, `ui/race-screen`, `ph44/swan`, `mp/race-director`
 - [ ] T2 The archive list of integration branches (`playtest/6nov`, `night2/*`, `play/6nov-evening` after the merge)
-- [ ] T3 The stash; the play folders and zips (ask Max: the 2 and 5 November folders, the beta.1 folder and zips, the publish scripts)
+- [ ] T3 The stash; the play folders and zips (ask Max: the 2 and 5 November folders, the beta.1 folder and zips, the publish scripts). 13 Nov 2026 (Max: "old play folders and zips clean up but dont delete important stuff"): fourteen old play folders and four zips removed (about 10 GB); their launchers, settings, READMEs and the 7 Nov `recording.csv` kept in `WindsurfingMMZB/.logs/play-folder-archive-13nov2026/` (its README names each build's commit); kept: the 12 Nov TV and 13 Nov roundings folders with their zips, the beta.1 zip. The stash and the publish scripts still open
 
 ### E18.S05 · The legal side
 Status: todo | Size: M | Owner: Max, the lead for the lists | Milestone: M11 | Needs: Q5, Q18, Q28, Q43 | Roadmap: PR1, MA2, GE2
