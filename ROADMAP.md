@@ -1,6 +1,6 @@
 # Roadmap
 
-What comes after version 0.1.0, and who does what. **The overview below is the short version.** The sections further down list every open item once, with its details, so this is the one place to look. When an item is done it moves to [CHANGELOG.md](CHANGELOG.md).
+What comes after version 0.1.0, and who does what. **The plan to version 1.0 (the epics, the stories, the sprint board, the open questions) is in [Documentation/backlog/](Documentation/backlog/README.md) since 6 November 2026; this file stays the detailed ledger of the items the stories name.** **The overview below is the short version.** The sections further down list every open item once, with its details, so this is the one place to look. When an item is done it moves to [CHANGELOG.md](CHANGELOG.md).
 
 Last update: 5 November 2026, late evening (Max's decisions for the session of 6 November: the next steps rewritten, seven items closed, twelve moved to later (PH43's video check among them), two new: GR9, the camera's jitter, and PH44, a realistic wave system). Before it, Session 71: **everything since 0.1.0 merged into `main`**: pull request #5 (`gp1/push-slider`), `gear/lead`, `gp/sea-follows-wind`, `mp/lan` and `ph43/airtime-fin`, after Michiel's OK on the physics (the wave files, PH43) and Max's tests (the waves in a North and a South wind, LAN on two PCs); MP1 and GR8 done, PH43 reviewed. Session 70 before it: PH43, the dive after a crest and the fin's stiffness.
 
