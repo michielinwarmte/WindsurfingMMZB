@@ -199,6 +199,18 @@ Options: a) Keep 30 s (the start judged with its first reach). b) Stop at about 
 Recommendation: b, so that each training judges its own part.
 Answer:
 
+### Q49 · The head's plan from the real race: in which order, and when are the runs?
+Why it matters: the U17 final measured against the head (`Documentation/reports/real_races/HEAD_PLAN.md`) shows two gaps: the start's timed run crosses the line at 0.58 of its top speed (the real riders 0.93 to 1.00), and the gybe at a mark keeps 0.29 of its speed (real foil riders 0.70). Each fix is a loop of the training method, with runs at night.
+Options: a) P0 (the suite prints the measures), then P1 (the timed run flat out, E09.S28), then P2 (the gybe's speed: a check, then the carve of E09.S22, which needs your OK for the controller change), then P3 (the gybe's shape, E09.S23 T9). b) Another order. c) Wait for more real data (fin races or your own GPS).
+Recommendation: a; P1's runs in one night (tune 50, hold-out 100, phase S3 slalom races).
+Answer:
+
+### Q50 · What is a good fin slalom gybe at a mark: the speed in, the slowest and the speed out?
+Why it matters: the head drops to a median 5.7 kt in a reach-to-reach gybe at a mark and keeps 0.29 of its speed. The real foil riders keep 0.70, but a foil keeps flying through a gybe, so that is not the fin's target. Without a fin number, E09.S22 can only be judged as better than before.
+Options: a) Your three speeds from the water. b) A GPS session of your own gybes on Silvaplana (with the time, the gear and the wind written down). c) No target: judged only as better than before.
+Recommendation: b, with a as the first number until the GPS is in.
+Answer:
+
 ---
 
 ## G. Racing
