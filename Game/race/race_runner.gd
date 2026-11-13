@@ -880,6 +880,19 @@ func _tell_the_race() -> void:
 			race.update_board(first_remote + i, where_now(remote_players[i]))
 	for i: int in opponents.size():
 		race.update_board(i + _first_ai, _where(opponents[i]))
+	_tell_the_race_the_wind()
+
+
+## The wind of the moment for the race's smart order (RaceSim.set_wind(): the boards ranked by the
+## polar's time to the finish, with the laylines): where it blows from and how strong it is at 10 m,
+## the wind field's own (on the lake the lake's mean, not a gust at one board), read from an AI board
+## that sails (the parked player's board is not stepped while watching), else from the player's.
+func _tell_the_race_the_wind() -> void:
+	var source: WindsurferNode = opponents[0] if not opponents.is_empty() else player
+	if source == null or source.sim == null or source.sim.wind == null:
+		return
+	var wind: WindField = source.sim.wind
+	race.set_wind(rad_to_deg(wind.current_from_bearing_rad), wind.speed_at_height(10.0) / SimMath.KNOT_MS)
 
 
 ## The other boards' places, for the small map: every board of the race on the water but the one

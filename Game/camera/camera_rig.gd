@@ -5,11 +5,19 @@ extends Node3D
 ## looking at the board). All of them read the board's interpolated transform, so the
 ## picture is smooth even though the physics runs in fixed ticks.
 
-enum Mode { FOLLOW, ORBIT, TOP_DOWN, FREE }
+## DIRECTED: the TV camera of a watched race (TvCamera) places the camera itself, every frame, through
+## `director`; the rig keeps the far plane and gives the camera its own lens back when it leaves.
+enum Mode { FOLLOW, ORBIT, TOP_DOWN, FREE, DIRECTED }
 
 @export var target_path: NodePath
 var mode: Mode = Mode.FOLLOW
 var camera: Camera3D
+## The directed camera: called every frame with the frame's delta while the mode is DIRECTED.
+var director: Callable = Callable()
+## The wheel while DIRECTED: how much nearer or farther than the TV camera's own framing (1 = its own).
+var directed_zoom: float = 1.0
+## The camera's own lens (vertical field of view, degrees), put back when DIRECTED ends.
+var _normal_fov: float = 75.0
 
 ## Follow camera: where it sits relative to the board (board axes, yaw only) and how
 ## quickly it catches up (seconds). Two framings (follow_close, a setting): the sailing one,
@@ -60,6 +68,7 @@ func _ready() -> void:
 	# past 1.5 km anyway. Settings > Graphics > Draw distance moves it (DrawDistance, _keep_far_plane()).
 	camera.far = DrawDistance.camera_far_m()
 	add_child(camera)
+	_normal_fov = camera.fov
 	_target = get_node_or_null(target_path) as Node3D
 
 
@@ -92,6 +101,10 @@ func set_mode(new_mode: Mode) -> void:
 			_free_position = camera.global_position
 		elif _target != null:
 			_free_position = _target.global_position + Vector3(12.0, 4.0, 12.0)
+	if mode == Mode.DIRECTED and new_mode != Mode.DIRECTED:
+		camera.fov = _normal_fov
+	if new_mode == Mode.DIRECTED and mode != Mode.DIRECTED:
+		directed_zoom = 1.0
 	mode = new_mode
 	_follow_initialised = false
 
@@ -104,6 +117,8 @@ func mode_name() -> String:
 			return "Orbit"
 		Mode.TOP_DOWN:
 			return "Top-down"
+		Mode.DIRECTED:
+			return "TV"
 	return "Free"
 
 
@@ -122,13 +137,19 @@ func _unhandled_input(event: InputEvent) -> void:
 		if button.pressed and button.button_index == MOUSE_BUTTON_WHEEL_UP:
 			orbit_distance_m = maxf(orbit_distance_m * 0.9, 3.0)
 			top_down_height_m = maxf(top_down_height_m * 0.9, 10.0)
+			directed_zoom = maxf(directed_zoom * 0.9, 0.3)
 		elif button.pressed and button.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			orbit_distance_m = minf(orbit_distance_m * 1.1, maxf(orbit_max_m, orbit_distance_m))
 			top_down_height_m = minf(top_down_height_m * 1.1, 300.0)
+			directed_zoom = minf(directed_zoom * 1.1, 4.0)
 
 
 func _process(delta: float) -> void:
 	_keep_far_plane()
+	if mode == Mode.DIRECTED:
+		if director.is_valid():
+			director.call(delta)
+		return
 	if _target == null:
 		return
 	var board: Transform3D = _target.get_global_transform_interpolated()

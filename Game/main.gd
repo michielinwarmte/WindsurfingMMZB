@@ -1123,6 +1123,21 @@ func director_view_open() -> bool:
 	return _director_view != null and _director_view.is_open
 
 
+## The start and finish lines drawn on the water (--lines=1; the TV camera's line shots, TvCamera).
+func show_course_lines(shown: bool) -> void:
+	if _course_on_water != null:
+		_course_on_water.set_lines_visible(shown)
+
+
+func course_lines_shown() -> bool:
+	return _course_on_water != null and _course_on_water.lines_visible
+
+
+## The faint grid on the water on or off (the TV camera hides it: TvCamera).
+func show_water_grid(shown: bool) -> void:
+	_ocean.set_grid_hidden(not shown)
+
+
 ## A new race from the start, as R (WatchMode's Shift+R, after it asked for the same dice).
 func restart_race() -> void:
 	_restart_run()

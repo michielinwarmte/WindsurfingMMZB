@@ -567,7 +567,7 @@ func read_from(config: ConfigFile) -> void:
 	control_mode = clampi(_int(config, "sailing", "control_mode", control_mode), 0, PlayerController.Mode.size() - 1) as PlayerController.Mode
 	auto_sheet = _bool(config, "sailing", "auto_sheet", auto_sheet)
 	start_heading_deg = fposmod(_float(config, "sailing", "start_heading_deg", start_heading_deg), 360.0)
-	start_camera = clampi(_int(config, "sailing", "start_camera", start_camera), 0, CameraRig.Mode.size() - 1) as CameraRig.Mode
+	start_camera = clampi(_int(config, "sailing", "start_camera", start_camera), 0, CameraRig.Mode.FREE) as CameraRig.Mode
 	show_hud_panel = _bool(config, "sailing", "show_hud_panel", show_hud_panel)
 	sailor_view = _bool(config, "sailing", "sailor_view", sailor_view)
 	camera_close = _bool(config, "sailing", "camera_close", camera_close)

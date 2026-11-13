@@ -82,6 +82,25 @@ var _order_cache: Array[int] = []
 var _host_order: Array[int] = []
 var _places: PackedInt32Array = PackedInt32Array()
 var _order_stale: bool = true
+## The smart order (Max, 12 November 2026: "the leaderboard is not correctly calculated. please keep
+## the wind polar in consideration. make a smart leaderboard with laylines kept in mind"). Once the
+## gun has gone and the race knows the wind (set_wind(): the game's RaceRunner every tick; the race
+## tool and the trainer do not, and keep the order by steps and distance), the boards still racing
+## are ranked by the time the skippers' polar says each still needs to finish, its standing time
+## penalty added (time_to_finish_s()): from where it is to its next step, then every leg after it.
+## A leg's time is RaceTimeLimit.leg_time_s(): on a beat the way the leg goes toward the wind over the
+## speed made good toward it at the polar's best beating angle, on a run the same away from the wind,
+## on a reach the distance over the polar's speed at that angle. The laylines are where the one turns
+## into the other, so inside them a board's sideways place costs it nothing (both tacks get there in
+## the same time) and past them it must sail a wider, slower angle to the mark. The plain distance to
+## the mark ranked a board far out to one side of a beat behind one straight below the mark, though
+## both reach it at the same time, and a board past the layline ahead of one inside it.
+## The wind the race knows: where it blows from (degrees; NAN: none), its strength (knots, at 10 m).
+var _wind_from_deg: float = NAN
+var _wind_kt: float = 0.0
+var _polar: SkipperPolar = null
+## Each board's time to the finish as last worked out (_order()); NAN where there is none.
+var _times_to_finish: PackedFloat64Array = PackedFloat64Array()
 
 
 func _init(race_course: Course, lap_count: int = 1, prestart: float = 60.0, limit_s: float = 1200.0) -> void:
@@ -277,8 +296,9 @@ func distance_to_next_m(index: int) -> float:
 
 
 ## A board's place, 1 for the first: the boards that have finished by their finish time, then the
-## others by the steps they have completed and then by their distance to the next step. A tie
-## goes to the board added first.
+## others: once the gun has gone and the race knows the wind, by their time to the finish (the smart
+## order, time_to_finish_s()); else by the steps they have completed and then by their distance to the
+## next step. Retired boards last. A tie goes to the board added first.
 func place(index: int) -> int:
 	_order()
 	return _places[index]
@@ -444,6 +464,9 @@ func _order() -> Array[int]:
 	if not _order_stale:
 		return _order_cache
 	if _host_order.size() == _boards.size():
+		# A LAN guest: the host's order, and no times of its own (the gaps fall back to the splits).
+		_times_to_finish.resize(_boards.size())
+		_times_to_finish.fill(NAN)
 		_order_cache = _host_order.duplicate()
 		_places.resize(_order_cache.size())
 		for rank: int in _order_cache.size():
@@ -455,6 +478,7 @@ func _order() -> Array[int]:
 	for i: int in _boards.size():
 		order.append(i)
 		distances.append(distance_to_next_m(i))
+	_work_out_the_times_to_finish()
 	order.sort_custom(func(a: int, b: int) -> bool: return _is_ahead(a, b, distances))
 	_places.resize(order.size())
 	for rank: int in order.size():
@@ -462,6 +486,82 @@ func _order() -> Array[int]:
 	_order_cache = order
 	_order_stale = false
 	return _order_cache
+
+
+## The wind the race ranks the boards in (the smart order, see _wind_from_deg): where it blows from
+## (degrees) and how strong it is (knots, at 10 m). The polar is the skippers' (SkipperPolar's default
+## when null). The game's RaceRunner hands it the wind of the moment every tick.
+func set_wind(from_deg: float, wind_kt: float, polar: SkipperPolar = null) -> void:
+	if polar != null:
+		_polar = polar
+	elif _polar == null:
+		_polar = SkipperPolar.default_polar()
+	if from_deg == _wind_from_deg and wind_kt == _wind_kt:
+		return
+	_wind_from_deg = from_deg
+	_wind_kt = wind_kt
+	_order_stale = true
+
+
+## Whether the race ranks the boards by their time to the finish now: it knows the wind and the gun
+## has gone (the countdown keeps the order by the distance to the line).
+func ranks_by_time() -> bool:
+	return not is_nan(_wind_from_deg) and _polar != null and _phase != Phase.PRE_START and _host_order.is_empty()
+
+
+## The polar's time a board still needs to the finish, seconds, its standing time penalty added (the
+## smart order, see _wind_from_deg); NAN when the race does not rank by time (ranks_by_time()), and
+## for a board that has finished or retired.
+func time_to_finish_s(index: int) -> float:
+	_order()
+	return _times_to_finish[index] if index < _times_to_finish.size() else NAN
+
+
+## When a board finishes, race seconds: its finish time once in, else the race time now plus its time
+## to the finish (time_to_finish_s()); NAN when there is none (retired, or the race does not rank by
+## time). The standings' gaps are the differences of these.
+func expected_finish_s(index: int) -> float:
+	var board: Board = _boards[index]
+	if board.finish_time_s >= 0.0:
+		return board.finish_time_s
+	var to_go: float = time_to_finish_s(index)
+	return race_time_s() + to_go if not is_nan(to_go) else NAN
+
+
+## Every board's time to the finish (_times_to_finish), or NAN for all when the race does not rank by
+## time. The legs after each step are worked out once here (the same for every board on that step).
+func _work_out_the_times_to_finish() -> void:
+	_times_to_finish.resize(_boards.size())
+	_times_to_finish.fill(NAN)
+	if not ranks_by_time() or _steps.is_empty():
+		return
+	var after: PackedFloat64Array = legs_after_s(_steps, _wind_from_deg, _wind_kt, _polar)
+	for i: int in _boards.size():
+		var board: Board = _boards[i]
+		if board.finish_time_s >= 0.0 or board.retired or board.next_step >= _steps.size():
+			continue
+		var step: RaceStep = _steps[board.next_step]
+		var aim: Vector2 = aim_point(step, board.position)
+		_times_to_finish[i] = RaceTimeLimit.leg_time_s(board.position, aim, _wind_from_deg, _wind_kt, _polar) + after[board.next_step] + board.penalty_s
+
+
+## The polar's time from each step's target to the finish, seconds (the last step's: 0): the legs
+## after it, each by RaceTimeLimit.leg_time_s().
+static func legs_after_s(steps: Array[RaceStep], wind_from_deg: float, wind_kt: float, polar: SkipperPolar) -> PackedFloat64Array:
+	var after: PackedFloat64Array = PackedFloat64Array()
+	after.resize(steps.size())
+	after.fill(0.0)
+	for i: int in range(steps.size() - 2, -1, -1):
+		after[i] = after[i + 1] + RaceTimeLimit.leg_time_s(steps[i].target(), steps[i + 1].target(), wind_from_deg, wind_kt, polar)
+	return after
+
+
+## Where a board sails to for a step: the mark, or the nearest point of a line (the start, a gate, the
+## finish).
+static func aim_point(step: RaceStep, from: Vector2) -> Vector2:
+	if step.is_line():
+		return Geometry2D.get_closest_point_to_segment(from, step.points[0], step.points[1])
+	return step.points[0]
 
 
 ## True when board a is ahead of board b in the race; `distances` holds every board's distance
@@ -480,6 +580,11 @@ func _is_ahead(a: int, b: int, distances: PackedFloat64Array) -> bool:
 		if board_a.finish_time_s != board_b.finish_time_s:
 			return board_a.finish_time_s < board_b.finish_time_s
 		return a < b
+	# The smart order: the less time still to sail (and to serve), the further ahead.
+	var time_a: float = _times_to_finish[a] if a < _times_to_finish.size() else NAN
+	var time_b: float = _times_to_finish[b] if b < _times_to_finish.size() else NAN
+	if not is_nan(time_a) and not is_nan(time_b) and time_a != time_b:
+		return time_a < time_b
 	if board_a.next_step != board_b.next_step:
 		return board_a.next_step > board_b.next_step
 	var distance_a: float = distances[a]

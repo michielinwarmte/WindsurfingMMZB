@@ -530,7 +530,7 @@ func _fill_fleet(race: RaceSim, player: int, mark: String) -> void:
 		elif board >= 0:
 			var going: String = "finished" if race.is_finished(board) else ("retired" if race.is_retired(board) else "to " + race.next_step_name(board))
 			texts = PackedStringArray(["%d" % race.place(board), race.board_name(board).left(14), going,
-				mark if board == player else gap_text(race.splits_s(board), race.splits_s(player))])
+				mark if board == player else gap_between(race, board, player)])
 		var colour: Color = HudStyle.HIGHLIGHT_COLOR if board == player else TEXT_COLOR
 		for i: int in 4:
 			cells[i].text = texts[i]
@@ -595,17 +595,32 @@ func _show_split(race: RaceSim, index: int) -> void:
 		_split.hide()
 
 
-## The fleet in race order: place, name, where it is going, and its gap to the player at the last
-## step both have completed (negative: it got there first); the player's own line says `mark`
+## The fleet in race order: place, name, where it is going, and its gap to the player (gap_between();
+## negative: ahead of the player); the player's own line says `mark`
 ## ("you", or "<< camera" for the board watched while spectating). The race works its order out once
 ## per tick (RaceSim.race_order), so this costs a line per board, not a sort per line.
 static func fleet_text(race: RaceSim, player: int, mark: String = "you") -> String:
 	var lines: PackedStringArray = PackedStringArray()
 	for i: int in race.race_order():
 		var going: String = "finished" if race.is_finished(i) else ("retired" if race.is_retired(i) else "to " + race.next_step_name(i))
-		var gap: String = mark if i == player else gap_text(race.splits_s(i), race.splits_s(player))
+		var gap: String = mark if i == player else gap_between(race, i, player)
 		lines.append("%d. %-12s %-16s %s" % [race.place(i), race.board_name(i).left(12), going, gap])
 	return "\n".join(lines)
+
+
+## A board's gap to the player (or the board watched): once the race ranks by time (the smart order,
+## RaceSim.ranks_by_time()), the difference of their expected finishes (RaceSim.expected_finish_s():
+## the polar's time still to sail, with the laylines, and the standing penalty; the finish time once
+## in): "-12.3 s" ahead of the player, "+12.3 s" behind. Otherwise (the countdown, a LAN guest's copy
+## of the race, a race that does not know the wind) at the last step both completed (gap_text()).
+static func gap_between(race: RaceSim, board: int, player: int) -> String:
+	if player < 0:
+		return ""
+	var theirs: float = race.expected_finish_s(board)
+	var yours: float = race.expected_finish_s(player)
+	if not is_nan(theirs) and not is_nan(yours):
+		return "%+.1f s" % (theirs - yours)
+	return gap_text(race.splits_s(board), race.splits_s(player))
 
 
 ## A board's gap to the player at the last step both have completed: "-12.3 s" when it got there

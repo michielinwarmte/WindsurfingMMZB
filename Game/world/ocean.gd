@@ -64,6 +64,9 @@ var _far_material: ShaderMaterial
 var _base_height_m: float = 0.0
 var _total_amplitude_m: float = 0.0
 var _look_ripple_strength: float = 0.7
+## The look's grid, and whether it is hidden (set_grid_hidden()).
+var _look_grid_strength: float = 0.12
+var grid_hidden: bool = false
 ## Whether the water is a lake's own waves (LakeWaveField): the graded mesh and the lake's shader path.
 var _lake: bool = false
 ## The water's foam and wind rows drift downwind with the surface (lake_look.gdshaderinc, 6. and 7.):
@@ -129,6 +132,8 @@ static func ripple_factor_for_wind(tws_kt: float) -> float:
 func _apply_look() -> void:
 	var chosen: ShaderMaterial = look if look != null else sea_look()
 	_look_ripple_strength = float(chosen.get_shader_parameter("ripple_strength"))
+	var grid: Variant = chosen.get_shader_parameter("grid_strength")
+	_look_grid_strength = float(grid) if grid != null else 0.12
 	_near_material = chosen.duplicate() as ShaderMaterial
 	_near_material.render_priority = -1
 	_far_material = chosen.duplicate() as ShaderMaterial
@@ -139,12 +144,16 @@ func _apply_look() -> void:
 		var parameters: Dictionary[String, Variant] = field.shader_parameters()
 		for key: String in parameters:
 			if key != "base_height_m":
+				# The far plane draws the waves as shading only (lake_displace and sea_displace off).
 				_near_material.set_shader_parameter(key, parameters[key])
-				if _lake:
-					# The far plane draws the lake's waves as shading only (lake_displace off).
-					_far_material.set_shader_parameter(key, parameters[key])
-	_far_material.set_shader_parameter("wave_amplitudes", Vector4.ZERO)
+				_far_material.set_shader_parameter(key, parameters[key])
+	# The far plane is flat. On the open sea it draws the waves as shading and keeps their whitecaps, and
+	# the near mesh's outer part turns to the same shading (water.gdshader, sea_displace), so the near
+	# mesh's edge does not show as a square from high up (Max, 12 November 2026, the TV camera).
+	_far_material.set_shader_parameter("sea_displace", false)
+	_near_material.set_shader_parameter("sea_near_half_m", near_size_m * 0.5)
 	if _lake:
+		_far_material.set_shader_parameter("wave_amplitudes", Vector4.ZERO)
 		_near_material.set_shader_parameter("lake_lod_reach", LAKE_LOD_REACH)
 		_far_material.set_shader_parameter("lake_displace", false)
 		# The lake's look in the wind (res://world/lake_look.gdshaderinc): its short waves' directions and
@@ -161,6 +170,15 @@ func _apply_look() -> void:
 	set_water_parameter("wind_rows_along", _rows_along)
 	_near.material_override = _near_material
 	_far.material_override = _far_material
+	set_grid_hidden(grid_hidden)
+
+
+## The faint grid on the water (a sailing aid: speed and heading on flat water) off or on again; the TV
+## camera of a watched race hides it (TvCamera). It stays as set when the water is built again.
+func set_grid_hidden(hidden: bool) -> void:
+	grid_hidden = hidden
+	if _near_material != null:
+		_near_material.set_shader_parameter("grid_strength", 0.0 if hidden else _look_grid_strength)
 
 
 func _far_size() -> Vector2:
@@ -252,9 +270,10 @@ func _process(_delta: float) -> void:
 	var tick_s: float = Engine.time_scale / float(Engine.physics_ticks_per_second)
 	var time_s: float = _sim.time_s + Engine.get_physics_interpolation_fraction() * tick_s
 	_near_material.set_shader_parameter("water_time_s", time_s)
+	# The far plane's shading moves with the waves too.
+	_far_material.set_shader_parameter("water_time_s", time_s)
 	if _lake:
-		# The far plane's shading moves with the waves too; the near mesh's shape follows the camera.
-		_far_material.set_shader_parameter("water_time_s", time_s)
+		# The near mesh's shape follows the camera.
 		var eye: Vector3 = _camera.global_position
 		_near_material.set_shader_parameter("lake_lod_centre", Vector2(eye.x, eye.z))
 		_near_material.set_shader_parameter("lake_lod_height_m", maxf(eye.y - _base_height_m, 0.0))
