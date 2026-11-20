@@ -54,6 +54,26 @@
       {"near": [574021, 3112609], "radius_m": 30, "levels": 5}
     ]
   },
+  "sea": {
+    "about": "The sea from the region (tools/map/spot_sea.py, P3): EMODnet over Fuerteventura, Gran Canaria's north and the African coast, the far fetch along the near grid's edges, the ocean swell's exposure; the checkpoints for the realism check (the SIMAR points' positions are read from the coastal study's map, approximate).",
+    "region_latlon": [27.4, -15.8, 29.4, -12.8],
+    "cell_m": 500,
+    "ray_step_m": 250,
+    "edge_step_m": 400,
+    "bearing_step_deg": 5,
+    "open_sea_fetch_m": 300000,
+    "open_water_m": 60000,
+    "swell_spreading_s": 20,
+    "swell_ray_step_deg": 3,
+    "exposure_cell_m": 200,
+    "exposure_direction_step_deg": 10,
+    "checkpoints": [
+      {"name": "SIMAR 10 (off the bar's apex, mean Hs 0.56 m, Ts 5.7 s)", "lat": 28.085, "lon": -14.255},
+      {"name": "SIMAR 09 (off El Matorral, mean Hs 0.87 m, Ts 9.5 s)", "lat": 28.035, "lon": -14.305},
+      {"name": "Open-Meteo marine point", "lat": 28.125, "lon": -14.2083},
+      {"name": "the start, in front of the judges' tower", "lat": 28.1376, "lon": -14.2397}
+    ]
+  },
   "water_level_m": 1.1,
   "water_level_about": "The session's water level above mean sea level until the tide is chosen in the menu (P4): between mean and spring high water, so the lagoon has water (35 to 85 cm at spring high water, the spot dossier).",
   "credits": "Terrain and aerial photos: © Instituto Geográfico Nacional (PNOA, MDT05, MDT25; CC BY 4.0). Bathymetry: EMODnet Bathymetry Consortium (CC BY 4.0)."

@@ -110,6 +110,28 @@ What the game has now:
 
 Still to do for the event site: the big tent's arched roof and stripes, the sponsors' banners (made-up names), the start boat's flags and the countdown, the crowd; the photos of the event (the PWA's own, copyrighted) were used for reference only and are not in the repository.
 
+### P3: the sea made realistic, the data and the design (20 November 2026)
+
+Max: "1 [P3]. But it needs to be realistic." So the sea is built from physics and data and checked against measurements, not tuned by eye.
+
+**The data.**
+- *Open-Meteo's marine archive* (free; the European wave models, about 9 km cells) and ERA5's wind, hourly, 2024 and 2025 (17,544 hours) at the model point 28.125 N, 14.208 W (4 km off Costa Calma). Total Hs mean 1.19 m (p90 1.68 m), the wind sea 0.38 m, the swell 0.82 m (p90 1.26 m); summer (June to September) total 1.11 m, mean period 6.4 s, winter 1.22 m, 8.6 s. The swell comes 95 % from the N, NNW and NW (the open Atlantic's), 2 % from the NNE and almost never from the east. **But the model's cells are too coarse to see the island's shelter**: the coastal study's finer hindcast (SIMAR, Puertos del Estado) finds the waves *at Sotavento* come from the ENE and NE, small (mean 0.56 m) and short (5.7 s). So Open-Meteo's sea is the open ocean's, the boundary, not the beach's.
+- *ERA5's wind* there snaps to a 25 km cell over the land at Costa Calma: mean 10 kt (summer 11 kt, p90 16 kt), from the N 59 %, NNW 23 %, NNE 11 % in summer. It is the synoptic trade wind; it misses the isthmus's funnel that makes Sotavento's 20 to 40 kt days. The game's wind stays the settings' (and the day types of P5).
+
+**What the region does to the sea** (`tools/map/spot_sea.py --check`, EMODnet over 27.4 to 29.4 N, 15.8 to 12.8 W on 500 m cells; the game's growth law at 20 kt):
+- *The fetch* depends hugely on the wind's direction. Off the bar (SIMAR 10's point): from the N 4.3 km (Hs 0.35 m, Tp 2.2 s), the NNE 9 km (0.50 m, 2.8 s), the NE 71 km (1.41 m, 5.6 s), the ENE 170 km (2.17 m, 7.5 s), the E 215 km (2.44 m, 8.1 s). In front of the judges' tower the N and NNE wind has blown over 100 m of water (flat by the beach, as at the real spot), the NE over 3.3 km.
+- *The ocean swell's exposure* (the share of a swell from a direction that reaches the point over water from the open ocean, its energy spread as cos^40((theta - theta0)/2)): from the N, NW and W 0.00 at Sotavento, the NE 0.04, the ENE 0.47, the E to the S 0.9 to 1.0, the SW 0.92. Off El Matorral (SIMAR 09) the W 0.72: the more exposed point, which fits its measured longer, swell-made sea (0.87 m at 9.5 s against 0.56 m at 5.7 s off the bar).
+
+**The physical picture this gives** (and the PWA reports' "a combination of swell and short period chop"): on a NNE trade day, a short local chop over a few km of fetch (Tp 2 to 3 s, growing away from the beach) on top of longer waves from the NE and ENE that the trade wind raises in the channel between Fuerteventura and Africa and that reach the beach partly sheltered (Tp 5 to 7 s); the open Atlantic's N to NW swell does not reach it; a rare S to SW swell in winter does.
+
+**The design.**
+1. *The far fetch* (done offline: `Game/maps/sotavento/sea.json`, `far_fetch`): the open water upwind along every bearing (5 degrees apart) at points 400 m apart along the near grid's edges. The game's fetch map (`FetchMap`) starts a ray that leaves the near grid with that water, instead of zero, so the wind sea grows over the whole channel.
+2. *The swell* (offline: `swell_exposure`, every 10 degrees on 200 m cells): two long trains of nearly the same period (the beat makes the sets), their height at each node the offshore swell times the square root of the exposure, times shoaling (linear theory, from the depth grid), then depth-limited breaking on the total of swell and wind sea (Hs at most 0.6 of the depth). The offshore swell of a session: the channel sea for the wind (from the NE sector, grown over the channel's fetch) and the ocean swell of the day (P5's day types; default the summer's N swell, which is then sheltered to almost nothing).
+3. *The shader and the physics*: six trains (four of wind sea, two of swell) instead of four. The shader's lake functions work on four trains at a time; the swell gets a second group. Silvaplana and the open water bit for bit as before (no swell, no far fetch).
+4. *The checks*: the game's Hs and period at SIMAR 10's and SIMAR 09's points for a summer trade day and for the climate's mix, against the study's means; the breaking on the bar against the breaker index (0.87 to 0.95); the crest spacing by Max's eye.
+
+Physics (`Game/sim/`) changes for Michiel's OK on this branch; PHYSICS_SPEC.md gets a section.
+
 ## 7. Progress log
 
 - 20 November 2026 (Claude Opus 5.5, Max's PC): P0. The dossier from two papers (the Jandía beaches' erosion study with the SIMAR wave climate, the barrier's geomorphology); the data probed (IGN MDT05 by WCS: 5 m but whole metres, the sea empty; PNOA photos by WMS: good on land and the shallows; EMODnet: 115 m with the island's land); the design of the water; the packages. Branch `spot/sotavento` from main 19ec1cc. The probe scripts stay in the session's scratchpad until P2 turns them into the adapters.

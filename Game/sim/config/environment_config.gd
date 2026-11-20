@@ -54,12 +54,17 @@ const DEFAULT_WAVES_PATH: String = "res://config/waves_default.tres"
 ## lagoon and the waves' depth follow it (TerrainGrid.lower_by()). 0 for a lake: its grid is
 ## already above its own surface.
 @export var water_level_m: float = 0.0
+## A sea spot's sea from its region (tools/map/spot_sea.py's sea.json): the open water beyond the
+## map, so the wind sea grows over the whole channel (FarFetch, PHYSICS_SPEC.md 9.19). "" for a lake.
+@export_file("*.json") var sea_path: String = ""
 
 ## The map's wind, loaded once and shared: it is a fixed function of the place and the time of
 ## day, so every simulation in this environment can ask the same one.
 var _map_wind: MapWind = null
 ## The depth grid, loaded once and shared (null until asked).
 var _depth_grid: TerrainGrid = null
+## The far fetch, loaded once and shared (null until asked, and for a lake).
+var _far_fetch: FarFetch = null
 ## The lake waves built so far, by the wind they were built for (a few at most; see
 ## lake_waves_for()). Built on the main thread when a simulation's water is made.
 var _lake_waves_built: Dictionary[String, LakeWaves] = {}
@@ -106,6 +111,13 @@ func depth_grid() -> TerrainGrid:
 	return _depth_grid
 
 
+## A sea spot's open water beyond its map (null for a lake, or when the file can't be read).
+func far_fetch() -> FarFetch:
+	if _far_fetch == null and sea_path != "":
+		_far_fetch = FarFetch.load_from(sea_path)
+	return _far_fetch
+
+
 ## The lake's waves for a simulation's wind (null when this place has none): built for the lake's
 ## mean wind of that moment (9.17). With the map's wind: its direction and speed at the field's
 ## time of day, the local wind from its pattern and the lee's average; with one wind for the whole
@@ -136,7 +148,7 @@ func lake_waves_for(wind: WindField, wind_config: WindConfig, height_scale: floa
 	if height_scale != 1.0:
 		lake_config = lake_waves.duplicate() as LakeWavesConfig
 		lake_config.height_scale *= height_scale
-	var built: LakeWaves = LakeWaves.build(lake_config, depth_at, area, from_deg, wind_10m_ms, speed_factor_at)
+	var built: LakeWaves = LakeWaves.build(lake_config, depth_at, area, from_deg, wind_10m_ms, speed_factor_at, far_fetch())
 	if _lake_waves_built.size() >= LAKE_WAVES_KEPT:
 		_lake_waves_built.erase(_lake_waves_built.keys()[0])
 	_lake_waves_built[key] = built

@@ -216,3 +216,43 @@ func test_the_event_site_puts_its_buoys_on_the_water() -> void:
 	assert_not_null(site.get_node_or_null("JudgesTower"))
 	site.show_course_buoys(false)
 	assert_false(site.get_node("CourseBuoys").visible, "a race on the course draws its own marks")
+
+
+## The sea built for a wind of 20 kt from a bearing, at the session's water level; far: with the far
+## fetch beyond the map (sea.json) or without (the map's edge as land, as a lake has it).
+func _sea_for(from_deg: float, far: bool) -> LakeWaves:
+	var environment: EnvironmentConfig = (load(ENVIRONMENT_PATH) as EnvironmentConfig).duplicate()
+	environment.water_level_m = _spot.water_level_m
+	if not far:
+		environment.sea_path = ""
+	var wind: WindConfig = WindConfig.new()
+	wind.speed_kt = 20.0
+	wind.from_bearing_deg = from_deg
+	return environment.lake_waves_for(null, wind)
+
+
+func test_the_wind_sea_grows_over_the_channel_beyond_the_map() -> void:
+	# SIMAR 10's point off the bar's apex (game x, z); the region's tool gives 71 km of water from the
+	# NE there and the growth law Hs 1.41 m, Tp 5.6 s at 20 kt (PLAN.md, P3).
+	var simar_10: Vector2 = Vector2(-970.0, 5632.0)
+	var with_far: Vector3 = _sea_for(45.0, true).sea_at(simar_10.x, simar_10.y)
+	var without: Vector3 = _sea_for(45.0, false).sea_at(simar_10.x, simar_10.y)
+	assert_gt(with_far.z, 40000.0, "the NE fetch reaches across the channel")
+	assert_lt(without.z, 15000.0, "without the far fetch it stops at the map's edge")
+	assert_between(with_far.x, 1.1, 1.7, "Hs from the NE at 20 kt off the bar")
+	assert_between(with_far.y, 4.8, 6.4, "Tp from the NE")
+	gut.p("SIMAR 10, 20 kt from the NE: fetch %.1f km, Hs %.2f m, Tp %.1f s (without the far fetch: %.1f km, %.2f m, %.1f s)" % [
+		with_far.z / 1000.0, with_far.x, with_far.y, without.z / 1000.0, without.x, without.y])
+
+
+func test_the_beach_is_flat_in_the_offshore_trade_wind() -> void:
+	# The trade wind from the NNE blows off the land in front of the event site: its fetch there is
+	# short and the water flat, the chop growing further out (the region's tool: 0.1 km at the start).
+	var sea: LakeWaves = _sea_for(25.0, true)
+	var start: Vector3 = _spot.start_position()
+	var at_start: Vector3 = sea.sea_at(start.x, start.z)
+	var simar_10: Vector3 = sea.sea_at(-970.0, 5632.0)
+	assert_lt(at_start.x, 0.35, "small chop in front of the tower")
+	assert_gt(simar_10.x, at_start.x + 0.1, "growing further out")
+	gut.p("20 kt from the NNE: at the start Hs %.2f m (fetch %.1f km), off the bar Hs %.2f m, Tp %.1f s (fetch %.1f km)" % [
+		at_start.x, at_start.z / 1000.0, simar_10.x, simar_10.y, simar_10.z / 1000.0])

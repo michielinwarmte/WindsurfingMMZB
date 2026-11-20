@@ -93,14 +93,15 @@ var _textures: Dictionary[String, Texture2D] = {}
 ## Builds a lake's waves. depth_at and speed_factor_at as in FetchMap.build(); area: where to look
 ## for the lake (game x, z of the north-west corner and the size). wind_from_deg and wind_10m_ms:
 ## the lake's mean wind.
+## far: a sea spot's open water beyond the area (FarFetch, 9.19); null for a lake.
 static func build(lake_config: LakeWavesConfig, depth_at: Callable, area: Rect2, wind_from_deg: float, wind_ms: float,
-		speed_factor_at: Callable) -> LakeWaves:
+		speed_factor_at: Callable, far: FarFetch = null) -> LakeWaves:
 	var lake: LakeWaves = LakeWaves.new()
 	lake.config = lake_config
 	lake.from_deg = wind_from_deg
 	lake.wind_10m_ms = wind_ms
 	lake.map = FetchMap.build(depth_at, area, lake_config.cell_m, wind_from_deg, speed_factor_at,
-		lake_config.ray_count, lake_config.ray_spacing_deg)
+		lake_config.ray_count, lake_config.ray_spacing_deg, far)
 	lake.reference_depth_m = lake_config.reference_depth_m if lake_config.reference_depth_m > 0.0 else lake.map.median_depth_m()
 	lake._set_up_bands()
 	lake._fill_nodes()

@@ -23,4 +23,5 @@ map_wind_enabled = false
 start_hour = 16.0
 lake_waves = ExtResource("4")
 depth_grid_path = "res://maps/sotavento/terrain/near_heights.json"
+sea_path = "res://maps/sotavento/sea.json"
 water_level_m = 1.1
