@@ -148,7 +148,8 @@ func _build_grandstand() -> void:
 		_box(stand, Vector3(14.0, 0.7 + step * 0.65, 0.12), Vector3(0.0, (0.7 + step * 0.65) / 2.0, depth_z + 0.7), Color(0.6, 0.62, 0.65))
 
 
-## A row of feather flags along the beach top, up the coast from the tower.
+## A row of feather flags along the beach top either side of the tower (the beach ends in a rocky point
+## about 120 m up the coast).
 func _build_flags() -> void:
 	var colours: Array[Color] = [Color(0.1, 0.32, 0.75), Color(0.95, 0.85, 0.1), Color(0.0, 0.7, 0.8), Color(0.85, 0.15, 0.15), Color(0.97, 0.97, 0.97)]
 	var pole: CylinderMesh = CylinderMesh.new()
@@ -158,14 +159,14 @@ func _build_flags() -> void:
 	var cloth: QuadMesh = QuadMesh.new()
 	cloth.size = Vector2(0.9, 3.4)
 	for k: int in 12:
-		var flag: Node3D = _group("Flag%d" % k, _on_ground(beach_point(10.0 + 9.0 * k, -6.0)), OUT_DEG)
+		var flag: Node3D = _group("Flag%d" % k, _on_ground(beach_point(-45.0 + 9.0 * k, -6.0)), OUT_DEG)
 		_instance(flag, pole, Vector3(0.0, 2.3, 0.0), _material(Color(0.8, 0.8, 0.82)))
 		# The cloth streams downwind of its pole (the trade wind from the north-north-east).
 		var banner: MeshInstance3D = _instance(flag, cloth, Vector3(0.0, 2.8, 0.5), _material(colours[k % colours.size()], true))
 		banner.rotation.y = PI / 2.0
 
 
-## The riders' sails rigged and lying on the sand in the rigging area up the coast from the tower.
+## The riders' sails rigged and lying on the sand along the beach top either side of the tower.
 func _build_sails_on_the_beach() -> void:
 	var colours: Array[Color] = [Color(0.9, 0.15, 0.1), Color(0.95, 0.8, 0.1), Color(0.1, 0.1, 0.12), Color(0.95, 0.5, 0.05),
 		Color(0.15, 0.6, 0.25), Color(0.9, 0.9, 0.92), Color(0.2, 0.35, 0.8)]
@@ -175,7 +176,7 @@ func _build_sails_on_the_beach() -> void:
 	sail_mesh.size = Vector3(2.4, 5.0, 0.04)
 	sail_mesh.left_to_right = 0.0
 	for k: int in 30:
-		var along: float = 25.0 + (k % 15) * 7.5 + random.randf_range(-1.5, 1.5)
+		var along: float = -60.0 + (k % 15) * 10.0 + random.randf_range(-1.5, 1.5)
 		var out: float = -14.0 + floorf(k / 15.0) * 6.0 + random.randf_range(-1.0, 1.0)
 		var sail: Node3D = _group("Sail%d" % k, _on_ground(beach_point(along, out), 0.25), random.randf_range(0.0, 360.0))
 		var cloth: MeshInstance3D = _instance(sail, sail_mesh, Vector3.ZERO, _material(colours[random.randi() % colours.size()], true))

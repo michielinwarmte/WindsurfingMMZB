@@ -106,6 +106,8 @@ What the game has now:
 - **The buildings** `Game/maps/sotavento/buildings.json` from OpenStreetMap (363 outlines: the hotels, Costa Calma, the big tent), drawn by `Game/maps/spots/spot_buildings.gd` (white walls with rows of windows, flat roofs, tents plain white); floors from OSM where tagged, else two (bigger blocks three or four); the three hotel blocks by the centre eight, six and five floors from the aerial photos. Built by `tools/map/spot_build.py --stage=buildings` (Overpass refuses browser-like user agents, and a bigger box timed out: the box is 28.115 to 28.16 N, so the Risco del Paso village is not in yet).
 - Screenshots: `game_event_drone2.png` (the drone view over the event beach: the big tent, the flags, the hotels at the end, the buoys) and `game_event_close.png` (from 220 m off the beach at board height: the tower, the flags, the riders' tent, the hotels).
 
+**The start moved into the event area** (Max: "start more in the event area"): in front of the judges' tower, 200 m out in the freestyle box (574672 E, 3112684 N, about 5 m of water at the game's high water), a beam reach out towards the course. The depths showed that the beach ends in a rocky point about 120 m up the coast from the tower, so the freestyle box moved down the beach (170 m below the tower to 70 m above it) and the flags and the sails with it.
+
 Still to do for the event site: the big tent's arched roof and stripes, the sponsors' banners (made-up names), the start boat's flags and the countdown, the crowd; the photos of the event (the PWA's own, copyrighted) were used for reference only and are not in the repository.
 
 ## 7. Progress log

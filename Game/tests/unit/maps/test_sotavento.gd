@@ -78,13 +78,15 @@ func test_the_environment_applies_the_water_level() -> void:
 	assert_almost_eq(_height(lowered, BAR), _height(plain, BAR) - 0.4, 1e-4)
 
 
-func test_the_start_is_out_at_sea_past_the_bar() -> void:
+func test_the_start_is_in_the_event_area() -> void:
 	var environment: EnvironmentConfig = (load(ENVIRONMENT_PATH) as EnvironmentConfig).duplicate()
 	environment.water_level_m = _spot.water_level_m
 	var grid: TerrainGrid = environment.depth_grid()
 	var start: Vector3 = _spot.start_position()
 	assert_lt(grid.height_at(start.x, start.z), -3.0, "deep enough for the fin, room to bear away")
 	assert_lt(start.distance_to(Vector3.ZERO), 600.0, "in front of the event site")
+	var tower: Vector3 = _spot.map_config.lv95_to_game(PwaEventSite.TOWER.x, PwaEventSite.TOWER.y, 0.0)
+	assert_lt(Vector2(start.x - tower.x, start.z - tower.z).length(), 260.0, "off the judges' tower (Max: start in the event area)")
 	# The start heading runs out to sea: deeper water 300 m ahead.
 	var ahead: Vector3 = start + 300.0 * Vector3(sin(deg_to_rad(_spot.start_heading_deg)), 0.0, -cos(deg_to_rad(_spot.start_heading_deg)))
 	assert_lt(grid.height_at(ahead.x, ahead.z), grid.height_at(start.x, start.z), "deeper ahead")
