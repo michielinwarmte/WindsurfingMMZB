@@ -1,7 +1,8 @@
 extends GutTest
 ## Fuerteventura, Sotavento (backlog E04.S12, package P2; Documentation/reports/spots/sotavento/PLAN.md):
 ## the height grid and the water level (the tide), the terrain drawn from the grid (HeightTerrain), the
-## spot's start on the water, the sailing scene, and the start menu's button.
+## spot's start on the water, the sailing scene, the start menu's button, and what makes it the PWA's
+## spot: the buildings from OpenStreetMap, the event site and the Slalom X course (PLAN.md section 6).
 ## Points are in the spot's frame (REGCAN95 / UTM 28N, metres east and north).
 
 const SPOT_PATH: String = "res://maps/sotavento/spot.tres"
@@ -170,3 +171,46 @@ func test_the_settings_remember_the_sotavento_choice() -> void:
 	var loaded: SettingsValues = SettingsValues.new()
 	loaded.read_from(config)
 	assert_eq(loaded.last_play_option, 6)
+
+
+func test_the_buildings_stand_on_the_ground_by_the_event_site() -> void:
+	var buildings: SpotBuildings = SpotBuildings.new()
+	buildings.buildings_json = "res://maps/sotavento/buildings.json"
+	add_child_autofree(buildings)
+	assert_gt(buildings.count, 300, "the hotels, Costa Calma and the event tent from OpenStreetMap")
+	var info: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://maps/sotavento/buildings.json"))
+	var tallest: float = 0.0
+	var tents: int = 0
+	for building: Dictionary in info["buildings"]:
+		tallest = maxf(tallest, float(building["height_m"]))
+		assert_gt(float(building["base_m"]), 0.4, "no building stands in the water")
+		if building["kind"] == "tent":
+			tents += 1
+	assert_almost_eq(tallest, 24.0, 0.01, "the Paradisus hotel's main block: eight floors")
+	assert_gt(tents, 0, "the event's big tent")
+
+
+func test_the_pwa_course_loads_from_the_spots_folder() -> void:
+	var course: Course = RaceCourses.load_named("pwa_slalom_x", _spot.map_config, _spot.courses_folder)
+	assert_not_null(course, "res://maps/sotavento/courses/pwa_slalom_x.json")
+	var environment: EnvironmentConfig = (load(ENVIRONMENT_PATH) as EnvironmentConfig).duplicate()
+	environment.water_level_m = 0.0
+	var grid: TerrainGrid = environment.depth_grid()
+	for mark: CourseMark in course.marks:
+		var depth_m: float = -grid.height_at(mark.position.x, mark.position.y)
+		assert_gt(depth_m, 2.0, "mark %s in water deep enough to race, even at mean sea level" % mark.id)
+		assert_lt(Vector2(mark.position.x, mark.position.y).length(), 1500.0, "in front of the event site")
+
+
+func test_the_event_site_puts_its_buoys_on_the_water() -> void:
+	var site: PwaEventSite = PwaEventSite.new()
+	site.map_config = _spot.map_config
+	site.heights_json = GRID_PATH
+	site.course_json = "res://maps/sotavento/courses/pwa_slalom_x.json"
+	site.water_level_m = _spot.water_level_m
+	add_child_autofree(site)
+	# Six buoys (the two line ends' pins and four gybe marks), two committee boats, four box corners.
+	assert_eq(site.buoy_count(), 12)
+	assert_not_null(site.get_node_or_null("JudgesTower"))
+	site.show_course_buoys(false)
+	assert_false(site.get_node("CourseBuoys").visible, "a race on the course draws its own marks")

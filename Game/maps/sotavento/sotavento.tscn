@@ -1,6 +1,7 @@
 [gd_scene format=3]
 
-; Fuerteventura, Sotavento's map (backlog E04.S12; Documentation/reports/spots/sotavento/PLAN.md): the
+; Fuerteventura, Sotavento's map (backlog E04.S12; the buildings from OpenStreetMap and the PWA event site added
+; after the photo check, PLAN.md section 6; Documentation/reports/spots/sotavento/PLAN.md): the
 ; terrain drawn from the height grids on the graphics card (HeightTerrain: the near grid at 5 m over
 ; 12 km with the lagoon and the bar, the far grid at 30 m over 48 km for the Jandia mountains and the
 ; island on the horizon), the sky and the sun of a July afternoon. The sailing scene sets the
@@ -10,6 +11,9 @@
 [ext_resource type="Texture2D" path="res://maps/sotavento/terrain/near_photo.webp" id="2_near"]
 [ext_resource type="Texture2D" path="res://maps/sotavento/terrain/detail_photo.webp" id="3_detail"]
 [ext_resource type="Texture2D" path="res://maps/sotavento/terrain/far_photo.webp" id="4_far"]
+[ext_resource type="Script" path="res://maps/spots/spot_buildings.gd" id="5_buildings"]
+[ext_resource type="Script" path="res://maps/sotavento/pwa_event_site.gd" id="6_event"]
+[ext_resource type="Resource" path="res://maps/sotavento/map_config.tres" id="7_config"]
 
 ; The trade wind's sky: a clear deep blue overhead and a pale, hazy horizon (the dust and the sea
 ; spray the wind carries). The fill light is part sky, part the light the white sand throws back.
@@ -76,3 +80,16 @@ levels = Array[Vector2]([Vector2(30, 15000), Vector2(120, 0)])
 casts_shadows = false
 photo_brightness = 0.78
 photo_tint = Color(1, 0.84, 0.64, 1)
+
+; The buildings from OpenStreetMap's outlines (the hotels by the René Egli Center, Costa Calma, the big
+; event tent): tools/map/spot_build.py --stage=buildings.
+[node name="Buildings" type="Node3D" parent="."]
+script = ExtResource("5_buildings")
+buildings_json = "res://maps/sotavento/buildings.json"
+
+; The PWA World Tour's event site and the Slalom X course's buoys, from the event's zone map of 2026.
+[node name="EventSite" type="Node3D" parent="."]
+script = ExtResource("6_event")
+map_config = ExtResource("7_config")
+heights_json = "res://maps/sotavento/terrain/near_heights.json"
+course_json = "res://maps/sotavento/courses/pwa_slalom_x.json"

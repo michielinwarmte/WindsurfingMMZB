@@ -43,6 +43,17 @@
     "beach_top_m": 1.5,
     "inlet_close_m": 20
   },
+  "buildings": {
+    "about": "OpenStreetMap's building outlines (ODbL); floors from OSM where tagged, otherwise guessed, and the landmarks' from photos (the Paradisus and Zel hotel blocks by the René Egli Center: eight and six floors in the aerial photos of 24 September 2021).",
+    "box_latlon": [28.115, -14.265, 28.16, -14.22],
+    "level_m": 3.0,
+    "default_levels": 2,
+    "overrides": [
+      {"near": [574104, 3112600], "radius_m": 30, "levels": 8},
+      {"near": [574133, 3112634], "radius_m": 30, "levels": 6},
+      {"near": [574021, 3112609], "radius_m": 30, "levels": 5}
+    ]
+  },
   "water_level_m": 1.1,
   "water_level_about": "The session's water level above mean sea level until the tide is chosen in the menu (P4): between mean and spring high water, so the lagoon has water (35 to 85 cm at spring high water, the spot dossier).",
   "credits": "Terrain and aerial photos: © Instituto Geográfico Nacional (PNOA, MDT05, MDT25; CC BY 4.0). Bathymetry: EMODnet Bathymetry Consortium (CC BY 4.0)."

@@ -97,8 +97,9 @@ static func template_named(course_name: String, wind_from_deg: float, start_midd
 
 ## A course saved by the course maker, by its file name (t2_slalom for t2_slalom.json), placed on
 ## the map with config; null if there is no such file. A file in game metres needs no map (null).
-static func load_named(course_name: String, config: MapConfig) -> Course:
-	var path: String = SAVED_FOLDER.path_join(course_name + ".json")
+## folder: where the spot keeps its courses (Lake Silvaplana's when not given; a Spot's courses_folder).
+static func load_named(course_name: String, config: MapConfig, folder: String = SAVED_FOLDER) -> Course:
+	var path: String = folder.path_join(course_name + ".json")
 	if course_name.is_empty() or not FileAccess.file_exists(path):
 		return null
 	return Course.load_from(path, config)

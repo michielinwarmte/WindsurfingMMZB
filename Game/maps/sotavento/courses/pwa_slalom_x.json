@@ -1,0 +1,80 @@
+{
+	"about": "Sotavento's PWA Slalom X course, laid from the event's zone map of 2026 (fuerteventura-worldcup.org): the start up the coast and about 500 m out, four gybe marks zigzagging downwind (broad reaches of about 125 degrees in the NNE trade wind), the finish outside the freestyle box opposite the judges' tower. The map is a drawing, not a survey: the positions are the lead's reading of it (Documentation/reports/spots/sotavento/PLAN.md, section 6). Positions are REGCAN95 / UTM 28N metres; sides are the side each mark is left on.",
+	"name": "PWA Slalom X, Sotavento",
+	"map": "Fuerteventura, Sotavento",
+	"template": "",
+	"sequence": "Start-1-2-3-4-Finish",
+	"axis_deg": 205.0,
+	"size_percent": 100.0,
+	"boards": 8,
+	"race_type": "slalom",
+	"start_type": "slalom",
+	"marks": [
+		{
+			"id": "start boat",
+			"side": "",
+			"east": 575116.88,
+			"north": 3113012.49
+		},
+		{
+			"id": "start pin",
+			"side": "",
+			"east": 574980.46,
+			"north": 3113043.99
+		},
+		{
+			"id": "1",
+			"side": "starboard",
+			"east": 575128.86,
+			"north": 3112886.57
+		},
+		{
+			"id": "2",
+			"side": "port",
+			"east": 574896.5,
+			"north": 3112858.11
+		},
+		{
+			"id": "3",
+			"side": "starboard",
+			"east": 575051.64,
+			"north": 3112729.93
+		},
+		{
+			"id": "4",
+			"side": "port",
+			"east": 574838.77,
+			"north": 3112696.97
+		},
+		{
+			"id": "finish boat",
+			"side": "",
+			"east": 574791.54,
+			"north": 3112625.77
+		},
+		{
+			"id": "finish pin",
+			"side": "",
+			"east": 574713.59,
+			"north": 3112643.76
+		}
+	],
+	"freestyle_box": [
+		{
+			"east": 574499.22,
+			"north": 3112559.83
+		},
+		{
+			"east": 574557.71,
+			"north": 3112813.17
+		},
+		{
+			"east": 574733.09,
+			"north": 3112772.68
+		},
+		{
+			"east": 574674.61,
+			"north": 3112519.34
+		}
+	]
+}

@@ -1,7 +1,7 @@
 """Builds a sea spot's map from open data, from one config file (backlog E04.S02, the generic
 pipeline; first used for Fuerteventura, Sotavento, E04.S12).
 
-    python -I tools/map/spot_build.py tools/map/spots/sotavento.json [--stage=download|grids|photos|all]
+    python -I tools/map/spot_build.py tools/map/spots/sotavento.json [--stage=download|grids|photos|buildings|all]
 
 What it makes, in Game/maps/<slug>/terrain/:
 - near_heights.bin/.json: the ground and the sea bed at `near.cell_m` over the sailing area, in metres
@@ -27,7 +27,9 @@ The downloads are kept in .map_data/<slug>/raw/ and fetched only once. Needs num
 Pillow and pyproj (pip install numpy scipy tifffile pillow pyproj).
 """
 import json
+import math
 import sys
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -440,6 +442,94 @@ def write_preview(spot: Spot, heights: np.ndarray, masks: dict) -> None:
     print(f"  wrote {spot.work / 'preview.png'}")
 
 
+# ---------------------------------------------------------------- buildings (OpenStreetMap)
+
+def overpass_buildings(spot: Spot) -> dict:
+    """OpenStreetMap's building outlines in the config's latitude-longitude box (cached)."""
+    path = spot.raw / "osm_buildings.json"
+    if not (path.exists() and path.stat().st_size > 1000):
+        south, west, north, east = spot.config["buildings"]["box_latlon"]
+        query = f'[out:json][timeout:60];way["building"]({south},{west},{north},{east});out tags geom;'
+        data = urllib.parse.urlencode({"data": query}).encode()
+        # Overpass turns away browser-like user agents: a plain tool name.
+        request = urllib.request.Request("https://overpass-api.de/api/interpreter", data=data,
+                                         headers={"User-Agent": "windsurf-game-map-builder/1.0"})
+        with urllib.request.urlopen(request, timeout=180) as response:
+            path.write_bytes(response.read())
+        print(f"  downloaded {path.name}")
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def building_levels(tags: dict, area_m2: float, centre: tuple, settings: dict) -> float:
+    """How many floors: the config's overrides (the landmarks, from photos), then OSM's
+    building:levels, then a guess by kind and size (low-rise Canarian building otherwise)."""
+    for override in settings["overrides"]:
+        if math.hypot(centre[0] - override["near"][0], centre[1] - override["near"][1]) <= override["radius_m"]:
+            return float(override["levels"])
+    if tags.get("building:levels", "").replace(".", "", 1).isdigit():
+        return float(tags["building:levels"])
+    kind = tags.get("building", "yes")
+    if kind == "tent":
+        return 2.5
+    if kind == "hotel":
+        return 4.0 if area_m2 > 1500 else 3.0
+    if area_m2 > 1500:
+        return 3.0
+    return float(settings["default_levels"])
+
+
+def write_buildings(spot: Spot) -> None:
+    """Game/maps/<slug>/buildings.json: each building's outline in game metres (x east, z south of
+    the origin), the ground under it (m above mean sea level, the lowest corner on the near grid) and
+    its height; drawn by SpotBuildings (Game/maps/spots/spot_buildings.gd). OpenStreetMap's data is
+    © OpenStreetMap contributors (ODbL): the credits name it."""
+    settings = spot.config["buildings"]
+    data = overpass_buildings(spot)
+    to_frame = Transformer.from_crs("EPSG:4326", spot.config["crs"], always_xy=True)
+    info = json.loads((spot.out / "near_heights.json").read_text(encoding="utf-8"))
+    values = np.frombuffer((spot.out / "near_heights.bin").read_bytes(), dtype="<u2").reshape(info["rows"], info["columns"])
+    origin_east, origin_north = spot.config["origin_east_m"], spot.config["origin_north_m"]
+
+    def ground_at(east: float, north: float) -> float:
+        column = int(round((east - info["west_m"]) / info["cell_m"]))
+        row = int(round((info["north_m"] - north) / info["cell_m"]))
+        column = min(max(column, 0), info["columns"] - 1)
+        row = min(max(row, 0), info["rows"] - 1)
+        return info["height_offset_m"] + float(values[row, column]) * info["height_scale_m"]
+
+    buildings = []
+    for element in data.get("elements", []):
+        geometry = element.get("geometry")
+        if not geometry or len(geometry) < 4:
+            continue
+        easts, norths = to_frame.transform([p["lon"] for p in geometry], [p["lat"] for p in geometry])
+        points = list(zip(easts, norths))[:-1]  # the outline closes on its first point
+        area = 0.5 * abs(sum(points[i][0] * points[(i + 1) % len(points)][1] - points[(i + 1) % len(points)][0] * points[i][1]
+                             for i in range(len(points))))
+        if area < 12.0:
+            continue
+        centre = (sum(p[0] for p in points) / len(points), sum(p[1] for p in points) / len(points))
+        tags = element.get("tags", {})
+        levels = building_levels(tags, area, centre, settings)
+        base = min(ground_at(e, n) for e, n in points)
+        if base < 0.5:  # an outline that reaches into the water: skip (a pier, a mapping slip)
+            continue
+        buildings.append({
+            "kind": "tent" if tags.get("building") == "tent" else "building",
+            "base_m": round(base, 2),
+            "height_m": round(levels * settings["level_m"], 2),
+            "outline": [[round(e - origin_east, 2), round(-(n - origin_north), 2)] for e, n in points],
+        })
+    out = REPO / "Game" / "maps" / spot.slug / "buildings.json"
+    out.write_text(json.dumps({
+        "about": f"{spot.config['name']}: buildings from OpenStreetMap (© OpenStreetMap contributors, ODbL), written by tools/map/spot_build.py: don't edit. "
+                 "outline in game metres (x east, z south of the origin), base_m and height_m in metres (base above mean sea level).",
+        "level_m": settings["level_m"],
+        "buildings": buildings,
+    }), encoding="utf-8")
+    print(f"  wrote {out.name}: {len(buildings)} buildings")
+
+
 def main() -> None:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     stage = next((a.split("=", 1)[1] for a in sys.argv[1:] if a.startswith("--stage=")), "all")
@@ -459,6 +549,9 @@ def main() -> None:
     if stage in ("photos", "all"):
         print("Photos:")
         write_photos(spot)
+    if stage in ("buildings", "all") and "buildings" in spot.config:
+        print("Buildings:")
+        write_buildings(spot)
 
 
 if __name__ == "__main__":

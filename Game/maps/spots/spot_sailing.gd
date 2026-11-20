@@ -17,6 +17,7 @@ extends SailingScene
 ##   --heading=<degrees>      start with this heading
 ##   --wind_from=<degrees>    the wind from this direction instead of the spot's usual one
 ##   --water_level=<m>        the water this high above mean sea level (the tide) instead of the spot's
+##   --course=<name>          race a course from the spot's courses folder (Sotavento: pwa_slalom_x)
 ##   --overview=<east>,<north>,<height>  a fixed camera there (height above mean sea level), looking
 ##       at the board, or with --overview_look=<east>,<north> at that point on the water
 ## tools/screenshot.sh res://maps/sotavento/sail_sotavento.tscn out.png 480 --autopilot=1 --camera=2
@@ -43,9 +44,11 @@ func _enter_tree() -> void:
 	environment.water_level_m = water_level_m()
 	environment.start_hour = spot.start_hour
 	windsurfer.environment = environment
-	var terrain_levels: Array[Node] = find_children("*", "HeightTerrain", true, false)
-	for terrain: Node in terrain_levels:
-		(terrain as HeightTerrain).water_level_m = environment.water_level_m
+	# Every part of the map that stands on the ground (the terrain, the buildings, the event site)
+	# at the same water level.
+	for part: Node in find_children("*", "", true, false):
+		if "water_level_m" in part and part != self:
+			part.set("water_level_m", environment.water_level_m)
 	# Before main.gd's part, which moves the start behind a race course's start line (--course).
 	windsurfer.start_position = start_position()
 	super()
@@ -60,6 +63,10 @@ func _ready() -> void:
 		_water_area = LakeArea.from_grid(shore_grid, start_position(), WATER_STEP_M)
 		_hud.show_mini_map(_water_area, _windsurfer.start_position)
 	super()
+	# A race on the PWA course draws its own marks: the event site's buoys step aside.
+	var event_site: Node = get_node_or_null("Map/EventSite")
+	if event_site != null and event_site.has_method("show_course_buoys"):
+		event_site.call("show_course_buoys", _course == null)
 	_apply_overview_options()
 	print("%s: water level %.2f m above mean sea level, wind from %.0f degrees" % [
 		spot.display_name, _windsurfer.environment.water_level_m, _windsurfer.wind_config.from_bearing_deg])
@@ -129,6 +136,15 @@ func _start_heading_deg() -> float:
 		return numbers[0]
 	# With a race course: a beam reach behind its start line (main.gd).
 	return super() if _course != null else spot.start_heading_deg
+
+
+## The spot's race courses by name (main.gd's --course): the files in the spot's courses folder.
+func _course_named(course_name: String, usual_start: Vector2) -> Course:
+	if spot.courses_folder != "":
+		var saved: Course = RaceCourses.load_named(course_name, spot.map_config, spot.courses_folder)
+		if saved != null:
+			return saved
+	return super(course_name, usual_start)
 
 
 ## The spot keeps its own wind direction when the settings change (the settings' direction is the

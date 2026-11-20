@@ -194,8 +194,8 @@ Done when: the ten checks pass. The trade wind, the lagoon that fills at high ti
 - [ ] T3 Terrain and water (built 20 Nov: the near and far grids, HeightTerrain, sailable at a fixed high water; waits on Max's look, P2's Stop)
 - [ ] T4 Wind
 - [ ] T5 Waves and tides (realistic waves and swell: the regional fetch, two swell trains with sets, shoaling, breaking on the bar, the tide per session)
-- [ ] T6 Beach
-- [ ] T7 Courses
+- [ ] T6 Beach (20 Nov: the PWA event site from the event's zone map: the judges' tower, grandstand, flags, sails, riders' tent, palms; 363 buildings from OpenStreetMap; the hut, the launch and the people still to do)
+- [ ] T7 Courses (20 Nov: `courses/pwa_slalom_x.json` from the 2026 zone map, racable; Max's check of the layout, the other formats)
 - [ ] T8 Look
 - [ ] T9 AI and fps
 - [ ] T10 Check

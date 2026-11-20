@@ -16,6 +16,8 @@ extends Resource
 @export var map_config: MapConfig = null
 ## The air, the water, the wind's height profile, the waves and the depth grid (EnvironmentConfig).
 @export_file("*.tres") var environment_path: String = ""
+## The folder with the spot's race courses (the course maker's .json files): --course=<name> races one.
+@export_dir var courses_folder: String = ""
 
 @export_group("Start")
 ## The start spot in the spot's frame (metres east and north), on the water.
