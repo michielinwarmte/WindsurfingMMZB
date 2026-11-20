@@ -4,7 +4,7 @@ Written 20 November 2026 (Claude Opus 5.5, Max's PC) after Max asked: "we do the
 
 ## 1. The spot in numbers (the dossier, T1)
 
-Sources: the 6 November research (`../spot_dossier.md`, section 2) and two papers read for this plan (section 8). Numbers marked *estimate* are not from a measurement.
+Sources: the 6 November research (`../spot_dossier.md`, section 2) and two papers read for this plan (section 9). Numbers marked *estimate* are not from a measurement.
 
 | What | The numbers | Source |
 |---|---|---|
@@ -75,19 +75,42 @@ Sizes: P1 L, P2 L, P3 L, P4 M, P5 M, P6 L. Several sessions each; P3 can be buil
 
 **Max's answers (20 November 2026):** D1 (c): the lagoon by hand from the photo now, the CNIG LiDAR later. D2: "the fastest way": the terrain is drawn from the height grid on the graphics card when the spot loads (HeightTerrain), no Blender and no meshes built offline. D3 (a): the tide fixed per session. D4: not answered yet. D5 (a): this session alone, package by package. Max also pointed out that it is the PWA World Tour's venue: the game's origin and start are at the René Egli Center (OpenStreetMap 28.13578 N, 14.24477 W, the event site at Playa Barca).
 
-## 6. Progress log
+## 6. Checked against photos (20 November 2026)
+
+Max, after the first version: "looks like the water is too low. Search and download pictures of the place and compare." The reference photos (Wikimedia Commons, not copied into the repository because of their licences; the file pages carry the authors and the licences):
+
+| Photo | When | What it shows |
+|---|---|---|
+| [Luftbild Playa de Sotavento, Lagune](https://commons.wikimedia.org/wiki/File:Luftbild_Playa_de_Sotavento,_Lagune.jpg) and [51512711614](https://commons.wikimedia.org/wiki/File:Luftbild_Playa_de_Sotavento,_Lagune_-_51512711614.jpg) | 24 September 2021, 15:20, four days after the full moon (springs), high water | From above Risco del Paso looking north-east: **the whole lagoon one turquoise sheet of water up to the dunes, the bar a thin continuous strip of sand** curving out, broken only at its openings |
+| [51511166127](https://commons.wikimedia.org/wiki/File:Luftbild_Playa_de_Sotavento,_Lagune_-_51511166127.jpg), [51512665394](https://commons.wikimedia.org/wiki/File:Luftbild_Playa_de_Sotavento,_Lagune_-_51512665394.jpg), [51512915455](https://commons.wikimedia.org/wiki/File:Luftbild_Playa_de_Sotavento,_Lagune_-_51512915455.jpg) | The same day, 09:24, low water | The lagoon drained (wet sand, dark mats of weed and sea grass, channels with water), the bar a wide strip of sand, the waves breaking on the outer beach; the hotel at the lagoon's north-east end |
+| [Playa Barca (194563677)](https://commons.wikimedia.org/wiki/File:Playa_Barca_(194563677).jpeg), [Windsurfer kitesurfer sotavento](https://commons.wikimedia.org/wiki/File:Windsurfer_kitesurfer_sotavento_playa_strand.jpg) | High water | From the beach and from the Risco del Paso hill: shallow clear water over sand across the lagoon, windsurfers and kites on it, the bar a low spit |
+| [Pájara - Playa Barca 01 to 12](https://commons.wikimedia.org/wiki/File:P%C3%A1jara_-_Playa_Barca_01_ies.jpg) | 16 March 2012, morning, low water | The drained lagoon as flat sand, the bar a wide sand strip with the sea on its outside |
+
+**What was wrong, and why.** In the first version the game's high water showed mostly grey flats with one narrow channel. Two assumptions put the ground too high:
+1. The PNOA photo the shallows were shaped from was flown **near low water** (its lagoon drained but for the channels, like the 09:24 photos), but its sea waterline had been taken as mean sea level. So the beach, the bar and everything measured from the waterline stood about 0.8 m too high.
+2. The bar was a flat 1.8 m top up to 80 m wide, and the lagoon's dry and dark patches stood at 0.8 to 1.0 m. The photos show a ridge with a thin crest just above spring high water, and the dark patches are wet weed on the lagoon floor, not salt marsh. Also, the terrain model's LiDAR (older than the photos) put sand strips inside the lagoon at 2 m where the bar used to be (it moves landward about 2.3 m a year; its tip changes a lot).
+
+**What changed in `tools/map/spot_build.py` and the config.** The photo's waterline is at `photo_waterline_m` -0.8 m (about mean low water: the mean range is 1.72 m). The bar is a ridge within 80 m of that waterline: its sea face rises at 5 %, its back falls at 6 % to the lagoon floor, its crest is capped at 1.5 m; the openings come from the photo. The lagoon floor: channels 0.2 m, wet sand and the weed 0.45 m, dry sand 0.65 m; salt marsh (1.0 m) only by the dune foot. Only ground the terrain model puts at 3 m or more is "high land" (the dunes); its 2 m strips inside the lagoon follow the photo. The terrain's colours are warmed (an aerial survey's photo is balanced to a pale grey): brightness 0.78, tint (1, 0.84, 0.64).
+
+**Measured on the built grid** (the low ground of the lagoon's box, between -0.5 and 2 m): under water 0 % at mean low water (-0.8 m), 3 % at mean sea level, 81 % at mean high water (+0.86 m), 87 % at the game's +1.1 m, 90 % at spring high water (+1.25 m); in front of the René Egli Center the lagoon floor 0.45 m and the bar's crest 1.2 to 1.4 m over about 30 m. The same viewpoints in the game: `game_compare_hw.png` (spring high water, from above Risco del Paso, like the 15:20 photo) and `game_from_water.png` (the game's high water, from the lagoon in front of the centre at board height). Tests: `test_sotavento.gd` checks the floor, the crest, the lagoon under water at high water and drained at low water.
+
+**Still different.** The drained lagoon at low water is greenish-grey in the game (the photo saw it wet), beige in the 2012 photos; the island's central mountains on the horizon to the north-east are outside the far grid (48 km); the photos' hotel and village are flat on the ground (no buildings yet: E05 and E04.S16).
+
+## 7. Progress log
 
 - 20 November 2026 (Claude Opus 5.5, Max's PC): P0. The dossier from two papers (the Jandía beaches' erosion study with the SIMAR wave climate, the barrier's geomorphology); the data probed (IGN MDT05 by WCS: 5 m but whole metres, the sea empty; PNOA photos by WMS: good on land and the shallows; EMODnet: 115 m with the island's land); the design of the water; the packages. Branch `spot/sotavento` from main 19ec1cc. The probe scripts stay in the session's scratchpad until P2 turns them into the adapters.
 - 20 November 2026, later the same session: **P2's first version, sailable** (with the lean start of P1: a `Spot` resource, no registry yet). `tools/map/spot_build.py` with the config `tools/map/spots/sotavento.json` downloads and builds the spot in 16 s: the IGN MDT05 (5 m) and MDT25 (25 m) by WCS, EMODnet by WCS, the PNOA photos by WMS (near 3 m, detail 1 m over the lagoon and the launch, far 23 m); the near grid 2400 x 2400 at 5 m over 12 km (heights above mean sea level: the land from the MDT, the near shore from the measured profile, EMODnet further out, the lagoon and the bar from the photo's colours: water, wet sand, dry sand, salt marsh, the open sea found by spreading from deep water with the bar's openings closed), the far grid 1600 x 1600 at 30 m over 48 km; 21 MB in all (LFS). In the game: `HeightTerrain` (`Game/maps/height_terrain.gd`, `.gdshader`) lifts shared flat grid meshes by the 16-bit grid on the graphics card (three detail levels a chunk, skirts, the far terrain leaves a hole for the near one, the seabed fades from the photo to sand below 2 m, the photo at 0.72 brightness); `SpotSailing` (`Game/maps/spots/spot_sailing.gd`) sails a `Spot` (`Game/maps/spots/spot.gd`, `Game/maps/sotavento/spot.tres`): the environment at the session's water level (`EnvironmentConfig.water_level_m`, new, for Michiel), the settings' wind from the spot's 25 degrees, the spot's own sea always on (today's lake law over the grid's fetch, trains 32/16/8/4 m on 32 m cells), the mini map; the start menu's row "Sail on Lake Silvaplana | Sotavento", `tools/play.sh sotavento`. Measured: the sea built on 379 x 379 cells, crests up to 27 cm at 18 kt and 47 cm at 30 kt (the fetch stops at the grid's edge: P3); 88 fps in the editor build at 1280 x 720 (3.3 M triangles, the graphics card 10.7 ms). Tests: `test_sotavento.gd` (10), unit 1127/1127, check 534/0. Screenshots in `.screenshots/sotavento/`. Not verified: how it feels to sail, the scale of the beach from the water (Max's look, P2's Stop).
+- 20 November 2026, the same session: Max: "looks like the water is too low". Checked against photos of the place (section 6): the shallows were measured from a low-water photo as if it were mean sea level, and the bar was too broad and high. Fixed in `spot_build.py` (the photo's waterline -0.8 m, the bar a thin ridge, the lagoon floor lower, the 3 m rule for high land) and the terrain's colours warmed; the lagoon is now one sheet of water at high water and drained at low water, as the photos show. `test_sotavento.gd` 11 tests.
 
-## 7. Token ledger
+## 8. Token ledger
 
 | Session | Work | Agents | Tokens (about) |
 |---|---|---|---|
 | 20 Nov 2026 | P0 (this plan) | 1 web-fetch (failed on the repository's page) | the lead's own context |
 | 20 Nov 2026 | P2 first version (sailable), the lean start of P1 | none | the lead's own context |
+| 20 Nov 2026 | The photo check (section 6): the water level fixed | none | the lead's own context |
 
-## 8. Sources
+## 9. Sources
 
 - Marrero-Rodríguez, N., Casamayor, M., Sánchez-García, M. J., Alonso, I. (2021). Can long-term beach erosion be solved with soft management measures? Case study of the protected Jandía beaches. *Ocean and Coastal Management* 214, 105946. ULPGC repository, handle 10553/112342. The wave climate (SIMAR nodes 40500009, 4051010, 4052011), tables 3 and 4, the bathymetry (section 4.5), the tide (section 3.5).
 - Alonso, I. et al. (2003). The Sotavento barrier and lagoon, in *II Jornadas Canarias de Geología*, Las Palmas. ULPGC repository, handle 10553/502.

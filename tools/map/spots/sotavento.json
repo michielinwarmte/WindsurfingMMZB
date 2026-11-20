@@ -27,14 +27,18 @@
     "blend_from_m": 1200,
     "blend_to_m": 2500
   },
+  "photo_waterline_m": -0.8,
+  "photo_waterline_about": "The PNOA photo was flown near low water (the lagoon drained but for its channels, the bar a wide strip: as in the photos of 24 September 2021 at 09:24); mean low water is about 0.86 m below mean sea level (mean range 1.72 m). The heights measured from the photo's sea waterline start here. Checked against the reference photos (Documentation/reports/spots/sotavento/PLAN.md, section 6).",
   "lagoon": {
-    "about": "The lagoon and the bar shaped from the aerial photo's colours (decision D1: by hand now, the CNIG LiDAR later). Heights above mean sea level (m). The lagoon fills around high water (mean HW about +0.86 m, springs about +1.25 m).",
+    "about": "The lagoon and the bar shaped from the aerial photo's colours (decision D1: by hand now, the CNIG LiDAR later). Heights above mean sea level (m). The lagoon fills around high water (mean HW about +0.86 m, springs about +1.25 m): at spring high water it is one sheet of water 35 to 85 cm deep and the bar a thin strip of sand (the high-tide photos of 24 September 2021, 15:20, and from Playa Barca and the Risco del Paso hill).",
     "channel_m": 0.2,
-    "wet_sand_m": 0.5,
-    "dry_sand_m": 0.8,
+    "wet_sand_m": 0.45,
+    "dry_sand_m": 0.65,
     "salt_marsh_m": 1.0,
-    "bar_face_slope": 0.06,
-    "bar_crest_m": 1.8,
+    "bar_reach_m": 80,
+    "bar_face_slope": 0.05,
+    "bar_back_slope": 0.06,
+    "bar_crest_m": 1.5,
     "beach_face_slope": 0.04,
     "beach_top_m": 1.5,
     "inlet_close_m": 20

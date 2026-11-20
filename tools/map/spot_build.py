@@ -223,9 +223,18 @@ def near_heights(spot: Spot) -> tuple[np.ndarray, dict]:
     photo = pnoa_photo(spot, box, config["photos"]["near"]["tiles"], config["photos"]["near"]["tile_px"], "photo_near")
     seen = classify_photo(photo_on_grid(photo, columns, rows))
 
-    # Land the terrain model is sure of: 2 m and higher (it has whole metres only, and the lagoon
-    # floor and the beach read 0 or 1).
-    high_land = np.nan_to_num(terrain, nan=-1.0) >= 2.0
+    # Land the terrain model is sure of: 3 m and higher (it has whole metres only: the lagoon floor
+    # and the beach read 0 or 1, and sand strips inside the lagoon 2, where its older LiDAR caught
+    # the moving bar; the dunes pass 3 m within a few metres of their foot).
+    high_land = np.nan_to_num(terrain, nan=-1.0) >= 3.0
+    # Only high land joined to the real land (the dunes, the hills) or big on its own (10 ha): the
+    # terrain model's LiDAR is older than the photos, and a sand strip it measured at 2 m inside the
+    # lagoon has since moved (the bar moves landward about 2.3 m a year and its tip changes a lot,
+    # Marrero-Rodriguez et al. 2021); the photo decides there.
+    land_labels, _count = ndimage.label(high_land)
+    land_sizes = np.bincount(land_labels.ravel()) * cell * cell
+    land_sizes[0] = 0.0
+    high_land = (land_labels > 0) & (land_sizes[land_labels] >= 100000.0)
     water = seen["water"] & ~high_land
     # Specks of "sand" out at sea (whitecaps, boats, the photo's seams) are water: keep only the dry
     # ground that touches the high land or is big (the bar, a sand bank: more than 0.5 ha).
@@ -258,33 +267,62 @@ def near_heights(spot: Spot) -> tuple[np.ndarray, dict]:
     distance_inland = ndimage.distance_transform_edt(~open_sea) * cell
 
     heights = np.where(np.isnan(terrain), 0.0, terrain)
+    # The photo was flown at some tide: its sea's waterline is this high above mean sea level
+    # (Sotavento's PNOA photo: near low water, the lagoon drained but for its channels, like the
+    # morning photo of 24 September 2021). Every height measured from that waterline starts here.
+    waterline = config.get("photo_waterline_m", 0.0)
 
-    # The sea: the measured profile near the shore, blended into EMODnet further out. EMODnet is
+    # The sea: the measured profile near the shore (depths below the photo's waterline), blended
+    # into the profile below mean sea level within 400 m and into EMODnet further out. EMODnet is
     # never allowed to be shallower than 0.5 m below the sea level at sea.
     profile_depth = interpolate_profile(distance_offshore, config["shore_profile"])
+    near_share = 1.0 - np.clip(distance_offshore / 400.0, 0.0, 1.0)
+    profile_height = -profile_depth + waterline * near_share
     blend = np.clip((distance_offshore - config["shore_profile"]["blend_from_m"])
                     / (config["shore_profile"]["blend_to_m"] - config["shore_profile"]["blend_from_m"]), 0.0, 1.0)
     blend = blend * blend * (3.0 - 2.0 * blend)  # smoothstep
-    sea_height = (1.0 - blend) * -profile_depth + blend * np.minimum(sea_bed, -0.5)
-    heights[open_sea] = np.minimum(sea_height[open_sea], -0.2)
+    sea_height = (1.0 - blend) * profile_height + blend * np.minimum(sea_bed, -0.5)
+    heights[open_sea] = np.minimum(sea_height[open_sea], waterline - 0.2)
 
-    # The beach and the bar facing the open sea: the beach face rises from the waterline at its
-    # slope; the bar's face is steeper and its crest higher (the config's numbers); sand further
-    # than the bar's reach from the sea is lagoon or flats.
+    # The lagoon's low ground: its water and its wet sand away from the sea (the outer beach's
+    # swash zone is wet too, but that is the beach face).
     sand = ~water & ~high_land
-    near_sea = sand & (distance_inland <= 80.0)
-    face = np.minimum(lagoon["bar_crest_m"], lagoon["bar_face_slope"] * distance_inland)
-    beach_face = np.minimum(lagoon["beach_top_m"], lagoon["beach_face_slope"] * distance_inland)
-    # Where the land behind is the lagoon (low), the strip is the bar; elsewhere a normal beach.
-    behind_is_low = ndimage.binary_dilation(lagoon_water | seen["wet_sand"], structure=disk(int(60 / cell)))
-    strip = np.where(behind_is_low, face, beach_face)
-    heights[near_sea] = np.maximum(np.nan_to_num(terrain[near_sea], nan=0.0), strip[near_sea])
+    lagoon_low = lagoon_water | (seen["wet_sand"] & (distance_inland > 40.0))
+    distance_to_low = ndimage.distance_transform_edt(~lagoon_low) * cell
+    # The lagoon's side of the shore: near its low ground, or far from the dunes (an ordinary beach
+    # has the dunes right behind it; the bar has the wide flats).
+    distance_to_dunes = ndimage.distance_transform_edt(~high_land) * cell
+    behind_is_low = (distance_to_low <= 60.0) | (distance_to_dunes > 80.0)
 
-    # The lagoon floor and the flats behind the bar, by what the photo sees.
-    flats = sand & ~near_sea & (np.nan_to_num(terrain, nan=0.0) < 2.0)
+    # The beach and the bar facing the open sea, within bar_reach_m of the photo's (low-water)
+    # waterline. Where the lagoon is behind, the bar is a ridge: its sea face rises from the
+    # waterline at bar_face_slope, its back falls at bar_back_slope to the lagoon floor at the reach's
+    # inner edge, and its crest is never higher than bar_crest_m. So the bar is one continuous thin
+    # strip just above spring high water, broken only where the photo shows water crossing it (the
+    # inlets), as the high-tide photos of 24 September 2021 (15:20) and from Playa Barca show; the
+    # sand further inside, even where the photo saw it dry, is the lagoon's floor (a dry ridge in the
+    # lagoon is drowned at spring high water). Where no lagoon is behind, an ordinary beach face up
+    # to beach_top_m, and the terrain model takes over landward.
+    reach = lagoon["bar_reach_m"]
+    near_sea = sand & (distance_inland <= reach)
+    sea_face = waterline + lagoon["bar_face_slope"] * distance_inland
+    back_face = lagoon["wet_sand_m"] + lagoon["bar_back_slope"] * (reach - distance_inland)
+    bar = np.minimum(np.minimum(sea_face, back_face), lagoon["bar_crest_m"])
+    beach = np.minimum(waterline + lagoon["beach_face_slope"] * distance_inland, lagoon["beach_top_m"])
+    strip = np.where(behind_is_low, bar, beach)
+    terrain_or_zero = np.nan_to_num(terrain, nan=0.0)
+    heights[near_sea] = np.where(behind_is_low[near_sea], strip[near_sea],
+                                 np.maximum(terrain_or_zero[near_sea], strip[near_sea]))
+
+    # The lagoon floor and the flats behind the bar, by what the photo sees (it saw them drained).
+    flats = sand & ~near_sea & (terrain_or_zero < 2.0)
     floor = np.full(heights.shape, lagoon["dry_sand_m"])
     floor[seen["wet_sand"]] = lagoon["wet_sand_m"]
-    floor[seen["marsh"]] = lagoon["salt_marsh_m"]
+    # Dark ground in the lagoon is mostly wet weed and sea grass on its floor (the low-tide photos);
+    # only by the dune foot is it the salt marsh's shrubs, which stand higher.
+    by_the_dunes = ndimage.binary_dilation(high_land, structure=disk(int(round(60 / cell))))
+    floor[seen["marsh"]] = lagoon["wet_sand_m"]
+    floor[seen["marsh"] & by_the_dunes] = lagoon["salt_marsh_m"]
     heights[flats] = floor[flats]
     heights[lagoon_water] = lagoon["channel_m"]
     heights[inlets] = np.minimum(heights[inlets], lagoon["channel_m"] - 0.2)
@@ -294,8 +332,8 @@ def near_heights(spot: Spot) -> tuple[np.ndarray, dict]:
     smooth = ndimage.gaussian_filter(heights, sigma=1.5)
     low = (heights > -6.0) & (heights < 6.0)
     heights[low] = smooth[low]
-    # Open sea stays water and the lagoon's channels stay below its flats after smoothing.
-    heights[open_sea] = np.minimum(heights[open_sea], -0.2)
+    # Open sea stays under the photo's waterline after smoothing.
+    heights[open_sea] = np.minimum(heights[open_sea], waterline - 0.2)
 
     masks = {"open_sea": open_sea, "lagoon_water": lagoon_water, "inlets": inlets, "high_land": high_land}
     print(f"  near grid {columns} x {rows} at {cell} m: open sea {open_sea.mean():.0%}, lagoon water "

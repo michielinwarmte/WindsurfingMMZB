@@ -11,8 +11,9 @@ const ENVIRONMENT_PATH: String = "res://maps/sotavento/environment_sotavento.tre
 const SAIL_SCENE: String = "res://maps/sotavento/sail_sotavento.tscn"
 ## The René Egli Center, the PWA event site: the game's origin.
 const CENTRE: Vector2 = Vector2(574164.0, 3112474.0)
-## 100 m out from the centre towards the sea (bearing 125): the lagoon's flats, 1.0 m above mean sea
-## level; 225 m out: the bar, 1.8 m (spot_build.py, the config's lagoon heights).
+## 100 m out from the centre towards the sea (bearing 125): the lagoon's floor, about 0.45 m above mean
+## sea level; 225 m out: the bar's crest, about 1.4 m (spot_build.py, the config's lagoon and bar heights,
+## checked against photos at high and low tide: PLAN.md section 6).
 const LAGOON_FLATS: Vector2 = Vector2(574246.0, 3112417.0)
 const BAR: Vector2 = Vector2(574348.0, 3112345.0)
 
@@ -53,12 +54,19 @@ func test_the_water_level_floods_the_lagoon_and_not_the_bar() -> void:
 	var grid: TerrainGrid = TerrainGrid.load_from(GRID_PATH)
 	var flats_m: float = _height(grid, LAGOON_FLATS)
 	var bar_m: float = _height(grid, BAR)
-	assert_between(flats_m, 0.5, 1.1, "the lagoon's flats above mean sea level")
-	assert_gt(bar_m, flats_m + 0.4, "the bar higher than the lagoon behind it")
+	assert_between(flats_m, 0.2, 0.86, "the lagoon's floor between mean sea level and mean high water")
+	assert_gt(bar_m, 1.25, "the bar's crest above spring high water (a thin strip at high tide)")
+	assert_lt(bar_m, 2.0, "and no higher: the high-tide photos show a low bar")
 	grid.lower_by(1.1)
-	assert_lt(_height(grid, LAGOON_FLATS), 0.0, "under water at the session's high water")
+	assert_lt(_height(grid, LAGOON_FLATS), -0.3, "the lagoon one sheet of water at the session's high water")
 	assert_gt(_height(grid, BAR), 0.0, "the bar stays dry")
 	assert_almost_eq(_height(grid, BAR), bar_m - 1.1, 1e-4)
+
+
+func test_the_lagoon_is_drained_at_low_water() -> void:
+	var grid: TerrainGrid = TerrainGrid.load_from(GRID_PATH)
+	grid.lower_by(-0.8)
+	assert_gt(_height(grid, LAGOON_FLATS), 0.5, "dry at mean low water: you walk out to the sea")
 
 
 func test_the_environment_applies_the_water_level() -> void:

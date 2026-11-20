@@ -36,6 +36,8 @@ const SHADER: Shader = preload("res://maps/height_terrain.gdshader")
 @export var lowest_m: float = -60.0
 ## The photo's colours times this (white sand in an aerial photo is near pure white).
 @export var photo_brightness: float = 1.0
+## The photo's colours times this tint (an aerial survey's photo is balanced to a pale grey).
+@export var photo_tint: Color = Color.WHITE
 
 var grid: TerrainGrid = null
 var material: ShaderMaterial = null
@@ -141,6 +143,7 @@ func _make_material() -> ShaderMaterial:
 	made.set_shader_parameter("height_scale_m", grid.height_scale_m())
 	made.set_shader_parameter("lowest_m", lowest_m)
 	made.set_shader_parameter("photo_brightness", photo_brightness)
+	made.set_shader_parameter("photo_tint", Vector3(photo_tint.r, photo_tint.g, photo_tint.b))
 	made.set_shader_parameter("water_level_m", water_level_m)
 	var rects: Dictionary = _photo_rects()
 	made.set_shader_parameter("photo", photo)

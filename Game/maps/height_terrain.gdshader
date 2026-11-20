@@ -49,6 +49,9 @@ uniform float water_level_m = 0.0;
 // The photo's colours times this: an aerial photo is exposed for the ground, so white sand comes out
 // near pure white, brighter than sand in the game's sun.
 uniform float photo_brightness : hint_range(0.0, 1.5) = 1.0;
+// The photo's colours times this tint: an aerial survey's photo is colour-balanced to a pale grey;
+// the ground seen from the beach is warmer (Sotavento's sand is beige, not white).
+uniform vec3 photo_tint : source_color = vec3(1.0);
 uniform float slope_darkening : hint_range(0.0, 1.0) = 0.25;
 uniform float sun_shading : hint_range(0.0, 1.0) = 0.5;
 
@@ -106,7 +109,7 @@ void fragment() {
 	float below_sea_level_m = -(world_position.y + water_level_m);
 	color = mix(color, seabed_color, smoothstep(photo_depth_m, photo_depth_m + 3.0, below_sea_level_m));
 	float flatness = clamp(world_normal.y, 0.0, 1.0);
-	ALBEDO = color * photo_brightness * mix(1.0 - slope_darkening, 1.0, flatness);
+	ALBEDO = color * photo_brightness * photo_tint * mix(1.0 - slope_darkening, 1.0, flatness);
 	ROUGHNESS = 0.95;
 	SPECULAR = 0.2;
 }
