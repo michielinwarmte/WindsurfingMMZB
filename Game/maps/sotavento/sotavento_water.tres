@@ -1,0 +1,46 @@
+[gd_resource type="ShaderMaterial" load_steps=4 format=3]
+
+; Sotavento's water look for the game's water shader res://world/water.gdshader (only parameters):
+; clear Atlantic water over white sand, so the shallows go turquoise and the deep sea dark navy blue.
+; Absorption per metre: red 0.35, green 0.07, blue 0.04 (clear ocean water is nearly pure water:
+; red is gone in a few metres, blue goes deep). No reflection probe (the land is low and far).
+
+[ext_resource type="Shader" path="res://world/water.gdshader" id="1_water"]
+
+
+[sub_resource type="FastNoiseLite" id="Noise_ripples"]
+noise_type = 3
+frequency = 0.02
+fractal_octaves = 3
+
+[sub_resource type="NoiseTexture2D" id="Texture_ripples"]
+seamless = true
+as_normal_map = true
+bump_strength = 6.0
+noise = SubResource("Noise_ripples")
+
+[resource]
+render_priority = -1
+shader = ExtResource("1_water")
+shader_parameter/ripple_normals = SubResource("Texture_ripples")
+shader_parameter/deep_color = Color(0.02, 0.1, 0.22, 1)
+shader_parameter/shallow_color = Color(0.05, 0.3, 0.36, 1)
+shader_parameter/crest_lightening = 0.5
+shader_parameter/absorption_per_m = Vector3(0.35, 0.07, 0.04)
+shader_parameter/no_bottom_depth_m = 80.0
+shader_parameter/refraction_strength = 0.03
+shader_parameter/ripple_size_m = 7.0
+shader_parameter/ripple_strength = 0.7
+shader_parameter/ripple_drift_direction = Vector2(-0.42, 0.91)
+shader_parameter/ripple_speed_ms = 0.8
+shader_parameter/ripple_fade_m = 1500.0
+shader_parameter/roughness_value = 0.05
+shader_parameter/roughness_far = 0.22
+shader_parameter/roughness_far_m = 2000.0
+shader_parameter/shore_line_depth_m = 0.15
+shader_parameter/shore_line_strength = 0.35
+shader_parameter/grid_strength = 0.0
+shader_parameter/whitecap_law = 1
+shader_parameter/whitecap_water_factor = 1.0
+shader_parameter/foam_life_s = 2.54
+shader_parameter/foam_lag_s = 0.35

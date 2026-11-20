@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="EnvironmentConfig" load_steps=5 format=3]
+
+; Sailing at Fuerteventura, Sotavento (backlog E04.S12; Documentation/reports/spots/sotavento/PLAN.md):
+; - the air: 1.18 kg/m3, sea level at about 25 degrees C (a July afternoon);
+; - the water: sea water (water_default.tres, 1025 kg/m3);
+; - the wind: the trade wind from the NNE (wind_sotavento.tres; the sailing scene blows the settings'
+;   strength from this direction);
+; - the waves: the sea grown by the wind over the fetch on the spot's depth grid (lake_waves_sotavento.tres);
+; - the depth grid: tools/map/spot_build.py's near grid, above mean sea level; water_level_m is the
+;   session's tide (the sailing scene sets it from the Spot).
+
+[ext_resource type="Script" path="res://sim/config/environment_config.gd" id="1"]
+[ext_resource type="Resource" path="res://config/water_default.tres" id="2"]
+[ext_resource type="Resource" path="res://maps/sotavento/wind_sotavento.tres" id="3"]
+[ext_resource type="Resource" path="res://maps/sotavento/lake_waves_sotavento.tres" id="4"]
+
+[resource]
+script = ExtResource("1")
+air_density_kg_m3 = 1.18
+water = ExtResource("2")
+wind = ExtResource("3")
+map_wind_enabled = false
+start_hour = 16.0
+lake_waves = ExtResource("4")
+depth_grid_path = "res://maps/sotavento/terrain/near_heights.json"
+water_level_m = 1.1

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="MapConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://maps/map_config.gd" id="1"]
+
+; Fuerteventura, Sotavento in the game (tools/map/spots/sotavento.json): the frame is REGCAN95 / UTM
+; zone 28N (EPSG:4083), metres east and north like Swiss LV95, so MapConfig's lv95_to_game() works
+; as it is. The origin is the René Egli Center on the beach at Playa Barca, the PWA World Tour's
+; event site. The game's height 0 is mean sea level; the session's tide lifts the water above it
+; (Spot.water_level_m, EnvironmentConfig.water_level_m).
+
+[resource]
+script = ExtResource("1")
+map_name = "Fuerteventura, Sotavento"
+origin_east_m = 574164.0
+origin_north_m = 3112474.0
+lake_level_m = 0.0

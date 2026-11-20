@@ -102,19 +102,32 @@ layout_mode = 2
 theme_type_variation = &"HintLabel"
 text = "18 kt from W (270), swell"
 
-[node name="SailSilvaplanaButton" type="Button" parent="Menu/Root/MainPage/Layout"]
-unique_name_in_owner = true
+[node name="RealSpots" type="HBoxContainer" parent="Menu/Root/MainPage/Layout"]
 custom_minimum_size = Vector2(520, 0)
 layout_mode = 2
 size_flags_horizontal = 0
+theme_override_constants/separation = 8
+
+[node name="SailSilvaplanaButton" type="Button" parent="Menu/Root/MainPage/Layout/RealSpots"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
 theme_type_variation = &"BigButton"
 text = "Sail on Lake Silvaplana"
 alignment = 0
 
-[node name="SailSilvaplanaHint" type="Label" parent="Menu/Root/MainPage/Layout"]
+[node name="SailSotaventoButton" type="Button" parent="Menu/Root/MainPage/Layout/RealSpots"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(212, 0)
+layout_mode = 2
+theme_type_variation = &"BigButton"
+text = "Sotavento"
+alignment = 0
+
+[node name="RealSpotsHint" type="Label" parent="Menu/Root/MainPage/Layout"]
 layout_mode = 2
 theme_type_variation = &"HintLabel"
-text = "The real lake in the Engadin, a Maloja wind from the south-west."
+text = "Real spots: the Engadin lake in a Maloja wind; Fuerteventura's PWA beach in the trade wind."
 
 [node name="RaceOpenWaterButton" type="Button" parent="Menu/Root/MainPage/Layout"]
 unique_name_in_owner = true

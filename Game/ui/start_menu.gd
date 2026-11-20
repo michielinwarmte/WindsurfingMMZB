@@ -4,6 +4,7 @@ extends Node
 ## The four ways to play:
 ##   Sail on open water: the backdrop becomes the game (main.gd, start_playing()).
 ##   Sail on Lake Silvaplana: the real lake in a Maloja wind (maps/silvaplana/sail_silvaplana.tscn).
+##   Sail at Fuerteventura, Sotavento: the PWA World Tour's beach (maps/sotavento/sail_sotavento.tscn).
 ##   Silvaplana wind viewer, with the race course maker (the map track's wind viewer).
 ##   Lake Silvaplana: fly over the map (the map track's terrain view).
 ## And Gear (the board, sail and fin to sail: gear_page.gd), Settings, Controls, How to sail,
@@ -25,6 +26,7 @@ extends Node
 ## wind viewer does for its panels.
 
 const SAIL_SILVAPLANA_SCENE: String = "res://maps/silvaplana/sail_silvaplana.tscn"
+const SAIL_SOTAVENTO_SCENE: String = "res://maps/sotavento/sail_sotavento.tscn"
 const FLY_OVER_SCENE: String = "res://maps/silvaplana/dev/terrain_view.tscn"
 const WIND_VIEWER_SCENE: String = "res://maps/silvaplana/wind_viewer.tscn"
 ## The sailing scene behind the menu, to build it again with new gear.
@@ -35,13 +37,14 @@ const MENU_SIZE_PX: Vector2i = Vector2i(1280, 800)
 
 ## The play options, as last_play_option in the settings saves them (new ones go at the end, so
 ## a saved choice keeps its meaning; the menu shows them in its own order).
-enum PlayOption { OPEN_WATER, FLY_OVER, WIND_VIEWER, SAIL_SILVAPLANA, RACE_OPEN_WATER, RACE_LAKE }
+enum PlayOption { OPEN_WATER, FLY_OVER, WIND_VIEWER, SAIL_SILVAPLANA, RACE_OPEN_WATER, RACE_LAKE, SAIL_SOTAVENTO }
 
 @onready var _sailing: SailingScene = $Sailing
 @onready var _menu: CanvasLayer = $Menu
 @onready var _main_page: Control = %MainPage
 @onready var _open_water_button: Button = %OpenWaterButton
 @onready var _sail_silvaplana_button: Button = %SailSilvaplanaButton
+@onready var _sail_sotavento_button: Button = %SailSotaventoButton
 @onready var _race_open_water_button: Button = %RaceOpenWaterButton
 @onready var _race_lake_button: Button = %RaceLakeButton
 @onready var _lan_button: Button = %LanButton
@@ -79,6 +82,7 @@ func _ready() -> void:
 	_fit_to_window()
 	_open_water_button.pressed.connect(_on_open_water_pressed)
 	_sail_silvaplana_button.pressed.connect(_open_map_scene.bind(PlayOption.SAIL_SILVAPLANA, SAIL_SILVAPLANA_SCENE, "Lake Silvaplana"))
+	_sail_sotavento_button.pressed.connect(_open_map_scene.bind(PlayOption.SAIL_SOTAVENTO, SAIL_SOTAVENTO_SCENE, "Fuerteventura, Sotavento"))
 	_race_open_water_button.pressed.connect(_on_race_open_water_pressed)
 	_race_lake_button.pressed.connect(_on_race_lake_pressed)
 	_lan_button.pressed.connect(_open_page.bind(_lan))
@@ -96,7 +100,7 @@ func _ready() -> void:
 	_race.start_race.connect(_on_race_page_start)
 	for page: MenuPage in [_settings, _controls, _howto, _race, _gear, _lan, _credits, _quit_confirm]:
 		page.closed.connect(_on_page_closed.bind(page))
-	MenuFocus.setup_buttons([_open_water_button, _sail_silvaplana_button, _race_open_water_button, _race_lake_button, _lan_button, _wind_button,
+	MenuFocus.setup_buttons([_open_water_button, _sail_silvaplana_button, _sail_sotavento_button, _race_open_water_button, _race_lake_button, _lan_button, _wind_button,
 		_silvaplana_button, _gear_button, _settings_button, _controls_button, _howto_button, _credits_button, _quit_button])
 	_version.text = _version_text()
 	_show_main_page(_play_buttons()[GameSettings.values.last_play_option])
@@ -120,7 +124,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 ## The play buttons in the order of PlayOption.
 func _play_buttons() -> Array[Button]:
-	return [_open_water_button, _silvaplana_button, _wind_button, _sail_silvaplana_button, _race_open_water_button, _race_lake_button]
+	return [_open_water_button, _silvaplana_button, _wind_button, _sail_silvaplana_button, _race_open_water_button, _race_lake_button,
+		_sail_sotavento_button]
 
 
 ## Sail on open water: the menu goes away and the backdrop becomes the game.

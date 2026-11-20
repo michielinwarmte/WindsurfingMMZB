@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="WindConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://sim/config/wind_config.gd" id="1"]
+
+; Sotavento's trade wind (the plan, section 1): from the NNE, cross-offshore from the left, funnelled
+; through the Jandia isthmus; 15 to 30 kt on a normal day. The sailing scene blows the settings' wind
+; (strength, gusts, shifts) from this direction; this is the environment's own for the tools.
+
+[resource]
+script = ExtResource("1")
+speed_kt = 20.0
+from_bearing_deg = 25.0
+gusts_enabled = true
+gust_intensity = 0.25
+shifts_enabled = true
+max_shift_deg = 10.0

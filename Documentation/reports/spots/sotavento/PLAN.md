@@ -1,0 +1,96 @@
+# Fuerteventura, Sotavento: the plan (E04.S12)
+
+Written 20 November 2026 (Claude Opus 5.5, Max's PC) after Max asked: "we do the map backlog. I want Fuerteventura Sotavento in the game, with realistic waves and swell." This file is the story's dossier (task T1), what the open data really gives (T2, probed), the design for the water, the packages in order with their Stops, and the decisions for Max. The progress log at the end is kept by every session that works on the spot.
+
+## 1. The spot in numbers (the dossier, T1)
+
+Sources: the 6 November research (`../spot_dossier.md`, section 2) and two papers read for this plan (section 8). Numbers marked *estimate* are not from a measurement.
+
+| What | The numbers | Source |
+|---|---|---|
+| Where | Playa de Sotavento de Jandía, south-east coast of the Jandía isthmus, from Costa Calma (north-east) to the Meliá Gorriones hotel and Risco del Paso (south-west). The coast runs north-east to south-west; the sea faces south-east (about 135°) | PNOA photo, probed |
+| The lagoon | A sand bar about 3 km long, about 400 m off the old cliff (2003; it is moving towards the land), with openings (bocanas) cut by the waves that the tide flows through. The lagoon floor is muddy sand, dry at spring low tide, under water at high tide: 35 to 85 cm deep around high water | Alonso et al. 2003; spot dossier |
+| The beach | About 15 km of beaches, up to 800 m wide; the beach face slopes 4 % (tan β = 0.04); the bar's apex is a cuspate foreland where the bottom drops to 7 m only 100 m out (a sharp step from 3.2 m) | Marrero-Rodríguez et al. 2021 |
+| The bottom outside | 50 m deep about 1500 m from the shore (3.3 % on average); seagrass meadows at 2 to 10 m; to the south (El Matorral) 100 m deep at 1000 m and two submarine canyons that start a few metres off the beach | Marrero-Rodríguez et al. 2021 (their bathymetry: the national Ecocartography of 2000 to 2001) |
+| Wind | The NE trade wind (alisio), funnelled through the isthmus between the Jandía mountains (Pico de la Zarza 807 m) and the land to the north-east: cross-offshore from the left, 15 to 30 kt on normal days, 35 to 40+ kt on PWA days in July and August, gusty near the shore; best June to September | spot dossier |
+| Waves outside | From the ENE and NE, small (Hs under 1 m) with short peak periods (5 to 10 s): **a short-fetch wind sea**, not ocean swell. Model point off the bar's apex (SIMAR 4051010): mean Hs 0.56 m, Ts 5.7 s; the storm wave (12 hours a year) 2.82 m, 8.8 s. Hs above 2 m only 0.17 % of the time (15 hours a year). Hs under 0.5 m 12 % of the time further south | Marrero-Rodríguez et al. 2021, tables 3 and 4 (Puertos del Estado SIMAR, 1958 to 2020) |
+| Swell | Storms are rare, mostly in winter, when the waves come from the **south-west**. The big north-west Atlantic swell of the island's west coast does not reach this lee coast (the forecasts' 1 to 1.7 m, 9 to 14 s from the NW at "Sotavento Sol Gorriones" is the open ocean's, not the beach's) | the same; surf-forecast; Windfinder |
+| Breaking | The breaker index measured from the wave data: γ = Hb / d = 0.87 to 0.95; the mean wave breaks in 0.85 m of water at the apex, the storm wave in 3.9 m | Marrero-Rodríguez et al. 2021, table 4 |
+| Tide | Semi-diurnal; mean range 1.72 m at Fuerteventura (Puertos del Estado); springs about 2.5 m and neaps about 1 m *estimate*. The lagoon fills a couple of hours either side of high water, most at new and full moon | Marrero-Rodríguez et al. 2021; spot dossier |
+| Water | 19 to 23 °C, turquoise over sand | spot dossier |
+| Events | The PWA Fuerteventura Grand Slam since 1986: slalom (downwind, on the outside), Slalom X, freestyle in the lagoon, foil | spot dossier |
+
+**What this means for "realistic waves and swell" here.** Sotavento is a lee spot: its waves are the trade wind's own chop, short and steep, growing with the distance from the shore because the wind blows off the land at an angle. Near the beach and in the lagoon the water is flat; further out the chop builds to about 0.5 to 1 m on a normal day and well over 1 m on a strong one, and **the wind's direction decides how much**: from the NNE the wind comes off the land (short fetch, flatter), from the NE it blows along the coast (long fetch, choppier), from the ENE it comes from the open sea (the longest fetch, the biggest chop). A small, longer swell runs underneath on some days, and a south-west swell in winter. On the bar the waves break at low and mid tide; at high tide the bar goes under and the lagoon fills.
+
+## 2. What the open data gives (T2, probed today)
+
+Probed from Max's PC on 20 November 2026 for a 12.7 x 12.3 km box (EPSG:4083, REGCAN95 / UTM 28N, the Canary Islands' frame):
+
+| Data | Service | What came back | Licence | Verdict |
+|---|---|---|---|---|
+| Terrain, 5 m | IGN MDT05, WCS `servicios.idee.es/wcs-inspire/mdt`, coverage `Elevacion4083_5` | 2540 x 2453 cells of 5 m; **whole metres only**; the sea is empty (-32768) | CC BY 4.0, "© Instituto Geográfico Nacional" | Good for the hills and the dunes; too coarse for the beach, the bar and the lagoon floor (a lagoon 0.35 to 0.85 m deep needs decimetres) |
+| Terrain, 2 m and LiDAR | CNIG download centre (MDT02, PNOA-LiDAR point clouds) | Not scripted: downloaded by hand per sheet through a form | CC BY 4.0 | Needed for the lagoon floor and the bar if the flight was near low tide (decision D1) |
+| Aerial photos | PNOA WMS `www.ign.es/wms-inspire/pnoa-ma`, layer `OI.OrthoimageCoverage` | A clear 25 cm photo of the land and the shallows: the bar, the lagoon's channels, the bocanas; the deep sea outside is cut off (black) | CC BY 4.0, "PNOA cedido por © Instituto Geográfico Nacional" | Use it; the sea's colour is painted, as Silvaplana's far tiles are |
+| Photos (regional) | GRAFCAN / IDECanarias | Not probed | Needs written permission (the OSM wiki) | Not used |
+| Bathymetry | EMODnet WCS `ows.emodnet-bathymetry.eu/wcs`, coverage `emodnet__mean` | About 115 m cells, the sea and the island's land (-1834 to 789 m) | CC BY 4.0 | Good for the outside, the island's shape and the regional fetch; blind to the near-shore bar and the 4 % beach face |
+| Bathymetry (fine) | MITECO Ecocartografía (2000 to 2001) | No download or WMS found | — | Not available; the near-shore profile is fitted to the paper's numbers instead (section 3) |
+| Wave climate | Puertos del Estado SIMAR 4051010 (portus.puertos.es) | Not downloaded yet; the paper's tables are used | Open (attribution) | Fetch later for the day types (P5) |
+| Tide | Puertos del Estado REDMAR, the Fuerteventura gauge | Not downloaded yet | Open (attribution) | The harmonic constants for P4 |
+
+## 3. The design of the water
+
+The game's waves today: the open water is four deep-water Gerstner waves; the lake is four wave trains of fixed length and direction whose **heights change from place to place**, grown by the wind over a fetch map from the lake's depth grid (`LakeWaves`, `LakeWaveField`, `FetchMap`; PHYSICS_SPEC 9.17, 9.18), already with depth-limited breaking (Hs at most 0.6 of the depth). Sotavento's water is the same idea made big enough for the sea, plus a swell and a tide:
+
+1. **The depth grid**, merged from three sources: EMODnet outside (115 m), a near-shore profile fitted to the measured numbers where EMODnet is blind (the 4 % beach face, 3.2 m then the step to 7 m at 100 m on the apex, 50 m at 1500 m), and the lagoon and the bar from the LiDAR model (D1) or shaped by hand from the photo's channels. The water level comes from the tide (item 4), so the lagoon is land or water by the level, not by hand.
+2. **The wind sea from a regional fetch.** The fetch map today looks only inside the map. At sea the wind has blown over far more water: the fetch is worked out on a coarse island-scale land mask (EMODnet's land, about 200 x 200 km with Gran Canaria and the African coast), then carried onto the spot's fine grid, where the near-shore land is sharp. The same SPM growth law as the lake. That alone gives the realistic picture of section 1: flat by the beach, chop growing outward, NNE flatter than NE, ENE the biggest, flat in the lagoon (its depth caps the height).
+3. **The swell** as two long trains of nearly the same period and direction (for example 9.5 and 10.5 s): two such trains beat, so the swell comes in **groups and sets**, about ten waves a set every couple of minutes, as a real narrow swell does (this is the physics of wave groups, not a trick). Its height per place from linear theory: shoaling over the depth grid, the island's shelter (the swell's rays from the open ocean blocked by land), and breaking where Hs passes γ times the depth (γ 0.78 to 0.9; the paper measured 0.87 to 0.95). The swell's turn towards the beach near the shore is a cross-fade between two directions, not a change of direction inside a train (a train's direction must be the same everywhere or its crests tear).
+4. **The tide** as the water level of the session: high, mid or low water, springs or neaps, from the time of day in the menu, held during a race (it moves about 7 cm in 15 minutes). The lagoon fills at high water, the bar breaks the waves at low and mid water, the shore check and the AI's shore lookout read the same level. Live tide over a long session comes later.
+5. **The look**: the turquoise over sand and the bottom seen through the shallows (E02.S07 T3), the white water on the bar, the whitecaps by the existing law.
+
+What changes in `Game/sim/` (Michiel's OK, on this branch, PHYSICS_SPEC updated, `tools/test.sh validation`): the sea's wave field with up to six trains (four of wind sea, two of swell) and a level per session; the fetch map with a far fetch from outside the map; the swell's per-place height. The open water and Silvaplana stay bit for bit as before (the tests prove it). The cost: six trains instead of four is about 50 % more for the wave query; measured with `tools/sea_bench.sh` and a 20-board race (the C++ wave query of 13 November is there if the budget breaks).
+
+## 4. The packages, in order
+
+The backlog's rule stays (Max, Q11): the spot list (E04.S01) and the generic pipeline (E04.S02) come before the second spot, and Sotavento is the spot that proves them.
+
+| # | Package | Stories, tasks | What Max sees at the end | Stop |
+|---|---|---|---|---|
+| P0 | This plan: the dossier, the data probed, the design | E04.S12 T1, part of T2 | This file | **D1 to D5** (section 5) |
+| P1 | **The spot list**: a `Spot` resource and the registry; the open water and Silvaplana as the first two spots; the ~15 hard-wired places read the list; the tests take a spot | E04.S01 T1 to T4 | Nothing changes (bit for bit), but the menus list spots | The tests and the check green; no play-test needed |
+| P2 | **Sotavento's ground**: the spot config (box, frame), the adapters (IDEE MDT, PNOA photos, EMODnet, the near-shore profile, the lagoon), the terrain chunks, the depth grid; Sotavento in the spot list, sailable on today's lake chop at a fixed level | E04.S02 T1 to T4, E04.S12 T2, T3 | Sail Sotavento: the dunes, the hotel's beach, the bar, the lagoon, the Jandía ridge | **Max's look** at the shore, the lagoon and the scale |
+| P3 | **The sea**: the regional fetch, the wind sea by direction, the swell's two trains with sets, shoaling, the island's shelter, breaking on the bar | E02.S03 T1, T3, T4; E02.S04 T1, T2 (without SWAN); E04.S12 T5 | Chop growing away from the beach; sets of swell; the bar breaking | **Michiel's OK** on the physics; **Max's eye** on the crest spacing, the height, the sets |
+| P4 | **The tide and the lagoon**: the level per session, the lagoon filling and emptying, the HUD's tide | E02.S05 T1, T3, T4 | Sail the lagoon at high water; at low water it is sand and the waves break on the bar | Max's look |
+| P5 | **The wind and the day types**: the trade wind funnelled through the isthmus, gustier near the shore, the hills' lee; the day types (a normal 20 kt NNE day, a 32 kt PWA day, a light day with a winter SW swell) from SIMAR | E03.S02, E04.S12 T4 | The menu's conditions for Sotavento | Max (and a local sailor if we find one) |
+| P6 | **Beach, courses, look, AI, check**: the launch by the windsurf centre, the PWA tower, the downwind slalom and Slalom X courses outside, the lagoon's freestyle box; the water's colour; the AI on every course without groundings; the frame rate | E04.S12 T6 to T10 | The spot complete | The ten checks |
+
+Sizes: P1 L, P2 L, P3 L, P4 M, P5 M, P6 L. Several sessions each; P3 can be built alongside P1 and P2 on open water (it needs only a depth grid to test, and a made-up beach serves until P2 lands).
+
+## 5. Decisions for Max
+
+- **D1 The lagoon floor.** (a) Max downloads the PNOA-LiDAR or MDT02 sheets for the beach from the CNIG download centre by hand (free, a form per sheet); the lead converts them; best if the flight was near low tide. (b) The lead shapes the lagoon floor and the bar by hand from the photo's channels and the measured numbers. (c) Both: (b) now, (a) when the sheets come. *Recommended: (c).*
+- **D2 Blender on this PC.** The terrain pipeline builds its chunks in Blender 4.5 LTS (TE2: not installed here). (a) Install Blender 4.5 LTS here. (b) The lead writes a terrain builder without Blender (Python writes the chunks, or Godot meshes the height grid when the spot loads), which also helps every later spot. *Recommended: (b), unless you want Blender here for the gear and the props anyway.*
+- **D3 The tide.** (a) Fixed for the session, chosen in the menu (high, mid, low water; springs or neaps). (b) Live, moving over the day. *Recommended: (a) now, (b) later.*
+- **D4 The local knowledge.** Have you sailed Sotavento? If yes: the chop outside on a normal day (height, how many board lengths between crests), the swell under it, where the waves break on the bar, the gusts near the beach. If not: is there someone in the club who has?
+- **D5 Who builds.** (a) This session alone, package by package (fewer tokens, slower). (b) The lead with Opus agents, two packages side by side (P1 and P3), at most three agents (about 0.3 to 0.9 M tokens each).
+
+**Max's answers (20 November 2026):** D1 (c): the lagoon by hand from the photo now, the CNIG LiDAR later. D2: "the fastest way": the terrain is drawn from the height grid on the graphics card when the spot loads (HeightTerrain), no Blender and no meshes built offline. D3 (a): the tide fixed per session. D4: not answered yet. D5 (a): this session alone, package by package. Max also pointed out that it is the PWA World Tour's venue: the game's origin and start are at the René Egli Center (OpenStreetMap 28.13578 N, 14.24477 W, the event site at Playa Barca).
+
+## 6. Progress log
+
+- 20 November 2026 (Claude Opus 5.5, Max's PC): P0. The dossier from two papers (the Jandía beaches' erosion study with the SIMAR wave climate, the barrier's geomorphology); the data probed (IGN MDT05 by WCS: 5 m but whole metres, the sea empty; PNOA photos by WMS: good on land and the shallows; EMODnet: 115 m with the island's land); the design of the water; the packages. Branch `spot/sotavento` from main 19ec1cc. The probe scripts stay in the session's scratchpad until P2 turns them into the adapters.
+- 20 November 2026, later the same session: **P2's first version, sailable** (with the lean start of P1: a `Spot` resource, no registry yet). `tools/map/spot_build.py` with the config `tools/map/spots/sotavento.json` downloads and builds the spot in 16 s: the IGN MDT05 (5 m) and MDT25 (25 m) by WCS, EMODnet by WCS, the PNOA photos by WMS (near 3 m, detail 1 m over the lagoon and the launch, far 23 m); the near grid 2400 x 2400 at 5 m over 12 km (heights above mean sea level: the land from the MDT, the near shore from the measured profile, EMODnet further out, the lagoon and the bar from the photo's colours: water, wet sand, dry sand, salt marsh, the open sea found by spreading from deep water with the bar's openings closed), the far grid 1600 x 1600 at 30 m over 48 km; 21 MB in all (LFS). In the game: `HeightTerrain` (`Game/maps/height_terrain.gd`, `.gdshader`) lifts shared flat grid meshes by the 16-bit grid on the graphics card (three detail levels a chunk, skirts, the far terrain leaves a hole for the near one, the seabed fades from the photo to sand below 2 m, the photo at 0.72 brightness); `SpotSailing` (`Game/maps/spots/spot_sailing.gd`) sails a `Spot` (`Game/maps/spots/spot.gd`, `Game/maps/sotavento/spot.tres`): the environment at the session's water level (`EnvironmentConfig.water_level_m`, new, for Michiel), the settings' wind from the spot's 25 degrees, the spot's own sea always on (today's lake law over the grid's fetch, trains 32/16/8/4 m on 32 m cells), the mini map; the start menu's row "Sail on Lake Silvaplana | Sotavento", `tools/play.sh sotavento`. Measured: the sea built on 379 x 379 cells, crests up to 27 cm at 18 kt and 47 cm at 30 kt (the fetch stops at the grid's edge: P3); 88 fps in the editor build at 1280 x 720 (3.3 M triangles, the graphics card 10.7 ms). Tests: `test_sotavento.gd` (10), unit 1127/1127, check 534/0. Screenshots in `.screenshots/sotavento/`. Not verified: how it feels to sail, the scale of the beach from the water (Max's look, P2's Stop).
+
+## 7. Token ledger
+
+| Session | Work | Agents | Tokens (about) |
+|---|---|---|---|
+| 20 Nov 2026 | P0 (this plan) | 1 web-fetch (failed on the repository's page) | the lead's own context |
+| 20 Nov 2026 | P2 first version (sailable), the lean start of P1 | none | the lead's own context |
+
+## 8. Sources
+
+- Marrero-Rodríguez, N., Casamayor, M., Sánchez-García, M. J., Alonso, I. (2021). Can long-term beach erosion be solved with soft management measures? Case study of the protected Jandía beaches. *Ocean and Coastal Management* 214, 105946. ULPGC repository, handle 10553/112342. The wave climate (SIMAR nodes 40500009, 4051010, 4052011), tables 3 and 4, the bathymetry (section 4.5), the tide (section 3.5).
+- Alonso, I. et al. (2003). The Sotavento barrier and lagoon, in *II Jornadas Canarias de Geología*, Las Palmas. ULPGC repository, handle 10553/502.
+- `Documentation/reports/spots/spot_dossier.md`, section 2, and its sources (sportif.travel, windsurfingukmag, continentseven, windfinder).
+- The services: https://servicios.idee.es/wcs-inspire/mdt ; https://www.ign.es/wms-inspire/pnoa-ma ; https://ows.emodnet-bathymetry.eu/wcs ; https://centrodedescargas.cnig.es ; https://portus.puertos.es
+- Surf and wind forecasts for the swell's direction: https://www.surf-forecast.com/breaks/Sotavento ; https://www.windfinder.com/forecast/fuerteventura_sotavento_sol_gorriones

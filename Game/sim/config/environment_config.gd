@@ -49,6 +49,11 @@ const DEFAULT_WAVES_PATH: String = "res://config/waves_default.tres"
 @export var lake_waves: LakeWavesConfig = null
 ## The map's depth grid (TerrainGrid's .json): where the water is and how deep.
 @export_file("*.json") var depth_grid_path: String = ""
+## The water level above the depth grid's zero, m: a sea spot's grid is written above mean sea
+## level, and the session's level (the tide) lifts the water by this much, so the shallows, the
+## lagoon and the waves' depth follow it (TerrainGrid.lower_by()). 0 for a lake: its grid is
+## already above its own surface.
+@export var water_level_m: float = 0.0
 
 ## The map's wind, loaded once and shared: it is a fixed function of the place and the time of
 ## day, so every simulation in this environment can ask the same one.
@@ -96,6 +101,8 @@ func start_time_of_day_s() -> float:
 func depth_grid() -> TerrainGrid:
 	if _depth_grid == null and depth_grid_path != "":
 		_depth_grid = TerrainGrid.load_from(depth_grid_path)
+		if _depth_grid != null and water_level_m != 0.0:
+			_depth_grid.lower_by(water_level_m)
 	return _depth_grid
 
 

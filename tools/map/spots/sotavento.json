@@ -1,0 +1,45 @@
+{
+  "about": "Fuerteventura, Sotavento (backlog E04.S12; Documentation/reports/spots/sotavento/PLAN.md). Read by tools/map/spot_build.py. Boxes are [west, south, east, north] in the spot's frame (metres east and north).",
+  "name": "Fuerteventura, Sotavento",
+  "slug": "sotavento",
+  "crs": "EPSG:4083",
+  "crs_name": "REGCAN95 / UTM zone 28N (the Canary Islands' frame)",
+  "origin_east_m": 574164,
+  "origin_north_m": 3112474,
+  "origin_about": "The game's origin: the René Egli Center on the beach at Playa Barca, the PWA World Tour's event site (OpenStreetMap: 28.13578 N, 14.24477 W).",
+  "near": {"box": [568200, 3106400, 580200, 3118400], "cell_m": 5},
+  "far": {"box": [550200, 3088400, 598200, 3136400], "cell_m": 30},
+  "photos": {
+    "near": {"tiles": 3, "tile_px": 2000, "out_px": 4096},
+    "detail": {"box": [571652, 3109252, 575748, 3113348], "tiles": 2, "tile_px": 2048},
+    "far": {"tiles": 1, "tile_px": 2048}
+  },
+  "sources": {
+    "terrain_near": {"service": "idee_wcs", "coverage": "Elevacion4083_5"},
+    "terrain_far": {"service": "idee_wcs", "coverage": "Elevacion4083_25"},
+    "bathymetry": {"service": "emodnet_wcs", "coverage": "emodnet__mean"},
+    "photo": {"service": "pnoa_wms", "layer": "OI.OrthoimageCoverage"}
+  },
+  "shore_profile": {
+    "about": "Depth below mean sea level (m) at a distance from the waterline (m) where EMODnet's 115 m cells are blind: the beach face 4 % (tan beta 0.04) and 50 m deep at 1500 m (3.3 %), Marrero-Rodriguez et al. 2021. Blended into EMODnet between blend_from_m and blend_to_m.",
+    "distance_m": [0, 30, 100, 300, 700, 1500],
+    "depth_m": [0.0, 0.9, 3.0, 9.0, 22.0, 50.0],
+    "blend_from_m": 1200,
+    "blend_to_m": 2500
+  },
+  "lagoon": {
+    "about": "The lagoon and the bar shaped from the aerial photo's colours (decision D1: by hand now, the CNIG LiDAR later). Heights above mean sea level (m). The lagoon fills around high water (mean HW about +0.86 m, springs about +1.25 m).",
+    "channel_m": 0.2,
+    "wet_sand_m": 0.5,
+    "dry_sand_m": 0.8,
+    "salt_marsh_m": 1.0,
+    "bar_face_slope": 0.06,
+    "bar_crest_m": 1.8,
+    "beach_face_slope": 0.04,
+    "beach_top_m": 1.5,
+    "inlet_close_m": 20
+  },
+  "water_level_m": 1.1,
+  "water_level_about": "The session's water level above mean sea level until the tide is chosen in the menu (P4): between mean and spring high water, so the lagoon has water (35 to 85 cm at spring high water, the spot dossier).",
+  "credits": "Terrain and aerial photos: © Instituto Geográfico Nacional (PNOA, MDT05, MDT25; CC BY 4.0). Bathymetry: EMODnet Bathymetry Consortium (CC BY 4.0)."
+}

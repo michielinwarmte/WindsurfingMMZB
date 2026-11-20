@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="LakeWavesConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://sim/config/lake_waves_config.gd" id="1"]
+
+; Sotavento's sea, grown by the wind over the fetch (PHYSICS_SPEC.md 9.17) on the spot's depth grid:
+; the same law as the lake, with sea-sized trains (the trade wind's chop: Tp 5 to 6 s offshore,
+; 40 to 55 m crests; the shorter trains carry the chop near the beach) and coarser cells (the waves
+; change slowly at sea; the grid is 12 km a side). The far fetch from outside the grid and the swell
+; come in package P3 (Documentation/reports/spots/sotavento/PLAN.md, section 3).
+
+[resource]
+script = ExtResource("1")
+growth_law = 0
+wavelengths_m = PackedFloat32Array(32, 16, 8, 4)
+offsets_deg = PackedFloat32Array(0, -8, 10, -14)
+physics_trains = 4
+phase_seed = 28
+reference_depth_m = 0.0
+look_wavelength_m = 1.5
+look_offset_deg = 18.0
+peak_enhancement = 3.3
+height_scale = 1.0
+cell_m = 32.0
+ray_count = 9
+ray_spacing_deg = 6.0
+depth_limited_height_ratio = 0.6

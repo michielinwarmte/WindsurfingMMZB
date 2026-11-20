@@ -610,7 +610,8 @@ func read_from(config: ConfigFile) -> void:
 	gear_board = _string(config, "gear", "board", gear_board)
 	gear_sail = _string(config, "gear", "sail", gear_sail)
 	gear_fin = _string(config, "gear", "fin", gear_fin)
-	last_play_option = clampi(_int(config, "menu", "last_play_option", last_play_option), 0, 3)
+	# The start menu's PlayOption: OPEN_WATER (0) to SAIL_SOTAVENTO (6).
+	last_play_option = clampi(_int(config, "menu", "last_play_option", last_play_option), 0, 6)
 	lan_name = _string(config, "lan", "name", lan_name)
 	lan_address = _string(config, "lan", "address", lan_address)
 
