@@ -65,6 +65,8 @@ var _map_wind: MapWind = null
 var _depth_grid: TerrainGrid = null
 ## The far fetch, loaded once and shared (null until asked, and for a lake).
 var _far_fetch: FarFetch = null
+## The swell's exposure, loaded once and shared (null until asked, and for a lake).
+var _swell_exposure: SwellExposure = null
 ## The lake waves built so far, by the wind they were built for (a few at most; see
 ## lake_waves_for()). Built on the main thread when a simulation's water is made.
 var _lake_waves_built: Dictionary[String, LakeWaves] = {}
@@ -111,6 +113,13 @@ func depth_grid() -> TerrainGrid:
 	return _depth_grid
 
 
+## A sea spot's swell exposure (null for a lake, or when the file can't be read).
+func swell_exposure() -> SwellExposure:
+	if _swell_exposure == null and sea_path != "":
+		_swell_exposure = SwellExposure.load_from(sea_path)
+	return _swell_exposure
+
+
 ## A sea spot's open water beyond its map (null for a lake, or when the file can't be read).
 func far_fetch() -> FarFetch:
 	if _far_fetch == null and sea_path != "":
@@ -148,7 +157,7 @@ func lake_waves_for(wind: WindField, wind_config: WindConfig, height_scale: floa
 	if height_scale != 1.0:
 		lake_config = lake_waves.duplicate() as LakeWavesConfig
 		lake_config.height_scale *= height_scale
-	var built: LakeWaves = LakeWaves.build(lake_config, depth_at, area, from_deg, wind_10m_ms, speed_factor_at, far_fetch())
+	var built: LakeWaves = LakeWaves.build(lake_config, depth_at, area, from_deg, wind_10m_ms, speed_factor_at, far_fetch(), swell_exposure())
 	if _lake_waves_built.size() >= LAKE_WAVES_KEPT:
 		_lake_waves_built.erase(_lake_waves_built.keys()[0])
 	_lake_waves_built[key] = built

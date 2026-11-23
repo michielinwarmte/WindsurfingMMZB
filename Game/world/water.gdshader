@@ -423,6 +423,8 @@ void fragment() {
 		vec4 lag_a;
 		vec4 lag_b;
 		lake_pixel_surface(rest_xz, pixel_m, tangent_x, tangent_z, crest, total_steepness, waves_faded_slope2, breaking, breaking_full, trains_mss, peak_period_s, lag_a, lag_b);
+		// A sea spot's swell: its slopes on top of the wind sea's (PHYSICS_SPEC.md 9.20).
+		lake_swell_slopes(rest_xz, tangent_x, tangent_z, crest, total_steepness);
 		// The wind of this moment here: the short waves' slope (Cox and Munk, in wind rows) and the
 		// whitecaps' share (whitecap_cover(), with the lake's own waves here).
 		float wind_here = wind_ratio_here(world_position.xz);

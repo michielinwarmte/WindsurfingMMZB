@@ -256,3 +256,42 @@ func test_the_beach_is_flat_in_the_offshore_trade_wind() -> void:
 	assert_gt(simar_10.x, at_start.x + 0.1, "growing further out")
 	gut.p("20 kt from the NNE: at the start Hs %.2f m (fetch %.1f km), off the bar Hs %.2f m, Tp %.1f s (fetch %.1f km)" % [
 		at_start.x, at_start.z / 1000.0, simar_10.x, simar_10.y, simar_10.z / 1000.0])
+
+
+func test_shoaling_follows_linear_theory() -> void:
+	# A 7.1 s swell: unchanged in deep water, a little lower at intermediate depth, higher in the
+	# shallows (Ks = sqrt(cg_deep / cg); in 1 m the shallow-water limit sqrt(5.54 / 3.13) = 1.33).
+	assert_almost_eq(LakeWaves.shoaling_coefficient(7.1, 500.0), 1.0, 1e-6)
+	assert_between(LakeWaves.shoaling_coefficient(7.1, 10.0), 0.9, 0.96)
+	assert_between(LakeWaves.shoaling_coefficient(7.1, 1.0), 1.25, 1.4)
+
+
+func test_the_trade_winds_swell_reaches_the_spot_sheltered() -> void:
+	# The default: the NE trade swell of a windy summer day, 0.8 m at 7.1 s from 36 degrees out in the
+	# channel (PLAN.md section 6). Off the bar (SIMAR 10's point) it arrives partly sheltered.
+	var sea: LakeWaves = _sea_for(25.0, true)
+	assert_eq(sea.swell_count, 2, "two trains: their beat makes the sets")
+	assert_eq(sea.physics_count, 6, "the physics floats on the swell and the four wind trains")
+	var simar_10: Vector2 = Vector2(-970.0, 5632.0)
+	var swell_hs: float = sea.swell_height_at(simar_10.x, simar_10.y)
+	assert_between(swell_hs, 0.1, 0.8, "sheltered by the island, less than out in the channel")
+	var periods: Array[float] = []
+	for k: int in 2:
+		periods.append(sqrt(TAU * sea.wavelength_m[sea.wind_band_count + k] / 9.81))
+	var set_waves: float = (periods[0] + periods[1]) / 2.0 / absf(periods[1] - periods[0])
+	assert_between(set_waves, 8.0, 12.0, "about ten waves a set")
+	gut.p("the trade swell (0.8 m, 7.1 s, from 36 deg out at sea) off the bar: Hs %.2f m; the wind sea there %.2f m; sets of %.0f waves" % [
+		swell_hs, sea.sea_at(simar_10.x, simar_10.y).x, set_waves])
+
+
+func test_the_north_atlantic_swell_does_not_reach_the_spot() -> void:
+	# A NW swell: the island is in the way (exposure 0 at Sotavento).
+	var environment: EnvironmentConfig = (load(ENVIRONMENT_PATH) as EnvironmentConfig).duplicate()
+	environment.water_level_m = _spot.water_level_m
+	environment.lake_waves = environment.lake_waves.duplicate() as LakeWavesConfig
+	environment.lake_waves.swell_from_deg = 315.0
+	var wind: WindConfig = WindConfig.new()
+	wind.speed_kt = 20.0
+	wind.from_bearing_deg = 25.0
+	var sea: LakeWaves = environment.lake_waves_for(null, wind)
+	assert_lt(sea.swell_height_at(-970.0, 5632.0), 0.05, "the NW swell blocked by the island")

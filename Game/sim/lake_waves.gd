@@ -53,6 +53,10 @@ var map: FetchMap
 ## physics_count of them; the picture draws the others as shading only (LakeWavesConfig).
 var band_count: int = 0
 var physics_count: int = 0
+## Of the bands: the wind sea's (first, the config's wavelengths) and a sea spot's swell trains after
+## them (9.20; 0 on every lake). The physics floats on the swell when it floats on every wind train.
+var wind_band_count: int = 0
+var swell_count: int = 0
 var wavelength_m: PackedFloat64Array = PackedFloat64Array()
 var wave_number: PackedFloat64Array = PackedFloat64Array()
 var dir_x: PackedFloat64Array = PackedFloat64Array()
@@ -88,14 +92,17 @@ static var _shape_table_gamma: float = -1.0
 
 ## The picture's textures, made the first time the water asks (main thread only).
 var _textures: Dictionary[String, Texture2D] = {}
+## The spot's swell exposure while the waves are built (null on a lake: the swell, if any, open).
+var _exposure: SwellExposure = null
 
 
 ## Builds a lake's waves. depth_at and speed_factor_at as in FetchMap.build(); area: where to look
 ## for the lake (game x, z of the north-west corner and the size). wind_from_deg and wind_10m_ms:
 ## the lake's mean wind.
-## far: a sea spot's open water beyond the area (FarFetch, 9.19); null for a lake.
+## far: a sea spot's open water beyond the area (FarFetch, 9.19); exposure: how much of an ocean
+## swell reaches each part of it (SwellExposure, 9.20); both null for a lake.
 static func build(lake_config: LakeWavesConfig, depth_at: Callable, area: Rect2, wind_from_deg: float, wind_ms: float,
-		speed_factor_at: Callable, far: FarFetch = null) -> LakeWaves:
+		speed_factor_at: Callable, far: FarFetch = null, exposure: SwellExposure = null) -> LakeWaves:
 	var lake: LakeWaves = LakeWaves.new()
 	lake.config = lake_config
 	lake.from_deg = wind_from_deg
@@ -103,6 +110,7 @@ static func build(lake_config: LakeWavesConfig, depth_at: Callable, area: Rect2,
 	lake.map = FetchMap.build(depth_at, area, lake_config.cell_m, wind_from_deg, speed_factor_at,
 		lake_config.ray_count, lake_config.ray_spacing_deg, far)
 	lake.reference_depth_m = lake_config.reference_depth_m if lake_config.reference_depth_m > 0.0 else lake.map.median_depth_m()
+	lake._exposure = exposure
 	lake._set_up_bands()
 	lake._fill_nodes()
 	lake.look_response_s = lake.look_response_time_s(wind_ms)
@@ -226,6 +234,31 @@ func _set_up_bands() -> void:
 		phase0.append(phases.randf() * TAU)
 	look_dir = WaveField.direction_for_bearing(downwind_deg + config.look_offset_deg)
 	look_phase0 = phases.randf() * TAU
+	wind_band_count = band_count
+	_set_up_swell(phases)
+
+
+## A sea spot's swell (9.20): two trains after the wind sea's, of the periods T (1 -+ spread / 2), from
+## the swell's direction spread a little apart, their phases the generator's next numbers (so the
+## wind sea's and the look train's phases stay what they were). Their lengths are deep water's.
+func _set_up_swell(phases: RandomNumberGenerator) -> void:
+	swell_count = 0
+	if config.swell_hs_m <= 0.0:
+		return
+	for k: int in 2:
+		var side: float = -1.0 if k == 0 else 1.0
+		var period: float = config.swell_period_s * (1.0 + side * config.swell_period_spread / 2.0)
+		var length: float = G * period * period / TAU
+		var direction: Vector2 = WaveField.direction_for_bearing(config.swell_from_deg + 180.0 + side * config.swell_direction_spread_deg / 2.0)
+		wavelength_m.append(length)
+		wave_number.append(TAU / length)
+		dir_x.append(direction.x)
+		dir_z.append(direction.y)
+		phase0.append(phases.randf() * TAU)
+		swell_count += 1
+	band_count += swell_count
+	if physics_count == wind_band_count:
+		physics_count = band_count
 
 
 ## Every node's waves (steps 2 to 4 of the top of this file).
@@ -244,14 +277,17 @@ func _fill_nodes() -> void:
 		var sea: Vector2 = height_and_period(wind_10m_ms * map.wind_factor[i], fetch)
 		var hs: float = sea.x
 		var tp: float = sea.y
+		# A sea spot's swell here (9.20): out at sea, through the island's shelter, over the bottom.
+		var swell_hs: float = _swell_height_at(i, depth)
 		# Shallow water: the waves break until Hs is at most this share of the depth (all trains
-		# lowered alike).
+		# lowered alike; with a swell, the total of the wind sea and the swell, sqrt(Hs_w² + Hs_s²)).
+		var total_hs: float = sqrt(hs * hs + swell_hs * swell_hs) if swell_hs > 0.0 else hs
 		var depth_factor: float = 1.0
-		if hs > 0.0:
-			depth_factor = minf(1.0, config.depth_limited_height_ratio * depth / hs)
+		if total_hs > 0.0:
+			depth_factor = minf(1.0, config.depth_limited_height_ratio * depth / total_hs)
 		var scale: float = depth_factor * config.height_scale
 		var total: float = 0.0
-		for band: int in band_count:
+		for band: int in wind_band_count:
 			var amplitude: float = band_amplitude_m(wavelength_m[band], hs, tp, config.peak_enhancement, reference_depth_m) * scale
 			# A wave steeper than k·a = pi/7 breaks (H/L = 1/7: coastalwiki; Michell 1893): only a
 			# height scale far above the law's reaches it, and the train is held there.
@@ -261,12 +297,72 @@ func _fill_nodes() -> void:
 			amplitudes[i * band_count + band] = amplitude
 			if band < physics_count:
 				total += amplitude
+		# The swell's two trains share its energy: each a² / 2 = (Hs / 4)² / 2, so a = Hs / 4.
+		for k: int in swell_count:
+			var band: int = wind_band_count + k
+			var amplitude: float = minf(swell_hs / 4.0 * scale, MAX_STEEPNESS / wave_number[band])
+			amplitudes[i * band_count + band] = amplitude
+			if band < physics_count:
+				total += amplitude
 		max_total_amplitude_m = maxf(max_total_amplitude_m, total)
 		var look: float = band_amplitude_m(config.look_wavelength_m, hs, tp, config.peak_enhancement, reference_depth_m) * scale
 		look_data[4 * i] = look
 		look_data[4 * i + 1] = _look_growth(look, wind_10m_ms * map.wind_factor[i], fetch, depth)
 		look_data[4 * i + 2] = hs * scale
 		look_data[4 * i + 3] = tp
+
+
+## A sea spot's swell's significant height at node i, water depth_m (9.20): the swell out at sea times
+## the square root of the share that reaches the node (energy) times shoaling; 0 without a swell.
+func _swell_height_at(i: int, depth_m: float) -> float:
+	if swell_count == 0:
+		return 0.0
+	var share: float = 1.0
+	if _exposure != null:
+		var at: Vector2 = map.node_position(i % map.columns, int(i / float(map.columns)))
+		share = _exposure.share_at(at.x, at.y, config.swell_from_deg)
+	return config.swell_hs_m * sqrt(share) * shoaling_coefficient(config.swell_period_s, depth_m)
+
+
+## Linear theory's shoaling: a wave of period_s that came from deep water is sqrt(cg_deep / cg) times
+## as high in water depth_m deep (the energy flux E cg is kept; cg = n c, n = (1 + 2kh / sinh 2kh) / 2,
+## omega² = g k tanh(k h); Dean and Dalrymple 1991, ch. 4). At most 2 (it has broken long before).
+static func shoaling_coefficient(period_s: float, depth_m: float) -> float:
+	if depth_m <= 0.0 or period_s <= 0.0:
+		return 1.0
+	var omega: float = TAU / period_s
+	var k: float = omega * omega / G  # deep water's, then Newton on omega² = g k tanh(k h)
+	for step: int in 30:
+		var t: float = tanh(k * depth_m)
+		var f: float = G * k * t - omega * omega
+		var df: float = G * t + G * k * depth_m * (1.0 - t * t)
+		var next: float = k - f / df
+		if absf(next - k) < 1e-9 * k:
+			k = next
+			break
+		k = next
+	var kh: float = k * depth_m
+	if kh > 10.0:
+		return 1.0
+	var n: float = 0.5 * (1.0 + 2.0 * kh / sinh(2.0 * kh))
+	var group: float = n * omega / k
+	var deep_group: float = G / (2.0 * omega)
+	return minf(sqrt(deep_group / group), 2.0)
+
+
+## The swell's significant height at a game position, from its trains' amplitudes there (0 without a
+## swell): Hs = 4 sqrt(a1² / 2 + a2² / 2).
+func swell_height_at(x: float, z: float) -> float:
+	if swell_count == 0:
+		return 0.0
+	var out: PackedFloat64Array = PackedFloat64Array()
+	out.resize(band_count)
+	amplitudes_at(x, z, out)
+	var variance: float = 0.0
+	for k: int in swell_count:
+		var a: float = out[wind_band_count + k]
+		variance += a * a / 2.0
+	return 4.0 * sqrt(variance)
 
 
 ## How much the look train grows with the wind at a node: d ln A / d ln U, from the same growth law
@@ -338,9 +434,18 @@ func textures() -> Dictionary[String, Texture2D]:
 		four.resize(nodes * 4)
 		four.fill(0.0)
 		for i: int in nodes:
-			for band: int in mini(band_count, 4):
+			for band: int in mini(wind_band_count, 4):
 				four[4 * i + band] = amplitudes[i * band_count + band]
 		_textures["lake_envelope"] = _texture_of(four)
+		# A sea spot's swell: its trains' amplitudes in a second picture (red and green), 9.20.
+		if swell_count > 0:
+			var swell: PackedFloat32Array = PackedFloat32Array()
+			swell.resize(nodes * 4)
+			swell.fill(0.0)
+			for i: int in nodes:
+				for k: int in swell_count:
+					swell[4 * i + k] = amplitudes[i * band_count + wind_band_count + k]
+			_textures["lake_swell_envelope"] = _texture_of(swell)
 		_textures["lake_look_data"] = _texture_of(look_data)
 	return _textures
 

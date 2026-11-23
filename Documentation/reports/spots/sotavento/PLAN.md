@@ -136,6 +136,8 @@ Physics (`Game/sim/`) changes for Michiel's OK on this branch; PHYSICS_SPEC.md g
 
 **The swell in the game (next):** two trains of 6.75 and 7.45 s (the beat: a set of about ten waves every 70 s), from the trade swell's direction (36 degrees by default) spread 4 degrees apart; each train's height at a node Hs_offshore / 4 times the square root of the exposure there times shoaling (linear theory, Ks = sqrt(cg_deep / cg(h)) from the depth grid), then the depth-limited breaking on the total of swell and wind sea. Default offshore: 0.8 m (the windy summer days' mean), to be set by Max's videos and P5's day types.
 
+**Built (23 November 2026):** the swell in the game (PHYSICS_SPEC.md 9.20): two trains of 6.75 and 7.45 s from 36 degrees (sets of about ten waves), sheltered by the island (sea.json's exposure), shoaled over the bottom, breaking with the wind sea; in the physics and the shader. Measured off the bar: the trade swell 0.23 m under the NNE wind sea's 0.52 m, a total of 0.57 m (the coastal study: 0.56 m); a NW swell blocked. The swell's size out at sea (0.8 m) waits on Max's videos.
+
 ## 7. Progress log
 
 - 20 November 2026 (Claude Opus 5.5, Max's PC): P0. The dossier from two papers (the Jandía beaches' erosion study with the SIMAR wave climate, the barrier's geomorphology); the data probed (IGN MDT05 by WCS: 5 m but whole metres, the sea empty; PNOA photos by WMS: good on land and the shallows; EMODnet: 115 m with the island's land); the design of the water; the packages. Branch `spot/sotavento` from main 19ec1cc. The probe scripts stay in the session's scratchpad until P2 turns them into the adapters.
