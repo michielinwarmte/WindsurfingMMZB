@@ -1,0 +1,81 @@
+{
+  "about": "The reality check: what real videos measured, and the game run in the same conditions. Read by tools/video/reality_check.py. Every real value comes from Documentation/reports/video/ and the Claude Doc 'Windsurf video analysis'. 'strict' cases pass or fail; the others are shown but cannot fail the check, because the game's conditions do not match the video's well enough yet. Gear: the game's own brands, the nearest to the videos' gear (pj_new_sealand_slalom_97 = 97 l like the JP Slalom 62.5; pj_new_sealand_slalom_117 for the 72 board; gg_sails_slalom_5_7 for the 5.6 race sail; nielstrots_slalom_7_4 for the 7.4).",
+  "runs": {
+    "strong_62": {
+      "tool": "matrix",
+      "args": ["--only=straight,gybe", "--winds=24,30", "--gear_board=pj_new_sealand_slalom_97", "--gear_sail=gg_sails_slalom_5_7"]
+    },
+    "medium_72": {
+      "tool": "matrix",
+      "args": ["--only=straight", "--winds=18,22", "--gear_board=pj_new_sealand_slalom_117", "--gear_sail=nielstrots_slalom_7_4"]
+    },
+    "lake_chop": {
+      "tool": "lake",
+      "args": ["--only=straight", "--lake_waves=1"]
+    }
+  },
+  "cases": [
+    {
+      "id": "rig_rake",
+      "what": "Rig rake back from upright, straight at full speed",
+      "source": "videos 04 (side view, 30-40 kn, 62 board + 5.6) and 08 (side view at water level, 20-25 kn, 72 + 7.4): 33-36 deg in the picture, about 31 deg once the 24 deg windward lean is taken out",
+      "real": 31.0, "tol": 5.0, "unit": "deg", "strict": true,
+      "measure": {"column": "rake", "stat": "median_tail", "scale": 25.0},
+      "game": [{"run": "strong_62", "csv": "straight_30.csv"}, {"run": "medium_72", "csv": "straight_22.csv"}],
+      "note": "the game's rake is a share of max_rake_deg (25 deg on both gear sails)"
+    },
+    {
+      "id": "rig_lean",
+      "what": "Rig lean to windward, straight at full speed",
+      "source": "video 07 (front view, 15-20 kn, 72 + 7.4, a close reach): 23-29 deg in the picture, about 24 deg once the rake is taken out",
+      "real": 24.0, "tol": 4.0, "unit": "deg", "strict": true,
+      "measure": {"column": "rig_lean_deg", "stat": "median_tail"},
+      "game": [{"run": "medium_72", "csv": "straight_18.csv"}],
+      "note": "the game's straight case is a beam reach, the video a close reach"
+    },
+    {
+      "id": "wet_length",
+      "what": "Wet length of the hull at full speed, from the tail",
+      "source": "videos 04 (0.5-0.7 m, 30-40 kn) and 06 (about 0.5 m, 20-25 kn), side views scaled by the board's length",
+      "real": 0.6, "tol": 0.15, "unit": "m", "strict": true,
+      "measure": {"column": "wetted_length_m", "stat": "median_tail"},
+      "game": [{"run": "strong_62", "csv": "straight_30.csv"}, {"run": "strong_62", "csv": "straight_24.csv"}]
+    },
+    {
+      "id": "heel",
+      "what": "Board heel at full speed",
+      "source": "video 07 (front view): about level, within about 5 deg",
+      "real": 0.0, "tol": 5.0, "unit": "deg", "strict": true,
+      "measure": {"column": "heel_deg", "stat": "median_tail"},
+      "game": [{"run": "medium_72", "csv": "straight_18.csv"}]
+    },
+    {
+      "id": "planing_gybe",
+      "what": "Time off the plane in a gybe at full speed (planing ratio under 0.5)",
+      "source": "videos 01 (35 kn) and 02 (20-25 kn): the board planes through the gybe, flip about 0.6 s; only video 03's deliberately slow gybe drops off the plane",
+      "real": 0.0, "tol": 0.3, "unit": "s", "strict": true,
+      "measure": {"stat": "off_plane_s"},
+      "game": [{"run": "strong_62", "csv": "gybe_beam_24.csv"}, {"run": "strong_62", "csv": "gybe_beam_30.csv"},
+               {"run": "strong_62", "csv": "gybe_broad_24.csv"}, {"run": "strong_62", "csv": "gybe_broad_30.csv"}],
+      "note": "tests the controller's gybe as well as the physics"
+    },
+    {
+      "id": "pitch_chop",
+      "what": "Board pitch changes over chop (spread of the changes faster than 1 s)",
+      "source": "video 04 (side view, 30-40 kn, dense chop, 313 frames against the beach line): 1.5-1.9 deg",
+      "real": 1.7, "tol": 0.6, "unit": "deg", "strict": false,
+      "measure": {"column": "pitch_deg", "stat": "fast_spread"},
+      "game": [{"run": "lake_chop", "csv": "straight_1200.csv"}, {"run": "lake_chop", "csv": "straight_1430.csv"}, {"run": "lake_chop", "csv": "straight_1700.csv"}],
+      "note": "not strict: the game's chop is the lake's at its own wind (about 15-18 kt), the video's is Gruissan's at 30-40 kn; the real wave height is not measured"
+    },
+    {
+      "id": "legs",
+      "what": "How much the legs give over chop (spread of the changes faster than 1 s)",
+      "source": "video 07 (front view, 15-20 kn, low chop): the distance from the shoulders to the board changes about 5 cm",
+      "real": 5.0, "tol": 2.0, "unit": "cm", "strict": false,
+      "measure": {"column": "knee_bend_m", "stat": "fast_spread", "scale": 100.0},
+      "game": [{"run": "lake_chop", "csv": "straight_1200.csv"}, {"run": "lake_chop", "csv": "straight_1430.csv"}, {"run": "lake_chop", "csv": "straight_1700.csv"}],
+      "note": "not strict: in the game the sailor is one rigid body with the board (mass_model.gd); knee_bend_m only moves the weight, the body cannot move apart from the board (backlog E01.S07 T1)"
+    }
+  ]
+}
