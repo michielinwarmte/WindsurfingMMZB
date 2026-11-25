@@ -80,6 +80,7 @@ Done when: the board can slam and skip under a level body on short chop without 
 - [ ] T3 The knees as an input (`SimControls`), for the timing button of E07.S07 (PH5)
 - [ ] T4 The open water's wind-made chop and airtime as the default sea (PH11): a board launched off a crest, the fin out, the landing
 - [ ] T5 The two manoeuvre cases that still fall on the swell, and the beat that loses a third of its speed on the swell (spec 17.12 item 3)
+- [ ] T6 The legs' tune from the reality check (25 Nov 2026, branch physics/reality-fixes): the legs at 1.2 Hz and damping 0.9 resonate with the lake's chop (0.8 to 1.25 Hz), the body moving about as much as the board; 0.4 Hz and 0.4 measured on the lake chop: pitch 1.21/1.56/3.21 to 0.61/0.86/1.06 deg, the knees about 5 cm as in video 07, the full matrix clean. To do: the config, the tests, spec 7.5, Michiel's OK, Max's play-test (Documentation/reports/reality_fixes/PROGRESS.md)
 Notes: this gates how much chop E02 may put under the board.
 
 ### E01.S08 · The hull over the hump: the planing onset, the wet length, the clip
@@ -90,6 +91,7 @@ Done when: the board planes at the real 8 to 10 kn, rides on 0.6 to 1.0 m of wet
 - [ ] T3 The low-trim bounce understood (the rig's pitch lag held 40 s then bounced)
 - [ ] T4 The weight forward until the board has way on (PH32); the nose that spears where Max's rears (PH34)
 - [ ] T5 The polar and the onset tests green (E01.S02 T4, T1)
+- [ ] T6 The wet length against video (25 Nov 2026): 0.5 to 0.7 m measured from the side (videos 04, 06) against 1.08 m in the game at 24 and 30 kt on race gear (tools/video/reality_check.py); it does not follow the rig. With the rig held rake-first (24 deg windward lean, as the autopilot's Helm.hold_rake_first) the board trims nose-down and rides on 1.2 to 1.3 m: the lift of a realistically held rig first, then rake-first steering for the player and the rake stop near 35 deg (videos: about 31 deg)
 Notes: the hull reports: `Documentation/reports/ph28/hull_balance.md`, `hull_suction.md`, `review_hull.md`; the tool `Game/dev/pitch_budget.gd`; the local draft branch `archive/hull-bounce-draft-30oct`.
 
 ### E01.S09 · Pumping, and the gybe's flip
@@ -99,6 +101,7 @@ Done when: a sailor can pump onto the plane from a deep course (as a real sailor
 - [ ] T2 The gybe's timing measured with `SimControls.hold_side` (GP9: a harness of its own)
 - [ ] T3 The flip in the physics checked; changed only if it does not stall and back as it should (PH4)
 - [ ] T4 The autopilot and the AI pump out of a lull and off the line (RA: the 12 kt start)
+- [ ] T5 The planing gybe against video (25 Nov 2026): videos 01 and 02 plane through with a 0.6 s flip; the game drops off the plane for 0.4 to 1.4 s and the sailor falls in the beam gybe at 24 kt on race gear (tools/video/reality_check.py)
 Notes: the player's keys are E07.S05 and E07.S06.
 
 ### E01.S10 · Contact between boards, and the bottom under the fin
