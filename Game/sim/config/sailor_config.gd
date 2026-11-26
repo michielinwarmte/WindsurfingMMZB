@@ -182,9 +182,18 @@ const BALANCE_STANCE_FULL_DEG: float = 6.0
 ## absorbs actively, softer and far more damped. With 2 Hz legs the body bounced against a
 ## porpoising hull at 1 Hz (near resonance, the body moved more than the stern) and the
 ## foot force pumped the board right out of the water in the gybes; at 1.2 Hz and 0.9 the
-## body rides over it (Session 37's matrix: no falls in the beam gybes at 12 to 24 kt).
-@export var leg_natural_frequency_hz: float = 1.2
-@export var leg_damping_ratio: float = 0.9
+## body rode over it (Session 37's matrix: no falls in the beam gybes at 12 to 24 kt).
+## The reality check (25 November 2026, Documentation/reports/reality_fixes/PROGRESS.md)
+## found 1.2 Hz still too close: the lake's chop comes at 0.8 to 1.25 Hz, the body moved
+## 1.1 to 1.3 times the board and the board pitched 1.2 to 3.2 degrees. At 0.4 Hz and 0.4
+## the legs sit well under the chop and let it pass: pitch 0.6 to 1.1 degrees, the knees
+## work 4.7 to 5.8 cm (video 07: about 5 cm), and the 27 manoeuvres at 12, 18 and 24 kt
+## still end without a fall on the default gear (tools/video/reality_sweep.py --chop,
+## tools/matrix.sh). On race gear at 24 and 30 kt the gybes fall more (4 of 6 against 1):
+## the same soft spring carries the posture's own height step at the gybe's entry and
+## overshoots. Left for the gybe's work (PHYSICS_SPEC.md 7.5, backlog E01.S09 T5).
+@export var leg_natural_frequency_hz: float = 0.4
+@export var leg_damping_ratio: float = 0.4
 ## How far the knees can flex either way from the normal stance before the legs reach a stop.
 @export var leg_travel_m: float = 0.25
 ## Across the deck the body goes where the posture puts it and rides the hull: loaded legs

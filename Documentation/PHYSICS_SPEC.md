@@ -3600,13 +3600,29 @@ and rig together) the push is at 1.1 m, not 0.45 to 0.75 m.
 
 **The legs, up and down.** The posture (7.2: lean, stance, hang-back) says where the body's
 centre should be above the feet. The legs are a spring and damper in the vertical between
-that height and the body (`leg_natural_frequency_hz` 1.2, `leg_damping_ratio` 0.9, soft
+that height and the body (`leg_natural_frequency_hz` 0.4, `leg_damping_ratio` 0.4, soft
 stops at `leg_travel_m` 0.25), the damper held to the impulse that would bring the body and
 the deck under the feet to the same speed (the hull end is light). The legs run from the
 feet, so a hull rolling under the sailor presses them (a roll stiffness of k times the rail
 offset squared). The steady loads, the weight and the pull the body has taken up (the hands
 and the windage, averaged over `hold_feel_time_s` 0.1 s in the vertical, at once across the
-deck), the legs carry outright, as a person braced against a pull does.
+deck), the legs carry outright, as a person braced against a pull does. Why 0.4 Hz (the
+reality check, 26 November 2026; it was 1.2 Hz with 0.9 from Session 37, 17.13): the lake's
+chop comes at 0.8 to 1.25 Hz, and 1.2 Hz legs sat right on it, so the body moved 1.1 to 1.3
+times the board and the board pitched 1.2 to 3.2°. Legs well under the chop let it pass:
+on the lake at 12:00, 14:30 and 17:00 the pitch falls to 0.6 to 1.1°, the heave at the feet
+from 3.3-6.1 to 2.8-3.4 cm, the knees work 4.7 to 5.8 cm (video 07 measured about 5 cm), the
+speed gains 0.3 to 1.9 kn, and the 27 manoeuvres at 12, 18 and 24 kt on the default gear
+still end without a fall (`tools/video/reality_sweep.py --chop`, `tools/matrix.sh`). Up and
+down the steady loads are carried outright, so soft legs do not sag. The cost, left for the
+gybe's own work (Max: "gybing is for later"; backlog E01.S09 T5): on race gear (97 l, 5.7
+m²) at 24 and 30 kt the gybes fall in 4 of 6 cases, against 1 of 6 at 1.2 Hz. The posture's
+own height steps 17 to 24 cm at the gybe's entry (out of the hike), the same soft spring
+carries that step, overshoots past the knees' stop at `leg_travel_m`, and the stop kicks the
+light hull out of the water. The fix proposed: the posture's height as the sailor's active
+move (followed at a limited rate, the rate fed to the damper), the soft spring only for what
+the deck does under the feet. The legs' roll stiffness (k times the rail offset squared)
+falls with k to a ninth; the overpowered catapult now goes at 51° of heel instead of 44°.
 
 **Across the deck the body rides the hull.** The force that makes the body's horizontal
 acceleration the same as the feet's is found from the hull's response to it and applied to
@@ -7218,7 +7234,8 @@ force fired the old "fell off" rule in every tack; the apparent-gravity frame fl
 the hull drops faster than g made the target jump 2 m (NaN); both fixed. Legs at 2 Hz with
 damping 0.4 bounced the body against the porpoising hull and pumped the board out of the
 water in the gybes (planing lift 50 kN on re-entry, NaN); scanned 1.2 to 4 Hz and 0.4 to
-0.9: 1.2 Hz with 0.9 cleared every gybe. Weight at the feet only porpoised at speed on flat
+0.9: 1.2 Hz with 0.9 cleared every gybe (on 26 November 2026 the reality check went below
+that scan, to 0.4 Hz with 0.4, under the lake's chop; the gybes still clear: 7.5). Weight at the feet only porpoised at speed on flat
 water; the harness line in the rig balance (the mast foot pressure) took it out. A step
 forward in a tack dragged the body at 2 m/s and kicked the hull into a 105 deg/s spin; the
 body now follows the feet at a walking pace (`body_stance`).

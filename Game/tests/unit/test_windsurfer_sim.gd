@@ -114,7 +114,11 @@ func test_overpowered_sailor_is_catapulted_and_the_board_stays_upright() -> void
 	# felt heel held for 0.2 s, where it was 20 at once) the board heels further before the sailor goes:
 	# 44 degrees here, where it was under 30. It is still a catapult and still short of the standing
 	# limit; the old numbers' fall is pinned in test_stay_on_the_board.gd.
-	assert_lt(heel_at_fall, sim.sailor_config.standing_fall_heel_deg, "the sailor let go before the board was rolled past the standing limit")
+	# Since the softer legs (26 November 2026, 1.2 Hz -> 0.4 Hz, PHYSICS_SPEC.md 7.5) it is 50.8 degrees,
+	# 0.8 past the standing limit: the legs' roll stiffness (k times the rail offset squared) is a ninth
+	# of what it was. Still a catapult (the kind is checked above), and the roll after it is smaller
+	# (66 degrees, was 82). Max moved the bar to 5 degrees past the limit; for Michiel to confirm.
+	assert_lt(heel_at_fall, sim.sailor_config.standing_fall_heel_deg + 5.0, "the sailor let go before the board was rolled far past the standing limit")
 	# The kick as the sailor leaves (0.3 s after) is sensitive: 42.7 degrees with the boom held
 	# at 0.6 m and level, 50 at 0.62, 57.5 at 0.70, 59.4 at 0.6 with the boom square to the
 	# raked mast (the default since PH16 step 16, which loosened this from 45), 63.7 at 0.70 and

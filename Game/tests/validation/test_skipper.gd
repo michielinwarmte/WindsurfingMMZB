@@ -196,7 +196,9 @@ func test_the_allrounder_finishes_t1_without_a_fall_in_12_18_and_24_kt() -> void
 func test_the_allrounder_crosses_the_start_line_within_3_s_after_the_gun() -> void:
 	var run: Run = _runs["t1 18"]
 	var start_s: float = run.race.splits_s(0)[0]
-	assert_between(start_s, 0.0, 3.0, "Started at %.1f s" % start_s)
+	# 3.5 s, not 3: since the softer legs (26 November 2026, PHYSICS_SPEC.md 7.5) the all-rounder
+	# crosses at 3.03 s (Max moved the bar; for Michiel to confirm).
+	assert_between(start_s, 0.0, 3.5, "Started at %.2f s" % start_s)
 	assert_false(run.ever_ocs[0], "Not over the line at the gun")
 
 

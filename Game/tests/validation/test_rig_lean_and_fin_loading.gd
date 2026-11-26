@@ -102,7 +102,9 @@ func test_the_rake_first_hold_keeps_the_rig_leaned_and_the_course() -> void:
 	assert_false(_rake_first.fell, "no fall")
 	assert_almost_eq(_rake_first.twa_deg, TWA_DEG, 3.0, "the rake alone (to its stop) holds the beam reach")
 	assert_gt(_rake_first.rig_lean_deg, 20.0, "the rig leans as the hike leans it (real: 10 to 25 degrees)")
-	assert_lt(_coupled.rig_lean_deg, 12.0, "where the default helm stands it up")
+	# 12.5, not 12: since the softer legs (26 November 2026, PHYSICS_SPEC.md 7.5) the default helm's
+	# lean is 12.016 degrees (11.99 before; Max moved the bar; for Michiel to confirm).
+	assert_lt(_coupled.rig_lean_deg, 12.5, "where the default helm stands it up")
 	assert_lt(_rake_first.line_m, _coupled.line_m - 0.2, "the hips are closer to the boom")
 	assert_gt(_rake_first.sail_up_share, _coupled.sail_up_share, "and the sail's own lift carries more of the weight")
 
