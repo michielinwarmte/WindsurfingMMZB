@@ -11,9 +11,11 @@ func _curve() -> PushCurveConfig:
 func test_the_ladders_ends_and_the_old_dials_three_settings() -> void:
 	var c: PushCurveConfig = _curve()
 	assert_almost_eq(c.at(c.drive_share, 0.0), 0.0, 1e-9, "0 %: the sail let fly")
-	assert_almost_eq(c.at(c.drive_share, 0.5), 0.85, 1e-9, "50 %: cruising, most of the drive")
-	assert_almost_eq(c.at(c.hike_share, PushDial.EASED), 0.8, 1e-9, "eased holds 0.8 of the hike")
-	assert_almost_eq(c.at(c.hike_share, PushDial.NEUTRAL), 1.0, 1e-9, "neutral 1.0")
+	# Max, 26 November 2026: the sail fully in once planing ("not sheeted in enough"): 50 % cruises
+	# with all of the drive, the margin taken by the hike share below and the ease in a gust.
+	assert_almost_eq(c.at(c.drive_share, 0.5), 1.0, 1e-9, "50 %: cruising with the sail fully in")
+	assert_almost_eq(c.at(c.hike_share, PushDial.EASED), 1.0, 1e-9, "eased (50 %) holds what the hike carries")
+	assert_almost_eq(c.at(c.hike_share, PushDial.NEUTRAL), 1.2, 1e-9, "neutral (75 %) 1.2")
 	assert_almost_eq(c.at(c.hike_share, PushDial.PUSHED), 1.6, 1e-9, "pushed 1.6")
 	assert_almost_eq(c.at(c.rig_lean_extra_deg, PushDial.NEUTRAL), 0.0, 1e-9, "the rig's lean is the sailor's at neutral")
 	assert_almost_eq(c.at(c.rig_lean_extra_deg, PushDial.PUSHED), 10.0, 1e-9, "and 10 degrees more pushed (35)")
@@ -28,7 +30,7 @@ func test_the_ladders_ends_and_the_old_dials_three_settings() -> void:
 func test_between_the_points_the_ladder_is_straight_and_held_at_the_ends() -> void:
 	var c: PushCurveConfig = _curve()
 	assert_almost_eq(c.at(c.drive_share, 0.125), 0.15, 1e-9, "halfway from 0 to 25 %")
-	assert_almost_eq(c.at(c.hike_share, 0.8), 1.15, 1e-9, "halfway from 75 to 85 %: 1.0 to 1.3")
+	assert_almost_eq(c.at(c.hike_share, 0.8), 1.25, 1e-9, "halfway from 75 to 85 %: 1.2 to 1.3")
 	assert_almost_eq(c.at(c.hike_share, 1.5), 1.6, 1e-9, "no further than the top")
 	assert_almost_eq(c.at(c.hike_share, -1.0), 0.8, 1e-9, "no further than the bottom")
 

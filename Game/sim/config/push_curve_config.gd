@@ -12,12 +12,18 @@ extends Resource
 @export var levels: PackedFloat64Array = [0.0, 0.25, 0.5, 0.75, 0.85, 0.95, 1.0]
 ## The sail trimmed between luffing (0) and the most drive (1): Autopilot.drive_share. 0.3 at
 ## 25 % is "slowly moving" at every wind (1.7, 6.1 and 8.1 m/s at 12, 18 and 24 kt on a beam
-## reach; 0.5 already planed at 24 kt), 0.85 at 50 % cruises (6.8, 9.7, 11.7 m/s): round 1.
+## reach; 0.5 already planed at 24 kt), 0.85 at 50 % cruised (6.8, 9.7, 11.7 m/s): round 1. From 50 %
+## up the sail is fully in (Max, 26 November 2026: "not sheeted in enough"; at 0.85 the cruise
+## eased the boom 29 to 39 degrees off the centreline in gusts and waves at 12 to 24 kt, fully in it
+## sits at 15 to 27, and 50 % sails as 75 % did before: 8.4, 13.1, 14.5 m/s, no falls; push check
+## runs sheet_gusts and sheet_gusts_new, Documentation/reports/reality_fixes/PROGRESS.md).
 @export var drive_share: PackedFloat64Array = [0.0, 0.3, 0.85, 1.0, 1.0, 1.0, 1.0]
 ## The pull held as a share of what the hike carries: Autopilot.hike_share. The lever that pays:
 ## 1.3 gives +3 % and 1.6 +4 to 7 % across the wind at 18 and 24 kt on flat water and on the
 ## default sea without a fall (round 1); 0.8 eased, 1.0 neutral, 1.6 pushed are the autopilot
-## suite's measured dial (autopilot_rework.md section 3).
+## suite's measured dial (autopilot_rework.md section 3). Since 26 November 2026 50 % holds 1.0 (was
+## 0.8) and 75 % 1.2 (was 1.0), so the sail stays in and only eases in a gust: at 75 % +0.3 to 0.6 m/s
+## at 18 and 24 kt in gusts and waves, no falls.
 @export var hike_share: PackedFloat64Array = [0.8, 0.8, 0.8, 1.0, 1.3, 1.5, 1.6]
 ## The rig leaned further to windward when powered, degrees on top of the sailor's
 ## max_rig_lean_deg (25): SimControls.rig_lean_extra_deg. 35 pushed (the photos' 15 to 35): with

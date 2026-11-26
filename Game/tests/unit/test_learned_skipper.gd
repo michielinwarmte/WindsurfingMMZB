@@ -371,11 +371,12 @@ func test_the_push_output_sets_the_hands_push_slider_and_a_brain_without_one_lea
 	assert_eq(LearnedSkipper.push_from_output(1.0), 1.0)
 	assert_almost_eq(LearnedSkipper.push_from_output(LearnedSkipper.output_for_push(0.3)), 0.3, 1e-6)
 	# The pilot's own margin: the level where the ladder's pull held is the autopilot's default
-	# (1.1 between 75 % at 1.0 and 85 % at 1.3: a third of the way, 78.3 %).
+	# (1.1 between 50 % at 1.0 and 75 % at 1.2 since the sheet-in change of 26 November 2026: half way,
+	# 62.5 %; it was 78.3 % on the old ladder).
 	var level: float = LearnedSkipper.pilot_margin_level()
 	var curve: PushCurveConfig = PushDial.default_curve()
 	assert_almost_eq(curve.at(curve.hike_share, level), Autopilot.new().hike_share, 1e-6, "the pilot's pull held")
-	assert_almost_eq(level, 0.75 + 0.1 / 3.0, 1e-4)
+	assert_almost_eq(level, 0.625, 1e-4)
 	# A brain finds its push output by name.
 	var brain: NeuralNet = _random_brain(3, 4)
 	assert_eq(LearnedSkipper.push_index_of(brain), -1, "no names: no push")

@@ -130,6 +130,25 @@ Pitch budget, 18 kt beam reach, default gear (`Game/dev/pitch_budget.gd -- --win
   boom offset per mast length (.screenshots/sailor_forces/examples/sheet_in_front.png), within that error.
 - Game/dev/rig_view.gd: views drone_front, --push=<level> (the autopilot at a push), and it prints sheet, AWA, lean, rake.
 
+## The sheet-in fixed in the push ladder (26 Nov 2026, Max: "fix it")
+
+Game/config/push_curve_default.tres: drive_share at 50 % 0.85 -> 1.0 (the sail fully in once planing; the eased
+sail stays at 0 and 25 %, below planing), hike_share 50 % 0.8 -> 1.0 and 75 % 1.0 -> 1.2 (the pull held before the
+auto-sheet eases; the ease in a gust stays). Push check, beam reach, gusts and waves (runs sheet_gusts -> sheet_gusts_new):
+
+| wind | push | boom before -> after (deg) | speed before -> after (m/s) | falls |
+|---|---|---|---|---|
+| 12 | 0.5 | 31 -> 15 | 6.00 -> 8.42 | 0 -> 0 |
+| 12 | 0.75 | 15 -> 15 | 8.42 -> 8.42 | 0 -> 0 |
+| 18 | 0.5 | 29 -> 19 | 10.64 -> 13.10 | 0 -> 0 |
+| 18 | 0.75 | 19 -> 17 | 13.10 -> 13.39 | 0 -> 0 |
+| 24 | 0.5 | 39 -> 27 | 11.29 -> 14.51 | 0 -> 0 |
+| 24 | 0.75 | 27 -> 26 | 14.51 -> 15.12 | 0 -> 0 |
+
+Left for Michiel: at 24 kt the boom stays ~26 deg even fully trimmed: AWA 35 deg minus the sail's best alpha ~13 deg
+(the twist law at high pressure, backlog E01.S20 T1); real race sails stay near fully in. The AI fleet sails the same
+ladder (its polar, skipper_polar.tres, was measured on the old one).
+
 ## Gap 1 (rig upright, wet length): diagnosed, not fixed
 
 - The player's controller steers with Helm.steer (rake + tilt together: tilt = -rake); the

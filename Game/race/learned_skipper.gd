@@ -405,7 +405,8 @@ static func output_for_push(level: float) -> float:
 
 ## The slider level that asks the autopilot for its own margin, the one the AI boards sail with
 ## AiHands.push at NaN: where the push curve's pull held (hike_share) reaches the pilot's default
-## (1.1, between "neutral" at 75 % and 85 %: about 78 %). A fresh policy's push starts here, so
+## (1.1, between 50 % at 1.0 and "neutral" at 75 % at 1.2: 62.5 % since the sheet-in change of 26
+## November 2026, about 78 % before). A fresh policy's push starts here, so
 ## the training begins where the fleet sails today. The slider also sets what the pilot leaves at
 ## its defaults (at 78 % about 1 degree more rig lean and up to 3 degrees of rail for the sea); the
 ## pull is the lever that pays (push_curve_default.tres).

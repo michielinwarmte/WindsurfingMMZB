@@ -80,6 +80,12 @@ func _run(wind_kt: float, twa_deg: float, push: float, seconds: float) -> Packed
 	controller.rail_full_ms = 0.0
 	controller.airborne_alpha_deg = 90.0
 	controller.push_level = push
+	# And the push ladder as it was before the sheet-in change of 26 November 2026 (50 %: drive 0.85 and
+	# hike 0.8; 75 %: hike 1.0): these numbers are from before it.
+	var old_ladder: PushCurveConfig = PushDial.default_curve().duplicate()
+	old_ladder.drive_share = PackedFloat64Array([0.0, 0.3, 0.85, 1.0, 1.0, 1.0, 1.0])
+	old_ladder.hike_share = PackedFloat64Array([0.8, 0.8, 0.8, 1.0, 1.3, 1.5, 1.6])
+	controller.push_curve = old_ladder
 	var hands: AiHands = AiHands.new()
 	hands.push = push
 	controller.hands = hands
