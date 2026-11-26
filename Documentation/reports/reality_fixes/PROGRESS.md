@@ -88,6 +88,28 @@ C:/Users/Max de Dikke/source/WindsurfingMMZB-reality. Measure with
   active move (a rate-limited copy of it, its rate fed to the legs' damper), the soft spring only
   for the deck under the feet; a switch, off by default; then the sweep again.
 
+## Would riding on the tail improve the game? (26 Nov 2026, Max's question)
+
+Pitch budget, 18 kt beam reach, default gear (`Game/dev/pitch_budget.gd -- --wind=18 --twa=100` + switches; outputs in
+.sim_output/sailor_forces/trim_*.txt):
+
+| switches | trim deg | wet m | push m | speed m/s | friction N | pitch SD deg (bounce) |
+|---|---|---|---|---|---|---|
+| none (the game) | 1.22 | 0.96 | 0.82 | 15.46 | 174 | 0.06 |
+| trim aim 2.5, 3.5 or 4.5 | 1.28 | 0.95 | 0.82 | 15.46 | 174 | (same: feet at the straps' 88.5 N m) |
+| aim 3.5, fin.bends=false | 1.57 | 0.85 | 0.68 | 15.78 | 157 | 0.07 |
+| aim 3.5, front_foot_pull_held_n=300 | 1.74 | 0.84 | 0.64 | 15.16 | 143 | 0.38 (0.4 Hz) |
+| aim 3.5, pull 300, stiff fin | fell at 35.6 s | | | | | |
+| aim 4.5, pull 450 | 2.02 | 0.82 | 0.65 | 14.49 | 130 | 1.24 |
+| aim 4.5, pull 450, stiff fin | 3.09 | 0.44 | 0.39 | 15.28 | 69 | 0.24 |
+
+- The trim aim alone does nothing: the front strap's held pull (150 N x 0.59 m = 88.5 N m) is the stop.
+- Tail riding (0.44 m wet, as the videos) cuts the friction 60 % but not the speed: the autopilot rakes less to hold the course
+  (rake 0.37 against 0.69), the drive falls 300 -> 222 N, the sail lifts 147 instead of 249 N, the planing lift rises 539 -> 832 N.
+- The hull porpoises at the higher trim (0.24 to 1.24 deg SD), worst with the bending fin; one run fell. So a fix needs the hull's
+  bounce (E01.S08 T3) and the fin's up-push with the sailor's limits, not a sailor setting alone; then the speeds and the AI's polar
+  re-measured.
+
 ## Gap 1 (rig upright, wet length): diagnosed, not fixed
 
 - The player's controller steers with Helm.steer (rake + tilt together: tilt = -rake); the
