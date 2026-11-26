@@ -191,6 +191,25 @@ at 18/22 kt 23.6/25.7 kn (27/21 % slow), 97 l + 5.7 at 24/30 kt 28.5/31.6 kn (12
 costs 8-10 % on the beam reach (flat 25.9/28.5/31.5/34.2). Too slow in chop everywhere but 30 kt. Levers: the rig's hold
 (rake-first), the waves' cost (backlog E01.S20 T3; the real cost needs a source or Max), the hull (E01.S08). 2 of 14 strict.
 
+## The measured stance tested on flat water (26 Nov 2026, Max: "is the body analysis good enough to test it?")
+
+Speed case made NOT strict (Max: neither flat water nor the game's sea is the videos' real chop). Pitch budget, flat water,
+beam reach, autopilot (.sim_output/sailor_forces/stance/):
+
+| switches | 18 kt wet / CoM x / rake / speed / pitch SD | 24 kt |
+|---|---|---|
+| none | 0.97 m / -0.04 / 17.5 deg / 15.47 m/s / 0.05 | 0.97 / -0.13 / 16.8 / 17.24 / 0.08 |
+| sail.max_rake_deg 35 | same (rake 0.50 x 35 = 17.5 deg) | same |
+| + fin.bends false | 0.95 / +0.05 / 18 / 15.64 / 0.07 | 0.88 / -0.08 / 16.8 / 17.70 / 0.07 |
+| + front foot 450 N, trim aim 4.5 | 0.39 / -0.10 / 8.8 / 15.40 / 0.87 (porpoises) | FELL |
+
+Findings: (1) the board can ride on its tail (0.39 m, friction 176 -> 62 N) but the hull porpoises at the real trim and is
+not faster; at 24 kt the sailor falls: the hull's stability at 3-4 deg (E01.S08 T3), Michiel. (2) The rake is the course's
+helm: the game sails straight at ~17.5 deg (8.8 with the weight back) where real boards sail at ~31: the yaw balance. In the
+game 551 of the sail's 572 N sideways goes through the hands and the feet at the back strap (yaw -651 N m) against the fin
+(+614), the mast foot ~0; the real split between mast foot and feet at 31 deg rake is not measurable from these videos.
+For Michiel: why a straight course needs only 17 deg of rake.
+
 ## Gap 1 (rig upright, wet length): diagnosed, not fixed
 
 - The player's controller steers with Helm.steer (rake + tilt together: tilt = -rake); the

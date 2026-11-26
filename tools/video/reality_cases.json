@@ -230,7 +230,7 @@
    "real": 32.5,
    "tol": 2.5,
    "unit": "kn",
-   "strict": true,
+   "strict": false,
    "measure": {
     "column": "speed_ms",
     "stat": "median_tail",
@@ -254,7 +254,7 @@
      "csv": "straight_30.csv"
     }
    ],
-   "note": "in the game's sea (--waves=1): the videos are nearly all in chop (Max, 26 Nov: 'we do not measure in waves'); flat water was the wrong comparison"
+   "note": "NOT STRICT, indicative only: the videos are in real chop and neither the game's flat water nor its sea matches it (Max, 26 Nov); fair only once the game's chop is real"
   }
  ]
 }
