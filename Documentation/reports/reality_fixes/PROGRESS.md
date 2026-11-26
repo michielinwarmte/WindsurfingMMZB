@@ -179,6 +179,13 @@ beam 12/18/24 kt boom 15/16/24 -> 6/13/20 deg, speed 8.44/13.16/15.25 -> 10.21/1
   the 12 deg stop; test_feet_press keeps the old sail. Reality check: 1 of 10; wet length 1.00/1.05 (1.02/1.07); race-gear
   gybes 4 of 4 fall (gybing is for later). For Michiel: the twist -> stall link, the tunnel sail's twist, the 10 deg stop.
 
+## Speed in the reality check (26 Nov 2026, Max: the videos' speeds are roughly 30-35 kn)
+
+New strict case "speed" (32.5 +- 2.5 kn, tools/video/reality_cases.json): strong_62 (97 l + 5.7) at 24/30 kt 31.5/34.2 kn
+pass; medium_72 (117 l + 7.4) at 18/22 kt 25.9/28.5 kn fail (12-20 % slow). Those runs use the player's controller
+(Helm.steer, rig nearly upright); the autopilot's rake-first hold made 30 kn at 18 kt (pitch budget, 72 + 8.0), so gap 1
+(rake-first steering for the player) is the likely first lever. Reality check now 3 of 14 strict.
+
 ## Gap 1 (rig upright, wet length): diagnosed, not fixed
 
 - The player's controller steers with Helm.steer (rake + tilt together: tilt = -rake); the
