@@ -265,7 +265,7 @@ frames on the full picture (trunk 50-300 px frame to frame). A crop per shot or 
 
 Max's other answers (26 Nov, written into `Documentation/backlog/QUESTIONS.md`): Q52 no (not his GPS tracks); Q53
 small chop with good timing costs almost nothing, big swell a lot (Sotavento 50-55 out against 65+ in on a downwind
-reach, read as km/h; added to the speed case's note); Q54 the nose comes up 20+ deg mostly from the front foot's
+reach, in km/h as Max confirmed; added to the speed case's note); Q54 the nose comes up 20+ deg mostly from the front foot's
 pull with more side load on the fin (backlog E01.S08 T10; in the game the front foot holds 150 N and cannot change
 the trim with the weight standing still).
 

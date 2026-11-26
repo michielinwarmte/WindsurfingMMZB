@@ -26,7 +26,7 @@ Status: todo | Size: L | Owner: Michiel | Milestone: M3 | Needs: Q7, E01.S08 | R
 Done when: each of the eight has a target with a source (a GPS track, a paper, a measurement of Max's board) and passes, or is retired with the reason written in the spec.
 - [ ] T1 The polar speeds in the real-world bands (`test_polar_sweep.gd`, old targets: refit them from GPS data per wind strength)
 - [ ] T2 The polar's shape (the 45° point slower than 40° with the upwind rail)
-- [ ] T3 The top speed (14.67 m/s today; the target from real slalom GPS) Not Max's own tracks (Q52, 26 Nov: no); his numbers: Sotavento 50-55 out, 65+ in on a downwind reach (Q53, read as km/h).
+- [ ] T3 The top speed (14.67 m/s today; the target from real slalom GPS) Not Max's own tracks (Q52, 26 Nov: no); his numbers: Sotavento 50-55 out, 65+ km/h in on a downwind reach (Q53; km/h confirmed by Max).
 - [ ] T4 The planing onset: 14.4 kn against the 8 to 10 kn band (the hull over the hump, E01.S08)
 - [ ] T5 The fin's side force on the beam reach (745 N against the 100 to 650 N bound)
 - [ ] T6 The push warning: the pushed 8.0 at 24 kt never catapults the 85 kg sailor (PH26: light wind too weak, strong wind too safe)
@@ -197,7 +197,7 @@ Status: todo | Size: M | Owner: Michiel | Milestone: M3 | Needs: — | Roadmap: 
 Done when: each of the three is checked against a source or a measurement and fixed or closed with a reason, with before and after numbers.
 - [ ] T1 The sail's twist under load: the law 1/(1+q/125) is fitted to the wind tunnel's 8 m/s and used up to 17 m/s; find data at higher apparent winds, refit or bound it 26 Nov: measured from video 07 from ahead (tools/video/sail_flex.py): a head twist of about 20 deg (16 to 26), the game's 3D sail draws 8 to 16; the twisted sail now stalls later above the tunnel's 8 m/s (SailConfig.twist_stall_shift_deg 11 from twist_stall_shift_from_pa 39 Pa, spec sections 2 and 16, 4a93408, for Michiel's OK); the twist law itself is still the 8 m/s fit.
 - [ ] T2 The legs: at 135° on flat water the board porpoises (the legs at 1.2 Hz, damping 0.9); softer legs removed it in the audit; choose the numbers from a source and check the chop (E01.S07)
-- [ ] T3 The waves' cost in a steady wind (17 to 24 % downwind, 11 to 14 % across): against a source or Max's GPS tracks (E01.S17 T5) Max (26 Nov, Q53): with good timing and the legs absorbing, small chop costs almost nothing; big swell and chop a lot: at Sotavento 50-55 going out against the waves and 65+ coming in (km/h as read: about 15 to 25 % slower going out). Not his GPS tracks (Q52: no).
+- [ ] T3 The waves' cost in a steady wind (17 to 24 % downwind, 11 to 14 % across): against a source or Max's GPS tracks (E01.S17 T5) Max (26 Nov, Q53): with good timing and the legs absorbing, small chop costs almost nothing; big swell and chop a lot: at Sotavento 50-55 going out against the waves and 65+ coming in (km/h, Max confirmed: about 15 to 25 % slower going out). Not his GPS tracks (Q52: no).
 Notes: the 7 November audit's findings D and E and the legs, `Documentation/reports/physics/realism_audit_7nov2026.md`.
 
 ### E01.S21 · The lake's north-east corner: a board on starboard crawls
