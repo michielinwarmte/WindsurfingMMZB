@@ -58,3 +58,4 @@ Status: todo | Size: S | Owner: the lead | Milestone: M2 | Needs: E08.S01 | Road
 Done when: the figure shows the push and the body (GR3), the catapult's warning (the nose lifting and the round-up in the last half second) is visible, the board model has its flat tail and the 44 cm fin looks right (GR5).
 - [ ] T1 GR3 and the catapult's warning
 - [ ] T2 GR5: the board's rebuild and the fin's look
+- [ ] T3 The 3D sail's twist and the mast's bend against video 07 (26 Nov, tools/video/sail_flex.py): the real head twist about 20 deg (16 to 26) against RigVisuals' 8 to 16; the masthead about 0.2 m to leeward at 1.8 m above the boom against 0.12 m at the head. Careful: more twist makes the sail look less sheeted in (Max's complaint of 26 Nov)

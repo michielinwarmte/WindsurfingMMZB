@@ -66,6 +66,7 @@ Status: todo | Size: S | Owner: the lead | Milestone: any | Needs: — | Roadmap
 Done when: the listed items are done: `windsurfer.gd` calls `_rig.bend_fin()` (TE4), the archived racing plan's times corrected (TE6), the physics spec split (TE7, E01.S14 T5), the duplicated RA11 row renumbered, the stale roadmap rows (RA2, RA24, UI4, SO3 built on 5 to 6 November) closed, and the stash `ph43-wip-5nov` dropped or archived.
 - [ ] T1 TE4, TE6
 - [ ] T2 RA11's duplicate; the stale rows; the stash
+- [ ] T3 The video measurement tools of 25 and 26 Nov written into CLAUDE.md and Documentation/README.md: tools/video/ (reality_check.py with the cases in reality_cases.json, sailor_forces.py, sail_flex.py, leg_sweep.py, reality_sweep.py), Game/dev/rig_view.gd (the close and drone views, --wind_kt, --push), Game/dev/sail_drive_table.gd; a body tracker (MediaPipe) waits for Max's OK (Q51)
 
 ### E17.S09 · Crash reports and logs from play-testers
 Status: todo | Size: S | Owner: the lead | Milestone: M11 | Needs: — | Roadmap: —

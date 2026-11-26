@@ -84,3 +84,4 @@ Status: review | Size: S | Owner: Max | Milestone: M1 | Needs: the night3 build 
 Done when: Max has looked at the night3 folder on his screen and answered: the lake's whitecap amount, the crest bursts, the spray, the wake and the bow wave, the lake wind at x0.44, 1.0 and 1.65, the waves' height.
 - [ ] T1 The six checks of `lake_wind_shading.md` and the sheets of `wind_on_water.md` and `board_fx.md`
 - [ ] T2 Answers written into the reports and the roadmap rows
+- [ ] T3 The game's sea against real chop (Max, 26 Nov: "these are waves not comparable to real life"): the videos' boards do roughly 30 to 35 kn in low to medium chop; the reality check's speed case stays indicative (not strict) until the game's chop is like the videos' (Documentation/reports/reality_fixes/PROGRESS.md)
