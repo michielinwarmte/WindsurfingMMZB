@@ -261,7 +261,7 @@ halves the gybe falls. The game's chop is not the video's (Max), so the pitch co
 Set (26 Nov, late; Max: "that's no question for me", the choice is mine from the measurements): 0.8 Hz / 1.0 in
 `sailor_default.tres` and the `SailorConfig` defaults (the comment says why), PHYSICS_SPEC.md 7.5, 17.13 and a
 section 16 row. Checks: `tools/matrix.sh` with the new legs, flat and `--waves=1`: 54 cases, 0 falls, 0 NaN, all
-manoeuvres completed; the full test suite was still running at this commit (result not recorded yet: re-run tools/test_parallel.sh all); the reality check not re-run yet (python tools/video/reality_check.py). For Michiel's OK; Max play-tests the feel. The reality check's legs case now reads 2.3 +- 0.8 cm
+manoeuvres completed; tools/test_parallel.sh all: 1165 tests, 6 failing, all known reds (the polar sweep's four, the lake fleet start, the push warning); the old T1 fleet start now passes; the reality check: legs 2.75/2.77/3.47 cm (2 of 3 close, were all off at 4.6-5.8), the lake pitch 1.18/1.74/2.00 deg (all 3 close to video 04's 1.7, were off below), strict 1 of 10 (the heel). For Michiel's OK; Max play-tests the feel. The reality check's legs case now reads 2.3 +- 0.8 cm
 from the tracker: the game 4.59/5.21/5.82, off (indicative).
 
 Side views: 04 and 06 (a boat to leeward) do not track: the sail hides the sailor and the tracker jumps between
