@@ -149,6 +149,17 @@ Left for Michiel: at 24 kt the boom stays ~26 deg even fully trimmed: AWA 35 deg
 (the twist law at high pressure, backlog E01.S20 T1); real race sails stay near fully in. The AI fleet sails the same
 ladder (its polar, skipper_polar.tres, was measured on the old one).
 
+## Full push sheets in further: the twisted sail stalls later (26 Nov 2026, Max: push 100 "clearly not enough sheet in")
+
+Cause: the sail model's drive peaks at 18 deg of alpha at every pressure, so the auto-sheet holds the boom at AWA - 18 (15-24 deg
+at full push); the 12 deg stop was not the limit in play. Change (physics, for Michiel): SailConfig.twist_stall_shift_deg (new,
+12 in all sails): the curve's linear end, peak and stall end move up by 12 x (1 - twist_factor): ~2 deg light air, 6 at 120 Pa,
+7 at 180 Pa (an estimate; E01.S20 T1). Sheet stop 12 -> 5 deg in all sails (catalogue regenerated); the autopilot takes the
+stop from its sail and scans alpha to 30. Push check, gusts and waves, full push (run stall_base -> sheet_final):
+beam 12/18/24 kt boom 15/16/24 -> 6/13/20 deg, speed 8.44/13.16/15.25 -> 10.21/13.31/15.79 m/s; broad 18/24 kt boom 40/26 -> 27/18,
+9.04/15.02 -> 10.42/16.05 m/s; no falls (all levels 0.5-1.0). check.sh 523 files OK. NOT RUN after this change: the unit and
+validation tests, the reality check. Next: run them, Michiel's OK, Max's play-test.
+
 ## Gap 1 (rig upright, wet length): diagnosed, not fixed
 
 - The player's controller steers with Helm.steer (rake + tilt together: tilt = -rake); the

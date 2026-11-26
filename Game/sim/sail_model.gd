@@ -279,23 +279,29 @@ func lift_coefficient(alpha: float, q_pa: float = 0.0) -> float:
 	var a_deg: float = rad_to_deg(absf(alpha))
 	var slope: float = lift_slope_per_rad()
 	var alpha_zero_lift: float = -deg_to_rad(config.zero_lift_deg_per_camber * config.camber)
-	var cl_linear_end: float = slope * (deg_to_rad(config.cl_linear_end_deg) - alpha_zero_lift)
+	var share: float = twist_factor(q_pa)
+	# The twisted sail stalls later (SailConfig.twist_stall_shift_deg): the curve's corners move
+	# up together, the slope stays.
+	var shift_deg: float = config.twist_stall_shift_deg * (1.0 - share)
+	var linear_end_deg: float = config.cl_linear_end_deg + shift_deg
+	var peak_deg: float = config.cl_peak_deg + shift_deg
+	var stall_end_deg: float = config.cl_stall_end_deg + shift_deg
+	var cl_linear_end: float = slope * (deg_to_rad(linear_end_deg) - alpha_zero_lift)
 	var cl_max: float = cl_linear_end + config.cl_transition_gain
 	var value: float
-	if a_deg < config.cl_linear_end_deg:
+	if a_deg < linear_end_deg:
 		value = slope * (deg_to_rad(a_deg) - alpha_zero_lift)
-	elif a_deg < config.cl_peak_deg:
-		value = cl_linear_end + config.cl_transition_gain * (a_deg - config.cl_linear_end_deg) / (config.cl_peak_deg - config.cl_linear_end_deg)
-	elif a_deg < config.cl_stall_end_deg:
-		value = lerpf(cl_max, config.stall_retention * cl_max, (a_deg - config.cl_peak_deg) / (config.cl_stall_end_deg - config.cl_peak_deg))
+	elif a_deg < peak_deg:
+		value = cl_linear_end + config.cl_transition_gain * (a_deg - linear_end_deg) / (peak_deg - linear_end_deg)
+	elif a_deg < stall_end_deg:
+		value = lerpf(cl_max, config.stall_retention * cl_max, (a_deg - peak_deg) / (stall_end_deg - peak_deg))
 	elif a_deg < config.cl_deep_stall_deg:
-		value = lerpf(config.stall_retention * cl_max, config.deep_stall_cl, (a_deg - config.cl_stall_end_deg) / (config.cl_deep_stall_deg - config.cl_stall_end_deg))
+		value = lerpf(config.stall_retention * cl_max, config.deep_stall_cl, (a_deg - stall_end_deg) / maxf(config.cl_deep_stall_deg - stall_end_deg, 1.0))
 	else:
 		value = config.deep_stall_cl * cos(deg_to_rad(a_deg - config.cl_deep_stall_deg))
 	var backwinded: float = config.backwind_efficiency if alpha < 0.0 else 1.0
-	var share: float = twist_factor(q_pa)
 	if share < 1.0:
-		var toward_peak: float = clampf((a_deg - config.cl_linear_end_deg) / (config.cl_peak_deg - config.cl_linear_end_deg), 0.0, 1.0)
+		var toward_peak: float = clampf((a_deg - linear_end_deg) / (peak_deg - linear_end_deg), 0.0, 1.0)
 		share = lerpf(share, 1.0 - (1.0 - share) * _twist_peak_share, toward_peak)
 	return value * luff_factor(alpha) * backwinded * share
 

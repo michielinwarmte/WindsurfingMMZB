@@ -140,6 +140,14 @@ extends Resource
 ## 8 m/s where the linear part fell to 0.75); the rest of the fit is the outhaul-on sail,
 ## which has no points past 16.5 degrees. A mixed source.
 @export var twist_peak_share: float = 0.45
+## The twisted top meets the wind at a smaller angle than the boom, so the sail stalls later when
+## it twists open under load: the lift curve's linear end, peak and stall end each move to higher
+## angles of attack by this many degrees times (1 - twist_factor()). 0 = off (the stall stays at
+## cl_peak_deg at every wind). 12 in the default sail (26 November 2026, the sheet-in: Max, "not
+## sheeted in enough" at full push; his photo of a race sail fully in shows the boom close along the
+## board): about 2 degrees in light air, 6 at the 18 kt beam reach (120 Pa), 7 at 24 kt. An
+## estimate: the tunnel's data stop at 8 m/s (backlog E01.S20 T1); for Michiel to confirm.
+@export var twist_stall_shift_deg: float = 0.0
 ## The twisted top carries less, so the centre of effort comes down. The height is
 ## ce_height_fraction times (1 - this times (1 - the twist's share)): about 6 % lower at 8 m/s
 ## than at 4 m/s. An average: in the tunnel (Fig. 8d) the drop from 4 to 8 m/s runs from 10 %

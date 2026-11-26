@@ -206,6 +206,11 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 	if luff_from_sail and sail != null and sail != _luff_sail:
 		_luff_sail = sail
 		alpha_luff_deg = sail.config.alpha_luff_deg
+	# The sheet's range is the sail's own (SailConfig), so the boom angle asked for and the one
+	# the sail model makes of the sheet agree (the default sail's stop fully in: 5 degrees).
+	if sail != null:
+		sheet_angle_in_deg = sail.config.sheet_angle_in_deg
+		sheet_angle_out_deg = sail.config.sheet_angle_out_deg
 	feel_the_sea(telemetry, dt)
 	# The pilot's own course hold adds the rail for the sea to the controls it steers (the
 	# player's controller adds it itself, after the slider: PlayerController._move_the_slider).
@@ -286,7 +291,8 @@ func update(telemetry: Telemetry, controls: SimControls, dt: float) -> void:
 		var tipping_back_nm: float = -telemetry.feet_moment_excess_nm * windward
 		_catching = tipping_back_nm > 0.0
 		var catch_deg: float = clampf(catch_alpha_per_nm * tipping_back_nm, -catch_alpha_max_deg, catch_alpha_max_deg)
-		alpha_deg = clampf(alpha_deg + catch_deg, min_alpha_deg, 24.0)
+		# 30, not 24: a sail twisted open under load stalls later (SailConfig.twist_stall_shift_deg).
+		alpha_deg = clampf(alpha_deg + catch_deg, min_alpha_deg, 30.0)
 		var boom_angle_deg: float = clampf(absf(telemetry.awa_deg) - alpha_deg, sheet_angle_in_deg, sheet_angle_out_deg)
 		var across: float = 0.0
 		# The apparent and true wind measured on the sail's own windward side: negative once
@@ -466,7 +472,7 @@ func best_alpha_deg(awa_rad: float, q_pa: float = 0.0) -> float:
 	var best_alpha: float = target_alpha_deg
 	var best_drive: float = -INF
 	var alpha_deg: float = 4.0
-	while alpha_deg <= 24.0:
+	while alpha_deg <= 30.0:
 		var alpha: float = deg_to_rad(alpha_deg)
 		var cl: float = sail.lift_coefficient(alpha, q_pa)
 		var cd: float = sail.drag_coefficient(cl, alpha, q_pa)
@@ -565,7 +571,7 @@ func _alpha_for_torque_deg(telemetry: Telemetry, limit_nm: float) -> float:
 	var q_area: float = q * sail.config.area_m2
 	var awa: float = deg_to_rad(absf(telemetry.awa_deg))
 	var arm_m: float = _heeling_arm_m(telemetry)
-	var alpha_deg: float = 24.0
+	var alpha_deg: float = 30.0
 	while alpha_deg > 0.25:
 		var alpha: float = deg_to_rad(alpha_deg)
 		var cl: float = sail.lift_coefficient(alpha, q)
