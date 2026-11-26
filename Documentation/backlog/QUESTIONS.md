@@ -301,25 +301,25 @@ Answer:
 Why it matters: the joints are read by eye today, slowly and to about ±20 px; a tracker reads every frame of every video: the knees over chop, the body through a gybe, the stance over time (E17.S08 T3). The install was blocked by a permission check on 26 November.
 Options: a) Yes, `pip install --user mediapipe` on this PC. b) No, keep reading by eye.
 Recommendation: a.
-Answer:
+Answer: a, yes (Max, 26 November 2026): "yes of course, you are from now on authorized to install needed plugins or applications, but you cannot delete anything outside of the source folder". Installed the same evening (MediaPipe 1.2.3, `pip install --user`; the pose model beside the videos in `WindsurfingMMZB-videos/_models`, not in git); the tool is `tools/video/pose_track.py` (E17.S08 T3).
 
 ### Q52 · May the game's analysis read your Strava or GPS sessions for the speeds?
 Why it matters: the videos give no speeds; your tracks on known gear in known wind would calibrate the game's speeds (the reality check's speed case, E01.S13). Asked on 25 November, not answered.
 Options: a) Yes, these sessions: ... b) No.
 Recommendation: a, for a few sessions with known gear and wind.
-Answer:
+Answer: b, no (Max, 26 November 2026): "this is not a good idea, discussed before already". Not to be asked again; the speeds come from Max's numbers (Q53) and the videos.
 
 ### Q53 · How much speed does a board lose in chop like the videos' against flat water?
 Why it matters: the game's sea costs 8 to 10 % on a beam reach (26 November), and the game's sea is not real chop; your number sets the target for the waves' cost (E01.S20 T3, E02.S09 T3).
 Options: a number or a range, per wind.
 Recommendation: a rough range from your own sailing is enough to start.
-Answer:
+Answer (Max, 26 November 2026): "if you fly it in the good rhythm and absorb well in chop you can almost lose no speed, but in big swells and chop it can lower speeds a lot. In Sotavento this is really noticeable: going into the waves (going outside) max speeds are 50-55 on a downwind reach, going inside they are 65+". Read as km/h (65 kn would beat the world record of about 53 kn; 65 km/h is 35 kn, the videos' 30-35 kn): going out against the swell about 27-30 kn, coming in with it 35+ kn, so about 15-25 % slower going out; in small chop with good timing almost nothing. The unit is my reading, to confirm with Max.
 
 ### Q54 · When does the fin lift the nose, and is the board heeled with the windward rail down then?
 Why it matters: in the game the fin pushes the tail up (126 to 132 N) and so the nose down; a vertical force at the tail can only lift the nose if it pulls down (the windward rail down) or the rider hangs back further (Documentation/reports/reality_fixes/PROGRESS.md; the Claude Doc's tab "The sailor's forces").
 Options: with more speed, a bigger fin, a gust; the heel at that moment.
 Recommendation: a short description of when you feel it.
-Answer:
+Answer (Max, 26 November 2026): "mostly pulling towards you with the front foot, and in combination with more side pressure on the fin you can fully lift the nose up 20+ degrees or more". The heel was not named. In the game the front foot's pull is held at 150 N (88.5 N m through the straps' 0.59 m, `sailor_default.tres`) and as a couple between the feet it cannot change the board's trim with the weight standing still (`SailorConfig.front_foot_pull_held_n`); a nose lifted 20 degrees is far outside what the game can do (E01.S08 T10, for Michiel with Q55).
 
 ### Q55 · Michiel: why does the game hold a straight course with 17 degrees of rake where real boards hold 31, and why does the hull porpoise at 3 to 4 degrees of trim?
 Why it matters: both block copying the real technique from the videos (E01.S08 T8 and T9): the board on its tail porpoises and the rig will not rake back like the real ones; rake-first steering for the player waits for it (E07.S12 T8).

@@ -20,6 +20,8 @@ C:/Users/Max de Dikke/source/WindsurfingMMZB-reality. Measure with
 
 ## To continue
 
+0. (26 Nov, late) Max chooses the legs after the body tracker: the 0.4 Hz / 0.4 legs fit video 07 worst of the sweep;
+   0.8 Hz / 1.0 is the measured recommendation (section 'The body tracker' below).
 1. Max play-tests the softer legs on the lake chop (`tools/play.sh lake` in this worktree, or a
    play folder if he asks: launchers with the mouse body on).
 2. Michiel's OK on the legs and the three moved test limits (all marked "for Michiel to confirm").
@@ -189,7 +191,8 @@ CORRECTED the same evening (Max: "game is not right in strong winds. we do not m
 all in chop, so the speed case now reads runs in the game's sea (--waves=1, runs medium_72_waves, strong_62_waves): 72 + 7.4
 at 18/22 kt 23.6/25.7 kn (27/21 % slow), 97 l + 5.7 at 24/30 kt 28.5/31.6 kn (12 % slow / just inside). The game's chop
 costs 8-10 % on the beam reach (flat 25.9/28.5/31.5/34.2). Too slow in chop everywhere but 30 kt. Levers: the rig's hold
-(rake-first), the waves' cost (backlog E01.S20 T3; the real cost needs a source or Max), the hull (E01.S08). 2 of 14 strict.
+(rake-first), the waves' cost (backlog E01.S20 T3; the real cost needs a source or Max), the hull (E01.S08). 2 of 14 strict
+(rows; after the speed case was made indicative below: 1 of 10, the heel).
 
 ## The measured stance tested on flat water (26 Nov 2026, Max: "is the body analysis good enough to test it?")
 
@@ -209,6 +212,62 @@ helm: the game sails straight at ~17.5 deg (8.8 with the weight back) where real
 game 551 of the sail's 572 N sideways goes through the hands and the feet at the back strap (yaw -651 N m) against the fin
 (+614), the mast foot ~0; the real split between mast foot and feet at 31 deg rake is not measurable from these videos.
 For Michiel: why a straight course needs only 17 deg of rake.
+
+## The body tracker (26 Nov 2026, late; Max's yes to Q51)
+
+Max (Q51): "yes of course, you are from now on authorized to install needed plugins or applications, but you cannot
+delete anything outside of the source folder". MediaPipe 1.2.3 (`python -m pip install --user mediapipe`); the pose
+model `pose_landmarker_heavy.task` (Google, Apache 2.0, about 30 MB) beside the videos in
+`WindsurfingMMZB-videos/_models` (not in git). Tool `tools/video/pose_track.py` (run with `python -E -P`: `-I` hides
+the user's site-packages):
+
+- `check`: video 07's four by-eye frames against the tracker (`<videos>/07_unknown_front_drone/pose/check.png`, red
+  by eye, green the tracker). Shoulders, knees, ankles within 8-51 px; the hips 30-90 px apart: the by-eye hips sat on
+  the back of the seat, the tracker's are the hip joints (checked on the picture). With the tracker's joints the
+  sideways pull is 0.82 of the weight on those four frames (by eye 0.94).
+- `track 07_unknown_front_drone --start 0 --end 17.8 --crop 0,800,1000,700`: 513 of 534 frames found; the tracker
+  loses the sailor after 16.5 s. `legs <csv> --front --until 16.4`: 459 frames kept; the scale follows the drone's
+  zoom (the trunk 375 to 645 px/m over the clip).
+
+Results (one camera, video 07, 15-20 kn, low chop):
+
+| | value |
+|---|---|
+| sideways pull / weight, per frame (257 usable) | median 0.87 (10-90 %: 0.81-0.90); the game about 0.90: still a match |
+| body line from the feet | median 60 deg (55-64) |
+| the legs' work (fast part: minus the 1 s average, SD) | hips to the feet 1.6 cm (2.3 with the tracker's jitter of 1.6), hips above the feet 3.0 cm |
+| the board at the feet / the hips, up and down against the shoreline (0-8.5 s) | 3.7 / 2.6 cm: the body moves 0.71 of the board, correlation 0.58 |
+
+The 5 cm of 25 Nov (`front_bounce.py`) measured the shoulders against the centre of an ellipse fitted to the board's
+underside seen from ahead, that is the nose area, which rises and falls with every pitch (1 deg = about 2.6 cm at the
+nose); the tracker's ankles are the feet. The legs' tune of 26 Nov (0.4 Hz / 0.4) was chosen to match that 5 cm.
+
+The game's lake chop (the leg sweep's runs, `.sim_output/leg_sweep/`, measured the same way: board = its height,
+body = the board less the knee bend, 0.17 s average, minus 1 s average, last 20 s):
+
+| legs Hz / damping | knees cm | body / board | correlation | gybe falls of 6 | lake pitch deg |
+|---|---|---|---|---|---|
+| real (07) | 1.6-3.0 | 0.71 | 0.58 | | (04: 1.7 +- 0.6) |
+| 0.4 / 0.4 (now) | 4.5-5.6 | 0.91-1.10 | -0.27 to -0.56 | 4 | 0.61/0.86/1.06 |
+| 0.4 / 1.0 | 3.2-3.9 | 0.70-0.89 | 0.22-0.37 | 4 | 0.98/1.05/1.80 |
+| 0.6 / 1.0 | 2.8-3.8 | 0.84-1.03 | 0.37-0.65 | 4 | 0.94/1.49/1.99 |
+| 0.8 / 1.0 | 2.3-3.3 | 0.90-1.13 | 0.58-0.81 | 2 | 1.08/1.26/2.72 |
+| 1.2 / 0.9 (old) | 2.1-3.0 | 1.06-1.21 | 0.75-0.90 | 1 | 1.21/1.56/3.21 |
+
+The soft legs fit worst: the knees work twice the real amount and the body bobs against the board (the negative
+correlation), where the real body goes with the board, less. Damping 1.0 at 0.6-0.8 Hz fits best; 0.8 / 1.0 also
+halves the gybe falls. The game's chop is not the video's (Max), so the pitch column is indicative. Not changed:
+Max's choice (the legs are his play-test), then Michiel's OK. The reality check's legs case now reads 2.3 +- 0.8 cm
+from the tracker: the game 4.59/5.21/5.82, off (indicative).
+
+Side views: 04 and 06 (a boat to leeward) do not track: the sail hides the sailor and the tracker jumps between
+frames on the full picture (trunk 50-300 px frame to frame). A crop per shot or a view from windward (08) next.
+
+Max's other answers (26 Nov, written into `Documentation/backlog/QUESTIONS.md`): Q52 no (not his GPS tracks); Q53
+small chop with good timing costs almost nothing, big swell a lot (Sotavento 50-55 out against 65+ in on a downwind
+reach, read as km/h; added to the speed case's note); Q54 the nose comes up 20+ deg mostly from the front foot's
+pull with more side load on the fin (backlog E01.S08 T10; in the game the front foot holds 150 N and cannot change
+the trim with the weight standing still).
 
 ## Gap 1 (rig upright, wet length): diagnosed, not fixed
 

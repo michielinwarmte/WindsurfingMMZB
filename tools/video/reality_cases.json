@@ -197,9 +197,9 @@
   {
    "id": "legs",
    "what": "How much the legs give over chop (spread of the changes faster than 1 s)",
-   "source": "video 07 (front view, 15-20 kn, low chop): the distance from the shoulders to the board changes about 5 cm",
-   "real": 5.0,
-   "tol": 2.0,
+   "source": "video 07 (front view, 15-20 kn, low chop), read by the body tracker on every frame (tools/video/pose_track.py, 26 Nov 2026, 459 frames): the hips' distance from the feet changes 1.6 cm (2.3 with the tracker's jitter), the hips' height above the feet 3.0 cm. The 5 cm of 25 Nov (front_bounce.py) followed the board's nose, which pitches",
+   "real": 2.3,
+   "tol": 0.8,
    "unit": "cm",
    "strict": false,
    "measure": {
@@ -221,7 +221,7 @@
      "csv": "straight_1700.csv"
     }
    ],
-   "note": "not strict: one camera. The sailor rides on legs in heave (SailorBody, a spring and damper; 0.4 Hz and 0.4 since 26 Nov 2026, PHYSICS_SPEC.md 7.5); legs that give in pitch and roll are still missing (backlog E01.S07 T1)"
+   "note": "not strict: one camera. The real body moves 0.71 of the board at the feet (correlation 0.58); the game at 0.4 Hz / 0.4 0.91-1.10 against the board (correlation -0.27 to -0.56: the body bobs against it); 0.6-0.8 Hz at damping 1.0 fit best (Documentation/reports/reality_fixes/PROGRESS.md, 'The body tracker'). The sailor rides on legs in heave (SailorBody, a spring and damper, PHYSICS_SPEC.md 7.5); legs that give in pitch and roll are still missing (backlog E01.S07 T1)"
   },
   {
    "id": "speed",
@@ -254,7 +254,7 @@
      "csv": "straight_30.csv"
     }
    ],
-   "note": "NOT STRICT, indicative only: the videos are in real chop and neither the game's flat water nor its sea matches it (Max, 26 Nov); fair only once the game's chop is real"
+   "note": "NOT STRICT, indicative only: the videos are in real chop and neither the game's flat water nor its sea matches it (Max, 26 Nov); fair only once the game's chop is real; Max, 26 Nov 2026 (Q53): with good timing in small chop almost no speed is lost; in big swell and chop a lot: at Sotavento 50-55 going out against the waves and 65+ coming in on a downwind reach (read as km/h: about 27-30 against 35+ kn)"
   }
  ]
 }
