@@ -175,9 +175,182 @@ def sailor_x_needed(c, x_push, rake_deg, fin_up, fin_depth):
     return x_push + m / (c["m_sailor"] * G), x_ce, z_ce
 
 
+# --- Side views marked: where the weight acts along the board -----------------------------
+# A hiked-out body is up to a metre nearer or farther from the camera than the board, so in a
+# side view it shows in the wrong place fore and aft (perspective). So each picture gets the
+# board's own scale (from points whose distance from the tail is known: the footstraps 0.235 and
+# 0.825 m, the mast foot 1.28 m on the real 62/72 boards and 1.26 m in the game, the nose), and
+# where the weight acts is drawn as a plumb line on the board at that scale; the visible body is
+# marked separately. Real board 2.33 m (Max: 62 and 72 cm wide slalom boards), game JP SL 72.
+SCREENS = "C:/Users/Max de Dikke/source/WindsurfingMMZB-reality/.screenshots/sailor_forces"
+EXAMPLES = [
+    dict(name="Real 1: video 04 at 12 s, boat beside, board square", video="04_gruissan_defiwind", t=12.0,
+         crop=(250, 1150, 1080, 1610), refs=[((780, 1515), 1.28), ((1025, 1478), 2.33)],
+         body={"shoulder (through the sail)": (400, 1310), "head": (440, 1245)},
+         wet=None, needed_for=(0.5, 0.7), ce=True,
+         note="tail in the spray; the mast foot falls 1.28 m from the tail by this scale"),
+    dict(name="Real 2: video 04 at 6 s, close beside", video="04_gruissan_defiwind", t=6.0,
+         crop=(250, 880, 1080, 1100), refs=[((505, 985), 0.235), ((670, 975), 0.825), ((822, 980), 1.28)],
+         body={}, wet=((610, 1018), (640, 1016)), needed_for=None, ce=False,
+         note="scale from the two footstraps and the mast foot"),
+    dict(name="Real 3: video 06 at 11 s, boat beside (board heads left)", video="06_unknown_crosswind_boat",
+         t=11.0, crop=(0, 1380, 620, 1560), refs=[((253, 1467), 1.28), ((42, 1433), 2.33)],
+         body={}, wet=((410, 1497), (380, 1493)), needed_for=None, ce=False,
+         note="scale from the mast foot and the nose"),
+    dict(name="Real 4: video 08 at 2.8 s, fly-by from windward (board 50 deg off square)",
+         video="08_bonaire_flyby", t=2.8, crop=(40, 500, 720, 850),
+         refs=[((419, 812), 0.0), ((251, 785), 1.28), ((101, 805), 2.33)],
+         body={"back foot": (394, 800), "knee": (466, 733), "hip": (554, 746), "shoulder": (594, 639),
+               "head": (602, 612)}, wet=None, needed_for=None, ce=False, oblique=True,
+         note="oblique: the hike to windward shows as fore and aft; body angles only"),
+    dict(name="Game 1: 18 kt beam reach, leeward side (as video 04)", screen="rig_starboard_port_close_18kt.png",
+         crop=(560, 120, 1700, 900), refs=[((1325, 815), 0.0), ((895, 785), 1.26)], body={},
+         game=dict(wet=0.96, push=0.82, com=-0.04, ce=(0.08, 1.57)), needed_for=(0.5, 0.7), ce=True,
+         note="the game's numbers from its pitch budget; the straps fall 0.24 and 0.83 m from the tail"),
+    dict(name="Game 2: 24 kt beam reach, leeward side", screen="rig_starboard_port_close_24kt.png",
+         crop=(540, 300, 1680, 920), refs=[((1300, 848), 0.0), ((880, 775), 1.26)], body={},
+         game=dict(wet=0.95, push=0.81, com=-0.13, ce=(0.13, 1.59)), needed_for=(0.5, 0.7), ce=False,
+         note="the game's numbers from its pitch budget at 24 kt"),
+    dict(name="Game 3: 18 kt beam reach, windward side (as video 08)", screen="rig_starboard_starboard_close_18kt.png",
+         crop=(330, 330, 1440, 900), refs=[((595, 822), 0.0), ((1022, 788), 1.26)], body={},
+         game=dict(wet=0.96, push=0.82, com=-0.04, ce=(0.08, 1.57)), needed_for=(0.5, 0.7), ce=False,
+         note="the figure hikes toward the camera, so it shows further aft than it is"),
+]
+
+
+def board_axis(refs):
+    """The board's line in the picture: the tail's point and the pixels per metre along it (and
+    its direction), fitted through the reference points."""
+    m = np.array([r[1] for r in refs])
+    p = np.array([r[0] for r in refs], dtype=float)
+    a = np.vstack([np.ones_like(m), m]).T
+    coef, *_ = np.linalg.lstsq(a, p, rcond=None)   # p = tail + m * per_m
+    tail, per_m = coef[0], coef[1]
+    up = np.array([per_m[1], -per_m[0]])
+    if up[1] > 0:
+        up = -up
+    up = up / np.linalg.norm(up) * np.linalg.norm(per_m)   # a metre up, square to the board
+    return tail, per_m, up
+
+
+def needed_band(wet_lo, wet_hi):
+    """Where the sailor's centre of mass must be (m from the tail) for a wet length, real rake 31,
+    the fin pushing 30 to 126 N: the whole band over the wet lengths given."""
+    c = GAME_18
+    xs = []
+    for wet in (wet_lo, wet_hi):
+        for fin in (30.0, c["fin_up"]):
+            xs.append(sailor_x_needed(c, wet * c["x_push"] / c["wet"], 31.0, fin, -c["z_fin"])[0])
+    return min(xs), max(xs)
+
+
+def draw_example(ex):
+    from PIL import Image, ImageDraw, ImageFont
+    if "screen" in ex:
+        img = Image.open(os.path.join(SCREENS, ex["screen"])).convert("RGB")
+    else:
+        from grid_overlay import frame_at
+        from video import original, probe
+        path = original(ex["video"])
+        info = probe(path)
+        img = frame_at(path, ex["t"], info["width"], info["height"]).convert("RGB")
+    d = ImageDraw.Draw(img, "RGBA")
+    try:
+        font = ImageFont.truetype("arial.ttf", 18)
+        small = ImageFont.truetype("arial.ttf", 15)
+    except OSError:
+        font = small = ImageFont.load_default()
+    tail, per_m, up = board_axis(ex["refs"])
+    at = lambda m, h=0.0: tuple(tail + m * per_m + h * up)
+    blue, orange, white, red = (40, 140, 255, 255), (255, 120, 20, 255), (255, 255, 255, 255), (255, 40, 40, 255)
+    # the board's line and a tick every half metre from the tail
+    d.line([at(-0.6), at(2.4)], fill=(255, 255, 255, 170), width=2)
+    for k in range(-1, 5):
+        mm = 0.5 * k
+        d.line([at(mm, -0.06), at(mm, 0.06)], fill=white, width=3)
+        d.text(at(mm, -0.16), ("tail" if mm == 0 else "%.1f m" % mm), fill=white, font=small, anchor="mm")
+    for (p, mm) in ex["refs"]:
+        d.ellipse([p[0] - 7, p[1] - 7, p[0] + 7, p[1] + 7], outline=(255, 255, 0, 255), width=3)
+    lines = [ex["name"], ex["note"]]
+    if ex.get("wet"):
+        # the front of the wet part, read on the picture, as metres from the tail
+        ms = [float(np.dot(np.array(p) - tail, per_m) / np.dot(per_m, per_m)) for p in ex["wet"]]
+        lo, hi = min(ms), max(ms)
+        d.line([at(0.0, -0.04), at(lo, -0.04)], fill=blue, width=9)
+        d.line([at(lo, -0.04), at(hi, -0.04)], fill=(40, 140, 255, 120), width=9)
+        lines.append("wet part, read here: 0 to %.2f-%.2f m from the tail" % (lo, hi))
+        x0, x1 = needed_band(lo, hi)
+        lines.append("weight must act %.2f to %.2f m behind the tail for it (balance, rake 31 deg)" % (-x1, -x0))
+        ex = dict(ex, needed_for=None, band=(x0, x1))
+    if ex.get("needed_for"):
+        x0, x1 = needed_band(*ex["needed_for"])
+        ex = dict(ex, band=(x0, x1))
+        lines.append("blue: where the weight must act for %.1f-%.1f m wet (videos): %.2f to %.2f m behind the tail"
+                     % (ex["needed_for"][0], ex["needed_for"][1], -x1, -x0))
+    if ex.get("band"):
+        x0, x1 = ex["band"]
+        poly = [at(x0, 0.0), at(x1, 0.0), at(x1, 0.75), at(x0, 0.75)]
+        d.polygon(poly, fill=(40, 140, 255, 70), outline=blue)
+        d.text(at(0.5 * (x0 + x1), 0.85), "weight needed", fill=blue, font=font, anchor="mm")
+    g = ex.get("game")
+    if g:
+        d.line([at(0.0, -0.04), at(g["wet"], -0.04)], fill=orange, width=9)
+        d.line([at(g["com"], 0.0), at(g["com"], 0.75)], fill=orange, width=4)
+        d.ellipse([at(g["com"], 0.62)[0] - 8, at(g["com"], 0.62)[1] - 8, at(g["com"], 0.62)[0] + 8,
+                   at(g["com"], 0.62)[1] + 8], outline=orange, width=4)
+        d.text(at(g["com"] + 0.05, 0.62), " game's weight", fill=orange, font=font, anchor="lm")
+        px, py = at(g["push"], -0.45)
+        qx, qy = at(g["push"], -0.07)
+        d.line([(px, py), (qx, qy)], fill=orange, width=4)
+        d.polygon([(qx, qy - 2), (qx - 7, qy + 12), (qx + 7, qy + 12)], fill=orange)
+        lines.append("orange, the game: wet %.2f m, water's push %.2f m, weight %.2f m from the tail"
+                     % (g["wet"], g["push"], g["com"]))
+    if ex.get("ce"):
+        for (x, z), col, txt in (((-0.23, 1.25), blue, "CE at 31 deg rake"), ((0.08, 1.57), orange, "CE at 17 deg (game)")):
+            cx, cy = at(x, z)
+            d.line([(cx - 9, cy - 9), (cx + 9, cy + 9)], fill=col, width=4)
+            d.line([(cx - 9, cy + 9), (cx + 9, cy - 9)], fill=col, width=4)
+            d.text((cx + 12, cy), txt, fill=col, font=small, anchor="lm")
+    for n, p in ex["body"].items():
+        d.ellipse([p[0] - 7, p[1] - 7, p[0] + 7, p[1] + 7], outline=red, width=3)
+        d.text((p[0] + 10, p[1] - 10), n, fill=red, font=small)
+    crop = img.crop(ex["crop"])
+    w = 980
+    crop = crop.resize((w, int(crop.height * w / crop.width)))
+    band_h = 26 * len(lines) + 10
+    out = Image.new("RGB", (w, crop.height + band_h), (20, 20, 24))
+    out.paste(crop, (0, 0))
+    dd = ImageDraw.Draw(out)
+    for i, line in enumerate(lines):
+        dd.text((12, crop.height + 8 + 26 * i), line, fill=(235, 235, 235), font=font if i == 0 else small)
+    return out, lines
+
+
+def draw_examples():
+    from PIL import Image
+    out_dir = os.path.join(SCREENS, "examples")
+    os.makedirs(out_dir, exist_ok=True)
+    pics = []
+    for i, ex in enumerate(EXAMPLES):
+        pic, lines = draw_example(ex)
+        pic.save(os.path.join(out_dir, "example_%d.png" % (i + 1)))
+        pics.append(pic)
+        print(" | ".join(lines))
+    for name, group in (("real", pics[:4]), ("game", pics[4:])):
+        h = sum(p.height for p in group)
+        sheet = Image.new("RGB", (group[0].width, h), (20, 20, 24))
+        y = 0
+        for p in group:
+            sheet.paste(p, (0, y))
+            y += p.height
+        sheet.save(os.path.join(out_dir, "sheet_%s.png" % name))
+    print("examples in", out_dir)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--overlays", action="store_true")
+    ap.add_argument("--examples", action="store_true", help="the side views marked (SCREENS/examples)")
     ap.add_argument("--mass", type=float, default=85.0)
     a = ap.parse_args()
 
@@ -221,6 +394,8 @@ def main():
 
     if a.overlays:
         draw_overlays(rows, a.mass)
+    if a.examples:
+        draw_examples()
 
 
 def draw_overlays(rows, mass):

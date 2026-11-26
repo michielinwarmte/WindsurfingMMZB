@@ -25,6 +25,10 @@ const OCEAN_SCRIPT: Script = preload("res://world/ocean.gd")
 const VIEWS: Dictionary[String, Array] = {
 	"port": [Vector3(-7.5, 2.4, -0.6), Vector3(0.0, 1.8, 0.3), 50.0],
 	"starboard": [Vector3(7.5, 2.4, -0.6), Vector3(0.0, 1.8, 0.3), 50.0],
+	# Square to the board and level with the deck, close: the board, its wet part and the
+	# sailor fill the picture (for comparing with side views of real boards).
+	"port_close": [Vector3(-3.4, 0.8, 0.1), Vector3(0.0, 0.8, 0.1), 50.0],
+	"starboard_close": [Vector3(3.4, 0.8, 0.1), Vector3(0.0, 0.8, 0.1), 50.0],
 	"bow": [Vector3(0.3, 2.2, -8.5), Vector3(0.0, 1.8, 0.0), 50.0],
 	"stern": [Vector3(-0.3, 2.6, 8.5), Vector3(0.0, 1.8, 0.0), 50.0],
 	"above": [Vector3(0.0, 11.0, 0.6), Vector3(0.0, 0.0, 0.0), 45.0],
@@ -58,6 +62,11 @@ func _ready() -> void:
 	if gear_wanted:
 		_windsurfer.gear = GearChoice.from_ids(options.get("gear_board", ""), options.get("gear_sail", ""), options.get("gear_fin", ""))
 		print(_windsurfer.gear.names_line())
+	# Another wind speed than the default's (--wind_kt=24): the pictures get "_<speed>kt".
+	if options.has("wind_kt"):
+		var wind: WindConfig = (load("res://config/wind_default.tres") as WindConfig).duplicate()
+		wind.speed_kt = options["wind_kt"].to_float()
+		_windsurfer.wind_config = wind
 	add_child(_windsurfer)
 	_ocean.call("setup", _windsurfer.sim, _camera)
 	if options.get("figure", "1") == "0":
@@ -73,6 +82,8 @@ func _ready() -> void:
 	var out_dir: String = screenshot.get_base_dir() if screenshot != "" else "user://"
 	var flutter: float = options.get("flutter", "0").to_float()
 	var suffix: String = ("_tint" if tinted else "") + ("_gear" if gear_wanted else "")
+	if options.has("wind_kt"):
+		suffix += "_%skt" % options["wind_kt"]
 	_capture_views(options.get("settle", "6").to_float(), views, out_dir, tack, flutter, suffix)
 
 
