@@ -20,7 +20,7 @@ C:/Users/Max de Dikke/source/WindsurfingMMZB-reality. Measure with
 
 ## To continue
 
-0. DONE (26 Nov, late): the legs set to 0.8 Hz / 1.0 from the body tracker (Max: the choice is mine from the
+0. DONE (26 Nov, late): the legs set to 0.8 Hz / 1.0 from the body tracker (Max: the choice is mine from the Max's play-test the same evening: "the small chop does good". NEXT: "the fin lifting straight up is frustrating me" (backlog E01.S08 T10, Q54).
    measurements, not his). Section 'The body tracker', 'Set'. Max play-tests the feel.
 1. Max play-tests the softer legs on the lake chop (`tools/play.sh lake` in this worktree, or a
    play folder if he asks: launchers with the mouse body on).
