@@ -110,6 +110,26 @@ Pitch budget, 18 kt beam reach, default gear (`Game/dev/pitch_budget.gd -- --win
   bounce (E01.S08 T3) and the fin's up-push with the sailor's limits, not a sailor setting alone; then the speeds and the AI's polar
   re-measured.
 
+## The sheet-in (26 Nov 2026, Max: "the game is really wrong on sheet in amount" -> "not sheeted in enough", "how the sail looks"; his drone photo of a sail fully sheeted in: the boom straight back, the clew over the tail near the centreline)
+
+- Boom angle = 85 - 73 x sheet (sail_model.gd, linear; the stop fully in 12 deg). The autopilot and the reality runs sheet 0.89-1.00 (boom 12-20 deg, alpha 14-16 deg, AWA 28-35 deg): fully in, as the photo.
+- The player's controller (tools/push_check.sh, beam reach, no gusts or waves; run sheet_look and sheet_look_075):
+
+  | push | 12 kt | 18 kt | 24 kt |
+  |---|---|---|---|
+  | 0 | sheet 0.00 (sail out, 1.3 m/s) | 0.00 | 0.00 |
+  | 0.5 | 0.86 (boom 22), 7.2 m/s | 0.80 (27), 10.6 m/s | 0.70 (34), 12.6 m/s |
+  | 0.75 (the game's start) | 0.94 (16), 8.0 m/s | 0.95 (16), 13.6 m/s | 0.85 (23), 15.5 m/s |
+  | 1.0 | 0.92 (18), 7.5 m/s | 0.98 (13), 14.0 m/s | 0.89 (20), 16.2 m/s |
+
+  So below full push, and in stronger wind even at the start's 0.75, the auto-sheet eases the sail 20-34 deg off the
+  centreline: visibly not fully in. Real racers at speed stay fully sheeted in and control the power with the body, the
+  rake and the lean; they ease only for a moment in a gust. A gameplay fix (the auto-sheet, Max's track), not physics.
+- Front views can't give the real boom angle without a camera model (the leaned rig's clamp sits to windward and the far
+  clew converges: the game's known 12 deg read as ~0.85 m); video 07 against the game from ahead: 0.56 against 0.45
+  boom offset per mast length (.screenshots/sailor_forces/examples/sheet_in_front.png), within that error.
+- Game/dev/rig_view.gd: views drone_front, --push=<level> (the autopilot at a push), and it prints sheet, AWA, lean, rake.
+
 ## Gap 1 (rig upright, wet length): diagnosed, not fixed
 
 - The player's controller steers with Helm.steer (rake + tilt together: tilt = -rake); the

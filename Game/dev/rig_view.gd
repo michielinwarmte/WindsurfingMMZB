@@ -29,6 +29,9 @@ const VIEWS: Dictionary[String, Array] = {
 	# sailor fill the picture (for comparing with side views of real boards).
 	"port_close": [Vector3(-3.4, 0.8, 0.1), Vector3(0.0, 0.8, 0.1), 50.0],
 	"starboard_close": [Vector3(3.4, 0.8, 0.1), Vector3(0.0, 0.8, 0.1), 50.0],
+	# A drone above and ahead, a little to windward, looking down at the board (as Max's photo of a
+	# sail fully sheeted in, 26 November 2026): where the clew ends against the board shows the sheet.
+	"drone_front": [Vector3(1.2, 7.0, -3.6), Vector3(0.0, 0.5, 0.5), 45.0],
 	"bow": [Vector3(0.3, 2.2, -8.5), Vector3(0.0, 1.8, 0.0), 50.0],
 	"stern": [Vector3(-0.3, 2.6, 8.5), Vector3(0.0, 1.8, 0.0), 50.0],
 	"above": [Vector3(0.0, 11.0, 0.6), Vector3(0.0, 0.0, 0.0), 45.0],
@@ -68,6 +71,12 @@ func _ready() -> void:
 		wind.speed_kt = options["wind_kt"].to_float()
 		_windsurfer.wind_config = wind
 	add_child(_windsurfer)
+	# The autopilot at a push level (--push=0.5), as main.gd's --push with --autopilot=1: the
+	# auto-sheet eases the sail below full push. The pictures get "_push<level>".
+	if options.has("push"):
+		var level: float = PushDial.level_of(options["push"])
+		_windsurfer.controller.push_level = level
+		_windsurfer.autopilot_push_level = level
 	_ocean.call("setup", _windsurfer.sim, _camera)
 	if options.get("figure", "1") == "0":
 		_windsurfer.get_node("SailorFigure").visible = false
@@ -84,6 +93,8 @@ func _ready() -> void:
 	var suffix: String = ("_tint" if tinted else "") + ("_gear" if gear_wanted else "")
 	if options.has("wind_kt"):
 		suffix += "_%skt" % options["wind_kt"]
+	if options.has("push"):
+		suffix += "_push%s" % options["push"]
 	_capture_views(options.get("settle", "6").to_float(), views, out_dir, tack, flutter, suffix)
 
 
@@ -98,6 +109,8 @@ func _capture_views(settle_s: float, views: PackedStringArray, out_dir: String, 
 	var t: Telemetry = _windsurfer.telemetry()
 	print("rig_view: %s tack, %.1f kt, sail side %d, boom %.0f deg, alpha %.1f deg, heel %.1f deg" % [
 		tack, t.speed_kt, t.sail_side, t.sail_angle_deg, t.alpha_deg, t.heel_deg])
+	print("rig_view: sheet %.2f, TWA %.0f deg, AWA %.1f deg, apparent %.1f kt, rig lean %.1f deg, rake %.1f deg" % [
+		t.sheet, t.twa_deg, t.awa_deg, t.aws_kt, t.rig_lean_deg, t.rake * _windsurfer.sim.sail_config.max_rake_deg])
 	var suffix: String = tint_suffix
 	if flutter > 0.0:
 		suffix += "_luff" if flutter == 1.0 else "_luff%.1f" % flutter
