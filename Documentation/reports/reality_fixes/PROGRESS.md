@@ -20,8 +20,8 @@ C:/Users/Max de Dikke/source/WindsurfingMMZB-reality. Measure with
 
 ## To continue
 
-0. (26 Nov, late) Max chooses the legs after the body tracker: the 0.4 Hz / 0.4 legs fit video 07 worst of the sweep;
-   0.8 Hz / 1.0 is the measured recommendation (section 'The body tracker' below).
+0. DONE (26 Nov, late): the legs set to 0.8 Hz / 1.0 from the body tracker (Max: the choice is mine from the
+   measurements, not his). Section 'The body tracker', 'Set'. Max play-tests the feel.
 1. Max play-tests the softer legs on the lake chop (`tools/play.sh lake` in this worktree, or a
    play folder if he asks: launchers with the mouse body on).
 2. Michiel's OK on the legs and the three moved test limits (all marked "for Michiel to confirm").
@@ -248,16 +248,20 @@ body = the board less the knee bend, 0.17 s average, minus 1 s average, last 20 
 | legs Hz / damping | knees cm | body / board | correlation | gybe falls of 6 | lake pitch deg |
 |---|---|---|---|---|---|
 | real (07) | 1.6-3.0 | 0.71 | 0.58 | | (04: 1.7 +- 0.6) |
-| 0.4 / 0.4 (now) | 4.5-5.6 | 0.91-1.10 | -0.27 to -0.56 | 4 | 0.61/0.86/1.06 |
+| 0.4 / 0.4 (26 Nov) | 4.5-5.6 | 0.91-1.10 | -0.27 to -0.56 | 4 | 0.61/0.86/1.06 |
 | 0.4 / 1.0 | 3.2-3.9 | 0.70-0.89 | 0.22-0.37 | 4 | 0.98/1.05/1.80 |
 | 0.6 / 1.0 | 2.8-3.8 | 0.84-1.03 | 0.37-0.65 | 4 | 0.94/1.49/1.99 |
-| 0.8 / 1.0 | 2.3-3.3 | 0.90-1.13 | 0.58-0.81 | 2 | 1.08/1.26/2.72 |
+| **0.8 / 1.0 (now)** | 2.3-3.3 | 0.90-1.13 | 0.58-0.81 | 2 | 1.08/1.26/2.72 |
 | 1.2 / 0.9 (old) | 2.1-3.0 | 1.06-1.21 | 0.75-0.90 | 1 | 1.21/1.56/3.21 |
 
 The soft legs fit worst: the knees work twice the real amount and the body bobs against the board (the negative
 correlation), where the real body goes with the board, less. Damping 1.0 at 0.6-0.8 Hz fits best; 0.8 / 1.0 also
-halves the gybe falls. The game's chop is not the video's (Max), so the pitch column is indicative. Not changed:
-Max's choice (the legs are his play-test), then Michiel's OK. The reality check's legs case now reads 2.3 +- 0.8 cm
+halves the gybe falls. The game's chop is not the video's (Max), so the pitch column is indicative.
+
+Set (26 Nov, late; Max: "that's no question for me", the choice is mine from the measurements): 0.8 Hz / 1.0 in
+`sailor_default.tres` and the `SailorConfig` defaults (the comment says why), PHYSICS_SPEC.md 7.5, 17.13 and a
+section 16 row. Checks: `tools/matrix.sh` with the new legs, flat and `--waves=1`: 54 cases, 0 falls, 0 NaN, all
+manoeuvres completed; the full test suite was still running at this commit (result not recorded yet: re-run tools/test_parallel.sh all); the reality check not re-run yet (python tools/video/reality_check.py). For Michiel's OK; Max play-tests the feel. The reality check's legs case now reads 2.3 +- 0.8 cm
 from the tracker: the game 4.59/5.21/5.82, off (indicative).
 
 Side views: 04 and 06 (a boat to leeward) do not track: the sail hides the sailor and the tracker jumps between

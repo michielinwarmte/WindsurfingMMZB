@@ -221,7 +221,7 @@
      "csv": "straight_1700.csv"
     }
    ],
-   "note": "not strict: one camera. The real body moves 0.71 of the board at the feet (correlation 0.58); the game at 0.4 Hz / 0.4 0.91-1.10 against the board (correlation -0.27 to -0.56: the body bobs against it); 0.6-0.8 Hz at damping 1.0 fit best (Documentation/reports/reality_fixes/PROGRESS.md, 'The body tracker'). The sailor rides on legs in heave (SailorBody, a spring and damper, PHYSICS_SPEC.md 7.5); legs that give in pitch and roll are still missing (backlog E01.S07 T1)"
+   "note": "not strict: one camera. The real body moves 0.71 of the board at the feet (correlation 0.58); at 0.4 Hz / 0.4 the game's body moved 0.91-1.10 of the board, against it (correlation -0.27 to -0.56); 0.8 Hz / 1.0 (set 26 Nov, late) 0.90-1.13, with it (0.58-0.81) (Documentation/reports/reality_fixes/PROGRESS.md, 'The body tracker'). The sailor rides on legs in heave (SailorBody, a spring and damper, 0.8 Hz / 1.0, PHYSICS_SPEC.md 7.5); legs that give in pitch and roll are still missing (backlog E01.S07 T1)"
   },
   {
    "id": "speed",

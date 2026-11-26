@@ -64,7 +64,7 @@ func _run(wind_kt: float, twa_deg: float, push: float, seconds: float) -> Packed
 	sim.sailor_config.stance_balance_share = 0.0
 	sim.sailor_config.stance_dive_full_deg = 0.0
 	sim.sailor_config.stance_bow_high_deg = 0.0
-	# And the legs as they were before the reality check of 26 November 2026 (0.4 Hz and 0.4 since,
+	# And the legs as they were before the reality check of 26 November 2026 (0.4 Hz and 0.4, then 0.8 Hz and 1.0 since,
 	# PHYSICS_SPEC.md 7.5: softer legs under the lake's chop): these numbers are from before it.
 	sim.sailor_config.leg_natural_frequency_hz = 1.2
 	sim.sailor_config.leg_damping_ratio = 0.9

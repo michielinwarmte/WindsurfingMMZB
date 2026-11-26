@@ -185,15 +185,21 @@ const BALANCE_STANCE_FULL_DEG: float = 6.0
 ## body rode over it (Session 37's matrix: no falls in the beam gybes at 12 to 24 kt).
 ## The reality check (25 November 2026, Documentation/reports/reality_fixes/PROGRESS.md)
 ## found 1.2 Hz still too close: the lake's chop comes at 0.8 to 1.25 Hz, the body moved
-## 1.1 to 1.3 times the board and the board pitched 1.2 to 3.2 degrees. At 0.4 Hz and 0.4
-## the legs sit well under the chop and let it pass: pitch 0.6 to 1.1 degrees, the knees
-## work 4.7 to 5.8 cm (video 07: about 5 cm), and the 27 manoeuvres at 12, 18 and 24 kt
-## still end without a fall on the default gear (tools/video/reality_sweep.py --chop,
-## tools/matrix.sh). On race gear at 24 and 30 kt the gybes fall more (4 of 6 against 1):
-## the same soft spring carries the posture's own height step at the gybe's entry and
-## overshoots. Left for the gybe's work (PHYSICS_SPEC.md 7.5, backlog E01.S09 T5).
-@export var leg_natural_frequency_hz: float = 0.4
-@export var leg_damping_ratio: float = 0.4
+## 1.1 to 1.3 times the board and the board pitched 1.2 to 3.2 degrees. 0.4 Hz with 0.4
+## (26 November) was tuned to a 5 cm of knee work that turned out to be the board's
+## pitching nose; the body tracker (tools/video/pose_track.py, every frame of video 07)
+## measured the real legs: they work 1.6 to 3.0 cm, and the body moves 0.71 of the board at
+## the feet, in step with it (correlation 0.58). At 0.4 Hz and 0.4 the knees worked 4.5 to
+## 5.6 cm and the body bobbed against the board (correlation -0.3 to -0.6); of the ten
+## settings swept, 0.8 Hz at full damping fits best: knees 2.3 to 3.3 cm, the body 0.90 to
+## 1.13 of the board, correlation 0.58 to 0.81, the lake pitch 1.1 to 2.7 degrees, all 54
+## manoeuvres at 12, 18 and 24 kt (flat and waves) without a fall on the default gear, and
+## on race gear at 24 and 30 kt 2 gybes of 6 fall (1 at 1.2 Hz, 4 at 0.4 Hz): the spring
+## carries the posture's own height step at the gybe's entry. Left for the gybe's work
+## (PHYSICS_SPEC.md 7.5, backlog E01.S09 T5; Documentation/reports/reality_fixes/PROGRESS.md,
+## "The body tracker").
+@export var leg_natural_frequency_hz: float = 0.8
+@export var leg_damping_ratio: float = 1.0
 ## How far the knees can flex either way from the normal stance before the legs reach a stop.
 @export var leg_travel_m: float = 0.25
 ## Across the deck the body goes where the posture puts it and rides the hull: loaded legs
