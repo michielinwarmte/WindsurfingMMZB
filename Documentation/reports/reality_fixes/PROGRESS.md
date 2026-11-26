@@ -157,8 +157,27 @@ at full push); the 12 deg stop was not the limit in play. Change (physics, for M
 7 at 180 Pa (an estimate; E01.S20 T1). Sheet stop 12 -> 5 deg in all sails (catalogue regenerated); the autopilot takes the
 stop from its sail and scans alpha to 30. Push check, gusts and waves, full push (run stall_base -> sheet_final):
 beam 12/18/24 kt boom 15/16/24 -> 6/13/20 deg, speed 8.44/13.16/15.25 -> 10.21/13.31/15.79 m/s; broad 18/24 kt boom 40/26 -> 27/18,
-9.04/15.02 -> 10.42/16.05 m/s; no falls (all levels 0.5-1.0). check.sh 523 files OK. NOT RUN after this change: the unit and
-validation tests, the reality check. Next: run them, Michiel's OK, Max's play-test.
+9.04/15.02 -> 10.42/16.05 m/s; no falls (all levels 0.5-1.0). Superseded the same evening by the measured version below.
+
+## The sail's flex measured (26 Nov 2026, evening; the scheduled run after Max's reset)
+
+- Twist, video 07 at 3 s from ahead (tools/video/sail_flex.py, overlay checked): the sail's angle off the centreline 15 deg
+  just above the boom -> 25 deg at 57 % of the luff; chord from the game's traced HGO outline (head 0.40 of the boom chord);
+  head twist ~20 deg (16-26 with the outline and scale varied). The game draws 8-16 (RigVisuals). Calibration on the game's
+  own sail failed (small, windowed): the number stands on its error range. Video 07 at 1/5/7 s not usable (luff off the crop).
+- Mast bend: upper luff leans 15.6 deg less than the lower mast in the picture; ~half perspective -> ~0.2 m (+-0.15) to
+  leeward at 1.8 m above the boom; the game 0.12 m at the head. Aft bend not checkable from these views (06 leech off-frame).
+- Physics: the stall shift = mean twist ~0.24 x head twist (~4.8 deg at ~130 Pa). The first form (from 0 Pa) moved the wind
+  tunnel's points (4 m/s, 16.5 deg: lift 1.06 vs 0.98 +-0.08, test_sail red) -> new SailConfig.twist_stall_shift_from_pa = 39
+  (8 m/s: the tunnel's data stand as measured), twist_stall_shift_deg 12 -> 11 (tunnel sail assumed 8 deg at the head; 7-16).
+  Stop 5 -> 10 deg: at 5 and 8 the overpowered catapult test rolled the board over (180 deg), at 10 it comes back.
+  The autopilot's alpha scans/caps back at 24 (30 let the pull-limit scan land in the deep stall and skip the limit).
+- Full push, gusts and waves (stall_base -> sail_measured): beam 12/18/24 kt boom 15/16/24 -> 14/14/21 deg, speed
+  8.44/13.16/15.25 -> 8.64/13.34/16.17 m/s; broad 24 kt 26 -> 23 deg, 15.02 -> 15.32; no falls.
+- All tests: 7 failing = 6 known reds + the old fleet-start test on T1 (one board of 16 late, Cautious 4; not reworked);
+  three old reds now pass (polar shape, broad reach on waves, the AI's 12 kt T1 time). test_sail: the worked examples keep
+  the 12 deg stop; test_feet_press keeps the old sail. Reality check: 1 of 10; wet length 1.00/1.05 (1.02/1.07); race-gear
+  gybes 4 of 4 fall (gybing is for later). For Michiel: the twist -> stall link, the tunnel sail's twist, the 10 deg stop.
 
 ## Gap 1 (rig upright, wet length): diagnosed, not fixed
 

@@ -68,6 +68,10 @@ func _run(wind_kt: float, twa_deg: float, push: float, seconds: float) -> Packed
 	# PHYSICS_SPEC.md 7.5: softer legs under the lake's chop): these numbers are from before it.
 	sim.sailor_config.leg_natural_frequency_hz = 1.2
 	sim.sailor_config.leg_damping_ratio = 0.9
+	# And the sail as it was before the sheet-in changes of 26 November 2026 (fully in at 12 degrees,
+	# no later stall when twisted): these numbers are from before them.
+	sim.sail_config.sheet_angle_in_deg = 12.0
+	sim.sail_config.twist_stall_shift_deg = 0.0
 	var controller: PlayerController = PlayerController.new()
 	# The controller as it sailed before the lake's chop technique (its defaults since the autopilot's
 	# training of 6 November 2026, Documentation/reports/autopilot/lake_chop_training.md): this test

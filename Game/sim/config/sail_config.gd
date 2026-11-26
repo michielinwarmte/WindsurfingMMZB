@@ -145,9 +145,17 @@ extends Resource
 ## angles of attack by this many degrees times (1 - twist_factor()). 0 = off (the stall stays at
 ## cl_peak_deg at every wind). 12 in the default sail (26 November 2026, the sheet-in: Max, "not
 ## sheeted in enough" at full push; his photo of a race sail fully in shows the boom close along the
-## board): about 2 degrees in light air, 6 at the 18 kt beam reach (120 Pa), 7 at 24 kt. An
-## estimate: the tunnel's data stop at 8 m/s (backlog E01.S20 T1); for Michiel to confirm.
+## board). Measured 26 November 2026 (tools/video/sail_flex.py): video 07 from ahead, the sail opens
+## from 15 degrees just above the boom to 25 at 57 % of the way up, a head twist of about 20 degrees
+## (16 to 26), whose sail-wide mean (0.24 of the head's, the twist growing from the boom) is about
+## 4.8 degrees at about 130 Pa. Beyond the tunnel (below): (4.8 - 1.9, the tunnel sail's assumed 8
+## degrees at the head) / (0.762 - 0.490) = 11 (7 to 16). For Michiel to confirm.
 @export var twist_stall_shift_deg: float = 0.0
+## The pressure up to which the measured curve stands as measured (Pa): the wind tunnel's top speed,
+## 8 m/s = 39 Pa. The stall's shift is twist_stall_shift_deg times (twist_factor(this) - twist_factor(q)),
+## none at or below it, so the tunnel's lift points stay where they were measured. 0 = from zero
+## pressure: twist_stall_shift_deg times (1 - twist_factor(q)).
+@export var twist_stall_shift_from_pa: float = 0.0
 ## The twisted top carries less, so the centre of effort comes down. The height is
 ## ce_height_fraction times (1 - this times (1 - the twist's share)): about 6 % lower at 8 m/s
 ## than at 4 m/s. An average: in the tunnel (Fig. 8d) the drop from 4 to 8 m/s runs from 10 %

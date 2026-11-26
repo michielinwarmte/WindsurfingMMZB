@@ -21,6 +21,9 @@ func _legacy_sail() -> SailConfig:
 	config.cl_transition_gain = 0.3
 	config.alpha_luff_deg = 5.0
 	config.twist_pressure_pa = 0.0
+	# And the sheet's range the worked examples were made with (fully in at 12 degrees, before the
+	# 5 degree stop of 26 November 2026).
+	config.sheet_angle_in_deg = 12.0
 	return config
 
 
@@ -345,7 +348,7 @@ func test_the_centre_of_effort_sits_lower_when_the_sail_is_eased() -> void:
 	# 77 degrees 13. The same wind, so the twist lowers both alike; the ratio is the table's.
 	var sail: SailModel = SailModel.new(config)
 	var foot_y: float = config.mast_foot_local.y
-	sail.compute(RigFrame.rigid_on(_body(), config.mast_foot_local), _constant_wind(8.0, 90.0), 1.0 - (77.0 - 12.0) / 73.0, 0.0, 1.225)
+	sail.compute(RigFrame.rigid_on(_body(), config.mast_foot_local), _constant_wind(8.0, 90.0), 1.0 - (77.0 - config.sheet_angle_in_deg) / (config.sheet_angle_out_deg - config.sheet_angle_in_deg), 0.0, 1.225)
 	assert_almost_eq(rad_to_deg(sail.alpha_rad), 13.0, 1e-3)
 	var powered_height: float = sail.ce_local.y - foot_y
 	sail.compute(RigFrame.rigid_on(_body(), config.mast_foot_local), _constant_wind(8.0, 90.0), 0.0, 0.0, 1.225)

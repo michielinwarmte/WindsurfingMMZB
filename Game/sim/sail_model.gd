@@ -282,7 +282,10 @@ func lift_coefficient(alpha: float, q_pa: float = 0.0) -> float:
 	var share: float = twist_factor(q_pa)
 	# The twisted sail stalls later (SailConfig.twist_stall_shift_deg): the curve's corners move
 	# up together, the slope stays.
-	var shift_deg: float = config.twist_stall_shift_deg * (1.0 - share)
+	var shift_deg: float = 0.0
+	if config.twist_stall_shift_deg > 0.0:
+		var share_at_start: float = twist_factor(config.twist_stall_shift_from_pa) if config.twist_stall_shift_from_pa > 0.0 else 1.0
+		shift_deg = config.twist_stall_shift_deg * maxf(share_at_start - share, 0.0)
 	var linear_end_deg: float = config.cl_linear_end_deg + shift_deg
 	var peak_deg: float = config.cl_peak_deg + shift_deg
 	var stall_end_deg: float = config.cl_stall_end_deg + shift_deg
