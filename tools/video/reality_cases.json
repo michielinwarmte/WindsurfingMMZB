@@ -25,6 +25,26 @@
     "--only=straight",
     "--lake_waves=1"
    ]
+  },
+  "strong_62_waves": {
+   "tool": "matrix",
+   "args": [
+    "--only=straight",
+    "--winds=24,30",
+    "--waves=1",
+    "--gear_board=pj_new_sealand_slalom_97",
+    "--gear_sail=gg_sails_slalom_5_7"
+   ]
+  },
+  "medium_72_waves": {
+   "tool": "matrix",
+   "args": [
+    "--only=straight",
+    "--winds=18,22",
+    "--waves=1",
+    "--gear_board=pj_new_sealand_slalom_117",
+    "--gear_sail=nielstrots_slalom_7_4"
+   ]
   }
  },
  "cases": [
@@ -218,23 +238,23 @@
    },
    "game": [
     {
-     "run": "medium_72",
+     "run": "medium_72_waves",
      "csv": "straight_18.csv"
     },
     {
-     "run": "medium_72",
+     "run": "medium_72_waves",
      "csv": "straight_22.csv"
     },
     {
-     "run": "strong_62",
+     "run": "strong_62_waves",
      "csv": "straight_24.csv"
     },
     {
-     "run": "strong_62",
+     "run": "strong_62_waves",
      "csv": "straight_30.csv"
     }
    ],
-   "note": "the videos' winds are ranges and the sails differ a little from the game's nearest gear; a rough check"
+   "note": "in the game's sea (--waves=1): the videos are nearly all in chop (Max, 26 Nov: 'we do not measure in waves'); flat water was the wrong comparison"
   }
  ]
 }

@@ -185,6 +185,11 @@ New strict case "speed" (32.5 +- 2.5 kn, tools/video/reality_cases.json): strong
 pass; medium_72 (117 l + 7.4) at 18/22 kt 25.9/28.5 kn fail (12-20 % slow). Those runs use the player's controller
 (Helm.steer, rig nearly upright); the autopilot's rake-first hold made 30 kn at 18 kt (pitch budget, 72 + 8.0), so gap 1
 (rake-first steering for the player) is the likely first lever. Reality check now 3 of 14 strict.
+CORRECTED the same evening (Max: "game is not right in strong winds. we do not measure in waves"): the videos are nearly
+all in chop, so the speed case now reads runs in the game's sea (--waves=1, runs medium_72_waves, strong_62_waves): 72 + 7.4
+at 18/22 kt 23.6/25.7 kn (27/21 % slow), 97 l + 5.7 at 24/30 kt 28.5/31.6 kn (12 % slow / just inside). The game's chop
+costs 8-10 % on the beam reach (flat 25.9/28.5/31.5/34.2). Too slow in chop everywhere but 30 kt. Levers: the rig's hold
+(rake-first), the waves' cost (backlog E01.S20 T3; the real cost needs a source or Max), the hull (E01.S08). 2 of 14 strict.
 
 ## Gap 1 (rig upright, wet length): diagnosed, not fixed
 
