@@ -72,6 +72,10 @@ extends Resource
 ## After the leader's take at a mark, the chasers at the same mark (then back to the leader): how
 ## often, and how soon after the leader's take they must come (seconds).
 @export var chasers_at_mark_chance: float = 0.7
+## A take whose time is up runs on when the leader's cut to its mark (or the finish) is due within this
+## long, s: a new take would be cut after a second or two (the stream holds a group until the buoy
+## comes up). The game's choice, set by the check (a quarter of the race's takes came out under 3 s).
+@export var hold_for_mark_s: float = 4.0
 @export var chasers_within_s: float = 25.0
 
 @export_group("The finish")

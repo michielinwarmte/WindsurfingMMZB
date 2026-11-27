@@ -32,6 +32,7 @@
 ;   only 58 % of the seconds); chasers_at_mark_chance 0.7 and finish_follow_through_chance 0.5 (the
 ;   notes say "often" and show both about equally); mark_after_rounding_s; mark_near_m (the gybe
 ;   done once the board has come within 25 m of the buoy and goes away again); chasers_within_s;
+;   hold_for_mark_s (a take runs on when the leader's mark cut is due within 4 s: set by the check);
 ;   lead_group_m and lead_group_most (the readers' lead group: the first 2 to 4 together);
 ;   fleet_together_m (a picture on the fleet only while the boards still racing are together); close_m and
 ;   gained_s (the 12 November numbers); the beach cam's place where a map does not say (the nearest
@@ -513,6 +514,7 @@ mark_longest_s = 16.0
 mark_after_rounding_s = 1.5
 mark_near_m = 25.0
 chasers_at_mark_chance = 0.7
+hold_for_mark_s = 4.0
 chasers_within_s = 25.0
 finish_picture = SubResource("finish_hover")
 finish_cut_before_s = Vector2(2.0, 5.0)

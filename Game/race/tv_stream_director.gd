@@ -210,7 +210,23 @@ func _race(race: RaceSim) -> void:
 		return
 	if _left_s > 0.0 and tv.runner.watch_order().has(tv.focus):
 		return
+	if tv.runner.watch_order().has(tv.focus) and _leader_due_within(race, config.hold_for_mark_s):
+		return  # the take runs on: the cut to the mark comes in a moment
 	_free(race, config.race)
+
+
+## Whether the leader's cut to its mark (or the finish) is due within this many seconds.
+func _leader_due_within(race: RaceSim, seconds: float) -> bool:
+	var leader: int = _first_racing(race)
+	if race.is_finished(leader):
+		return false
+	var next: RaceStep = race.next_step(leader)
+	if next == null:
+		return false
+	var cut_before_s: float = _finish_cut_s if next.kind == RaceStep.Kind.FINISH else _cut_before(race.next_step_index(leader))
+	if next.kind != RaceStep.Kind.FINISH and _shown.get(leader, -1) == race.next_step_index(leader):
+		return false
+	return _seconds_to_next(race, leader) - cut_before_s < seconds
 
 
 func _after_race(race: RaceSim) -> void:
