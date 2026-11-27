@@ -25,9 +25,10 @@ extends RefCounted
 ## speed through the turn, the time it was off the plane, how near the mark it went (its nearest
 ## distance to the mark, or to the nearer end of a gate) and whether it fell. A rounding counts as a
 ## gybe when the board's stern went through the wind: its wind angle changed sides beyond
-## gybe_twa_deg (from +170 to -175 degrees, say; a tack changes sides through 0). The sail's own flip
-## comes later than that in the game's gybe, often after the watch, so it is not the measure. A
-## rounding without a gybe (a bear-away at a windward mark, a head-up) gets no gybe line. Good: it kept good_kept
+## gybe_twa_deg (from +170 to -175 degrees, say; a tack changes sides through 0; the game's sail goes
+## across at the same moment). The race counts the mark seconds before that, so the watch goes on until
+## the way out of the gybe. A rounding without a gybe (a bear-away at a windward mark, a head-up) gets
+## no gybe line. Good: it kept good_kept
 ## of its speed, stayed on the plane and went in tight; bad: it all but stopped (less than bad_kept of
 ## its speed) or went wide; a fall is told as a fall; safe: the rest.
 
