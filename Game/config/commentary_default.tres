@@ -202,8 +202,8 @@ after_win_s = 8.0
 subtitle_linger_s = 1.2
 subtitle_min_s = 1.8
 voice_name = "en_GB-northern_english_male-medium"
-voice_length_scale = 1.0
-voice_sentence_silence_s = 0.2
+voice_length_scale = 0.9
+voice_sentence_silence_s = 0.15
 voice_noise_scale = 0.667
 voice_noise_w = 0.8
 voice_rate_by_level = PackedFloat32Array(0.97, 1, 1.03, 1.06)
@@ -213,4 +213,39 @@ voice_wait_min_s = 0.3
 voice_wait_max_s = 0.8
 voice_fade_s = 0.06
 voice_warm_up_lines = 400
-voice_spellings = Dictionary[String, String]({})
+voice_spellings = Dictionary[String, String]({
+"Aiko": "Eye-ko",
+"Baumann": "Bowman",
+"Corentin": "Corontan",
+"Croes": "Kroos",
+"Daan": "Dahn",
+"Dijkman": "Dikeman",
+"Elin": "Ellin",
+"Faure": "Fore",
+"Garrec": "Garreck",
+"Gian": "Jahn",
+"Giulio": "Julio",
+"Hinrichs": "Hinriks",
+"Ines": "Eeness",
+"Kacper": "Katsper",
+"Malo": "Mallo",
+"Marchetti": "Marketti",
+"Mathis": "Mateess",
+"Noe": "Noay",
+"Noor": "Noo-er",
+"Norgaard": "Norgord",
+"Nowacki": "Novatski",
+"Ole": "Oleh",
+"Pia": "Peea",
+"Roussel": "Roossell",
+"Thijmen": "Taymen",
+"Tiago": "Tee-ahgo",
+"Tibault": "Teebo",
+"Tomas": "Tommas",
+"Tymon": "Timon",
+"Unai": "Oonai",
+"Vasseur": "Vassur",
+"Veldhuis": "Velthouse",
+"Wilke": "Vilkeh",
+"Zielinski": "Zhelinski"
+})

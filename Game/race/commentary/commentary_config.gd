@@ -237,9 +237,12 @@ extends Resource
 @export var voice_name: String = "en_GB-northern_english_male-medium"
 ## Piper's own numbers, for every line: length_scale (above 1 slower, below 1 faster), the pause after
 ## each sentence (s), and how much the voice (noise_scale) and its timing (noise_w) vary. Changing one
-## makes every line again (they are part of a line's name on the disk).
-@export var voice_length_scale: float = 1.0
-@export var voice_sentence_silence_s: float = 0.2
+## makes every line again (they are part of a line's name on the disk). Measured 28 November 2026 on
+## the 76 starter lines: at 1.0 (and 0.2 s between sentences) the voice took 1.15 to 1.17 times his
+## seconds (he talks fast); at 0.9 (and 0.15 s) 1.04 times, and Whisper read the lines back as well
+## (word errors 9 % against 11 %). So 0.9.
+@export var voice_length_scale: float = 0.9
+@export var voice_sentence_silence_s: float = 0.15
 @export var voice_noise_scale: float = 0.667
 @export var voice_noise_w: float = 0.8
 ## How each level (1 calm, 2 his race voice, 3 lifted, 4 shouting) is said: the rate the sound is
