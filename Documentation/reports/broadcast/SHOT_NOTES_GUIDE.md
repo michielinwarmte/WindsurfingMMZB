@@ -32,10 +32,27 @@ One file per replay: `shots/shot_notes.csv` (UTF-8, comma separated, a header ro
 | `boards` | boards in the picture: `0`, `1`, `2`, `3`, `4-6`, `7+` |
 | `subject` | `leader`, `lead_group` (the first 2 to 4 together), `duel` (two boards fighting, not for first), `chasers` (a group behind the lead), `fleet` (most of the heat), `one_rider` (a single board that isn't leading), `mark` (the buoy, boards coming through), `start_line`, `finish_line`, `shore` (beach, people, scenery), `people` (presenter, interview, a rider on land), `graphic`, `none` |
 | `move` | `follows` (the camera travels with the boards and keeps them about the same size), `static` (it stays in place, the boards move through the picture), `pan` (it stays in place and turns with them), `push_in`, `pull_out`, `orbit` (it circles the subject), `fly_over`, `na` |
-| `moment` | the race moment, from the picture and the commentary: `intro`, `pre_start` (boards milling or lining up), `start` (the last seconds to the line and the first seconds after), `first_reach`, `reach` (a later leg), `mark_approach`, `mark_rounding` (the gybe), `last_leg`, `finish`, `after_finish`, `replay` (action shown again, slow motion or not), `results` (a results graphic, or the commentator going through the order), `interview`, `other` |
+| `phase` | one of the four phases of a heat (Max, 27 November 2026): `pre_start`, `start`, `race`, `after_race`. Their exact borders are under "The four phases" below. |
+| `moment` | the finer race moment inside the phase, from the picture and the commentary: `intro`, `pre_start` (boards milling or lining up), `start` (the last seconds to the line and the first seconds after), `first_reach`, `reach` (a later leg), `mark_approach`, `mark_rounding` (the gybe), `last_leg`, `finish`, `after_finish`, `replay` (action shown again, slow motion or not), `results` (a results graphic, or the commentator going through the order), `interview`, `other` |
 | `graphics` | the graphics on the picture, `+` between them: `logo` (corner logo), `caption` (a small title bar), `leaderboard`, `clock`, `name_tag` (a rider's name bar), `results_table`, `sponsor`, `none` |
 | `sure` | `yes`, or `no` when you had to guess one of the fields; say which in `note` |
 | `note` | anything short and useful: "cut to the second drone, cooler colours", "leader gybes inside", "camera loses the leader, searches" |
+
+### The four phases
+
+Every beat belongs to exactly one phase. All the drone numbers (which camera, how high, how long a shot lasts) are worked out per phase, and the game's TV director gets its settings per phase.
+
+| Phase | From | Until | Moments inside it |
+|---|---|---|---|
+| `pre_start` | the first picture of the heat | the boards turn for their final run at the line (about the last 10 s before the gun) | `intro`, `pre_start` |
+| `start` | the final run at the line | the fleet is clear of the line and strung out on the first reach (about 10 to 15 s after the gun) | `start` |
+| `race` | the fleet on the first reach | the last board that the stream shows crosses the finish line | `first_reach`, `reach`, `mark_approach`, `mark_rounding`, `last_leg`, `finish` |
+| `after_race` | after that finish | the end of the video | `after_finish`, `replay`, `results`, `interview` |
+
+- A beat that runs across a border goes to the phase it starts in, unless it is a long take: then split it at the border into parts.
+- Note the time of **the gun** and of **the winner's finish** in `director_notes.md` (as `mm:ss`), with how you know (the commentary, a flag, the boards crossing the line). Everything is later measured against these two times.
+- A heat that is started twice (a general recall): the first try is `pre_start` again from the recall on; say so in `note`.
+- `other` as a moment keeps the phase of the beats around it.
 
 ### How to judge the hard ones
 
