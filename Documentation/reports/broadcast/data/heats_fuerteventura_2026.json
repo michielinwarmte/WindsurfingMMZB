@@ -1,0 +1,74 @@
+{
+ "Mt9gi7qP82Q": {
+  "name": "Men's Elimination 1",
+  "gun_s": 105,
+  "finish_s": 290,
+  "recalled": [
+   [
+    52,
+    59
+   ]
+  ],
+  "format": "regular"
+ },
+ "Q08jEfcMU9Q": {
+  "name": "Men's Elimination 2",
+  "gun_s": 43,
+  "finish_s": 235,
+  "format": "regular"
+ },
+ "dLbDV6jDm2s": {
+  "name": "Men's Elimination 3",
+  "gun_s": 63,
+  "finish_s": 252,
+  "format": "obstacle"
+ },
+ "6Lp_1I03OHE": {
+  "name": "Men's Elimination 4",
+  "gun_s": 82,
+  "finish_s": 267,
+  "format": "obstacle"
+ },
+ "XQMlNVPPuaw": {
+  "name": "Men's Elimination 5",
+  "gun_s": 105,
+  "finish_s": 292,
+  "format": "regular"
+ },
+ "ANNFWjE6JuI": {
+  "name": "Men's Elimination 6",
+  "gun_s": 64,
+  "finish_s": 455,
+  "format": "long_distance"
+ },
+ "2FJY7lpVYDA": {
+  "name": "Men's Elimination 7",
+  "gun_s": 16,
+  "finish_s": 500,
+  "format": "long_distance"
+ },
+ "ujNLUgITjpg": {
+  "name": "Men's Elimination 8",
+  "gun_s": 114,
+  "finish_s": 310,
+  "format": "regular"
+ },
+ "P6iCS8-o0B8": {
+  "name": "Men's Elimination 9",
+  "gun_s": 108,
+  "finish_s": 335,
+  "format": "regular"
+ },
+ "V73vVhTTr0E": {
+  "name": "Men's Elimination 10",
+  "gun_s": 74,
+  "finish_s": 247,
+  "format": "regular"
+ },
+ "CJIOFQGVrpk": {
+  "name": "Men's Elimination 11",
+  "gun_s": 219,
+  "finish_s": 395,
+  "format": "regular"
+ }
+}

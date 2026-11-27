@@ -77,6 +77,10 @@ Short words; the director knows what each means. The bank's builders use only th
 | `many` | at least 6 boards race |
 | `pair` | exactly two boards are in the moment (`{rider2}` is filled) |
 | `last_lap` | the board is on its last leg |
+| `wind_strong` | it blows hard (a "howling" line must not come in light wind) |
+| `wind_light` | the wind is light |
+| `choppy` | the water is rough |
+| `flat` | the water is flat |
 
 ## The moments
 

@@ -1,0 +1,1366 @@
+{
+ "source": "shot notes of 9 slalom heat replays, World Cup Fuerteventura 2026 (Slalom-X)",
+ "videos": [
+  "Mt9gi7qP82Q",
+  "Q08jEfcMU9Q",
+  "dLbDV6jDm2s",
+  "6Lp_1I03OHE",
+  "XQMlNVPPuaw",
+  "ujNLUgITjpg",
+  "P6iCS8-o0B8",
+  "V73vVhTTr0E",
+  "CJIOFQGVrpk"
+ ],
+ "start_phase_s": [
+  -10.0,
+  12.0
+ ],
+ "phases": {
+  "pre_start": {
+   "seconds_per_heat": 89.6,
+   "take_length": {
+    "shots": 48,
+    "p25_s": 7.4,
+    "median_s": 11.3,
+    "p75_s": 26.9,
+    "longest_s": 71.9
+   },
+   "take_length_action": {
+    "shots": 27,
+    "p25_s": 4.9,
+    "median_s": 9.0,
+    "p75_s": 19.8,
+    "longest_s": 71.9
+   },
+   "pictures": [
+    {
+     "camera": "graphic",
+     "view": "",
+     "on": "",
+     "share_pct": 55.6,
+     "beat": {
+      "p25_s": 7.6,
+      "median_s": 12.1,
+      "p75_s": 46.0,
+      "beats": 19
+     },
+     "move_pct": {
+      "na": 100
+     }
+    },
+    {
+     "camera": "shore_long_lens",
+     "view": "shore",
+     "on": "fleet",
+     "share_pct": 23.1,
+     "beat": {
+      "p25_s": 10.4,
+      "median_s": 14.0,
+      "p75_s": 20.0,
+      "beats": 9
+     },
+     "move_pct": {
+      "static": 97,
+      "pan": 3
+     },
+     "sail_pct": {
+      "p25": 3.0,
+      "median": 3.0,
+      "p75": 5.0
+     },
+     "horizon_pct": {
+      "p25": 55.0,
+      "median": 70.0,
+      "p75": 70.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "shore_long_lens",
+     "view": "shore",
+     "on": "line",
+     "share_pct": 11.4,
+     "beat": {
+      "p25_s": 2.3,
+      "median_s": 4.5,
+      "p75_s": 6.4,
+      "beats": 17
+     },
+     "move_pct": {
+      "static": 92,
+      "pan": 8
+     },
+     "sail_pct": {
+      "p25": 3.0,
+      "median": 8.0,
+      "p75": 25.0
+     },
+     "horizon_pct": {
+      "p25": 35.0,
+      "median": 45.0,
+      "p75": 75.0
+     },
+     "horizon_out_of_picture_pct": 13
+    },
+    {
+     "camera": "beach_handheld",
+     "view": "",
+     "on": "",
+     "share_pct": 3.3,
+     "beat": {
+      "p25_s": 11.7,
+      "median_s": 15.0,
+      "p75_s": 15.0,
+      "beats": 2
+     },
+     "move_pct": {
+      "follows": 100
+     }
+    },
+    {
+     "camera": "drone",
+     "view": "na",
+     "on": "line",
+     "share_pct": 3.2,
+     "beat": {
+      "p25_s": 6.6,
+      "median_s": 6.6,
+      "p75_s": 9.8,
+      "beats": 4
+     },
+     "move_pct": {
+      "static": 100
+     },
+     "sail_pct": {
+      "p25": 1.0,
+      "median": 1.0,
+      "p75": 1.0
+     },
+     "horizon_pct": {
+      "p25": 20.0,
+      "median": 40.0,
+      "p75": 45.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "drone",
+     "view": "behind_side",
+     "on": "fleet",
+     "share_pct": 1.4,
+     "beat": {
+      "p25_s": 11.3,
+      "median_s": 11.3,
+      "p75_s": 11.3,
+      "beats": 1
+     },
+     "move_pct": {
+      "follows": 100
+     },
+     "sail_pct": {
+      "p25": 8.0,
+      "median": 8.0,
+      "p75": 8.0
+     },
+     "horizon_pct": {
+      "p25": 35.0,
+      "median": 35.0,
+      "p75": 35.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "drone",
+     "view": "front_side",
+     "on": "line",
+     "share_pct": 1.1,
+     "beat": {
+      "p25_s": 0.1,
+      "median_s": 9.0,
+      "p75_s": 9.0,
+      "beats": 2
+     },
+     "move_pct": {
+      "static": 100
+     },
+     "sail_pct": {
+      "p25": 10.0,
+      "median": 10.0,
+      "p75": 10.0
+     },
+     "horizon_pct": {
+      "p25": 45.0,
+      "median": 45.0,
+      "p75": 45.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "drone",
+     "view": "side",
+     "on": "pack",
+     "share_pct": 0.9,
+     "beat": {
+      "p25_s": 7.0,
+      "median_s": 7.0,
+      "p75_s": 7.0,
+      "beats": 1
+     },
+     "move_pct": {
+      "follows": 100
+     },
+     "sail_pct": {
+      "p25": 25.0,
+      "median": 25.0,
+      "p75": 25.0
+     },
+     "horizon_pct": {
+      "p25": 45.0,
+      "median": 45.0,
+      "p75": 45.0
+     },
+     "horizon_out_of_picture_pct": 0
+    }
+   ]
+  },
+  "start": {
+   "seconds_per_heat": 23.9,
+   "take_length": {
+    "shots": 23,
+    "p25_s": 4.8,
+    "median_s": 8.0,
+    "p75_s": 12.0,
+    "longest_s": 22.0
+   },
+   "take_length_action": {
+    "shots": 23,
+    "p25_s": 4.8,
+    "median_s": 8.0,
+    "p75_s": 12.0,
+    "longest_s": 22.0
+   },
+   "pictures": [
+    {
+     "camera": "shore_long_lens",
+     "view": "shore",
+     "on": "line",
+     "share_pct": 31.5,
+     "beat": {
+      "p25_s": 6.3,
+      "median_s": 6.7,
+      "p75_s": 7.1,
+      "beats": 10
+     },
+     "move_pct": {
+      "static": 100
+     },
+     "sail_pct": {
+      "p25": 3.0,
+      "median": 3.0,
+      "p75": 5.0
+     },
+     "horizon_pct": {
+      "p25": 60.0,
+      "median": 70.0,
+      "p75": 75.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "drone",
+     "view": "front_side",
+     "on": "line",
+     "share_pct": 20.3,
+     "beat": {
+      "p25_s": 3.9,
+      "median_s": 6.0,
+      "p75_s": 8.0,
+      "beats": 8
+     },
+     "move_pct": {
+      "static": 68,
+      "follows": 32
+     },
+     "sail_pct": {
+      "p25": 5.0,
+      "median": 10.0,
+      "p75": 15.0
+     },
+     "horizon_pct": {
+      "p25": 40.0,
+      "median": 40.0,
+      "p75": 45.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "drone",
+     "view": "side",
+     "on": "line",
+     "share_pct": 20.1,
+     "beat": {
+      "p25_s": 3.8,
+      "median_s": 5.2,
+      "p75_s": 10.0,
+      "beats": 7
+     },
+     "move_pct": {
+      "static": 73,
+      "follows": 27
+     },
+     "sail_pct": {
+      "p25": 2.0,
+      "median": 5.0,
+      "p75": 10.0
+     },
+     "horizon_pct": {
+      "p25": 35.0,
+      "median": 45.0,
+      "p75": 45.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "drone",
+     "view": "behind_side",
+     "on": "fleet",
+     "share_pct": 14.5,
+     "beat": {
+      "p25_s": 7.3,
+      "median_s": 9.0,
+      "p75_s": 9.6,
+      "beats": 4
+     },
+     "move_pct": {
+      "follows": 83,
+      "static": 17
+     },
+     "sail_pct": {
+      "p25": 15.0,
+      "median": 15.0,
+      "p75": 15.0
+     },
+     "horizon_pct": {
+      "p25": 35.0,
+      "median": 35.0,
+      "p75": 35.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "drone",
+     "view": "front_side",
+     "on": "front",
+     "share_pct": 8.7,
+     "beat": {
+      "p25_s": 3.8,
+      "median_s": 5.3,
+      "p75_s": 9.6,
+      "beats": 3
+     },
+     "move_pct": {
+      "follows": 100
+     },
+     "sail_pct": {
+      "p25": 20.0,
+      "median": 20.0,
+      "p75": 20.0
+     },
+     "horizon_pct": {
+      "p25": 25.0,
+      "median": 40.0,
+      "p75": 40.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "drone",
+     "view": "front_side",
+     "on": "fleet",
+     "share_pct": 1.7,
+     "beat": {
+      "p25_s": 3.6,
+      "median_s": 3.6,
+      "p75_s": 3.6,
+      "beats": 1
+     },
+     "move_pct": {
+      "follows": 100
+     },
+     "sail_pct": {
+      "p25": 10.0,
+      "median": 10.0,
+      "p75": 10.0
+     },
+     "horizon_pct": {
+      "p25": 35.0,
+      "median": 35.0,
+      "p75": 35.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "drone",
+     "view": "side",
+     "on": "fleet",
+     "share_pct": 1.2,
+     "beat": {
+      "p25_s": 0.8,
+      "median_s": 1.8,
+      "p75_s": 1.8,
+      "beats": 2
+     },
+     "move_pct": {
+      "follows": 100
+     },
+     "sail_pct": {
+      "p25": 5.0,
+      "median": 5.0,
+      "p75": 20.0
+     },
+     "horizon_pct": {
+      "p25": 30.0,
+      "median": 45.0,
+      "p75": 45.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "shore_long_lens",
+     "view": "shore",
+     "on": "fleet",
+     "share_pct": 0.9,
+     "beat": {
+      "p25_s": 2.0,
+      "median_s": 2.0,
+      "p75_s": 2.0,
+      "beats": 1
+     },
+     "move_pct": {
+      "static": 100
+     },
+     "sail_pct": {
+      "p25": 5.0,
+      "median": 5.0,
+      "p75": 5.0
+     },
+     "horizon_pct": {
+      "p25": 60.0,
+      "median": 60.0,
+      "p75": 60.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "drone",
+     "view": "behind_side",
+     "on": "front",
+     "share_pct": 0.8,
+     "beat": {
+      "p25_s": 1.7,
+      "median_s": 1.7,
+      "p75_s": 1.7,
+      "beats": 1
+     },
+     "move_pct": {
+      "follows": 100
+     },
+     "sail_pct": {
+      "p25": 20.0,
+      "median": 20.0,
+      "p75": 20.0
+     },
+     "horizon_pct": {
+      "p25": 30.0,
+      "median": 30.0,
+      "p75": 30.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "drone",
+     "view": "na",
+     "on": "line",
+     "share_pct": 0.3,
+     "beat": {
+      "p25_s": 0.6,
+      "median_s": 0.6,
+      "p75_s": 0.6,
+      "beats": 1
+     },
+     "move_pct": {
+      "static": 100
+     },
+     "sail_pct": null,
+     "horizon_pct": {
+      "p25": 45.0,
+      "median": 45.0,
+      "p75": 45.0
+     },
+     "horizon_out_of_picture_pct": 0
+    }
+   ]
+  },
+  "race": {
+   "seconds_per_heat": 199.2,
+   "take_length": {
+    "shots": 174,
+    "p25_s": 5.0,
+    "median_s": 8.1,
+    "p75_s": 12.2,
+    "longest_s": 55.8
+   },
+   "take_length_action": {
+    "shots": 174,
+    "p25_s": 5.0,
+    "median_s": 8.1,
+    "p75_s": 12.2,
+    "longest_s": 55.8
+   },
+   "pictures": [
+    {
+     "camera": "drone",
+     "view": "behind_side",
+     "on": "front",
+     "share_pct": 17.4,
+     "beat": {
+      "p25_s": 6.0,
+      "median_s": 10.0,
+      "p75_s": 16.4,
+      "beats": 28
+     },
+     "move_pct": {
+      "follows": 100
+     },
+     "sail_pct": {
+      "p25": 10.0,
+      "median": 15.0,
+      "p75": 15.0
+     },
+     "horizon_pct": {
+      "p25": 10.0,
+      "median": 25.0,
+      "p75": 40.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "drone",
+     "view": "front_side",
+     "on": "front",
+     "share_pct": 16.3,
+     "beat": {
+      "p25_s": 4.5,
+      "median_s": 6.7,
+      "p75_s": 15.5,
+      "beats": 31
+     },
+     "move_pct": {
+      "follows": 91,
+      "pan": 6,
+      "orbit": 2
+     },
+     "sail_pct": {
+      "p25": 10.0,
+      "median": 15.0,
+      "p75": 15.0
+     },
+     "horizon_pct": {
+      "p25": 25.0,
+      "median": 35.0,
+      "p75": 40.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "drone",
+     "view": "side",
+     "on": "front",
+     "share_pct": 12.0,
+     "beat": {
+      "p25_s": 4.6,
+      "median_s": 6.9,
+      "p75_s": 9.7,
+      "beats": 26
+     },
+     "move_pct": {
+      "follows": 84,
+      "pan": 9,
+      "static": 6
+     },
+     "sail_pct": {
+      "p25": 5.0,
+      "median": 10.0,
+      "p75": 15.0
+     },
+     "horizon_pct": {
+      "p25": 25.0,
+      "median": 35.0,
+      "p75": 35.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "drone",
+     "view": "side",
+     "on": "mark",
+     "share_pct": 7.8,
+     "beat": {
+      "p25_s": 3.8,
+      "median_s": 6.4,
+      "p75_s": 10.4,
+      "beats": 19
+     },
+     "move_pct": {
+      "static": 50,
+      "pan": 47,
+      "follows": 3
+     },
+     "sail_pct": {
+      "p25": 10.0,
+      "median": 15.0,
+      "p75": 20.0
+     },
+     "horizon_pct": {
+      "p25": 20.0,
+      "median": 25.0,
+      "p75": 35.0
+     },
+     "horizon_out_of_picture_pct": 8
+    },
+    {
+     "camera": "drone",
+     "view": "behind_side",
+     "on": "pack",
+     "share_pct": 7.0,
+     "beat": {
+      "p25_s": 5.2,
+      "median_s": 7.7,
+      "p75_s": 11.0,
+      "beats": 16
+     },
+     "move_pct": {
+      "follows": 100
+     },
+     "sail_pct": {
+      "p25": 15.0,
+      "median": 20.0,
+      "p75": 20.0
+     },
+     "horizon_pct": {
+      "p25": 5.0,
+      "median": 15.0,
+      "p75": 20.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "drone",
+     "view": "behind_side",
+     "on": "mark",
+     "share_pct": 6.4,
+     "beat": {
+      "p25_s": 6.4,
+      "median_s": 8.4,
+      "p75_s": 8.9,
+      "beats": 13
+     },
+     "move_pct": {
+      "static": 60,
+      "pan": 30,
+      "follows": 10
+     },
+     "sail_pct": {
+      "p25": 15.0,
+      "median": 20.0,
+      "p75": 20.0
+     },
+     "horizon_pct": {
+      "p25": 15.0,
+      "median": 15.0,
+      "p75": 20.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "shore_long_lens",
+     "view": "shore",
+     "on": "front",
+     "share_pct": 6.1,
+     "beat": {
+      "p25_s": 3.2,
+      "median_s": 6.4,
+      "p75_s": 8.4,
+      "beats": 18
+     },
+     "move_pct": {
+      "pan": 100
+     },
+     "sail_pct": {
+      "p25": 40.0,
+      "median": 55.0,
+      "p75": 65.0
+     },
+     "horizon_pct": {
+      "p25": 15.0,
+      "median": 25.0,
+      "p75": 25.0
+     },
+     "horizon_out_of_picture_pct": 48
+    },
+    {
+     "camera": "drone",
+     "view": "side",
+     "on": "line",
+     "share_pct": 5.1,
+     "beat": {
+      "p25_s": 5.4,
+      "median_s": 12.4,
+      "p75_s": 25.0,
+      "beats": 7
+     },
+     "move_pct": {
+      "static": 77,
+      "pan": 16,
+      "follows": 8
+     },
+     "sail_pct": {
+      "p25": 3.0,
+      "median": 5.0,
+      "p75": 5.0
+     },
+     "horizon_pct": {
+      "p25": 25.0,
+      "median": 25.0,
+      "p75": 30.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "drone",
+     "view": "front_side",
+     "on": "mark",
+     "share_pct": 4.8,
+     "beat": {
+      "p25_s": 5.7,
+      "median_s": 8.2,
+      "p75_s": 9.4,
+      "beats": 10
+     },
+     "move_pct": {
+      "pan": 72,
+      "static": 28
+     },
+     "sail_pct": {
+      "p25": 10.0,
+      "median": 10.0,
+      "p75": 20.0
+     },
+     "horizon_pct": {
+      "p25": 5.0,
+      "median": 25.0,
+      "p75": 35.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "drone",
+     "view": "side",
+     "on": "pack",
+     "share_pct": 4.5,
+     "beat": {
+      "p25_s": 3.6,
+      "median_s": 9.4,
+      "p75_s": 15.1,
+      "beats": 8
+     },
+     "move_pct": {
+      "follows": 96,
+      "static": 4
+     },
+     "sail_pct": {
+      "p25": 8.0,
+      "median": 10.0,
+      "p75": 15.0
+     },
+     "horizon_pct": {
+      "p25": 15.0,
+      "median": 25.0,
+      "p75": 40.0
+     },
+     "horizon_out_of_picture_pct": 23
+    },
+    {
+     "camera": "drone",
+     "view": "behind_side",
+     "on": "fleet",
+     "share_pct": 3.7,
+     "beat": {
+      "p25_s": 4.8,
+      "median_s": 5.0,
+      "p75_s": 6.2,
+      "beats": 12
+     },
+     "move_pct": {
+      "follows": 91,
+      "static": 9
+     },
+     "sail_pct": {
+      "p25": 10.0,
+      "median": 15.0,
+      "p75": 20.0
+     },
+     "horizon_pct": {
+      "p25": 25.0,
+      "median": 35.0,
+      "p75": 40.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "shore_long_lens",
+     "view": "shore",
+     "on": "mark",
+     "share_pct": 2.8,
+     "beat": {
+      "p25_s": 5.0,
+      "median_s": 11.1,
+      "p75_s": 11.9,
+      "beats": 6
+     },
+     "move_pct": {
+      "pan": 100
+     },
+     "sail_pct": {
+      "p25": 35.0,
+      "median": 35.0,
+      "p75": 35.0
+     },
+     "horizon_pct": {
+      "p25": 30.0,
+      "median": 30.0,
+      "p75": 30.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "drone",
+     "view": "side",
+     "on": "fleet",
+     "share_pct": 2.4,
+     "beat": {
+      "p25_s": 8.1,
+      "median_s": 8.4,
+      "p75_s": 11.2,
+      "beats": 5
+     },
+     "move_pct": {
+      "follows": 100
+     },
+     "sail_pct": {
+      "p25": 5.0,
+      "median": 10.0,
+      "p75": 20.0
+     },
+     "horizon_pct": {
+      "p25": 35.0,
+      "median": 40.0,
+      "p75": 45.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "drone",
+     "view": "front_side",
+     "on": "line",
+     "share_pct": 1.1,
+     "beat": {
+      "p25_s": 7.0,
+      "median_s": 12.4,
+      "p75_s": 12.4,
+      "beats": 2
+     },
+     "move_pct": {
+      "pan": 64,
+      "static": 36
+     },
+     "sail_pct": {
+      "p25": 3.0,
+      "median": 5.0,
+      "p75": 5.0
+     },
+     "horizon_pct": {
+      "p25": 25.0,
+      "median": 25.0,
+      "p75": 45.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "drone",
+     "view": "front_side",
+     "on": "fleet",
+     "share_pct": 1.1,
+     "beat": {
+      "p25_s": 0.8,
+      "median_s": 7.4,
+      "p75_s": 10.5,
+      "beats": 4
+     },
+     "move_pct": {
+      "follows": 100
+     },
+     "sail_pct": {
+      "p25": 8.0,
+      "median": 8.0,
+      "p75": 10.0
+     },
+     "horizon_pct": {
+      "p25": 25.0,
+      "median": 40.0,
+      "p75": 40.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "drone",
+     "view": "behind_side",
+     "on": "line",
+     "share_pct": 0.8,
+     "beat": {
+      "p25_s": 2.9,
+      "median_s": 12.0,
+      "p75_s": 12.0,
+      "beats": 2
+     },
+     "move_pct": {
+      "follows": 100
+     },
+     "sail_pct": {
+      "p25": 5.0,
+      "median": 5.0,
+      "p75": 5.0
+     },
+     "horizon_pct": {
+      "p25": 40.0,
+      "median": 40.0,
+      "p75": 40.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "shore_long_lens",
+     "view": "shore",
+     "on": "pack",
+     "share_pct": 0.6,
+     "beat": {
+      "p25_s": 2.8,
+      "median_s": 8.6,
+      "p75_s": 8.6,
+      "beats": 2
+     },
+     "move_pct": {
+      "pan": 100
+     },
+     "sail_pct": {
+      "p25": 30.0,
+      "median": 30.0,
+      "p75": 30.0
+     },
+     "horizon_pct": {
+      "p25": 35.0,
+      "median": 35.0,
+      "p75": 35.0
+     },
+     "horizon_out_of_picture_pct": 25
+    }
+   ]
+  },
+  "after_race": {
+   "seconds_per_heat": 237.1,
+   "take_length": {
+    "shots": 66,
+    "p25_s": 7.6,
+    "median_s": 13.0,
+    "p75_s": 38.0,
+    "longest_s": 308.9
+   },
+   "take_length_action": {
+    "shots": 20,
+    "p25_s": 9.7,
+    "median_s": 19.0,
+    "p75_s": 31.7,
+    "longest_s": 190.7
+   },
+   "pictures": [
+    {
+     "camera": "beach_handheld",
+     "view": "",
+     "on": "",
+     "share_pct": 71.8,
+     "beat": {
+      "p25_s": 4.0,
+      "median_s": 13.0,
+      "p75_s": 58.9,
+      "beats": 43
+     },
+     "move_pct": {
+      "static": 94,
+      "follows": 6
+     }
+    },
+    {
+     "camera": "shore_long_lens",
+     "view": "shore",
+     "on": "pack",
+     "share_pct": 6.7,
+     "beat": {
+      "p25_s": 1.3,
+      "median_s": 16.4,
+      "p75_s": 31.7,
+      "beats": 7
+     },
+     "move_pct": {
+      "follows": 94,
+      "pan": 6
+     },
+     "sail_pct": {
+      "p25": 55.0,
+      "median": 60.0,
+      "p75": 100.0
+     },
+     "horizon_pct": {
+      "p25": 25.0,
+      "median": 25.0,
+      "p75": 25.0
+     },
+     "horizon_out_of_picture_pct": 94
+    },
+    {
+     "camera": "shore_long_lens",
+     "view": "shore",
+     "on": "front",
+     "share_pct": 5.0,
+     "beat": {
+      "p25_s": 1.3,
+      "median_s": 2.2,
+      "p75_s": 9.7,
+      "beats": 13
+     },
+     "move_pct": {
+      "pan": 67,
+      "follows": 33
+     },
+     "sail_pct": {
+      "p25": 60.0,
+      "median": 70.0,
+      "p75": 80.0
+     },
+     "horizon_pct": null,
+     "horizon_out_of_picture_pct": 100
+    },
+    {
+     "camera": "graphic",
+     "view": "",
+     "on": "",
+     "share_pct": 3.2,
+     "beat": {
+      "p25_s": 7.6,
+      "median_s": 7.6,
+      "p75_s": 7.6,
+      "beats": 9
+     },
+     "move_pct": {
+      "na": 100
+     }
+    },
+    {
+     "camera": "drone",
+     "view": "side",
+     "on": "front",
+     "share_pct": 3.2,
+     "beat": {
+      "p25_s": 8.0,
+      "median_s": 20.0,
+      "p75_s": 40.0,
+      "beats": 3
+     },
+     "move_pct": {
+      "follows": 100
+     },
+     "sail_pct": {
+      "p25": 10.0,
+      "median": 10.0,
+      "p75": 10.0
+     },
+     "horizon_pct": {
+      "p25": 30.0,
+      "median": 40.0,
+      "p75": 40.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "drone",
+     "view": "na",
+     "on": "scenery",
+     "share_pct": 2.4,
+     "beat": {
+      "p25_s": 20.6,
+      "median_s": 30.4,
+      "p75_s": 30.4,
+      "beats": 2
+     },
+     "move_pct": {
+      "pull_out": 60,
+      "fly_over": 40
+     },
+     "sail_pct": null,
+     "horizon_pct": {
+      "p25": 20.0,
+      "median": 20.0,
+      "p75": 25.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "drone",
+     "view": "na",
+     "on": "people",
+     "share_pct": 2.3,
+     "beat": {
+      "p25_s": 18.5,
+      "median_s": 31.0,
+      "p75_s": 31.0,
+      "beats": 2
+     },
+     "move_pct": {
+      "orbit": 100
+     },
+     "sail_pct": null,
+     "horizon_pct": null,
+     "horizon_out_of_picture_pct": 100
+    },
+    {
+     "camera": "drone",
+     "view": "side",
+     "on": "mark",
+     "share_pct": 1.4,
+     "beat": {
+      "p25_s": 8.0,
+      "median_s": 9.3,
+      "p75_s": 12.0,
+      "beats": 3
+     },
+     "move_pct": {
+      "follows": 100
+     },
+     "sail_pct": {
+      "p25": 5.0,
+      "median": 8.0,
+      "p75": 20.0
+     },
+     "horizon_pct": {
+      "p25": 25.0,
+      "median": 35.0,
+      "p75": 40.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "drone",
+     "view": "behind_side",
+     "on": "mark",
+     "share_pct": 1.1,
+     "beat": {
+      "p25_s": 8.0,
+      "median_s": 15.7,
+      "p75_s": 15.7,
+      "beats": 2
+     },
+     "move_pct": {
+      "static": 66,
+      "follows": 34
+     },
+     "sail_pct": {
+      "p25": 15.0,
+      "median": 20.0,
+      "p75": 20.0
+     },
+     "horizon_pct": {
+      "p25": 15.0,
+      "median": 15.0,
+      "p75": 15.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "drone",
+     "view": "side",
+     "on": "scenery",
+     "share_pct": 0.7,
+     "beat": {
+      "p25_s": 15.4,
+      "median_s": 15.4,
+      "p75_s": 15.4,
+      "beats": 1
+     },
+     "move_pct": {
+      "fly_over": 100
+     },
+     "sail_pct": {
+      "p25": 3.0,
+      "median": 3.0,
+      "p75": 3.0
+     },
+     "horizon_pct": {
+      "p25": 35.0,
+      "median": 35.0,
+      "p75": 35.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "drone",
+     "view": "side",
+     "on": "pack",
+     "share_pct": 0.5,
+     "beat": {
+      "p25_s": 11.4,
+      "median_s": 11.4,
+      "p75_s": 11.4,
+      "beats": 1
+     },
+     "move_pct": {
+      "pan": 100
+     },
+     "sail_pct": {
+      "p25": 8.0,
+      "median": 8.0,
+      "p75": 8.0
+     },
+     "horizon_pct": {
+      "p25": 25.0,
+      "median": 25.0,
+      "p75": 25.0
+     },
+     "horizon_out_of_picture_pct": 0
+    },
+    {
+     "camera": "drone",
+     "view": "behind_side",
+     "on": "front",
+     "share_pct": 0.5,
+     "beat": {
+      "p25_s": 4.3,
+      "median_s": 7.1,
+      "p75_s": 7.1,
+      "beats": 2
+     },
+     "move_pct": {
+      "pan": 62,
+      "follows": 38
+     },
+     "sail_pct": {
+      "p25": 3.0,
+      "median": 15.0,
+      "p75": 15.0
+     },
+     "horizon_pct": {
+      "p25": 45.0,
+      "median": 45.0,
+      "p75": 45.0
+     },
+     "horizon_out_of_picture_pct": 62
+    },
+    {
+     "camera": "drone",
+     "view": "behind_side",
+     "on": "pack",
+     "share_pct": 0.4,
+     "beat": {
+      "p25_s": 8.4,
+      "median_s": 8.4,
+      "p75_s": 8.4,
+      "beats": 1
+     },
+     "move_pct": {
+      "follows": 100
+     },
+     "sail_pct": {
+      "p25": 10.0,
+      "median": 10.0,
+      "p75": 10.0
+     },
+     "horizon_pct": null,
+     "horizon_out_of_picture_pct": 100
+    },
+    {
+     "camera": "drone",
+     "view": "na",
+     "on": "pack",
+     "share_pct": 0.4,
+     "beat": {
+      "p25_s": 8.0,
+      "median_s": 8.0,
+      "p75_s": 8.0,
+      "beats": 1
+     },
+     "move_pct": {
+      "static": 100
+     },
+     "sail_pct": null,
+     "horizon_pct": null,
+     "horizon_out_of_picture_pct": 100
+    },
+    {
+     "camera": "drone",
+     "view": "side",
+     "on": "line",
+     "share_pct": 0.3,
+     "beat": {
+      "p25_s": 6.8,
+      "median_s": 6.8,
+      "p75_s": 6.8,
+      "beats": 1
+     },
+     "move_pct": {
+      "static": 100
+     },
+     "sail_pct": {
+      "p25": 5.0,
+      "median": 5.0,
+      "p75": 5.0
+     },
+     "horizon_pct": {
+      "p25": 45.0,
+      "median": 45.0,
+      "p75": 45.0
+     },
+     "horizon_out_of_picture_pct": 0
+    }
+   ]
+  }
+ },
+ "race": {
+  "first_cut_after_gun_s": {
+   "p25": 4.7,
+   "median": 8.4,
+   "p75": 10.3
+  },
+  "mark_time_pct": 28.4,
+  "mark_beat": {
+   "p25_s": 5.4,
+   "median_s": 6.7,
+   "p75_s": 9.4,
+   "beats": 65
+  },
+  "on_pct": {
+   "front": 51.9,
+   "mark": 21.8,
+   "pack": 12.1,
+   "fleet": 7.2,
+   "line": 7.1
+  }
+ }
+}

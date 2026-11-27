@@ -9,6 +9,10 @@ screen, not by the number of shots.
     python -E -P tools/broadcast/shot_stats.py <media root> --ids=<id,id,...> [--out=<folder>]
         [--agree=<id>]     also compare shot_notes.csv with shot_notes_check.csv of this
                            replay (two readers, apart): the share of seconds they agree on
+        [--heats=<json>]   per replay {"gun_s": .., "finish_s": .., "recalled": [[gun, recall]],
+                           "format": "regular" | "obstacle" | "long_distance"}: the start phase
+                           is then set by the clock, the same for every heat
+        [--formats=regular,obstacle]   only the heats of these formats
 
 Writes shot_stats.json (the numbers the game's TV director is set to) and shot_stats.md.
 """
@@ -61,6 +65,56 @@ def read(path, video):
     return rows, bad
 
 
+START_BEFORE_S = 10.0   # the start phase: from this long before the gun ...
+START_AFTER_S = 12.0    # ... until this long after it (SHOT_NOTES_GUIDE.md, "The four phases")
+
+
+def mark_takes(rows):
+    """Number the real takes: the cut detector's shots, set right by the reader's notes.
+    A part noted "missed cut" starts a new take; a shot noted "same take as shot N" runs on."""
+    take, last = 0, None
+    for r in sorted(rows, key=lambda r: (r["video"], r["a"])):
+        note = r.get("note", "").lower()
+        new = last is None or r["video"] != last["video"]
+        if not new and r["shot"] != last["shot"]:
+            new = "same take" not in note
+        elif not new and "missed cut" in note:
+            new = True
+        if new:
+            take += 1
+        r["take"] = take
+        last = r
+
+
+def apply_heats(rows, heats):
+    """The border between pre_start and start set by the clock, the same for every heat:
+    the start phase runs from START_BEFORE_S before the gun to START_AFTER_S after it (a
+    recalled try: from START_BEFORE_S before its gun to the recall). Beats are cut at the
+    borders. The readers' own border differed from heat to heat; the race's end stays theirs."""
+    out = []
+    for r in rows:
+        h = heats.get(r["video"])
+        if not h or h.get("gun_s") is None or r["phase"] == "after_race":
+            out.append(r)
+            continue
+        windows = [(a - START_BEFORE_S, b) for a, b in h.get("recalled", [])]
+        windows.append((h["gun_s"] - START_BEFORE_S, h["gun_s"] + START_AFTER_S))
+        last_end = windows[-1][1]
+        cuts = sorted(set([r["a"], r["b"]] + [t for w in windows for t in w if r["a"] < t < r["b"]]))
+        for a, b in zip(cuts, cuts[1:]):
+            piece = dict(r)
+            piece["a"], piece["b"], piece["len"] = a, b, b - a
+            mid = (a + b) / 2.0
+            if any(w0 <= mid < w1 for w0, w1 in windows):
+                piece["phase"] = "start"
+            elif mid < last_end:
+                piece["phase"] = "pre_start"
+            else:
+                piece["phase"] = "race"
+            out.append(piece)
+    return out
+
+
 def weighted_quantiles(pairs, qs=(0.25, 0.5, 0.75)):
     """Quantiles of values weighted by seconds on screen."""
     pairs = sorted((v, w) for v, w in pairs if v is not None and w > 0)
@@ -84,12 +138,16 @@ def shares(rows, col):
     return {k: round(100.0 * v / total, 1) for k, v in t.most_common()}
 
 
-def lengths(rows):
-    """How long the picture stays on one camera: parts of one shot count together."""
-    by_shot = collections.OrderedDict()
-    for r in rows:
-        by_shot.setdefault((r["video"], r["shot"]), []).append(r["len"])
-    vals = sorted(sum(v) for v in by_shot.values())
+def lengths(rows, everything=None):
+    """How long the picture stays on one camera: a whole take, counted in the phase it starts in."""
+    everything = everything if everything is not None else rows
+    whole, first = collections.Counter(), {}
+    for r in everything:
+        whole[r["take"]] += r["len"]
+        if r["take"] not in first or r["a"] < first[r["take"]]["a"]:
+            first[r["take"]] = r
+    mine = set(id(r) for r in rows)
+    vals = sorted(whole[t] for t, r in first.items() if id(r) in mine)
     if not vals:
         return None
     q = lambda p: vals[min(len(vals) - 1, int(p * len(vals)))]
@@ -159,24 +217,37 @@ def main():
     ap.add_argument("root")
     ap.add_argument("--ids", required=True)
     ap.add_argument("--agree", default="")
+    ap.add_argument("--heats", default="")
+    ap.add_argument("--formats", default="")
     ap.add_argument("--out", default="")
     a = ap.parse_args()
+    heats = {}
+    if a.heats:
+        with open(a.heats, encoding="utf-8") as f:
+            heats = json.load(f)
+    formats = set(x for x in a.formats.split(",") if x)
     out = a.out or os.path.join(os.path.dirname(a.root.rstrip("/\\")), "shot_stats")
     os.makedirs(out, exist_ok=True)
 
     rows, bad, per_video = [], [], {}
     for vid in a.ids.split(","):
+        if formats and heats.get(vid, {}).get("format") not in formats:
+            continue
         path = os.path.join(a.root, vid, "shots", "shot_notes.csv")
         if not os.path.exists(path):
             bad.append("%s: no shot_notes.csv" % vid)
             continue
         r, b = read(path, vid)
+        mark_takes(r)
+        r = apply_heats(r, heats)
         rows += r
         bad += b
         per_video[vid] = {"beats": len(r), "seconds": round(sum(x["len"] for x in r), 1),
                           "unsure_pct": round(100.0 * sum(x["len"] for x in r if x.get("sure") == "no")
                                               / max(sum(x["len"] for x in r), 1.0), 1)}
-    stats = {"videos": per_video, "problems": bad, "phases": {}}
+    for i, r in enumerate(rows):
+        r["take"] = (r["video"], r["take"])
+    stats = {"videos": per_video, "formats": sorted(formats) or "all", "problems": bad, "phases": {}}
     for ph in PHASES:
         pr = [r for r in rows if r["phase"] == ph]
         if not pr:
@@ -185,8 +256,8 @@ def main():
         stats["phases"][ph] = {
             "seconds": round(sum(r["len"] for r in pr), 1),
             "seconds_per_heat": round(sum(r["len"] for r in pr) / max(len(per_video), 1), 1),
-            "shot_length": lengths(pr),
-            "shot_length_by_camera": {c: lengths([r for r in pr if r["camera"] == c])
+            "shot_length": lengths(pr, rows),
+            "shot_length_by_camera": {c: lengths([r for r in pr if r["camera"] == c], rows)
                                       for c in ("drone", "shore_long_lens")
                                       if any(r["camera"] == c for r in pr)},
             "shares_pct": {col: shares(pr, col) for col in FIELDS},
@@ -208,7 +279,7 @@ def main():
     follow = collections.Counter()
     ordered = sorted(race, key=lambda r: (r["video"], r["a"]))
     for x, y in zip(ordered, ordered[1:]):
-        if x["video"] == y["video"] and (x["shot"], x.get("part", "")) != (y["shot"], y.get("part", "")):
+        if x["video"] == y["video"] and x["take"] != y["take"]:
             follow[("%s %s %s" % (x["camera"], x["height"], x["subject"]),
                     "%s %s %s" % (y["camera"], y["height"], y["subject"]))] += 1
     stats["race_cuts"] = [{"from": k[0], "to": k[1], "times": n} for k, n in follow.most_common(15)]
