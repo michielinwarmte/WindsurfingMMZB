@@ -370,6 +370,21 @@ func _gather_boards() -> void:
 	_boards.append_array(opponents)
 
 
+## The same boards with other sailors (an event week's next heat, EventBroadcast): every AI board
+## gets its new skipper, his name and his sail colour, in order. The restart() that follows gears
+## each board for its new sailor and the wind, puts it at the start and sets the skippers up.
+## False (and nothing changes) when there aren't as many skippers as AI boards.
+func change_skippers(new_skippers: Array[RaceSkipper]) -> bool:
+	if new_skippers.size() != opponents.size():
+		return false
+	for i: int in opponents.size():
+		_skippers[i] = new_skippers[i]
+		opponents[i].skipper = new_skippers[i]
+		opponents[i].set_sail_colour(new_skippers[i].sail_colour())
+		opponents[i].set_name_label(new_skippers[i].board_name())
+	return true
+
+
 ## Each AI board on the gear its persona chooses for the wind of the moment (R3: gear changes
 ## between starts, the AI's too), where it is. The places in `opponents` of those that changed.
 func _gear_the_fleet_for_the_wind() -> Array[int]:

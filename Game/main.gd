@@ -1117,6 +1117,14 @@ func _add_watch_mode() -> void:
 	_watch = WatchMode.new()
 	add_child(_watch)
 	_watch.setup(self, _race_runner, _hud, _camera_rig)
+	# An event week watched as a broadcast (--event=<schedule>; EventBroadcast): heat after heat
+	# from a ladder of 64 on this race's boards.
+	for arg: String in OS.get_cmdline_user_args():
+		if arg.begins_with("--event="):
+			var event: EventBroadcast = EventBroadcast.new()
+			event.name = "EventBroadcast"
+			add_child(event)
+			event.setup(_race_runner, _hud, arg.get_slice("=", 1), _watch)
 
 
 ## Whether the race director's view is open (M).
