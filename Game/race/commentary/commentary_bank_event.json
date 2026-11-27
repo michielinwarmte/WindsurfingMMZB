@@ -516,13 +516,12 @@
   {
    "id": "E0037",
    "moment": "final_win",
-   "text": "{rider} wins it, with {rider2} in second.",
+   "text": "{rider} wins the final, and the elimination with it.",
    "slots": [
-    "rider",
-    "rider2"
+    "rider"
    ],
    "level": 3,
-   "seconds": 3.1,
+   "seconds": 3.4,
    "count": 1,
    "needs": [],
    "src": "written for the game"

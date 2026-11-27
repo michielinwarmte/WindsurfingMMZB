@@ -83,6 +83,8 @@ var _board_text: Label = null
 ## The ladder and the standings asked for with B; they also come up by themselves while a final's
 ## result is held and when the week is over.
 var _board_by_hand: bool = false
+## The winner of the winners' final on the water has been named.
+var _win_said: bool = false
 
 
 ## Starts or picks up the week of a schedule on a watched race. False (with a warning) when the
@@ -168,6 +170,11 @@ func _process(delta: float) -> void:
 		_trace_next_s = race.clock_s() + _trace_every_s
 		_trace(race)
 	var final: bool = week.next_heat() >= EliminationLadder.LOSERS_FINAL
+	if week.next_heat() == EliminationLadder.WINNERS_FINAL and not _win_said and _finished_count(race) >= 1:
+		# The winners' final has its winner: the elimination is won (the places behind him are still
+		# being sailed for).
+		_win_said = true
+		_say_the_final_win()
 	if _decided_s < 0.0:
 		# A heat is decided when its four who go through are home; a final when everyone is (every
 		# place counts), or when the race closes its finish.
@@ -249,6 +256,7 @@ func _order_now() -> Array[EventRoster.Sailor]:
 func _start_heat() -> void:
 	_on_boards = week.sailors_now()
 	_decided_s = -1.0
+	_win_said = false
 	_falls.resize(_on_boards.size())
 	_falls.fill(0)
 	_was_down.resize(_on_boards.size())
@@ -431,8 +439,20 @@ func _say_the_heat() -> void:
 	commentary.hear(moments)
 
 
-## A decided heat: who goes through and the favourite who doesn't; a winners' final: who won the
-## elimination.
+## The winners' final has its first board home: who won the elimination, and from whom (the board
+## behind him on the water now).
+func _say_the_final_win() -> void:
+	var commentary: Commentary = _commentary()
+	var order: Array[EventRoster.Sailor] = _order_now()
+	if commentary == null or order.size() < 2:
+		return
+	var won: RaceMoment = _moment("final_win", 4, week.next_heat(), week.elimination)
+	_about(won, order[0], order[1])
+	commentary.hear([won])
+
+
+## A decided heat: who goes through and the favourite who doesn't (a final has no one going
+## through: its winner is named as he finishes, _say_the_final_win()).
 func _say_the_result() -> void:
 	var commentary: Commentary = _commentary()
 	if commentary == null:
@@ -442,11 +462,7 @@ func _say_the_result() -> void:
 	if order.size() < EliminationLadder.HEAT_SIZE:
 		return
 	var moments: Array[RaceMoment] = []
-	if heat == EliminationLadder.WINNERS_FINAL:
-		var won: RaceMoment = _moment("final_win", 4, heat, week.elimination)
-		_about(won, order[0], order[1])
-		moments.append(won)
-	elif heat < EliminationLadder.LOSERS_FINAL:
+	if heat < EliminationLadder.LOSERS_FINAL:
 		var through: RaceMoment = _moment("heat_through", 2, heat, week.elimination)
 		_about(through, order[0], order[1])
 		moments.append(through)
