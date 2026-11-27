@@ -508,7 +508,10 @@ func _say_the_heat() -> void:
 		var standings: RaceMoment = _moment("standings", 2, heat, week.results.size())
 		_about(standings, week.roster.sailor(order[0]), week.roster.sailor(order[1]))
 		moments.append(standings)
-	moments.append(_moment("heat_called", 3 if final else 2, heat, week.elimination))
+	var called: RaceMoment = _moment("heat_called", 3 if final else 2, heat, week.elimination)
+	if heat == 1:
+		called.tags.append("opening")
+	moments.append(called)
 	var best: EventRoster.Sailor = null
 	for sailor: EventRoster.Sailor in _on_boards:
 		if best == null or week.ladder.seeds.find(sailor.id) < week.ladder.seeds.find(best.id):
@@ -518,6 +521,8 @@ func _say_the_heat() -> void:
 		_about(favourite, best)
 		# His place in the event so far (before the first result: in the ranking he came with).
 		favourite.place = week.standings().find(best.id) + 1
+		if favourite.place == 1 and not week.results.is_empty():
+			favourite.tags.append("event_leader")
 		moments.append(favourite)
 	commentary.hear(moments)
 

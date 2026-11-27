@@ -37,7 +37,7 @@ SLOTS = ["rider", "rider2", "place", "brand", "colour", "mark", "leg", "national
          "heat", "round", "elimination", "event"]
 NEEDS = ["leader", "not_leader", "podium", "big_lead", "close", "camera_wide", "camera_close", "many", "pair",
          "last_lap", "wind_strong", "wind_light", "choppy", "flat", "windward", "leeward", "dirty_air",
-         "final", "not_final"]
+         "final", "not_final", "opening", "event_leader"]
 
 
 def main():

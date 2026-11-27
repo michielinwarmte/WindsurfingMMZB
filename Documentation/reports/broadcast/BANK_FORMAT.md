@@ -174,9 +174,9 @@ Each moment is something the race can tell the commentary director. The list com
 | `standings` | the next elimination's first heat is called: the event's leader and the second | "After {elimination}, {rider} leads from {rider2}." |
 | `event_win` | the last final of the week is over | "{rider} wins {event}!" |
 
-With these there are 42 moments. Two `needs` words belong to them: `final` (the heat is the losers' or the winners' final) and `not_final` (four go through from it).
+With these there are 42 moments. Four `needs` words belong to them: `final` (the heat is the losers' or the winners' final), `not_final` (four go through from it), `opening` (the elimination's first heat) and `event_leader` (the sailor leads the event's standings).
 
-The lines for these moments that were written for the game (not said in the streams) are in their own file, `Game/race/commentary/commentary_bank_event.json`, in the same format with ids `E0001` on. The game reads it on top of the bank, so rebuilding the bank from the streams keeps them. Lines of the real commentator for these moments go into the bank the usual way (the judged sheets may use the seven moments and the four slots).
+The lines for these moments that were written for the game (not said in the streams) are in their own file, `Game/race/commentary/commentary_bank_event.json`, in the same format with ids `E0001` on. The game reads it on top of the bank, so rebuilding the bank from the streams keeps them. The real commentator's own sentences for these moments are picked by hand from the streams' text (the candidate sheets' rules do not know these moments) and brought into the same file with ids `H...` by `tools/broadcast/event_lines.py`, which looks up how long he took, how excited he was, where he said it and whether it was his voice; the picks file quotes his sentences and stays outside the repository (`pwa_broadcast/lists/event_lines_picks.txt`).
 
 ## What stays out of the bank
 

@@ -39,8 +39,9 @@ const EVENT_PATH: String = "res://race/commentary/commentary_bank_event.json"
 ## The extra conditions the director knows (BANK_FORMAT.md, "needs").
 const NEEDS: PackedStringArray = ["leader", "not_leader", "podium", "big_lead", "close", "camera_wide", "camera_close", "many", "pair", "last_lap",
 	"wind_strong", "wind_light", "choppy", "flat", "windward", "leeward", "dirty_air",
-	# An event week's heat (RaceMoment.tags): one of the two finals, or a heat four go through from.
-	"final", "not_final"]
+	# An event week's heat (RaceMoment.tags): one of the two finals, or a heat four go through from;
+	# an elimination's first heat; the sailor leads the event.
+	"final", "not_final", "opening", "event_leader"]
 ## The levels of excitement: 1 calm, 2 the normal race voice, 3 lifted, 4 shouting.
 const LOWEST_LEVEL: int = 1
 const HIGHEST_LEVEL: int = 4
