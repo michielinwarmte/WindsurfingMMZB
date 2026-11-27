@@ -1,0 +1,1054 @@
+{
+ "format": 1,
+ "made": "2026-11-27",
+ "source": "starter bank: picked by hand from the replay of Men's Elimination 7, World Cup Fuerteventura 2026 (Slalom-X)",
+ "moments": {
+  "after_race": {
+   "lines": 3
+  },
+  "airtime": {
+   "lines": 1
+  },
+  "camera": {
+   "lines": 5
+  },
+  "chase": {
+   "lines": 5
+  },
+  "fall": {
+   "lines": 2
+  },
+  "fight": {
+   "lines": 4
+  },
+  "finish_place": {
+   "lines": 3
+  },
+  "finish_win": {
+   "lines": 2
+  },
+  "gybe_bad": {
+   "lines": 1
+  },
+  "gybe_good": {
+   "lines": 2
+  },
+  "gybe_safe": {
+   "lines": 3
+  },
+  "identify": {
+   "lines": 6
+  },
+  "lead_change": {
+   "lines": 2
+  },
+  "leader": {
+   "lines": 6
+  },
+  "mark_approach": {
+   "lines": 3
+  },
+  "near_miss": {
+   "lines": 1
+  },
+  "photo_finish": {
+   "lines": 1
+  },
+  "pre_start": {
+   "lines": 3
+  },
+  "rundown": {
+   "lines": 7
+  },
+  "speed": {
+   "lines": 7
+  },
+  "start_bad": {
+   "lines": 1
+  },
+  "start_good": {
+   "lines": 1
+  },
+  "start_gun": {
+   "lines": 1
+  },
+  "unsure": {
+   "lines": 3
+  }
+ },
+ "lines": [
+  {
+   "id": "S0001",
+   "moment": "pre_start",
+   "text": "All lined up. Super spread.",
+   "slots": [],
+   "level": 1,
+   "seconds": 2.1,
+   "count": 1,
+   "needs": [
+    "camera_wide"
+   ],
+   "src": "2FJY7lpVYDA@18.6"
+  },
+  {
+   "id": "S0002",
+   "moment": "pre_start",
+   "text": "Tight line down the pin end.",
+   "slots": [],
+   "level": 1,
+   "seconds": 1.4,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@24.8"
+  },
+  {
+   "id": "S0003",
+   "moment": "pre_start",
+   "text": "All fleet race and they're getting ready.",
+   "slots": [],
+   "level": 1,
+   "seconds": 1.8,
+   "count": 1,
+   "needs": [
+    "many"
+   ],
+   "src": "2FJY7lpVYDA@7.5"
+  },
+  {
+   "id": "S0004",
+   "moment": "start_gun",
+   "text": "Here we go. Look at that.",
+   "slots": [],
+   "level": 1,
+   "seconds": 1.3,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@16.9"
+  },
+  {
+   "id": "S0005",
+   "moment": "start_good",
+   "text": "Good start down this bottom end from one of the {brand} boys.",
+   "slots": [
+    "brand"
+   ],
+   "level": 2,
+   "seconds": 2.4,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@49.2"
+  },
+  {
+   "id": "S0006",
+   "moment": "start_bad",
+   "text": "Just had a shocker in the middle.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.1,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@47.7"
+  },
+  {
+   "id": "S0007",
+   "moment": "unsure",
+   "text": "It's hard to pick out where everyone is.",
+   "slots": [],
+   "level": 1,
+   "seconds": 1.7,
+   "count": 1,
+   "needs": [
+    "camera_wide"
+   ],
+   "src": "2FJY7lpVYDA@26.7"
+  },
+  {
+   "id": "S0008",
+   "moment": "camera",
+   "text": "We're just getting an overall view at the moment.",
+   "slots": [],
+   "level": 1,
+   "seconds": 2.3,
+   "count": 1,
+   "needs": [
+    "camera_wide"
+   ],
+   "src": "2FJY7lpVYDA@28.6"
+  },
+  {
+   "id": "S0009",
+   "moment": "identify",
+   "text": "It looks like {rider} is down here.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.9,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@51.9"
+  },
+  {
+   "id": "S0010",
+   "moment": "identify",
+   "text": "You've got {rider} in the middle on that {brand}.",
+   "slots": [
+    "rider",
+    "brand"
+   ],
+   "level": 2,
+   "seconds": 2.0,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@72.6"
+  },
+  {
+   "id": "S0011",
+   "moment": "identify",
+   "text": "The {colour} {brand} looking okay.",
+   "slots": [
+    "colour",
+    "brand"
+   ],
+   "level": 2,
+   "seconds": 1.9,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@65.3"
+  },
+  {
+   "id": "S0012",
+   "moment": "identify",
+   "text": "Then there's a {brand} coming through.",
+   "slots": [
+    "brand"
+   ],
+   "level": 2,
+   "seconds": 1.3,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@67.5"
+  },
+  {
+   "id": "S0013",
+   "moment": "identify",
+   "text": "This looks like {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 1.7,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@82.9"
+  },
+  {
+   "id": "S0014",
+   "moment": "identify",
+   "text": "But that's definitely {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 1.4,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@112.5"
+  },
+  {
+   "id": "S0015",
+   "moment": "unsure",
+   "text": "Who's on that?",
+   "slots": [],
+   "level": 1,
+   "seconds": 1.0,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@79.9"
+  },
+  {
+   "id": "S0016",
+   "moment": "unsure",
+   "text": "Is that {rider}? Can't quite see from here.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 3.4,
+   "count": 1,
+   "needs": [
+    "camera_wide"
+   ],
+   "src": "2FJY7lpVYDA@132.9"
+  },
+  {
+   "id": "S0017",
+   "moment": "camera",
+   "text": "We're going to have to get a closer view.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.2,
+   "count": 1,
+   "needs": [
+    "camera_wide"
+   ],
+   "src": "2FJY7lpVYDA@143.5"
+  },
+  {
+   "id": "S0018",
+   "moment": "camera",
+   "text": "That's a better angle.",
+   "slots": [],
+   "level": 1,
+   "seconds": 0.7,
+   "count": 1,
+   "needs": [
+    "camera_close"
+   ],
+   "src": "2FJY7lpVYDA@163.1"
+  },
+  {
+   "id": "S0019",
+   "moment": "camera",
+   "text": "The drones are getting left behind.",
+   "slots": [],
+   "level": 2,
+   "seconds": 2.1,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@280.7"
+  },
+  {
+   "id": "S0020",
+   "moment": "camera",
+   "text": "Look at the boys. They've got some serious speed. The drones can't even keep up.",
+   "slots": [],
+   "level": 2,
+   "seconds": 4.5,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@283.0"
+  },
+  {
+   "id": "S0021",
+   "moment": "speed",
+   "text": "He is flying over this chop.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.9,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@114.3"
+  },
+  {
+   "id": "S0022",
+   "moment": "speed",
+   "text": "He's got just such good control over the chop.",
+   "slots": [],
+   "level": 2,
+   "seconds": 2.5,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@116.4"
+  },
+  {
+   "id": "S0023",
+   "moment": "speed",
+   "text": "He's eating up the chop.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.4,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@127.5"
+  },
+  {
+   "id": "S0024",
+   "moment": "speed",
+   "text": "He is in the money here.",
+   "slots": [],
+   "level": 3,
+   "seconds": 1.1,
+   "count": 1,
+   "needs": [
+    "podium"
+   ],
+   "src": "2FJY7lpVYDA@119.0"
+  },
+  {
+   "id": "S0025",
+   "moment": "speed",
+   "text": "Don't count this fella out. He is right in the game.",
+   "slots": [],
+   "level": 3,
+   "seconds": 3.2,
+   "count": 1,
+   "needs": [
+    "not_leader"
+   ],
+   "src": "2FJY7lpVYDA@120.3"
+  },
+  {
+   "id": "S0026",
+   "moment": "speed",
+   "text": "Hitting a bit of chop there on the {brand}.",
+   "slots": [
+    "brand"
+   ],
+   "level": 1,
+   "seconds": 1.9,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@70.6"
+  },
+  {
+   "id": "S0027",
+   "moment": "speed",
+   "text": "What the hell is going on?",
+   "slots": [],
+   "level": 2,
+   "seconds": 2.2,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@101.8"
+  },
+  {
+   "id": "S0028",
+   "moment": "leader",
+   "text": "Leading this race. What a race he is having.",
+   "slots": [],
+   "level": 3,
+   "seconds": 2.4,
+   "count": 1,
+   "needs": [
+    "leader"
+   ],
+   "src": "2FJY7lpVYDA@248.1"
+  },
+  {
+   "id": "S0029",
+   "moment": "leader",
+   "text": "But {rider} is still leading this.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 1.9,
+   "count": 1,
+   "needs": [
+    "leader"
+   ],
+   "src": "2FJY7lpVYDA@287.6"
+  },
+  {
+   "id": "S0030",
+   "moment": "leader",
+   "text": "But out in the lead.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.4,
+   "count": 1,
+   "needs": [
+    "leader"
+   ],
+   "src": "2FJY7lpVYDA@353.0"
+  },
+  {
+   "id": "S0031",
+   "moment": "leader",
+   "text": "Out in front.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.0,
+   "count": 1,
+   "needs": [
+    "leader"
+   ],
+   "src": "2FJY7lpVYDA@481.3"
+  },
+  {
+   "id": "S0032",
+   "moment": "leader",
+   "text": "Look at this from {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 2.1,
+   "count": 1,
+   "needs": [
+    "leader"
+   ],
+   "src": "2FJY7lpVYDA@436.4"
+  },
+  {
+   "id": "S0033",
+   "moment": "leader",
+   "text": "On a heater right now.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.6,
+   "count": 1,
+   "needs": [
+    "leader"
+   ],
+   "src": "2FJY7lpVYDA@253.8"
+  },
+  {
+   "id": "S0034",
+   "moment": "lead_change",
+   "text": "No. No. It's {rider} that's now taking the lead.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 2.7,
+   "count": 1,
+   "needs": [
+    "leader"
+   ],
+   "src": "2FJY7lpVYDA@289.6"
+  },
+  {
+   "id": "S0035",
+   "moment": "lead_change",
+   "text": "He did well to hold him off all the way down.",
+   "slots": [],
+   "level": 3,
+   "seconds": 2.3,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@292.6"
+  },
+  {
+   "id": "S0036",
+   "moment": "rundown",
+   "text": "So {rider} in {place}.",
+   "slots": [
+    "rider",
+    "place"
+   ],
+   "level": 2,
+   "seconds": 1.6,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@312.6"
+  },
+  {
+   "id": "S0037",
+   "moment": "rundown",
+   "text": "Then it looks like {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.5,
+   "count": 1,
+   "needs": [
+    "not_leader"
+   ],
+   "src": "2FJY7lpVYDA@315.6"
+  },
+  {
+   "id": "S0038",
+   "moment": "rundown",
+   "text": "Then we've got {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.3,
+   "count": 1,
+   "needs": [
+    "not_leader"
+   ],
+   "src": "2FJY7lpVYDA@341.3"
+  },
+  {
+   "id": "S0039",
+   "moment": "rundown",
+   "text": "{rider} in {place} place.",
+   "slots": [
+    "rider",
+    "place"
+   ],
+   "level": 2,
+   "seconds": 2.2,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@336.4"
+  },
+  {
+   "id": "S0040",
+   "moment": "rundown",
+   "text": "Then {rider} in {place} place.",
+   "slots": [
+    "rider",
+    "place"
+   ],
+   "level": 4,
+   "seconds": 2.3,
+   "count": 1,
+   "needs": [
+    "not_leader"
+   ],
+   "src": "2FJY7lpVYDA@425.2"
+  },
+  {
+   "id": "S0041",
+   "moment": "rundown",
+   "text": "{rider}'s in there.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.3,
+   "count": 1,
+   "needs": [
+    "not_leader"
+   ],
+   "src": "2FJY7lpVYDA@266.0"
+  },
+  {
+   "id": "S0042",
+   "moment": "rundown",
+   "text": "He's right up there in the top five.",
+   "slots": [],
+   "level": 3,
+   "seconds": 1.8,
+   "count": 1,
+   "needs": [
+    "not_leader"
+   ],
+   "src": "2FJY7lpVYDA@429.8"
+  },
+  {
+   "id": "S0043",
+   "moment": "chase",
+   "text": "But he's got {rider} chasing him down.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 2.1,
+   "count": 1,
+   "needs": [
+    "close"
+   ],
+   "src": "2FJY7lpVYDA@259.4"
+  },
+  {
+   "id": "S0044",
+   "moment": "chase",
+   "text": "He is making a bid for this.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.4,
+   "count": 1,
+   "needs": [
+    "not_leader"
+   ],
+   "src": "2FJY7lpVYDA@201.3"
+  },
+  {
+   "id": "S0045",
+   "moment": "chase",
+   "text": "{rider} though putting the hammer down.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 2.2,
+   "count": 1,
+   "needs": [
+    "not_leader"
+   ],
+   "src": "2FJY7lpVYDA@438.8"
+  },
+  {
+   "id": "S0046",
+   "moment": "chase",
+   "text": "And putting the pressure on.",
+   "slots": [],
+   "level": 3,
+   "seconds": 1.4,
+   "count": 1,
+   "needs": [
+    "close"
+   ],
+   "src": "2FJY7lpVYDA@452.1"
+  },
+  {
+   "id": "S0047",
+   "moment": "chase",
+   "text": "But there you can see {rider} closing in a little bit further back.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 4.8,
+   "count": 1,
+   "needs": [
+    "not_leader"
+   ],
+   "src": "2FJY7lpVYDA@295.0"
+  },
+  {
+   "id": "S0048",
+   "moment": "fight",
+   "text": "Look at this. Head to head.",
+   "slots": [],
+   "level": 4,
+   "seconds": 1.1,
+   "count": 1,
+   "needs": [
+    "close",
+    "pair"
+   ],
+   "src": "2FJY7lpVYDA@498.5"
+  },
+  {
+   "id": "S0049",
+   "moment": "fight",
+   "text": "Keep your eye on that battle for {place} place. It's a big one.",
+   "slots": [
+    "place"
+   ],
+   "level": 3,
+   "seconds": 2.7,
+   "count": 1,
+   "needs": [
+    "close",
+    "pair"
+   ],
+   "src": "2FJY7lpVYDA@478.5"
+  },
+  {
+   "id": "S0050",
+   "moment": "fight",
+   "text": "This is going to be an out and out speed battle for {rider} and {rider2}.",
+   "slots": [
+    "rider",
+    "rider2"
+   ],
+   "level": 3,
+   "seconds": 3.7,
+   "count": 1,
+   "needs": [
+    "close",
+    "pair"
+   ],
+   "src": "2FJY7lpVYDA@472.3"
+  },
+  {
+   "id": "S0051",
+   "moment": "fight",
+   "text": "{rider} needs to hold off {rider2}.",
+   "slots": [
+    "rider",
+    "rider2"
+   ],
+   "level": 3,
+   "seconds": 2.3,
+   "count": 1,
+   "needs": [
+    "close",
+    "pair"
+   ],
+   "src": "2FJY7lpVYDA@476.1"
+  },
+  {
+   "id": "S0052",
+   "moment": "airtime",
+   "text": "Gets airborne on this {leg} reach and he's holding on, {rider}.",
+   "slots": [
+    "leg",
+    "rider"
+   ],
+   "level": 4,
+   "seconds": 3.9,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@444.1"
+  },
+  {
+   "id": "S0053",
+   "moment": "mark_approach",
+   "text": "But it will be {rider} who's going to go around this mark in first place.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 3.3,
+   "count": 1,
+   "needs": [
+    "leader"
+   ],
+   "src": "2FJY7lpVYDA@321.8"
+  },
+  {
+   "id": "S0054",
+   "moment": "mark_approach",
+   "text": "{rider}'s going to try and go in tight.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 1.6,
+   "count": 1,
+   "needs": [
+    "close"
+   ],
+   "src": "2FJY7lpVYDA@457.6"
+  },
+  {
+   "id": "S0055",
+   "moment": "mark_approach",
+   "text": "These are tricky right now.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.2,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@365.5"
+  },
+  {
+   "id": "S0056",
+   "moment": "gybe_safe",
+   "text": "Gybes first. Round safely.",
+   "slots": [],
+   "level": 2,
+   "seconds": 2.9,
+   "count": 1,
+   "needs": [
+    "leader"
+   ],
+   "src": "2FJY7lpVYDA@331.4"
+  },
+  {
+   "id": "S0057",
+   "moment": "gybe_safe",
+   "text": "So the leaders round safely.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.2,
+   "count": 1,
+   "needs": [
+    "leader"
+   ],
+   "src": "2FJY7lpVYDA@371.9"
+  },
+  {
+   "id": "S0058",
+   "moment": "gybe_safe",
+   "text": "And he does.",
+   "slots": [],
+   "level": 2,
+   "seconds": 0.5,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@371.2"
+  },
+  {
+   "id": "S0059",
+   "moment": "gybe_bad",
+   "text": "A little bit of a wayward gybe.",
+   "slots": [],
+   "level": 3,
+   "seconds": 1.4,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@374.6"
+  },
+  {
+   "id": "S0060",
+   "moment": "gybe_good",
+   "text": "Oh, what a gybe from {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 2.6,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@459.6"
+  },
+  {
+   "id": "S0061",
+   "moment": "gybe_good",
+   "text": "What a gybe under pressure.",
+   "slots": [],
+   "level": 3,
+   "seconds": 1.5,
+   "count": 1,
+   "needs": [
+    "close"
+   ],
+   "src": "2FJY7lpVYDA@462.6"
+  },
+  {
+   "id": "S0062",
+   "moment": "near_miss",
+   "text": "Oh no. {rider} has just nearly took out {rider2}.",
+   "slots": [
+    "rider",
+    "rider2"
+   ],
+   "level": 4,
+   "seconds": 4.7,
+   "count": 1,
+   "needs": [
+    "pair"
+   ],
+   "src": "2FJY7lpVYDA@379.0"
+  },
+  {
+   "id": "S0063",
+   "moment": "fall",
+   "text": "Someone is in the drink.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.4,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@174.8"
+  },
+  {
+   "id": "S0064",
+   "moment": "fall",
+   "text": "{rider}'s gone inside the water.",
+   "slots": [
+    "rider"
+   ],
+   "level": 4,
+   "seconds": 2.5,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@469.7"
+  },
+  {
+   "id": "S0065",
+   "moment": "finish_win",
+   "text": "{rider} will win it.",
+   "slots": [
+    "rider"
+   ],
+   "level": 4,
+   "seconds": 1.2,
+   "count": 1,
+   "needs": [
+    "leader"
+   ],
+   "src": "2FJY7lpVYDA@500.0"
+  },
+  {
+   "id": "S0066",
+   "moment": "finish_win",
+   "text": "{rider} gets the bullet.",
+   "slots": [
+    "rider"
+   ],
+   "level": 4,
+   "seconds": 1.2,
+   "count": 1,
+   "needs": [
+    "leader"
+   ],
+   "src": "2FJY7lpVYDA@501.4"
+  },
+  {
+   "id": "S0067",
+   "moment": "photo_finish",
+   "text": "But who will get second?",
+   "slots": [],
+   "level": 4,
+   "seconds": 0.9,
+   "count": 1,
+   "needs": [
+    "close"
+   ],
+   "src": "2FJY7lpVYDA@502.7"
+  },
+  {
+   "id": "S0068",
+   "moment": "finish_place",
+   "text": "And {rider} will get the {place} place.",
+   "slots": [
+    "rider",
+    "place"
+   ],
+   "level": 3,
+   "seconds": 1.8,
+   "count": 1,
+   "needs": [
+    "not_leader"
+   ],
+   "src": "2FJY7lpVYDA@507.3"
+  },
+  {
+   "id": "S0069",
+   "moment": "finish_place",
+   "text": "{rider} has to settle for {place}.",
+   "slots": [
+    "rider",
+    "place"
+   ],
+   "level": 3,
+   "seconds": 1.6,
+   "count": 1,
+   "needs": [
+    "not_leader"
+   ],
+   "src": "2FJY7lpVYDA@509.3"
+  },
+  {
+   "id": "S0070",
+   "moment": "finish_place",
+   "text": "In {place} it will be {rider}.",
+   "slots": [
+    "place",
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 2.5,
+   "count": 1,
+   "needs": [
+    "not_leader"
+   ],
+   "src": "2FJY7lpVYDA@512.7"
+  },
+  {
+   "id": "S0071",
+   "moment": "after_race",
+   "text": "Hardcore racing.",
+   "slots": [],
+   "level": 1,
+   "seconds": 1.1,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@555.3"
+  },
+  {
+   "id": "S0072",
+   "moment": "after_race",
+   "text": "Absolutely ridiculous.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.2,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@221.7"
+  },
+  {
+   "id": "S0073",
+   "moment": "after_race",
+   "text": "What a race he is having.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.2,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@249.3"
+  }
+ ]
+}
