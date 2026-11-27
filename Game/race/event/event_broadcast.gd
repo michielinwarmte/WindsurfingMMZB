@@ -529,9 +529,10 @@ func _build_cards() -> void:
 	_board.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_MINSIZE)
 	_board.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_board.grow_vertical = Control.GROW_DIRECTION_BOTH
-	# A little under the middle: clear of the race card at the top.
-	_board.offset_top += 44.0
-	_board.offset_bottom += 44.0
+	# A little under the middle: between the race card at the top and the subtitle at the bottom
+	# (checked at 1280 x 720 and at Max's 3137 x 1263).
+	_board.offset_top += 30.0
+	_board.offset_bottom += 30.0
 	_board_text = HudStyle.label(HudStyle.mono(500), 12)
 	_board.add_child(_board_text)
 	_board.visible = false
@@ -603,7 +604,9 @@ func board_text() -> String:
 	lines.append("%s after %d of %d eliminations%s" % ["FINAL STANDINGS" if week.is_over() else "STANDINGS", finished, week.total_eliminations(),
 		"" if dropped == 0 else (" (%d dropped)" % dropped)])
 	var order: PackedInt32Array = week.standings()
-	for place: int in mini(12, order.size()):
+	# By itself the first ten (with the result's eight above them the board fills the room between
+	# the race card and the subtitle); asked for, the first twelve.
+	for place: int in mini(12 if _board_by_hand else 10, order.size()):
 		var sailor: EventRoster.Sailor = week.roster.sailor(order[place])
 		lines.append("%2d  %-22s %-8s %6s" % [place + 1, sailor.name, sailor.sail_number,
 			String.num(week.total_of(sailor.id), 1) if finished > 0 else ""])
