@@ -857,7 +857,9 @@ func _place_the_beach_cam(next: TvPicture, at: Vector3, node: WindsurferNode) ->
 		var beam: Vector3 = _heading.cross(Vector3.UP) * _side
 		for turn_rad: float in [0.0, PI, 0.5, PI + 0.5, -0.5, PI - 0.5, 1.0, PI + 1.0]:
 			directions.append(beam.rotated(Vector3.UP, turn_rad))
-	_stand_look = subject
+	# A still long lens looks at the board it is zoomed for, where it is at the cut (the middle of the line
+	# or of the fleet may be open water: at 3 degrees of view the boards would be out of the picture).
+	_stand_look = at if node != null else subject
 	# Where the map says its beach camera stands (one place for the heat); when land hides the subject
 	# from there, cut_to() says so and the director takes a drone instead.
 	var marker: Node3D = _shore_camera_marker(subject)
@@ -873,7 +875,7 @@ func _place_the_beach_cam(next: TvPicture, at: Vector3, node: WindsurferNode) ->
 		_stand_eye_m = stream.beach_eye_m
 	_stand_fov = Vector3.ZERO
 	if next.move != "pan" and node != null:
-		var level_m: float = Vector2(subject.x - _stand.x, subject.z - _stand.z).length()
+		var level_m: float = Vector2(_stand_look.x - _stand.x, _stand_look.z - _stand.z).length()
 		_stand_fov = TvFraming.lens_place(level_m, _rig_top(node).y, sail_share, horizon_share, next.subject_share(sail_share, horizon_share),
 			_stand_eye_m, _stand_eye_m, stream.lens_min_deg, stream.lens_max_deg)
 
