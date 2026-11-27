@@ -10,11 +10,13 @@
 #   tools/tv_check.sh --races=5 --seed=7       5 races, the first race's dice 7 (the next ones 8, 9, ...)
 #   tools/tv_check.sh --director=12nov         the director of 12 November, for comparing
 #   tools/tv_check.sh --map=lake               on Lake Silvaplana (T2 sprint slalom; the beach cam on the shore)
+#   tools/tv_check.sh --map=res://maps/<spot>/<scene>.tscn --course=<name>    any map's sailing scene
 #   tools/tv_check.sh --report_only=1 --run=<name>    the report again from a run's logs
 #
-# Options: --run=<name> (default: stream or 12nov), --course=<name> (default template:PD3@60 on the open
-# water, t2_slalom on the lake), --skippers=<a,b,...> (default eight: the stream's heats have 8), --wind=<kt>,
-# --threads=<n> (default 2: the PC is shared), --gap=<s> (after the race until the next countdown,
+# Options: --map=open|lake|<a map's sailing scene, res://...tscn> (default open: the open water),
+# --run=<name> (default: stream or 12nov), --course=<name> (default template:PD3@60 on the open water,
+# t2_slalom on the lake; a map scene: one of its own courses), --skippers=<a,b,...> (default eight: the stream's heats have 8), --wind=<kt>,
+# --threads=<n> (default 0: the boards one after the other on one core, the PC is shared), --gap=<s> (after the race until the next countdown,
 # default 45). One race after the other, one Godot at a time; a race of about 5 minutes takes about
 # 5 to 8 minutes. Each race's log: .sim_output/tv_check/<run>/race_<n>.csv.
 set -euo pipefail
@@ -27,7 +29,7 @@ map="open"
 course=""
 skippers="allrounder,cautious,gambler,rookie,allrounder,cautious,gambler,rookie"
 wind=""
-threads=2
+threads=0
 gap=45
 run=""
 report_only=0
@@ -52,6 +54,9 @@ scene="res://main.tscn"
 if [[ "$map" == "lake" ]]; then
 	scene="res://maps/silvaplana/sail_silvaplana.tscn"
 	[[ -n "$course" ]] || course="t2_slalom"
+elif [[ "$map" == res://* ]]; then
+	scene="$map"
+	[[ -n "$course" ]] || { echo "A map scene needs --course=<one of its courses>" >&2; exit 2; }
 fi
 [[ -n "$course" ]] || course="template:PD3@60"
 out_dir="$REPO_ROOT/.sim_output/tv_check/$run"

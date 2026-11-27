@@ -145,6 +145,8 @@ func use_director(which: String) -> void:
 	stream = borders
 	old = stream.hand_shots
 	director = TvStreamDirector.new(self, stream, _rng)
+	# --tv_only=<shot> (screenshots, checks): the director takes that camera wherever it has one.
+	director.only_shot = Shot.keys().find(LanSession.command_line_options().get("tv_only", "").to_upper())
 
 
 ## The director's name in the log.
@@ -730,7 +732,8 @@ func _place_picture(at: Vector3) -> PackedVector3Array:
 				CourseMark.START_PIN if picture.shot == Shot.COMMITTEE else CourseMark.FINISH_PIN, at.y)
 			if ends.is_empty():
 				return _follow(at, top_m, wanted, subject)
-			return _line_end_view(ends[0], ends[1], top_m, wanted, subject, _lean_toward(_eye - at))
+			var round_deg: float = stream.line_drone_angle_deg if picture.shot == Shot.COMMITTEE else 0.0
+			return _line_end_view(ends[0], ends[1], top_m, wanted, subject, _lean_toward(_eye - at), round_deg)
 		Shot.BEACH_WIDE, Shot.BEACH_TIGHT:
 			return _beach_view(at, top_m, wanted, subject)
 		Shot.PULL_OUT:
@@ -754,18 +757,25 @@ func _follow(at: Vector3, top_m: float, wanted: float, subject: float) -> Packed
 
 
 ## The view down a line from beyond its boat's end, the line's middle framed: the stream's low drone at
-## the end of the start line (Max's committee boat view), and its drone side-on at the finish. It
-## stays beyond the boat (the line never runs under it), so on a long line a sail at the middle may be
-## smaller than asked.
-func _line_end_view(boat: Vector3, pin: Vector3, top_m: float, wanted: float, subject: float, toward_m: float) -> PackedVector3Array:
+## the end of the start line (Max's committee boat view), and its drone side-on at the finish.
+## `round_deg`: how far round from the line's own line it stands, towards the course side (the start's
+## line drone: TvDirectorConfig.line_drone_angle_deg). It stays beyond the boat (the line never runs
+## under it), so on a long line a sail at the middle may be smaller than asked.
+func _line_end_view(boat: Vector3, pin: Vector3, top_m: float, wanted: float, subject: float, toward_m: float, round_deg: float) -> PackedVector3Array:
 	var place: Vector3 = TvFraming.drone_place(picture.lens_deg, top_m, wanted, horizon_share, subject, stream.lowest_m, toward_m)
 	_fov_now = picture.lens_deg
 	var middle: Vector3 = (boat + pin) * 0.5
 	var along: Vector3 = Vector3(boat.x - pin.x, 0.0, boat.z - pin.z)
 	var half_m: float = along.length() * 0.5
 	along = along.normalized() if along.length() > 0.01 else Vector3.BACK
-	var distance_m: float = maxf(place.x, half_m + stream.lowest_m * 4.0)
-	var eye: Vector3 = middle + along * distance_m + Vector3.UP * place.y
+	# The course side: the way the boards cross the start line, square to the line.
+	var course: Vector3 = _first_leg()
+	course = (course - along * course.dot(along))
+	course = course.normalized() if course.length() > 0.01 else along.cross(Vector3.UP)
+	var round_rad: float = deg_to_rad(round_deg)
+	var away: Vector3 = along * cos(round_rad) + course * sin(round_rad)
+	var distance_m: float = maxf(place.x, (half_m + stream.lowest_m * 4.0) / maxf(cos(round_rad), 0.2))
+	var eye: Vector3 = middle + away * distance_m + Vector3.UP * place.y
 	return PackedVector3Array([eye, TvFraming.aim_point(eye, middle, place.z)])
 
 
@@ -782,10 +792,11 @@ func _beach_view(at: Vector3, top_m: float, wanted: float, subject: float) -> Pa
 	return PackedVector3Array([eye, TvFraming.aim_point(eye, toward, lens.z)])
 
 
-## The beach cam's place for this take: on a lake the shore (the water's edge) in the first good
-## direction from what it films, on the open sea (or where no shore is in reach) a camera boat off the
-## course; never with a board close in front of it (it would fill the picture). What it films: the
-## board, the start line's middle (on the line), the fleet's middle (on the fleet).
+## The beach cam's place for this take: on a map with land (its shore_grid) the water's edge of the
+## nearest shore round what it films, a side view preferred; where no shore is in reach (the open sea,
+## a coast too far off) a camera boat off the course; never with a board close in front of it (it
+## would fill the picture). What it films: the board, the start line's middle (on the line), the
+## fleet's middle (on the fleet). `directions`: the views it prefers, best first.
 func _place_the_beach_cam(next: TvPicture, at: Vector3, node: WindsurferNode) -> void:
 	var subject: Vector3 = at
 	var directions: Array[Vector3] = []
@@ -793,8 +804,9 @@ func _place_the_beach_cam(next: TvPicture, at: Vector3, node: WindsurferNode) ->
 	if next.on == "line" and not line.is_empty():
 		subject = (line[0] + line[1]) * 0.5
 		var along: Vector3 = (line[1] - line[0]).normalized()
-		# Along the line from beyond the pin first (the long lens stacks the boards on it), then the boat's end.
-		directions = [along, -along, along.rotated(Vector3.UP, 0.5), -along.rotated(Vector3.UP, 0.5)]
+		# Along the line from beyond the pin first (the long lens stacks the boards on it), then the boat's
+		# end; a little round from the line's own line, so the mark at its end is not in front of its middle.
+		directions = [along.rotated(Vector3.UP, 0.4), along.rotated(Vector3.UP, -0.4), -along.rotated(Vector3.UP, 0.4), -along.rotated(Vector3.UP, -0.4)]
 	elif next.on == "fleet" and runner.race != null:
 		subject = fleet_middle(at.y)
 		var across: Vector3 = _first_leg().cross(Vector3.UP)
@@ -814,26 +826,45 @@ func _place_the_beach_cam(next: TvPicture, at: Vector3, node: WindsurferNode) ->
 			stream.lens_lowest_m, stream.lens_highest_m, stream.lens_min_deg, stream.lens_max_deg)
 
 
-## The first place, in the order of `directions` from the subject, where the beach cam can stand: the
-## water's edge of a lake's shore within reach, else a camera boat boat_m off; a place with a board in
-## the way is passed over. The first boat place when none is free.
+## Where the beach cam can stand: on a map with land, the water's edge of the shore round the subject
+## (looked for all the way round, every 30 degrees: a lake's shore, or a coast on one side only), the
+## nearest one counting a view off the preferred `directions` as farther (half as far again at the
+## opposite side); else a camera boat boat_m off in the first preferred direction that is on the water
+## with a clear view. A place with a board close in front of it is passed over.
 func _shore_or_boat(subject: Vector3, directions: Array[Vector3], boat_m: float) -> Vector3:
 	var grid: TerrainGrid = scene.shore_grid if scene != null else null
 	if grid != null:
-		for direction: Vector3 in directions:
+		var best: Vector3 = Vector3(NAN, NAN, NAN)
+		var best_score: float = INF
+		for step: int in 12:
+			var direction: Vector3 = directions[0].rotated(Vector3.UP, step * PI / 6.0)
 			var shore: Vector3 = shore_along(grid, subject, direction, stream.shore_nearest_m, stream.shore_farthest_m)
-			if not is_nan(shore.x) and not _board_in_the_way(shore, subject):
-				return shore
+			if is_nan(shore.x) or _board_in_the_way(shore, subject):
+				continue
+			var score: float = subject.distance_to(shore) * (1.0 + 0.5 * view_off(direction, directions) / PI)
+			if score < best_score:
+				best_score = score
+				best = shore
+		if not is_nan(best.x):
+			return best
 	var first: Vector3 = Vector3(NAN, NAN, NAN)
 	for direction: Vector3 in directions:
 		var boat: Vector3 = subject + direction.normalized() * boat_m
-		if grid != null and _is_land(grid, boat):
+		if grid != null and (_is_land(grid, boat) or land_between(grid, boat, subject)):
 			continue
 		if is_nan(first.x):
 			first = boat
 		if not _board_in_the_way(boat, subject):
 			return boat
 	return first if not is_nan(first.x) else subject + directions[0].normalized() * boat_m
+
+
+## How far a direction is from the nearest of the preferred ones, radians (0 to PI).
+static func view_off(direction: Vector3, preferred: Array[Vector3]) -> float:
+	var least: float = PI
+	for wanted: Vector3 in preferred:
+		least = minf(least, absf(Vector2(direction.x, direction.z).angle_to(Vector2(wanted.x, wanted.z))))
+	return least
 
 
 ## The water's edge from a point along a direction: the last water before the first land, between
@@ -852,6 +883,16 @@ static func shore_along(grid: TerrainGrid, from: Vector3, direction: Vector3, ne
 			return from + way * (reach_m - step_m)
 		reach_m += step_m
 	return Vector3(NAN, NAN, NAN)
+
+
+## Land anywhere on the line from a camera to what it films (looked at every 8 m), on a lake's map.
+static func land_between(grid: TerrainGrid, eye: Vector3, subject: Vector3) -> bool:
+	var length_m: float = Vector2(subject.x - eye.x, subject.z - eye.z).length()
+	var steps: int = ceili(length_m / 8.0)
+	for i: int in range(1, steps):
+		if _is_land(grid, eye.lerp(subject, float(i) / steps)):
+			return true
+	return false
 
 
 static func _is_land(grid: TerrainGrid, point: Vector3) -> bool:

@@ -16,7 +16,8 @@
 ; - COUNTED tonight on the nine heats' start sequences (the readers' shot_notes.csv around the gun):
 ;   line_drone_before_gun_s (the line drone came 2.6, 3.1, 3.7 s before the gun: p25, middle, p75),
 ;   runner_after_gun_s (the drone running with the fleet came, or the line drone began to run, 0.6,
-;   0.7, 1.8 s after it), runner_take_s (it ran 8.0, 9.6, 11.6 s); the runners were 4 of 9 behind-side
+;   0.7, 1.8 s after it; runner_latest_s 5: the latest of the nine was 4.7), runner_take_s (it ran
+;   8.0, 9.6, 11.6 s); the runners were 4 of 9 behind-side
 ;   on the fleet, 4 ahead-side on the front, 1 side: start_runners' weights (the ahead-side one's
 ;   weight is the start's drone front_side front share plus the following part of its front_side
 ;   line share, its framing the start's front_side front picture).
@@ -41,6 +42,10 @@
 ;   choice). Each take puts the sail's middle at horizon + k x sail - sail / 2 (TvPicture.subject_share()).
 ;   subject_pct: the same at the medians (kept between 40 and 70), used only where there is no k: 50 for
 ;   the line drones and the beach cam (a choice).
+; - line_drone_angle_deg (20, a choice): the line drone stands that far round from the start line's own
+;   line, on the course side, so the drawn line shows (end-on it hides behind the committee boat); so
+;   placed the fleet sails at it, and it takes the stream's start-phase "drone front_side line" picture
+;   (5 of the nine heats' line drones were front-side, 4 side).
 ; - HOW A TAKE DRAWS ITS FRAMING (the game's choice, TvPicture.take_framing()): one number for the sail
 ;   and the horizon, within about the middle half of each: a bigger sail with a higher horizon, as a
 ;   drone at a steady height in sail heights that comes closer sees it.
@@ -151,13 +156,13 @@ glide_s = 0.6
 script = ExtResource("2")
 shot = 7
 on = "line"
-view = "side"
+view = "front_side"
 move = "static"
-weight_pct = 20.1
+weight_pct = 20.3
 lens_deg = 47.0
 angle_deg = 90.0
-sail_pct = Vector3(2.0, 5.0, 10.0)
-horizon_pct = Vector3(35.0, 45.0, 45.0)
+sail_pct = Vector3(5.0, 10.0, 15.0)
+horizon_pct = Vector3(40.0, 40.0, 45.0)
 subject_pct = 50.0
 glide_s = 0.2
 
@@ -489,8 +494,10 @@ start_beach = SubResource("start_beach")
 start_line_drone = SubResource("start_line_drone")
 start_runners = Array[ExtResource("2")]([SubResource("start_runner"), SubResource("start_runner_ahead")])
 line_drone_before_gun_s = Vector3(2.6, 3.1, 3.7)
+line_drone_angle_deg = 20.0
 runner_after_gun_s = Vector3(0.6, 0.7, 1.8)
 runner_take_s = Vector3(8.0, 9.6, 11.6)
+runner_latest_s = 5.0
 mark_pictures = Array[ExtResource("2")]([SubResource("mark_side"), SubResource("mark_behind_side"), SubResource("mark_front_side"), SubResource("mark_beach")])
 mark_cut_before_s = Vector2(2.0, 5.0)
 mark_take_s = Vector3(5.4, 6.7, 9.4)

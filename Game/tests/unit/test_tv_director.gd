@@ -349,6 +349,43 @@ func test_a_takes_framing_keeps_the_sail_and_the_horizon_together() -> void:
 	assert_almost_eq(zoomed.y, middle.y, 1e-6, "the horizon stays")
 
 
+# ---------------------------------------------------------------- the beach cam on a map's shore
+
+## A map's ground grid with a straight coast (a sea coast like Sotavento, not a lake): open water 10 m
+## deep up to x = 400 m, land 5 m high from x = 450 m (the grid's points are 50 m apart and the ground
+## between them is interpolated: the waterline at x = 433 m), 2 km square round the origin.
+func _coast() -> TerrainGrid:
+	var grid: TerrainGrid = TerrainGrid.new()
+	grid.columns = 41
+	grid.rows = 41
+	grid.cell_m = 50.0
+	grid.x0_m = -1000.0
+	grid.z0_m = -1000.0
+	grid._offset_m = -20.0
+	grid._scale_m = 0.01
+	var values: PackedByteArray = PackedByteArray()
+	values.resize(grid.columns * grid.rows * 2)
+	for row: int in grid.rows:
+		for column: int in grid.columns:
+			var x_m: float = grid.x0_m + column * grid.cell_m
+			values.encode_u16(2 * (row * grid.columns + column), 2500 if x_m > 400.0 else 1000)
+	grid._values = values
+	return grid
+
+
+func test_the_beach_cam_finds_a_coast_on_one_side_only() -> void:
+	var grid: TerrainGrid = _coast()
+	var shore: Vector3 = TvCamera.shore_along(grid, Vector3.ZERO, Vector3.RIGHT, 60.0, 1200.0)
+	assert_between(shore.x, 400.0, 434.0, "towards the coast: the water's edge (the waterline at 433 m)")
+	assert_false(TvCamera._is_land(grid, shore), "it stands on the water")
+	assert_true(is_nan(TvCamera.shore_along(grid, Vector3.ZERO, Vector3.LEFT, 60.0, 1200.0).x), "out to sea: no shore")
+	assert_true(is_nan(TvCamera.shore_along(grid, Vector3.ZERO, Vector3.RIGHT, 60.0, 200.0).x), "a coast out of reach: none")
+	assert_true(is_nan(TvCamera.shore_along(grid, Vector3(400.0, 0.0, 0.0), Vector3.RIGHT, 60.0, 1200.0).x), "a coast too near: none")
+	assert_true(TvCamera.land_between(grid, Vector3(600.0, 2.0, 0.0), Vector3(-200.0, 0.0, 0.0)), "a camera inland looks across the land")
+	assert_false(TvCamera.land_between(grid, Vector3(-600.0, 2.0, 0.0), Vector3(-200.0, 0.0, 0.0)), "a camera boat at sea does not")
+	assert_almost_eq(TvCamera.view_off(Vector3.BACK, [Vector3.RIGHT, Vector3.LEFT] as Array[Vector3]), PI / 2.0, 1e-5, "a quarter turn off both views")
+
+
 # ---------------------------------------------------------------- the 12 November director stays
 
 func test_the_12_november_director_keeps_its_numbers() -> void:

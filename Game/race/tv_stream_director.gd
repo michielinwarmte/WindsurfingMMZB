@@ -62,6 +62,9 @@ var _finish: int = 0
 var _finish_cut_s: float = 3.0
 ## After the race: whether the winner's close-up has been on.
 var _winner_shown: bool = false
+## For screenshots and checks (--tv_only=<shot>, e.g. FRONT_SIDE): the director takes this camera
+## whenever the phase or the mark has a picture made by it; -1: the stream's mix.
+var only_shot: int = -1
 ## The places as last seen and when each board last gained one (seconds of the director's clock).
 var _places: Dictionary[int, int] = {}
 var _gained_at: Dictionary[int, float] = {}
@@ -172,7 +175,7 @@ func _enter(now: Phase, race: RaceSim) -> void:
 ## line drone a few seconds before the gun, the runner just after it.
 static func start_times(numbers: TvDirectorConfig, rng: RandomNumberGenerator) -> Vector3:
 	var line_at_s: float = -TvFraming.from_spread(numbers.line_drone_before_gun_s, rng.randfn(), true, 0.5, 9.0)
-	var runner_at_s: float = TvFraming.from_spread(numbers.runner_after_gun_s, rng.randfn(), true, 0.2, 8.0)
+	var runner_at_s: float = TvFraming.from_spread(numbers.runner_after_gun_s, rng.randfn(), true, 0.2, numbers.runner_latest_s)
 	var runner_s: float = TvFraming.from_spread(numbers.runner_take_s, rng.randfn(), true, 4.0, 18.0)
 	return Vector3(line_at_s, runner_at_s, runner_s)
 
@@ -225,7 +228,7 @@ func _free(race: RaceSim, mix: TvPhaseMix) -> void:
 		return
 	var only_on: String = "front" if _back_to_leader else ""
 	_back_to_leader = false
-	var next: TvPicture = draw_picture(mix.pictures, tv.picture, _rng.randf(), only_on)
+	var next: TvPicture = draw_picture(_pool(mix.pictures), tv.picture, _rng.randf(), only_on)
 	if next == null:
 		return
 	var board: int = _subject(race, next.on)
@@ -237,6 +240,17 @@ func _free(race: RaceSim, mix: TvPhaseMix) -> void:
 	var take_s: float = TvFraming.from_spread(mix.take_s, _rng.randfn(), true, mix.shortest_s, mix.longest_s)
 	_left_s = take_s
 	_cut(next, board, take_s)
+
+
+## The pictures to draw from: all of them, or with --tv_only those made by that camera (when there are any).
+func _pool(pictures: Array[TvPicture]) -> Array[TvPicture]:
+	if only_shot < 0:
+		return pictures
+	var only: Array[TvPicture] = []
+	for picture: TvPicture in pictures:
+		if picture.shot == only_shot:
+			only.append(picture)
+	return only if not only.is_empty() else pictures
 
 
 ## A picture drawn from a list by the stream's shares (weight_pct): `dice` from 0 to 1, never `last`
@@ -406,7 +420,7 @@ func _cut_to_the_mark(race: RaceSim, index: int) -> void:
 		if race.next_step_index(other) == step_number and race.board_position(other).distance_to(race.board_position(index)) < config.lead_group_m:
 			_shown[other] = step_number
 	_mark_take_s = TvFraming.from_spread(config.mark_take_s, _rng.randfn(), true, config.mark_shortest_s, config.mark_longest_s)
-	var next: TvPicture = draw_picture(config.mark_pictures, null, _rng.randf())
+	var next: TvPicture = draw_picture(_pool(config.mark_pictures), null, _rng.randf())
 	_cut(next, index, _mark_take_s, step_number)
 	_rounded_at_s = -1.0
 

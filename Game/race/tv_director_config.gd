@@ -35,6 +35,12 @@ extends Resource
 ## down the start line that Max asked for on 12 November ("for looking for over-earlies"), the line
 ## drawn on the water, with the stream's timing and framing.
 @export var start_line_drone: TvPicture
+## The line drone stands this far round from the start line's own line, on the course side, degrees:
+## seen exactly end-on from beyond the committee boat the drawn line hides behind the boat; a little
+## round, the line shows as a slanted line on the water, a board over early is on the camera's side of
+## it, and the fleet sails towards the camera, as at the stream's line drone (the readers saw it as
+## front-side and side about equally). The game's choice, not measured.
+@export var line_drone_angle_deg: float = 20.0
 ## The drone that runs with the fleet off the line (behind and to the side on the fleet, or ahead and to
 ## the side on the front), drawn by weight_pct.
 @export var start_runners: Array[TvPicture] = []
@@ -44,6 +50,8 @@ extends Resource
 @export var line_drone_before_gun_s: Vector3 = Vector3(2.6, 3.1, 3.7)
 @export var runner_after_gun_s: Vector3 = Vector3(0.6, 0.7, 1.8)
 @export var runner_take_s: Vector3 = Vector3(8.0, 9.6, 11.6)
+## The runner comes at the latest this long after the gun, s (the stream's latest of nine: 4.7).
+@export var runner_latest_s: float = 5.0
 
 @export_group("The marks")
 ## A drone already waits at the buoy; these are its pictures (by weight_pct; angle_deg round the
