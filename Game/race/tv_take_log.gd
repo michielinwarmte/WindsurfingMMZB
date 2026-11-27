@@ -118,11 +118,6 @@ func close() -> void:
 		_file.flush()
 
 
-## The game closes (a screenshot run, Esc to the menu): the take on the screen is written too.
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_PREDELETE:
-		close()
-
 
 func _start_part(phase: String, clock_s: float) -> void:
 	_open = true

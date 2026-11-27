@@ -31,7 +31,8 @@
 ;   behind-side, 90 side, 135 front-side: the middle of each view; the readers agreed on the side for
 ;   only 58 % of the seconds); chasers_at_mark_chance 0.7 and finish_follow_through_chance 0.5 (the
 ;   notes say "often" and show both about equally); mark_after_rounding_s; chasers_within_s;
-;   lead_group_m and lead_group_most (the readers' lead group: the first 2 to 4 together); close_m and
+;   lead_group_m and lead_group_most (the readers' lead group: the first 2 to 4 together);
+;   fleet_together_m (a picture on the fleet only while the boards still racing are together); close_m and
 ;   gained_s (the 12 November numbers); the beach cam's place (the shore, or a camera boat 150 m off
 ;   for the tight picture and 450 m for the wide one), its heights (1.5 to 8 m) and zoom range (0.8 to
 ;   30 degrees); the pull-out's growth (4 times); every picture's glide_s.
@@ -514,6 +515,7 @@ finish_shortest_s = 8.0
 finish_longest_s = 30.0
 after_winner = SubResource("after_winner")
 after_winner_take_s = Vector3(20.0, 25.0, 30.0)
+fleet_together_m = 150.0
 lead_group_m = 40.0
 lead_group_most = 4
 close_m = 30.0

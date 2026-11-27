@@ -129,6 +129,8 @@ func setup(race_runner: RaceRunner, camera_rig: CameraRig, sailing_scene: Sailin
 	use_director(options.get("tv_director", "stream"))
 	if options.has("tv_log"):
 		take_log = TvTakeLog.new(options["tv_log"], maxi(options.get("tv_log_races", "0").to_int(), 0))
+		# The take on the screen is written too when the game closes.
+		rig.tree_exiting.connect(take_log.close)
 		if options.has("tv_seed"):
 			_rng.seed = options["tv_seed"].to_int()
 

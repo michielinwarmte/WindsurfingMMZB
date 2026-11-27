@@ -228,7 +228,15 @@ func _free(race: RaceSim, mix: TvPhaseMix) -> void:
 		return
 	var only_on: String = "front" if _back_to_leader else ""
 	_back_to_leader = false
-	var next: TvPicture = draw_picture(_pool(mix.pictures), tv.picture, _rng.randf(), only_on)
+	var pool: Array[TvPicture] = _pool(mix.pictures)
+	if not _fleet_together(race):
+		# A spread fleet is no picture: its pictures wait for the next race's first reach.
+		var together_only: Array[TvPicture] = []
+		for picture: TvPicture in pool:
+			if picture.on != "fleet":
+				together_only.append(picture)
+		pool = together_only
+	var next: TvPicture = draw_picture(pool, tv.picture, _rng.randf(), only_on)
 	if next == null:
 		return
 	var board: int = _subject(race, next.on)
@@ -293,6 +301,24 @@ func _subject(race: RaceSim, on: String) -> int:
 	return _first_racing(race)
 
 
+## Whether the boards still racing are together (all within fleet_together_m of their middle).
+func _fleet_together(race: RaceSim) -> bool:
+	var racing: PackedVector2Array = PackedVector2Array()
+	for index: int in tv.runner.watch_order():
+		if not race.is_finished(index) and not race.is_retired(index):
+			racing.append(race.board_position(index))
+	if racing.size() < 2:
+		return false
+	var middle: Vector2 = Vector2.ZERO
+	for at: Vector2 in racing:
+		middle += at
+	middle /= racing.size()
+	for at: Vector2 in racing:
+		if at.distance_to(middle) > config.fleet_together_m:
+			return false
+	return true
+
+
 ## The first board in race order that is still racing (the winner once every board is in).
 func _first_racing(race: RaceSim) -> int:
 	var order: Array[int] = tv.runner.watch_order()
@@ -308,12 +334,16 @@ func _pack_board(race: RaceSim) -> int:
 	var positions: PackedVector2Array = PackedVector2Array()
 	var finished: PackedByteArray = PackedByteArray()
 	var gained: PackedByteArray = PackedByteArray()
+	var late: PackedByteArray = PackedByteArray()
+	var racing: bool = race.phase() == RaceSim.Phase.RACING
 	for index: int in order:
 		positions.append(race.board_position(index))
 		finished.append(1 if race.is_finished(index) or race.is_retired(index) else 0)
 		gained.append(1 if _gained_at.has(index) and _clock_s - _gained_at[index] < config.gained_s else 0)
+		var next: RaceStep = race.next_step(index)
+		late.append(1 if racing and next != null and next.kind == RaceStep.Kind.START else 0)
 	var front: int = lead_group_size(positions, finished, config.lead_group_m, config.lead_group_most)
-	var weights: PackedFloat32Array = pack_weights(positions, finished, gained, front, config.close_m)
+	var weights: PackedFloat32Array = pack_weights(positions, finished, gained, late, front, config.close_m)
 	var total: float = 0.0
 	for weight: float in weights:
 		total += weight
@@ -343,8 +373,9 @@ static func lead_group_size(positions: PackedVector2Array, finished: PackedByteA
 
 ## What each board is worth as the pack's story (race order): nothing for the lead group (the first
 ## `front`) and the finished; for the rest one, more for a fight (another racing board within close_m)
-## and a place just gained, and more the nearer the front. Plain numbers in.
-static func pack_weights(positions: PackedVector2Array, finished: PackedByteArray, gained: PackedByteArray, front: int, close_m: float) -> PackedFloat32Array:
+## and a place just gained, and more the nearer the front; a board still to start after the gun
+## (`late`: back over the line, or a late starter) a tenth. Plain numbers in.
+static func pack_weights(positions: PackedVector2Array, finished: PackedByteArray, gained: PackedByteArray, late: PackedByteArray, front: int, close_m: float) -> PackedFloat32Array:
 	var weights: PackedFloat32Array = PackedFloat32Array()
 	for i: int in positions.size():
 		if i < front or finished[i] != 0:
@@ -357,6 +388,8 @@ static func pack_weights(positions: PackedVector2Array, finished: PackedByteArra
 				break
 		if gained[i] != 0:
 			weight += 3.0
+		if late[i] != 0:
+			weight *= 0.1
 		weights.append(weight)
 	return weights
 

@@ -92,6 +92,9 @@ extends Resource
 ## The lead group: the leader and the boards within lead_group_m of it, at most lead_group_most.
 @export var lead_group_m: float = 40.0
 @export var lead_group_most: int = 4
+## The fleet is together while every board still racing is within fleet_together_m of their middle:
+## only then is a picture on the fleet drawn (the stream's are on the first reach). The game's choice.
+@export var fleet_together_m: float = 150.0
 ## A fight: another racing board this close, m. A place gained this recently counts, s.
 @export var close_m: float = 30.0
 @export var gained_s: float = 15.0
