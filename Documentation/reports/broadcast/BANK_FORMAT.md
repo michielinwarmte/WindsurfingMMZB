@@ -77,13 +77,10 @@ Short words; the director knows what each means. The bank's builders use only th
 | `many` | at least 6 boards race |
 | `pair` | exactly two boards are in the moment (`{rider2}` is filled) |
 | `last_lap` | the board is on its last leg |
-| `wind_strong` | the wind is strong: its mean true wind at 10 m over the last 20 s at least 22 kt (`CommentaryConfig.wind_strong_kt`; for "it's absolutely howling") |
-| `wind_light` | the wind is light: that mean at most 13 kt (`wind_light_kt`) |
-| `choppy` | the water is rough: the sea's significant wave height, measured under the boards, at least 0.3 m (`choppy_hs_m`) |
-| `flat` | the water is flat: that height at most 0.12 m (`flat_hs_m`) |
-| `windward` | `{rider}` is to windward (above, higher) of `{rider2}` or of its straight line to the mark (`tactics`: "Pushing hard above {rider2} though.") |
-| `leeward` | `{rider}` is to leeward (below, lower) of them ("He's got a lower line.") |
-| `dirty_air` | `{rider}` sails in another sail's wind shadow ("Oh and he's got some dirty air there.") |
+| `wind_strong` | it blows hard (a "howling" line must not come in light wind) |
+| `wind_light` | the wind is light |
+| `choppy` | the water is rough |
+| `flat` | the water is flat |
 
 ## The moments
 
@@ -167,3 +164,18 @@ Each moment is something the race can tell the commentary director. The list com
 - Anything the speech-to-text wasn't sure of (its certainty per word is in the transcript) until someone has listened to it.
 
 The raw transcripts, with the riders' real names, stay outside git in `C:/Users/Max de Dikke/source/pwa_broadcast/`.
+
+## How the game reads the newer `needs` words
+
+Added for the commentary director (27 November 2026, [commentary_director.md](commentary_director.md)); the numbers are
+in `Game/config/commentary_default.tres`.
+
+| Word | The line fits only when |
+|---|---|
+| `wind_strong` | the fleet's mean true wind at 10 m over the last 20 s is at least 22 kt (`wind_strong_kt`) |
+| `wind_light` | that mean is at most 13 kt (`wind_light_kt`) |
+| `choppy` | the sea's significant wave height, measured under the boards, is at least 0.3 m (`choppy_hs_m`) |
+| `flat` | that height is at most 0.12 m (`flat_hs_m`) |
+| `windward` | (new) `{rider}` is to windward (above, higher) of `{rider2}` or of its straight line to the mark (`tactics`: "Pushing hard above {rider2} though.") |
+| `leeward` | (new) `{rider}` is to leeward (below, lower) of them ("He's got a lower line.") |
+| `dirty_air` | (new) `{rider}` sails in another sail's wind shadow ("Oh and he's got some dirty air there.") |
