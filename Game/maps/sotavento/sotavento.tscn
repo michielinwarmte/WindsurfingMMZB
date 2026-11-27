@@ -19,7 +19,7 @@
 ; spray the wind carries). The fill light is part sky, part the light the white sand throws back.
 [sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_sotavento"]
 sky_top_color = Color(0.16, 0.38, 0.72, 1)
-sky_horizon_color = Color(0.74, 0.8, 0.86, 1)
+sky_horizon_color = Color(0.52, 0.62, 0.82, 1)
 sky_curve = 0.1
 ground_bottom_color = Color(0.3, 0.42, 0.55, 1)
 ground_horizon_color = Color(0.74, 0.8, 0.86, 1)
@@ -36,9 +36,9 @@ ambient_light_sky_contribution = 0.6
 reflected_light_source = 2
 tonemap_mode = 2
 fog_enabled = true
-fog_light_color = Color(0.76, 0.81, 0.87, 1)
+fog_light_color = Color(0.55, 0.64, 0.82, 1)
 fog_sun_scatter = 0.1
-fog_density = 4e-05
+fog_density = 0.00013
 fog_aerial_perspective = 0.5
 fog_sky_affect = 0.0
 

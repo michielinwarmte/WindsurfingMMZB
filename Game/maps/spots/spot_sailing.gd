@@ -19,7 +19,8 @@ extends SailingScene
 ##   --water_level=<m>        the water this high above mean sea level (the tide) instead of the spot's
 ##   --course=<name>          race a course from the spot's courses folder (Sotavento: pwa_slalom_x)
 ##   --overview=<east>,<north>,<height>  a fixed camera there (height above mean sea level), looking
-##       at the board, or with --overview_look=<east>,<north> at that point on the water
+##       at the board, or with --overview_look=<east>,<north> at that point on the water;
+##       --overview_fov=<degrees> gives it another lens (the vertical field of view)
 ## tools/screenshot.sh res://maps/sotavento/sail_sotavento.tscn out.png 480 --autopilot=1 --camera=2
 
 ## The water for the small map: found every this many metres.
@@ -105,6 +106,11 @@ func _apply_overview_options() -> void:
 	var look: PackedFloat64Array = _option_numbers("overview_look")
 	if look.size() == 2:
 		_overview_look = spot.map_config.lv95_to_game(look[0], look[1], 0.0)
+	# --overview_fov=<degrees>: the fixed camera's lens (its vertical field of view), for pictures
+	# to set beside a real camera's (the stream's drones: about 47 degrees).
+	var fov: PackedFloat64Array = _option_numbers("overview_fov")
+	if fov.size() == 1:
+		_camera_rig.camera.fov = clampf(fov[0], 1.0, 120.0)
 
 
 ## The start spot in game coordinates, on the water.

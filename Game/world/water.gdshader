@@ -92,6 +92,25 @@ uniform float roughness_value : hint_range(0.0, 1.0) = 0.05;
 uniform float roughness_far : hint_range(0.0, 1.0) = 0.22;
 uniform float roughness_far_m = 2000.0;
 // A thin light line where the water meets the shore (or a hull), this deep and this strong.
+// Three looks a windy sea over sand needs (Sotavento, 27 November 2026: the stream's pictures measured:
+// tools/broadcast/water_look.py). All off by default, so every other water is drawn as before.
+// - refracted_bed_path: the light from the bottom comes up through the water steeply whatever the
+//   angle it is looked at from (Snell's law: at most 48.6 degrees from straight up), so the water its
+//   light passes is the depth over the cosine of that angle, not the long straight line of sight. Without
+//   it, far water over sand loses its bottom's glow and goes navy; the stream's stays turquoise to the horizon.
+// - mirror_most: how much of a flat sea's mirror a pixel keeps (1.0: all of it, a flat sea is all mirror
+//   at a glancing look). A rough sea shows its tilted faces and mirrors a third to a half as much.
+// - lake_ripple_strength: the ripples' normal map on a lake's or a sea spot's own waves too (0: left
+//   out, the short waves only roughen the mirror), so the small chop shows as light and dark.
+uniform bool refracted_bed_path = false;
+uniform float mirror_most : hint_range(0.0, 1.0) = 1.0;
+uniform float lake_ripple_strength : hint_range(0.0, 2.0) = 0.0;
+// - sky_fill_color: the sky a rough sea's faces mirror (black: off). The engine's own mirror fades on
+//   rough water, which leaves a windy sea evenly lit; with this, each small face shows as much of this
+//   sky colour as it mirrors (faces turned away: pale sky; faces turned to the eye: the water's own
+//   colour), which is the mottled look of a real chop. Set it to the sky's colour near the horizon.
+uniform vec3 sky_fill_color : source_color = vec3(0.0);
+
 uniform float shore_line_depth_m = 0.15;
 uniform float shore_line_strength : hint_range(0.0, 1.0) = 0.0;
 
@@ -494,7 +513,7 @@ void fragment() {
 	// waves draw their short waves themselves (lake_short_waves()), sized by the wind, so there the
 	// ripples' noise is left out.
 	vec3 ripple = vec3(0.0, 0.0, 1.0);
-	if (!lake_waves_on) {
+	if (!lake_waves_on || lake_ripple_strength > 0.0) {
 		vec2 along = normalize(ripple_drift_direction + vec2(1e-6, 0.0));
 		vec3 big = ripple_layer(world_position.xz, ripple_size_m, ripple_speed_ms, along, TIME);
 		vec3 small = ripple_layer(world_position.xz, ripple_size_m * 0.35, ripple_speed_ms * 0.6,
@@ -502,7 +521,7 @@ void fragment() {
 		ripple = normalize(big + small);
 	}
 	NORMAL_MAP = ripple * 0.5 + 0.5;
-	NORMAL_MAP_DEPTH = lake_waves_on ? 0.0 : ripple_strength * wind * near;
+	NORMAL_MAP_DEPTH = lake_waves_on ? lake_ripple_strength * near : ripple_strength * wind * near;
 	vec2 tilt = lake_waves_on ? lake_slope : ripple.xy;
 
 	// 1. How much water the view passes through before it reaches what lies behind it.
@@ -518,13 +537,24 @@ void fragment() {
 		bent_bed = bed;
 	}
 	float path_m = length(bent_bed - world_position);
+	if (refracted_bed_path) {
+		// The bottom's light comes up steeply (Snell): the depth under the surface over the cosine of
+		// the bent ray's angle, never more than the straight path.
+		float up = clamp(normalize((INV_VIEW_MATRIX * vec4(VIEW, 0.0)).xyz).y, 0.0, 1.0);
+		float cos_bent = sqrt(1.0 - (1.0 - up * up) / 1.7769);
+		path_m = min(path_m, max(world_position.y - bent_bed.y, 0.0) / cos_bent);
+	}
 	vec3 through = exp(-absorption_per_m * path_m);
 	vec3 bed_color = textureLod(screen_texture, bent_uv, 0.0).rgb;
 
 	// 3. The share that is mirrored (Schlick's Fresnel, 2 % straight down for water); the rest
 	// comes out of the water: what lies under it seen through it, and the water's own colour.
 	float facing = clamp(dot(NORMAL, VIEW), 0.0, 1.0);
-	float mirrored = 0.02 + 0.98 * pow(1.0 - facing, 5.0);
+	if (lake_waves_on && lake_ripple_strength > 0.0) {
+		// With the ripples drawn on a lake's waves, each ripple's own face decides what it mirrors.
+		facing = clamp(dot(normalize(NORMAL + (TANGENT * ripple.x + BINORMAL * ripple.y) * NORMAL_MAP_DEPTH), VIEW), 0.0, 1.0);
+	}
+	float mirrored = (0.02 + 0.98 * pow(1.0 - facing, 5.0)) * mirror_most;
 	vec3 own_color = mix(deep_color, shallow_color, clamp(0.5 + 0.5 * pixel_crest_factor, 0.0, 1.0) * crest_lightening);
 	float shore = (1.0 - smoothstep(0.0, shore_line_depth_m, world_position.y - bed.y)) * shore_line_strength;
 	vec3 albedo = mix(own_color * (vec3(1.0) - through), vec3(0.9), shore) * (1.0 - mirrored) * darker;
@@ -535,7 +565,7 @@ void fragment() {
 	// On the open sea in a known wind, its whitecaps by the law (sea_foam); without one, the steep crests.
 	float foam = lake_waves_on ? lake_foam : (sea_foam >= 0.0 ? sea_foam : smoothstep(foam_threshold, foam_threshold + 0.15, pixel_crest_steepness) * 0.7);
 	albedo = mix(albedo, foam_color, foam);
-	emission *= 1.0 - foam;
+	emission = (emission + sky_fill_color * mirrored) * (1.0 - foam);
 	float distance_fade = clamp(1.0 - distance_m / grid_fade_distance_m, 0.0, 1.0);
 	// The grid is on the near mesh only: it fades out before the mesh's edge (sea_far_share), or that edge shows.
 	float lines = grid_line(world_position.xz, cell_m, line_width_m) * distance_fade * grid_strength * (1.0 - sea_far_share);
