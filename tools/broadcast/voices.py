@@ -12,7 +12,8 @@ take the answer of the sentence next to them in time.
                 without it the main voice found here is saved as <folder>/main_voice.npy
 
 Reads sentences.jsonl, writes voices.npy (one fingerprint per sentence) and adds
-"voice_like" (0 to 1) to every line of sentences.jsonl. Which likeness counts as "him" is
+"voice_like" (0 to 1, the sentence's own) and "voice_main" (the same, steadied over the
+sentences next to it) to every line of sentences.jsonl. Which likeness counts as "him" is
 decided afterwards from the spread of the numbers (see bank.py), not here.
 """
 import argparse
@@ -87,11 +88,18 @@ def run(folder, main_path, threads):
                 best, gap = j, g
         r["voice_like"] = round(float(like[best]), 3) if best is not None else -1.0
         r["voice_own"] = False
+    # A voice speaks for several sentences in a row, and one sentence's fingerprint can be
+    # off: "voice_main" is the middle value of the sentence and its two neighbours on each
+    # side (those within 6 s), which is steadier than the sentence's own number.
+    for i, r in enumerate(rows):
+        near = [rows[j]["voice_like"] for j in range(max(0, i - 2), min(len(rows), i + 3))
+                if rows[j]["voice_like"] >= 0.0 and abs(rows[j]["start"] - r["start"]) <= 6.0 + r["seconds"]]
+        r["voice_main"] = round(float(np.median(near)), 3) if near else r["voice_like"]
     np.save(os.path.join(folder, "voices.npy"), embs)
     with open(os.path.join(folder, "sentences.jsonl"), "w", encoding="utf-8") as f:
         for r in rows:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
-    own = np.array([r["voice_like"] for r in rows if r["voice_own"]])
+    own = np.array([r["voice_main"] for r in rows if r["voice_own"]])
     hist, _ = np.histogram(own, bins=10, range=(0.0, 1.0))
     print("%s: %d sentences, %d with a fingerprint; likeness 0.0-1.0 in tenths: %s"
           % (os.path.basename(folder), len(rows), int(has.sum()), " ".join(str(h) for h in hist)), flush=True)

@@ -58,6 +58,8 @@ A **line** is what the commentator says in one go: one sentence, or two or three
 | `{colour}` | the board's sail colour as a word ("red", "blue"), when the game can name it |
 | `{mark}` | which mark: "first", "second", "last" |
 | `{leg}` | "first", "second", "last", "penultimate" (he says "on this penultimate reach") |
+| `{national}` | the sailor's nationality as a noun, the way he uses it for a rider: "the {national}" = "the Italian", "the Frenchman". The game's sailors have no country yet, so until they do these lines are skipped (the data is kept). |
+| `{nation_adj}` | the same as an adjective: "the {nation_adj} rider" = "the Polish rider". Skipped for the same reason. |
 
 ### `needs`
 
@@ -120,6 +122,14 @@ Each moment is something the race can tell the commentary director. The list com
 |---|---|---|
 | `fall` | a board is down | "Someone is in the drink." "{rider}'s gone." |
 | `near_miss` | two boards nearly touch | "Oh no. {rider} has just nearly took out {rider2}." |
+| `trouble` | a board loses speed or places without falling: a mistake, a spin-out, backing off, stuck in someone's wind | "{rider} mistake." "And {rider} has had to back off here." "Just had a shocker in the middle." |
+
+**His reactions** (added 27 November 2026, from the eleven replays: he says these all the time, on their own, right before or after the line that says what happened)
+
+| Moment | When | He says, for example |
+|---|---|---|
+| `wow` | a reaction to something spectacular, of any kind: a pass, a save, a gybe, the speed. Said first, the line about what happened follows. | "Wow." "Oh my life." "Look at this." |
+| `oh_no` | a reaction to something going wrong for a board: a fall, a near miss, trouble | "Oh no." "No." |
 
 **The finish and after**
 
