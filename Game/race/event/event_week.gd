@@ -8,13 +8,17 @@ extends RefCounted
 ##
 ## The schedule is data (res://race/event/schedules/<name>.json): the days, how many eliminations
 ## on each, each day's wind. The game's Sotavento week follows the real World Cup Fuerteventura
-## 2026: eliminations 1 and 2 on the first day, 3 and 4 on the second, 5 to 7 on the third, 8 to 11
-## on the fifth.
+## 2026: eliminations 1 and 2 on the first day, 3 and 4 on the second, 5 to 7 on the third, 8 and 9
+## on the fourth, 10 and 11 on the fifth.
 ##
-## The points (THE LEAD'S READING OF THE SPORT, to be checked in the plan's step W0, kept here in
-## one place): the winner of an elimination 0.7, everyone else his place (2nd 2, 3rd 3 ...); the
-## fewest points lead; the worst results are dropped as the week goes on (DROPPED_AFTER); a tie
-## goes to the better last elimination.
+## The points (checked against the streams' commentary on 27 November 2026, step W0 of the plan):
+## the winner of an elimination 0.7, everyone else his place (2nd 2, 3rd 3 ...: the leader's "4.8
+## points" after six eliminations is four wins and a second with one result dropped); the fewest
+## points lead; the worst results are dropped as the week goes on (DROPPED_AFTER: "elimination 4
+## ... the discard will come in", "we have had six eliminations, so this next one means two discards
+## will come in", "this is elimination 12, and that's when three discards come in"; the game had the
+## third at ten until then). A tie goes to the better last elimination (THE LEAD'S CHOICE: the
+## tour's own tie-break was not said on the streams).
 
 signal heat_called(elimination: int, heat: int, sailor_ids: PackedInt32Array)
 signal heat_recorded(elimination: int, heat: int, order: PackedInt32Array)
@@ -25,7 +29,7 @@ const SCHEDULES_FOLDER: String = "res://race/event/schedules"
 const SAVE_VERSION: int = 1
 const WINNER_POINTS: float = 0.7
 ## Eliminations completed -> results dropped (the most that applies counts).
-const DROPPED_AFTER: Dictionary[int, int] = {4: 1, 7: 2, 10: 3}
+const DROPPED_AFTER: Dictionary[int, int] = {4: 1, 7: 2, 12: 3}
 
 var roster: EventRoster = null
 var schedule_name: String = ""

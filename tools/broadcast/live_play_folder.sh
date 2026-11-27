@@ -40,11 +40,17 @@ for cfg in body.cfg push_and_body.cfg; do
 	fi
 done
 # The broadcast's settings: Max's play settings with the sound set for a broadcast (his play
-# settings have the master volume at 5 %: the commentator would not be heard).
+# settings have the master volume at 5 %: the commentator would not be heard), and the spot's sea at
+# 0.7 of its height, as in Max's own settings and as the test heats of 27 November were sailed
+# (crests up to about 1.0 m in 30 kt; at 1.0 they are 1.5 m).
 if [[ ! -f "$dest/live.cfg" ]]; then
 	sed -e 's/^master_volume=.*/master_volume=0.6/' -e 's/^wind_volume=.*/wind_volume=0.3/' \
 		-e 's/^water_volume=.*/water_volume=0.4/' -e 's/^sail_volume=.*/sail_volume=0.3/' \
+		-e 's/^lake_wave_scale=.*/lake_wave_scale=0.7/' \
 		"$dest/push_and_body.cfg" > "$dest/live.cfg"
+	if ! grep -q '^lake_wave_scale=' "$dest/live.cfg"; then
+		printf '\r\n[waves]\r\nlake_wave_scale=0.7\r\n' >> "$dest/live.cfg"
+	fi
 	if ! grep -q '^master_volume=' "$dest/live.cfg"; then
 		printf '\r\n[audio]\r\nmaster_volume=0.6\r\nwind_volume=0.3\r\nwater_volume=0.4\r\nsail_volume=0.3\r\ncommentary_volume=1.0\r\n' >> "$dest/live.cfg"
 	fi

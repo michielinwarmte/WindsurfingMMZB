@@ -17,9 +17,16 @@ extends RefCounted
 ## quarter-finals and 33 to 64 to those knocked out in the first round: by their place in their
 ## heat, then by their seed.
 ##
-## THE FORMAT IS THE LEAD'S READING OF THE SPORT, NOT YET CHECKED against the tour's rule book or
-## the 2026 streams' commentary (step W0 of the plan): the snake, which heats feed which, and how
-## the knocked-out are ranked are kept in this one file so they are easy to set right.
+## Checked against the 2026 streams' commentary (27 November 2026, step W0 of the plan): heats of
+## eight, the first four go through ("top four will qualify", "four riders will go through"), then
+## the quarter-finals, the semi-finals, a winners' final and a losers' final ("runners-up final:
+## this is to decide nine to 16th"). The real fleet was smaller than the game's 64: only its last
+## sixteen sailed a first round ("two qualifying heats to go into the quarterfinals"), the others
+## began in the quarter-finals. With 64 (Max: "64 people in brackets") everyone sails a first round
+## of eight heats. NOT SAID ON THE STREAMS, so still the lead's reading: the snake of the seeding,
+## and how those knocked out in the same round are ranked against each other. And a sailor over the
+## line early is out of his heat there ("all jumped the gun, so three guys were out"); the game's
+## race lets him go back and start again (a question for Max).
 
 const SAILORS: int = 64
 const HEAT_SIZE: int = 8

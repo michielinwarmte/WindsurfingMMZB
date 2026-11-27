@@ -97,7 +97,8 @@ func test_the_points_and_the_dropped_results() -> void:
 	assert_eq(EventWeek.dropped_after(3), 0)
 	assert_eq(EventWeek.dropped_after(4), 1)
 	assert_eq(EventWeek.dropped_after(7), 2)
-	assert_eq(EventWeek.dropped_after(11), 3)
+	assert_eq(EventWeek.dropped_after(11), 2)
+	assert_eq(EventWeek.dropped_after(12), 3)
 
 
 func test_a_week_runs_to_a_champion_and_seeds_from_the_standings() -> void:
@@ -124,14 +125,14 @@ func test_a_week_runs_to_a_champion_and_seeds_from_the_standings() -> void:
 	assert_eq(heats, 11 * 16)
 	assert_eq(week.next_heat(), 0)
 	assert_eq(week.results.size(), 11)
-	# Eleven results, three dropped: the champion's total is the sum of his eight best.
+	# Eleven results, two dropped: the champion's total is the sum of his nine best.
 	var champion: int = week.standings()[0]
 	var points: Array = Array(week.points_of(champion))
 	points.sort()
-	var best_eight: float = 0.0
-	for i: int in 8:
-		best_eight += float(points[i])
-	assert_almost_eq(week.total_of(champion), best_eight, 1e-4)
+	var best_nine: float = 0.0
+	for i: int in 9:
+		best_nine += float(points[i])
+	assert_almost_eq(week.total_of(champion), best_nine, 1e-4)
 
 
 func test_a_saved_week_goes_on_to_the_same_champion() -> void:
