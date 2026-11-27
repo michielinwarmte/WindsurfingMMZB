@@ -87,6 +87,7 @@ func test_the_beach_cam_wide_puts_the_sea_in_a_thin_band() -> void:
 	# Tight on the leaders at a mark 455 m off: the sail 40 %, the horizon at 30 %: the stream's 1 to 1.5 degrees.
 	var tight: Vector3 = TvFraming.lens_place(455.0, 3.5, 0.40, 0.30, 0.5, eye_m, eye_m, config.lens_min_deg, config.lens_max_deg)
 	assert_between(tight.x, 0.9, 1.6, "the stream's tight zoom")
+	assert_gte(config.lens_min_deg, 1.0, "Godot's camera takes no view narrower than 1 degree (it keeps the old one)")
 
 
 func test_the_shares_are_of_the_pictures_height_in_any_window() -> void:

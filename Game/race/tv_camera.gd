@@ -655,7 +655,8 @@ func frame(delta: float) -> void:
 		_look = _look.lerp(wanted[1], 1.0 - exp(-delta / old.look_glide_s))
 	# The picture's shares are of its height: the lens keeps its height in any window shape.
 	camera.keep_aspect = Camera3D.KEEP_HEIGHT
-	camera.fov = _fov_now
+	# Godot's camera takes no view narrower than 1 degree (it keeps the old one).
+	camera.fov = clampf(_fov_now, 1.0, 179.0)
 	camera.global_position = _eye
 	if _eye.distance_to(_look) < 0.01:
 		return

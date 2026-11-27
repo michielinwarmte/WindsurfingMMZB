@@ -113,10 +113,11 @@ extends Resource
 ## camera on the PWA's beach at Sotavento, drone_position.md: about 4.5 m, 3.5 to 5 on 41 shots: a
 ## camera standing on the beach, not on the judges' tower), never lower than lens_lowest_m above the
 ## ground under it; its zoom between these lenses (vertical field of view, degrees; the stream's: 8 to
-## 10 wide on the start line, 2 to 4 half close, 1 to 1.5 tight on the leaders).
+## 10 wide on the start line, 2 to 4 half close, 1 to 1.5 tight on the leaders; Godot's camera takes
+## nothing narrower than 1).
 @export var beach_eye_m: float = 4.5
 @export var lens_lowest_m: float = 1.5
-@export var lens_min_deg: float = 0.8
+@export var lens_min_deg: float = 1.0
 @export var lens_max_deg: float = 30.0
 ## Where the beach cam stands: where the map says (a Marker3D in the group "tv_shore_camera" anywhere
 ## in its scene: the eye's place; one place for the whole heat, it only pans and zooms; with several,
