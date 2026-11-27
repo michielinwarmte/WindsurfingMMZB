@@ -119,6 +119,13 @@ var _fov_now: float = 45.0
 ## The heat's phase as last written down (the log splits a take at a border), and the borders.
 var _log_phase: String = ""
 var _phase_borders: Vector2 = Vector2(-10.0, 12.0)
+## True when land stands between the camera and what it films (TvStreamDirector cuts away): checked at
+## the cut and every VIEW_CHECK_S while a camera that stands somewhere (the beach cam, a static drone)
+## is on. The beach markers whose hidden marks were written down once.
+const VIEW_CHECK_S: float = 0.25
+var view_lost: bool = false
+var _view_check_s: float = 0.0
+var _markers_reported: Dictionary[Node3D, bool] = {}
 ## The mast of each board (its drawn mast, for framing and measuring the picture).
 var _masts: Dictionary[WindsurferNode, Node3D] = {}
 ## The filmed board's sail top as it really stands (smoothed): its height above the water (m) and how
@@ -183,7 +190,7 @@ func hold(by_hand: Shot) -> void:
 	var board: int = runner.followed_index()
 	var by_hand_picture: TvPicture = director.hand_picture(by_hand) if director != null else null
 	if by_hand_picture != null:
-		cut_to(by_hand_picture, board, INF)
+		cut_to(by_hand_picture, board, INF, -1, true)
 	else:
 		_cut(by_hand, board)
 
@@ -534,8 +541,10 @@ func _cut(next: Shot, board: int) -> void:
 ## Cuts to one of the stream's pictures about a board (TvStreamDirector): its framing for this take
 ## drawn from the stream's spread, the camera's side drawn (a mark's: the outside of the turn), and a
 ## camera that stands somewhere put there. `take_s`: how long the take lasts (the pull-out's pace).
-## `mark_step`: the mark a MARK picture waits at (the board's next step when -1).
-func cut_to(next: TvPicture, board: int, take_s: float, mark_step: int = -1) -> void:
+## `mark_step`: the mark a MARK picture waits at (the board's next step when -1). False, and nothing on
+## the screen changes for good, when land stands between that camera and what it films (the map's
+## shore_grid): the director takes another picture. `force`: cut even so (the director's last choice).
+func cut_to(next: TvPicture, board: int, take_s: float, mark_step: int = -1, force: bool = false) -> bool:
 	shot = next.shot
 	picture = next
 	focus = board
@@ -564,11 +573,16 @@ func cut_to(next: TvPicture, board: int, take_s: float, mark_step: int = -1) -> 
 		_place_the_beach_cam(next, at, node)
 	elif next.shot == Shot.PULL_OUT:
 		_stand_look = at
+	view_lost = _view_cut(at, node)
+	_view_check_s = 0.0
+	if view_lost and not force:
+		return false
 	var fields: Dictionary[String, String] = {"picture": next.key(), "shot": Shot.keys()[next.shot], "camera": next.camera_kind(),
 		"view": next.view, "on": next.on, "move": next.move}
 	fields["sail_wanted_pct"] = "%.1f" % (sail_share * 100.0)
 	fields["horizon_wanted_pct"] = "%.1f" % (horizon_share * 100.0)
 	_log_the_take(fields)
+	return not view_lost
 
 
 ## The mark a MARK picture waits at, and the side it stands on: the outside of the turn (the boards
@@ -618,7 +632,7 @@ func frame(delta: float) -> void:
 		var watched: int = runner.followed_index()
 		if watched != focus and watched >= 0:
 			if picture != null:
-				cut_to(picture, watched, INF)
+				cut_to(picture, watched, INF, -1, true)
 			else:
 				_cut(shot, watched)
 	var node: WindsurferNode = runner.board_node(focus) if focus >= 0 else runner.followed_node()
@@ -636,6 +650,12 @@ func frame(delta: float) -> void:
 	if picture != null:
 		_follow_the_rig(node, board, delta)
 		wanted = _place_picture(board.origin)
+		if picture.move != "follows":
+			# A camera that stands somewhere: does land come between it and what it films?
+			_view_check_s += delta
+			if _view_check_s >= VIEW_CHECK_S:
+				_view_check_s = 0.0
+				view_lost = _view_cut(board.origin, node)
 		glide_s = picture.glide_s
 		if picture.is_lens_camera():
 			eye = wanted[0] if _stand_on_marker else _keep_above_ground(wanted[0], board.origin.y, stream.lens_lowest_m, stream.lens_lowest_m)
@@ -838,14 +858,12 @@ func _place_the_beach_cam(next: TvPicture, at: Vector3, node: WindsurferNode) ->
 		for turn_rad: float in [0.0, PI, 0.5, PI + 0.5, -0.5, PI - 0.5, 1.0, PI + 1.0]:
 			directions.append(beam.rotated(Vector3.UP, turn_rad))
 	_stand_look = subject
+	# Where the map says its beach camera stands (one place for the heat); when land hides the subject
+	# from there, cut_to() says so and the director takes a drone instead.
 	var marker: Node3D = _shore_camera_marker(subject)
-	var grid: TerrainGrid = scene.shore_grid if scene != null else null
-	if marker != null and grid != null and view_blocked(grid, marker.global_position, subject):
-		# The map's camera can't see the water where the subject is (a point of land in the way): this take
-		# from the nearest shore with a clear view instead.
-		marker = null
 	_stand_on_marker = marker != null
 	if marker != null:
+		_report_hidden_marks(marker, at.y)
 		# Where the map says its beach camera stands: its eye there, as high as the marker.
 		_stand = marker.global_position
 		_stand_eye_m = marker.global_position.y - at.y
@@ -858,6 +876,49 @@ func _place_the_beach_cam(next: TvPicture, at: Vector3, node: WindsurferNode) ->
 		var level_m: float = Vector2(subject.x - _stand.x, subject.z - _stand.z).length()
 		_stand_fov = TvFraming.lens_place(level_m, _rig_top(node).y, sail_share, horizon_share, next.subject_share(sail_share, horizon_share),
 			_stand_eye_m, _stand_eye_m, stream.lens_min_deg, stream.lens_max_deg)
+
+
+## Whether land stands between the picture's camera, where it is placed now, and what it films (the
+## board, or the line's middle, the mark, the spot a static camera looks at), on a map with land.
+func _view_cut(at: Vector3, node: WindsurferNode) -> bool:
+	var grid: TerrainGrid = scene.shore_grid if scene != null else null
+	if grid == null or picture == null or node == null:
+		return false
+	var eye: Vector3 = _place_picture(at)[0]
+	if not picture.is_lens_camera():
+		eye = _keep_above_ground(eye, at.y, stream.lowest_m, stream.above_land_m)
+	var subject: Vector3 = at
+	match picture.shot:
+		Shot.MARK:
+			subject = Vector3(_mark_at.x, at.y, _mark_at.y)
+		Shot.COMMITTEE, Shot.FINISH_LINE:
+			var ends: PackedVector3Array = _line(CourseMark.START_BOAT if picture.shot == Shot.COMMITTEE else CourseMark.FINISH_BOAT,
+				CourseMark.START_PIN if picture.shot == Shot.COMMITTEE else CourseMark.FINISH_PIN, at.y)
+			if not ends.is_empty():
+				subject = (ends[0] + ends[1]) * 0.5
+		Shot.BEACH_WIDE, Shot.BEACH_TIGHT:
+			if picture.move != "pan":
+				subject = _stand_look
+	return view_blocked(grid, Vector3(eye.x, eye.y - at.y, eye.z), Vector3(subject.x, 0.0, subject.z))
+
+
+## Once per marker of a map's beach camera: which of the course's marks land hides from it (for the
+## map maker), on the game's log.
+func _report_hidden_marks(marker: Node3D, water_y: float) -> void:
+	var grid: TerrainGrid = scene.shore_grid if scene != null else null
+	if _markers_reported.has(marker) or grid == null or runner.course == null:
+		return
+	_markers_reported[marker] = true
+	var eye: Vector3 = marker.global_position - Vector3.UP * water_y
+	var hidden: PackedStringArray = PackedStringArray()
+	for mark: CourseMark in runner.course.marks:
+		if view_blocked(grid, eye, Vector3(mark.position.x, 0.0, mark.position.y)):
+			hidden.append(mark.id)
+	if hidden.is_empty():
+		print("TV DIRECTOR: the map's beach camera %s sees every mark of %s." % [marker.name, runner.course.name])
+	else:
+		push_warning("TV director: from the map's beach camera %s (%s) land hides the marks %s of %s; those takes are filmed by a drone." % [
+			marker.name, marker.get_path(), ", ".join(hidden), runner.course.name])
 
 
 ## The map's beach camera nearest a point (a Marker3D in the group SHORE_CAMERA_GROUP), or null.

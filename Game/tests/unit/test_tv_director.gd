@@ -391,6 +391,38 @@ func _coast() -> TerrainGrid:
 	return grid
 
 
+## Open water 5 m deep with a ridge of land 10 m high across it, from x = 200 to 260 m.
+func _ridge() -> TerrainGrid:
+	var grid: TerrainGrid = TerrainGrid.new()
+	grid.columns = 41
+	grid.rows = 41
+	grid.cell_m = 20.0
+	grid.x0_m = -200.0
+	grid.z0_m = -400.0
+	grid._offset_m = -20.0
+	grid._scale_m = 0.01
+	var values: PackedByteArray = PackedByteArray()
+	values.resize(grid.columns * grid.rows * 2)
+	for row: int in grid.rows:
+		for column: int in grid.columns:
+			var x_m: float = grid.x0_m + column * grid.cell_m
+			values.encode_u16(2 * (row * grid.columns + column), 3000 if x_m >= 200.0 and x_m <= 260.0 else 1500)
+	grid._values = values
+	return grid
+
+
+func test_never_a_picture_through_land() -> void:
+	# The lead's rule (27 November 2026): before the cut and while a camera that stands somewhere is on,
+	# the sight line to what it films is tested against the map's ground; land in it: another picture.
+	var grid: TerrainGrid = _ridge()
+	assert_true(TvCamera.view_blocked(grid, Vector3(0.0, 4.5, 0.0), Vector3(500.0, 0.0, 0.0)), "the ridge between the beach cam and the board")
+	assert_true(TvCamera.view_blocked(grid, Vector3(0.0, 9.0, 0.0), Vector3(500.0, 0.0, 0.0)), "a 9 m eye does not clear 10 m of land")
+	assert_false(TvCamera.view_blocked(grid, Vector3(0.0, 40.0, 0.0), Vector3(500.0, 0.0, 0.0)), "a drone high above the ridge sees over it")
+	assert_false(TvCamera.view_blocked(grid, Vector3(300.0, 4.5, 0.0), Vector3(500.0, 0.0, 0.0)), "on the board's side of the ridge: clear")
+	assert_false(TvCamera.view_blocked(grid, Vector3(0.0, 4.5, -300.0), Vector3(0.0, 0.0, 300.0)), "along the ridge, not across it: clear")
+	assert_true(TvCamera.land_between(grid, Vector3(0.0, 0.0, 0.0), Vector3(500.0, 0.0, 0.0)), "a camera boat would look across it")
+
+
 func test_the_beach_cam_finds_a_coast_on_one_side_only() -> void:
 	var grid: TerrainGrid = _coast()
 	var shore: Vector3 = TvCamera.shore_along(grid, Vector3.ZERO, Vector3.RIGHT, 60.0, 1200.0)

@@ -136,6 +136,8 @@ func step(dt: float) -> void:
 	_left_s -= dt
 	_chasers_left_s -= dt
 	_note_places(race)
+	if tv.view_lost:
+		_cut_away_from_land(race)
 	var now: Phase = heat_phase(race.is_started(), race.clock_s(), race.phase() == RaceSim.Phase.FINISHED, config.start_from_s, config.start_until_s)
 	if now != phase or not _entered:
 		_enter(now, race)
@@ -551,12 +553,55 @@ func _hover(race: RaceSim) -> void:
 # ---------------------------------------------------------------- helpers
 
 ## A cut to a picture on a board (a mark's picture at that mark's step number; any other cut ends a
-## mark's take).
+## mark's take). When land stands between that picture's camera and what it films (the beach cam on a
+## coast, a drone off a headland), a drone picture on the same subject instead (the lead's rule, 27
+## November 2026: never a picture through land).
 func _cut(next: TvPicture, board: int, take_s: float, mark_step: int = -1) -> void:
 	if next == null or board < 0:
 		return
 	_mark_step = mark_step
-	tv.cut_to(next, board, take_s, mark_step)
+	if tv.cut_to(next, board, take_s, mark_step):
+		return
+	var instead: TvPicture = _drone_instead_of(next, mark_step >= 0)
+	tv.cut_to(instead if instead != null else next, board, take_s, mark_step, true)
+
+
+## A drone picture for a picture whose camera can't see its subject: at a mark another mark drone, on
+## the line the line drone, otherwise a drone of the phase's mix on the same subject (the front when it
+## has none), never the same picture.
+func _drone_instead_of(blocked: TvPicture, at_a_mark: bool) -> TvPicture:
+	var pool: Array[TvPicture] = []
+	if at_a_mark:
+		pool = config.mark_pictures
+	elif blocked.on == "line":
+		return config.start_line_drone if blocked != config.start_line_drone else null
+	else:
+		var mix: TvPhaseMix = config.mix_of(phase)
+		pool = mix.pictures if mix != null else config.race.pictures
+	var drones: Array[TvPicture] = []
+	for picture: TvPicture in pool:
+		if picture != blocked and not picture.is_lens_camera() and (picture.on == blocked.on or blocked.on == "mark"):
+			drones.append(picture)
+	if drones.is_empty():
+		for picture: TvPicture in pool:
+			if picture != blocked and not picture.is_lens_camera() and picture.on == "front":
+				drones.append(picture)
+	return draw_picture(drones, null, _rng.randf())
+
+
+## Land has come between the camera on the screen and what it films: at the start the beach cam gives way
+## to the line drone, at a mark the take ends, any other take ends now.
+func _cut_away_from_land(race: RaceSim) -> void:
+	tv.view_lost = false
+	if phase == Phase.START and _start_step == 0:
+		_start_step = 1
+		_cut_on_the_line(config.start_line_drone, race, INF)
+		return
+	if _mark_step >= 0:
+		_after_a_mark()
+	if _finish == 2:
+		_finish = 3
+	_left_s = 0.0
 
 
 ## The places in race order now; a board that moved up while racing has gained a place.
