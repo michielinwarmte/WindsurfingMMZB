@@ -69,14 +69,24 @@ func test_the_beach_cams_zoom_gives_the_picture_from_where_it_stands() -> void:
 
 
 func test_the_beach_cam_wide_puts_the_sea_in_a_thin_band() -> void:
-	# The wide picture before the start: sail 3 %, horizon at 70 % from the top. From water level the
-	# boards sit near the horizon, low in the picture.
-	var lens: Vector3 = TvFraming.lens_place(450.0, 4.5, 0.03, 0.70, 0.5, 1.5, 8.0, 0.3, 30.0)
-	var seen: Vector3 = TvFraming.measure(_camera_at(450.0, lens.y, lens.z), lens.x, Vector3.ZERO, Vector3.UP * 4.5)
-	assert_almost_eq(seen.y, 0.70, 0.002, "the horizon low")
-	assert_almost_eq(seen.x, 0.03, 0.003, "a small sail")
-	assert_almost_eq(lens.y, 1.5, 1e-6, "at water level")
-	assert_gt(seen.z, 0.65, "the board on the horizon line, the sea below it a thin band")
+	# The wide picture on the start line: sail 3.5 %, horizon at 72 % from the top, the eye 4.5 m up on
+	# the beach (the stream's, measured), the line 650 m off, a raked sail 3.5 m tall as the lead took
+	# it: the lens tilts up, the boards sit on the horizon low in the picture, the sea a thin band; the
+	# zoom as the stream's wide (8 to 10 degrees). The game's own sails stand taller (about 4.5 to 5 m
+	# at speed): for the same picture its zoom comes out wider, about 11 degrees.
+	var eye_m: float = config.beach_eye_m
+	assert_eq(eye_m, 4.5)
+	var lens: Vector3 = TvFraming.lens_place(650.0, 3.5, 0.035, 0.72, 0.5, eye_m, eye_m, config.lens_min_deg, config.lens_max_deg)
+	var seen: Vector3 = TvFraming.measure(_camera_at(650.0, lens.y, lens.z), lens.x, Vector3.ZERO, Vector3.UP * 3.5)
+	assert_almost_eq(seen.y, 0.72, 0.002, "the horizon low")
+	assert_almost_eq(seen.x, 0.035, 0.003, "a small sail")
+	assert_almost_eq(lens.y, eye_m, 1e-6, "the eye on the beach")
+	assert_lt(lens.z, 0.0, "tilted up")
+	assert_gt(seen.z, 0.72, "the board's foot under the horizon, the sea a thin band")
+	assert_between(lens.x, 7.0, 11.0, "the stream's wide zoom")
+	# Tight on the leaders at a mark 455 m off: the sail 40 %, the horizon at 30 %: the stream's 1 to 1.5 degrees.
+	var tight: Vector3 = TvFraming.lens_place(455.0, 3.5, 0.40, 0.30, 0.5, eye_m, eye_m, config.lens_min_deg, config.lens_max_deg)
+	assert_between(tight.x, 0.9, 1.6, "the stream's tight zoom")
 
 
 func test_the_shares_are_of_the_pictures_height_in_any_window() -> void:

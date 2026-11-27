@@ -263,8 +263,8 @@ def position_table(rep, rows):
             "about +-15 %%. The game inside the stream's middle half for the height and the distance, the look-down within %.0f degrees. "
             "The game's metres scale with its own rig: its sail top stands higher than 3.5 m)" % LOOK_DOWN_DEG)
     rep.add("")
-    rep.add("| Picture | Sail heights: stream | Sail heights: game | Inside | Height: stream | Height: game | Inside | Distance: stream | Distance: game | Inside | Looks down: stream | Looks down: game | Inside | Angle round the board: game | Lens: game |")
-    rep.add("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
+    rep.add("| Picture | Sail heights: stream | Sail heights: game | Inside | Height: stream | Height: game | Inside | Distance: stream | Distance: game | Inside | Looks down: stream | Looks down: game | Inside | Angle round the board: game | Lens: game | The game's sail top (height / sail heights) |")
+    rep.add("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
     for key, group in sorted(by_pic.items(), key=lambda kv: -sum(r["length_s"] for r in kv[1])):
         k = weighted_middle([(r.get("sail_heights"), r["length_s"]) for r in group])
         h = weighted_middle([(r["height_m"], r["length_s"]) for r in group])
@@ -289,7 +289,9 @@ def position_table(rep, rows):
         else:
             ok = None if down is None else abs(down - sdown) <= LOOK_DOWN_DEG
             cells += ["%.0f deg" % sdown, "%s deg" % fmt(down, 0), rep.judge(ok, "race: look-down of %s" % key)]
-        cells += ["%s deg" % fmt(angle, 0), "%s deg" % fmt(lens, 1)]
+        top = weighted_middle([(r["height_m"] / r["sail_heights"], r["length_s"]) for r in group
+                               if r["height_m"] is not None and r.get("sail_heights") and r["sail_heights"] > 0.5])
+        cells += ["%s deg" % fmt(angle, 0), "%s deg" % fmt(lens, 1), "-" if top is None else "%.1f m (the stream's: about 3.5)" % top]
         rep.add("| " + " | ".join(cells) + " |")
     rep.add("")
 

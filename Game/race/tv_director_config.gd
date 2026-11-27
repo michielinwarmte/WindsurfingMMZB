@@ -105,15 +105,21 @@ extends Resource
 ## The lowest a drone flies above the water, and above the land under it (a lake's shore), m.
 @export var lowest_m: float = 2.5
 @export var above_land_m: float = 12.0
-## The beach cam: at water level on the shore or on a camera boat, between these heights (m), with a
-## zoom between these lenses (vertical field of view, degrees).
+## The beach cam: its eye this high above the water, m (the lead's measurement of the stream's beach
+## camera on the PWA's beach at Sotavento, drone_position.md: about 4.5 m, 3.5 to 5 on 41 shots: a
+## camera standing on the beach, not on the judges' tower), never lower than lens_lowest_m above the
+## ground under it; its zoom between these lenses (vertical field of view, degrees; the stream's: 8 to
+## 10 wide on the start line, 2 to 4 half close, 1 to 1.5 tight on the leaders).
+@export var beach_eye_m: float = 4.5
 @export var lens_lowest_m: float = 1.5
-@export var lens_highest_m: float = 8.0
 @export var lens_min_deg: float = 0.8
 @export var lens_max_deg: float = 30.0
-## Where the beach cam stands: on a lake the shore, between shore_nearest_m and shore_farthest_m from
-## its subject; on the open sea (and where no shore is in reach) a camera boat this far off, close for
-## the tight picture and far for the wide one, m.
+## Where the beach cam stands: where the map says (a Marker3D in the group "tv_shore_camera" anywhere
+## in its scene: the eye's place; one place for the whole heat, it only pans and zooms; with several,
+## the nearest to what it films); else the water's edge of the nearest shore of the map's land
+## (shore_grid) between shore_nearest_m and shore_farthest_m from what it films; where no shore is in
+## reach (the open sea) a camera boat this far off, close for the tight picture and far for the wide
+## one, m.
 @export var shore_nearest_m: float = 60.0
 @export var shore_farthest_m: float = 1200.0
 @export var boat_tight_m: float = 150.0

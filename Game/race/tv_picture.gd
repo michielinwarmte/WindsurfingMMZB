@@ -28,7 +28,7 @@ extends Resource
 ## a lens camera on the shore or a boat, whose zoom is worked out from where it stands.
 @export var lens_deg: float = 45.0
 ## The camera's angle round the board: 0 dead behind, 90 abeam, 180 dead ahead, degrees (a mark's
-## camera: round the boards' way into the mark). The readers agreed on the side for only 58 % of the
+## camera: round the boards' way into the mark, or their way out of it when it is behind them). The readers agreed on the side for only 58 % of the
 ## seconds: these are the game's choice in the middle of each view until the side is measured.
 @export var angle_deg: float = 45.0
 ## The followed sail's height, percent of the picture's height: x the first quarter, y the middle,

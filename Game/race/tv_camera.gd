@@ -80,6 +80,8 @@ var _finish_hold_s: float = 0.0
 ## A mark shot: the mark, the leg arriving at it, the board's steps when it began, when it rounded.
 var _mark_at: Vector2 = Vector2.ZERO
 var _mark_in: Vector2 = Vector2.ZERO
+## The way the boards leave the mark (the next leg), for the stream's mark drones.
+var _mark_out: Vector2 = Vector2.ZERO
 var _mark_steps: int = 0
 var _rounded_age_s: float = -1.0
 ## The camera: where it is and what it looks at (smoothed), the heading it frames, the orbit's angle.
@@ -100,8 +102,14 @@ var _step_dt: float = 0.0
 ## Whether the lines on the water were shown before a line shot showed them.
 var _lines_before: bool = false
 var _lines_ours: bool = false
+## The group of the Marker3D a map puts where its beach camera stands (its eye), for the TV director.
+const SHORE_CAMERA_GROUP: StringName = &"tv_shore_camera"
+
 ## A stream picture that stands somewhere: where (the beach cam's place, the pull-out's point), what a
-## static one looks at, its lens for a static take, how long the take lasts (the pull-out's pace).
+## static one looks at, its lens for a static take, how long the take lasts (the pull-out's pace); the
+## beach cam's eye above the water, m.
+var _stand_eye_m: float = 4.5
+var _stand_on_marker: bool = false
 var _stand: Vector3 = Vector3.ZERO
 var _stand_look: Vector3 = Vector3.ZERO
 var _stand_fov: Vector3 = Vector3.ZERO
@@ -568,6 +576,7 @@ func _set_the_mark(race: RaceSim, board: int, mark_step: int) -> void:
 	var mark: RaceStep = steps[step_number]
 	_mark_at = mark.target()
 	_mark_in = mark.in_dir
+	_mark_out = steps[step_number + 1].in_dir if step_number + 1 < steps.size() else mark.in_dir
 	_mark_steps = step_number
 	if step_number + 1 < steps.size():
 		var out: Vector2 = steps[step_number + 1].in_dir
@@ -624,7 +633,7 @@ func frame(delta: float) -> void:
 		wanted = _place_picture(board.origin)
 		glide_s = picture.glide_s
 		if picture.is_lens_camera():
-			eye = _keep_above_ground(wanted[0], board.origin.y, stream.lens_lowest_m, stream.lens_lowest_m)
+			eye = wanted[0] if _stand_on_marker else _keep_above_ground(wanted[0], board.origin.y, stream.lens_lowest_m, stream.lens_lowest_m)
 		else:
 			eye = _keep_above_ground(wanted[0], board.origin.y, stream.lowest_m, stream.above_land_m)
 	else:
@@ -722,10 +731,14 @@ func _place_picture(at: Vector3) -> PackedVector3Array:
 			var place: Vector3 = TvFraming.drone_place(picture.lens_deg, top_m, wanted, horizon_share, subject, stream.lowest_m, _lean_toward(_eye - at))
 			_fov_now = picture.lens_deg
 			var mark: Vector3 = Vector3(_mark_at.x, at.y, _mark_at.y)
-			var into: Vector3 = Vector3(_mark_in.x, 0.0, _mark_in.y)
-			if into.length() < 0.01:
-				into = _heading
-			var eye: Vector3 = mark + TvFraming.offset_round(into, picture.angle_deg, _side, place.x, place.y)
+			# A drone ahead of the boards or abeam of them stands round their way into the mark; one behind
+			# them round their way out: there the leader comes towards it, gybes at the buoy and sails away
+			# (round the way in it would see the leader only once it had passed).
+			var leg: Vector2 = _mark_in if picture.angle_deg >= 90.0 else _mark_out
+			var way: Vector3 = Vector3(leg.x, 0.0, leg.y)
+			if way.length() < 0.01:
+				way = _heading
+			var eye: Vector3 = mark + TvFraming.offset_round(way, picture.angle_deg, _side, place.x, place.y)
 			# Panning keeps the buoy and the board in the picture; a static drone looks at the buoy.
 			var toward: Vector3 = mark.lerp(at, old.mark_look_share) if picture.move == "pan" else mark
 			return PackedVector3Array([eye, TvFraming.aim_point(eye, toward, place.z)])
@@ -788,7 +801,7 @@ func _beach_view(at: Vector3, top_m: float, wanted: float, subject: float) -> Pa
 	var level_m: float = Vector2(toward.x - _stand.x, toward.z - _stand.z).length()
 	var lens: Vector3 = _stand_fov
 	if picture.move == "pan" or rig.directed_zoom != 1.0 or lens.x <= 0.0:
-		lens = TvFraming.lens_place(level_m, top_m, wanted, horizon_share, subject, stream.lens_lowest_m, stream.lens_highest_m, stream.lens_min_deg, stream.lens_max_deg)
+		lens = TvFraming.lens_place(level_m, top_m, wanted, horizon_share, subject, _stand_eye_m, _stand_eye_m, stream.lens_min_deg, stream.lens_max_deg)
 	_fov_now = lens.x
 	var eye: Vector3 = Vector3(_stand.x, at.y + lens.y, _stand.z)
 	return PackedVector3Array([eye, TvFraming.aim_point(eye, toward, lens.z)])
@@ -819,13 +832,33 @@ func _place_the_beach_cam(next: TvPicture, at: Vector3, node: WindsurferNode) ->
 		for turn_rad: float in [0.0, PI, 0.5, PI + 0.5, -0.5, PI - 0.5, 1.0, PI + 1.0]:
 			directions.append(beam.rotated(Vector3.UP, turn_rad))
 	_stand_look = subject
-	var boat_m: float = stream.boat_wide_m if next.shot == Shot.BEACH_WIDE else stream.boat_tight_m
-	_stand = _shore_or_boat(subject, directions, boat_m)
+	var marker: Node3D = _shore_camera_marker(subject)
+	_stand_on_marker = marker != null
+	if marker != null:
+		# Where the map says its beach camera stands: its eye there, as high as the marker.
+		_stand = marker.global_position
+		_stand_eye_m = marker.global_position.y - at.y
+	else:
+		var boat_m: float = stream.boat_wide_m if next.shot == Shot.BEACH_WIDE else stream.boat_tight_m
+		_stand = _shore_or_boat(subject, directions, boat_m)
+		_stand_eye_m = stream.beach_eye_m
 	_stand_fov = Vector3.ZERO
 	if next.move != "pan" and node != null:
 		var level_m: float = Vector2(subject.x - _stand.x, subject.z - _stand.z).length()
 		_stand_fov = TvFraming.lens_place(level_m, _rig_top(node).y, sail_share, horizon_share, next.subject_share(sail_share, horizon_share),
-			stream.lens_lowest_m, stream.lens_highest_m, stream.lens_min_deg, stream.lens_max_deg)
+			_stand_eye_m, _stand_eye_m, stream.lens_min_deg, stream.lens_max_deg)
+
+
+## The map's beach camera nearest a point (a Marker3D in the group SHORE_CAMERA_GROUP), or null.
+func _shore_camera_marker(near: Vector3) -> Node3D:
+	if rig == null or not rig.is_inside_tree():
+		return null
+	var best: Node3D = null
+	for node: Node in rig.get_tree().get_nodes_in_group(SHORE_CAMERA_GROUP):
+		var marker: Node3D = node as Node3D
+		if marker != null and (best == null or marker.global_position.distance_to(near) < best.global_position.distance_to(near)):
+			best = marker
+	return best
 
 
 ## Where the beach cam can stand: on a map with land, the water's edge of the shore round the subject
