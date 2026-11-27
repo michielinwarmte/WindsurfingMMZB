@@ -42,6 +42,7 @@ Done when: pushing too hard on a reach can end in a sudden spin-out with warning
 - [ ] T3 The back foot's push against the fin (PH35) as the sailor's lever into the spin-out and out of it
 - [ ] T4 The player's warning: the fin's hum stutters (SO1 exists), the tail chatters (GR1), the HUD says nothing (the design's rule 2)
 - [ ] T5 The autopilot and the AI recover (ease, weight forward) and the fall records count spin-outs apart from catapults
+- [ ] T6 The fin racers choose is the best one (Max's chart, Q56, 27 November 2026, at 90 kg): up to 18 kn 44 cm on 80+ cm and 8.0+; 18 to 22 kn 37 to 38 cm on 72 cm and 7.5; 20 to 25 kn 36 cm on 72 cm and 6.7 to 7.0; 22 to 27 kn 33 to 34 cm on 63 cm and 6.7 to 7.0; 25+ kn 32 to 33 cm on 62 cm and 5.7. In each setup's wind his fin beats two sizes up and down (`.sim_output/fin_chart/`, Documentation/reports/reality_fixes/PROGRESS.md, "Max's fin chart"). Without a real spin-out a too-small fin is never punished. First run (27 Nov, before the spin-out): 20 kt his 38 cm wins the reaches; from 23 kt the game always picks the smallest fin tried, 2 to 4 cm under his (his fin 0.8 to 3.8 % slower); 15 kt the size hardly matters, bigger a little better upwind
 Notes: Max, 5 November: "this must be done". The catapult, the other risk of pushing, exists already.
 
 ### E01.S04 · The wind shadow simulated

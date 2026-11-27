@@ -115,6 +115,39 @@ pull (Q54/Q55). The fin's own up-push is as measured; whether it lifts the tail 
 the wet length: on a real 0.5 to 0.7 m the push centre is about 0.3 m from the tail and the fin's lever is
 small.
 
+## Max's fin chart against the game (27 November 2026, Q56, E01.S03 T6)
+
+Max: "weird that the real used fin on a setup like this is 38cm fin. and its no time the best in game". His
+chart (approximation, 90 kg): up to 18 kn 44 cm, 80+ cm wide, 8.0+; 18-22 kn 37-38 cm, 72 cm, 7.5; 20-25 kn
+36 cm, 72 cm, 6.7-7.0; 22-27 kn 33-34 cm, 63 cm, 6.7-7.0; 25+ kn 32-33 cm, 62 cm, 5.7. Each setup sailed at
+the middle of its range with his fin and two sizes either side (Montag's family: the gear's real race-fin
+areas, every other depth made from its 38 cm), the player's controller in gusts and waves, 90 kg, 300 s per
+case, one run each (`.sim_output/fin_chart/`; script in the session's scratchpad: `tools/push_check.sh
+--winds=<w> --twas=48,100,135 --seconds=300 --gear_board=... --gear_sail=... --gear_fin=montag_slalom_<cm>
+--sailor.mass_kg=90`). Speeds in m/s; "reach" = the mean of the beam and the broad reach's made good.
+
+| setup (wind tested) | game board + sail | Max's fin | best on the reaches | best upwind (VMG) | Max's fin against the best reach |
+|---|---|---|---|---|---|
+| A (15 kt) | 129 l, 80 cm + 8.0 | 44 | 46/48 (all five within 0.3 %) | 48 (3.47; 44: 3.41) | -0.3 % |
+| B (20 kt) | 117 l, 72 cm + 7.5 | 37-38 | **38** (12.94; 36: 12.93; 34/40/42: 12.55-12.63) | 42 (4.57; 38: 4.53) | best |
+| C (23 kt) | 117 l, 72 cm + 6.7 | 36 | 32 (13.73; 34: 13.65) | 34 | -3.8 % |
+| D (25 kt) | 97 l, 62.5 cm + 6.7 | 33-34 | 30 (13.90; 34: 13.79) | 30 | -0.8 % |
+| E (28 kt) | 96 l, 61 cm + 5.7 | 32-33 | 29 (14.71; 33: 14.50) | 35 | -1.4 % |
+
+- Light wind (A): the size hardly matters on the reaches; upwind the bigger fin wins a little (40 -> 48: +3.9 %
+  VMG), the direction Max's choice goes.
+- 20 kt (B): his 37-38 cm wins the reach mean, by the broad reach (36/38 11.43 against 10.65-10.87; one run
+  each, so partly luck); the beam reach prefers the 34 by 1 %.
+- From 23 kt (C, D, E) the game always picks the smallest fin tried, 2 to 4 cm under Max's, on the beam reach
+  above all (the speed falls steadily with the size). The small fins slip 3.7 to 3.8 deg at the 95th
+  percentile, far from the stall at 12: in the game nothing goes wrong with a small fin on a reach. Only the
+  36 cm on setup D touched the stall (2.6 %) and fell twice.
+- Reading: what stops a real racer going smaller in strong wind is the spin-out (ventilation: air sucked down
+  the fin's low-pressure side, at angles well under the stall, more with the tail light in chop), which the
+  game does not have yet (E01.S03 T1). With it, a fin too small for the gusts should lose seconds and the
+  best fin move up toward Max's. That is the check in E01.S03 T6. One run per case: differences under 1 to 2 %
+  are within the noise of the gusts.
+
 ## Gap 2 (the bounce): CORRECTION + the fix found
 
 - My earlier claim "the sailor is one rigid body with the board" was WRONG. The sim already has a

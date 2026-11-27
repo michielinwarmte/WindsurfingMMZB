@@ -326,3 +326,9 @@ Why it matters: both block copying the real technique from the videos (E01.S08 T
 Options: the side load's path (the feet at the back strap against the fin, the mast foot about 0), the fin's and the hull's lateral centres, the strips' damping at higher trim.
 Recommendation: the pitch budget runs in Documentation/reports/reality_fixes/PROGRESS.md reproduce both.
 Answer:
+
+### Q56 · Which fin does a racer use with which board, sail and wind?
+Why it matters: on the 117 l board with the 8.0 sail the game's 38 cm fin is never clearly the best (27 November 2026, push check in gusts and waves: the 46 cm wins at 12 kt, the three sizes tie at 18 kt, the 34 cm wins at 24 kt); a right game makes the fin racers choose the best one in its wind (E01.S03 T6).
+Options: a chart of board width, sail and fin by wind for Max's weight.
+Recommendation: Max's own choices, as an approximation.
+Answer (Max, 27 November 2026, "approximation!", at 90 kg): up to 18 kn a 44 cm fin, a board 80+ cm wide, an 8.0+ sail; 18 to 22 kn 37 to 38 cm, 72 cm wide, 7.5 sail; 20 to 25 kn 36 cm, 72 cm wide, 6.7 to 7.0 sail; 22 to 27 kn 33 to 34 cm, 63 cm wide, 6.7 to 7.0 sail; 25+ kn 32 to 33 cm, 62 cm wide, 5.7 sail.
