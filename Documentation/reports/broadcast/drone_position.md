@@ -66,6 +66,35 @@ From the height, the look-down angle and the lens, the distance over the water f
 
 **Which side** of the board the drone is on comes from the readers' notes (behind-side 36 % of the race's drone time, side 35 %, ahead-side 25 %). Two readers agreed on it for only 58 % of the seconds, so it is rough. The wake's direction in the picture would measure it; that is not done yet.
 
+## The beach camera
+
+Max, 27 November 2026: "try to match the camera angles on the beach". This became possible when his Sotavento spot arrived (branch `spot/sotavento`): it has the judges' tower and the Slalom X course in real coordinates, so the distances from the beach to the start line, the marks and the finish are known. With a known distance a lens can be worked out, which the drones didn't allow.
+
+**Its height (measured, no lens needed):** on 41 beach-camera shots the sail's foot stands 1.0 to 1.5 sail heights below the horizon (middle 1.3), so the camera is about **4.5 m above the water** (3.5 to 5). That is a camera standing on the beach, not on the judges' tower's deck (7 m up on the beach top, about 10 m above the water). A few finish shots of the full-fleet race come out higher (2.0 to 2.6 sail heights, about 8 m); those may be a second camera or a drone the readers took for the beach camera.
+
+**Its lens (from the spot's distances; an estimate, because the game's course was laid from a drawing of the event, not a survey):**
+
+| The shot | Sail in the picture | Distance from the tower | Vertical view |
+|---|---|---|---|
+| Wide on the start line, before and at the start | 3 to 4 % of the picture's height | 620 to 720 m | **8 to 10°** |
+| Half close: a group on a reach, the finish | 14 to 20 % | 250 to 580 m | 2 to 4° |
+| Tight on the leaders at a mark or in a fight | 27 to 55 % | 370 to 580 m | **1 to 1.5°** |
+
+A check on the wide shot: the start line is 140 m long and 670 m away, which is 12 degrees wide; a picture with 8 degrees of vertical view is 14 degrees wide. So the wide shot is framed exactly on the start line, as the pictures show.
+
+**Where it points** (bearings from the tower; the beach runs 013°, straight out to sea is 103°):
+
+| At | Bearing | Distance |
+|---|---|---|
+| The start line | 056 to 064° (up the coast and out) | 620 to 720 m |
+| Mark 1 | 074° | 685 m |
+| Mark 2 | 070° | 455 m |
+| Mark 3 | 087° | 580 m |
+| Mark 4 | 090° | 370 m |
+| The finish line | 103° (straight out) | 250 to 330 m |
+
+**How it frames:** wide on the start, the camera is tilted up: the horizon sits low in the picture, 70 to 75 % from the top, the sea a thin band under a lot of sky. Tight on the leaders the horizon sits at 25 to 35 % from the top and the board's foot at about 70 %. It stays in one place and pans.
+
 ## Against the game's drones today
 
 | | The stream | The game (12 November) |
