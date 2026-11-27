@@ -1,5 +1,10 @@
 class_name CommentaryRun
 extends RefCounted
+
+## The stand-in camera below follows the 12 November director's rules (TvCamera's old logic), with its
+## numbers from their resource: the transcript only needs to know which board and shot are on the
+## screen. The stream's director (TvStreamDirector) is not modelled here yet.
+const OLD_DIRECTOR: TvDirector12NovConfig = preload("res://config/tv_director_12nov.tres")
 ## The commentary of a headless race, written down (tools/race.sh ... --commentary=1): the same race
 ## story (RaceStory) and the same commentary director (CommentaryDirector) as in the game's watch mode,
 ## on the race tool's boards, and a time-coded transcript of what he said: the race time, the moment,
@@ -170,7 +175,7 @@ class Camera:
 		if look.order.is_empty():
 			return
 		_note_places(look)
-		var part: int = TvCamera.start_part(look.started, look.clock_s, look.over)
+		var part: int = TvCamera.start_part(look.started, look.clock_s, look.over, OLD_DIRECTOR)
 		if part != _start_part:
 			_start_part = part
 			if part >= 0:
@@ -215,42 +220,42 @@ class Camera:
 		if shot == TvCamera.Shot.FINISH_LINE:
 			if look.boards[focus].finished:
 				_finish_hold_s += dt
-				if _finish_hold_s > TvCamera.FINISH_HOLD_S:
+				if _finish_hold_s > OLD_DIRECTOR.finish_hold_s:
 					_left_s = 0.0
 					return false
 			return true
-		if look.on_last_leg(leader) and look.boards[leader].to_next_m < TvCamera.FINISH_M:
+		if look.on_last_leg(leader) and look.boards[leader].to_next_m < OLD_DIRECTOR.finish_m:
 			_finish_hold_s = 0.0
 			_cut(TvCamera.Shot.FINISH_LINE, leader, look)
 			return true
 		return false
 
 	func _front_at_a_mark(look: RaceLook) -> bool:
-		if not look.racing or _age_s < TvCamera.MARK_CUT_AFTER_S:
+		if not look.racing or _age_s < OLD_DIRECTOR.mark_cut_after_s:
 			return false
 		if shot == TvCamera.Shot.MARK and focus >= 0 and _mark_shot_goes_on(look):
 			return false
-		for place: int in mini(TvCamera.MARK_FRONT, look.order.size()):
+		for place: int in mini(OLD_DIRECTOR.mark_front, look.order.size()):
 			var index: int = look.order[place]
 			var board: RaceLook.Board = look.boards[index]
 			if board.finished or not look.next_is_a_mark(index):
 				continue
-			if board.to_next_m >= TvCamera.MARK_SOON_M or _marks_shown.get(index, -1) == board.next_step:
+			if board.to_next_m >= OLD_DIRECTOR.mark_soon_m or _marks_shown.get(index, -1) == board.next_step:
 				continue
 			for other: int in look.order:
-				if look.boards[other].next_step == board.next_step and look.boards[other].position.distance_to(board.position) < TvCamera.GROUP_M:
+				if look.boards[other].next_step == board.next_step and look.boards[other].position.distance_to(board.position) < OLD_DIRECTOR.group_m:
 					_marks_shown[other] = board.next_step
 			_cut(TvCamera.Shot.MARK, index, look)
 			return true
 		return false
 
 	func _mark_shot_goes_on(look: RaceLook) -> bool:
-		if _age_s > TvCamera.MARK_MAX_S:
+		if _age_s > OLD_DIRECTOR.mark_max_s:
 			return false
 		if look.boards[focus].next_step > _mark_steps:
 			if _rounded_age_s < 0.0:
 				_rounded_age_s = _age_s
-			return _age_s - _rounded_age_s < TvCamera.MARK_AFTER_S
+			return _age_s - _rounded_age_s < OLD_DIRECTOR.mark_after_s
 		return true
 
 	func _cut_to_a_story(look: RaceLook) -> void:
@@ -264,17 +269,17 @@ class Camera:
 			positions.append(board.position)
 			to_mark.append(board.to_next_m if look.racing and look.next_is_a_mark(index) else INF)
 			finished.append(1 if board.finished or board.retired else 0)
-			gained.append(1 if _gained_at.has(index) and _clock_s - _gained_at[index] < TvCamera.GAINED_S else 0)
+			gained.append(1 if _gained_at.has(index) and _clock_s - _gained_at[index] < OLD_DIRECTOR.gained_s else 0)
 			late.append(1 if look.racing and board.next_step == 0 else 0)
-		var weights: PackedFloat32Array = TvCamera.story_weights(positions, to_mark, finished, gained, late, look.order.find(focus))
+		var weights: PackedFloat32Array = TvCamera.story_weights(positions, to_mark, finished, gained, late, look.order.find(focus), OLD_DIRECTOR)
 		var at: int = _rng.rand_weighted(weights)
 		var pick: int = look.order[at]
-		_cut(TvCamera.pick_shot(to_mark[at] < TvCamera.MARK_M, _has_company(look, pick), shot, _rng.randf()), pick, look)
-		_left_s = _rng.randf_range(TvCamera.SHOT_MIN_S, TvCamera.SHOT_MAX_S)
+		_cut(TvCamera.pick_shot(to_mark[at] < OLD_DIRECTOR.mark_m, _has_company(look, pick), shot, _rng.randf(), OLD_DIRECTOR), pick, look)
+		_left_s = _rng.randf_range(OLD_DIRECTOR.shot_min_s, OLD_DIRECTOR.shot_max_s)
 
 	func _has_company(look: RaceLook, index: int) -> bool:
 		for other: int in look.order:
-			if other != index and not look.boards[other].finished and look.boards[other].position.distance_to(look.boards[index].position) < TvCamera.CLOSE_M:
+			if other != index and not look.boards[other].finished and look.boards[other].position.distance_to(look.boards[index].position) < OLD_DIRECTOR.close_m:
 				return true
 		return false
 
