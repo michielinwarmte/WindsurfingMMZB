@@ -63,6 +63,12 @@ func show_line(text: String, seconds: float) -> void:
 	visible = true
 
 
+## The line shown stays at least `seconds` more (the voice says it slower than he did).
+func last_at_least(seconds: float) -> void:
+	if visible:
+		_left_s = maxf(_left_s, seconds)
+
+
 ## The line goes (cut short, the commentary off, a new race).
 func clear() -> void:
 	_left_s = 0.0

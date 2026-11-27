@@ -4,8 +4,10 @@ extends Node
 ## story (RaceStory) looks at the race every look_every_s of race time and tells the commentary
 ## director (CommentaryDirector) what happened; the director picks the line and the moment to say it,
 ## about the board the camera shows; the line goes on the screen as a subtitle (CommentarySubtitles)
-## and out through line_started, where a sound player can be attached later (each line a sound file,
-## after the commentator's yes: P7).
+## and out through line_started, where the voice (CommentaryVoice) says it: a neutral computer voice
+## beside the game (SpeechEngine), NOT the commentator's, until he says yes (P7). Without the speech
+## program the commentary is subtitles only. --commentary_voice=0 keeps it silent; in a headless run
+## (no sound) it only speaks with --commentary_voice=1.
 ##
 ## Watch mode makes one now (WatchMode, the key V); it is made to work in the player's own race too:
 ## without a TV camera the board on the screen is the board the camera follows, and the player's own
@@ -16,6 +18,10 @@ extends Node
 ## For screenshots of the subtitles' place: --subtitle_test=<words> keeps those words on the screen.
 
 signal line_started(id: String, text: String, seconds: float, level: int)
+## A line cut short (a bigger moment, the commentary off, a new race): its sound stops too.
+signal line_stopped(id: String)
+## A line chosen a moment before it is said (the second of a pair): its sound can be made ahead.
+signal line_ahead(id: String, text: String, seconds: float, level: int)
 
 const CONFIG_PATH: String = "res://config/commentary_default.tres"
 
@@ -27,6 +33,8 @@ var bank: CommentaryBank = null
 var director: CommentaryDirector = null
 var story: RaceStory = null
 var subtitles: CommentarySubtitles = null
+## The voice that says the lines (null when there is none: headless, --commentary_voice=0).
+var voice: CommentaryVoice = null
 ## The commentary talks (on) or is quiet (off); the subtitles are shown on this screen level (shown).
 var on: bool = false
 var shown: bool = true
@@ -43,6 +51,8 @@ var _brands: PackedStringArray = PackedStringArray()
 var _colours: PackedColorArray = PackedColorArray()
 ## --subtitle_test=<words>: these words always on the screen (for screenshots).
 var _test_words: String = ""
+## When the line said now started, the director's clock.
+var _line_started_s: float = 0.0
 
 
 func _init() -> void:
@@ -60,15 +70,42 @@ func setup(race_runner: RaceRunner, tv_camera: TvCamera, hud: Hud) -> void:
 	bank.warn_problems()
 	director = CommentaryDirector.new(bank, config)
 	director.line_started.connect(_on_line_started)
+	director.line_stopped.connect(_on_line_stopped)
+	director.line_ahead.connect(_on_line_ahead)
 	if hud != null:
 		subtitles = CommentarySubtitles.new()
 		subtitles.put_on(hud)
 	runner.restarted.connect(new_race)
+	var voice_wanted: String = ""
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--subtitle_test="):
 			_test_words = arg.trim_prefix("--subtitle_test=")
+		elif arg.begins_with("--commentary_voice="):
+			voice_wanted = arg.trim_prefix("--commentary_voice=")
+	if voice_wanted == "1" or (voice_wanted == "" and DisplayServer.get_name() != "headless"):
+		add_voice()
 	_last_real_us = Time.get_ticks_usec()
 	new_race()
+
+
+## The voice that says the lines (CommentaryVoice), with this speech engine (null: the speech program
+## is looked for and started; not found, the commentary stays subtitles only).
+func add_voice(speech: SpeechEngine = null) -> CommentaryVoice:
+	voice = CommentaryVoice.new()
+	add_child(voice)
+	voice.setup(self, speech)
+	return voice
+
+
+## The line `id` lasts `seconds` from its start (the voice says it slower than he did): the director
+## waits for it and the subtitle stays as long.
+func line_lasts(id: String, seconds: float) -> void:
+	if director == null or director.saying_id != id:
+		return
+	director.line_lasts(id, seconds)
+	if subtitles != null:
+		var left_s: float = seconds - (director.clock_s() - _line_started_s)
+		subtitles.last_at_least(left_s + config.subtitle_linger_s)
 
 
 ## The commentary on (it talks) or off (quiet, the subtitle goes).
@@ -165,6 +202,7 @@ static func is_close(shot: TvCamera.Shot) -> bool:
 
 
 func _on_line_started(id: String, text: String, seconds: float, level: int) -> void:
+	_line_started_s = director.clock_s()
 	if subtitles != null:
 		subtitles.show_line(text, maxf(seconds + config.subtitle_linger_s, config.subtitle_min_s))
 	line_started.emit(id, text, seconds, level)
@@ -217,3 +255,11 @@ static func sail_colour_of(node: WindsurferNode) -> Color:
 	if node.gear != null and node.gear.sail != null:
 		return node.gear.sail.cloth_colour()
 	return Color.TRANSPARENT
+
+
+func _on_line_stopped(id: String) -> void:
+	line_stopped.emit(id)
+
+
+func _on_line_ahead(id: String, text: String, seconds: float, level: int) -> void:
+	line_ahead.emit(id, text, seconds, level)

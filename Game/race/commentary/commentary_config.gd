@@ -224,6 +224,39 @@ extends Resource
 @export var subtitle_linger_s: float = 1.2
 @export var subtitle_min_s: float = 1.8
 
+@export_group("The voice")
+## The computer voice that speaks the lines (CommentaryVoice, SpeechEngine; commentary_voice.md): a
+## ready-made Piper voice, NOT the commentator's. Its files are voices/<voice_name>.onnx and .onnx.json
+## in the speech program's folder (tools/tts/fetch_tts.py fetches them).
+@export var voice_name: String = "en_GB-northern_english_male-medium"
+## Piper's own numbers, for every line: length_scale (above 1 slower, below 1 faster), the pause after
+## each sentence (s), and how much the voice (noise_scale) and its timing (noise_w) vary. Changing one
+## makes every line again (they are part of a line's name on the disk).
+@export var voice_length_scale: float = 1.0
+@export var voice_sentence_silence_s: float = 0.2
+@export var voice_noise_scale: float = 0.667
+@export var voice_noise_w: float = 0.8
+## How each level (1 calm, 2 his race voice, 3 lifted, 4 shouting) is said: the rate the sound is
+## played at (faster and higher together, like a tape played faster: 1.06 is 6 % faster and one
+## semitone higher) and its loudness (dB). Modest on purpose: a shout a little faster, higher and louder.
+@export var voice_rate_by_level: PackedFloat32Array = [0.97, 1.0, 1.03, 1.06]
+@export var voice_db_by_level: PackedFloat32Array = [-2.0, 0.0, 1.5, 3.0]
+## How long a line's sound may be waited for: this share of his seconds, at least voice_wait_min_s and
+## at most voice_wait_max_s. Later, the line stays silent (its subtitle shows): too late is dropped,
+## not said late.
+@export var voice_wait_share: float = 0.3
+@export var voice_wait_min_s: float = 0.3
+@export var voice_wait_max_s: float = 0.8
+## A line cut short (or followed at once by the next) fades out in this many seconds: no click.
+@export var voice_fade_s: float = 0.06
+## The bank's lines without a slot made ahead in the background, the most said first, at most this
+## many (each about 40 to 150 kB on the disk; 0: none).
+@export var voice_warm_up_lines: int = 400
+## Names the voice says badly, spelled the way it says them well (the written name -> what the voice
+## is given). Only the sound changes; the subtitle keeps the name. Checked by reading the voice's
+## sound back with Whisper (tools/tts/read_back.py).
+@export var voice_spellings: Dictionary[String, String] = {}
+
 
 ## The moment's priority with its size and the camera counted (see priority, focus_bonus).
 func weight_of(moment: RaceMoment, focus: int, place: int) -> float:
