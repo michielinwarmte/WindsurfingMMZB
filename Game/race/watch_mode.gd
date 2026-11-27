@@ -413,6 +413,13 @@ func _build_cards() -> void:
 	_head_card.add_child(_head)
 
 
+## A card of someone else's under watch mode's own, in the same corner (the event week's card:
+## EventBroadcast).
+func add_card(card: Control) -> void:
+	card.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	_cards.add_child(card)
+
+
 func _card() -> PanelContainer:
 	var card: PanelContainer = PanelContainer.new()
 	card.mouse_filter = Control.MOUSE_FILTER_IGNORE

@@ -1,0 +1,453 @@
+{
+	"about": "The provisional roster of an event week: 64 made-up sailors with placeholder names (first names and surnames drawn apart per country; no real sailor), a country and a sail number. The order is the ranking before the event, the favourite first. The real roster with the team's names replaces this file (backlog E10.S02); nothing else needs to change.",
+	"sailors": [
+		{
+			"name": "Ruben Brouwer",
+			"country": "the Netherlands",
+			"national": "Dutchman",
+			"nation_adj": "Dutch",
+			"sail_number": "NED-864"
+		},
+		{
+			"name": "Noe Roussel",
+			"country": "France",
+			"national": "Frenchman",
+			"nation_adj": "French",
+			"sail_number": "FRA-364"
+		},
+		{
+			"name": "Thijmen Terpstra",
+			"country": "the Netherlands",
+			"national": "Dutchman",
+			"nation_adj": "Dutch",
+			"sail_number": "NED-789"
+		},
+		{
+			"name": "Remi Vasseur",
+			"country": "France",
+			"national": "Frenchman",
+			"nation_adj": "French",
+			"sail_number": "FRA-22"
+		},
+		{
+			"name": "Pietro Colombi",
+			"country": "Italy",
+			"national": "Italian",
+			"nation_adj": "Italian",
+			"sail_number": "ITA-47"
+		},
+		{
+			"name": "Ewen Caradec",
+			"country": "France",
+			"national": "Frenchman",
+			"nation_adj": "French",
+			"sail_number": "FRA-260"
+		},
+		{
+			"name": "Yonatan Shalev",
+			"country": "Israel",
+			"national": "Israeli",
+			"nation_adj": "Israeli",
+			"sail_number": "ISR-851"
+		},
+		{
+			"name": "Jonas Lorenz",
+			"country": "Germany",
+			"national": "German",
+			"nation_adj": "German",
+			"sail_number": "GER-53"
+		},
+		{
+			"name": "Quentin Bressan",
+			"country": "France",
+			"national": "Frenchman",
+			"nation_adj": "French",
+			"sail_number": "FRA-28"
+		},
+		{
+			"name": "Malo Garrec",
+			"country": "France",
+			"national": "Frenchman",
+			"nation_adj": "French",
+			"sail_number": "FRA-84"
+		},
+		{
+			"name": "Dario Ferrante",
+			"country": "Italy",
+			"national": "Italian",
+			"nation_adj": "Italian",
+			"sail_number": "ITA-385"
+		},
+		{
+			"name": "Magnus Kjeldsen",
+			"country": "Denmark",
+			"national": "Dane",
+			"nation_adj": "Danish",
+			"sail_number": "DEN-67"
+		},
+		{
+			"name": "Fraser Ashdown",
+			"country": "Great Britain",
+			"national": "Brit",
+			"nation_adj": "British",
+			"sail_number": "GBR-115"
+		},
+		{
+			"name": "Callum Pengelly",
+			"country": "Great Britain",
+			"national": "Brit",
+			"nation_adj": "British",
+			"sail_number": "GBR-67"
+		},
+		{
+			"name": "Lucien Guivarc",
+			"country": "France",
+			"national": "Frenchman",
+			"nation_adj": "French",
+			"sail_number": "FRA-839"
+		},
+		{
+			"name": "Koen Zeilstra",
+			"country": "the Netherlands",
+			"national": "Dutchman",
+			"nation_adj": "Dutch",
+			"sail_number": "NED-87"
+		},
+		{
+			"name": "Lorenzo Serra",
+			"country": "Italy",
+			"national": "Italian",
+			"nation_adj": "Italian",
+			"sail_number": "ITA-424"
+		},
+		{
+			"name": "Moritz Hinrichs",
+			"country": "Germany",
+			"national": "German",
+			"nation_adj": "German",
+			"sail_number": "GER-27"
+		},
+		{
+			"name": "Lars Hofstee",
+			"country": "the Netherlands",
+			"national": "Dutchman",
+			"nation_adj": "Dutch",
+			"sail_number": "NED-80"
+		},
+		{
+			"name": "Emil Norgaard",
+			"country": "Denmark",
+			"national": "Dane",
+			"nation_adj": "Danish",
+			"sail_number": "DEN-17"
+		},
+		{
+			"name": "Tymon Zielinski",
+			"country": "Poland",
+			"national": "Pole",
+			"nation_adj": "Polish",
+			"sail_number": "POL-49"
+		},
+		{
+			"name": "Arne Declercq",
+			"country": "Belgium",
+			"national": "Belgian",
+			"nation_adj": "Belgian",
+			"sail_number": "BEL-575"
+		},
+		{
+			"name": "Emre Kaplan",
+			"country": "Turkey",
+			"national": "Turk",
+			"nation_adj": "Turkish",
+			"sail_number": "TUR-606"
+		},
+		{
+			"name": "Alvaro Morales",
+			"country": "Spain",
+			"national": "Spaniard",
+			"nation_adj": "Spanish",
+			"sail_number": "ESP-34"
+		},
+		{
+			"name": "Toby Marlow",
+			"country": "Great Britain",
+			"national": "Brit",
+			"nation_adj": "British",
+			"sail_number": "GBR-507"
+		},
+		{
+			"name": "Sem Dijkman",
+			"country": "the Netherlands",
+			"national": "Dutchman",
+			"nation_adj": "Dutch",
+			"sail_number": "NED-436"
+		},
+		{
+			"name": "Oscar Hartley",
+			"country": "Great Britain",
+			"national": "Brit",
+			"nation_adj": "British",
+			"sail_number": "GBR-929"
+		},
+		{
+			"name": "Mathis Delcourt",
+			"country": "France",
+			"national": "Frenchman",
+			"nation_adj": "French",
+			"sail_number": "FRA-407"
+		},
+		{
+			"name": "Wout Vermeire",
+			"country": "Belgium",
+			"national": "Belgian",
+			"nation_adj": "Belgian",
+			"sail_number": "BEL-125"
+		},
+		{
+			"name": "Simone Zanetti",
+			"country": "Italy",
+			"national": "Italian",
+			"nation_adj": "Italian",
+			"sail_number": "ITA-99"
+		},
+		{
+			"name": "Tiago Pacheco",
+			"country": "Portugal",
+			"national": "Portuguese",
+			"nation_adj": "Portuguese",
+			"sail_number": "POR-158"
+		},
+		{
+			"name": "Gaspard Morvan",
+			"country": "France",
+			"national": "Frenchman",
+			"nation_adj": "French",
+			"sail_number": "FRA-60"
+		},
+		{
+			"name": "Duarte Vilela",
+			"country": "Portugal",
+			"national": "Portuguese",
+			"nation_adj": "Portuguese",
+			"sail_number": "POR-65"
+		},
+		{
+			"name": "Axel Jaouen",
+			"country": "France",
+			"national": "Frenchman",
+			"nation_adj": "French",
+			"sail_number": "FRA-569"
+		},
+		{
+			"name": "Felix Petersen",
+			"country": "Germany",
+			"national": "German",
+			"nation_adj": "German",
+			"sail_number": "GER-38"
+		},
+		{
+			"name": "Henrik Albers",
+			"country": "Germany",
+			"national": "German",
+			"nation_adj": "German",
+			"sail_number": "GER-43"
+		},
+		{
+			"name": "Giulio Bellandi",
+			"country": "Italy",
+			"national": "Italian",
+			"nation_adj": "Italian",
+			"sail_number": "ITA-468"
+		},
+		{
+			"name": "Nico Caduff",
+			"country": "Switzerland",
+			"national": "Swiss",
+			"nation_adj": "Swiss",
+			"sail_number": "SUI-92"
+		},
+		{
+			"name": "Tibault Lemoine",
+			"country": "France",
+			"national": "Frenchman",
+			"nation_adj": "French",
+			"sail_number": "FRA-537"
+		},
+		{
+			"name": "Yanis Levasseur",
+			"country": "France",
+			"national": "Frenchman",
+			"nation_adj": "French",
+			"sail_number": "FRA-29"
+		},
+		{
+			"name": "Robin Tanguy",
+			"country": "France",
+			"national": "Frenchman",
+			"nation_adj": "French",
+			"sail_number": "FRA-89"
+		},
+		{
+			"name": "Corentin Faure",
+			"country": "France",
+			"national": "Frenchman",
+			"nation_adj": "French",
+			"sail_number": "FRA-12"
+		},
+		{
+			"name": "Unai Santana",
+			"country": "Spain",
+			"national": "Spaniard",
+			"nation_adj": "Spanish",
+			"sail_number": "ESP-63"
+		},
+		{
+			"name": "Haruto Ishikawa",
+			"country": "Japan",
+			"national": "Japanese",
+			"nation_adj": "Japanese",
+			"sail_number": "JPN-36"
+		},
+		{
+			"name": "Florent Marchetti",
+			"country": "France",
+			"national": "Frenchman",
+			"nation_adj": "French",
+			"sail_number": "FRA-414"
+		},
+		{
+			"name": "Bram Postma",
+			"country": "the Netherlands",
+			"national": "Dutchman",
+			"nation_adj": "Dutch",
+			"sail_number": "NED-41"
+		},
+		{
+			"name": "Niklas Thomsen",
+			"country": "Germany",
+			"national": "German",
+			"nation_adj": "German",
+			"sail_number": "GER-50"
+		},
+		{
+			"name": "Caio Fontes",
+			"country": "Brazil",
+			"national": "Brazilian",
+			"nation_adj": "Brazilian",
+			"sail_number": "BRA-9"
+		},
+		{
+			"name": "Marcos Cabrera",
+			"country": "Spain",
+			"national": "Spaniard",
+			"nation_adj": "Spanish",
+			"sail_number": "ESP-43"
+		},
+		{
+			"name": "Borys Wrona",
+			"country": "Poland",
+			"national": "Pole",
+			"nation_adj": "Polish",
+			"sail_number": "POL-97"
+		},
+		{
+			"name": "Jaylen Croes",
+			"country": "Aruba",
+			"national": "Aruban",
+			"nation_adj": "Aruban",
+			"sail_number": "ARU-544"
+		},
+		{
+			"name": "Bastien Pradel",
+			"country": "France",
+			"national": "Frenchman",
+			"nation_adj": "French",
+			"sail_number": "FRA-157"
+		},
+		{
+			"name": "Nicolo Mancuso",
+			"country": "Italy",
+			"national": "Italian",
+			"nation_adj": "Italian",
+			"sail_number": "ITA-125"
+		},
+		{
+			"name": "Matthias Egger",
+			"country": "Austria",
+			"national": "Austrian",
+			"nation_adj": "Austrian",
+			"sail_number": "AUT-71"
+		},
+		{
+			"name": "Tommaso Rinaldo",
+			"country": "Italy",
+			"national": "Italian",
+			"nation_adj": "Italian",
+			"sail_number": "ITA-226"
+		},
+		{
+			"name": "Ole Wilke",
+			"country": "Germany",
+			"national": "German",
+			"nation_adj": "German",
+			"sail_number": "GER-390"
+		},
+		{
+			"name": "Lukas Hofer",
+			"country": "Austria",
+			"national": "Austrian",
+			"nation_adj": "Austrian",
+			"sail_number": "AUT-637"
+		},
+		{
+			"name": "Fabian Brandt",
+			"country": "Germany",
+			"national": "German",
+			"nation_adj": "German",
+			"sail_number": "GER-68"
+		},
+		{
+			"name": "Iker Betancor",
+			"country": "Spain",
+			"national": "Spaniard",
+			"nation_adj": "Spanish",
+			"sail_number": "ESP-312"
+		},
+		{
+			"name": "Kacper Nowacki",
+			"country": "Poland",
+			"national": "Pole",
+			"nation_adj": "Polish",
+			"sail_number": "POL-59"
+		},
+		{
+			"name": "Jesse Hoekstra",
+			"country": "the Netherlands",
+			"national": "Dutchman",
+			"nation_adj": "Dutch",
+			"sail_number": "NED-933"
+		},
+		{
+			"name": "Loris Kerbrat",
+			"country": "France",
+			"national": "Frenchman",
+			"nation_adj": "French",
+			"sail_number": "FRA-7"
+		},
+		{
+			"name": "Daan Veldhuis",
+			"country": "the Netherlands",
+			"national": "Dutchman",
+			"nation_adj": "Dutch",
+			"sail_number": "NED-98"
+		},
+		{
+			"name": "Gian Baumann",
+			"country": "Switzerland",
+			"national": "Swiss",
+			"nation_adj": "Swiss",
+			"sail_number": "SUI-57"
+		}
+	]
+}
