@@ -121,7 +121,9 @@ for his yes.
 Start
 -----
 1 LIVE - the Sotavento slalom week (goes on where it stopped).bat
-    The broadcast. It runs by itself: a 60 s countdown, the heat, the result, the next heat.
+    The broadcast. It runs by itself: a 60 s countdown, the heat, the result, the next heat
+    (a heat is over when its fourth board is home: the four who go through; a final when all
+    eight are, or a minute after its winner).
     The week is saved after every heat; start it again and it goes on with the next heat.
 2 LIVE - a NEW Sotavento slalom week from heat 1.bat
     The same, from the first heat of elimination 1 (the saved week is replaced).
@@ -132,8 +134,9 @@ Start
 
 Keys while watching
 -------------------
-B       the ladder of this elimination and the standings (they also come up by themselves after
-        a final and at the end of the week)
+B       the ladder of this elimination and the standings (the last elimination's result and the
+        standings also come up by themselves when the next elimination begins, and at the end
+        of the week)
 H       the screen: full (every card and the keys) / TV (what a viewer needs) / clean
 V       the commentary on or off;  Shift+V  the voice alone (subtitles stay)
 T       the TV director on or off;  5 to 9  one TV shot by hand;  1 to 4  your own cameras
