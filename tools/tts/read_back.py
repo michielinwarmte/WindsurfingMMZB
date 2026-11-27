@@ -20,6 +20,7 @@ import re
 import sys
 import time
 import unicodedata
+import wave
 
 NUMBER_WORDS = {"1": "one", "2": "two", "3": "three", "4": "four", "5": "five", "6": "six",
                 "7": "seven", "8": "eight", "9": "nine", "10": "ten", "1st": "first", "2nd": "second",
@@ -33,6 +34,22 @@ def words_of(text):
     text = text.lower().replace("'", "").replace("’", "")
     text = re.sub(r"[^a-z0-9]+", " ", text)
     return [NUMBER_WORDS.get(w, w) for w in text.split()]
+
+
+def read_wav_16k(path):
+    """A WAV file (16-bit, Piper's own) as Whisper's input: mono floats at 16 kHz. Read here, not
+    through faster-whisper's own decoder (its PyAV call fails with this PC's PyAV version)."""
+    import numpy as np
+    with wave.open(path, "rb") as wav:
+        rate = wav.getframerate()
+        channels = wav.getnchannels()
+        samples = np.frombuffer(wav.readframes(wav.getnframes()), dtype=np.int16).astype(np.float32) / 32768.0
+    if channels > 1:
+        samples = samples.reshape(-1, channels).mean(axis=1)
+    if rate != 16000 and samples.size > 1:
+        times = np.arange(int(samples.size * 16000 / rate)) * (rate / 16000.0)
+        samples = np.interp(times, np.arange(samples.size), samples).astype(np.float32)
+    return samples
 
 
 def word_errors(said, heard):
@@ -68,7 +85,7 @@ def main():
         if not item.get("made"):
             item["heard"] = None
             continue
-        segments, _ = model.transcribe(item["wav"], language="en", beam_size=5,
+        segments, _ = model.transcribe(read_wav_16k(item["wav"]), language="en", beam_size=5,
                                        initial_prompt=hint, condition_on_previous_text=False,
                                        vad_filter=False)
         heard = " ".join(s.text.strip() for s in segments).strip()
