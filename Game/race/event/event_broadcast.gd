@@ -100,6 +100,8 @@ var _board_by_hand: bool = false
 var _standings_until_s: float = -INF
 ## The winner of the winners' final on the water has been named.
 var _win_said: bool = false
+## The sailors of the heat on the water already named as out (their ids).
+var _out_said: PackedInt32Array = PackedInt32Array()
 ## Giving up (GIVE_UP_BEHIND_S; 0: off) and the race clock of the next look.
 var give_up_behind_s: float = GIVE_UP_BEHIND_S
 var _give_up_look_s: float = -INF
@@ -274,6 +276,7 @@ func _let_the_hopeless_give_up(race: RaceSim) -> void:
 			race.retire(i)
 			print("EVENT %s gives up at %.0f s: still sailing for %s, which the heat's fourth board completed at %.0f s" % [
 				_on_boards[i].name, now_s, race.next_step_name(i), fourth_s])
+			_say_he_is_out(_on_boards[i])
 
 
 ## When the heat's fourth board completed a step (the race clock), or -1 when fewer than four have.
@@ -329,6 +332,7 @@ func _start_heat() -> void:
 	_on_boards = week.sailors_now()
 	_decided_s = -1.0
 	_win_said = false
+	_out_said.clear()
 	_give_up_look_s = -INF
 	_falls.resize(_on_boards.size())
 	_falls.fill(0)
@@ -549,12 +553,26 @@ func _say_the_result() -> void:
 		for place: int in range(EliminationLadder.THROUGH, order.size()):
 			if best_out == null or week.ladder.seeds.find(order[place].id) < week.ladder.seeds.find(best_out.id):
 				best_out = order[place]
+		commentary.hear(moments)
 		if best_out != null:
-			var seed: int = week.ladder.seeds.find(best_out.id)
-			var out: RaceMoment = _moment("heat_out", 4 if seed < SHOCK_SEEDS else (3 if seed < UPSET_SEEDS else 2), heat, week.elimination)
-			_about(out, best_out)
-			moments.append(out)
+			_say_he_is_out(best_out)
+		return
 	commentary.hear(moments)
+
+
+## A sailor is out of a heat four go through from (he gave up, or the four are home without him):
+## said once per sailor and heat, louder for a favourite of the elimination's seeding. Nothing in a
+## final (no one goes through from it).
+func _say_he_is_out(sailor: EventRoster.Sailor) -> void:
+	var commentary: Commentary = _commentary()
+	var heat: int = week.next_heat()
+	if commentary == null or heat >= EliminationLadder.LOSERS_FINAL or _out_said.has(sailor.id):
+		return
+	_out_said.append(sailor.id)
+	var seed: int = week.ladder.seeds.find(sailor.id)
+	var out: RaceMoment = _moment("heat_out", 4 if seed < SHOCK_SEEDS else (3 if seed < UPSET_SEEDS else 2), heat, week.elimination)
+	_about(out, sailor)
+	commentary.hear([out])
 
 
 ## The week is over: the champion.
