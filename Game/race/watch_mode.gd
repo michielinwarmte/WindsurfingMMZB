@@ -14,6 +14,11 @@ extends Node
 ##   helicopter only, the committee boat's view down the start line at the start (who is over early),
 ##   the finish line as the leader comes in, and between them cuts to the front of the fleet, the
 ##   fights, the mark roundings. T again, or a camera key 1 to 4: your own camera again.
+## - V: the commentary on or off (Commentary; Max, 27 November 2026: "a fifa kind of commentating"):
+##   the stream commentator's own lines at the right moments, as subtitles at the bottom of the
+##   screen. It comes on with the TV director (T) and goes off with it; V switches it by hand at any
+##   time (without the TV director it talks about the board you follow). The clean screen shows no
+##   subtitles (the commentary goes on unseen).
 ## - 5 to 9: one TV shot by hand, on the board watched (Tab and L change the board, the shot stays):
 ##   5 the helicopter (5 again: the circling stops or goes on), 6 the committee boat down the start
 ##   line, 7 the chase drone, 8 the drone beside the board, 9 the drone overhead. The wheel brings the
@@ -30,7 +35,8 @@ extends Node
 ## - Shift+R: the same race again: the same start spots and the same skippers' day (the race's dice;
 ##   the wind's gusts go on with their own clock). R a new race. The full screen shows the race's
 ##   number and dice; --seed=<dice> on the command line starts that race again.
-## Command line: --tv=1 (the TV camera from the start), --screen=full|tv|clean, --speed=<x>, --head=1.
+## Command line: --tv=1 (the TV camera from the start), --screen=full|tv|clean, --speed=<x>, --head=1,
+## --commentary=1|0 (the commentary on or off from the start, whatever --tv says).
 
 enum Screen { FULL, TV, CLEAN }
 
@@ -55,6 +61,7 @@ const KEYS: Array[Array] = [
 	["1-4", "camera"],
 	["5-9", "TV shots"],
 	["T", "TV director"],
+	["V", "commentary"],
 	["- + 0", "speed"],
 	["P", "freeze"],
 	["H", "screen"],
@@ -76,6 +83,8 @@ var speed_index: int = NORMAL
 var frozen: bool = false
 var tv_on: bool = false
 var head_shown: bool = false
+## The commentator (V; on with the TV director).
+var commentary: Commentary = null
 
 ## The project's ticks a second and steps a frame, put back when the watching ends.
 var _normal_ticks: int = 60
@@ -113,6 +122,9 @@ func setup(sailing_scene: SailingScene, race_runner: RaceRunner, hud_layer: Hud,
 	_normal_max_steps = int(ProjectSettings.get_setting("physics/common/max_physics_steps_per_frame", 8))
 	rig.orbit_max_m = ORBIT_MAX_M
 	_build_cards()
+	commentary = Commentary.new()
+	add_child(commentary)
+	commentary.setup(race_runner, tv, hud_layer)
 	hud.set_watch_keys(KEYS)
 	runner.restarted.connect(_on_new_race)
 	_read_options()
@@ -129,11 +141,14 @@ func _exit_tree() -> void:
 		get_tree().paused = false
 
 
-## --tv=1, --screen=full|tv|clean, --speed=<x>, --head=1.
+## --tv=1, --screen=full|tv|clean, --speed=<x>, --head=1, --commentary=1|0 (after --tv, whatever its place).
 func _read_options() -> void:
+	var commentary_wanted: String = ""
 	for arg: String in OS.get_cmdline_user_args():
 		var value: String = arg.get_slice("=", 1)
-		if arg.begins_with("--tv="):
+		if arg.begins_with("--commentary="):
+			commentary_wanted = value
+		elif arg.begins_with("--tv="):
 			if value == "1":
 				set_tv(true)
 		elif arg.begins_with("--screen="):
@@ -142,6 +157,8 @@ func _read_options() -> void:
 			set_speed(nearest_speed(value.to_float()))
 		elif arg.begins_with("--head="):
 			head_shown = value == "1"
+	if commentary_wanted != "":
+		commentary.set_on(commentary_wanted == "1")
 
 
 # ---------------------------------------------------------------- the keys
@@ -160,6 +177,9 @@ func handle_input(event: InputEvent) -> bool:
 		KEY_T:
 			set_tv(not tv_on)
 			_say("TV director on: it picks the boards and the shots. T again or 1-4: your own camera; 5-9 one shot by hand." if tv_on else "TV director off.")
+		KEY_V:
+			commentary.set_on(not commentary.on)
+			_say("Commentary on: the commentator's lines at the bottom of the screen." if commentary.on else "Commentary off (V: on again).")
 		KEY_P:
 			set_frozen(not frozen)
 		KEY_MINUS, KEY_KP_SUBTRACT:
@@ -208,6 +228,7 @@ func set_screen(level: Screen) -> void:
 func _apply_screen() -> void:
 	if not scene.director_view_open():
 		hud.visible = screen != Screen.CLEAN
+	commentary.set_shown(screen != Screen.CLEAN)
 
 
 ## Slower or faster: SPEEDS[index] times real time, each tick still 1/60 s of the race.
@@ -260,6 +281,8 @@ func set_tv(on: bool) -> void:
 	if on == tv_on:
 		return
 	tv_on = on
+	# The commentary comes and goes with the TV director (V switches it by hand).
+	commentary.set_on(on)
 	if on:
 		_remember_the_camera()
 		tv.begin_auto()
@@ -414,6 +437,8 @@ func _update_cards() -> void:
 			lines.append("TV director")
 		elif tv.is_on():
 			lines.append("TV shot (by hand)")
+		if commentary.on:
+			lines.append("Commentary (V: off)")
 		lines.append("Race %d   ·   dice %d" % [runner.race_number, runner.last_dice])
 	_corner.text = "\n".join(lines)
 	_corner_card.visible = not lines.is_empty()

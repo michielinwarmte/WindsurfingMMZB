@@ -1,0 +1,161 @@
+[gd_resource type="Resource" script_class="CommentaryConfig" format=3]
+
+[ext_resource type="Script" uid="uid://bbywjo0qo3oiu" path="res://race/commentary/commentary_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+pause_min_s = 0.4
+pause_max_s = 1.5
+quiet_pause_min_s = 1.0
+quiet_pause_max_s = 3.0
+rundown_pause_s = 0.3
+repeat_line_s = 300.0
+repeat_words_s = 300.0
+identify_again_s = 40.0
+quiet_again_s = Dictionary[String, float]({
+"camera": 35.0,
+"filler": 25.0,
+"identify": 5.0,
+"leader": 22.0,
+"rundown": 70.0,
+"speed": 14.0,
+"unsure": 45.0
+})
+quiet_weight = Dictionary[String, float]({
+"camera": 0.7,
+"filler": 0.6,
+"identify": 3.0,
+"leader": 2.0,
+"rundown": 1.5,
+"speed": 2.5,
+"unsure": 0.7
+})
+priority = Dictionary[String, float]({
+"after_race": 4.5,
+"airtime": 6.5,
+"camera": 1.0,
+"chase": 4.0,
+"fall": 8.0,
+"fight": 4.5,
+"filler": 1.0,
+"finish_place": 6.0,
+"finish_win": 10.0,
+"gybe_bad": 6.0,
+"gybe_good": 5.5,
+"gybe_safe": 3.5,
+"identify": 2.0,
+"last_leg": 5.5,
+"lead_change": 9.0,
+"leader": 2.0,
+"mark_approach": 4.0,
+"near_miss": 7.5,
+"oh_no": 1.0,
+"over_early": 7.5,
+"overtake": 5.0,
+"photo_finish": 9.5,
+"pre_start": 3.0,
+"rundown": 2.5,
+"speed": 2.0,
+"start_bad": 5.0,
+"start_good": 5.0,
+"start_gun": 8.5,
+"trouble": 5.5,
+"unsure": 1.0,
+"wow": 1.0
+})
+level_bonus = 1.0
+focus_bonus = 1.5
+back_from_place = 6
+back_penalty = 1.5
+cut_in_from = 7.0
+cut_margin = 3.0
+late_s = Dictionary[String, float]({
+"after_race": 20.0,
+"airtime": 4.0,
+"chase": 8.0,
+"fall": 4.0,
+"fight": 10.0,
+"finish_place": 8.0,
+"finish_win": 4.0,
+"gybe_bad": 5.0,
+"gybe_good": 5.0,
+"gybe_safe": 4.0,
+"last_leg": 8.0,
+"lead_change": 6.0,
+"mark_approach": 5.0,
+"near_miss": 3.0,
+"over_early": 6.0,
+"overtake": 6.0,
+"photo_finish": 3.0,
+"pre_start": 8.0,
+"start_bad": 8.0,
+"start_good": 8.0,
+"start_gun": 1.5,
+"trouble": 6.0
+})
+late_default_s = 5.0
+rundown_places = 6
+not_in_a_row = PackedStringArray("mark_approach", "gybe_safe", "chase", "fight", "pre_start", "start_good", "start_bad")
+not_in_a_row_s = 6.0
+reaction = Dictionary[String, String]({
+"airtime": "wow",
+"chase": "wow",
+"fall": "oh_no",
+"finish_win": "wow",
+"gybe_bad": "oh_no",
+"gybe_good": "wow",
+"lead_change": "wow",
+"near_miss": "oh_no",
+"over_early": "oh_no",
+"overtake": "wow",
+"photo_finish": "wow",
+"trouble": "oh_no"
+})
+reaction_from_level = 3
+reaction_chance = 0.5
+pair_gap_s = 0.15
+look_every_s = 0.05
+order_hold_s = 2.5
+order_from_s = 15.0
+many_boards = 6
+close_m = 15.0
+big_lead_m = 60.0
+pre_start_at_s = PackedFloat32Array(-50, -28, -12)
+start_judge_s = 8.0
+good_start_within_s = 3.0
+chase_near_m = 50.0
+chase_gain_m = 8.0
+chase_window_s = 8.0
+chase_again_s = 40.0
+fight_m = 15.0
+fight_after_s = 6.0
+fight_again_s = 45.0
+fast_share = 1.04
+near_miss_m = 4.0
+near_speed_ms = 3.0
+near_from_s = 8.0
+near_again_s = 30.0
+trouble_off_plane_s = 3.0
+trouble_places = 2
+trouble_window_s = 15.0
+trouble_again_s = 30.0
+air_share = 0.08
+air_min_s = 0.25
+air_land_s = 1.0
+mark_approach_m = 70.0
+mark_front = 3
+rounding_from_m = 35.0
+rounding_after_s = 3.0
+gybe_twa_deg = 150.0
+good_kept = 0.8
+good_off_plane_s = 0.3
+tight_m = 12.0
+bad_kept = 0.5
+bad_off_plane_s = 2.0
+wide_m = 25.0
+photo_m = 50.0
+photo_close_m = 6.0
+photo_s = 1.0
+after_win_s = 8.0
+subtitle_linger_s = 1.2
+subtitle_min_s = 1.8

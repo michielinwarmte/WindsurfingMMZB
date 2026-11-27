@@ -74,7 +74,7 @@ func _add_watch_button() -> void:
 	_watch_button.name = "WatchButton"
 	_watch_button.text = "Watch: the AI races, you direct"
 	_watch_button.custom_minimum_size = Vector2(220.0, 0.0)
-	_watch_button.tooltip_text = "Your board stays ashore. M race director, T TV camera, H hides the screen, - and + slow motion and fast forward."
+	_watch_button.tooltip_text = "Your board stays ashore. M race director, T TV camera, V commentary, H hides the screen, - and + slow motion and fast forward."
 	_start_button.add_sibling(_watch_button)
 	_start_button.get_parent().move_child(_watch_button, _start_button.get_index())
 	_watch_button.pressed.connect(_on_start_pressed.bind(true))
