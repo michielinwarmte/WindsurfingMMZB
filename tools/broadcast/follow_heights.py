@@ -14,6 +14,7 @@ height in metres, using the height a raked sail really shows from that side (SAI
 
     python -E -P tools/broadcast/follow_heights.py <media root> --ids=<id,...> --heats=<json>
         --work=<folder> --out=<csv> [--fov=47] [--formats=regular,obstacle]
+        [--camera=drone] [--phases=race] [--min-sail=8]     which beats (the beach cam: shore_long_lens)
 """
 import argparse
 import collections
@@ -54,6 +55,9 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--fov", type=float, default=47.0)
     ap.add_argument("--skip-tracking", action="store_true")
+    ap.add_argument("--camera", default="drone")
+    ap.add_argument("--phases", default="race")
+    ap.add_argument("--min-sail", type=float, default=8.0)
     a = ap.parse_args()
     with open(a.heats, encoding="utf-8") as f:
         heats = json.load(f)
@@ -66,9 +70,9 @@ def main():
         with open(os.path.join(a.root, vid, "shots", "shot_notes.csv"), encoding="utf-8-sig") as f:
             notes = list(csv.DictReader(f))
         for r in notes:
-            if r["camera"] != "drone" or r["phase"] != "race" or r["horizon_pct"] in ("none", "", "na"):
+            if r["camera"] != a.camera or r["phase"] not in a.phases.split(",") or r["horizon_pct"] in ("none", "", "na"):
                 continue
-            if r["sail_pct"] in ("", "na") or float(r["sail_pct"]) < 8.0:
+            if r["sail_pct"] in ("", "na") or float(r["sail_pct"]) < a.min_sail:
                 continue
             start, end = float(r["start_s"]), float(r["end_s"])
             if end - start < 2.0:
@@ -109,7 +113,7 @@ def main():
             height_m = ratio * sail_m
             ground_m = height_m / math.tan(alpha) if alpha > 0.02 else float("nan")
             out_rows.append({"video": vid, "shot": r["shot"] + r["part"], "view": r["view"], "subject": r["subject"],
-                             "move": r["move"], "moment": r["moment"], "seconds": round(end - start, 1),
+                             "move": r["move"], "phase": r["phase"], "moment": r["moment"], "seconds": round(end - start, 1),
                              "track": tid, "horizon_y": horizon, "top_y": round(top), "foot_y": round(foot),
                              "x": round(x), "sail_px": round(size), "reader_sail_px": round(want),
                              "height_in_sails": round(ratio, 2), "tilt_deg": round(math.degrees(tilt), 1),
