@@ -132,6 +132,24 @@ Size: W1 and W3 are a session each for one worker; W2 and W4 are the big ones (t
 
 **One point this leaves open:** Max asked for 64 in the brackets; the real event had 39 men (and 13 women). "Recreate the real event" with 64 means the real days, wind and number of eliminations with a full 64 ladder; with 39 it would also be the real ladder with its free passes in the first round. The plan assumes 64 until Max says otherwise.
 
+## Step W0, done in part on the night of 27 November: what the streams say
+
+Read from the text of the five stream days (the speech-to-text was at 67 of 81 pieces; `tools/broadcast/format_facts.py` lists the sentences by topic, `pwa_broadcast/lists/format_facts.txt` is its print). The rule book itself has not been read.
+
+| Question | The commentator | In the game now |
+|---|---|---|
+| Who goes through | "Top four will qualify", "four riders will go through", "top four is where you need to be in the quarterfinals to get into the semis"; a heat is eight ("there's eight in this here") | the same (`EliminationLadder.THROUGH` 4, `HEAT_SIZE` 8) |
+| The rounds | a qualifying round, four quarter-finals, two semi-finals, the winners' final, and the losers' ("runners-up") final "to decide nine to 16th" | the same |
+| The first round | the real fleet (about 40 men) had only "two qualifying heats to go into the quarterfinals"; everyone else began in a quarter-final | 64 sail a full first round of eight heats (Max: "64 people in brackets") |
+| The points | the leader had "4.8 points" after six eliminations with one result dropped: four wins and a second, so a win is 0.7 and a second 2 | the same |
+| Dropped results | "elimination 4 ... the discard will come in"; "we have had six eliminations, so this next one means two discards will come in"; "this is elimination 12, and that's when three discards come in" | 1 from four, 2 from seven, 3 from twelve (**was ten: set right**); a week of eleven ends with two dropped |
+| Over the line early | "General recall ... all jumped the gun, so three guys were out" | **different:** the game's race lets a board go back and start again. A question for Max. |
+| The days | eliminations 1 and 2 on 22 July, 3 and 4 on the 23rd, 5 to 7 on the 24th, 8 and 9 on the 25th, 10 and 11 on the 26th | the same (`schedules/sotavento_2026.json`; **was 0 on the 25th and 4 on the 26th: set right**) |
+| The wind | 22nd: no number, the heaviest riders on 5.6 m2; 23rd: "like 30 knots average" in the afternoon, lighter in the morning; 24th: "already 35 knots at this time of day", one gust read at 50; 25th: "over 40 knots", "40 knots for sure"; 26th: "the lighter wind day, still cranking", 5.6 to 6.7 m2 | in the schedule as 30, 30, 35, 40 and 28 knots, each with the words it comes from (the 22nd and the 26th are estimates from the sail sizes). **Not used yet:** every heat is sailed in the wind the game is started with (30 knots). The AI has never been tried in 35 or 40. |
+| Time between heats | not read yet | a 60 s countdown (what the AI's start needs) and 8 s for the result |
+
+**Not said on the streams, so still the lead's reading:** the snake of the seeding, how sailors knocked out in the same round are ranked against each other, and the tie-break. **Not measured yet:** how many boards the PC carries at Sotavento (the live week uses eight at a time).
+
 ## After the decisions
 
 The steps become backlog stories under E11.S03, E13.S03 and E10.S06 (with E16.S06 for the new commentary moments), W0's report is written in `Documentation/reports/broadcast/`, and W1 starts.

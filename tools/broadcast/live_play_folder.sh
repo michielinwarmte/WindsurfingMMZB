@@ -97,6 +97,70 @@ launcher "5 Sail at Sotavento yourself (body on the mouse)" push_and_body.cfg "-
 launcher "6 Start the game - push and body on the mouse" push_and_body.cfg "" \
 	"The start menu with the push gauge AND the body on the mouse (settings in push_and_body.cfg next to this file)."
 
+# The README: what this build is, how to start it, the keys, what is not there yet. The part under
+# "KNOWN" comes from tools/broadcast/live_known.txt when it is there (the state of the night).
+commit="$(git -C "$REPO_ROOT" log -1 --format='%h, %cd' --date=format:'%d %B %Y %H:%M')"
+branch="$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD)"
+{
+	cat <<EOF
+Windsurf MMZB - the live slalom week at Sotavento
+=================================================
+
+Build: branch $branch at $commit (not pushed, not merged into main).
+
+What it is
+----------
+The game's own slalom world cup at Fuerteventura, Sotavento, as a live broadcast: 64 sailors,
+11 eliminations of 16 heats (a first round of 8 heats, 4 quarter-finals, 2 semi-finals, the losers'
+final and the winners' final; the first four of a heat go through). Every heat is sailed on the
+water by eight AI sailors, filmed by the TV director (set to the pictures of the real 2026 streams)
+and talked through by the commentator: his lines as subtitles, and said by a computer voice.
+The voice is NOT the real commentator's: a ready-made British computer voice. His own voice waits
+for his yes.
+
+Start
+-----
+1 LIVE - the Sotavento slalom week (goes on where it stopped).bat
+    The broadcast. It runs by itself: a 60 s countdown, the heat, the result, the next heat.
+    The week is saved after every heat; start it again and it goes on with the next heat.
+2 LIVE - a NEW Sotavento slalom week from heat 1.bat
+    The same, from the first heat of elimination 1 (the saved week is replaced).
+3 LIVE - the Sotavento slalom week, subtitles only (no voice).bat
+4 Watch one Sotavento slalom heat (TV director and commentary, 8 AI boards).bat
+5 Sail at Sotavento yourself (body on the mouse).bat
+6 Start the game - push and body on the mouse.bat
+
+Keys while watching
+-------------------
+B       the ladder of this elimination and the standings (they also come up by themselves after
+        a final and at the end of the week)
+H       the screen: full (every card and the keys) / TV (what a viewer needs) / clean
+V       the commentary on or off;  Shift+V  the voice alone (subtitles stay)
+T       the TV director on or off;  5 to 9  one TV shot by hand;  1 to 4  your own cameras
+Tab, L  the next board, the leader
+- + 0   slower, faster, normal speed;  P  freeze
+N       the names above the boards;  I  the AI's head (what a skipper is doing)
+R       this heat again with a new start
+
+The results as text
+-------------------
+After every heat the week writes its results (the standings of all 64 with every elimination's
+points, each elimination's first sixteen, the ladder being sailed) to
+  %APPDATA%\\Godot\\app_userdata\\Windsurfing Simulator\\event_week_sotavento_2026_results.txt
+
+The sound
+---------
+The live launchers use live.cfg next to this file: your play settings with the master volume at
+60 % and the wind, water and sail sounds lower, so the commentator is heard (your play settings
+have the master volume at 5 %). Change it in Settings > Audio (Commentary has its own slider).
+The speech program is in the tts folder next to wsim.exe; without it there are subtitles only.
+
+EOF
+	if [[ -f "$REPO_ROOT/tools/broadcast/live_known.txt" ]]; then
+		cat "$REPO_ROOT/tools/broadcast/live_known.txt"
+	fi
+} | sed 's/\r$//' | sed 's/$/\r/' > "$dest/README.txt"
+
 echo "Play folder: $dest"
 ls -1 "$dest" | sed 's/^/  /'
 du -sh "$dest" | cut -f1
