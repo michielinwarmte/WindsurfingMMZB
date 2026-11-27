@@ -46,6 +46,9 @@ var _heats_left: int = -1
 ## The countdown of every heat (COUNTDOWN_S, or --event_countdown=<s>).
 var countdown_s: float = COUNTDOWN_S
 var _stopped: bool = false
+## Each board's falls in the heat on the water (after the gun), and whether it was down last frame.
+var _falls: PackedInt32Array = PackedInt32Array()
+var _was_down: PackedByteArray = PackedByteArray()
 
 var _card: PanelContainer = null
 var _text: Label = null
@@ -96,6 +99,7 @@ func _process(delta: float) -> void:
 	if week.is_over():
 		return
 	var race: RaceSim = runner.race
+	_count_falls(race)
 	if _decided_s < 0.0:
 		if _finished_count(race) >= EliminationLadder.THROUGH or race.phase() == RaceSim.Phase.FINISHED:
 			_decided_s = 0.0
@@ -104,6 +108,15 @@ func _process(delta: float) -> void:
 	_decided_s += delta
 	if _decided_s >= HOLD_S:
 		_close_heat()
+
+
+## Counts each board's falls once the gun has gone (the heat's report and the result card).
+func _count_falls(race: RaceSim) -> void:
+	for i: int in mini(runner.opponents.size(), _falls.size()):
+		var down: bool = runner.opponents[i].sim.sailor_state == WindsurferSim.SailorState.FALLEN
+		if down and _was_down[i] == 0 and race.phase() == RaceSim.Phase.RACING:
+			_falls[i] += 1
+		_was_down[i] = 1 if down else 0
 
 
 ## How many of the heat's boards have finished.
@@ -137,6 +150,10 @@ func _order_now() -> Array[EventRoster.Sailor]:
 func _start_heat() -> void:
 	_on_boards = week.sailors_now()
 	_decided_s = -1.0
+	_falls.resize(_on_boards.size())
+	_falls.fill(0)
+	_was_down.resize(_on_boards.size())
+	_was_down.fill(0)
 	if _on_boards.size() != runner.opponents.size():
 		push_warning("The event's heat has %d sailors for %d boards: the week stops." % [_on_boards.size(), runner.opponents.size()])
 		_stopped = true
@@ -186,8 +203,11 @@ func _log_heat() -> void:
 	var order: Array[EventRoster.Sailor] = _order_now()
 	for place: int in order.size():
 		var board: int = _on_boards.find(order[place])
-		var time: String = "%.1f s" % race.finish_time_s(board) if race.is_finished(board) else "racing"
-		words.append("%d %s (seed %d, %s)" % [place + 1, order[place].name, week.ladder.seeds.find(order[place].id) + 1, time])
+		var time: String = "%.1f s" % race.finish_time_s(board) if race.is_finished(board) else "racing to %s" % race.next_step_name(board)
+		var splits: PackedStringArray = PackedStringArray()
+		for split: float in race.splits_s(board):
+			splits.append("%.0f" % split)
+		words.append("%d %s (seed %d, %s, falls %d, splits %s)" % [place + 1, order[place].name, week.ladder.seeds.find(order[place].id) + 1, time, _falls[board] if board < _falls.size() else 0, " ".join(splits)])
 	print("EVENT elimination %d, %s: %s" % [week.elimination, EliminationLadder.heat_name(week.next_heat()), "; ".join(words)])
 
 

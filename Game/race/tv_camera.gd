@@ -1072,8 +1072,11 @@ func fleet_middle(water_y: float) -> Vector3:
 ## The board's mast as it is drawn now: [its foot, its top] in the world (straight up from the board
 ## when the board has no drawn mast).
 func _mast_points(node: WindsurferNode, board: Transform3D) -> PackedVector3Array:
-	var mast: Node3D = _masts.get(node, null)
-	if mast == null or not is_instance_valid(mast):
+	# A change of gear (a new sailor on the board, a new wind) frees the drawn mast: the kept one is
+	# checked before it is used, and looked up again when it is gone.
+	var kept: Variant = _masts.get(node, null)
+	var mast: Node3D = (kept as Node3D) if is_instance_valid(kept) else null
+	if mast == null:
 		mast = node.find_child("Mast", true, false) as Node3D
 		_masts[node] = mast
 	var mast_m: float = node.sim.sail_config.mast_m
