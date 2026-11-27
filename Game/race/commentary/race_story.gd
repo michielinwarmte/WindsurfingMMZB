@@ -68,6 +68,8 @@ var _flight_s: Dictionary[int, float] = {}
 var _fell_at: Dictionary[int, float] = {}
 var _off_plane_since: Dictionary[int, float] = {}
 var _drops: Dictionary[int, PackedVector2Array] = {}
+## Every rounding watched, judged or not, one line each (the transcript's list, to check the numbers).
+var rounding_notes: PackedStringArray = PackedStringArray()
 
 
 ## A rounding being watched (see the class's doc).
@@ -84,6 +86,8 @@ class Rounding:
 	var fell: bool = false
 	## When it rounded (its step done), race seconds; -1 before.
 	var rounded_s: float = -1.0
+	## When the sail first changed sides in the watch, race seconds; -1: it did not.
+	var flipped_s: float = -1.0
 
 
 func _init(tuning: CommentaryConfig) -> void:
@@ -130,8 +134,8 @@ func quiet(now: RaceLook, focus: int, wide: bool) -> Array[RaceMoment]:
 		if wide:
 			moments.append(_quiet("unsure", focus, now, 1))
 	moments.append(_quiet("camera", -1, now, 1))
-	if not now.racing:
-		return moments
+	if not now.racing or now.clock_s < config.order_from_s:
+		return moments  # the countdown and the start's shuffle: no order to talk about yet
 	if shown and is_fast(now, focus):
 		moments.append(_quiet("speed", focus, now, 3 if now.boards[focus].place <= 3 else 2))
 	if not now.order.is_empty() and not now.boards[now.order[0]].finished:
@@ -439,11 +443,17 @@ func _watch_a_rounding(now: RaceLook, index: int, moments: Array[RaceMoment]) ->
 	rounding.nearest_m = minf(rounding.nearest_m, now.distance_to_mark_m(index, rounding.step))
 	rounding.widest_twa_deg = maxf(rounding.widest_twa_deg, absf(board.twa_deg))
 	rounding.fell = rounding.fell or board.fallen
+	if rounding.flipped_s < 0.0 and board.sail_side != rounding.side_in:
+		rounding.flipped_s = now.clock_s
 	if board.next_step > rounding.step and rounding.rounded_s < 0.0:
 		rounding.rounded_s = now.clock_s
 	if rounding.rounded_s >= 0.0 and now.clock_s - rounding.rounded_s >= config.rounding_after_s:
 		_roundings.erase(index)
 		var judged: RaceMoment = judge_the_gybe(rounding, board.sail_side, config)
+		rounding_notes.append("%s  %s at mark %d: %s; the sail %s, the widest wind angle %.0f deg%s -> %s" % [
+			clock_text(now.clock_s), now.name_of(index), now.mark_number(rounding.step), rounding_text(rounding),
+			"changed sides %.1f s %s the rounding" % [absf(rounding.flipped_s - rounding.rounded_s), "before" if rounding.flipped_s < rounding.rounded_s else "after"] if rounding.flipped_s >= 0.0 else "stayed on its side",
+			rounding.widest_twa_deg, ", fell" if rounding.fell else "", judged.moment if judged != null else "no gybe line"])
 		if judged != null:
 			judged.board = index
 			judged.race_s = now.clock_s
@@ -455,6 +465,7 @@ func _watch_a_rounding(now: RaceLook, index: int, moments: Array[RaceMoment]) ->
 			moments.append(judged)
 	elif rounding.rounded_s < 0.0 and (now.clock_s - rounding.began_s > 60.0 or now.distance_to_mark_m(index, rounding.step) > 2.0 * config.rounding_from_m):
 		_roundings.erase(index)  # it went away from the mark without rounding it: nothing to judge
+		rounding_notes.append("%s  %s at mark %d: went away without rounding it" % [clock_text(now.clock_s), now.name_of(index), now.mark_number(rounding.step)])
 
 
 ## A rounding judged (see the class's doc): gybe_good, gybe_safe or gybe_bad, or null when the board
@@ -473,9 +484,22 @@ static func judge_the_gybe(rounding: Rounding, side_out: int, tuning: Commentary
 		what = "gybe_good"
 		size = 3
 	var moment: RaceMoment = RaceMoment.make(what, -1, size)
-	moment.note = "kept %d %% of its speed (%.1f to %.1f kt), %.1f s off the plane, %.0f m from the mark" % [
-		roundi(kept * 100.0), rounding.speed_in_ms / SimMath.KNOT_MS, rounding.least_ms / SimMath.KNOT_MS, rounding.off_plane_s, rounding.nearest_m]
+	moment.note = rounding_text(rounding)
 	return moment
+
+
+## What a rounding measured, in a few words: "kept 84 % of its speed (20.1 to 16.9 kt), 0.0 s off the
+## plane, 6 m from the mark".
+static func rounding_text(rounding: Rounding) -> String:
+	var kept: float = rounding.least_ms / maxf(rounding.speed_in_ms, 0.1)
+	return "kept %d %% of its speed (%.1f to %.1f kt), %.1f s off the plane, %.0f m from the mark" % [
+		roundi(kept * 100.0), rounding.speed_in_ms / SimMath.KNOT_MS, rounding.least_ms / SimMath.KNOT_MS, rounding.off_plane_s, rounding.nearest_m]
+
+
+## A race time as "1:07.3" ("-0:12.0" before the gun).
+static func clock_text(seconds: float) -> String:
+	var whole: float = absf(seconds)
+	return "%s%d:%04.1f" % ["-" if seconds < 0.0 else "", floori(whole / 60.0), fmod(whole, 60.0)]
 
 
 # ---------------------------------------------------------------- two boards

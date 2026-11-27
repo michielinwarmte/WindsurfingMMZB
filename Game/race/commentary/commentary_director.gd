@@ -15,9 +15,11 @@ extends RefCounted
 ## - When nothing new is happening: small talk about the board the camera shows (identify, speed,
 ##   unsure), the leader, a rundown of the order (one line per board, down the places, stopped by
 ##   anything new), a filler, a word on the camera; each kind not again within its quiet_again_s.
-## - No line twice in a short time: not the same line (repeat_line_s) and not the same words, whatever
-##   the line (repeat_words_s); among the lines that fit, the least used first, so the whole bank gets
-##   used; a staple of his (a high `count`) a little more often.
+## - No line twice in a short time: not the same line (repeat_line_s; a line with a slot, whose words
+##   change with the board, repeat_slotted_line_s) and not the same words, whatever the line
+##   (repeat_words_s). Among the lines that fit, the least used for how often he says it: a line's uses
+##   are measured against the square root of its `count`, so the whole bank gets used and a staple of
+##   his comes more often (a line he said 9 times about three times as often as one he said once).
 ## - The line's level fits the moment's: the nearest level first (a photo finish takes a shouted line if
 ##   there is one, a routine rounding a calm one).
 ## - A line's `needs` must hold, and every slot must be filled ({rider}, {brand}, {colour} ...), or the
@@ -340,12 +342,14 @@ func _weight(moment: RaceMoment, look: RaceLook) -> float:
 
 ## The line for a moment now: {"line": CommentaryBank.Line, "text": the words with the slots filled},
 ## or empty when none fits. Of the lines whose needs hold, whose slots can be filled and that were not
-## said lately: the nearest level, then the least used, then by chance, a staple a little more often.
+## said lately: the nearest level, then the least used for how often he says it (uses over the square
+## root of its count), then by chance, a staple more often.
 ## `naming`: only lines that say the board's name.
 func choose_line(moment: RaceMoment, look: RaceLook, naming: bool = false) -> Dictionary:
 	var fitting: Array[Dictionary] = []
 	for line: CommentaryBank.Line in bank.lines_for(moment.moment):
-		if _clock_s - _line_at.get(line.id, -INF) < config.repeat_line_s:
+		var again_s: float = config.repeat_slotted_line_s if not line.slots.is_empty() else config.repeat_line_s
+		if _clock_s - _line_at.get(line.id, -INF) < again_s:
 			continue
 		if naming and not line.slots.has("rider"):
 			continue
@@ -362,19 +366,24 @@ func choose_line(moment: RaceMoment, look: RaceLook, naming: bool = false) -> Di
 	var nearest: int = 99
 	for pick: Dictionary in fitting:
 		nearest = mini(nearest, absi((pick["line"] as CommentaryBank.Line).level - moment.level))
-	var least_used: int = 1 << 30
+	var least_used: float = INF
 	for pick: Dictionary in fitting:
 		var line: CommentaryBank.Line = pick["line"]
 		if absi(line.level - moment.level) == nearest:
-			least_used = mini(least_used, _uses.get(line.id, 0))
+			least_used = minf(least_used, _used_share(line))
 	var best: Array[Dictionary] = []
 	var weights: PackedFloat32Array = PackedFloat32Array()
 	for pick: Dictionary in fitting:
 		var line: CommentaryBank.Line = pick["line"]
-		if absi(line.level - moment.level) == nearest and _uses.get(line.id, 0) == least_used:
+		if absi(line.level - moment.level) == nearest and _used_share(line) <= least_used + 1e-6:
 			best.append(pick)
 			weights.append(sqrt(float(line.count)))
 	return best[_rng.rand_weighted(weights)]
+
+
+## How much a line has been used for how often he says it: its uses over the square root of its count.
+func _used_share(line: CommentaryBank.Line) -> float:
+	return float(_uses.get(line.id, 0)) / sqrt(float(maxi(line.count, 1)))
 
 
 ## Whether a line's needs hold for a moment now (BANK_FORMAT.md, "needs").

@@ -188,6 +188,34 @@ func test_the_least_used_line_comes_first_so_the_whole_bank_is_used() -> void:
 	assert_eq(seen, {"U1": 3, "U2": 3, "U3": 3} as Dictionary[String, int], "each line three times in nine")
 
 
+func test_a_staple_of_his_comes_more_often() -> void:
+	var config: CommentaryConfig = CommentaryConfig.new()
+	config.repeat_line_s = 0.0
+	config.repeat_words_s = 0.0
+	var staple: Dictionary = _line("C9", "filler", "Hardcore racing.")
+	staple["count"] = 9
+	var director: CommentaryDirector = _director([staple, _line("C1", "filler", "What a race.")], config)
+	var look: RaceLook = _look(30.0, [{}, {}])
+	var said: Dictionary[String, int] = {}
+	for k: int in 12:
+		var pick: Dictionary = director.choose_line(RaceMoment.make("filler"), look)
+		director.call("_start", RaceMoment.make("filler"), pick)
+		var id: String = (pick["line"] as CommentaryBank.Line).id
+		said[id] = said.get(id, 0) + 1
+	assert_between(said.get("C9", 0), 8, 10, "said 9 times to once in the streams: about three times as often (%s)" % [said])
+	assert_between(said.get("C1", 0), 2, 4, "but the other line too")
+
+
+func test_a_line_with_a_slot_comes_again_sooner_for_another_board() -> void:
+	var director: CommentaryDirector = _director([_line("N1", "identify", "{rider}.", ["rider"])])
+	var look: RaceLook = _look(30.0, [{}, {}])
+	director.call("_start", RaceMoment.make("identify", 0), director.choose_line(RaceMoment.make("identify", 0), look))
+	assert_true(director.choose_line(RaceMoment.make("identify", 1), look).is_empty(), "not straight away")
+	director.step(director.config.repeat_slotted_line_s + 0.1, look, null)
+	assert_eq(director.choose_line(RaceMoment.make("identify", 1), look)["text"], "Hana.", "another board soon after")
+	assert_true(director.choose_line(RaceMoment.make("identify", 0), look).is_empty(), "the same words not yet")
+
+
 func test_the_lines_level_fits_the_moment() -> void:
 	var director: CommentaryDirector = _director([
 		_line("V1", "finish_win", "{rider} wins.", ["rider"], [], 2),

@@ -23,10 +23,12 @@ extends Resource
 @export var rundown_pause_s: float = 0.3
 
 @export_group("Not twice in a short time")
-## A line (by its id) is not said again within this many seconds.
-@export var repeat_line_s: float = 300.0
+## A line (by its id) is not said again within this many seconds; a line with a slot, whose words
+## change with the board ("{rider}." is his most said line by far), within repeat_slotted_line_s.
+@export var repeat_line_s: float = 240.0
+@export var repeat_slotted_line_s: float = 40.0
 ## The same words (after the slots are filled, whatever the line) are not said again within this.
-@export var repeat_words_s: float = 300.0
+@export var repeat_words_s: float = 90.0
 ## The same board is not identified again within this many seconds.
 @export var identify_again_s: float = 40.0
 ## A quiet moment of the same kind is not taken again within these seconds.

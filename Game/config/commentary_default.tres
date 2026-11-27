@@ -9,8 +9,9 @@ pause_max_s = 1.5
 quiet_pause_min_s = 1.0
 quiet_pause_max_s = 3.0
 rundown_pause_s = 0.3
-repeat_line_s = 300.0
-repeat_words_s = 300.0
+repeat_line_s = 240.0
+repeat_slotted_line_s = 40.0
+repeat_words_s = 90.0
 identify_again_s = 40.0
 quiet_again_s = Dictionary[String, float]({
 "camera": 35.0,

@@ -68,7 +68,7 @@ const KEYS: Array[Array] = [
 	["N", "names"],
 	["I", "AI's head"],
 	["M", "race director"],
-	["R / Shift+R", "new race / same again"],
+	["R / Shift+R", "new race / again"],
 	["Esc", "menu"],
 ]
 
@@ -438,7 +438,7 @@ func _update_cards() -> void:
 		elif tv.is_on():
 			lines.append("TV shot (by hand)")
 		if commentary.on:
-			lines.append("Commentary (V: off)")
+			lines.append("Commentary on (V)")
 		lines.append("Race %d   ·   dice %d" % [runner.race_number, runner.last_dice])
 	_corner.text = "\n".join(lines)
 	_corner_card.visible = not lines.is_empty()

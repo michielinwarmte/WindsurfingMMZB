@@ -13,6 +13,7 @@ extends Node
 ## The director runs on real seconds (watching at 4x he does not talk four times as fast: he says less
 ## of the race); the story on the race's clock. Frozen (the tree paused), both stop and the subtitle
 ## stays. Nothing here touches the race or the physics.
+## For screenshots of the subtitles' place: --subtitle_test=<words> keeps those words on the screen.
 
 signal line_started(id: String, text: String, seconds: float, level: int)
 
@@ -40,6 +41,8 @@ var _race: RaceSim = null
 var _names: PackedStringArray = PackedStringArray()
 var _brands: PackedStringArray = PackedStringArray()
 var _colours: PackedColorArray = PackedColorArray()
+## --subtitle_test=<words>: these words always on the screen (for screenshots).
+var _test_words: String = ""
 
 
 func _init() -> void:
@@ -61,6 +64,9 @@ func setup(race_runner: RaceRunner, tv_camera: TvCamera, hud: Hud) -> void:
 		subtitles = CommentarySubtitles.new()
 		subtitles.put_on(hud)
 	runner.restarted.connect(new_race)
+	for arg: String in OS.get_cmdline_user_args():
+		if arg.begins_with("--subtitle_test="):
+			_test_words = arg.trim_prefix("--subtitle_test=")
 	_last_real_us = Time.get_ticks_usec()
 	new_race()
 
@@ -124,6 +130,9 @@ func _process(_delta: float) -> void:
 	var now_us: int = Time.get_ticks_usec()
 	var real_dt: float = clampf((now_us - _last_real_us) / 1e6, 0.0, 0.25)
 	_last_real_us = now_us
+	if _test_words != "" and subtitles != null:
+		subtitles.show_line(_test_words, 1.0)
+		return
 	if not on or director == null:
 		return
 	_tell_the_camera()

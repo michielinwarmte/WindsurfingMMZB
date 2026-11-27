@@ -32,6 +32,8 @@ var _said: Dictionary[String, int] = {}
 var _talk_s: float = 0.0
 var _first_s: float = INF
 var _last_s: float = -INF
+## The roundings of the races before an R (each race has its own story).
+var _rounding_notes: PackedStringArray = PackedStringArray()
 
 
 ## The transcript at `out_path`, headed by `heading`; the boards' names, their sails' brands and colours
@@ -82,6 +84,7 @@ func tick(race: RaceSim, telemetry: Array[Telemetry], dt: float) -> void:
 
 ## The game's R (--restart_after): a new race, a new story and camera; the lines said stay remembered.
 func new_race() -> void:
+	_rounding_notes.append_array(story.rounding_notes)
 	story = RaceStory.new(config)
 	director.new_race()
 	var dice: int = camera._rng.seed
@@ -110,6 +113,9 @@ func finish() -> void:
 		if _heard.has(moment) or _said.has(moment):
 			moments.append("%s %d/%d" % [moment, _said.get(moment, 0), _heard.get(moment, 0)])
 	_file.store_line("# Said / heard by moment (small talk is not heard, only said): " + ", ".join(moments))
+	_file.store_line("# The roundings watched (RaceStory: from %.0f m before the mark to %.0f s after it):" % [config.rounding_from_m, config.rounding_after_s])
+	for note: String in _rounding_notes + story.rounding_notes:
+		_file.store_line("#   " + note)
 	_file.close()
 	_file = null
 	print("COMMENTARY transcript: %s (%d lines)" % [ProjectSettings.globalize_path(path), counts["said"]])
@@ -131,9 +137,7 @@ func _on_line_started(id: String, text: String, seconds: float, _level: int) -> 
 
 ## A race time as the transcript writes it: "-0:52.3" in the countdown, "3:07.9" after the gun.
 static func clock(seconds: float) -> String:
-	var sign: String = "-" if seconds < 0.0 else ""
-	var whole: float = absf(seconds)
-	return "%s%d:%04.1f" % [sign, floori(whole / 60.0), fmod(whole, 60.0)]
+	return RaceStory.clock_text(seconds)
 
 
 ## The board and the shot on the screen, chosen as TvCamera chooses them (its rules and numbers), from
