@@ -889,7 +889,8 @@ static func state_for(race: RaceSim, index: int, clear_of_finish: bool) -> State
 		return State.FREE_SAILING
 	if race.is_finished(index):
 		return State.FREE_SAILING if clear_of_finish else State.FINISHED
-	if race.phase() == RaceSim.Phase.FINISHED:
+	if race.phase() == RaceSim.Phase.FINISHED or race.is_retired(index):
+		# The race is over, or over for this board (it gave up: an event week's heat, EventBroadcast).
 		return State.FREE_SAILING
 	if race.next_step_index(index) == 0:
 		return State.PRE_START

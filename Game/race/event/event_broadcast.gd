@@ -29,7 +29,8 @@ extends Node
 ## --event_skip=<n> does not sail the first n heats (their results are made up from the seeding, so
 ## a test can begin at a final or at the next elimination); --event_lines=1 writes every line the
 ## commentator says to the log; --event_save=<name> keeps the week in a save of its own (a test
-## must not touch the week Max is watching: the game and its tests share one folder of saves).
+## must not touch the week Max is watching: the game and its tests share one folder of saves);
+## --event_give_up=0 lets a hopelessly late board sail on (see GIVE_UP_BEHIND_S).
 
 ## The countdown before every heat, seconds: the game's own minute. The AI's slalom start is a timed
 ## run (away from the line, a gybe, back in at full speed) that needs it: with 60 s the eight came to
@@ -47,6 +48,15 @@ const STANDINGS_SHOWN_S: float = 15.0
 ## shout, among the first UPSET_SEEDS a lifted voice.
 const SHOCK_SEEDS: int = 8
 const UPSET_SEEDS: int = 16
+## A sailor gives up his heat (he retires and sails off the course) when the heat's fourth board
+## rounded the mark he is still sailing for more than this long ago, seconds: no place among the four
+## who go through is left to sail for. THE LEAD'S RULE, not the tour's (28 November 2026): the AI now
+## and then misses a mark at speed and circles it for minutes, which no sailor does; a real one who
+## is out of it sails home. 45 s is more than twice the biggest gap between the first and the fourth
+## board at a mark in the night's test heats (about 20 s). 0 (--event_give_up=0): nobody gives up.
+const GIVE_UP_BEHIND_S: float = 45.0
+## How often the boards are looked at for it, seconds of the race.
+const GIVE_UP_LOOK_S: float = 1.0
 const NUMBER_WORDS: PackedStringArray = ["one", "two", "three", "four", "five", "six", "seven", "eight",
 	"nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen"]
 const ORDER_WORDS: PackedStringArray = ["first", "second", "third", "fourth"]
@@ -90,6 +100,9 @@ var _board_by_hand: bool = false
 var _standings_until_s: float = -INF
 ## The winner of the winners' final on the water has been named.
 var _win_said: bool = false
+## Giving up (GIVE_UP_BEHIND_S; 0: off) and the race clock of the next look.
+var give_up_behind_s: float = GIVE_UP_BEHIND_S
+var _give_up_look_s: float = -INF
 
 
 ## Starts or picks up the week of a schedule on a watched race. False (with a warning) when the
@@ -108,6 +121,8 @@ func setup(race_runner: RaceRunner, hud_layer: Hud, schedule: String, watch_mode
 			skip = maxi(arg.get_slice("=", 1).to_int(), 0)
 		if arg == "--event_lines=1":
 			log_lines = true
+		if arg == "--event_give_up=0":
+			give_up_behind_s = 0.0
 		if arg.begins_with("--event_save="):
 			save_name = arg.get_slice("=", 1).validate_filename()
 		if arg.begins_with("--event_heats="):
@@ -177,6 +192,9 @@ func _process(delta: float) -> void:
 		return
 	var race: RaceSim = runner.race
 	_count_falls(race)
+	if give_up_behind_s > 0.0 and race.phase() == RaceSim.Phase.RACING and race.clock_s() >= _give_up_look_s:
+		_give_up_look_s = race.clock_s() + GIVE_UP_LOOK_S
+		_let_the_hopeless_give_up(race)
 	if _standings_until_s > -INF and race.clock_s() >= _standings_until_s:
 		_standings_until_s = -INF
 		_show_the_board()
@@ -193,7 +211,8 @@ func _process(delta: float) -> void:
 		# A heat is decided when its four who go through are home; a final when everyone is (every
 		# place counts), or when the race closes its finish.
 		var needed: int = race.board_count() if final else EliminationLadder.THROUGH
-		if _finished_count(race) >= needed or race.phase() == RaceSim.Phase.FINISHED:
+		var done: int = _finished_count(race) + (_retired_count(race) if final else 0)
+		if done >= needed or race.phase() == RaceSim.Phase.FINISHED:
 			_decided_s = 0.0
 			_update_card()
 			_say_the_result()
@@ -241,6 +260,43 @@ func _trace(race: RaceSim) -> void:
 			" FINISHED" if race.is_finished(i) else "", " AGROUND" if runner.is_aground(node) else "", note.left(90)])
 
 
+## A board whose next step the heat's fourth board completed more than give_up_behind_s ago retires
+## (GIVE_UP_BEHIND_S says why). The start counts as a step: a board not over the line that long after
+## the fourth board is out of it too.
+func _let_the_hopeless_give_up(race: RaceSim) -> void:
+	var now_s: float = race.clock_s()
+	for i: int in mini(race.board_count(), _on_boards.size()):
+		if race.is_finished(i) or race.is_retired(i):
+			continue
+		var step: int = race.splits_s(i).size()
+		var fourth_s: float = _fourth_at_step_s(race, step)
+		if fourth_s >= 0.0 and now_s - fourth_s > give_up_behind_s:
+			race.retire(i)
+			print("EVENT %s gives up at %.0f s: still sailing for %s, which the heat's fourth board completed at %.0f s" % [
+				_on_boards[i].name, now_s, race.next_step_name(i), fourth_s])
+
+
+## When the heat's fourth board completed a step (the race clock), or -1 when fewer than four have.
+func _fourth_at_step_s(race: RaceSim, step: int) -> float:
+	var times: Array[float] = []
+	for i: int in race.board_count():
+		var splits: PackedFloat32Array = race.splits_s(i)
+		if splits.size() > step:
+			times.append(splits[step])
+	if times.size() < EliminationLadder.THROUGH:
+		return -1.0
+	times.sort()
+	return times[EliminationLadder.THROUGH - 1]
+
+
+func _retired_count(race: RaceSim) -> int:
+	var count: int = 0
+	for i: int in race.board_count():
+		if race.is_retired(i):
+			count += 1
+	return count
+
+
 ## How many of the heat's boards have finished.
 func _finished_count(race: RaceSim) -> int:
 	var count: int = 0
@@ -273,6 +329,7 @@ func _start_heat() -> void:
 	_on_boards = week.sailors_now()
 	_decided_s = -1.0
 	_win_said = false
+	_give_up_look_s = -INF
 	_falls.resize(_on_boards.size())
 	_falls.fill(0)
 	_was_down.resize(_on_boards.size())
@@ -350,7 +407,8 @@ func _log_heat() -> void:
 	var order: Array[EventRoster.Sailor] = _order_now()
 	for place: int in order.size():
 		var board: int = _on_boards.find(order[place])
-		var time: String = "%.1f s" % race.finish_time_s(board) if race.is_finished(board) else "racing to %s" % race.next_step_name(board)
+		var time: String = "%.1f s" % race.finish_time_s(board) if race.is_finished(board) else (
+			("gave up before %s" if race.is_retired(board) else "racing to %s") % race.next_step_name(board))
 		var splits: PackedStringArray = PackedStringArray()
 		for split: float in race.splits_s(board):
 			splits.append("%.0f" % split)

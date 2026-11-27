@@ -336,3 +336,9 @@ Why it matters: you set five; the sixth was refused by the permission check, so 
 Options: a) Five stays. b) Eight on a night run. c) Tell the lead per night.
 Recommendation: c.
 Answer:
+
+### Q66 · A sailor who is hopelessly behind gives up his heat: keep the lead's rule?
+Why it matters: the AI now and then misses a mark at speed and then circled it for minutes, on screen, which no sailor does. Since the night of 28 November a sailor in an event heat retires (the standings say "retired", he sails off the course, the cameras leave him) when the heat's fourth board rounded the mark he is still sailing for more than 45 s ago: no place among the four who go through is left for him. It is the lead's rule, not the tour's; `--event_give_up=0` switches it off.
+Options: a) Keep it, 45 s. b) Keep it with another time. c) Off: everyone sails his heat to the end, however late.
+Recommendation: a until the AI rounds the marks cleanly at Sotavento (Q63); then look again.
+Answer:

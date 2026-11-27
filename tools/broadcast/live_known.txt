@@ -12,8 +12,12 @@ What works
 What is not right yet
 - The AI's gybes: a board loses most of its speed at every mark, and in every heat one to three of
   the eight cut inside a mark at full speed, or are pushed there by another board, and lose 30 to
-  90 s coming back; now and then one never gets round the first mark. This is AI training for
-  Sotavento (Max: "yes but later"), not built this night.
+  90 s coming back. This is AI training for Sotavento (Max: "yes but later"), not built this night.
+- Because of that, a rule of the lead's (not the tour's): a sailor gives up his heat ("retired")
+  when the heat's fourth board rounded the mark he is still sailing for more than 45 s ago.
+  Before, such a board circled its mark for minutes. Off with --event_give_up=0 in a launcher.
+- The ranking decides little yet: the provisional sailors keep their characters' daring, and a
+  daring tail-ender often wins his heat. The roster is Max's to make.
 - The wind is 30 knots and steady in every heat. The real week had 30, 30, 35, 40 and 28 knots
   (the commentator's words, in the schedule file); the AI has never been tried above 30.
 - Every heat is the same eight boards with other sailors: the next heat does not wait on the water
