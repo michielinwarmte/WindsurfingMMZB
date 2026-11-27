@@ -185,6 +185,35 @@ func test_the_roster_has_favourites_and_tail_enders() -> void:
 	assert_not_null(roster.sailors[0].make_skipper())
 
 
+func test_the_results_text_names_everyone_and_marks_the_dropped() -> void:
+	var week: EventWeek = EventWeek.start("sotavento_2026")
+	if week == null:
+		fail_test("the week didn't start")
+		return
+	var heats: int = 0
+	while week.results.size() < 4:
+		assert_true(week.record_heat(_turned(week.ladder, week.next_heat(), heats % 3)))
+		heats += 1
+	# Three heats into the fifth elimination.
+	for i: int in 3:
+		assert_true(week.record_heat(_turned(week.ladder, week.next_heat(), i)))
+	var text: String = week.results_text()
+	var rows: PackedStringArray = text.split("\n")
+	assert_eq(rows[0], week.title)
+	assert_string_contains(rows[1], "after 4 of 11 eliminations (1 dropped)")
+	for sailor: EventRoster.Sailor in week.roster.sailors:
+		assert_string_contains(text, sailor.name)
+	# Every sailor's row has four results, one of them in brackets (the dropped one).
+	for row: int in range(2, 66):
+		assert_eq(rows[row].count("("), 1, "one dropped result in: %s" % rows[row])
+	var leader: EventRoster.Sailor = week.roster.sailor(week.standings()[0])
+	assert_string_contains(rows[2], leader.name)
+	assert_string_contains(text, "Elimination 4 (")
+	assert_string_contains(text, "Elimination 5, being sailed:")
+	assert_string_contains(text, "First round, heat 3")
+	assert_false(text.contains("First round, heat 4"), "a heat not sailed yet is not listed")
+
+
 # ---------------------------------------------------------------- the event in the commentary
 
 func test_the_heats_are_said_in_words() -> void:

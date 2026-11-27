@@ -1,10 +1,10 @@
 {
-	"about": "Sotavento's PWA Slalom X course, rebuilt on 27 November 2026 from the stream's replays of the 2026 event (Max: \"the start is the wrong way, the first reach is always to the beach\", and \"try to match the positions of the start boat, the pin end, all buoys and the finish\"). The legs' lengths: the leader's time on each leg, the middle of nine heats (32, 33, 38, 38 and 40 s; the winner finishes about 187 s after the gun), times Max's own speeds at Sotavento (16 m/s coming in, 13.5 going out, a gybe's loss taken off). The directions: the first reach towards the beach on starboard tack, then out, in, out and in to the finish, in the spot's 025 trade wind: the reaches in 125 degrees off the wind, the reaches out 105 (Max, looking at the first drawing: \"the outward reaches seem too downwind\"; his speeds say the same: slower going out, on the tighter reach). The place: the finish in front of the judges' tower, as the event's zone map of 2026 has it; everything else follows backwards from there. An estimate, not a survey: another wind direction on the day turns the whole course about the finish. Until this date the course was a third of this size and its first reach went out to sea. Positions are REGCAN95 / UTM 28N metres; sides are the side each mark is left on.",
+	"about": "Sotavento's PWA Slalom X course, rebuilt on 27 November 2026 from the stream's replays of the 2026 event (Max: \"the start is the wrong way, the first reach is always to the beach\", and \"try to match the positions of the start boat, the pin end, all buoys and the finish\"). The legs' lengths: the leader's time on each leg, the middle of nine heats (32, 33, 38, 38 and 40 s; the winner finishes about 187 s after the gun), times Max's own speeds at Sotavento (16 m/s coming in, 13.5 going out, a gybe's loss taken off). The directions: the first reach towards the beach on starboard tack, then out, in, out and in to the finish, in the spot's 025 trade wind: the reaches in 125 degrees off the wind, the reaches out 105 (Max, looking at the first drawing: \"the outward reaches seem too downwind\"; his speeds say the same: slower going out, on the tighter reach). The place: the finish in front of the judges' tower, as the event's zone map of 2026 has it; everything else follows backwards from there. An estimate, not a survey: another wind direction on the day turns the whole course about the finish. Until this date the course was a third of this size and its first reach went out to sea. Positions are REGCAN95 / UTM 28N metres; sides are the side each mark is left on. 27 November 2026, late: the wind direction the course is set for is 25 degrees (where the trade wind comes from); the file said 205, where it blows to, which turned the game's slalom start and its right-of-way rules upside down (the eight boards were put on one spot and crossed the line 6 to 22 s late). And the start boat is on the line's upwind (north) end, the pin on its downwind end, as the game's slalom start needs (Max, 6 November 2026: \"start upwind of the start boat\") and as the stream's commentator has it (\"down the pin end\"): THE LEAD'S READING, for Max to confirm; the line itself has not moved.",
 	"name": "PWA Slalom X, Sotavento",
 	"map": "Fuerteventura, Sotavento",
 	"template": "",
 	"sequence": "Start-1-2-3-4-Finish",
-	"axis_deg": 205.0,
+	"axis_deg": 25.0,
 	"size_percent": 100.0,
 	"boards": 8,
 	"race_type": "slalom",
@@ -13,14 +13,14 @@
 		{
 			"id": "start boat",
 			"side": "",
-			"east": 575783.22,
-			"north": 3113483.06
+			"east": 575758.91,
+			"north": 3113620.93
 		},
 		{
 			"id": "start pin",
 			"side": "",
-			"east": 575758.91,
-			"north": 3113620.93
+			"east": 575783.22,
+			"north": 3113483.06
 		},
 		{
 			"id": "1",

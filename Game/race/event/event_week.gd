@@ -197,6 +197,47 @@ func standings() -> PackedInt32Array:
 	return PackedInt32Array(ids)
 
 
+## The week so far as plain text, for a file beside the save and for the log: the standings of all
+## 64 with each elimination's points (a dropped result in brackets), then every finished
+## elimination's first sixteen, then the ladder of the elimination being sailed.
+func results_text() -> String:
+	var lines: PackedStringArray = PackedStringArray()
+	lines.append(title)
+	var dropped: int = dropped_after(results.size())
+	lines.append("Standings after %d of %d eliminations (%d dropped)" % [results.size(), total_eliminations(), dropped])
+	var order: PackedInt32Array = standings()
+	for place: int in order.size():
+		var one: EventRoster.Sailor = roster.sailor(order[place])
+		var points: PackedFloat32Array = points_of(one.id)
+		# The dropped results: his worst, the later one first when two are the same.
+		var worst: Array = range(points.size())
+		worst.sort_custom(func(a: int, b: int) -> bool: return points[a] > points[b] if not is_equal_approx(points[a], points[b]) else a > b)
+		var out: Array = worst.slice(0, mini(dropped, worst.size()))
+		var cells: PackedStringArray = PackedStringArray()
+		for i: int in points.size():
+			cells.append(("(%s)" if out.has(i) else "%s") % String.num(points[i], 1))
+		lines.append("%2d  %-24s %-8s %7s   %s" % [place + 1, one.name, one.sail_number,
+			String.num(total_of(one.id), 1) if not results.is_empty() else "-", "  ".join(cells)])
+	for i: int in results.size():
+		var names: PackedStringArray = PackedStringArray()
+		for place: int in mini(16, results[i].size()):
+			names.append("%d %s" % [place + 1, roster.sailor(results[i][place]).name])
+		lines.append("")
+		lines.append("Elimination %d (%s): %s" % [i + 1, String(day_of(i + 1).get("day", "")), ", ".join(names)])
+	if ladder != null and not is_over():
+		lines.append("")
+		lines.append("Elimination %d, being sailed:" % elimination)
+		for heat: int in range(1, EliminationLadder.HEATS + 1):
+			var result: PackedInt32Array = ladder.result_of(heat)
+			if result.is_empty():
+				continue
+			var names: PackedStringArray = PackedStringArray()
+			for id: int in result:
+				names.append(roster.sailor(id).name)
+			lines.append("  %-22s %s" % [EliminationLadder.heat_name(heat), ", ".join(names)])
+	return "\n".join(lines) + "\n"
+
+
 ## The whole week as a dictionary (the save).
 func to_data() -> Dictionary:
 	var done: Array = []

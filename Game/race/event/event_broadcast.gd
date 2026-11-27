@@ -27,8 +27,11 @@ extends Node
 ## --event_trace=<s> writes every board's place, speed and what its skipper is doing to the log
 ## every <s> seconds of the race (to see where a heat goes wrong).
 
-## The countdown before every heat, seconds.
-const COUNTDOWN_S: float = 30.0
+## The countdown before every heat, seconds: the game's own minute. The AI's slalom start is a timed
+## run (away from the line, a gybe, back in at full speed) that needs it: with 60 s the eight came to
+## the line within 5 s of the gun at 8 to 17 m/s; with 30 s half of them were still turning (measured
+## at Sotavento, 30 kt, 27 November 2026).
+const COUNTDOWN_S: float = 60.0
 ## How long a decided heat's result stays before the next heat is called, seconds of the race
 ## (a final's longer: its winner, the elimination's result and the standings are said).
 const HOLD_S: float = 8.0
@@ -42,6 +45,9 @@ const NUMBER_WORDS: PackedStringArray = ["one", "two", "three", "four", "five", 
 const ORDER_WORDS: PackedStringArray = ["first", "second", "third", "fourth"]
 ## A heat that isn't decided by its time limit is closed with the order on the water.
 const SAVE_PATH: String = "user://event_week_%s.json"
+## The week's results as plain text, written beside the save after every heat (to read in a text
+## editor: the standings of all 64, every elimination's first sixteen, the ladder being sailed).
+const RESULTS_PATH: String = "user://event_week_%s_results.txt"
 
 var week: EventWeek = null
 var runner: RaceRunner = null
@@ -224,6 +230,17 @@ func _close_heat() -> void:
 		_stopped = true
 		return
 	week.save_to(SAVE_PATH % week.schedule_name)
+	_write_the_results()
+	if week.is_over() or week.next_heat() == 1:
+		# An elimination is over: its first eight and the standings' first eight on the log.
+		var last: PackedInt32Array = week.results[week.results.size() - 1]
+		var first: PackedStringArray = PackedStringArray()
+		var top: PackedStringArray = PackedStringArray()
+		for place: int in 8:
+			first.append("%d %s" % [place + 1, week.roster.sailor(last[place]).name])
+			top.append("%d %s (%s)" % [place + 1, week.roster.sailor(week.standings()[place]).name, String.num(week.total_of(week.standings()[place]), 1)])
+		print("EVENT elimination %d is over: %s" % [week.results.size(), ", ".join(first)])
+		print("EVENT standings after %d of %d: %s" % [week.results.size(), week.total_eliminations(), ", ".join(top)])
 	if _heats_left > 0:
 		_heats_left -= 1
 		if _heats_left == 0:
@@ -251,6 +268,13 @@ func _log_heat() -> void:
 			splits.append("%.0f" % split)
 		words.append("%d %s (seed %d, %s, falls %d, splits %s)" % [place + 1, order[place].name, week.ladder.seeds.find(order[place].id) + 1, time, _falls[board] if board < _falls.size() else 0, " ".join(splits)])
 	print("EVENT elimination %d, %s: %s" % [week.elimination, EliminationLadder.heat_name(week.next_heat()), "; ".join(words)])
+
+
+## The results file beside the save (RESULTS_PATH), rewritten whole.
+func _write_the_results() -> void:
+	var file: FileAccess = FileAccess.open(RESULTS_PATH % week.schedule_name, FileAccess.WRITE)
+	if file != null:
+		file.store_string(week.results_text())
 
 
 # ---------------------------------------------------------------- the commentary
