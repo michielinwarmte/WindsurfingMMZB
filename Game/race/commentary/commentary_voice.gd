@@ -173,7 +173,7 @@ func _on_line_started(id: String, text: String, seconds: float, level: int) -> v
 	_want_from_us = Time.get_ticks_usec()
 	if FileAccess.file_exists(path):
 		counts["from_disk"] += 1
-		_play_wanted()
+		_play_wanted("from the disk")
 		return
 	_ask(spoken, path)
 
@@ -236,14 +236,14 @@ func _file_made(part: String) -> void:
 	if path == _want_path and _want_id != "":
 		if FileAccess.file_exists(path):
 			counts["made"] += 1
-			_play_wanted()
+			_play_wanted("made")
 		else:
 			counts["failed"] += 1
 			_want_id = ""
 
 
 ## Plays the wanted line, at its level; tells the commentary how long it really lasts.
-func _play_wanted() -> void:
+func _play_wanted(how: String) -> void:
 	var stream: AudioStreamWAV = AudioStreamWAV.load_from_file(_want_path)
 	if stream == null:
 		counts["failed"] += 1
@@ -266,7 +266,7 @@ func _play_wanted() -> void:
 		commentary.line_lasts(_want_id, wait_s + sound_s)
 	sound_started.emit(_want_id, wait_s, sound_s)
 	if _log_lines:
-		print("Commentary voice: %s after %.3f s, %.2f s of sound at level %d" % [_want_id, wait_s, sound_s, _want_level])
+		print("Commentary voice: %s after %.3f s (%s), %.2f s of sound at level %d" % [_want_id, wait_s, how, sound_s, _want_level])
 	_want_id = ""
 
 
