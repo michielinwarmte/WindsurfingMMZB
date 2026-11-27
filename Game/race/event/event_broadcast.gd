@@ -74,6 +74,9 @@ var _card: PanelContainer = null
 var _text: Label = null
 var _board: PanelContainer = null
 var _board_text: Label = null
+## The ladder and the standings asked for with B; they also come up by themselves while a final's
+## result is held and when the week is over.
+var _board_by_hand: bool = false
 
 
 ## Starts or picks up the week of a schedule on a watched race. False (with a warning) when the
@@ -112,8 +115,8 @@ func setup(race_runner: RaceRunner, hud_layer: Hud, schedule: String, watch_mode
 func _unhandled_input(event: InputEvent) -> void:
 	var key: InputEventKey = event as InputEventKey
 	if key != null and key.pressed and not key.echo and key.keycode == KEY_B and _board != null:
-		_board.visible = not _board.visible
-		_update_board()
+		_board_by_hand = not _board_by_hand
+		_show_the_board()
 
 
 func _process(delta: float) -> void:
@@ -134,11 +137,24 @@ func _process(delta: float) -> void:
 		if _finished_count(race) >= needed or race.phase() == RaceSim.Phase.FINISHED:
 			_decided_s = 0.0
 			_update_card()
+			_show_the_board()
 			_say_the_result()
 		return
 	_decided_s += delta
 	if _decided_s >= (FINAL_HOLD_S if final else HOLD_S):
 		_close_heat()
+
+
+## The ladder and the standings on the screen: asked for (B), or by themselves while a final's result
+## is held (the elimination's result and the standings) and when the week is over.
+func _show_the_board() -> void:
+	if _board == null or week == null:
+		return
+	var by_itself: bool = week.is_over() or (_decided_s >= 0.0 and week.next_heat() >= EliminationLadder.LOSERS_FINAL)
+	var wanted: bool = _board_by_hand or by_itself
+	if wanted != _board.visible:
+		_board.visible = wanted
+		_update_board()
 
 
 ## Counts each board's falls once the gun has gone (the heat's report and the result card).
@@ -214,6 +230,7 @@ func _start_heat() -> void:
 	runner.change_skippers(skippers)
 	runner.restart()
 	_update_card()
+	_show_the_board()
 	_update_board()
 	_say_the_heat()
 
@@ -249,6 +266,7 @@ func _close_heat() -> void:
 			return
 	if week.is_over():
 		_update_card()
+		_show_the_board()
 		_update_board()
 		_say_the_champion()
 		return
@@ -452,7 +470,6 @@ func card_text() -> String:
 		var champion: EventRoster.Sailor = week.roster.sailor(week.standings()[0])
 		lines.append("The week is over")
 		lines.append("Champion: %s (%s)" % [champion.name, champion.sail_number])
-		lines.append("B: the standings")
 		return "\n".join(lines)
 	var heat: int = week.next_heat()
 	lines.append("%s  ·  Elimination %d of %d" % [String(week.day_of(week.elimination).get("day", "")), week.elimination, week.total_eliminations()])
@@ -469,8 +486,10 @@ func card_text() -> String:
 	else:
 		for sailor: EventRoster.Sailor in _on_boards:
 			lines.append("%s  %s" % [sailor.sail_number, sailor.name])
-	lines.append("")
-	lines.append("B: the ladder and the standings")
+	# The key's hint only on the full screen (the TV screen shows what a viewer needs).
+	if watch == null or watch.screen == WatchMode.Screen.FULL:
+		lines.append("")
+		lines.append("B: the ladder and the standings")
 	return "\n".join(lines)
 
 

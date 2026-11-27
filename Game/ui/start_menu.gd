@@ -112,6 +112,8 @@ func _ready() -> void:
 	_apply_command_line_options()
 	if _run_bench_from_options():
 		return
+	if _open_spot_from_options():
+		return
 	_start_race_from_options()
 
 
@@ -366,6 +368,22 @@ func _start_race_from_options() -> void:
 	else:
 		RaceSetup.pending = setup
 		_open_map_scene(PlayOption.RACE_LAKE, SAIL_SILVAPLANA_SCENE, "Lake Silvaplana")
+
+
+## --spot=sotavento: the menu opens that spot's sailing scene at once (an exported build takes no
+## scene on the command line). The scene reads the rest of the command line itself, as when it is
+## started from the editor: --course=pwa_slalom_x --skippers=<eight> --spectate=1 --tv=1
+## --event=sotavento_2026 is the live broadcast of the slalom week (EventBroadcast). Returns true
+## when a spot was opened.
+func _open_spot_from_options() -> bool:
+	match _race_option("spot"):
+		"sotavento":
+			_open_map_scene(PlayOption.SAIL_SOTAVENTO, SAIL_SOTAVENTO_SCENE, "Fuerteventura, Sotavento")
+			return true
+		"":
+			return false
+	push_warning("--spot=%s: no such spot (sotavento)." % _race_option("spot"))
+	return false
 
 
 ## --bench=thread [--threads=1,4,8,16] [--iterations=<n>] [--only=a,b]: runs the thread bench
