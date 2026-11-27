@@ -232,6 +232,8 @@ var master_volume: float
 var wind_volume: float
 var water_volume: float
 var sail_volume: float
+## The commentary's voice (watch mode's commentator, CommentaryVoice), 0 to 1, on top of the master.
+var commentary_volume: float
 
 # --- The gear (section "gear") ---
 ## The gear the player sails, as GearItem ids ("savanna_slalom_8_0"; Game/gear/). An unknown id
@@ -327,6 +329,7 @@ func reset_to_defaults() -> void:
 	wind_volume = 1.0
 	water_volume = 1.0
 	sail_volume = 1.0
+	commentary_volume = 1.0
 	gear_board = GearCatalogue.DEFAULT_BOARD_ID
 	gear_sail = GearCatalogue.DEFAULT_SAIL_ID
 	gear_fin = GearCatalogue.DEFAULT_FIN_ID
@@ -528,6 +531,7 @@ func write_to(config: ConfigFile) -> void:
 	config.set_value("audio", "wind_volume", wind_volume)
 	config.set_value("audio", "water_volume", water_volume)
 	config.set_value("audio", "sail_volume", sail_volume)
+	config.set_value("audio", "commentary_volume", commentary_volume)
 	config.set_value("gear", "board", gear_board)
 	config.set_value("gear", "sail", gear_sail)
 	config.set_value("gear", "fin", gear_fin)
@@ -607,6 +611,7 @@ func read_from(config: ConfigFile) -> void:
 	wind_volume = clampf(_float(config, "audio", "wind_volume", wind_volume), 0.0, 1.0)
 	water_volume = clampf(_float(config, "audio", "water_volume", water_volume), 0.0, 1.0)
 	sail_volume = clampf(_float(config, "audio", "sail_volume", sail_volume), 0.0, 1.0)
+	commentary_volume = clampf(_float(config, "audio", "commentary_volume", commentary_volume), 0.0, 1.0)
 	gear_board = _string(config, "gear", "board", gear_board)
 	gear_sail = _string(config, "gear", "sail", gear_sail)
 	gear_fin = _string(config, "gear", "fin", gear_fin)

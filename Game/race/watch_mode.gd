@@ -18,7 +18,10 @@ extends Node
 ##   the stream commentator's own lines at the right moments, as subtitles at the bottom of the
 ##   screen. It comes on with the TV director (T) and goes off with it; V switches it by hand at any
 ##   time (without the TV director it talks about the board you follow). The clean screen shows no
-##   subtitles (the commentary goes on unseen).
+##   subtitles (the commentary goes on unseen). The lines are also heard, said by a computer voice
+##   (CommentaryVoice; NOT the commentator's own), when the speech program is there (tts/ beside the
+##   game). V switches the subtitles and the voice together; Shift+V the voice alone (subtitles only).
+##   Its loudness: Settings > Audio > Commentary.
 ## - 5 to 9: one TV shot by hand, on the board watched (Tab and L change the board, the shot stays):
 ##   5 the helicopter (5 again: the circling stops or goes on), 6 the committee boat down the start
 ##   line, 7 the chase drone, 8 the drone beside the board, 9 the drone overhead. The wheel brings the
@@ -36,7 +39,8 @@ extends Node
 ##   the wind's gusts go on with their own clock). R a new race. The full screen shows the race's
 ##   number and dice; --seed=<dice> on the command line starts that race again.
 ## Command line: --tv=1 (the TV camera from the start), --screen=full|tv|clean, --speed=<x>, --head=1,
-## --commentary=1|0 (the commentary on or off from the start, whatever --tv says).
+## --commentary=1|0 (the commentary on or off from the start, whatever --tv says), --commentary_voice=0
+## (subtitles only, no voice; Commentary).
 
 enum Screen { FULL, TV, CLEAN }
 
@@ -61,7 +65,7 @@ const KEYS: Array[Array] = [
 	["1-4", "camera"],
 	["5-9", "TV shots"],
 	["T", "TV director"],
-	["V", "commentary"],
+	["V, Shift+V", "commentary, voice"],
 	["- + 0", "speed"],
 	["P", "freeze"],
 	["H", "screen"],
@@ -178,8 +182,11 @@ func handle_input(event: InputEvent) -> bool:
 			set_tv(not tv_on)
 			_say("TV director on: it picks the boards and the shots. T again or 1-4: your own camera; 5-9 one shot by hand." if tv_on else "TV director off.")
 		KEY_V:
-			commentary.set_on(not commentary.on)
-			_say("Commentary on: the commentator's lines at the bottom of the screen." if commentary.on else "Commentary off (V: on again).")
+			if key.shift_pressed:
+				_switch_the_voice()
+			else:
+				commentary.set_on(not commentary.on)
+				_say("Commentary on: the commentator's lines at the bottom of the screen%s." % (", said by a computer voice (Shift+V: off)" if commentary.voice_on() else "") if commentary.on else "Commentary off (V: on again).")
 		KEY_P:
 			set_frozen(not frozen)
 		KEY_MINUS, KEY_KP_SUBTRACT:
@@ -215,6 +222,15 @@ func handle_input(event: InputEvent) -> bool:
 		_:
 			return false
 	return true
+
+
+## Shift+V: the commentary's voice on or off (the subtitles stay).
+func _switch_the_voice() -> void:
+	if commentary.voice == null:
+		_say("No commentary voice: the speech program is not there (tts/ beside the game; see the log). Subtitles only.")
+		return
+	commentary.voice.set_on(not commentary.voice.on)
+	_say("Commentary voice on: a computer voice, not the real commentator's." if commentary.voice.on else "Commentary voice off: subtitles only (Shift+V: on again).")
 
 
 ## The screen: full, TV or clean.
@@ -445,7 +461,7 @@ func _update_cards() -> void:
 		elif tv.is_on():
 			lines.append("TV shot (by hand)")
 		if commentary.on:
-			lines.append("Commentary on (V)")
+			lines.append("Commentary on (V)%s" % (", voice on (Shift+V)" if commentary.voice_on() else ""))
 		lines.append("Race %d   ·   dice %d" % [runner.race_number, runner.last_dice])
 	_corner.text = "\n".join(lines)
 	_corner_card.visible = not lines.is_empty()

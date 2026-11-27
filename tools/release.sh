@@ -11,11 +11,20 @@
 #                                             [--skippers=a,b,c] [--prestart=20] [--measure=12]
 #   tools/release.sh --mute [--options...]    the same without sound (a measurement or a bench
 #                                             run is always silent: Max sleeps next to the laptop)
+#   tools/release.sh tts [<play folder>]      only copy the commentary's speech program and voice
+#                                             into .release/tts (or <play folder>/tts)
 #
 # Rebuild after a change to the game (the pack is a copy). Needs the Windows export templates of
 # this Godot version installed once: in the editor, Editor > Manage Export Templates > Download,
 # or copy windows_release_x86_64.exe and windows_release_x86_64_console.exe from the
 # Godot_v4.7.2-stable_export_templates.tpz into %APPDATA%/Godot/export_templates/4.7.2.stable/.
+#
+# The commentary's voice (Documentation/reports/broadcast/commentary_voice.md): the build also copies
+# the speech program and its voice into .release/tts/ (piper/ and voices/), where the game looks for
+# them beside its executable; a play folder made from .release keeps that tts/ folder next to wsim.exe.
+# They come from MMZB_TTS_DIR, else from ../pwa_broadcast/tts beside the repository (Max's PC; fetch
+# them with python -I tools/tts/fetch_tts.py <folder>). Without them the game shows the commentary as
+# subtitles only.
 set -euo pipefail
 source "$(dirname "$0")/common.sh"
 
@@ -39,8 +48,28 @@ build() {
 	cp "$templates/windows_release_x86_64.exe" "$out/wsim.exe"
 	cp "$templates/windows_release_x86_64_console.exe" "$out/wsim_console.exe"
 	echo "Built $out/wsim.pck ($(du -h "$out/wsim.pck" | cut -f1)) with the engine beside it."
+	copy_speech_program
 }
 
+# The commentary's speech program and voice into .release/tts/ (see the top of this script).
+copy_speech_program() {
+	local source="${MMZB_TTS_DIR:-$REPO_ROOT/../pwa_broadcast/tts}"
+	if [[ ! -f "$source/piper/piper.exe" || ! -d "$source/voices" ]]; then
+		echo "No speech program in $source: the commentary will be subtitles only (python -I tools/tts/fetch_tts.py <folder>, then MMZB_TTS_DIR=<folder>)."
+		return 0
+	fi
+	mkdir -p "$out/tts"
+	cp -r "$source/piper" "$source/voices" "$out/tts/"
+	echo "Copied the commentary's speech program and voice from $source to $out/tts ($(du -sh "$out/tts" | cut -f1))."
+}
+
+if [[ "${1:-}" == "tts" ]]; then
+	# tools/release.sh tts [<play folder>]: only the speech program and its voice, into .release/tts
+	# or into <play folder>/tts (no build).
+	if [[ -n "${2:-}" ]]; then out="$2"; fi
+	copy_speech_program
+	exit 0
+fi
 if [[ "${1:-}" == "build" ]]; then
 	build
 	exit 0

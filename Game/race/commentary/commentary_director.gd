@@ -30,11 +30,15 @@ extends RefCounted
 ##   own followed by the board's name ("Second." "Hana."). A bigger moment that cuts in drops the rest
 ##   of the pair.
 ## line_started is emitted when a line starts (its id, its words with the slots filled, its seconds and
-## level), so the subtitles show it now and a sound player can be attached later; line_stopped when a
-## line is cut short.
+## level), so the subtitles show it now and the voice says it (CommentaryVoice); line_stopped when a
+## line is cut short; line_ahead when the second line of a pair is chosen, before it is said. When the
+## computer voice takes longer than his seconds, the voice tells the director (line_lasts()) and the
+## next line waits for it.
 
 signal line_started(id: String, text: String, seconds: float, level: int)
 signal line_stopped(id: String)
+## A line chosen a moment before it is said (the second line of a pair), so its sound can be made ahead.
+signal line_ahead(id: String, text: String, seconds: float, level: int)
 
 const QUIET_MOMENTS: PackedStringArray = ["identify", "speed", "leader", "rundown", "filler", "camera", "unsure",
 	"tactics", "tension", "form", "conditions"]
@@ -58,6 +62,8 @@ var counts: Dictionary[String, int] = {"heard": 0, "said": 0, "quiet": 0, "late"
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var _clock_s: float = 0.0
 var _talk_until_s: float = -INF
+## When the line being said started (the director's clock).
+var _said_at_s: float = -INF
 var _free_s: float = -INF
 var _quiet_free_s: float = -INF
 var _pending: Array[RaceMoment] = []
@@ -269,8 +275,7 @@ func _say(moment: RaceMoment, look: RaceLook) -> bool:
 		named.place = moment.place
 		var name_pick: Dictionary = choose_line(named, look, true)
 		if not name_pick.is_empty():
-			_follow = named
-			_follow_pick = name_pick
+			_follow_with(named, name_pick)
 	return true
 
 
@@ -288,15 +293,39 @@ func _start_with_a_reaction(moment: RaceMoment, pick: Dictionary, look: RaceLook
 		if not reaction_pick.is_empty() and words_key(reaction_pick["text"]) != words_key(pick["text"]):
 			counts["reaction"] += 1
 			_start(reaction, reaction_pick)
-			_follow = moment
-			_follow_pick = pick
+			_follow_with(moment, pick)
 			return
 	_start(moment, pick)
+
+
+## The second line of a pair, said straight after the line now; told ahead (line_ahead) so its sound
+## can be made while the first is said.
+func _follow_with(moment: RaceMoment, pick: Dictionary) -> void:
+	_follow = moment
+	_follow_pick = pick
+	var line: CommentaryBank.Line = pick["line"]
+	line_ahead.emit(line.id, pick["text"], line.seconds, line.level)
+
+
+## The line being said lasts `seconds` from its start, if that is longer than his own seconds (the
+## computer voice is often slower than him): the pause after it and the next line move on with it, so
+## the next line does not cut its sound off. Nothing happens when `id` is no longer being said.
+func line_lasts(id: String, seconds: float) -> void:
+	if saying == null or saying_id != id:
+		return
+	var until_s: float = _said_at_s + seconds
+	if until_s <= _talk_until_s:
+		return
+	var more_s: float = until_s - _talk_until_s
+	_talk_until_s = until_s
+	_free_s += more_s
+	_quiet_free_s += more_s
 
 
 func _start(moment: RaceMoment, pick: Dictionary) -> void:
 	var line: CommentaryBank.Line = pick["line"]
 	var text: String = pick["text"]
+	_said_at_s = _clock_s
 	_line_at[line.id] = _clock_s
 	_words_at[words_key(text)] = _clock_s
 	_uses[line.id] = _uses.get(line.id, 0) + 1

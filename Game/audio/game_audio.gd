@@ -13,7 +13,8 @@ extends Node
 ##                    <- WaterHiss   (band-pass: the planing hiss)
 ##           <- Sail  <- SailFlutter (low-pass: the flapping), and the cracks and swooshes
 ##           <- Signals: a race's start, the horn, the start watch's beep and the gun (SO3)
-## The player's volume sliders (settings, Audio tab) set Master, Wind, Water and Sail.
+##           <- Commentary: the commentator's voice in watch mode (CommentaryVoice)
+## The player's volume sliders (settings, Audio tab) set Master, Wind, Water, Sail and Commentary.
 ##
 ## The players are plain (not 3D) AudioStreamPlayers: the mix itself makes the board's sounds
 ## quieter with a far camera. They stop while the game is paused (this node is pausable), and
@@ -28,6 +29,8 @@ const WATER_LAP_BUS: StringName = &"WaterLap"
 const WATER_HISS_BUS: StringName = &"WaterHiss"
 const SAIL_FLUTTER_BUS: StringName = &"SailFlutter"
 const SIGNALS_BUS: StringName = &"Signals"
+## The commentary's voice (CommentaryVoice): its own bus, its own slider.
+const COMMENTARY_BUS: StringName = &"Commentary"
 ## How many of each one-shot can sound at the same time.
 const SPLASH_PLAYERS: int = 3
 const CRACK_PLAYERS: int = 3
@@ -114,6 +117,7 @@ static func apply_bus_volumes(values: SettingsValues) -> void:
 	_set_bus_volume(WIND_BUS, values.wind_volume)
 	_set_bus_volume(WATER_BUS, values.water_volume)
 	_set_bus_volume(SAIL_BUS, values.sail_volume)
+	_set_bus_volume(COMMENTARY_BUS, values.commentary_volume)
 
 
 static func _set_bus_volume(bus_name: StringName, volume: float) -> void:

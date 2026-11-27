@@ -84,6 +84,7 @@ func test_round_trip_through_a_file() -> void:
 	saved.wind_volume = 0.3
 	saved.water_volume = 0.6
 	saved.sail_volume = 0.0
+	saved.commentary_volume = 0.4
 	saved.last_play_option = 2
 	assert_eq(saved.save_file(TEMP_PATH), OK)
 
@@ -126,6 +127,7 @@ func test_round_trip_through_a_file() -> void:
 	assert_almost_eq(loaded.wind_volume, 0.3, TOL)
 	assert_almost_eq(loaded.water_volume, 0.6, TOL)
 	assert_almost_eq(loaded.sail_volume, 0.0, TOL)
+	assert_almost_eq(loaded.commentary_volume, 0.4, TOL)
 	assert_eq(loaded.last_play_option, 2)
 
 

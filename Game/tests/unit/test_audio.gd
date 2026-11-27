@@ -248,6 +248,7 @@ func test_the_volume_sliders_set_the_buses() -> void:
 	values.wind_volume = 0.5
 	values.water_volume = 0.0
 	values.sail_volume = 1.0
+	values.commentary_volume = 0.25
 	GameAudio.apply_bus_volumes(values)
 	var wind: int = AudioServer.get_bus_index("Wind")
 	var water: int = AudioServer.get_bus_index("Water")
@@ -256,6 +257,9 @@ func test_the_volume_sliders_set_the_buses() -> void:
 	assert_true(AudioServer.is_bus_mute(water), "0 is off")
 	assert_false(AudioServer.is_bus_mute(sail))
 	assert_almost_eq(AudioServer.get_bus_volume_db(sail), 0.0, 1e-4)
+	var commentary: int = AudioServer.get_bus_index("Commentary")
+	assert_gt(commentary, 0, "the commentary's voice has its own bus")
+	assert_almost_eq(AudioServer.get_bus_volume_db(commentary), linear_to_db(0.25), 1e-4, "its own slider")
 
 
 # --- The wind ---------------------------------------------------------------------------
