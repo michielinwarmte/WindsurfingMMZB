@@ -10,7 +10,9 @@ extends SceneTree
 ## The lines: every line of the commentary bank with its slots filled (the riders' names taken in turn
 ## from the game's 20 characters and the --names file, one name a line; the brands from the game's
 ## catalogue), then every name alone ("Hana.", his most said line is a name on its own) and every name
-## in a sentence. --count=<n> speaks only the first n lines (a quick check). The program is found as
+## in a sentence. --count=<n> speaks only the first n lines (a quick check); --only=bank|name|
+## name_sentence one kind; --length_scale=<x> and --sentence_silence=<s> try other numbers than the
+## config's (to choose them from the read-back). The program is found as
 ## the game finds it (SpeechEngine.find_dir: --tts_dir, MMZB_TTS_DIR, tts/ beside the executable).
 ## Writes <out>/manifest.json (a list: id, kind, name, text as shown, spoken as given to the voice,
 ## wav, made, sound_s, took_s) and prints a summary; the sounds are <out>/wav/<n>.wav. The cache of the
@@ -44,7 +46,15 @@ func _initialize() -> void:
 		for line: String in FileAccess.get_file_as_string(options["names"]).split("\n", false):
 			if line.strip_edges() != "":
 				names.append(line.strip_edges())
+	if options.has("length_scale"):
+		_config.voice_length_scale = options["length_scale"].to_float()
+	if options.has("sentence_silence"):
+		_config.voice_sentence_silence_s = options["sentence_silence"].to_float()
 	_items = lines_to_speak(CommentaryBank.load_file(), names, sail_brands())
+	if options.has("only"):
+		var kept: Array[Dictionary] = []
+		kept.assign(_items.filter(func(item: Dictionary) -> bool: return item["kind"] == options["only"]))
+		_items = kept
 	if options.has("count"):
 		_items = _items.slice(0, options["count"].to_int())
 	var folder: String = SpeechEngine.find_dir(_config.voice_name)
