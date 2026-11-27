@@ -93,6 +93,23 @@ A check on the wide shot: the start line is 140 m long and 670 m away, which is 
 | Mark 4 | 090° | 370 m |
 | The finish line | 103° (straight out) | 250 to 330 m |
 
+### Checked against the spot's terrain, and corrected (27 November 2026, evening)
+
+Max: "check the camera positions, see a big mountain in front of the important part", and "try to check your own work please". The first version of this section put the camera at the foot of the judges' tower without looking at its real pictures or at the land between it and the start line. Both checks were then made:
+
+- **In the game, from the tower's foot, the start line is hidden.** The land up the coast (a rocky headland with tops of 5 to 27 m, beginning about 100 m from the tower) stands in the sight line: with the eye 4.5 m above the water the start pin is hidden by 0.6 m of rock 155 m away, from standing height on the sand by 2.6 m.
+- **Where the view is clear:** the headland's seaward edge, about 100 to 140 m up the coast from the tower and 125 to 165 m out (ground 1.7 to 1.9 m above the water: standing height there is about 3.5 m above the water, close to the 4.5 m measured from the footage). From there the start line, the four marks and the finish are clear of land. Also clear: 60 m or more straight out from the tower, but that is 2.5 m deep water at the game's water level (a dry beach only at low tide); and the tower's deck, which is twice the real camera's height.
+- **The real pictures show a big hazy mountain behind the start line** (seen once the contrast is raised: a single rounded peak, about a third of the picture above the horizon, with land rising on the left). Fitted against the spot's far terrain it reads two ways about equally well (19 and 20 pixels of misfit on a peak of 170):
+
+| Reading | Vertical view | The picture looks at bearing | The start line is | Behind it |
+|---|---|---|---|---|
+| A | 7.7° | 027 to 041 | about 430 m away | Montaña Cardón (661 m, 15 km away at 032) |
+| B | 4.6° | 055 to 063 | about 730 m away | the far hills at 058 (378 m, 17 km away) |
+
+Reading B agrees with the course as it is laid (the start line 620 to 720 m from the tower at 056 to 064). Reading A would mean the real start line lies more along the beach than the course file has it. **Not settled.** Whoever knows where the stream's long-lens camera stands at Sotavento can settle it at once.
+
+So the table above stands for the tight shots; for the wide start shot the lens is **4.5 to 8 degrees**, not 8 to 10, and the camera's place in the game is the headland's edge, not the tower's foot. The director also gets a rule for every map: no beach-camera picture when land stands between the camera and its subject.
+
 **How it frames:** wide on the start, the camera is tilted up: the horizon sits low in the picture, 70 to 75 % from the top, the sea a thin band under a lot of sky. Tight on the leaders the horizon sits at 25 to 35 % from the top and the board's foot at about 70 %. It stays in one place and pans.
 
 ## Against the game's drones today
