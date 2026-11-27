@@ -252,14 +252,11 @@ func _free(race: RaceSim, mix: TvPhaseMix) -> void:
 	var only_on: String = "front" if _back_to_leader else ""
 	_back_to_leader = false
 	var pool: Array[TvPicture] = _pool(mix.pictures)
-	if not _fleet_together(race):
-		# A spread fleet is no picture: its pictures wait for the next race's first reach.
-		var together_only: Array[TvPicture] = []
-		for picture: TvPicture in pool:
-			if picture.on != "fleet":
-				together_only.append(picture)
-		pool = together_only
 	var next: TvPicture = draw_picture(pool, tv.picture, _rng.randf(), only_on)
+	if next != null and next.on == "fleet" and not _fleet_together(race):
+		# A spread fleet is no picture: its share goes to the boards behind the leaders (the pack), not
+		# to the leader (the check: the leader had 69 % of the race instead of the stream's 52 %).
+		next = draw_picture(pool, tv.picture, _rng.randf(), "pack")
 	if next == null:
 		return
 	var board: int = _subject(race, next.on)
@@ -395,9 +392,10 @@ static func lead_group_size(positions: PackedVector2Array, finished: PackedByteA
 
 
 ## What each board is worth as the pack's story (race order): nothing for the lead group (the first
-## `front`) and the finished; for the rest one, more for a fight (another racing board within close_m)
-## and a place just gained, and more the nearer the front; a board still to start after the gun
-## (`late`: back over the line, or a late starter) a tenth. Plain numbers in.
+## `front`), the finished and a board still to start after the gun (`late`: back over the line, or a
+## late starter: the stream films the race); for the rest one, more for a fight (another racing board
+## within close_m) and a place just gained, and more the nearer the front. All nothing: the director
+## films the front instead. Plain numbers in.
 static func pack_weights(positions: PackedVector2Array, finished: PackedByteArray, gained: PackedByteArray, late: PackedByteArray, front: int, close_m: float) -> PackedFloat32Array:
 	var weights: PackedFloat32Array = PackedFloat32Array()
 	for i: int in positions.size():
@@ -412,7 +410,7 @@ static func pack_weights(positions: PackedVector2Array, finished: PackedByteArra
 		if gained[i] != 0:
 			weight += 3.0
 		if late[i] != 0:
-			weight *= 0.1
+			weight = 0.0
 		weights.append(weight)
 	return weights
 

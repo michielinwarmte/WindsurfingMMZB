@@ -281,7 +281,7 @@ func test_the_lead_group_and_the_pack() -> void:
 	var gained: PackedFloat32Array = TvStreamDirector.pack_weights(positions, finished, PackedByteArray([0, 0, 0, 0, 1, 0]), none, front, config.close_m)
 	assert_gt(gained[4], weights[4], "a place gained counts")
 	var late: PackedFloat32Array = TvStreamDirector.pack_weights(positions, finished, none, PackedByteArray([0, 0, 0, 1, 0, 0]), front, config.close_m)
-	assert_lt(late[3], weights[4] * 0.5, "a board going back to start again (over early) is seldom the story")
+	assert_eq(late[3], 0.0, "a board going back to start again (over early) is never the pack's story")
 	var all_finished_but_one: int = TvStreamDirector.lead_group_size(positions, PackedByteArray([1, 1, 0, 1, 1, 1]), 40.0, 4)
 	assert_eq(all_finished_but_one, 3, "the first still racing leads the group")
 
