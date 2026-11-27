@@ -1,6 +1,6 @@
 # The slalom week, live: 64 sailors in brackets, never more than 16 on the water
 
-Status: **plan, waiting for Max's decisions** (27 November 2026). Nothing of this is built. It stands on tonight's broadcast work ([PLAN.md](PLAN.md)) and ties together backlog stories that already exist: E11.S03 (slalom elimination ladders), E13.S03 (the event flow), E10.S06 (the roster in heats), E11.S07 (results and rankings), E11.S09 and E11.S11 (watch mode and the TV director), E16.S06 (the commentary).
+Status: **plan, Max's decisions in** (27 November 2026, see "Max's answers"); the build is not started. Nothing of this is built. It stands on tonight's broadcast work ([PLAN.md](PLAN.md)) and ties together backlog stories that already exist: E11.S03 (slalom elimination ladders), E13.S03 (the event flow), E10.S06 (the roster in heats), E11.S07 (results and rankings), E11.S09 and E11.S11 (watch mode and the TV director), E16.S06 (the commentary).
 
 ## What Max asked
 
@@ -90,7 +90,7 @@ Days with wind drawn per day (strong, normal, too light to race), two or three e
 | **W0** Facts first | The real format from the rule book and the commentary (seeding, who goes through, points, dropped results, time between heats). How many boards Sotavento holds at 60 pictures a second. How reliably the AI sails a heat on the rebuilt course (finishers, late starts). | A short report, and the decisions below answered |
 | **W1** The book-keeping | The ladder, the points, the standings, the save; a week run as text | A printed week: every heat, every ladder, the champion |
 | **W2** Heats in a row, 16 on the water | The loading rules, the next heat waiting, the finishers sailing in, the retire rule; watch mode at Sotavento | Three heats in a row on your screen, never more than 16 boards |
-| **W3** Jump ahead | Heats sailed in the background, jump to a round, close and go on | One whole elimination, part watched, part jumped |
+| **W3** Close and go on | The week saved after every heat and picked up where it was (the jump over heats is dropped: D2, all live) | A week closed in the middle of an elimination and going on from the next heat |
 | **W4** The broadcast | The line-up card, the ladder, the results, the standings; the new commentary moments; the director between heats | An elimination that looks and sounds like the stream |
 | **W5** The week | The days and the wind, eleven eliminations, the dropped results, the champion | The Sotavento week from the first heat to the champion |
 | Later | The play-test of sailing in it yourself (built along from W2, D1). The women's fleet. The obstacle and the long-distance race. Interviews (E13.S06). Other spots. | |
@@ -116,6 +116,21 @@ Size: W1 and W3 are a session each for one worker; W2 and W4 are the big ones (t
 - **D6 The race kinds:** normal slalom only at first; the obstacle and the long-distance race later? *Recommended: yes. The long-distance race has the whole fleet on one line, which the 16-board limit can't show.*
 - **D7 The other eight boards:** the next heat waiting near the start (as on the stream), with the finishers freed as they reach the beach? *Recommended: yes.*
 - **D8 The AI's training on the Sotavento course:** start it as night runs alongside W1, so the heats are worth watching by W2? *Recommended: yes; it needs your go for each night.*
+
+### Max's answers (27 November 2026)
+
+| | Max | What it means for the build |
+|---|---|---|
+| D1 | "watch and play but test only watch" | Built for watching and for sailing in it as one of the 64; only the watching is tested and shown for now. |
+| D2 | "no all live" | **No heat is jumped over or sailed in the background: every heat of the week is sailed on the screen.** Part 3 of the design and step W3 change: the jump is dropped. What stays of W3 is closing the game and going on later, because a whole week live is many hours (my assumption; Max hasn't said so). Watch mode's own fast-forward keys stay as they are. |
+| D3 | "my names you are going to create later" | A provisional roster with placeholder names now. The real names are made later by the lead, by Max's naming rule (Q28). |
+| D4 | "live speed as fast as the sailors are going" | No set pace and no waiting for talk: the race runs in real time, and the next heat starts as soon as its sailors are at the line. The time between heats is the time the sailing takes. |
+| D5 | "just to recreate the real event" | The week is the World Cup Fuerteventura 2026 as it was sailed: its race days, how many eliminations on which day, the wind of each day. Step W0 takes that from the 27 hours of commentary and the replays (so far: Eliminations 1 and 2 on 22 July, 3 and 4 on the 23rd, 5 to 7 on the 24th, 8 to 11 on the 26th). The results are the game's own: the AI sails them. |
+| D6 | "yes normal slalom" | Normal slalom only. The obstacle heats and the full-fleet races of the real week are sailed as normal slalom or left out; W0 lists which eliminations were which. |
+| D7 (the other eight boards) | not asked again | Stays as recommended: the next heat waits near the start. |
+| D8 | "yes but later" | The AI's night training on the Sotavento course comes after the first steps, on Max's go. |
+
+**One point this leaves open:** Max asked for 64 in the brackets; the real event had 39 men (and 13 women). "Recreate the real event" with 64 means the real days, wind and number of eliminations with a full 64 ladder; with 39 it would also be the real ladder with its free passes in the first round. The plan assumes 64 until Max says otherwise.
 
 ## After the decisions
 
