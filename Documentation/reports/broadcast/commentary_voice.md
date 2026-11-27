@@ -198,7 +198,35 @@ subtitles often have); a line whose sound would come more than 0.3 to 0.8 s late
 
 ## Read back by Whisper: does the voice say the words right?
 
-RESULT_READBACK
+Nobody could listen tonight, so the voice's sound files were turned back into words by Whisper (`small.en`, on this
+PC) and compared with the words that were meant: `tools/tts/speak_lines.sh` speaks every line, then
+`python -E -P tools/tts/read_back.py <folder>` reads them back. The set: the 76 starter lines with their slots filled
+(the names taken in turn from the game's 20 characters and the event week's 64 provisional sailors), every one of the
+84 names on its own, and every name in a sentence ("And it's <name> in first place."). The final numbers (pace 0.9, the
+spelling table in):
+
+| | Lines | The same words | The same or close | Word errors |
+|---|---|---|---|---|
+| The bank's lines, names filled in | 76 | 49 (64 %) | **70 (92 %)** | 54 of 538 words (10 %) |
+| A name in a sentence: the name came back | 84 | 12 exactly | 35 close to its sound (42 %) | |
+| A name alone: the name came back | 84 | 12 exactly | 30 close to its sound (36 %) | |
+
+"Close" means the letters are at least 85 % alike, or the words sound the same and are written another way: "Reuben
+Brower" for "Ruben Brouwer", "Thomas" for "Tomas", "point dot nine" for "Point.9", "jibe" for "gybe", "he's" for "he
+is". The full list of every line that differs, with what came back: `.sim_output/voice_final/read_back.md` (not in
+git: it holds the sound files' paths).
+
+**What it shows.** The commentator's own sentences come out clearly: 70 of the 76 lines come back with the same words
+or nearly. The 6 that do not are mostly about names ("Remi Vasseur's going to try" came back as "Remove the shorts",
+"Then Noor in second place" as "Then you are in second place", "Pietro Colombi" as "pyro columbi"), plus "Hardcore
+racing." ("Harko racing") and "Gybes first." ("Jai's first"). Names are the weak part. Whisper is a hard judge of
+names (it knows English words, not Dutch or Polish surnames, and a single name on its own often comes back as
+something else entirely: "Elin." came back as "That's all for now, bye bye."), so these numbers say less about the
+names than about the sentences: **the names are what Max should listen to first**. The spelling table moved the event's
+names in a sentence from 22 to 27 of 64 close to their own sound (the characters stayed at 8 of 20, most of the rest
+being British readings that are right, above).
+
+All 244 lines were made (none failed).
 
 ## What is tested
 
@@ -211,6 +239,10 @@ played; the voice switched off; the level's rate and loudness; a pair's second l
 slower voice and the breath after it; the voice telling the length of its sound; the missing program (silent, no
 error). Also: the Commentary bus and its slider (`test_audio.gd`), the setting saved and loaded
 (`test_game_settings.gd`), watch mode's key (`test_commentary.gd`).
+
+The whole unit suite (`tools/test.sh`): before this work 1168 of 1168 passed (127 files); after it 1187 of 1187 (128
+files). `tools/check.sh`: 538 files, none failed. The key row with "V, Shift+V commentary, voice" still fits a
+1280 x 720 window (screenshot `.screenshots/voice/keys_1280.png`).
 
 ## Files
 
