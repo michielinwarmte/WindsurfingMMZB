@@ -52,12 +52,12 @@ extends Resource
 
 ## A take's framing, drawn from the stream's spread: Vector3(the sail's share, the horizon's share from
 ## the top, the sail middle's share from the top), 0 to 1. `z`: a standard normal number, kept within
-## one either way (a quarter's spread or a little more). One number for both: a bigger sail goes with a
+## the middle half (between the stream's first and third quarters). One number for both: a bigger sail goes with a
 ## horizon higher in the picture, as when a drone that keeps its height in sail heights comes closer and
 ## looks down more steeply (the game's choice: the readers wrote each picture's sail and horizon, not
 ## how they go together). `zoom`: the wheel (2: the sail half as tall; the horizon stays).
 func take_framing(z: float, zoom: float = 1.0) -> Vector3:
-	var held: float = clampf(z, -1.0, 1.0)
+	var held: float = clampf(z, -TvFraming.QUARTER_Z, TvFraming.QUARTER_Z)
 	var sail: float = TvFraming.from_spread(sail_pct, held, false, sail_pct.x * 0.5, sail_pct.z * 1.5) / 100.0 / maxf(zoom, 0.05)
 	var horizon: float = clampf(TvFraming.from_spread(horizon_pct, -held, false, horizon_pct.x - 5.0, horizon_pct.z + 5.0), 3.0, 92.0) / 100.0
 	return Vector3(sail, horizon, subject_share(sail, horizon))

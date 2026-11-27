@@ -353,7 +353,12 @@ func test_a_takes_framing_keeps_the_sail_and_the_horizon_together() -> void:
 	var far: Vector3 = picture.take_framing(1.0)
 	assert_true(far.x >= middle.x and middle.x >= close.x, "the sail grows with the draw")
 	assert_true(far.y <= middle.y and middle.y <= close.y, "and the horizon climbs as it does")
-	assert_eq(picture.take_framing(5.0), far, "never past about the middle half")
+	assert_eq(picture.take_framing(5.0), far, "never past the middle half")
+	for any: TvPicture in config.race.pictures:
+		for z: float in [-3.0, 3.0]:
+			var drawn: Vector3 = any.take_framing(z)
+			assert_between(drawn.x, any.sail_pct.x / 100.0 - 1e-6, any.sail_pct.z / 100.0 + 1e-6, "%s: the sail inside the stream's middle half" % any.key())
+			assert_between(drawn.y, any.horizon_pct.x / 100.0 - 1e-6, any.horizon_pct.z / 100.0 + 1e-6, "%s: the horizon too" % any.key())
 	# The sail's foot stands the drone's height in sail heights below the horizon.
 	assert_almost_eq((middle.z + middle.x * 0.5 - middle.y) / middle.x, picture.height_in_sails, 1e-4)
 	var zoomed: Vector3 = picture.take_framing(0.0, 2.0)
@@ -396,6 +401,10 @@ func test_the_beach_cam_finds_a_coast_on_one_side_only() -> void:
 	assert_true(TvCamera.land_between(grid, Vector3(600.0, 2.0, 0.0), Vector3(-200.0, 0.0, 0.0)), "a camera inland looks across the land")
 	assert_false(TvCamera.land_between(grid, Vector3(-600.0, 2.0, 0.0), Vector3(-200.0, 0.0, 0.0)), "a camera boat at sea does not")
 	assert_almost_eq(TvCamera.view_off(Vector3.BACK, [Vector3.RIGHT, Vector3.LEFT] as Array[Vector3]), PI / 2.0, 1e-5, "a quarter turn off both views")
+	# The beach cam on the coast, its eye 4.5 m up: across the water it sees, across a point of land not.
+	assert_false(TvCamera.view_blocked(grid, Vector3(420.0, 4.5, 0.0), Vector3(-300.0, 0.0, 0.0)), "over the sea: a clear view")
+	assert_false(TvCamera.view_blocked(grid, Vector3(420.0, 4.5, -900.0), Vector3(420.0, 0.0, 600.0)), "along the waterline: clear")
+	assert_true(TvCamera.view_blocked(grid, Vector3(300.0, 4.5, 0.0), Vector3(800.0, 0.0, 0.0)), "across the land behind the beach: hidden")
 
 
 # ---------------------------------------------------------------- the 12 November director stays

@@ -248,6 +248,11 @@ func take_age_s() -> float:
 	return _age_s
 
 
+## The mark a mark's take is at (game X, Z).
+func mark_point() -> Vector2:
+	return _mark_at
+
+
 # ---------------------------------------------------------------- the director
 
 ## Every frame while the director cuts by itself (not while the race is frozen): the next cut when it
@@ -552,7 +557,7 @@ func cut_to(next: TvPicture, board: int, take_s: float, mark_step: int = -1) -> 
 		at = board_place.origin
 		_heading = _forward_of(board_place)
 		_orbit_rad = _behind_rad(_heading) + _side * PI * 0.25
-	if next.shot == Shot.MARK and runner.race != null and board >= 0:
+	if (next.shot == Shot.MARK or mark_step >= 0) and runner.race != null and board >= 0:
 		_set_the_mark(runner.race, board, mark_step)
 	_show_lines(next.shot == Shot.COMMITTEE or next.shot == Shot.FINISH_LINE)
 	if next.shot == Shot.BEACH_WIDE or next.shot == Shot.BEACH_TIGHT:
@@ -833,6 +838,11 @@ func _place_the_beach_cam(next: TvPicture, at: Vector3, node: WindsurferNode) ->
 			directions.append(beam.rotated(Vector3.UP, turn_rad))
 	_stand_look = subject
 	var marker: Node3D = _shore_camera_marker(subject)
+	var grid: TerrainGrid = scene.shore_grid if scene != null else null
+	if marker != null and grid != null and view_blocked(grid, marker.global_position, subject):
+		# The map's camera can't see the water where the subject is (a point of land in the way): this take
+		# from the nearest shore with a clear view instead.
+		marker = null
 	_stand_on_marker = marker != null
 	if marker != null:
 		# Where the map says its beach camera stands: its eye there, as high as the marker.
@@ -874,7 +884,7 @@ func _shore_or_boat(subject: Vector3, directions: Array[Vector3], boat_m: float)
 		for step: int in 12:
 			var direction: Vector3 = directions[0].rotated(Vector3.UP, step * PI / 6.0)
 			var shore: Vector3 = shore_along(grid, subject, direction, stream.shore_nearest_m, stream.shore_farthest_m)
-			if is_nan(shore.x) or _board_in_the_way(shore, subject):
+			if is_nan(shore.x) or _board_in_the_way(shore, subject) or view_blocked(grid, shore + Vector3.UP * stream.beach_eye_m, subject):
 				continue
 			var score: float = subject.distance_to(shore) * (1.0 + 0.5 * view_off(direction, directions) / PI)
 			if score < best_score:
@@ -918,6 +928,23 @@ static func shore_along(grid: TerrainGrid, from: Vector3, direction: Vector3, ne
 			return from + way * (reach_m - step_m)
 		reach_m += step_m
 	return Vector3(NAN, NAN, NAN)
+
+
+## Whether land hides the water at a subject from a camera's eye (heights above the water): the ground
+## anywhere on the way (every 8 m, the camera's own first 15 m left out: it stands on it) higher than
+## the line from the eye down to the water at the subject.
+static func view_blocked(grid: TerrainGrid, eye: Vector3, subject: Vector3) -> bool:
+	var length_m: float = Vector2(subject.x - eye.x, subject.z - eye.z).length()
+	var steps: int = ceili(length_m / 8.0)
+	for i: int in range(1, steps):
+		var share: float = float(i) / steps
+		if share * length_m < 15.0:
+			continue
+		var at: Vector3 = eye.lerp(subject, share)
+		var ground_m: float = grid.height_at(at.x, at.z)
+		if not is_nan(ground_m) and ground_m > (eye.y - subject.y) * (1.0 - share):
+			return true
+	return false
 
 
 ## Land anywhere on the line from a camera to what it films (looked at every 8 m), on a lake's map.

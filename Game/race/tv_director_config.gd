@@ -65,6 +65,10 @@ extends Resource
 @export var mark_shortest_s: float = 4.0
 @export var mark_longest_s: float = 16.0
 @export var mark_after_rounding_s: float = 1.5
+## A board has gybed round its mark once it has come this near the buoy and is going away again
+## (the race counts the rounding only once the board crosses a line past the mark, a few seconds
+## later than the gybe on the screen), m. The game's choice.
+@export var mark_near_m: float = 25.0
 ## After the leader's take at a mark, the chasers at the same mark (then back to the leader): how
 ## often, and how soon after the leader's take they must come (seconds).
 @export var chasers_at_mark_chance: float = 0.7

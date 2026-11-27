@@ -50,6 +50,13 @@ DRONE_POSITION = {
     "drone front_side mark": ((3.0, 2.3, 3.2), (11.4, 8.6, 12.1), (39.0, 22.0, 60.0), 16.0),
     "drone behind_side fleet": ((2.5, 1.9, 3.0), None, None, 18.0),
 }
+# The lead's measurement of the stream's beach camera at Sotavento (drone_position.md, "The beach
+# camera", 41 shots; distances from the game's course): its eye about 4.5 m up (3.5 to 5), its zoom (the
+# vertical view, degrees) wide on the start line 8 to 10, tight on the leaders 1 to 1.5 (half close 2 to
+# 4: a group on a reach, the finish). With a raked sail about 3.5 m tall.
+BEACH_EYE_M = (4.5, 3.5, 5.0)
+BEACH_LENS_DEG = {"line": (8.0, 10.0), "fleet": (8.0, 10.0), "front": (1.0, 1.5), "pack": (1.0, 1.5), "mark": (1.0, 4.0)}
+STREAM_SAIL_TOP_M = 3.5
 # The start's timing counted on the nine heats' shot notes (27 November 2026; the config's header says how).
 LINE_DRONE_BEFORE_GUN_S = (2.6, 3.1, 3.7)
 MARK_CUT_BEFORE_S = (2.0, 5.0)
@@ -296,6 +303,38 @@ def position_table(rep, rows):
     rep.add("")
 
 
+def beach_table(rep, phase, rows):
+    by_pic = collections.defaultdict(list)
+    for r in rows:
+        if r["camera"] == "shore_long_lens":
+            by_pic[r["picture"]].append(r)
+    if not by_pic:
+        return
+    rep.add("**The beach cam** (the stream: the lead's measurement at Sotavento. The zoom is the vertical view; the stream's "
+            "assumes a sail 3.5 m tall, so the game's is also shown for a sail that tall: its own sails stand taller, and for "
+            "the same picture its zoom is that much wider. Inside: the eye within 3.5 to 5 m, the zoom for a 3.5 m sail within the stream's)")
+    rep.add("")
+    rep.add("| Picture | Eye: stream | Eye: game | Inside | Zoom: stream | Zoom: game | Zoom for a 3.5 m sail | Inside | Distance: game | Horizon: game |")
+    rep.add("|---|---|---|---|---|---|---|---|---|---|")
+    for key, group in sorted(by_pic.items(), key=lambda kv: -sum(r["length_s"] for r in kv[1])):
+        on = key.split()[-1]
+        eye = weighted_middle([(r["height_m"], r["length_s"]) for r in group])
+        lens = weighted_middle([(r["lens_deg"], r["length_s"]) for r in group])
+        top = weighted_middle([(r["height_m"] / r["sail_heights"], r["length_s"]) for r in group
+                               if r["height_m"] is not None and r.get("sail_heights") and r["sail_heights"] > 0.3])
+        scaled = lens * STREAM_SAIL_TOP_M / top if lens is not None and top else None
+        d = weighted_middle([(r["distance_m"], r["length_s"]) for r in group])
+        hor = weighted_middle([(r["horizon_pct"], r["length_s"]) for r in group])
+        ok_eye = None if eye is None else BEACH_EYE_M[1] <= eye <= BEACH_EYE_M[2]
+        rng = BEACH_LENS_DEG.get(on)
+        ok_lens = None if rng is None or scaled is None else rng[0] * 0.85 <= scaled <= rng[1] * 1.15
+        rep.add("| %s | %.1f m (%.1f to %.1f) | %s m | %s | %s | %s deg | %s deg | %s | %s m | %s %% |" % (
+            key, BEACH_EYE_M[0], BEACH_EYE_M[1], BEACH_EYE_M[2], fmt(eye), rep.judge(ok_eye, "%s: beach cam eye, %s" % (phase, key)),
+            ("%.0f to %.1f deg" % rng) if rng else "-", fmt(lens, 1), fmt(scaled, 1), rep.judge(ok_lens, "%s: beach cam zoom, %s" % (phase, key)),
+            fmt(d, 0), fmt(hor, 0)))
+    rep.add("")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("folder")
@@ -339,6 +378,7 @@ def main():
             share_table(rep, "The drone's view (of the drone's time)", shares(drone_rows, "view"), stream_shares(pics, "view"), LOOSE_SHARE_POINTS, phase)
         share_table(rep, "How the camera moves", shares(rows, "move"), stream_shares(pics, "move"), LOOSE_SHARE_POINTS, phase)
         framing_table(rep, phase, rows, pics)
+        beach_table(rep, phase, rows)
         if phase == "race":
             position_table(rep, rows)
             race_extras(rep, races, takes, profile)

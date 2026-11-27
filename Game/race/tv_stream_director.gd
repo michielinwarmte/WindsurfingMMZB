@@ -50,6 +50,8 @@ var _cut_before_s: Dictionary[int, float] = {}
 var _mark_step: int = -1
 var _mark_take_s: float = 0.0
 var _rounded_at_s: float = -1.0
+## The nearest the board of a mark's take has come to the buoy, m.
+var _mark_nearest_m: float = INF
 ## The chasers awaited at a mark after the leader's take there (its step number, -1 none), for how
 ## much longer (s), the marks whose chasers were weighed already; then back to the leader.
 var _chasers_step: int = -1
@@ -456,6 +458,7 @@ func _cut_to_the_mark(race: RaceSim, index: int) -> void:
 	var next: TvPicture = draw_picture(_pool(config.mark_pictures), null, _rng.randf())
 	_cut(next, index, _mark_take_s, step_number)
 	_rounded_at_s = -1.0
+	_mark_nearest_m = INF
 
 
 ## A mark's take goes on for its drawn length and until its board has rounded and a little more, never
@@ -464,7 +467,11 @@ func _mark_goes_on(race: RaceSim) -> bool:
 	if tv.focus < 0:
 		return false
 	var age_s: float = tv.take_age_s()
-	var rounded: bool = race.is_finished(tv.focus) or race.next_step_index(tv.focus) > _mark_step
+	var to_buoy_m: float = race.board_position(tv.focus).distance_to(tv.mark_point())
+	_mark_nearest_m = minf(_mark_nearest_m, to_buoy_m)
+	# Gybed: the race has the rounding, or the board came near the buoy and is going away again.
+	var gybed: bool = _mark_nearest_m < config.mark_near_m and to_buoy_m > _mark_nearest_m + 5.0
+	var rounded: bool = race.is_finished(tv.focus) or race.next_step_index(tv.focus) > _mark_step or gybed
 	if rounded and _rounded_at_s < 0.0:
 		_rounded_at_s = age_s
 	return mark_take_goes_on(age_s, _rounded_at_s, _mark_take_s, config.mark_longest_s, config.mark_after_rounding_s)

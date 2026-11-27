@@ -30,7 +30,8 @@
 ;   distances and heights then follow from the framing); angle_deg round the board (45 for
 ;   behind-side, 90 side, 135 front-side: the middle of each view; the readers agreed on the side for
 ;   only 58 % of the seconds); chasers_at_mark_chance 0.7 and finish_follow_through_chance 0.5 (the
-;   notes say "often" and show both about equally); mark_after_rounding_s; chasers_within_s;
+;   notes say "often" and show both about equally); mark_after_rounding_s; mark_near_m (the gybe
+;   done once the board has come within 25 m of the buoy and goes away again); chasers_within_s;
 ;   lead_group_m and lead_group_most (the readers' lead group: the first 2 to 4 together);
 ;   fleet_together_m (a picture on the fleet only while the boards still racing are together); close_m and
 ;   gained_s (the 12 November numbers); the beach cam's place where a map does not say (the nearest
@@ -53,7 +54,7 @@
 ;   placed the fleet sails at it, and it takes the stream's start-phase "drone front_side line" picture
 ;   (5 of the nine heats' line drones were front-side, 4 side).
 ; - HOW A TAKE DRAWS ITS FRAMING (the game's choice, TvPicture.take_framing()): one number for the sail
-;   and the horizon, within about the middle half of each: a bigger sail with a higher horizon, as a
+;   and the horizon, within the middle half of each (between the stream's quarters): a bigger sail with a higher horizon, as a
 ;   drone at a steady height in sail heights that comes closer sees it.
 ; - Pictures the stream has that the game leaves out: the line-up graphic (55 % of the pre-start; a
 ;   later phase of the plan), the beach among the people (handheld), the interviews.
@@ -510,6 +511,7 @@ mark_take_s = Vector3(5.4, 6.7, 9.4)
 mark_shortest_s = 4.0
 mark_longest_s = 16.0
 mark_after_rounding_s = 1.5
+mark_near_m = 25.0
 chasers_at_mark_chance = 0.7
 chasers_within_s = 25.0
 finish_picture = SubResource("finish_hover")
