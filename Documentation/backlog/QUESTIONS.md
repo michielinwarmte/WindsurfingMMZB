@@ -296,3 +296,43 @@ Why it matters: Max, 6 November 2026: "the UI and main menu is very AI-like; we 
 Options: a) The race-broadcast look of a PWA live stream (dark panels, bold numbers, flags, the sponsor strip). b) A beach-club and surf-poster look (warm colours, hand-drawn type, wood and canvas). c) A clean instrument look like a sailing watch or a chartplotter (light panels, one accent colour, thin type). d) Your own references (links or photos).
 Recommendation: a for the race screens and c for the settings is the usual compromise, but one theme everywhere is what you asked for: bring three references each to the next session and the lead mocks up one screen in each (E15.S09 T1).
 Answer:
+
+## K. The live slalom week (the night of 27 to 28 November 2026; E11.S13)
+
+Numbered from Q60: Q47 to Q59 are in use on other branches.
+
+### Q60 · Sotavento's start line: is the start boat on the upwind (north) end, and does the trade wind come from about 025?
+Why it matters: the course file said the wind comes from 205 (where it blows to). With it the game's slalom start put all eight boards on one spot and they crossed 6 to 22 s late; set to 025 and with the boat on the upwind end (the game's slalom start waits upwind of the boat, your own rule of 6 November) they cross 0 to 18 s after the gun. The boat's end is the lead's reading of the stream (the commentator: "down the pin end"), not something seen for sure.
+Options: a) Yes, the boat is on the upwind end. b) No, the boat is on the downwind end (then the game's slalom start has to learn that). c) It differs by day.
+Recommendation: a, until you say otherwise.
+Answer:
+
+### Q61 · A sailor over the line early: out of the heat, or back to start again?
+Why it matters: on the streams an early starter is out ("all jumped the gun, so three guys were out") and the heat is started again with the others. The game's race lets him sail back and start again, as in course racing.
+Options: a) Out of the heat (last place), as the real slalom. b) Back to start again, as now. c) Out, and the heat started again (a general recall), as on the streams.
+Recommendation: a for the event week (simple and true); c later with the recall's pictures.
+Answer:
+
+### Q62 · The week's wind: the real days (30, 30, 35, 40 and 28 knots), or what the AI can sail?
+Why it matters: you asked to recreate the real event; its fourth day had over 40 knots. The AI has never been tried above 30 and already loses boards at the marks in 30. The schedule file holds each day's wind in the commentator's words; the live week does not use it yet.
+Options: a) The real winds, after the AI has been trained for them. b) 30 knots every day for now. c) The real winds capped at what the AI sails cleanly.
+Recommendation: b now, a after the Sotavento training (Q63).
+Answer:
+
+### Q63 · A training night for the AI at Sotavento: when?
+Why it matters: the heats' weak point is the AI at the marks: one to three of eight cut inside a mark at 17 to 19 m/s (or are pushed there keeping clear) and lose 30 to 90 s; a gybe keeps little speed. You said "yes but later" to training at Sotavento. It needs a night of the method's runs on the Sotavento course (roundings first, then the start in a crowd).
+Options: a) The next free night. b) After you have watched the week and listed what bothers you most. c) Not before the names and the look are settled.
+Recommendation: b.
+Answer:
+
+### Q64 · The commentator's voice: stay with the computer voice, another one, or ask the real commentator?
+Why it matters: the voice in the build is a ready-made British computer voice, not the real commentator's. Its licence allows play tests, not a public release (its base voice is research-only). Nobody has heard it yet: how it sounds, how loud it is against the wind, how it says the names (14 of the 64 still read back badly).
+Options: a) Keep it for the play tests and look for a voice with a clean licence before a release. b) Ask the real commentator for his voice (the plan's last step). c) Subtitles only.
+Recommendation: a, after you have listened.
+Answer:
+
+### Q65 · How many workers at once on a night like this?
+Why it matters: you set five; the sixth was refused by the permission check, so the lead built the event week, judged the lines and read the format itself. With eight the next heat waiting on the water and the stream's look for the cards would have fitted in the night.
+Options: a) Five stays. b) Eight on a night run. c) Tell the lead per night.
+Recommendation: c.
+Answer:

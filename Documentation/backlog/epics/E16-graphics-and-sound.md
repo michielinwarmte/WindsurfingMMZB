@@ -52,6 +52,7 @@ Status: todo | Size: M | Owner: the team | Milestone: M8 | Needs: a decision, E1
 Done when: the team has decided on music (none, a licensed set, or commissioned; menus and the beach only, never while sailing?) and on a commentary voice for the race and the interviews (none, or a voice bank), and the chosen things are built.
 - [ ] T1 The decision and the licences
 - [ ] T2 The build
+Notes: 27 Nov 2026 (E11.S13): a commentary voice is built for watched races (`CommentaryVoice`: a ready-made British computer voice beside the game, its own Commentary volume slider; not the real commentator's voice; licence for play tests only). The decision (Q64) and the music are open.
 
 ### E16.S07 · The figure's and the gear's look at the limit
 Status: todo | Size: S | Owner: the lead | Milestone: M2 | Needs: E08.S01 | Roadmap: GR3, GR5

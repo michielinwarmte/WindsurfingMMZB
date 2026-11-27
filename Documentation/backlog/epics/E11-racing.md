@@ -29,11 +29,11 @@ Done when: the rules set the PWA and the iQFOiL class apply is in `race_rules.gd
 Notes: 8 Nov 2026 day (`ai/skipper-heads-8nov`): the skipper keeps clear by the rules at any distance (`RaceRules.must_keep_clear_why()`, passing 6 s ahead, Shift from 5 m/s), turns its penalty circle clear of the crowd and does not tack onto port into a starboard board: penalties 46 -> 25 in 22 start rounds, 61 -> 29 in 9 fleet races, no falls.
 
 ### E11.S03 · Slalom elimination ladders
-Status: todo | Size: L | Owner: the lead, Max for the format | Milestone: M2 | Needs: E09.S03, E10.S06 | Roadmap: —
+Status: doing | Size: L | Owner: the lead, Max for the format | Milestone: M2 | Needs: E09.S03, E10.S06 | Roadmap: —
 Done when: an event runs eliminations as the PWA does: heats of 8 to 10 from a seeded ladder, the first places advance (the winners' round and, if chosen, the losers' round), a final, the elimination's points, up to three eliminations per event and the event's result from them with the class's scoring; the player sails only their own heats and can watch the others (or skip them, simulated headless).
-- [ ] T1 The ladder's structure as a resource (the heat size, how many advance, the rounds)
+- [x] T1 The ladder's structure (the heat size, how many advance, the rounds): `EliminationLadder`, 64 in 16 heats of 8, the first four through (E11.S13, 27 Nov 2026; a resource for other sizes is still to make)
 - [ ] T2 The heats run one after another with the race director's gaps; the AI heats simulated headless when skipped
-- [ ] T3 The scoring (the PWA's points per place per elimination, the event's result, the tour's result)
+- [x] T3 The scoring per elimination and the event's result with the dropped results: `EventWeek` (27 Nov 2026, checked against the 2026 streams' commentary); the tour's result is still to make
 - [ ] T4 The ladder screen (the brackets, the player's next heat, the clock)
 - [ ] T5 Played by Max on the lake's PD3 with the twenty personas
 
@@ -121,3 +121,20 @@ Done when: from the gun the standings rank the boards by the time each still nee
 - [ ] T6 A long race with wind shifts; a LAN race (the guest still shows the old gaps)
 - [ ] T7 Later, if wanted: the time lost in tacks, gybes and roundings; each board's own gust or lull
 Notes: 12 Nov 2026 late evening, Max: "the leaderboard is not correctly calculated. please keep the wind polar in consideration. make a smart leaderboard with laylines kept in mind". Before, the boards still racing ranked by their straight line to the next mark, and the gaps were those at the last mark both had rounded (on the first beat the start's). Same branch as E11.S11, not committed yet. Report `Documentation/reports/racing/smart_order_12nov.md`. Related: E11.S07 (results and splits).
+
+### E11.S13 · The slalom week as a live broadcast
+Status: review | Size: L | Owner: Max (the look, the format, the names), the lead | Milestone: M2 | Needs: E11.S03, E11.S11, E16.S06, E09 (the AI at Sotavento) | Roadmap: —
+Done when: the game's slalom world cup at Sotavento runs by itself as a broadcast: 64 sailors in a ladder, every heat sailed live by eight AI sailors, filmed by the TV director with the pictures of the real streams, talked through by the commentator (subtitles and a voice), with the results, the ladder and the standings on the screen; the week is saved and goes on; Max finds it looks and sounds like a stream.
+- [x] T1 The study of the real streams (27 Nov 2026): 27 h of commentary and 11 heat replays of the World Cup Fuerteventura 2026 written out, the shots noted by two readers, the stream's profile (`Documentation/reports/broadcast/`)
+- [x] T2 The commentary: 42 moments, a bank of the commentator's lines with slots (340 lines from the replays, judged by hand, and 47 written for the event), a director that picks the line (`Game/race/commentary/`)
+- [x] T3 The TV director set to the stream's measured numbers, with a beach camera and the drone's heights (`Game/race/tv_stream_director.gd`, `Game/config/tv_director.tres`)
+- [x] T4 The commentary heard: a computer voice beside the game (`CommentaryVoice`, `SpeechEngine`; NOT the commentator's own voice; its licence allows play tests only)
+- [x] T5 The week's book-keeping: the roster of 64 (provisional names), the ladder of 16 heats, the points, the dropped results, the standings, the schedule of the real week, the save (`Game/race/event/`, 13 tests)
+- [x] T6 Heats in a row on the water: `EventBroadcast` (`--event=sotavento_2026`), the heat's card, the results card with the heat's name, the standings by themselves at the next elimination, the results as a text file; the play folder `WindsurfingMMZB-play-28nov2026-live`
+- [x] T7 Sotavento's course set right: the first reach to the beach, the stream's leg lengths, the wind axis 025 (the file said 205), the start boat on the upwind end
+- [ ] T8 Max's look and listen on his screen: the pictures against the streams, the voice (how it sounds, how loud, the names), the cards
+- [ ] T9 The AI at Sotavento: the roundings at 17 to 19 m/s (one to three of eight cut inside a mark and lose 30 to 90 s; now and then one never rounds mark 1) and the gybes (most of the speed lost at every mark); training there on Max's go
+- [ ] T10 The next heat waiting on the water (16 boards), the player's own heats, each day's own wind (30, 30, 35, 40, 28 kt in the schedule; the AI has never been tried above 30)
+- [ ] T11 The real commentator's lines from the 27 h (the sheets to judge), the lines for the event's own moments from them
+- [ ] T12 Max's 64 names; the start boat's end confirmed; an early starter out of his heat as in the real event, or back to start again as now (Max's choice)
+Notes: 27 Nov 2026, Max: "we do the commentary and drone plan", then "i want to simulate the whole slalom week with eliminations with 64 people in brackets all live broadcasted", then the night order: "tomorrow morning i want a fully working livestream with audable commentary and the full races with results working". Built on `broadcast/on-sotavento` (the run's `broadcast/study-27nov` with Max's `spot/sotavento`), not pushed, not merged. Five Opus workers (the commentary director, two shot readers, the TV director, the voice); the lead built the event week, judged the lines and read the format from the streams (`EVENT_WEEK_PLAN.md`: the top four go through, 0.7 for a win, results dropped after 4, 7 and 12 eliminations, the days 2-2-3-2-2). Measured at Sotavento in 30 kt with a 60 s countdown: the eight cross the line 0 to 18 s after the gun, the winner needs 195 to 215 s (the stream's leader: about 187 s). The log of the night: `Documentation/reports/broadcast/PROGRESS.md`.
