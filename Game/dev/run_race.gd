@@ -130,6 +130,13 @@ extends SceneTree
 ##                         the fall rule's, for the stay-on-the-board work
 ##   [--out_dir=<folder>: a CSV per board: race time, x, z, heading, speed, its next step, and what
 ##                         its skipper is doing]
+##   [--commentary=1 --commentary_out=<file> --commentary_seed=<n>] the race's commentary written down (the
+##                         broadcast study's P6, 27 November 2026; CommentaryRun): the game's race story and
+##                         commentary director on these boards, with a stand-in for the TV director's camera,
+##                         as a time-coded transcript (race time, moment, line id, the words, the shot) in
+##                         .sim_output/commentary/<course>_seed<seed>.txt (or --commentary_out). The race is told
+##                         the wind (the smart order, as in the game), so the order of the boards still racing
+##                         when it ends may differ from a run without it; the finishers' places do not.
 ## After the results it prints each skipper's start: how long after the gun it crossed the start
 ## line, whether it was over the line at the gun (OCS), and the boards outside the sailing area at the
 ## gun.
@@ -336,6 +343,8 @@ class Entry:
 	var file: FileAccess = null
 	## Every fall with the 2 s before it (FallLog; null: not watched).
 	var fall_log: FallLog = null
+	## A persona's own gear (--gear=1), or null for the default gear (its sail's brand for the commentary).
+	var gear: GearChoice = null
 	## The whole telemetry, a row every 3 ticks (--trace=<board name>), or null.
 	var trace_file: FileAccess = null
 	## What _watch() counts (the skipper's heads, 8 November 2026), from the gun until the goal: the
@@ -647,6 +656,12 @@ func _initialize() -> void:
 			return
 	race.start_in(free_sail_s)
 	print("COURSE_JSON " + course_json(race, course.axis_deg))
+	# --commentary=1: the race's commentary written down (CommentaryRun), the race told the wind for the smart order.
+	var commentary: CommentaryRun = null
+	if options.get("commentary", "0") == "1":
+		race.set_wind(anywhere_wind_deg, timing_wind_kt)
+		commentary = make_commentary(race, entries, options, "%s (%s), %d boards: %s; wind %.0f kt from %.0f deg; seed %d" % [
+			course.name, course.sequence, entries.size(), ", ".join(who), timing_wind_kt, anywhere_wind_deg, random_seed])
 
 	var outside_at_gun: PackedStringArray = PackedStringArray()
 	var gun_seen: bool = false
@@ -670,6 +685,9 @@ func _initialize() -> void:
 			race = restart_race(race, course, laps, prestart_s, entries, restart_places, random_seed + 1000)
 			rules = give_rules(entries, race, course) if with_rules else null
 			apply_skipper_overrides(entries, options)
+			if commentary != null:
+				race.set_wind(anywhere_wind_deg, timing_wind_kt)
+				commentary.new_race()
 			aground_count = 0
 			gun_seen = false
 			tick = 0
@@ -682,6 +700,8 @@ func _initialize() -> void:
 					quit(3)
 					return
 		step_race(race, entries, blind, rules)
+		if commentary != null:
+			commentary.tick(race, telemetry_of(entries), DT)
 		if bottom != null:
 			aground_count += _check_the_bottom(bottom, race, entries)
 		for i: int in entries.size():
@@ -728,6 +748,8 @@ func _initialize() -> void:
 	for entry: Entry in entries:
 		if entry.file != null:
 			entry.file.close()
+	if commentary != null:
+		commentary.finish()
 
 	print("Race on %s (%s, %d lap%s, %d steps): wind %.0f kt from %.0f deg, %s, seed %d, pre-start %.0f s, spawn %s (seed %d)%s" % [
 		course.name, course.sequence, laps, "" if laps == 1 else "s", race.steps().size(), wind_kt, course.axis_deg,
@@ -1684,6 +1706,7 @@ static func _make_skipper_board(skipper_name: String, race: RaceSim, course: Cou
 		# The same wind and sea on its own gear (copies of the items' numbers); before the
 		# controller is given the sail, so that it trims this one.
 		entry.sim = own_gear.sim_with(entry.sim)
+		entry.gear = own_gear
 		print("%s sails %s" % [entry.name, own_gear.names_line()])
 	for field: String in _sailor_overrides:
 		if field in entry.sim.sailor_config:
@@ -1841,6 +1864,30 @@ func _write_row(entry: Entry, race: RaceSim, index: int) -> void:
 	var aim: Vector2 = scripted.aim_point if scripted != null and scripted.aim_point.is_finite() else Vector2(NAN, NAN)
 	entry.file.store_line("%.2f,%.2f,%.2f,%.1f,%.2f,%d,%s,%.1f,%.1f" % [race.clock_s(), t.position.x, t.position.z, t.heading_deg, t.speed_ms,
 		race.next_step_index(index), doing.replace(",", ";"), aim.x, aim.y])
+
+
+## The commentary of this race (--commentary=1): the boards' names, their sails' brands (a persona's own gear) and
+## colours (the skipper's, as the game tints the sail), to the transcript's file.
+static func make_commentary(race: RaceSim, entries: Array[Entry], options: Dictionary[String, String], heading: String) -> CommentaryRun:
+	var names: PackedStringArray = PackedStringArray()
+	var brands: PackedStringArray = PackedStringArray()
+	var colours: PackedColorArray = PackedColorArray()
+	for entry: Entry in entries:
+		names.append(entry.name)
+		brands.append(entry.gear.sail.brand.name if entry.gear != null and entry.gear.sail.brand != null else "")
+		colours.append(entry.skipper.sail_colour() if entry.skipper != null else Color.TRANSPARENT)
+	var dice: int = options.get("commentary_seed", options.get("seed", "0")).to_int()
+	var course_slug: String = _file_name(options.get("course", "test").get_file().get_basename().replace(":", "_"))
+	var out: String = options.get("commentary_out", _repository_path(".sim_output/commentary/%s_seed%d.txt" % [course_slug, dice]))
+	return CommentaryRun.new(out, heading, names, brands, colours, dice)
+
+
+## Every board's telemetry, in race order of entry (the commentary's look at the race).
+static func telemetry_of(entries: Array[Entry]) -> Array[Telemetry]:
+	var telemetry: Array[Telemetry] = []
+	for entry: Entry in entries:
+		telemetry.append(entry.sim.telemetry)
+	return telemetry
 
 
 ## A board's name as a file name: "All-rounder 2" is all-rounder_2.
