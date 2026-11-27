@@ -25,7 +25,11 @@ extends Node
 ## --event_new=1 starts a new week even when a saved one exists; --event_heats=<n> stops after n
 ## heats (for tests and screenshots); --event_countdown=<s> another countdown than COUNTDOWN_S;
 ## --event_trace=<s> writes every board's place, speed and what its skipper is doing to the log
-## every <s> seconds of the race (to see where a heat goes wrong).
+## every <s> seconds of the race (to see where a heat goes wrong). For tests only:
+## --event_skip=<n> does not sail the first n heats (their results are made up from the seeding, so
+## a test can begin at a final or at the next elimination); --event_lines=1 writes every line the
+## commentator says to the log; --event_save=<name> keeps the week in a save of its own (a test
+## must not touch the week Max is watching: the game and its tests share one folder of saves).
 
 ## The countdown before every heat, seconds: the game's own minute. The AI's slalom start is a timed
 ## run (away from the line, a gybe, back in at full speed) that needs it: with 60 s the eight came to
@@ -63,6 +67,8 @@ var _heats_left: int = -1
 ## The countdown of every heat (COUNTDOWN_S, or --event_countdown=<s>).
 var countdown_s: float = COUNTDOWN_S
 var _stopped: bool = false
+## The name of the week's save (SAVE_PATH, RESULTS_PATH): the schedule's, or --event_save=<name>.
+var save_name: String = ""
 ## --event_trace=<s>: seconds between two trace lines (0: none), and the race clock of the next.
 var _trace_every_s: float = 0.0
 var _trace_next_s: float = -INF
@@ -86,9 +92,17 @@ func setup(race_runner: RaceRunner, hud_layer: Hud, schedule: String, watch_mode
 	hud = hud_layer
 	watch = watch_mode
 	var fresh: bool = false
+	var skip: int = 0
+	var log_lines: bool = false
 	for arg: String in OS.get_cmdline_user_args():
 		if arg == "--event_new=1":
 			fresh = true
+		if arg.begins_with("--event_skip="):
+			skip = maxi(arg.get_slice("=", 1).to_int(), 0)
+		if arg == "--event_lines=1":
+			log_lines = true
+		if arg.begins_with("--event_save="):
+			save_name = arg.get_slice("=", 1).validate_filename()
 		if arg.begins_with("--event_heats="):
 			_heats_left = arg.get_slice("=", 1).to_int()
 		if arg.begins_with("--event_trace="):
@@ -99,17 +113,41 @@ func setup(race_runner: RaceRunner, hud_layer: Hud, schedule: String, watch_mode
 		push_warning("An event week needs a watched race of %d AI boards (--spectate=1 and eight --skippers); this race has %d." % [EliminationLadder.HEAT_SIZE, runner.opponents.size() if runner != null else 0])
 		_stopped = true
 		return false
-	var path: String = SAVE_PATH % schedule
+	if save_name == "":
+		save_name = schedule
+	var path: String = SAVE_PATH % save_name
 	week = null if fresh else EventWeek.load_from(path)
 	if week == null:
 		week = EventWeek.start(schedule)
 	if week == null:
 		_stopped = true
 		return false
+	for i: int in skip:
+		if week.is_over():
+			break
+		week.record_heat(_made_up_order(i))
+	if fresh:
+		# A new week replaces the saved one at once, also when no heat of it is finished.
+		week.save_to(path)
+		_write_the_results()
+	if log_lines and _commentary() != null:
+		_commentary().line_started.connect(func(_id: String, text: String, _seconds: float, level: int) -> void:
+			print("SAID %7.1f  (%d)  %s" % [runner.race.clock_s() if runner.race != null else 0.0, level, text]))
 	_build_cards()
 	_tell_the_commentary_the_countries()
 	_start_heat()
 	return true
+
+
+## A heat's result made up for --event_skip: its sailors by their seed, turned by a number that
+## changes from heat to heat (the same every time).
+func _made_up_order(number: int) -> PackedInt32Array:
+	var sailors: Array = Array(week.ladder.sailors_in(week.next_heat()))
+	sailors.sort_custom(func(a: int, b: int) -> bool: return week.ladder.seeds.find(a) < week.ladder.seeds.find(b))
+	var order: PackedInt32Array = PackedInt32Array()
+	for i: int in sailors.size():
+		order.append(sailors[(i + number % 3) % sailors.size()])
+	return order
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -246,7 +284,7 @@ func _close_heat() -> void:
 		push_warning("The event's heat result didn't fit its heat: the week stops.")
 		_stopped = true
 		return
-	week.save_to(SAVE_PATH % week.schedule_name)
+	week.save_to(SAVE_PATH % save_name)
 	_write_the_results()
 	if week.is_over() or week.next_heat() == 1:
 		# An elimination is over: its first eight and the standings' first eight on the log.
@@ -263,6 +301,9 @@ func _close_heat() -> void:
 		if _heats_left == 0:
 			_stopped = true
 			_update_card()
+			if DisplayServer.get_name() == "headless":
+				# A test without a window has seen what it asked for.
+				get_tree().quit()
 			return
 	if week.is_over():
 		_update_card()
@@ -290,7 +331,7 @@ func _log_heat() -> void:
 
 ## The results file beside the save (RESULTS_PATH), rewritten whole.
 func _write_the_results() -> void:
-	var file: FileAccess = FileAccess.open(RESULTS_PATH % week.schedule_name, FileAccess.WRITE)
+	var file: FileAccess = FileAccess.open(RESULTS_PATH % save_name, FileAccess.WRITE)
 	if file != null:
 		file.store_string(week.results_text())
 
