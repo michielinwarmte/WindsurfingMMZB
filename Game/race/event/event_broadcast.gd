@@ -142,6 +142,12 @@ func setup(race_runner: RaceRunner, hud_layer: Hud, schedule: String, watch_mode
 			print("SAID %7.1f  (%d)  %s" % [runner.race.clock_s() if runner.race != null else 0.0, level, text]))
 	_build_cards()
 	_tell_the_commentary_the_countries()
+	if week.is_over():
+		# A saved week that is finished: its champion and its final standings (the launcher "a new
+		# week" starts another); the race on the water goes on as an ordinary watched race.
+		_update_card()
+		_show_the_board()
+		return true
 	_start_heat()
 	return true
 
