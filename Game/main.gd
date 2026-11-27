@@ -875,11 +875,20 @@ func _apply_pilot_options(options: Dictionary[String, String]) -> void:
 
 # ---------------------------------------------------------------- the race course (RACING_PLAN.md, 9A)
 
+## Whether this scene is a spot's own sailing scene (SpotSailing says yes).
+func _is_a_spot() -> bool:
+	return false
+
+
 ## The course asked for with --course=<name>, placed for this scene; null without the option, or
 ## when there is no such course (it says so).
 func _course_from_options(usual_start: Vector2) -> Course:
 	# The start menu's race first; else the command line's course, raced when it names skippers.
 	_race_setup = RaceSetup.take()
+	if _race_setup == null and not _user_option("spot").is_empty() and not _is_a_spot():
+		# --spot=<name>: the start menu is about to open that spot's scene, and the command line's
+		# course and skippers are for it (this scene is only the picture behind the menu).
+		return null
 	var course_name: String = _race_setup.course_name if _race_setup != null else _user_option("course")
 	if course_name.is_empty():
 		return null

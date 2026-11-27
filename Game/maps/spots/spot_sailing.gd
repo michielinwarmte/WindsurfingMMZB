@@ -144,6 +144,10 @@ func _start_heading_deg() -> float:
 	return super() if _course != null else spot.start_heading_deg
 
 
+func _is_a_spot() -> bool:
+	return true
+
+
 ## The spot's race courses by name (main.gd's --course): the files in the spot's courses folder.
 func _course_named(course_name: String, usual_start: Vector2) -> Course:
 	if spot.courses_folder != "":
