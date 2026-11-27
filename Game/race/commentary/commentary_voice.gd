@@ -13,8 +13,9 @@ extends Node
 ## - A line already spoken once is on the disk (user://commentary_voice/<voice>/<hash>.wav, by the
 ##   words and the voice): it plays at once. Otherwise the speech program makes it (a short wait).
 ## - A line the director has chosen a moment early (the second line of a pair) is made ahead
-##   (Commentary.line_ahead), and, when nothing else is waiting, the bank's lines without a slot are
-##   made one by one in the background (voice_warm_up_lines), so most lines are on the disk.
+##   (Commentary.line_ahead), and, when nothing else is waiting, the race's names on their own
+##   ("Hana.") and the bank's lines without a slot are made one by one in the background
+##   (voice_warm_up_lines), so most lines are on the disk.
 ## - Too late is dropped, not said late: when the sound is not ready within the line's wait
 ##   (voice_wait_share of his seconds, between voice_wait_min_s and voice_wait_max_s), the line stays
 ##   silent (its subtitle shows as always).
@@ -111,6 +112,17 @@ static func start_engine(tuning: CommentaryConfig) -> SpeechEngine:
 		return null
 	print("Commentary voice: %s with the voice %s (a computer voice, not the commentator's)." % [folder.path_join(SpeechEngine.PROGRAM), tuning.voice_name])
 	return speech
+
+
+## The race's sailors' names on their own ("Hana."), made first in the background: his most said line
+## is a name alone, and it is short, so it has the least time to wait for its sound.
+func warm_up_names(names: PackedStringArray) -> void:
+	var first: PackedStringArray = PackedStringArray()
+	for name_said: String in names:
+		if name_said != "":
+			first.append(name_said.left(1).to_upper() + name_said.substr(1) + ".")
+	first.append_array(_warm_up)
+	_warm_up = first
 
 
 ## The voice on or off (the subtitles stay as they are).

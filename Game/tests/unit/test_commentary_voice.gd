@@ -257,6 +257,12 @@ func test_the_warm_up_makes_one_line_at_a_time_when_nothing_waits() -> void:
 	assert_eq(_speech.asked.size(), 2, "then the next")
 
 
+func test_the_race_names_alone_are_made_first() -> void:
+	_voice._warm_up = PackedStringArray(["Here we go."])
+	_voice.warm_up_names(PackedStringArray(["Hana", "", "noor"]))
+	assert_eq(_voice._warm_up, PackedStringArray(["Hana.", "Noor.", "Here we go."]), "as the director says them, before the bank's lines")
+
+
 # ---------------------------------------------------------------- the director waits for the voice
 
 func test_the_director_waits_for_a_voice_slower_than_him() -> void:

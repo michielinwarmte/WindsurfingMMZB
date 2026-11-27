@@ -158,6 +158,8 @@ func _physics_process(delta: float) -> void:
 	if runner.race != _race:
 		_race = runner.race
 		_learn_the_boards()
+		if voice != null:
+			voice.warm_up_names(_names)
 	_look_left_s -= delta
 	if _look_left_s > 0.0:
 		return
