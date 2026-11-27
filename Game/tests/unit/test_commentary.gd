@@ -13,8 +13,8 @@ const ORANGE: Color = Color(0.95, 0.55, 0.1)
 
 func test_the_real_bank_loads_without_a_problem() -> void:
 	var bank: CommentaryBank = CommentaryBank.load_file()
-	assert_eq(bank.problems, PackedStringArray(), "every line of the starter bank keeps the contract")
-	assert_eq(bank.size(), 76, "the starter bank's 76 lines")
+	assert_eq(bank.problems, PackedStringArray(), "every line of the bank keeps the contract")
+	assert_gt(bank.size(), 300, "the bank judged from the replays (340 lines on 27 November 2026; the starter bank had 76)")
 	assert_eq(CommentaryBank.MOMENTS.size(), 42, "the 42 moments of BANK_FORMAT.md (35 of the race, 7 of an event week)")
 	var text: String = FileAccess.get_file_as_string(CommentaryBank.PATH)
 	var data: Dictionary = JSON.parse_string(text)

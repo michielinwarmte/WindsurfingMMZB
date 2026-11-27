@@ -1,111 +1,125 @@
 {
  "format": 1,
  "made": "2026-11-27",
- "source": "starter bank: picked by hand from the replay of Men's Elimination 7, World Cup Fuerteventura 2026 (Slalom-X)",
+ "source": "World Cup Fuerteventura 2026, Slalom-X: the 11 heat replays (judged by hand, 27 November 2026) and the starter lines of Men's Elimination 7",
  "moments": {
-  "after_race": {
-   "lines": 3
-  },
-  "airtime": {
-   "lines": 1
-  },
-  "camera": {
-   "lines": 5
-  },
-  "chase": {
-   "lines": 5
-  },
-  "fall": {
-   "lines": 2
-  },
-  "fight": {
-   "lines": 4
-  },
-  "finish_place": {
-   "lines": 3
-  },
-  "finish_win": {
-   "lines": 2
-  },
-  "form": {
-   "lines": 1
-  },
-  "gybe_bad": {
-   "lines": 1
-  },
-  "gybe_good": {
-   "lines": 2
-  },
-  "gybe_safe": {
-   "lines": 3
-  },
-  "identify": {
-   "lines": 6
-  },
-  "lead_change": {
-   "lines": 2
-  },
-  "leader": {
-   "lines": 6
-  },
-  "mark_approach": {
-   "lines": 3
-  },
-  "near_miss": {
-   "lines": 1
-  },
-  "photo_finish": {
-   "lines": 1
-  },
   "pre_start": {
-   "lines": 3
+   "lines": 9
   },
-  "rundown": {
-   "lines": 6
+  "start_gun": {
+   "lines": 2
   },
-  "speed": {
-   "lines": 8
+  "start_good": {
+   "lines": 4
   },
   "start_bad": {
    "lines": 1
   },
-  "start_good": {
-   "lines": 1
+  "identify": {
+   "lines": 20
   },
-  "start_gun": {
-   "lines": 1
+  "speed": {
+   "lines": 26
   },
-  "tactics": {
+  "leader": {
+   "lines": 25
+  },
+  "rundown": {
+   "lines": 28
+  },
+  "lead_change": {
+   "lines": 5
+  },
+  "overtake": {
+   "lines": 4
+  },
+  "chase": {
+   "lines": 24
+  },
+  "fight": {
+   "lines": 29
+  },
+  "airtime": {
    "lines": 2
   },
-  "unsure": {
+  "tactics": {
    "lines": 3
+  },
+  "tension": {
+   "lines": 12
+  },
+  "form": {
+   "lines": 9
+  },
+  "conditions": {
+   "lines": 7
+  },
+  "mark_approach": {
+   "lines": 20
+  },
+  "gybe_good": {
+   "lines": 12
+  },
+  "gybe_safe": {
+   "lines": 14
+  },
+  "gybe_bad": {
+   "lines": 8
+  },
+  "fall": {
+   "lines": 6
+  },
+  "near_miss": {
+   "lines": 4
+  },
+  "trouble": {
+   "lines": 12
+  },
+  "wow": {
+   "lines": 3
+  },
+  "oh_no": {
+   "lines": 1
+  },
+  "last_leg": {
+   "lines": 1
+  },
+  "finish_win": {
+   "lines": 2
+  },
+  "finish_place": {
+   "lines": 8
+  },
+  "photo_finish": {
+   "lines": 1
+  },
+  "after_race": {
+   "lines": 15
+  },
+  "camera": {
+   "lines": 7
+  },
+  "unsure": {
+   "lines": 14
+  },
+  "final_win": {
+   "lines": 1
+  },
+  "event_win": {
+   "lines": 1
   }
  },
  "lines": [
   {
-   "id": "S0001",
+   "id": "LCC9A112",
    "moment": "pre_start",
-   "text": "All lined up. Super spread.",
+   "text": "Let's get ready.",
    "slots": [],
    "level": 1,
-   "seconds": 2.1,
-   "count": 1,
-   "needs": [
-    "camera_wide"
-   ],
-   "src": "2FJY7lpVYDA@18.6"
-  },
-  {
-   "id": "S0002",
-   "moment": "pre_start",
-   "text": "Tight line down the pin end.",
-   "slots": [],
-   "level": 1,
-   "seconds": 1.4,
-   "count": 1,
+   "seconds": 0.9,
+   "count": 3,
    "needs": [],
-   "src": "2FJY7lpVYDA@24.8"
+   "src": "CJIOFQGVrpk@55.4"
   },
   {
    "id": "S0003",
@@ -121,6 +135,100 @@
    "src": "2FJY7lpVYDA@7.5"
   },
   {
+   "id": "S0001",
+   "moment": "pre_start",
+   "text": "All lined up. Super spread.",
+   "slots": [],
+   "level": 1,
+   "seconds": 2.1,
+   "count": 1,
+   "needs": [
+    "camera_wide"
+   ],
+   "src": "2FJY7lpVYDA@18.6"
+  },
+  {
+   "id": "LB7142FB",
+   "moment": "pre_start",
+   "text": "Getting ready for this start.",
+   "slots": [],
+   "level": 1,
+   "seconds": 1.5,
+   "count": 1,
+   "needs": [],
+   "src": "dLbDV6jDm2s@48.8"
+  },
+  {
+   "id": "LB4C9EE2",
+   "moment": "pre_start",
+   "text": "Lining up.",
+   "slots": [],
+   "level": 1,
+   "seconds": 0.3,
+   "count": 1,
+   "needs": [],
+   "src": "V73vVhTTr0E@60.0"
+  },
+  {
+   "id": "L88AED5F",
+   "moment": "pre_start",
+   "text": "Okay, you better be ready because the red flag is up.",
+   "slots": [],
+   "level": 1,
+   "seconds": 4.8,
+   "count": 1,
+   "needs": [],
+   "src": "ANNFWjE6JuI@7.5"
+  },
+  {
+   "id": "S0002",
+   "moment": "pre_start",
+   "text": "Tight line down the pin end.",
+   "slots": [],
+   "level": 1,
+   "seconds": 1.4,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@24.8"
+  },
+  {
+   "id": "L6541A53",
+   "moment": "pre_start",
+   "text": "We've got {rider} in this one.",
+   "slots": [
+    "rider"
+   ],
+   "level": 1,
+   "seconds": 1.9,
+   "count": 1,
+   "needs": [],
+   "src": "P6iCS8-o0B8@8.4"
+  },
+  {
+   "id": "L1289C5B",
+   "moment": "pre_start",
+   "text": "We've got {rider} in this.",
+   "slots": [
+    "rider"
+   ],
+   "level": 1,
+   "seconds": 1.1,
+   "count": 1,
+   "needs": [],
+   "src": "dLbDV6jDm2s@24.4"
+  },
+  {
+   "id": "L651EBE8",
+   "moment": "start_gun",
+   "text": "A clean start.",
+   "slots": [],
+   "level": 3,
+   "seconds": 0.7,
+   "count": 1,
+   "needs": [],
+   "src": "ANNFWjE6JuI@67.0"
+  },
+  {
    "id": "S0004",
    "moment": "start_gun",
    "text": "Here we go. Look at that.",
@@ -130,6 +238,17 @@
    "count": 1,
    "needs": [],
    "src": "2FJY7lpVYDA@16.9"
+  },
+  {
+   "id": "L02CAED1",
+   "moment": "start_good",
+   "text": "But it's a great start.",
+   "slots": [],
+   "level": 2,
+   "seconds": 0.8,
+   "count": 1,
+   "needs": [],
+   "src": "V73vVhTTr0E@78.1"
   },
   {
    "id": "S0005",
@@ -145,6 +264,28 @@
    "src": "2FJY7lpVYDA@49.2"
   },
   {
+   "id": "LB7FB7B3",
+   "moment": "start_good",
+   "text": "Had a good start.",
+   "slots": [],
+   "level": 2,
+   "seconds": 0.8,
+   "count": 1,
+   "needs": [],
+   "src": "Mt9gi7qP82Q@111.6"
+  },
+  {
+   "id": "L700D09E",
+   "moment": "start_good",
+   "text": "It's a good start.",
+   "slots": [],
+   "level": 2,
+   "seconds": 0.8,
+   "count": 1,
+   "needs": [],
+   "src": "6Lp_1I03OHE@83.6"
+  },
+  {
    "id": "S0006",
    "moment": "start_bad",
    "text": "Just had a shocker in the middle.",
@@ -156,57 +297,147 @@
    "src": "2FJY7lpVYDA@47.7"
   },
   {
-   "id": "S0007",
-   "moment": "unsure",
-   "text": "It's hard to pick out where everyone is.",
-   "slots": [],
-   "level": 1,
-   "seconds": 1.7,
-   "count": 1,
-   "needs": [
-    "camera_wide"
-   ],
-   "src": "2FJY7lpVYDA@26.7"
-  },
-  {
-   "id": "S0008",
-   "moment": "camera",
-   "text": "We're just getting an overall view at the moment.",
-   "slots": [],
-   "level": 1,
-   "seconds": 2.3,
-   "count": 1,
-   "needs": [
-    "camera_wide"
-   ],
-   "src": "2FJY7lpVYDA@28.6"
-  },
-  {
-   "id": "S0009",
+   "id": "L0D43DCE",
    "moment": "identify",
-   "text": "It looks like {rider} is down here.",
+   "text": "{rider}.",
    "slots": [
     "rider"
    ],
    "level": 2,
-   "seconds": 1.9,
-   "count": 1,
+   "seconds": 0.7,
+   "count": 78,
    "needs": [],
-   "src": "2FJY7lpVYDA@51.9"
+   "src": "CJIOFQGVrpk@287.7"
   },
   {
-   "id": "S0010",
+   "id": "L39FE662",
    "moment": "identify",
-   "text": "You've got {rider} in the middle on that {brand}.",
+   "text": "We've got {rider}.",
    "slots": [
-    "rider",
-    "brand"
+    "rider"
    ],
    "level": 2,
-   "seconds": 2.0,
+   "seconds": 1.4,
+   "count": 8,
+   "needs": [],
+   "src": "ujNLUgITjpg@107.2"
+  },
+  {
+   "id": "LCEB23A1",
+   "moment": "identify",
+   "text": "{rider} is there.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.2,
+   "count": 5,
+   "needs": [],
+   "src": "Q08jEfcMU9Q@168.2"
+  },
+  {
+   "id": "L3DC9F32",
+   "moment": "identify",
+   "text": "It is {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.4,
+   "count": 4,
+   "needs": [],
+   "src": "Q08jEfcMU9Q@83.9"
+  },
+  {
+   "id": "LA105A08",
+   "moment": "identify",
+   "text": "It's {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 1,
+   "seconds": 1.0,
+   "count": 3,
+   "needs": [],
+   "src": "P6iCS8-o0B8@172.8"
+  },
+  {
+   "id": "L353E0DB",
+   "moment": "identify",
+   "text": "But {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 1.8,
+   "count": 2,
+   "needs": [],
+   "src": "Mt9gi7qP82Q@275.4"
+  },
+  {
+   "id": "LF344EE7",
+   "moment": "identify",
+   "text": "It's the {national}.",
+   "slots": [
+    "national"
+   ],
+   "level": 2,
+   "seconds": 1.2,
+   "count": 2,
+   "needs": [],
+   "src": "2FJY7lpVYDA@355.8"
+  },
+  {
+   "id": "LAEC859D",
+   "moment": "identify",
+   "text": "The {national}.",
+   "slots": [
+    "national"
+   ],
+   "level": 2,
+   "seconds": 0.6,
+   "count": 2,
+   "needs": [],
+   "src": "2FJY7lpVYDA@301.6"
+  },
+  {
+   "id": "L5ABB542",
+   "moment": "identify",
+   "text": "There's {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 1.1,
+   "count": 2,
+   "needs": [],
+   "src": "2FJY7lpVYDA@165.1"
+  },
+  {
+   "id": "L5E69934",
+   "moment": "identify",
+   "text": "We've got {rider} there.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 1.6,
+   "count": 2,
+   "needs": [],
+   "src": "ANNFWjE6JuI@258.4"
+  },
+  {
+   "id": "S0014",
+   "moment": "identify",
+   "text": "But that's definitely {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 1.4,
    "count": 1,
    "needs": [],
-   "src": "2FJY7lpVYDA@72.6"
+   "src": "2FJY7lpVYDA@112.5"
   },
   {
    "id": "S0011",
@@ -236,6 +467,32 @@
    "src": "2FJY7lpVYDA@67.5"
   },
   {
+   "id": "LFF2A98E",
+   "moment": "identify",
+   "text": "There he is in view.",
+   "slots": [],
+   "level": 2,
+   "seconds": 0.8,
+   "count": 1,
+   "needs": [
+    "camera_close"
+   ],
+   "src": "2FJY7lpVYDA@326.4"
+  },
+  {
+   "id": "L2B32EC4",
+   "moment": "identify",
+   "text": "There he is.",
+   "slots": [],
+   "level": 2,
+   "seconds": 0.5,
+   "count": 1,
+   "needs": [
+    "camera_close"
+   ],
+   "src": "ANNFWjE6JuI@292.6"
+  },
+  {
    "id": "S0013",
    "moment": "identify",
    "text": "This looks like {rider}.",
@@ -249,137 +506,130 @@
    "src": "2FJY7lpVYDA@82.9"
   },
   {
-   "id": "S0014",
+   "id": "L6C51E3C",
    "moment": "identify",
-   "text": "But that's definitely {rider}.",
+   "text": "We've got {rider} as well.",
    "slots": [
     "rider"
    ],
-   "level": 3,
-   "seconds": 1.4,
-   "count": 1,
-   "needs": [],
-   "src": "2FJY7lpVYDA@112.5"
-  },
-  {
-   "id": "S0015",
-   "moment": "unsure",
-   "text": "Who's on that?",
-   "slots": [],
-   "level": 1,
-   "seconds": 1.0,
-   "count": 1,
-   "needs": [],
-   "src": "2FJY7lpVYDA@79.9"
-  },
-  {
-   "id": "S0016",
-   "moment": "unsure",
-   "text": "Is that {rider}? Can't quite see from here.",
-   "slots": [
-    "rider"
-   ],
-   "level": 2,
-   "seconds": 3.4,
-   "count": 1,
-   "needs": [
-    "camera_wide"
-   ],
-   "src": "2FJY7lpVYDA@132.9"
-  },
-  {
-   "id": "S0017",
-   "moment": "camera",
-   "text": "We're going to have to get a closer view.",
-   "slots": [],
-   "level": 2,
-   "seconds": 1.2,
-   "count": 1,
-   "needs": [
-    "camera_wide"
-   ],
-   "src": "2FJY7lpVYDA@143.5"
-  },
-  {
-   "id": "S0018",
-   "moment": "camera",
-   "text": "That's a better angle.",
-   "slots": [],
-   "level": 1,
-   "seconds": 0.7,
-   "count": 1,
-   "needs": [
-    "camera_close"
-   ],
-   "src": "2FJY7lpVYDA@163.1"
-  },
-  {
-   "id": "S0019",
-   "moment": "camera",
-   "text": "The drones are getting left behind.",
-   "slots": [],
-   "level": 2,
-   "seconds": 2.1,
-   "count": 1,
-   "needs": [],
-   "src": "2FJY7lpVYDA@280.7"
-  },
-  {
-   "id": "S0020",
-   "moment": "camera",
-   "text": "Look at the boys. They've got some serious speed. The drones can't even keep up.",
-   "slots": [],
-   "level": 2,
-   "seconds": 4.5,
-   "count": 1,
-   "needs": [],
-   "src": "2FJY7lpVYDA@283.0"
-  },
-  {
-   "id": "S0021",
-   "moment": "speed",
-   "text": "He is flying over this chop.",
-   "slots": [],
    "level": 2,
    "seconds": 1.9,
    "count": 1,
    "needs": [],
-   "src": "2FJY7lpVYDA@114.3"
+   "src": "ujNLUgITjpg@120.9"
   },
   {
-   "id": "S0022",
-   "moment": "speed",
-   "text": "He's got just such good control over the chop.",
-   "slots": [],
+   "id": "L5A585E8",
+   "moment": "identify",
+   "text": "We've got {rider} probably in the mix.",
+   "slots": [
+    "rider"
+   ],
    "level": 2,
-   "seconds": 2.5,
+   "seconds": 2.3,
    "count": 1,
    "needs": [],
-   "src": "2FJY7lpVYDA@116.4"
+   "src": "ANNFWjE6JuI@322.4"
   },
   {
-   "id": "S0023",
-   "moment": "speed",
-   "text": "He's eating up the chop.",
-   "slots": [],
+   "id": "S0010",
+   "moment": "identify",
+   "text": "You've got {rider} in the middle on that {brand}.",
+   "slots": [
+    "rider",
+    "brand"
+   ],
    "level": 2,
-   "seconds": 1.4,
+   "seconds": 2.0,
    "count": 1,
    "needs": [],
-   "src": "2FJY7lpVYDA@127.5"
+   "src": "2FJY7lpVYDA@72.6"
   },
   {
-   "id": "S0024",
+   "id": "L6B52B05",
+   "moment": "identify",
+   "text": "{rider}'s in there.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.3,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@266.0"
+  },
+  {
+   "id": "LF3206BF",
    "moment": "speed",
-   "text": "He is in the money here.",
+   "text": "He just looks so comfortable at the moment.",
+   "slots": [],
+   "level": 2,
+   "seconds": 2.8,
+   "count": 2,
+   "needs": [],
+   "src": "6Lp_1I03OHE@98.6"
+  },
+  {
+   "id": "L8FFAED9",
+   "moment": "speed",
+   "text": "{rider} is looking good.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 1.6,
+   "count": 2,
+   "needs": [],
+   "src": "CJIOFQGVrpk@231.8"
+  },
+  {
+   "id": "L0992488",
+   "moment": "speed",
+   "text": "All these guys are absolutely flying.",
    "slots": [],
    "level": 3,
-   "seconds": 1.1,
+   "seconds": 1.9,
    "count": 1,
    "needs": [
-    "podium"
+    "camera_wide"
    ],
-   "src": "2FJY7lpVYDA@119.0"
+   "src": "ujNLUgITjpg@122.9"
+  },
+  {
+   "id": "L6BBCFB9",
+   "moment": "speed",
+   "text": "Amazing speed from {rider} on that {leg} reach.",
+   "slots": [
+    "rider",
+    "leg"
+   ],
+   "level": 2,
+   "seconds": 3.9,
+   "count": 1,
+   "needs": [],
+   "src": "CJIOFQGVrpk@453.8"
+  },
+  {
+   "id": "L529C145",
+   "moment": "speed",
+   "text": "And he is flying right now.",
+   "slots": [],
+   "level": 1,
+   "seconds": 1.2,
+   "count": 1,
+   "needs": [],
+   "src": "dLbDV6jDm2s@23.1"
+  },
+  {
+   "id": "L8DB3A0E",
+   "moment": "speed",
+   "text": "But he is absolutely flying.",
+   "slots": [],
+   "level": 3,
+   "seconds": 1.9,
+   "count": 1,
+   "needs": [],
+   "src": "dLbDV6jDm2s@89.2"
   },
   {
    "id": "S0025",
@@ -395,6 +645,162 @@
    "src": "2FJY7lpVYDA@120.3"
   },
   {
+   "id": "L31F7AB1",
+   "moment": "speed",
+   "text": "He is flying over this chop.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.9,
+   "count": 1,
+   "needs": [
+    "choppy"
+   ],
+   "src": "2FJY7lpVYDA@114.3"
+  },
+  {
+   "id": "S0024",
+   "moment": "speed",
+   "text": "He is in the money here.",
+   "slots": [],
+   "level": 3,
+   "seconds": 1.1,
+   "count": 1,
+   "needs": [
+    "podium"
+   ],
+   "src": "2FJY7lpVYDA@119.0"
+  },
+  {
+   "id": "L7689501",
+   "moment": "speed",
+   "text": "He is looking very good.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.4,
+   "count": 1,
+   "needs": [],
+   "src": "Mt9gi7qP82Q@187.9"
+  },
+  {
+   "id": "L2890782",
+   "moment": "speed",
+   "text": "He is right in the game.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.4,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@122.0"
+  },
+  {
+   "id": "LCA9B182",
+   "moment": "speed",
+   "text": "He knows he's got the speed.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.4,
+   "count": 1,
+   "needs": [],
+   "src": "XQMlNVPPuaw@335.9"
+  },
+  {
+   "id": "L2C8DB24",
+   "moment": "speed",
+   "text": "He's eating up the chop.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.4,
+   "count": 1,
+   "needs": [
+    "choppy"
+   ],
+   "src": "2FJY7lpVYDA@127.5"
+  },
+  {
+   "id": "L5C6CF48",
+   "moment": "speed",
+   "text": "He's got just such good control over the chop.",
+   "slots": [],
+   "level": 2,
+   "seconds": 2.5,
+   "count": 1,
+   "needs": [
+    "choppy"
+   ],
+   "src": "2FJY7lpVYDA@116.4"
+  },
+  {
+   "id": "L9D73427",
+   "moment": "speed",
+   "text": "He's got some decent speed in {place} place.",
+   "slots": [
+    "place"
+   ],
+   "level": 3,
+   "seconds": 2.3,
+   "count": 1,
+   "needs": [],
+   "src": "ANNFWjE6JuI@249.4"
+  },
+  {
+   "id": "LE9747B7",
+   "moment": "speed",
+   "text": "He's got the speed.",
+   "slots": [],
+   "level": 1,
+   "seconds": 0.6,
+   "count": 1,
+   "needs": [],
+   "src": "dLbDV6jDm2s@36.9"
+  },
+  {
+   "id": "L4A433DE",
+   "moment": "speed",
+   "text": "He's just got the speed.",
+   "slots": [],
+   "level": 3,
+   "seconds": 1.5,
+   "count": 1,
+   "needs": [],
+   "src": "Q08jEfcMU9Q@97.1"
+  },
+  {
+   "id": "L22F42CA",
+   "moment": "speed",
+   "text": "He's looking comfortable here.",
+   "slots": [],
+   "level": 1,
+   "seconds": 1.5,
+   "count": 1,
+   "needs": [],
+   "src": "ANNFWjE6JuI@196.4"
+  },
+  {
+   "id": "LDDDBF8B",
+   "moment": "speed",
+   "text": "He's looking like he's still in control.",
+   "slots": [],
+   "level": 2,
+   "seconds": 3.0,
+   "count": 1,
+   "needs": [],
+   "src": "6Lp_1I03OHE@277.6"
+  },
+  {
+   "id": "S0042",
+   "moment": "speed",
+   "text": "He's right up there in the top five.",
+   "slots": [],
+   "level": 3,
+   "seconds": 1.8,
+   "count": 1,
+   "needs": [
+    "podium",
+    "not_leader"
+   ],
+   "src": "2FJY7lpVYDA@429.8"
+  },
+  {
    "id": "S0026",
    "moment": "speed",
    "text": "Hitting a bit of chop there on the {brand}.",
@@ -408,15 +814,222 @@
    "src": "2FJY7lpVYDA@70.6"
   },
   {
-   "id": "S0027",
+   "id": "L6CAA010",
    "moment": "speed",
-   "text": "What the hell is going on?",
-   "slots": [],
-   "level": 2,
-   "seconds": 2.2,
+   "text": "Look at the speed of the {national}.",
+   "slots": [
+    "national"
+   ],
+   "level": 4,
+   "seconds": 1.8,
    "count": 1,
    "needs": [],
-   "src": "2FJY7lpVYDA@101.8"
+   "src": "CJIOFQGVrpk@360.4"
+  },
+  {
+   "id": "L55EF78E",
+   "moment": "speed",
+   "text": "These boys are looking in such good control.",
+   "slots": [],
+   "level": 1,
+   "seconds": 2.2,
+   "count": 1,
+   "needs": [
+    "camera_wide"
+   ],
+   "src": "dLbDV6jDm2s@204.0"
+  },
+  {
+   "id": "L52C2C7B",
+   "moment": "speed",
+   "text": "They've got some serious speed.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.5,
+   "count": 1,
+   "needs": [
+    "camera_wide"
+   ],
+   "src": "2FJY7lpVYDA@283.9"
+  },
+  {
+   "id": "L2081EDD",
+   "moment": "speed",
+   "text": "{rider} is right in the game here.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 3.4,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@203.0"
+  },
+  {
+   "id": "L4AA26E6",
+   "moment": "speed",
+   "text": "{rider} looking comfortable.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.5,
+   "count": 1,
+   "needs": [],
+   "src": "P6iCS8-o0B8@245.2"
+  },
+  {
+   "id": "L61043A9",
+   "moment": "leader",
+   "text": "But out in front.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.3,
+   "count": 6,
+   "needs": [],
+   "src": "Q08jEfcMU9Q@92.2"
+  },
+  {
+   "id": "L4874044",
+   "moment": "leader",
+   "text": "But out in the lead.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.4,
+   "count": 2,
+   "needs": [],
+   "src": "2FJY7lpVYDA@353.0"
+  },
+  {
+   "id": "L2B3AD42",
+   "moment": "leader",
+   "text": "He's going to control this.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.2,
+   "count": 2,
+   "needs": [
+    "leader"
+   ],
+   "src": "V73vVhTTr0E@237.3"
+  },
+  {
+   "id": "LCBD4000",
+   "moment": "leader",
+   "text": "But at the front.",
+   "slots": [],
+   "level": 3,
+   "seconds": 0.9,
+   "count": 1,
+   "needs": [],
+   "src": "CJIOFQGVrpk@346.2"
+  },
+  {
+   "id": "L58916F1",
+   "moment": "leader",
+   "text": "But look who is in the lead.",
+   "slots": [],
+   "level": 4,
+   "seconds": 1.8,
+   "count": 1,
+   "needs": [],
+   "src": "CJIOFQGVrpk@245.6"
+  },
+  {
+   "id": "LB3F8713",
+   "moment": "leader",
+   "text": "But look who is out in front.",
+   "slots": [],
+   "level": 2,
+   "seconds": 2.6,
+   "count": 1,
+   "needs": [],
+   "src": "ANNFWjE6JuI@179.6"
+  },
+  {
+   "id": "LFE5DB43",
+   "moment": "leader",
+   "text": "But out in front is definitely the {national}.",
+   "slots": [
+    "national"
+   ],
+   "level": 2,
+   "seconds": 2.6,
+   "count": 1,
+   "needs": [],
+   "src": "ANNFWjE6JuI@280.4"
+  },
+  {
+   "id": "L4897315",
+   "moment": "leader",
+   "text": "But out in front, {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 2.9,
+   "count": 1,
+   "needs": [],
+   "src": "ANNFWjE6JuI@371.0"
+  },
+  {
+   "id": "L32562AA",
+   "moment": "leader",
+   "text": "But {rider} is still leading this.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 1.9,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@287.6"
+  },
+  {
+   "id": "LF66893D",
+   "moment": "leader",
+   "text": "It's all going on but at the front of the fleet it is {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 4.0,
+   "count": 1,
+   "needs": [],
+   "src": "Q08jEfcMU9Q@232.0"
+  },
+  {
+   "id": "LD0B173A",
+   "moment": "leader",
+   "text": "Keep your eye at the front.",
+   "slots": [],
+   "level": 3,
+   "seconds": 0.9,
+   "count": 1,
+   "needs": [],
+   "src": "ujNLUgITjpg@194.3"
+  },
+  {
+   "id": "L4770D78",
+   "moment": "leader",
+   "text": "Leading the pack.",
+   "slots": [],
+   "level": 3,
+   "seconds": 0.9,
+   "count": 1,
+   "needs": [],
+   "src": "CJIOFQGVrpk@289.3"
+  },
+  {
+   "id": "LBBD306F",
+   "moment": "leader",
+   "text": "Leading this race.",
+   "slots": [],
+   "level": 3,
+   "seconds": 0.9,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@248.1"
   },
   {
    "id": "S0028",
@@ -430,47 +1043,6 @@
     "leader"
    ],
    "src": "2FJY7lpVYDA@248.1"
-  },
-  {
-   "id": "S0029",
-   "moment": "leader",
-   "text": "But {rider} is still leading this.",
-   "slots": [
-    "rider"
-   ],
-   "level": 3,
-   "seconds": 1.9,
-   "count": 1,
-   "needs": [
-    "leader"
-   ],
-   "src": "2FJY7lpVYDA@287.6"
-  },
-  {
-   "id": "S0030",
-   "moment": "leader",
-   "text": "But out in the lead.",
-   "slots": [],
-   "level": 2,
-   "seconds": 1.4,
-   "count": 1,
-   "needs": [
-    "leader"
-   ],
-   "src": "2FJY7lpVYDA@353.0"
-  },
-  {
-   "id": "S0031",
-   "moment": "leader",
-   "text": "Out in front.",
-   "slots": [],
-   "level": 2,
-   "seconds": 1.0,
-   "count": 1,
-   "needs": [
-    "leader"
-   ],
-   "src": "2FJY7lpVYDA@481.3"
   },
   {
    "id": "S0032",
@@ -501,33 +1073,195 @@
    "src": "2FJY7lpVYDA@253.8"
   },
   {
-   "id": "S0034",
-   "moment": "lead_change",
-   "text": "No. No. It's {rider} that's now taking the lead.",
+   "id": "L18CCE1F",
+   "moment": "leader",
+   "text": "Out in front though, the {national}.",
+   "slots": [
+    "national"
+   ],
+   "level": 2,
+   "seconds": 1.9,
+   "count": 1,
+   "needs": [],
+   "src": "Q08jEfcMU9Q@132.3"
+  },
+  {
+   "id": "LC706093",
+   "moment": "leader",
+   "text": "Out in front.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.0,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@481.3"
+  },
+  {
+   "id": "L2D174EA",
+   "moment": "leader",
+   "text": "Out in the lead though is {rider}.",
    "slots": [
     "rider"
    ],
-   "level": 3,
-   "seconds": 2.7,
+   "level": 2,
+   "seconds": 1.6,
+   "count": 1,
+   "needs": [],
+   "src": "P6iCS8-o0B8@238.8"
+  },
+  {
+   "id": "L55E7BE4",
+   "moment": "leader",
+   "text": "Right at the front with so much room.",
+   "slots": [],
+   "level": 2,
+   "seconds": 2.6,
+   "count": 1,
+   "needs": [
+    "big_lead"
+   ],
+   "src": "Q08jEfcMU9Q@173.5"
+  },
+  {
+   "id": "LD6C251E",
+   "moment": "leader",
+   "text": "So, {rider} leading.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.4,
+   "count": 1,
+   "needs": [],
+   "src": "Mt9gi7qP82Q@191.3"
+  },
+  {
+   "id": "L67A992E",
+   "moment": "leader",
+   "text": "We've got {rider} ahead.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 3.1,
    "count": 1,
    "needs": [
     "leader"
    ],
-   "src": "2FJY7lpVYDA@289.6"
+   "src": "ANNFWjE6JuI@391.9"
   },
   {
-   "id": "S0035",
-   "moment": "lead_change",
-   "text": "He did well to hold him off all the way down.",
-   "slots": [],
+   "id": "LA186D03",
+   "moment": "leader",
+   "text": "{rider} has so much room.",
+   "slots": [
+    "rider"
+   ],
    "level": 3,
-   "seconds": 2.3,
+   "seconds": 2.5,
+   "count": 1,
+   "needs": [
+    "big_lead"
+   ],
+   "src": "Q08jEfcMU9Q@184.8"
+  },
+  {
+   "id": "L021DAB9",
+   "moment": "leader",
+   "text": "{rider} is extending the lead at the front.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 3.2,
+   "count": 1,
+   "needs": [
+    "big_lead"
+   ],
+   "src": "ANNFWjE6JuI@416.6"
+  },
+  {
+   "id": "L97EF974",
+   "moment": "leader",
+   "text": "{rider} is leading the pack away.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 2.4,
    "count": 1,
    "needs": [],
-   "src": "2FJY7lpVYDA@292.6"
+   "src": "CJIOFQGVrpk@294.1"
   },
   {
-   "id": "S0036",
+   "id": "L9F45C09",
+   "moment": "rundown",
+   "text": "{rider} in {place}.",
+   "slots": [
+    "rider",
+    "place"
+   ],
+   "level": 2,
+   "seconds": 1.2,
+   "count": 12,
+   "needs": [],
+   "src": "ANNFWjE6JuI@303.0"
+  },
+  {
+   "id": "LA3F1E97",
+   "moment": "rundown",
+   "text": "And {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.4,
+   "count": 5,
+   "needs": [],
+   "src": "P6iCS8-o0B8@320.6"
+  },
+  {
+   "id": "L468FD7F",
+   "moment": "rundown",
+   "text": "Then {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.1,
+   "count": 4,
+   "needs": [],
+   "src": "ujNLUgITjpg@157.3"
+  },
+  {
+   "id": "LE994B35",
+   "moment": "rundown",
+   "text": "And then {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.3,
+   "count": 2,
+   "needs": [],
+   "src": "dLbDV6jDm2s@259.0"
+  },
+  {
+   "id": "L76B11B6",
+   "moment": "rundown",
+   "text": "Looks like {rider} in {place}.",
+   "slots": [
+    "rider",
+    "place"
+   ],
+   "level": 3,
+   "seconds": 1.7,
+   "count": 2,
+   "needs": [],
+   "src": "ANNFWjE6JuI@158.1"
+  },
+  {
+   "id": "LAD36F6B",
    "moment": "rundown",
    "text": "So {rider} in {place}.",
    "slots": [
@@ -536,12 +1270,110 @@
    ],
    "level": 2,
    "seconds": 1.6,
-   "count": 1,
+   "count": 2,
    "needs": [],
    "src": "2FJY7lpVYDA@312.6"
   },
   {
-   "id": "S0037",
+   "id": "L2F6A330",
+   "moment": "rundown",
+   "text": "{rider} in {place} place.",
+   "slots": [
+    "rider",
+    "place"
+   ],
+   "level": 4,
+   "seconds": 2.3,
+   "count": 2,
+   "needs": [],
+   "src": "CJIOFQGVrpk@258.8"
+  },
+  {
+   "id": "L5F7F7A7",
+   "moment": "rundown",
+   "text": "And it's {rider} who's in {place} place.",
+   "slots": [
+    "rider",
+    "place"
+   ],
+   "level": 2,
+   "seconds": 1.9,
+   "count": 1,
+   "needs": [],
+   "src": "P6iCS8-o0B8@317.0"
+  },
+  {
+   "id": "L30CE3E6",
+   "moment": "rundown",
+   "text": "And then {rider} a little bit further back.",
+   "slots": [
+    "rider"
+   ],
+   "level": 1,
+   "seconds": 2.9,
+   "count": 1,
+   "needs": [
+    "not_leader"
+   ],
+   "src": "ujNLUgITjpg@337.4"
+  },
+  {
+   "id": "L4466E29",
+   "moment": "rundown",
+   "text": "And {rider} in {place} place.",
+   "slots": [
+    "rider",
+    "place"
+   ],
+   "level": 4,
+   "seconds": 2.5,
+   "count": 1,
+   "needs": [],
+   "src": "Mt9gi7qP82Q@263.2"
+  },
+  {
+   "id": "L067EF23",
+   "moment": "rundown",
+   "text": "And {rider} solid in {place}.",
+   "slots": [
+    "rider",
+    "place"
+   ],
+   "level": 2,
+   "seconds": 3.0,
+   "count": 1,
+   "needs": [],
+   "src": "ujNLUgITjpg@273.7"
+  },
+  {
+   "id": "LCE6849F",
+   "moment": "rundown",
+   "text": "He's sitting in {place} place.",
+   "slots": [
+    "place"
+   ],
+   "level": 1,
+   "seconds": 1.3,
+   "count": 1,
+   "needs": [],
+   "src": "V73vVhTTr0E@37.7"
+  },
+  {
+   "id": "L0721698",
+   "moment": "rundown",
+   "text": "It looks like {rider} in {place} place.",
+   "slots": [
+    "rider",
+    "place"
+   ],
+   "level": 2,
+   "seconds": 2.3,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@129.0"
+  },
+  {
+   "id": "L17299EC",
    "moment": "rundown",
    "text": "Then it looks like {rider}.",
    "slots": [
@@ -550,10 +1382,21 @@
    "level": 2,
    "seconds": 1.5,
    "count": 1,
-   "needs": [
-    "not_leader"
-   ],
+   "needs": [],
    "src": "2FJY7lpVYDA@315.6"
+  },
+  {
+   "id": "L7106A57",
+   "moment": "rundown",
+   "text": "Then there's {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 2.1,
+   "count": 1,
+   "needs": [],
+   "src": "ujNLUgITjpg@161.0"
   },
   {
    "id": "S0038",
@@ -571,21 +1414,7 @@
    "src": "2FJY7lpVYDA@341.3"
   },
   {
-   "id": "S0039",
-   "moment": "rundown",
-   "text": "{rider} in {place} place.",
-   "slots": [
-    "rider",
-    "place"
-   ],
-   "level": 2,
-   "seconds": 2.2,
-   "count": 1,
-   "needs": [],
-   "src": "2FJY7lpVYDA@336.4"
-  },
-  {
-   "id": "S0040",
+   "id": "LA3FA084",
    "moment": "rundown",
    "text": "Then {rider} in {place} place.",
    "slots": [
@@ -595,10 +1424,157 @@
    "level": 4,
    "seconds": 2.3,
    "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@425.2"
+  },
+  {
+   "id": "L3A48F5A",
+   "moment": "rundown",
+   "text": "We've got {rider} a little bit further back.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 2.0,
+   "count": 1,
    "needs": [
     "not_leader"
    ],
-   "src": "2FJY7lpVYDA@425.2"
+   "src": "CJIOFQGVrpk@243.4"
+  },
+  {
+   "id": "L920C8F6",
+   "moment": "rundown",
+   "text": "We've got {rider} further back.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 2.2,
+   "count": 1,
+   "needs": [
+    "not_leader"
+   ],
+   "src": "ANNFWjE6JuI@273.2"
+  },
+  {
+   "id": "LBB7704D",
+   "moment": "rundown",
+   "text": "We've got {rider} in {place}.",
+   "slots": [
+    "rider",
+    "place"
+   ],
+   "level": 2,
+   "seconds": 1.8,
+   "count": 1,
+   "needs": [],
+   "src": "ujNLUgITjpg@209.4"
+  },
+  {
+   "id": "LDD02CC8",
+   "moment": "rundown",
+   "text": "{rider} a bit further back with {rider2}.",
+   "slots": [
+    "rider",
+    "rider2"
+   ],
+   "level": 2,
+   "seconds": 3.1,
+   "count": 1,
+   "needs": [
+    "pair",
+    "not_leader"
+   ],
+   "src": "dLbDV6jDm2s@110.4"
+  },
+  {
+   "id": "L5B268C1",
+   "moment": "rundown",
+   "text": "{rider} a little bit further back.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.7,
+   "count": 1,
+   "needs": [
+    "not_leader"
+   ],
+   "src": "Mt9gi7qP82Q@138.5"
+  },
+  {
+   "id": "L2A19E8C",
+   "moment": "rundown",
+   "text": "{rider} further back now.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 2.2,
+   "count": 1,
+   "needs": [
+    "not_leader"
+   ],
+   "src": "Q08jEfcMU9Q@87.8"
+  },
+  {
+   "id": "LBEF153E",
+   "moment": "rundown",
+   "text": "{rider} further back.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.6,
+   "count": 1,
+   "needs": [
+    "not_leader"
+   ],
+   "src": "Mt9gi7qP82Q@154.8"
+  },
+  {
+   "id": "L1E57B86",
+   "moment": "rundown",
+   "text": "{rider} is a bit further back.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.7,
+   "count": 1,
+   "needs": [
+    "not_leader"
+   ],
+   "src": "ANNFWjE6JuI@177.7"
+  },
+  {
+   "id": "L4E86162",
+   "moment": "rundown",
+   "text": "{rider} is in {place}.",
+   "slots": [
+    "rider",
+    "place"
+   ],
+   "level": 3,
+   "seconds": 1.1,
+   "count": 1,
+   "needs": [],
+   "src": "CJIOFQGVrpk@265.2"
+  },
+  {
+   "id": "L1F4205F",
+   "moment": "rundown",
+   "text": "{rider} solid in {place}.",
+   "slots": [
+    "rider",
+    "place"
+   ],
+   "level": 2,
+   "seconds": 1.6,
+   "count": 1,
+   "needs": [],
+   "src": "Mt9gi7qP82Q@211.9"
   },
   {
    "id": "S0041",
@@ -616,61 +1592,144 @@
    "src": "2FJY7lpVYDA@266.0"
   },
   {
-   "id": "S0042",
-   "moment": "speed",
-   "text": "He's right up there in the top five.",
+   "id": "S0035",
+   "moment": "lead_change",
+   "text": "He did well to hold him off all the way down.",
    "slots": [],
    "level": 3,
+   "seconds": 2.3,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@292.6"
+  },
+  {
+   "id": "L7FD5E82",
+   "moment": "lead_change",
+   "text": "It's {rider} that's now taking the lead.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
    "seconds": 1.8,
    "count": 1,
-   "needs": [
-    "podium",
-    "not_leader"
-   ],
-   "src": "2FJY7lpVYDA@429.8"
+   "needs": [],
+   "src": "2FJY7lpVYDA@290.6"
   },
   {
-   "id": "S0043",
-   "moment": "chase",
-   "text": "But he's got {rider} chasing him down.",
-   "slots": [
-    "rider"
-   ],
-   "level": 2,
-   "seconds": 2.1,
-   "count": 1,
-   "needs": [
-    "close"
-   ],
-   "src": "2FJY7lpVYDA@259.4"
-  },
-  {
-   "id": "S0044",
-   "moment": "chase",
-   "text": "He is making a bid for this.",
-   "slots": [],
-   "level": 2,
-   "seconds": 1.4,
-   "count": 1,
-   "needs": [
-    "not_leader"
-   ],
-   "src": "2FJY7lpVYDA@201.3"
-  },
-  {
-   "id": "S0045",
-   "moment": "chase",
-   "text": "{rider} though putting the hammer down.",
+   "id": "S0034",
+   "moment": "lead_change",
+   "text": "No. No. It's {rider} that's now taking the lead.",
    "slots": [
     "rider"
    ],
    "level": 3,
-   "seconds": 2.2,
+   "seconds": 2.7,
    "count": 1,
    "needs": [
-    "not_leader"
+    "leader"
    ],
-   "src": "2FJY7lpVYDA@438.8"
+   "src": "2FJY7lpVYDA@289.6"
+  },
+  {
+   "id": "L4591D34",
+   "moment": "lead_change",
+   "text": "Straight into the lead.",
+   "slots": [],
+   "level": 3,
+   "seconds": 0.9,
+   "count": 1,
+   "needs": [],
+   "src": "Mt9gi7qP82Q@256.3"
+  },
+  {
+   "id": "L7393BA4",
+   "moment": "lead_change",
+   "text": "What a gybe to go into the lead.",
+   "slots": [],
+   "level": 3,
+   "seconds": 2.3,
+   "count": 1,
+   "needs": [],
+   "src": "6Lp_1I03OHE@156.1"
+  },
+  {
+   "id": "LB66980C",
+   "moment": "overtake",
+   "text": "And he's got rolled by {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 1,
+   "seconds": 2.0,
+   "count": 1,
+   "needs": [],
+   "src": "Q08jEfcMU9Q@48.6"
+  },
+  {
+   "id": "LF2CB0C1",
+   "moment": "overtake",
+   "text": "Then there's a {brand} coming through.",
+   "slots": [
+    "brand"
+   ],
+   "level": 2,
+   "seconds": 1.3,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@67.5"
+  },
+  {
+   "id": "L60982B9",
+   "moment": "overtake",
+   "text": "Up into {place} place.",
+   "slots": [
+    "place"
+   ],
+   "level": 3,
+   "seconds": 1.1,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@419.9"
+  },
+  {
+   "id": "LD0B603A",
+   "moment": "overtake",
+   "text": "{rider}'s up into {place} now.",
+   "slots": [
+    "rider",
+    "place"
+   ],
+   "level": 2,
+   "seconds": 1.3,
+   "count": 1,
+   "needs": [],
+   "src": "Q08jEfcMU9Q@206.0"
+  },
+  {
+   "id": "LED1796A",
+   "moment": "chase",
+   "text": "But here comes {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 1.3,
+   "count": 3,
+   "needs": [],
+   "src": "V73vVhTTr0E@103.8"
+  },
+  {
+   "id": "L80E3582",
+   "moment": "chase",
+   "text": "And here comes {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 4,
+   "seconds": 1.5,
+   "count": 1,
+   "needs": [],
+   "src": "CJIOFQGVrpk@355.6"
   },
   {
    "id": "S0046",
@@ -686,7 +1745,83 @@
    "src": "2FJY7lpVYDA@452.1"
   },
   {
-   "id": "S0047",
+   "id": "L71ED5FC",
+   "moment": "chase",
+   "text": "And {rider} coming back into it.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 1.8,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@377.0"
+  },
+  {
+   "id": "LC1E09DC",
+   "moment": "chase",
+   "text": "And {rider} is doing the comeback of all comebacks.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 3.5,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@416.2"
+  },
+  {
+   "id": "L42DAB1F",
+   "moment": "chase",
+   "text": "And {rider} is right back in it.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 2.5,
+   "count": 1,
+   "needs": [],
+   "src": "dLbDV6jDm2s@186.4"
+  },
+  {
+   "id": "LE804F7C",
+   "moment": "chase",
+   "text": "And {rider} is throwing the hammer down.",
+   "slots": [
+    "rider"
+   ],
+   "level": 4,
+   "seconds": 2.6,
+   "count": 1,
+   "needs": [],
+   "src": "CJIOFQGVrpk@362.6"
+  },
+  {
+   "id": "LAF9F34F",
+   "moment": "chase",
+   "text": "But he is absolutely charging right now.",
+   "slots": [],
+   "level": 2,
+   "seconds": 3.4,
+   "count": 1,
+   "needs": [],
+   "src": "XQMlNVPPuaw@198.6"
+  },
+  {
+   "id": "L5F621C6",
+   "moment": "chase",
+   "text": "But he's got {rider} chasing him down.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 2.1,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@259.4"
+  },
+  {
+   "id": "L15EB080",
    "moment": "chase",
    "text": "But there you can see {rider} closing in a little bit further back.",
    "slots": [
@@ -695,24 +1830,355 @@
    "level": 2,
    "seconds": 4.8,
    "count": 1,
-   "needs": [
-    "not_leader"
-   ],
+   "needs": [],
    "src": "2FJY7lpVYDA@295.0"
   },
   {
-   "id": "S0048",
+   "id": "LFE40E2D",
+   "moment": "chase",
+   "text": "But {rider} is on the hunt.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 2.1,
+   "count": 1,
+   "needs": [],
+   "src": "XQMlNVPPuaw@98.6"
+  },
+  {
+   "id": "L006F7D4",
+   "moment": "chase",
+   "text": "But {rider} putting the hammer down.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 2.1,
+   "count": 1,
+   "needs": [],
+   "src": "V73vVhTTr0E@86.6"
+  },
+  {
+   "id": "L02DEF7B",
+   "moment": "chase",
+   "text": "He is holding on as {rider} is really putting the hammer down.",
+   "slots": [
+    "rider"
+   ],
+   "level": 4,
+   "seconds": 3.8,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@448.3"
+  },
+  {
+   "id": "LB86546D",
+   "moment": "chase",
+   "text": "He is making a bid for this.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.4,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@201.3"
+  },
+  {
+   "id": "LBBEC6CE",
+   "moment": "chase",
+   "text": "He's got {rider} behind him.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.5,
+   "count": 1,
+   "needs": [],
+   "src": "P6iCS8-o0B8@211.9"
+  },
+  {
+   "id": "L8E4784F",
+   "moment": "chase",
+   "text": "It's {rider} pushing through.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.4,
+   "count": 1,
+   "needs": [],
+   "src": "P6iCS8-o0B8@232.8"
+  },
+  {
+   "id": "L6701DE3",
+   "moment": "chase",
+   "text": "Needs to get going because {rider} is coming quick.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 2.8,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@464.4"
+  },
+  {
+   "id": "L044FAD2",
+   "moment": "chase",
+   "text": "We've got {rider}, who's on a charge right now.",
+   "slots": [
+    "rider"
+   ],
+   "level": 1,
+   "seconds": 2.5,
+   "count": 1,
+   "needs": [],
+   "src": "XQMlNVPPuaw@28.5"
+  },
+  {
+   "id": "L1E2504C",
+   "moment": "chase",
+   "text": "What a comeback for {rider} there.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 2.1,
+   "count": 1,
+   "needs": [],
+   "src": "Mt9gi7qP82Q@266.0"
+  },
+  {
+   "id": "LC9AE3FA",
+   "moment": "chase",
+   "text": "{rider} chasing him down.",
+   "slots": [
+    "rider"
+   ],
+   "level": 1,
+   "seconds": 1.3,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@262.5"
+  },
+  {
+   "id": "L59DFD9D",
+   "moment": "chase",
+   "text": "{rider} having to fight his way back.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 2.7,
+   "count": 1,
+   "needs": [],
+   "src": "Q08jEfcMU9Q@126.7"
+  },
+  {
+   "id": "LB08A589",
+   "moment": "chase",
+   "text": "{rider} is going to want to overtake him though.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 2.4,
+   "count": 1,
+   "needs": [],
+   "src": "CJIOFQGVrpk@351.2"
+  },
+  {
+   "id": "L2573078",
+   "moment": "chase",
+   "text": "{rider} right behind him.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.7,
+   "count": 1,
+   "needs": [
+    "close"
+   ],
+   "src": "ujNLUgITjpg@234.4"
+  },
+  {
+   "id": "LAF403B9",
+   "moment": "chase",
+   "text": "{rider} though putting the hammer down.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 2.2,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@438.8"
+  },
+  {
+   "id": "L1676CBC",
    "moment": "fight",
-   "text": "Look at this. Head to head.",
+   "text": "And meanwhile a little bit further back {rider} battling with {rider2} for that {place} place.",
+   "slots": [
+    "rider",
+    "rider2",
+    "place"
+   ],
+   "level": 2,
+   "seconds": 6.6,
+   "count": 1,
+   "needs": [
+    "pair"
+   ],
+   "src": "dLbDV6jDm2s@237.2"
+  },
+  {
+   "id": "L3581465",
+   "moment": "fight",
+   "text": "And now he's fighting to get back in this.",
+   "slots": [],
+   "level": 2,
+   "seconds": 2.1,
+   "count": 1,
+   "needs": [],
+   "src": "P6iCS8-o0B8@129.0"
+  },
+  {
+   "id": "L8050C81",
+   "moment": "fight",
+   "text": "And then {rider} is fighting back.",
+   "slots": [
+    "rider"
+   ],
+   "level": 1,
+   "seconds": 3.2,
+   "count": 1,
+   "needs": [],
+   "src": "P6iCS8-o0B8@48.9"
+  },
+  {
+   "id": "LF868245",
+   "moment": "fight",
+   "text": "And {rider} is fighting for this as well.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 2.6,
+   "count": 1,
+   "needs": [],
+   "src": "P6iCS8-o0B8@135.4"
+  },
+  {
+   "id": "LC660A9C",
+   "moment": "fight",
+   "text": "But {rider} is fighting back.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 1.2,
+   "count": 1,
+   "needs": [],
+   "src": "dLbDV6jDm2s@148.4"
+  },
+  {
+   "id": "L9D6C2AD",
+   "moment": "fight",
+   "text": "But {rider} is fighting his way back.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 2.5,
+   "count": 1,
+   "needs": [],
+   "src": "Q08jEfcMU9Q@181.5"
+  },
+  {
+   "id": "LD7D7132",
+   "moment": "fight",
+   "text": "Fighting his way back.",
    "slots": [],
    "level": 4,
    "seconds": 1.1,
    "count": 1,
-   "needs": [
-    "close",
-    "pair"
+   "needs": [],
+   "src": "V73vVhTTr0E@206.4"
+  },
+  {
+   "id": "L48C0791",
+   "moment": "fight",
+   "text": "Fighting with {rider}.",
+   "slots": [
+    "rider"
    ],
-   "src": "2FJY7lpVYDA@498.5"
+   "level": 2,
+   "seconds": 1.1,
+   "count": 1,
+   "needs": [],
+   "src": "6Lp_1I03OHE@144.9"
+  },
+  {
+   "id": "LF0B6A4F",
+   "moment": "fight",
+   "text": "He did well to hold him off all the way down.",
+   "slots": [],
+   "level": 2,
+   "seconds": 2.3,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@292.6"
+  },
+  {
+   "id": "L9A4D8D2",
+   "moment": "fight",
+   "text": "He's fighting.",
+   "slots": [],
+   "level": 1,
+   "seconds": 0.5,
+   "count": 1,
+   "needs": [],
+   "src": "6Lp_1I03OHE@129.8"
+  },
+  {
+   "id": "LA9E00C2",
+   "moment": "fight",
+   "text": "He's got a drag race with {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 1.6,
+   "count": 1,
+   "needs": [],
+   "src": "XQMlNVPPuaw@263.3"
+  },
+  {
+   "id": "L55FB322",
+   "moment": "fight",
+   "text": "Head to head.",
+   "slots": [],
+   "level": 4,
+   "seconds": 0.4,
+   "count": 1,
+   "needs": [
+    "close"
+   ],
+   "src": "2FJY7lpVYDA@499.2"
+  },
+  {
+   "id": "L7D779AC",
+   "moment": "fight",
+   "text": "Keep your eye on that battle for {place} place.",
+   "slots": [
+    "place"
+   ],
+   "level": 3,
+   "seconds": 2.1,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@478.5"
   },
   {
    "id": "S0049",
@@ -731,7 +2197,56 @@
    "src": "2FJY7lpVYDA@478.5"
   },
   {
-   "id": "S0050",
+   "id": "S0048",
+   "moment": "fight",
+   "text": "Look at this. Head to head.",
+   "slots": [],
+   "level": 4,
+   "seconds": 1.1,
+   "count": 1,
+   "needs": [
+    "close",
+    "pair"
+   ],
+   "src": "2FJY7lpVYDA@498.5"
+  },
+  {
+   "id": "LA95E8A8",
+   "moment": "fight",
+   "text": "Pushing {rider} all the way.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 2.2,
+   "count": 1,
+   "needs": [],
+   "src": "CJIOFQGVrpk@1171.2"
+  },
+  {
+   "id": "LFA83FC9",
+   "moment": "fight",
+   "text": "There's going to be a good battle here.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.4,
+   "count": 1,
+   "needs": [],
+   "src": "dLbDV6jDm2s@220.3"
+  },
+  {
+   "id": "LDE067C9",
+   "moment": "fight",
+   "text": "This is a great battle.",
+   "slots": [],
+   "level": 4,
+   "seconds": 1.2,
+   "count": 1,
+   "needs": [],
+   "src": "CJIOFQGVrpk@373.3"
+  },
+  {
+   "id": "L2DD7829",
    "moment": "fight",
    "text": "This is going to be an out and out speed battle for {rider} and {rider2}.",
    "slots": [
@@ -742,13 +2257,69 @@
    "seconds": 3.7,
    "count": 1,
    "needs": [
-    "close",
     "pair"
    ],
    "src": "2FJY7lpVYDA@472.3"
   },
   {
-   "id": "S0051",
+   "id": "L64FB2E7",
+   "moment": "fight",
+   "text": "This is not an easy battle for {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 2.1,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@488.7"
+  },
+  {
+   "id": "LE619FF7",
+   "moment": "fight",
+   "text": "This is {rider} and {rider2} fighting it out.",
+   "slots": [
+    "rider",
+    "rider2"
+   ],
+   "level": 2,
+   "seconds": 2.6,
+   "count": 1,
+   "needs": [
+    "pair"
+   ],
+   "src": "Q08jEfcMU9Q@139.6"
+  },
+  {
+   "id": "L23A9188",
+   "moment": "fight",
+   "text": "{rider} is definitely fighting back.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 1.6,
+   "count": 1,
+   "needs": [],
+   "src": "dLbDV6jDm2s@149.7"
+  },
+  {
+   "id": "LF9E97F4",
+   "moment": "fight",
+   "text": "{rider} is fighting back from underneath.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 2.8,
+   "count": 1,
+   "needs": [
+    "leeward"
+   ],
+   "src": "Q08jEfcMU9Q@69.4"
+  },
+  {
+   "id": "LC4FD87A",
    "moment": "fight",
    "text": "{rider} needs to hold off {rider2}.",
    "slots": [
@@ -759,10 +2330,80 @@
    "seconds": 2.3,
    "count": 1,
    "needs": [
-    "close",
     "pair"
    ],
    "src": "2FJY7lpVYDA@476.1"
+  },
+  {
+   "id": "LFF7EE86",
+   "moment": "fight",
+   "text": "{rider} trying to hold off {rider2}.",
+   "slots": [
+    "rider",
+    "rider2"
+   ],
+   "level": 3,
+   "seconds": 1.7,
+   "count": 1,
+   "needs": [
+    "pair"
+   ],
+   "src": "2FJY7lpVYDA@490.9"
+  },
+  {
+   "id": "L875A939",
+   "moment": "fight",
+   "text": "{rider} trying to hold off.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 1.4,
+   "count": 1,
+   "needs": [],
+   "src": "XQMlNVPPuaw@271.2"
+  },
+  {
+   "id": "L5C3286E",
+   "moment": "fight",
+   "text": "{rider} will be fighting hard for this one.",
+   "slots": [
+    "rider"
+   ],
+   "level": 1,
+   "seconds": 2.3,
+   "count": 1,
+   "needs": [],
+   "src": "ujNLUgITjpg@43.2"
+  },
+  {
+   "id": "LA279494",
+   "moment": "fight",
+   "text": "{rider}'s fighting back.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.3,
+   "count": 1,
+   "needs": [],
+   "src": "Q08jEfcMU9Q@228.3"
+  },
+  {
+   "id": "L83B9591",
+   "moment": "fight",
+   "text": "{rider}'s holding off {rider2}.",
+   "slots": [
+    "rider",
+    "rider2"
+   ],
+   "level": 2,
+   "seconds": 2.1,
+   "count": 1,
+   "needs": [
+    "pair"
+   ],
+   "src": "Q08jEfcMU9Q@229.7"
   },
   {
    "id": "S0052",
@@ -779,288 +2420,18 @@
    "src": "2FJY7lpVYDA@444.1"
   },
   {
-   "id": "S0053",
-   "moment": "mark_approach",
-   "text": "But it will be {rider} who's going to go around this mark in first place.",
-   "slots": [
-    "rider"
-   ],
-   "level": 2,
-   "seconds": 3.3,
-   "count": 1,
-   "needs": [
-    "leader"
-   ],
-   "src": "2FJY7lpVYDA@321.8"
-  },
-  {
-   "id": "S0054",
-   "moment": "mark_approach",
-   "text": "{rider}'s going to try and go in tight.",
-   "slots": [
-    "rider"
-   ],
-   "level": 3,
-   "seconds": 1.6,
-   "count": 1,
-   "needs": [
-    "close"
-   ],
-   "src": "2FJY7lpVYDA@457.6"
-  },
-  {
-   "id": "S0055",
-   "moment": "mark_approach",
-   "text": "These are tricky right now.",
-   "slots": [],
-   "level": 2,
-   "seconds": 1.2,
-   "count": 1,
-   "needs": [],
-   "src": "2FJY7lpVYDA@365.5"
-  },
-  {
-   "id": "S0056",
-   "moment": "gybe_safe",
-   "text": "Gybes first. Round safely.",
-   "slots": [],
-   "level": 2,
-   "seconds": 2.9,
-   "count": 1,
-   "needs": [
-    "leader"
-   ],
-   "src": "2FJY7lpVYDA@331.4"
-  },
-  {
-   "id": "S0057",
-   "moment": "gybe_safe",
-   "text": "So the leaders round safely.",
-   "slots": [],
-   "level": 2,
-   "seconds": 1.2,
-   "count": 1,
-   "needs": [
-    "leader"
-   ],
-   "src": "2FJY7lpVYDA@371.9"
-  },
-  {
-   "id": "S0058",
-   "moment": "gybe_safe",
-   "text": "And he does.",
-   "slots": [],
-   "level": 2,
-   "seconds": 0.5,
-   "count": 1,
-   "needs": [],
-   "src": "2FJY7lpVYDA@371.2"
-  },
-  {
-   "id": "S0059",
-   "moment": "gybe_bad",
-   "text": "A little bit of a wayward gybe.",
-   "slots": [],
-   "level": 3,
-   "seconds": 1.4,
-   "count": 1,
-   "needs": [],
-   "src": "2FJY7lpVYDA@374.6"
-  },
-  {
-   "id": "S0060",
-   "moment": "gybe_good",
-   "text": "Oh, what a gybe from {rider}.",
-   "slots": [
-    "rider"
-   ],
-   "level": 3,
-   "seconds": 2.6,
-   "count": 1,
-   "needs": [],
-   "src": "2FJY7lpVYDA@459.6"
-  },
-  {
-   "id": "S0061",
-   "moment": "gybe_good",
-   "text": "What a gybe under pressure.",
+   "id": "LE3FA78F",
+   "moment": "airtime",
+   "text": "Just going into orbit.",
    "slots": [],
    "level": 3,
    "seconds": 1.5,
    "count": 1,
-   "needs": [
-    "close"
-   ],
-   "src": "2FJY7lpVYDA@462.6"
-  },
-  {
-   "id": "S0062",
-   "moment": "near_miss",
-   "text": "Oh no. {rider} has just nearly took out {rider2}.",
-   "slots": [
-    "rider",
-    "rider2"
-   ],
-   "level": 4,
-   "seconds": 4.7,
-   "count": 1,
-   "needs": [
-    "pair"
-   ],
-   "src": "2FJY7lpVYDA@379.0"
-  },
-  {
-   "id": "S0063",
-   "moment": "fall",
-   "text": "Someone is in the drink.",
-   "slots": [],
-   "level": 2,
-   "seconds": 1.4,
-   "count": 1,
    "needs": [],
-   "src": "2FJY7lpVYDA@174.8"
+   "src": "CJIOFQGVrpk@478.6"
   },
   {
-   "id": "S0064",
-   "moment": "fall",
-   "text": "{rider}'s gone inside the water.",
-   "slots": [
-    "rider"
-   ],
-   "level": 4,
-   "seconds": 2.5,
-   "count": 1,
-   "needs": [],
-   "src": "2FJY7lpVYDA@469.7"
-  },
-  {
-   "id": "S0065",
-   "moment": "finish_win",
-   "text": "{rider} will win it.",
-   "slots": [
-    "rider"
-   ],
-   "level": 4,
-   "seconds": 1.2,
-   "count": 1,
-   "needs": [
-    "leader"
-   ],
-   "src": "2FJY7lpVYDA@500.0"
-  },
-  {
-   "id": "S0066",
-   "moment": "finish_win",
-   "text": "{rider} gets the bullet.",
-   "slots": [
-    "rider"
-   ],
-   "level": 4,
-   "seconds": 1.2,
-   "count": 1,
-   "needs": [
-    "leader"
-   ],
-   "src": "2FJY7lpVYDA@501.4"
-  },
-  {
-   "id": "S0067",
-   "moment": "photo_finish",
-   "text": "But who will get {place}?",
-   "slots": [
-    "place"
-   ],
-   "level": 4,
-   "seconds": 0.9,
-   "count": 1,
-   "needs": [
-    "close"
-   ],
-   "src": "2FJY7lpVYDA@502.7"
-  },
-  {
-   "id": "S0068",
-   "moment": "finish_place",
-   "text": "And {rider} will get the {place} place.",
-   "slots": [
-    "rider",
-    "place"
-   ],
-   "level": 3,
-   "seconds": 1.8,
-   "count": 1,
-   "needs": [
-    "not_leader"
-   ],
-   "src": "2FJY7lpVYDA@507.3"
-  },
-  {
-   "id": "S0069",
-   "moment": "finish_place",
-   "text": "{rider} has to settle for {place}.",
-   "slots": [
-    "rider",
-    "place"
-   ],
-   "level": 3,
-   "seconds": 1.6,
-   "count": 1,
-   "needs": [
-    "not_leader"
-   ],
-   "src": "2FJY7lpVYDA@509.3"
-  },
-  {
-   "id": "S0070",
-   "moment": "finish_place",
-   "text": "In {place} it will be {rider}.",
-   "slots": [
-    "place",
-    "rider"
-   ],
-   "level": 3,
-   "seconds": 2.5,
-   "count": 1,
-   "needs": [
-    "not_leader"
-   ],
-   "src": "2FJY7lpVYDA@512.7"
-  },
-  {
-   "id": "S0071",
-   "moment": "after_race",
-   "text": "Hardcore racing.",
-   "slots": [],
-   "level": 1,
-   "seconds": 1.1,
-   "count": 1,
-   "needs": [],
-   "src": "2FJY7lpVYDA@555.3"
-  },
-  {
-   "id": "S0072",
-   "moment": "after_race",
-   "text": "Absolutely ridiculous.",
-   "slots": [],
-   "level": 2,
-   "seconds": 1.2,
-   "count": 1,
-   "needs": [],
-   "src": "2FJY7lpVYDA@221.7"
-  },
-  {
-   "id": "S0073",
-   "moment": "after_race",
-   "text": "What a race he is having.",
-   "slots": [],
-   "level": 2,
-   "seconds": 1.2,
-   "count": 1,
-   "needs": [],
-   "src": "2FJY7lpVYDA@249.3"
-  },
-  {
-   "id": "S0074",
+   "id": "L5252C01",
    "moment": "tactics",
    "text": "He's got a lower line.",
    "slots": [],
@@ -1071,6 +2442,19 @@
     "leeward"
    ],
    "src": "2FJY7lpVYDA@318.6"
+  },
+  {
+   "id": "LAAD86B3",
+   "moment": "tactics",
+   "text": "Oh and he's got some dirty air there.",
+   "slots": [],
+   "level": 3,
+   "seconds": 1.6,
+   "count": 1,
+   "needs": [
+    "dirty_air"
+   ],
+   "src": "ANNFWjE6JuI@174.0"
   },
   {
    "id": "S0075",
@@ -1090,6 +2474,144 @@
    "src": "2FJY7lpVYDA@242.1"
   },
   {
+   "id": "LBF6557C",
+   "moment": "tension",
+   "text": "It's going to be sweaty.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.7,
+   "count": 3,
+   "needs": [],
+   "src": "V73vVhTTr0E@242.8"
+  },
+  {
+   "id": "L36940F2",
+   "moment": "tension",
+   "text": "It's definitely not all over.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.3,
+   "count": 2,
+   "needs": [],
+   "src": "P6iCS8-o0B8@221.4"
+  },
+  {
+   "id": "L116A072",
+   "moment": "tension",
+   "text": "It's going to come down to it.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.4,
+   "count": 2,
+   "needs": [],
+   "src": "V73vVhTTr0E@238.9"
+  },
+  {
+   "id": "LF270DBF",
+   "moment": "tension",
+   "text": "Anything can happen on these reaches.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.8,
+   "count": 1,
+   "needs": [],
+   "src": "ANNFWjE6JuI@227.9"
+  },
+  {
+   "id": "LC8F060F",
+   "moment": "tension",
+   "text": "But he's still got time.",
+   "slots": [],
+   "level": 3,
+   "seconds": 1.2,
+   "count": 1,
+   "needs": [],
+   "src": "XQMlNVPPuaw@316.6"
+  },
+  {
+   "id": "L4DEF671",
+   "moment": "tension",
+   "text": "Could he do it?",
+   "slots": [],
+   "level": 3,
+   "seconds": 0.9,
+   "count": 1,
+   "needs": [],
+   "src": "V73vVhTTr0E@259.7"
+  },
+  {
+   "id": "LFA68076",
+   "moment": "tension",
+   "text": "Just needs to keep it together.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.2,
+   "count": 1,
+   "needs": [
+    "leader"
+   ],
+   "src": "Mt9gi7qP82Q@237.8"
+  },
+  {
+   "id": "L38D1F2F",
+   "moment": "tension",
+   "text": "Needs to keep it together though.",
+   "slots": [],
+   "level": 3,
+   "seconds": 1.5,
+   "count": 1,
+   "needs": [
+    "leader"
+   ],
+   "src": "XQMlNVPPuaw@235.9"
+  },
+  {
+   "id": "LE330AAB",
+   "moment": "tension",
+   "text": "So it's far from over.",
+   "slots": [],
+   "level": 1,
+   "seconds": 1.3,
+   "count": 1,
+   "needs": [],
+   "src": "ANNFWjE6JuI@512.8"
+  },
+  {
+   "id": "L08F123E",
+   "moment": "tension",
+   "text": "So this {place} place could come down to the wire.",
+   "slots": [
+    "place"
+   ],
+   "level": 1,
+   "seconds": 2.0,
+   "count": 1,
+   "needs": [],
+   "src": "V73vVhTTr0E@173.8"
+  },
+  {
+   "id": "L288CDF8",
+   "moment": "tension",
+   "text": "This is all to play for here.",
+   "slots": [],
+   "level": 3,
+   "seconds": 1.5,
+   "count": 1,
+   "needs": [],
+   "src": "dLbDV6jDm2s@113.9"
+  },
+  {
+   "id": "LD385D68",
+   "moment": "tension",
+   "text": "What a race this is.",
+   "slots": [],
+   "level": 2,
+   "seconds": 0.9,
+   "count": 1,
+   "needs": [],
+   "src": "XQMlNVPPuaw@167.6"
+  },
+  {
    "id": "S0076",
    "moment": "form",
    "text": "And again, he loves it. He's having fun.",
@@ -1101,6 +2623,1865 @@
     "leader"
    ],
    "src": "2FJY7lpVYDA@562.7"
+  },
+  {
+   "id": "L9AF46F8",
+   "moment": "form",
+   "text": "And he looks like he means business.",
+   "slots": [],
+   "level": 1,
+   "seconds": 1.5,
+   "count": 1,
+   "needs": [],
+   "src": "XQMlNVPPuaw@50.0"
+  },
+  {
+   "id": "L1B06688",
+   "moment": "form",
+   "text": "But he's going to be feeling very confident right now.",
+   "slots": [],
+   "level": 1,
+   "seconds": 2.6,
+   "count": 1,
+   "needs": [],
+   "src": "ANNFWjE6JuI@506.5"
+  },
+  {
+   "id": "LD115302",
+   "moment": "form",
+   "text": "But {rider} is super hungry for this.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 3.0,
+   "count": 1,
+   "needs": [],
+   "src": "P6iCS8-o0B8@146.7"
+  },
+  {
+   "id": "L3D7355D",
+   "moment": "form",
+   "text": "He doesn't look like he's going to make a mistake.",
+   "slots": [],
+   "level": 2,
+   "seconds": 3.0,
+   "count": 1,
+   "needs": [
+    "leader"
+   ],
+   "src": "ANNFWjE6JuI@448.2"
+  },
+  {
+   "id": "LFF24A5F",
+   "moment": "form",
+   "text": "We've got {rider} who's on a roll.",
+   "slots": [
+    "rider"
+   ],
+   "level": 1,
+   "seconds": 1.7,
+   "count": 1,
+   "needs": [],
+   "src": "ujNLUgITjpg@31.0"
+  },
+  {
+   "id": "LD263F64",
+   "moment": "form",
+   "text": "What a race he is having.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.2,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@249.3"
+  },
+  {
+   "id": "L6AA1483",
+   "moment": "form",
+   "text": "{rider} is hungry for the win.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.5,
+   "count": 1,
+   "needs": [],
+   "src": "P6iCS8-o0B8@215.8"
+  },
+  {
+   "id": "L0B40766",
+   "moment": "form",
+   "text": "{rider} means business.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 3.0,
+   "count": 1,
+   "needs": [],
+   "src": "Q08jEfcMU9Q@253.1"
+  },
+  {
+   "id": "LE961C32",
+   "moment": "conditions",
+   "text": "It's going to be choppy.",
+   "slots": [],
+   "level": 2,
+   "seconds": 0.8,
+   "count": 2,
+   "needs": [
+    "choppy"
+   ],
+   "src": "V73vVhTTr0E@240.4"
+  },
+  {
+   "id": "LEA47DD6",
+   "moment": "conditions",
+   "text": "A little bit of swell to navigate.",
+   "slots": [],
+   "level": 3,
+   "seconds": 1.6,
+   "count": 1,
+   "needs": [
+    "choppy"
+   ],
+   "src": "ujNLUgITjpg@307.8"
+  },
+  {
+   "id": "L8160C02",
+   "moment": "conditions",
+   "text": "And as you get further out, that swell increases.",
+   "slots": [],
+   "level": 2,
+   "seconds": 2.9,
+   "count": 1,
+   "needs": [
+    "choppy"
+   ],
+   "src": "ANNFWjE6JuI@95.8"
+  },
+  {
+   "id": "LAAF5145",
+   "moment": "conditions",
+   "text": "And you've got to just find that trim in between the swell lines.",
+   "slots": [],
+   "level": 2,
+   "seconds": 4.2,
+   "count": 1,
+   "needs": [
+    "choppy"
+   ],
+   "src": "ANNFWjE6JuI@98.9"
+  },
+  {
+   "id": "L98A2CDB",
+   "moment": "conditions",
+   "text": "It's absolutely howling out there.",
+   "slots": [],
+   "level": 3,
+   "seconds": 2.3,
+   "count": 1,
+   "needs": [
+    "wind_strong"
+   ],
+   "src": "ANNFWjE6JuI@451.4"
+  },
+  {
+   "id": "LE75F059",
+   "moment": "conditions",
+   "text": "It's blowing old boots out there.",
+   "slots": [],
+   "level": 1,
+   "seconds": 2.4,
+   "count": 1,
+   "needs": [
+    "wind_strong"
+   ],
+   "src": "ANNFWjE6JuI@33.5"
+  },
+  {
+   "id": "L115F1A4",
+   "moment": "conditions",
+   "text": "The wind is absolutely cranking.",
+   "slots": [],
+   "level": 1,
+   "seconds": 2.5,
+   "count": 1,
+   "needs": [
+    "wind_strong"
+   ],
+   "src": "ANNFWjE6JuI@28.1"
+  },
+  {
+   "id": "LB831C24",
+   "moment": "mark_approach",
+   "text": "And he should get the inside line coming into this gybe mark.",
+   "slots": [],
+   "level": 2,
+   "seconds": 3.3,
+   "count": 1,
+   "needs": [],
+   "src": "Mt9gi7qP82Q@126.1"
+  },
+  {
+   "id": "LB614DC1",
+   "moment": "mark_approach",
+   "text": "And then this is the {mark} gybe mark.",
+   "slots": [
+    "mark"
+   ],
+   "level": 1,
+   "seconds": 1.9,
+   "count": 1,
+   "needs": [],
+   "src": "XQMlNVPPuaw@347.4"
+  },
+  {
+   "id": "LC2BACE9",
+   "moment": "mark_approach",
+   "text": "As he comes up to the {mark} gybe mark.",
+   "slots": [
+    "mark"
+   ],
+   "level": 2,
+   "seconds": 2.2,
+   "count": 1,
+   "needs": [],
+   "src": "Mt9gi7qP82Q@233.9"
+  },
+  {
+   "id": "L30D7DFB",
+   "moment": "mark_approach",
+   "text": "But he made it first to the mark.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.4,
+   "count": 1,
+   "needs": [
+    "leader"
+   ],
+   "src": "V73vVhTTr0E@110.6"
+  },
+  {
+   "id": "L30D72D5",
+   "moment": "mark_approach",
+   "text": "But it will be the {national} who's going to go around this mark in {place} place.",
+   "slots": [
+    "national",
+    "place"
+   ],
+   "level": 2,
+   "seconds": 3.3,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@321.8"
+  },
+  {
+   "id": "S0053",
+   "moment": "mark_approach",
+   "text": "But it will be {rider} who's going to go around this mark in first place.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 3.3,
+   "count": 1,
+   "needs": [
+    "leader"
+   ],
+   "src": "2FJY7lpVYDA@321.8"
+  },
+  {
+   "id": "L8A8C9F9",
+   "moment": "mark_approach",
+   "text": "But {rider} is looking to take the inside line here.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 3.3,
+   "count": 1,
+   "needs": [],
+   "src": "Mt9gi7qP82Q@163.2"
+  },
+  {
+   "id": "L33CEB46",
+   "moment": "mark_approach",
+   "text": "Going for the inside line.",
+   "slots": [],
+   "level": 3,
+   "seconds": 1.3,
+   "count": 1,
+   "needs": [],
+   "src": "ANNFWjE6JuI@428.5"
+  },
+  {
+   "id": "LDB6A1AF",
+   "moment": "mark_approach",
+   "text": "Just needs to make it safely round.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.5,
+   "count": 1,
+   "needs": [
+    "leader"
+   ],
+   "src": "Q08jEfcMU9Q@179.8"
+  },
+  {
+   "id": "L375CE87",
+   "moment": "mark_approach",
+   "text": "Needs a good gybe.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.0,
+   "count": 1,
+   "needs": [],
+   "src": "Mt9gi7qP82Q@205.9"
+  },
+  {
+   "id": "LE56F303",
+   "moment": "mark_approach",
+   "text": "Or will {rider} just seal it with a perfect gybe?",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 3.4,
+   "count": 1,
+   "needs": [
+    "leader"
+   ],
+   "src": "ujNLUgITjpg@263.8"
+  },
+  {
+   "id": "L1C89845",
+   "moment": "mark_approach",
+   "text": "So he's going for a better line into this gybe mark.",
+   "slots": [],
+   "level": 2,
+   "seconds": 2.1,
+   "count": 1,
+   "needs": [],
+   "src": "dLbDV6jDm2s@163.7"
+  },
+  {
+   "id": "L441F16A",
+   "moment": "mark_approach",
+   "text": "The {national} coming into the {mark} mark.",
+   "slots": [
+    "national",
+    "mark"
+   ],
+   "level": 3,
+   "seconds": 2.0,
+   "count": 1,
+   "needs": [],
+   "src": "dLbDV6jDm2s@91.2"
+  },
+  {
+   "id": "LEF7A6D4",
+   "moment": "mark_approach",
+   "text": "The {national} is going to go round in {place} place.",
+   "slots": [
+    "national",
+    "place"
+   ],
+   "level": 4,
+   "seconds": 2.7,
+   "count": 1,
+   "needs": [],
+   "src": "CJIOFQGVrpk@253.8"
+  },
+  {
+   "id": "S0055",
+   "moment": "mark_approach",
+   "text": "These are tricky right now.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.2,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@365.5"
+  },
+  {
+   "id": "L0A1CBC1",
+   "moment": "mark_approach",
+   "text": "{mark} gybe mark coming up.",
+   "slots": [
+    "mark"
+   ],
+   "level": 2,
+   "seconds": 1.2,
+   "count": 1,
+   "needs": [],
+   "src": "dLbDV6jDm2s@123.4"
+  },
+  {
+   "id": "L13F176C",
+   "moment": "mark_approach",
+   "text": "{rider} does take the inside line.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.6,
+   "count": 1,
+   "needs": [],
+   "src": "Mt9gi7qP82Q@136.7"
+  },
+  {
+   "id": "L40780E5",
+   "moment": "mark_approach",
+   "text": "{rider} trying to take the inside line.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 1.7,
+   "count": 1,
+   "needs": [],
+   "src": "XQMlNVPPuaw@247.6"
+  },
+  {
+   "id": "L17ADE5B",
+   "moment": "mark_approach",
+   "text": "{rider}'s going to try and go in tight.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 1.6,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@457.6"
+  },
+  {
+   "id": "L32E7069",
+   "moment": "mark_approach",
+   "text": "{rider}'s got the inside line.",
+   "slots": [
+    "rider"
+   ],
+   "level": 4,
+   "seconds": 1.4,
+   "count": 1,
+   "needs": [],
+   "src": "XQMlNVPPuaw@261.8"
+  },
+  {
+   "id": "LF3958D5",
+   "moment": "gybe_good",
+   "text": "What a gybe from the {nation_adj} rider.",
+   "slots": [
+    "nation_adj"
+   ],
+   "level": 4,
+   "seconds": 2.1,
+   "count": 2,
+   "needs": [],
+   "src": "P6iCS8-o0B8@274.4"
+  },
+  {
+   "id": "L09A08AB",
+   "moment": "gybe_good",
+   "text": "What a gybe from {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 2.4,
+   "count": 2,
+   "needs": [],
+   "src": "V73vVhTTr0E@203.6"
+  },
+  {
+   "id": "L6E9CE76",
+   "moment": "gybe_good",
+   "text": "A really good gybe from {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.6,
+   "count": 1,
+   "needs": [],
+   "src": "XQMlNVPPuaw@218.1"
+  },
+  {
+   "id": "L400FB8A",
+   "moment": "gybe_good",
+   "text": "And he does seal it with a perfect gybe.",
+   "slots": [],
+   "level": 1,
+   "seconds": 1.8,
+   "count": 1,
+   "needs": [
+    "leader"
+   ],
+   "src": "ujNLUgITjpg@267.2"
+  },
+  {
+   "id": "LFF513F6",
+   "moment": "gybe_good",
+   "text": "Gets a good gybe.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.3,
+   "count": 1,
+   "needs": [],
+   "src": "Mt9gi7qP82Q@207.8"
+  },
+  {
+   "id": "LD460A5B",
+   "moment": "gybe_good",
+   "text": "Good gybe.",
+   "slots": [],
+   "level": 2,
+   "seconds": 0.6,
+   "count": 1,
+   "needs": [],
+   "src": "dLbDV6jDm2s@129.1"
+  },
+  {
+   "id": "LAFE0A7B",
+   "moment": "gybe_good",
+   "text": "He's got the gybes.",
+   "slots": [],
+   "level": 1,
+   "seconds": 1.0,
+   "count": 1,
+   "needs": [],
+   "src": "P6iCS8-o0B8@18.5"
+  },
+  {
+   "id": "L3E59E72",
+   "moment": "gybe_good",
+   "text": "Oh, what a gybe from {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 2.6,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@459.6"
+  },
+  {
+   "id": "LB4AFB1C",
+   "moment": "gybe_good",
+   "text": "Oh, what a gybe.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.1,
+   "count": 1,
+   "needs": [],
+   "src": "P6iCS8-o0B8@273.2"
+  },
+  {
+   "id": "L3C84A0D",
+   "moment": "gybe_good",
+   "text": "What a great gybe from {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.2,
+   "count": 1,
+   "needs": [],
+   "src": "V73vVhTTr0E@144.9"
+  },
+  {
+   "id": "LAD4F065",
+   "moment": "gybe_good",
+   "text": "What a gybe under pressure.",
+   "slots": [],
+   "level": 3,
+   "seconds": 1.5,
+   "count": 1,
+   "needs": [
+    "close"
+   ],
+   "src": "2FJY7lpVYDA@462.6"
+  },
+  {
+   "id": "L1C228F7",
+   "moment": "gybe_good",
+   "text": "{rider} with a great gybe putting himself right back in the game.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 3.2,
+   "count": 1,
+   "needs": [],
+   "src": "Q08jEfcMU9Q@161.3"
+  },
+  {
+   "id": "S0058",
+   "moment": "gybe_safe",
+   "text": "And he does.",
+   "slots": [],
+   "level": 2,
+   "seconds": 0.5,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@371.2"
+  },
+  {
+   "id": "L34CE13E",
+   "moment": "gybe_safe",
+   "text": "And it is {rider} rounding first.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.9,
+   "count": 1,
+   "needs": [
+    "leader"
+   ],
+   "src": "XQMlNVPPuaw@172.4"
+  },
+  {
+   "id": "L5AECEF1",
+   "moment": "gybe_safe",
+   "text": "But hopefully he made it round safely.",
+   "slots": [],
+   "level": 2,
+   "seconds": 2.0,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@369.2"
+  },
+  {
+   "id": "LDBF795D",
+   "moment": "gybe_safe",
+   "text": "But it will be {rider} that goes around in {place}.",
+   "slots": [
+    "rider",
+    "place"
+   ],
+   "level": 3,
+   "seconds": 3.6,
+   "count": 1,
+   "needs": [],
+   "src": "P6iCS8-o0B8@149.8"
+  },
+  {
+   "id": "L8425640",
+   "moment": "gybe_safe",
+   "text": "But it's {rider} that goes round in {place} place.",
+   "slots": [
+    "rider",
+    "place"
+   ],
+   "level": 3,
+   "seconds": 2.5,
+   "count": 1,
+   "needs": [],
+   "src": "ujNLUgITjpg@152.5"
+  },
+  {
+   "id": "LCE1129A",
+   "moment": "gybe_safe",
+   "text": "Gybes first.",
+   "slots": [],
+   "level": 2,
+   "seconds": 0.6,
+   "count": 1,
+   "needs": [
+    "leader"
+   ],
+   "src": "2FJY7lpVYDA@331.4"
+  },
+  {
+   "id": "S0056",
+   "moment": "gybe_safe",
+   "text": "Gybes first. Round safely.",
+   "slots": [],
+   "level": 2,
+   "seconds": 2.9,
+   "count": 1,
+   "needs": [
+    "leader"
+   ],
+   "src": "2FJY7lpVYDA@331.4"
+  },
+  {
+   "id": "LD6350E9",
+   "moment": "gybe_safe",
+   "text": "It's the {national} that goes round in {place}.",
+   "slots": [
+    "national",
+    "place"
+   ],
+   "level": 2,
+   "seconds": 1.8,
+   "count": 1,
+   "needs": [],
+   "src": "6Lp_1I03OHE@116.4"
+  },
+  {
+   "id": "LC0DA57F",
+   "moment": "gybe_safe",
+   "text": "It's {rider} that goes round in {place}.",
+   "slots": [
+    "rider",
+    "place"
+   ],
+   "level": 2,
+   "seconds": 2.5,
+   "count": 1,
+   "needs": [],
+   "src": "ujNLUgITjpg@140.7"
+  },
+  {
+   "id": "L4020B62",
+   "moment": "gybe_safe",
+   "text": "It's {rider} who goes round in {place} though.",
+   "slots": [
+    "rider",
+    "place"
+   ],
+   "level": 2,
+   "seconds": 2.2,
+   "count": 1,
+   "needs": [],
+   "src": "dLbDV6jDm2s@175.3"
+  },
+  {
+   "id": "L6357131",
+   "moment": "gybe_safe",
+   "text": "Round safely.",
+   "slots": [],
+   "level": 2,
+   "seconds": 0.9,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@333.4"
+  },
+  {
+   "id": "L0CCC573",
+   "moment": "gybe_safe",
+   "text": "So the leaders round safely.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.2,
+   "count": 1,
+   "needs": [
+    "leader"
+   ],
+   "src": "2FJY7lpVYDA@371.9"
+  },
+  {
+   "id": "L3A93F02",
+   "moment": "gybe_safe",
+   "text": "Then {rider} just coming around.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 2.1,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@537.4"
+  },
+  {
+   "id": "LD97F8CD",
+   "moment": "gybe_safe",
+   "text": "{rider} round in {place}.",
+   "slots": [
+    "rider",
+    "place"
+   ],
+   "level": 4,
+   "seconds": 1.7,
+   "count": 1,
+   "needs": [],
+   "src": "CJIOFQGVrpk@256.9"
+  },
+  {
+   "id": "L6D799C1",
+   "moment": "gybe_bad",
+   "text": "A little bit of a wayward gybe.",
+   "slots": [],
+   "level": 3,
+   "seconds": 1.4,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@374.6"
+  },
+  {
+   "id": "L9EAC730",
+   "moment": "gybe_bad",
+   "text": "A little bit of a wobble there for {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 1.7,
+   "count": 1,
+   "needs": [],
+   "src": "XQMlNVPPuaw@164.1"
+  },
+  {
+   "id": "L45E4B24",
+   "moment": "gybe_bad",
+   "text": "A wobbly, wobbly gybe.",
+   "slots": [],
+   "level": 4,
+   "seconds": 1.6,
+   "count": 1,
+   "needs": [],
+   "src": "P6iCS8-o0B8@312.4"
+  },
+  {
+   "id": "L310265F",
+   "moment": "gybe_bad",
+   "text": "And he's gone wide.",
+   "slots": [],
+   "level": 3,
+   "seconds": 0.9,
+   "count": 1,
+   "needs": [],
+   "src": "V73vVhTTr0E@109.6"
+  },
+  {
+   "id": "L8851957",
+   "moment": "gybe_bad",
+   "text": "He's gone super wide.",
+   "slots": [],
+   "level": 3,
+   "seconds": 1.0,
+   "count": 1,
+   "needs": [],
+   "src": "6Lp_1I03OHE@224.9"
+  },
+  {
+   "id": "LB52B754",
+   "moment": "gybe_bad",
+   "text": "That little wobble probably cost him.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.6,
+   "count": 1,
+   "needs": [],
+   "src": "CJIOFQGVrpk@1052.9"
+  },
+  {
+   "id": "LDA69323",
+   "moment": "gybe_bad",
+   "text": "Wobbly gybe.",
+   "slots": [],
+   "level": 3,
+   "seconds": 1.1,
+   "count": 1,
+   "needs": [],
+   "src": "P6iCS8-o0B8@311.2"
+  },
+  {
+   "id": "L0AC1753",
+   "moment": "gybe_bad",
+   "text": "{rider} gets it all wrong into the {mark} mark.",
+   "slots": [
+    "rider",
+    "mark"
+   ],
+   "level": 4,
+   "seconds": 2.8,
+   "count": 1,
+   "needs": [],
+   "src": "CJIOFQGVrpk@368.4"
+  },
+  {
+   "id": "L1569C2E",
+   "moment": "fall",
+   "text": "{rider} is in the water.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.7,
+   "count": 2,
+   "needs": [],
+   "src": "V73vVhTTr0E@146.5"
+  },
+  {
+   "id": "LD2D1EAC",
+   "moment": "fall",
+   "text": "And {rider} went down under pressure from {rider2}.",
+   "slots": [
+    "rider",
+    "rider2"
+   ],
+   "level": 3,
+   "seconds": 2.4,
+   "count": 1,
+   "needs": [
+    "pair"
+   ],
+   "src": "2FJY7lpVYDA@454.8"
+  },
+  {
+   "id": "LA617E36",
+   "moment": "fall",
+   "text": "It looks like {rider} is down here.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.9,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@51.9"
+  },
+  {
+   "id": "L6590B47",
+   "moment": "fall",
+   "text": "Someone is in the drink.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.4,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@174.8"
+  },
+  {
+   "id": "L1A079CB",
+   "moment": "fall",
+   "text": "{rider} and he's in the water.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.6,
+   "count": 1,
+   "needs": [],
+   "src": "ANNFWjE6JuI@175.9"
+  },
+  {
+   "id": "L1EC637B",
+   "moment": "fall",
+   "text": "{rider} is swimming.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 1.5,
+   "count": 1,
+   "needs": [],
+   "src": "P6iCS8-o0B8@281.4"
+  },
+  {
+   "id": "L1D9A505",
+   "moment": "near_miss",
+   "text": "And he's took out, almost took out, {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 4,
+   "seconds": 3.6,
+   "count": 1,
+   "needs": [],
+   "src": "Q08jEfcMU9Q@193.0"
+  },
+  {
+   "id": "S0062",
+   "moment": "near_miss",
+   "text": "Oh no. {rider} has just nearly took out {rider2}.",
+   "slots": [
+    "rider",
+    "rider2"
+   ],
+   "level": 4,
+   "seconds": 4.7,
+   "count": 1,
+   "needs": [
+    "pair"
+   ],
+   "src": "2FJY7lpVYDA@379.0"
+  },
+  {
+   "id": "LD0128FA",
+   "moment": "near_miss",
+   "text": "{rider} going right in front of {rider2}.",
+   "slots": [
+    "rider",
+    "rider2"
+   ],
+   "level": 2,
+   "seconds": 2.5,
+   "count": 1,
+   "needs": [
+    "pair"
+   ],
+   "src": "XQMlNVPPuaw@350.5"
+  },
+  {
+   "id": "L3AF3DC6",
+   "moment": "near_miss",
+   "text": "{rider} has just nearly took out {rider2}.",
+   "slots": [
+    "rider",
+    "rider2"
+   ],
+   "level": 4,
+   "seconds": 3.8,
+   "count": 1,
+   "needs": [
+    "pair"
+   ],
+   "src": "2FJY7lpVYDA@379.8"
+  },
+  {
+   "id": "L4C15980",
+   "moment": "trouble",
+   "text": "A big mistake from the {nation_adj} rider.",
+   "slots": [
+    "nation_adj"
+   ],
+   "level": 2,
+   "seconds": 2.2,
+   "count": 1,
+   "needs": [],
+   "src": "P6iCS8-o0B8@255.3"
+  },
+  {
+   "id": "L6AEEA44",
+   "moment": "trouble",
+   "text": "And {rider} has had to back off here.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 1.7,
+   "count": 1,
+   "needs": [],
+   "src": "6Lp_1I03OHE@183.8"
+  },
+  {
+   "id": "L250DE52",
+   "moment": "trouble",
+   "text": "But he slipped to the back here.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.5,
+   "count": 1,
+   "needs": [],
+   "src": "6Lp_1I03OHE@111.1"
+  },
+  {
+   "id": "LD8D355B",
+   "moment": "trouble",
+   "text": "But look at {rider} on the edge there.",
+   "slots": [
+    "rider"
+   ],
+   "level": 4,
+   "seconds": 2.1,
+   "count": 1,
+   "needs": [],
+   "src": "P6iCS8-o0B8@131.2"
+  },
+  {
+   "id": "LCA437BA",
+   "moment": "trouble",
+   "text": "Got hit by that chop and he's lost it.",
+   "slots": [],
+   "level": 3,
+   "seconds": 2.2,
+   "count": 1,
+   "needs": [
+    "choppy"
+   ],
+   "src": "V73vVhTTr0E@209.3"
+  },
+  {
+   "id": "L1826594",
+   "moment": "trouble",
+   "text": "He slows down.",
+   "slots": [],
+   "level": 3,
+   "seconds": 0.7,
+   "count": 1,
+   "needs": [],
+   "src": "dLbDV6jDm2s@197.3"
+  },
+  {
+   "id": "LDDF5020",
+   "moment": "trouble",
+   "text": "It's a disaster for {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 4,
+   "seconds": 1.5,
+   "count": 1,
+   "needs": [],
+   "src": "Mt9gi7qP82Q@247.3"
+  },
+  {
+   "id": "L2EBB820",
+   "moment": "trouble",
+   "text": "It's an absolute disaster for {rider} as he has slipped to {place} place.",
+   "slots": [
+    "rider",
+    "place"
+   ],
+   "level": 3,
+   "seconds": 5.2,
+   "count": 1,
+   "needs": [],
+   "src": "Mt9gi7qP82Q@249.0"
+  },
+  {
+   "id": "L2029252",
+   "moment": "trouble",
+   "text": "Nearly lost it.",
+   "slots": [],
+   "level": 3,
+   "seconds": 0.9,
+   "count": 1,
+   "needs": [],
+   "src": "CJIOFQGVrpk@578.5"
+  },
+  {
+   "id": "L7C0D5F9",
+   "moment": "trouble",
+   "text": "Oh, a little moment there by one of the {brand} boys.",
+   "slots": [
+    "brand"
+   ],
+   "level": 3,
+   "seconds": 2.7,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@55.4"
+  },
+  {
+   "id": "L206D5FE",
+   "moment": "trouble",
+   "text": "Oh, he nearly went down then.",
+   "slots": [],
+   "level": 4,
+   "seconds": 1.4,
+   "count": 1,
+   "needs": [],
+   "src": "V73vVhTTr0E@207.7"
+  },
+  {
+   "id": "LDEC667C",
+   "moment": "trouble",
+   "text": "{rider} has to back off as {rider2} pushes through.",
+   "slots": [
+    "rider",
+    "rider2"
+   ],
+   "level": 3,
+   "seconds": 3.2,
+   "count": 1,
+   "needs": [
+    "pair"
+   ],
+   "src": "Mt9gi7qP82Q@151.2"
+  },
+  {
+   "id": "L998A4C9",
+   "moment": "wow",
+   "text": "Look at this.",
+   "slots": [],
+   "level": 3,
+   "seconds": 0.7,
+   "count": 8,
+   "needs": [],
+   "src": "ANNFWjE6JuI@40.1"
+  },
+  {
+   "id": "L5BAE372",
+   "moment": "wow",
+   "text": "Wow.",
+   "slots": [],
+   "level": 2,
+   "seconds": 0.5,
+   "count": 3,
+   "needs": [],
+   "src": "P6iCS8-o0B8@287.6"
+  },
+  {
+   "id": "L817170C",
+   "moment": "wow",
+   "text": "Look at that.",
+   "slots": [],
+   "level": 1,
+   "seconds": 0.5,
+   "count": 1,
+   "needs": [],
+   "src": "CJIOFQGVrpk@537.9"
+  },
+  {
+   "id": "LFD12863",
+   "moment": "oh_no",
+   "text": "No.",
+   "slots": [],
+   "level": 3,
+   "seconds": 0.3,
+   "count": 4,
+   "needs": [],
+   "src": "P6iCS8-o0B8@172.3"
+  },
+  {
+   "id": "LE6008B6",
+   "moment": "last_leg",
+   "text": "Will {rider} take this all the way to the wire?",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 3.6,
+   "count": 2,
+   "needs": [
+    "leader"
+   ],
+   "src": "CJIOFQGVrpk@10.0"
+  },
+  {
+   "id": "L1DAA6D7",
+   "moment": "finish_win",
+   "text": "{rider} gets the bullet.",
+   "slots": [
+    "rider"
+   ],
+   "level": 4,
+   "seconds": 1.2,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@501.4"
+  },
+  {
+   "id": "L453C78C",
+   "moment": "finish_win",
+   "text": "{rider} will win it.",
+   "slots": [
+    "rider"
+   ],
+   "level": 4,
+   "seconds": 1.2,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@500.0"
+  },
+  {
+   "id": "LE28BEC6",
+   "moment": "finish_place",
+   "text": "And {rider} will finish in {place} place.",
+   "slots": [
+    "rider",
+    "place"
+   ],
+   "level": 2,
+   "seconds": 4.2,
+   "count": 1,
+   "needs": [],
+   "src": "Mt9gi7qP82Q@296.2"
+  },
+  {
+   "id": "LB266EE7",
+   "moment": "finish_place",
+   "text": "And {rider} will get the {place} place.",
+   "slots": [
+    "rider",
+    "place"
+   ],
+   "level": 3,
+   "seconds": 1.8,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@507.3"
+  },
+  {
+   "id": "L76B4ED9",
+   "moment": "finish_place",
+   "text": "He will finish in {place} place.",
+   "slots": [
+    "place"
+   ],
+   "level": 4,
+   "seconds": 1.8,
+   "count": 1,
+   "needs": [],
+   "src": "CJIOFQGVrpk@421.8"
+  },
+  {
+   "id": "S0070",
+   "moment": "finish_place",
+   "text": "In {place} it will be {rider}.",
+   "slots": [
+    "place",
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 2.5,
+   "count": 1,
+   "needs": [
+    "not_leader"
+   ],
+   "src": "2FJY7lpVYDA@512.7"
+  },
+  {
+   "id": "LE13E5EC",
+   "moment": "finish_place",
+   "text": "What a result for {rider} in {place}.",
+   "slots": [
+    "rider",
+    "place"
+   ],
+   "level": 2,
+   "seconds": 1.7,
+   "count": 1,
+   "needs": [],
+   "src": "V73vVhTTr0E@264.5"
+  },
+  {
+   "id": "L65F30CA",
+   "moment": "finish_place",
+   "text": "{place} place in the end was {rider}.",
+   "slots": [
+    "place",
+    "rider"
+   ],
+   "level": 1,
+   "seconds": 2.2,
+   "count": 1,
+   "needs": [],
+   "src": "CJIOFQGVrpk@1062.9"
+  },
+  {
+   "id": "L13C94FB",
+   "moment": "finish_place",
+   "text": "{rider} finishing in {place}.",
+   "slots": [
+    "rider",
+    "place"
+   ],
+   "level": 1,
+   "seconds": 1.1,
+   "count": 1,
+   "needs": [],
+   "src": "CJIOFQGVrpk@605.3"
+  },
+  {
+   "id": "L1B6AF12",
+   "moment": "finish_place",
+   "text": "{rider} has to settle for {place}.",
+   "slots": [
+    "rider",
+    "place"
+   ],
+   "level": 3,
+   "seconds": 1.6,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@509.3"
+  },
+  {
+   "id": "S0067",
+   "moment": "photo_finish",
+   "text": "But who will get {place}?",
+   "slots": [
+    "place"
+   ],
+   "level": 4,
+   "seconds": 0.9,
+   "count": 1,
+   "needs": [
+    "close"
+   ],
+   "src": "2FJY7lpVYDA@502.7"
+  },
+  {
+   "id": "LBEA5D2E",
+   "moment": "after_race",
+   "text": "But what a race that was to finish on.",
+   "slots": [],
+   "level": 2,
+   "seconds": 2.1,
+   "count": 2,
+   "needs": [],
+   "src": "CJIOFQGVrpk@451.1"
+  },
+  {
+   "id": "LAE089E3",
+   "moment": "after_race",
+   "text": "Impressive stuff.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.1,
+   "count": 2,
+   "needs": [],
+   "src": "CJIOFQGVrpk@1159.6"
+  },
+  {
+   "id": "L8ADF01D",
+   "moment": "after_race",
+   "text": "Absolutely ridiculous.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.2,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@221.7"
+  },
+  {
+   "id": "S0071",
+   "moment": "after_race",
+   "text": "Hardcore racing.",
+   "slots": [],
+   "level": 1,
+   "seconds": 1.1,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@555.3"
+  },
+  {
+   "id": "L66E72CF",
+   "moment": "after_race",
+   "text": "Incredible racing from the boys.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.8,
+   "count": 1,
+   "needs": [],
+   "src": "CJIOFQGVrpk@460.4"
+  },
+  {
+   "id": "LFBF4113",
+   "moment": "after_race",
+   "text": "Incredible stuff and a great end.",
+   "slots": [],
+   "level": 2,
+   "seconds": 2.2,
+   "count": 1,
+   "needs": [],
+   "src": "CJIOFQGVrpk@1256.5"
+  },
+  {
+   "id": "L636494E",
+   "moment": "after_race",
+   "text": "Ridiculous sailing from {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.8,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@402.9"
+  },
+  {
+   "id": "L7FF2241",
+   "moment": "after_race",
+   "text": "That was incredible.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.6,
+   "count": 1,
+   "needs": [],
+   "src": "CJIOFQGVrpk@458.1"
+  },
+  {
+   "id": "LF76BD2C",
+   "moment": "after_race",
+   "text": "What a performance from {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 2.1,
+   "count": 1,
+   "needs": [],
+   "src": "V73vVhTTr0E@257.3"
+  },
+  {
+   "id": "LCDD2F50",
+   "moment": "after_race",
+   "text": "What a race for {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.9,
+   "count": 1,
+   "needs": [],
+   "src": "XQMlNVPPuaw@310.5"
+  },
+  {
+   "id": "L4B6F7F6",
+   "moment": "after_race",
+   "text": "What a race from him.",
+   "slots": [],
+   "level": 2,
+   "seconds": 0.8,
+   "count": 1,
+   "needs": [],
+   "src": "V73vVhTTr0E@194.7"
+  },
+  {
+   "id": "S0073",
+   "moment": "after_race",
+   "text": "What a race he is having.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.2,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@249.3"
+  },
+  {
+   "id": "LE581FB5",
+   "moment": "after_race",
+   "text": "What a race that was from {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 1.7,
+   "count": 1,
+   "needs": [],
+   "src": "6Lp_1I03OHE@267.5"
+  },
+  {
+   "id": "L1393159",
+   "moment": "after_race",
+   "text": "What a race.",
+   "slots": [],
+   "level": 1,
+   "seconds": 1.1,
+   "count": 1,
+   "needs": [],
+   "src": "ANNFWjE6JuI@431.8"
+  },
+  {
+   "id": "LF8BB107",
+   "moment": "after_race",
+   "text": "{rider}, {rider2}, what a race.",
+   "slots": [
+    "rider",
+    "rider2"
+   ],
+   "level": 4,
+   "seconds": 1.5,
+   "count": 1,
+   "needs": [
+    "pair"
+   ],
+   "src": "Q08jEfcMU9Q@307.0"
+  },
+  {
+   "id": "S0020",
+   "moment": "camera",
+   "text": "Look at the boys. They've got some serious speed. The drones can't even keep up.",
+   "slots": [],
+   "level": 2,
+   "seconds": 4.5,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@283.0"
+  },
+  {
+   "id": "L5F59EC1",
+   "moment": "camera",
+   "text": "That's a better angle.",
+   "slots": [],
+   "level": 1,
+   "seconds": 0.7,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@163.1"
+  },
+  {
+   "id": "L634DFA3",
+   "moment": "camera",
+   "text": "The drones are getting left behind.",
+   "slots": [],
+   "level": 2,
+   "seconds": 2.1,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@280.7"
+  },
+  {
+   "id": "L3032E14",
+   "moment": "camera",
+   "text": "The drones can't even keep up.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.7,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@285.8"
+  },
+  {
+   "id": "L1DD8B4D",
+   "moment": "camera",
+   "text": "We're going to have to get a closer view.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.2,
+   "count": 1,
+   "needs": [
+    "camera_wide"
+   ],
+   "src": "2FJY7lpVYDA@143.5"
+  },
+  {
+   "id": "S0008",
+   "moment": "camera",
+   "text": "We're just getting an overall view at the moment.",
+   "slots": [],
+   "level": 1,
+   "seconds": 2.3,
+   "count": 1,
+   "needs": [
+    "camera_wide"
+   ],
+   "src": "2FJY7lpVYDA@28.6"
+  },
+  {
+   "id": "LA920086",
+   "moment": "camera",
+   "text": "You know, it looks like an easy cruise from here on the drone.",
+   "slots": [],
+   "level": 2,
+   "seconds": 3.3,
+   "count": 1,
+   "needs": [],
+   "src": "ANNFWjE6JuI@230.0"
+  },
+  {
+   "id": "LBCF55D0",
+   "moment": "unsure",
+   "text": "Is that {rider}?",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.3,
+   "count": 3,
+   "needs": [
+    "camera_wide"
+   ],
+   "src": "2FJY7lpVYDA@132.9"
+  },
+  {
+   "id": "L102F619",
+   "moment": "unsure",
+   "text": "Or is that {rider}?",
+   "slots": [
+    "rider"
+   ],
+   "level": 1,
+   "seconds": 2.0,
+   "count": 2,
+   "needs": [
+    "camera_wide"
+   ],
+   "src": "6Lp_1I03OHE@124.9"
+  },
+  {
+   "id": "L4C4F0A5",
+   "moment": "unsure",
+   "text": "Where is {rider}?",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.5,
+   "count": 2,
+   "needs": [
+    "camera_wide"
+   ],
+   "src": "V73vVhTTr0E@150.6"
+  },
+  {
+   "id": "L23DAFE9",
+   "moment": "unsure",
+   "text": "But it's obviously hard to tell.",
+   "slots": [],
+   "level": 1,
+   "seconds": 2.0,
+   "count": 1,
+   "needs": [
+    "camera_wide"
+   ],
+   "src": "2FJY7lpVYDA@234.9"
+  },
+  {
+   "id": "L7FDCD5D",
+   "moment": "unsure",
+   "text": "Can't quite see from here.",
+   "slots": [],
+   "level": 1,
+   "seconds": 1.4,
+   "count": 1,
+   "needs": [
+    "camera_wide"
+   ],
+   "src": "2FJY7lpVYDA@134.9"
+  },
+  {
+   "id": "S0016",
+   "moment": "unsure",
+   "text": "Is that {rider}? Can't quite see from here.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 3.4,
+   "count": 1,
+   "needs": [
+    "camera_wide"
+   ],
+   "src": "2FJY7lpVYDA@132.9"
+  },
+  {
+   "id": "L72DE7D8",
+   "moment": "unsure",
+   "text": "It could be {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 2.6,
+   "count": 1,
+   "needs": [
+    "camera_wide"
+   ],
+   "src": "ANNFWjE6JuI@121.5"
+  },
+  {
+   "id": "L9034E71",
+   "moment": "unsure",
+   "text": "It looks like {rider} looking at the sail numbers.",
+   "slots": [
+    "rider"
+   ],
+   "level": 1,
+   "seconds": 2.9,
+   "count": 1,
+   "needs": [
+    "camera_wide"
+   ],
+   "src": "2FJY7lpVYDA@180.8"
+  },
+  {
+   "id": "L9BB89ED",
+   "moment": "unsure",
+   "text": "It looks like {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.5,
+   "count": 1,
+   "needs": [
+    "camera_wide"
+   ],
+   "src": "6Lp_1I03OHE@123.0"
+  },
+  {
+   "id": "S0007",
+   "moment": "unsure",
+   "text": "It's hard to pick out where everyone is.",
+   "slots": [],
+   "level": 1,
+   "seconds": 1.7,
+   "count": 1,
+   "needs": [
+    "camera_wide"
+   ],
+   "src": "2FJY7lpVYDA@26.7"
+  },
+  {
+   "id": "LD372E59",
+   "moment": "unsure",
+   "text": "Looks like {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.2,
+   "count": 1,
+   "needs": [
+    "camera_wide"
+   ],
+   "src": "ANNFWjE6JuI@204.0"
+  },
+  {
+   "id": "LFB6558F",
+   "moment": "unsure",
+   "text": "This looks like {rider} looking good.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 2.1,
+   "count": 1,
+   "needs": [
+    "camera_wide"
+   ],
+   "src": "ANNFWjE6JuI@126.3"
+  },
+  {
+   "id": "L8728987",
+   "moment": "unsure",
+   "text": "This looks like {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.7,
+   "count": 1,
+   "needs": [
+    "camera_wide"
+   ],
+   "src": "2FJY7lpVYDA@82.9"
+  },
+  {
+   "id": "LEA07948",
+   "moment": "unsure",
+   "text": "Who's on that?",
+   "slots": [],
+   "level": 1,
+   "seconds": 1.0,
+   "count": 1,
+   "needs": [
+    "camera_wide"
+   ],
+   "src": "2FJY7lpVYDA@79.9"
+  },
+  {
+   "id": "LA366A55",
+   "moment": "final_win",
+   "text": "What a final.",
+   "slots": [],
+   "level": 2,
+   "seconds": 0.8,
+   "count": 1,
+   "needs": [],
+   "src": "Q08jEfcMU9Q@251.7"
+  },
+  {
+   "id": "L85A6DCF",
+   "moment": "event_win",
+   "text": "What a week of racing.",
+   "slots": [],
+   "level": 3,
+   "seconds": 1.3,
+   "count": 2,
+   "needs": [],
+   "src": "CJIOFQGVrpk@434.0"
   }
  ]
 }

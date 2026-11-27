@@ -472,7 +472,25 @@ func fill(line: CommentaryBank.Line, moment: RaceMoment, look: RaceLook) -> Stri
 		if word == "":
 			return ""
 		text = text.replace("{%s}" % slot, word)
-	return text.left(1).to_upper() + text.substr(1)
+	return capitalised(text)
+
+
+## A line with a capital at the start of every sentence (a slot's word may open one: "This is it.
+## {heat} of {elimination}." is "This is it. The winners' final of elimination one.").
+static func capitalised(text: String) -> String:
+	var out: String = text
+	var opens: bool = true
+	for i: int in out.length():
+		var letter: String = out[i]
+		if opens and letter != " ":
+			if letter != letter.to_upper():
+				out = out.left(i) + letter.to_upper() + out.substr(i + 1)
+			opens = false
+		# A full stop, a question or an exclamation mark followed by a space ends a sentence (a full
+		# stop inside a word or a number, "Point.9", does not).
+		if letter in [".", "!", "?"] and i + 1 < out.length() and out[i + 1] == " ":
+			opens = true
+	return out
 
 
 ## The word for a slot (BANK_FORMAT.md, "The slots"), or "" when the game cannot fill it now.

@@ -1,7 +1,7 @@
 """Build the game's commentary bank from the reader's judged sheets.
 
     python -E -P tools/broadcast/bank_build.py <bank folder> <out commentary_bank.json>
-        [--source="..."]
+        [--source="..."] [--also=<another bank.json> ...]
 
 Reads <bank folder>/candidates.json (bank_candidates.py) and every
 <bank folder>/judged/sheet_*.tsv the reader wrote:
@@ -46,10 +46,14 @@ def main():
     ap.add_argument("out")
     ap.add_argument("--source", default="World Cup Fuerteventura 2026, Slalom-X: 5 stream days and 11 heat replays")
     ap.add_argument("--made", default="")
+    ap.add_argument("--also", action="append", default=[],
+                    help="another bank file whose lines are added (an earlier bank, the starter bank): "
+                         "a line is skipped when the same words are already there for its moment")
     a = ap.parse_args()
     with open(os.path.join(a.bank, "candidates.json"), encoding="utf-8") as f:
         cands = json.load(f)
     lines, bad, seen_text = [], [], set()
+    estimated = []
     judged = kept = 0
     for path in sorted(glob.glob(os.path.join(a.bank, "judged", "sheet_*.tsv"))):
         with open(path, encoding="utf-8") as f:
@@ -84,8 +88,26 @@ def main():
                     continue
                 seen_text.add((moment, text.lower()))
                 kept += 1
+                seconds = c["seconds"]
+                if not seconds or seconds < 0.3:
+                    # No usable measurement (a sentence the speech-to-text gave no length): about 2.9
+                    # words a second, his pace in the replays, a slot counted as two words.
+                    seconds = round(max(0.8, len(re.sub(r"\{[a-z_0-9]+\}", "two words", text).split()) / 2.9), 1)
+                    estimated.append(c["id"])
                 lines.append({"id": c["id"], "moment": moment, "text": text, "slots": slots, "level": c["level"],
-                              "seconds": c["seconds"], "count": c["count"], "needs": needs, "src": c["src"]})
+                              "seconds": seconds, "count": c["count"], "needs": needs, "src": c["src"]})
+    carried = 0
+    seen_ids = {l["id"] for l in lines}
+    for path in a.also:
+        with open(path, encoding="utf-8") as f:
+            for l in json.load(f).get("lines", []):
+                key = (l.get("moment"), str(l.get("text", "")).lower())
+                if l.get("moment") not in MOMENTS or key in seen_text or l.get("id") in seen_ids:
+                    continue
+                seen_text.add(key)
+                seen_ids.add(l["id"])
+                lines.append(l)
+                carried += 1
     lines.sort(key=lambda l: (MOMENTS.index(l["moment"]), -l["count"], l["text"]))
     per = collections.Counter(l["moment"] for l in lines)
     import datetime
@@ -94,7 +116,10 @@ def main():
     with open(a.out, "w", encoding="utf-8", newline="\n") as f:
         json.dump(bank, f, indent=1, ensure_ascii=False)
         f.write("\n")
-    print("%d judged, %d kept in %d moments; %d left out for breaking the format" % (judged, kept, len(per), len(bad)))
+    print("%d judged, %d kept, %d carried over from other banks: %d lines in %d moments; %d left out for breaking the format"
+          % (judged, kept, carried, len(lines), len(per), len(bad)))
+    if estimated:
+        print("length estimated from the words (no measurement) for %d: %s" % (len(estimated), " ".join(estimated[:20])))
     print("per moment: " + ", ".join("%s %d" % (m, per[m]) for m in MOMENTS if per[m]))
     print("no line yet for: " + (", ".join(m for m in MOMENTS if not per[m]) or "none"))
     for b in bad[:40]:

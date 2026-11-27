@@ -230,6 +230,13 @@ func test_the_heats_are_said_in_words() -> void:
 	assert_eq(EventBroadcast.elimination_words(11), "elimination eleven")
 
 
+func test_a_slot_that_opens_a_sentence_gets_a_capital() -> void:
+	assert_eq(CommentaryDirector.capitalised("this is it. the winners' final of elimination one."), "This is it. The winners' final of elimination one.")
+	assert_eq(CommentaryDirector.capitalised("no! he's down? yes."), "No! He's down? Yes.")
+	assert_eq(CommentaryDirector.capitalised("You've got Mara on that Point.9 sail."), "You've got Mara on that Point.9 sail.")
+	assert_eq(CommentaryDirector.capitalised(""), "")
+
+
 func test_the_event_lines_load_clean_on_top_of_the_bank() -> void:
 	var bank: CommentaryBank = CommentaryBank.load_file()
 	var before: int = bank.size()
