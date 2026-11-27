@@ -369,6 +369,12 @@ func bottom_middle_top() -> float:
 	return _screen_size().y - BOTTOM_INSET - PushGauge.GAUGE_SIZE.y
 
 
+## Whether a gauge (the push, the body) is on the screen at the bottom in the middle now (the TV
+## screen has none): the commentary's subtitles then sit above them.
+func gauges_shown() -> bool:
+	return _gauges != null and _gauges.visible and (_push_gauge.visible or _body_gauge.visible)
+
+
 ## The small map's width in the bottom right corner (0 without one).
 func mini_map_width() -> float:
 	return _mini_map.custom_minimum_size.x if _mini_map != null else 0.0
