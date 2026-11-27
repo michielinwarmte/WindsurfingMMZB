@@ -356,6 +356,7 @@ var _front_strap_z_m: float = -INF
 var _trim_press_rate_ms: float = 0.0
 var _trim_feel_time_s: float = 0.0
 var _bounce_tolerance_dps: float = 0.0
+var _trim_aft_when_spearing: bool = false
 var _trim_press_release_ms: float = 0.0
 var _waterstart_time_s: float = 0.0
 var _windage_area_cd_m2: float = 0.0
@@ -747,6 +748,7 @@ func _copy_configs() -> void:
 	_trim_press_rate_ms = sailor_config.trim_press_rate_ms
 	_trim_feel_time_s = sailor_config.trim_feel_time_s
 	_bounce_tolerance_dps = sailor_config.bounce_tolerance_dps
+	_trim_aft_when_spearing = sailor_config.trim_aft_when_spearing
 	_trim_press_release_ms = sailor_config.trim_press_release_ms
 	_waterstart_time_s = sailor_config.waterstart_time_s
 	_windage_area_cd_m2 = sailor_config.windage_area_cd_m2
@@ -1077,10 +1079,16 @@ func _felt_true_wind_from() -> Vector3:
 ## running_trim_fast_deg at running_trim_fastest_speed_ms. The two trims are this hull's
 ## own measured steadiness, less a margin (SailorConfig, PHYSICS_SPEC.md section 14).
 func _running_trim_target_deg(forward_speed: float) -> float:
+	return lerpf(_running_trim_deg, _running_trim_fast_deg, _fast_trim_share(forward_speed))
+
+
+## How far into the fast trim the board is: 0 up to running_trim_fast_speed_ms, 1 from
+## running_trim_fastest_speed_ms, linear between: where this hull starts to tail-walk with the
+## slow speeds' trim (_running_trim_target_deg; trim_aft_when_spearing fades out the same way).
+func _fast_trim_share(forward_speed: float) -> float:
 	var slow: float = _running_trim_fast_speed_ms
 	var span: float = _running_trim_fastest_speed_ms - slow
-	var share: float = clampf((forward_speed - slow) / span, 0.0, 1.0) if span > 0.0 else (1.0 if forward_speed >= slow else 0.0)
-	return lerpf(_running_trim_deg, _running_trim_fast_deg, share)
+	return clampf((forward_speed - slow) / span, 0.0, 1.0) if span > 0.0 else (1.0 if forward_speed >= slow else 0.0)
 
 
 ## The trim the feet press for: the technique's by speed, plus what the rider asks on top
@@ -1574,7 +1582,8 @@ func _press_within_straps(press_m: float) -> float:
 ## its bounce over a second or two. While planing, the weight keeps moving aft (slowly, at
 ## trim_press_rate_ms) as long as the board rides below the trim aimed for, and forward when it
 ## rides above it (quickly, at trim_press_release_ms) or starts to chatter (the bounce felt
-## beyond bounce_tolerance_dps, at the slow rate). The press
+## beyond bounce_tolerance_dps, at the slow rate; with the nose low a bouncing board keeps the
+## weight going aft, SailorConfig.trim_aft_when_spearing). The press
 ## reaches as far as trim_press_max_m times the share of the weight the hull planes on, as the
 ## press of the moment does. Off the plane (or stepping in a tack) it goes back to nothing at
 ## once (trim_press_release_ms: the rider steps off the tail).
@@ -1602,6 +1611,17 @@ func _trim_by_feel(trimming: bool, forward_speed: float, dt: float) -> void:
 	# setup bounced at 1.8 Hz between -4 and +2.7 degrees of pitch with the rider walking forward,
 	# and sailed steady once the rider stopped). There the chatter only stops the creep aft.
 	var push: float = aim * (1.0 - chatter) - chatter * clampf(1.0 - aim, 0.0, 1.0)
+	# The low nose lifted (SailorConfig.trim_aft_when_spearing, E01.S08 T10): below the aim the
+	# bounce's say fades out as the nose gets further below it, and a band or more below the
+	# weight keeps going aft, bumps or not. In chop the waves alone shake the board far past the
+	# tolerance, and a rider who held still there left the bent fin's push holding the tail up
+	# and the nose in the water. At the aim (aim 0) both rules give -chatter: forward. Only at
+	# the slow speeds' trim: it fades out over the band where the aim falls (_fast_trim_share),
+	# and from there the bounce holds the rider as before. Faster, on the open sea's waves at 24
+	# to 30 kt, the nose lifted this way launched the board off the waves and it fell.
+	if _trim_aft_when_spearing and aim > 0.0:
+		var low_nose_push: float = aim - chatter * (1.0 - aim)
+		push = lerpf(low_nose_push, push, _fast_trim_share(forward_speed))
 	# The rider's own press (GP2): the technique's search, the chatter's easing off included, stands
 	# aside as far as the rider presses (_feet_pressure_point_m puts the weight where they press).
 	if feet_pitch_press != 0.0:
@@ -2223,6 +2243,8 @@ func _fill_telemetry(controls: SimControls) -> void:
 	# z = +length / 2.
 	t.push_centre_m = 0.5 * board_config.length_m - hull.cop_local.z
 	t.bow_immersion_m = buoyancy.point_depths_m[buoyancy.bow_centre_index]
+	t.felt_trim_deg = felt_trim_deg
+	t.felt_bounce_dps = felt_bounce_dps
 	t.is_planing = hull.planing_ratio > 0.5
 	t.trim_deg = hull.trim_deg
 	t.hull_friction_n = hull.friction_n

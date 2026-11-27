@@ -353,7 +353,7 @@ func _wanted(case_name: String, only: PackedStringArray) -> bool:
 	return false
 
 
-## The --pilot.x=, --controller.x=, --sailor.x= and --sail.x= settings, by name. The pilot's go
+## The --pilot.x=, --controller.x=, --sailor.x=, --sail.x= and --fin.x= settings, by name. The pilot's go
 ## through the controller's pilot_overrides (applied at every update, so a new pilot after a
 ## reset gets them too); the configs are the sim's (shared for the whole run).
 func _apply_overrides(sim: WindsurferSim, controller: PlayerController) -> void:
@@ -376,6 +376,8 @@ func _apply_overrides(sim: WindsurferSim, controller: PlayerController) -> void:
 				target = sim.sailor_config
 			"sail":
 				target = sim.sail_config
+			"fin":
+				target = sim.fin_config
 		if target == null or not (parts[1] in target):
 			push_error("No field '%s' to override." % key)
 			continue

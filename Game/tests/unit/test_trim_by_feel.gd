@@ -25,9 +25,9 @@ func _hold(sim: WindsurferSim, pitch_deg: float, rate_dps: float) -> void:
 	sim.body.angular_velocity = sim.body.starboard_axis() * deg_to_rad(rate_dps)
 
 
-func _feel(sim: WindsurferSim, seconds: float, trimming: bool = true) -> void:
+func _feel(sim: WindsurferSim, seconds: float, trimming: bool = true, speed_ms: float = 13.0) -> void:
 	for i: int in int(seconds / DT):
-		sim._trim_by_feel(trimming, 13.0, DT)
+		sim._trim_by_feel(trimming, speed_ms, DT)
 
 
 func test_a_board_riding_low_gets_the_weight_moved_aft_slowly() -> void:
@@ -56,14 +56,54 @@ func test_a_board_chattering_at_its_aim_gets_the_weight_moved_forward() -> void:
 
 
 func test_a_board_chattering_with_its_nose_low_is_not_walked_forward() -> void:
-	# PH16 step 17: riding well below the aim, a chattering board is spearing with its nose low;
-	# walking forward drives the nose in. The chatter only stops the creep aft.
+	# PH16 step 17's rule (trim_aft_when_spearing off): riding well below the aim, a chattering
+	# board is spearing with its nose low; walking forward drives the nose in. The chatter only
+	# stops the creep aft.
+	var sim: WindsurferSim = _sim()
+	sim.sailor_config.trim_aft_when_spearing = false
+	sim._copy_configs()  # the sim reads its config at the start of a step
+	sim.trim_press_m = 0.2
+	_hold(sim, 0.5, 10.0)  # riding low and bouncing hard
+	_feel(sim, 5.0, true, 12.0)
+	assert_between(sim.trim_press_m, 0.2, 0.21, "neither forward nor further onto the tail (a few millimetres before the chatter is felt)")
+	assert_gt(sim.felt_bounce_dps, 5.0, "and feels the chatter")
+
+
+func test_a_board_bouncing_with_its_nose_low_gets_the_weight_moved_aft() -> void:
+	# E01.S08 T10 (trim_aft_when_spearing, the shipped sailor): a band or more below the aim the
+	# bounce no longer holds the rider; the nose is lifted with the weight back, bumps or not (in
+	# chop the waves alone bounce the board past the tolerance). At 12 m/s: the slow speeds' trim.
+	var sim: WindsurferSim = _sim()
+	assert_true(sim.sailor_config.trim_aft_when_spearing, "on in sailor_default.tres")
+	sim.trim_press_m = 0.2
+	_hold(sim, 0.5, 10.0)  # riding low and bouncing hard
+	_feel(sim, 5.0, true, 12.0)
+	assert_almost_eq(sim.trim_press_m, 0.35, 0.01, "aft at the trimming rate, 0.03 m/s for 5 s, as with no bounce")
+	assert_gt(sim.felt_bounce_dps, 5.0, "though it feels the bounce")
+
+
+func test_a_bouncing_board_just_below_its_aim_is_held() -> void:
+	# Half a band below the aim and bouncing hard: the bounce's say has faded by half, which
+	# leaves aim - chatter * (1 - aim) = 0.5 - 0.5 = nothing: the press holds.
+	var sim: WindsurferSim = _sim()
+	var pitch_deg: float = sim._trim_aim_deg(12.0) - 0.5 * sim.sailor_config.trim_press_band_deg
+	sim.trim_press_m = 0.2
+	_hold(sim, pitch_deg, 10.0)
+	# Felt in full from the start (the feel's own lag would otherwise move it while it builds).
+	sim.felt_trim_deg = pitch_deg
+	sim.felt_bounce_dps = 10.0
+	_feel(sim, 5.0, true, 12.0)
+	assert_almost_eq(sim.trim_press_m, 0.2, 0.002, "neither forward nor aft once the bounce is felt in full")
+
+
+func test_fast_the_bounce_holds_a_low_nose_as_before() -> void:
+	# From running_trim_fastest_speed_ms (13.5 m/s) the rule has faded out: on the open sea's
+	# waves at 24 to 30 kt the nose lifted with the weight back launched the board and it fell.
 	var sim: WindsurferSim = _sim()
 	sim.trim_press_m = 0.2
 	_hold(sim, 0.5, 10.0)  # riding low and bouncing hard
-	_feel(sim, 5.0)
-	assert_between(sim.trim_press_m, 0.2, 0.21, "neither forward nor further onto the tail (a few millimetres before the chatter is felt)")
-	assert_gt(sim.felt_bounce_dps, 5.0, "and feels the chatter")
+	_feel(sim, 5.0, true, 14.0)
+	assert_between(sim.trim_press_m, 0.2, 0.21, "held, as PH16 step 17's rule")
 
 
 func test_a_nose_riding_high_gets_the_weight_off_the_tail_quickly() -> void:

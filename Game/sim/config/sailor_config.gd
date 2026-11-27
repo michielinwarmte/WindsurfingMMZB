@@ -153,6 +153,26 @@ const BALANCE_STANCE_FULL_DEG: float = 6.0
 ## a second. 1.7 deg/s is a bounce of 0.15 deg SD at 1.8 Hz, half the steadiness the team set
 ## for a planing board (pitch SD 0.3 deg, U1 Stop 1).
 @export var bounce_tolerance_dps: float = 1.7
+## A board bouncing with its nose low gets the weight moved aft (E01.S08 T10, 27 November 2026).
+## The bounce eases the rider forward only where forward helps: a board porpoising at or above
+## the trim aimed for. Riding below it, the further below, the less the bounce holds the rider
+## back, and a band (trim_press_band_deg) or more below it the weight keeps going aft at the
+## trimming rate: the nose is low, and a low nose is lifted with the weight back and the front
+## foot's pull (Max, Q54), bumps or not. Only at the slow speeds' trim: the rule fades out with
+## the trim aim, from running_trim_fast_speed_ms to running_trim_fastest_speed_ms, and from there
+## the bounce holds the rider as before. Why: in chop the waves alone pitch the board 1.3 to 2 deg
+## SD, far over bounce_tolerance_dps, so a rider who froze at every bounce never moved back on the
+## lake's chop, and the bent fin's push at the tail (100 to 135 N) left the tail up and the nose in
+## the water (Max's play-test, 26 November 2026: "it is lifted at the fin and nose is in the
+## water"). Measured on the lake's chop (12:00, 14:30, 17:00): the pitch 0.17/0.70/0.18 ->
+## 1.58/1.57/0.84 deg, the wet front 1.50/1.52/1.53 -> 1.18/1.31/1.35 m from the tail, 3 to 6 %
+## faster, no falls, the bounce no larger; the bent fin then costs the trim 0.09/0.20/0.49 deg
+## against a stiff fin instead of 0.81/0.80/0.40. Without the speed fade, the open sea's broad
+## reaches at 24 and 30 kt fell up to 8 times in 300 s (none before): the nose lifted at 16 to 17
+## m/s launched the board off the waves. Documentation/reports/reality_fixes/PROGRESS.md, "The fin
+## lifting the tail". For Michiel to confirm. false: PH16 step 17's rule exactly (a band or more
+## below the aim the bounce stops the creep aft and the press holds).
+@export var trim_aft_when_spearing: bool = true
 ## Off the plane (or stepping round the mast), or with the nose riding above the trim aimed for,
 ## the rider steps off the tail at once, not at the slow trimming rate: metres a second (0.3:
 ## the weight comes off the tail in about a second).

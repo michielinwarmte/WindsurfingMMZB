@@ -20,8 +20,13 @@ C:/Users/Max de Dikke/source/WindsurfingMMZB-reality. Measure with
 
 ## To continue
 
-0. DONE (26 Nov, late): the legs set to 0.8 Hz / 1.0 from the body tracker (Max: the choice is mine from the Max's play-test the same evening: "the small chop does good". NEXT: "the fin lifting straight up is frustrating me" (backlog E01.S08 T10, Q54).
-   measurements, not his). Section 'The body tracker', 'Set'. Max play-tests the feel.
+0. DONE (26 Nov, late): the legs set to 0.8 Hz / 1.0 from the body tracker (the choice was mine from the
+   measurements, not Max's; section 'The body tracker', 'Set'). Max's play-test the same evening: "the small
+   chop does good", but "the fin lifting straight up is frustrating me" (backlog E01.S08 T10, Q54).
+0b. BUILT (27 Nov): the fin lifting the tail, section "The fin lifting the tail" below: the sailor lifts a low
+   nose in a bounce (`SailorConfig.trim_aft_when_spearing`, on), up to 12.3 m/s, fading out by 13.5. NEXT: Max
+   play-tests it on the lake (`tools/play.sh lake` in this worktree): does the nose come up out of the chop,
+   does the tail still look lifted at the fin? Then Michiel's OK (the rule, the two moved test limits).
 1. Max play-tests the softer legs on the lake chop (`tools/play.sh lake` in this worktree, or a
    play folder if he asks: launchers with the mouse body on).
 2. Michiel's OK on the legs and the three moved test limits (all marked "for Michiel to confirm").
@@ -29,6 +34,86 @@ C:/Users/Max de Dikke/source/WindsurfingMMZB-reality. Measure with
    player with the rake stop near 35 deg. Gybing (the soft legs' gybe falls) is for later.
 4. Step 2 of gap 2 (legs that give in pitch and roll, spec 17.12 item 1) after the play-test;
    17.13 lists what failed sideways before (a sideways leg spring hunted the course).
+
+## The fin lifting the tail (27 November 2026, E01.S08 T10; Max: "it is lifted at the fin and nose is in the water")
+
+Max's play-test of 26 Nov on the lake's chop: "the fin lifting straight up is frustrating me"; asked what he saw
+(three options), his words: "it is lifted at the fin and nose is in the water". Outputs in `.sim_output/fin_lift/`.
+
+**What the fin does.** The bent fin's lift tilts up toward the deck (spec 4, "The fin bends", FEA-calibrated:
+the physics is right as far as the sources go): 129 N up on the default gear's 18 kt beam reach (21 N with
+`--fin.bends=false`, the heel's part), 100 to 135 N on the lake's chop, 330 to 350 N on the race gear (97 l +
+5.7, 38 cm fin) at 24 and 30 kt flat (42 to 44 % of what the hull's planing lift carries), spikes to 950 to
+1 380 N in the game's sea. It acts at the tail (0.18 m from it), 0.64 m behind the water's push centre on a
+1 m wet length: a nose-down moment of about 80 N m on the 18 kt beam reach, nearly the front strap's whole
+held 88.5 N m.
+
+**Why the nose stays in the water.** On flat water the feet are at the straps' held moment, so the bend costs
+only 0.0 to 0.2 deg of pitch (the lake's steady wind; pitch budget 18 kt: 1.38 -> 1.18 deg). On the lake's
+chop it costs 0.4 to 0.8 deg (pitch 0.98/1.50/0.58 stiff against 0.17/0.70/0.18 bent, 12:00/14:30/17:00, the
+wet front 1.37-1.42 -> 1.50-1.53 m from the tail): there the rider never moves back at all. The chop's own
+pitching (pitch rate 8.5 to 10.7 deg/s RMS) is far over `bounce_tolerance_dps` 1.7, and PH16 step 17's rule
+(a band or more below the aim the bounce stops the creep aft) holds the press still: the stiff fin's board
+sits nose-low too, the bent fin's push just holds the tail up further. With the bounce's veto off
+(`--sailor.bounce_tolerance_dps=100`) the lake's chop gave pitch 1.63/1.74/1.42 deg, the wet front 1.17 to
+1.29 m, 4 to 8 % faster, no falls, and the bend then cost 0.04 to 0.10 deg.
+
+**Built:** `SailorConfig.trim_aft_when_spearing` (true in the class and `sailor_default.tres`; false = PH16
+step 17 exactly): below the aim `push = aim - chatter (1 - aim)` instead of `aim - chatter`, so a band or more
+below the aim the weight keeps going aft through the bounce (Q54: a low nose is lifted with the weight back
+and the front foot), faded out with the trim aim from 12.3 to 13.5 m/s (`WindsurferSim._fast_trim_share`, the
+band where this hull starts to tail-walk). Spec 7.5 and a section 16 row; `test_trim_by_feel.gd` 4 new or
+changed tests. Telemetry: `felt_trim_deg` and `felt_bounce_dps` (CSV columns at the end). Dev tool:
+`run_lake.gd` takes `--fin.<field>=`.
+
+| lake chop, straight, 12:00/14:30/17:00 | pitch deg | wet front m | speed m/s | pitch SD deg | falls |
+|---|---|---|---|---|---|
+| before | 0.17/0.70/0.18 | 1.50/1.52/1.53 | 11.75/10.52/11.96 | 1.30/1.92/2.08 | 0 |
+| before, stiff fin | 0.98/1.50/0.58 | 1.37/1.41/1.42 | 11.84/10.53/12.30 | 1.19/1.70/1.49 | 0 |
+| **now** | **1.58/1.57/0.84** | **1.18/1.31/1.35** | **12.48/10.99/12.29** | 1.41/1.70/1.86 | 0 |
+| now, stiff fin | 1.67/1.77/1.33 | 1.20/1.36/1.24 | 12.42/10.75/12.76 | 1.26/1.69/1.51 | 0 |
+
+The bend's cost in chop: 0.81/0.80/0.40 deg -> 0.09/0.20/0.49 deg (17:00 is the fastest run, where the rule
+fades). Lake flat (steady wind): the same to 0.01 deg.
+
+**What did not work.** (1) The rule without the speed fade: the lake the same, but the player's broad reaches
+on the open sea (push check, gusts and waves, 300 s) fell 0/2 times at 24 kt TWA 120/135 and 8/3 at 30 kt
+(none before): the nose lifted at 16 to 17 m/s launched the board off the waves, the fin came out (its load
+0.01 to 0.06 of the side force) and the board spun (yaw 80 deg/s). (2) Judging the trim and the bounce against
+the water's own slope (a straight line through the surface's heights along the board) instead of the horizon:
+on the lake's short chop the board does not follow that slope (the relative pitch rate 11 to 14 deg/s, more
+than the plain 8.5 to 10.7), and on the open sea it did not stop the falls (2/4/7/4). Removed. (3) More
+front-foot pull (`front_foot_pull_held_n` 250, the top of the sourced range): +0.06 to +0.25 deg in chop, a
+larger bounce at 17:00; with higher trim aims (3 to 4.5 deg) the board porpoised or fell (pitch budget, flat;
+the hull's stability at higher trim, E01.S08 T3/T8, is still the lock).
+
+**Checks (all with the rule on):**
+- `tools/matrix.sh` flat and `--waves=1`: 54 cases, 0 falls, 0 NaN, all manoeuvres done.
+- `tools/lake_matrix.sh` (map wind) and `--lake_waves=1`: 0 falls; 1 manoeuvre unfinished in the map wind,
+  the same one with the rule off (two tack times differ by a second).
+- The player's controller (`tools/push_check.sh`, 9 cases, gusts and waves): 0 falls (0 before); made good
+  18 kt beam 13.11 -> 13.33, 24 kt beam 14.31 -> 14.62, 24 kt broad 15.02 -> 15.17, 12 kt broad 5.36 -> 5.21,
+  the rest within 1.5 %. Broad reaches 24 and 30 kt at TWA 120/135/150, 300 s: 0 falls (0 before), speeds
+  within 2 %.
+- Race gear (97 l + 5.7) on the autopilot: straight in waves at 24 kt faster at all three wave scales
+  (12.21/11.13/11.19 -> 14.55/13.59/11.85 m/s), at 30 kt slower: 15.26 -> 11.31 m/s, no falls (it hovers
+  below 13.5 m/s, where the rule lifts the nose into the big waves, and flies off them: the cost of this
+  rule). Gybes at 24 and 30 kt over four key shifts: 11 falls of 24 (14 of 24 before; gybing is for later).
+- `tools/test_parallel.sh all`: 1168 tests; the 5 known reds (the polar's speeds, the top speed, the planing
+  onset, the push warning, the lake fleet start) and three new: `test_feet_press` (recorded numbers: the old
+  rule now set inside it, as for the legs and the sail), and two limits Max moved (27 Nov, for Michiel):
+  `test_recovery` "still touching the water" 0.02 -> 0.015 (0.01999) and `test_skipper` the all-rounder's
+  12 kt T1 time 12:00 -> 12:30 (12:20.3 against 11:51.0: two more tacks on the first beat, 241 -> 275 s to
+  mark 1, the other legs as fast or faster; 14 kt 10:01.4 -> 10:00.7).
+- Reality check: strict 1 of 10 (the heel), as before; the lake's pitch SD 1.18/1.74/2.00 -> 1.09/1.34/1.84
+  deg (12:00 now "off" below video 04's 1.7, indicative); the legs 2 of 3 close, as before; the speed in waves
+  medium 18/22 kt 23.7/26.0 -> 24.7/26.1 kn, race gear 24 kt 22.0 -> 26.3, 30 kt 30.5 -> 22.8 kn (above).
+
+**Still open (Michiel):** the wet length (1.2 to 1.35 m in chop now, 0.95 to 1.1 m flat, real 0.5 to 0.7 m);
+a nose lifted to the real 3 to 4 deg needs the hull steady there (E01.S08 T3/T8) and more of the front foot's
+pull (Q54/Q55). The fin's own up-push is as measured; whether it lifts the tail or merely carries it depends on
+the wet length: on a real 0.5 to 0.7 m the push centre is about 0.3 m from the tail and the fin's lever is
+small.
 
 ## Gap 2 (the bounce): CORRECTION + the fix found
 

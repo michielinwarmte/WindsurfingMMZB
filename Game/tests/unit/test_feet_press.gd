@@ -72,6 +72,9 @@ func _run(wind_kt: float, twa_deg: float, push: float, seconds: float) -> Packed
 	# no later stall when twisted): these numbers are from before them.
 	sim.sail_config.sheet_angle_in_deg = 12.0
 	sim.sail_config.twist_stall_shift_deg = 0.0
+	# And the trim by feel as it was before 27 November 2026 (E01.S08 T10: a board bouncing with its
+	# nose low now gets the weight moved aft): these numbers are from before it.
+	sim.sailor_config.trim_aft_when_spearing = false
 	var controller: PlayerController = PlayerController.new()
 	# The controller as it sailed before the lake's chop technique (its defaults since the autopilot's
 	# training of 6 November 2026, Documentation/reports/autopilot/lake_chop_training.md): this test

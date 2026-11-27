@@ -23,8 +23,12 @@ const DT: float = 1.0 / 60.0
 const PRESTART_S: float = 60.0
 ## The longest any of these races may take after the gun, seconds.
 const RACE_LIMIT_S: float = 900.0
-## The finish times allowed for the all-rounder on T1, seconds, by wind (kt).
-const T1_LIMIT_S: Dictionary[int, float] = {12: 720.0, 18: 480.0, 24: 510.0}
+## The finish times allowed for the all-rounder on T1, seconds, by wind (kt). 12 kt: 750, not 720,
+## since the low nose is lifted in a bounce (27 November 2026, E01.S08 T10,
+## SailorConfig.trim_aft_when_spearing): 12:20.3 against 11:51.0, two more tacks on the first beat
+## (241 -> 275 s to mark 1), the other legs as fast or faster, 14 kt the same to the second (Max
+## moved the bar; for Michiel to confirm).
+const T1_LIMIT_S: Dictionary[int, float] = {12: 750.0, 18: 480.0, 24: 510.0}
 
 
 ## One race: what is raced, and what the tests need to know of it afterwards.
