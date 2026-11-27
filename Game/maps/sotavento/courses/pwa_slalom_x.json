@@ -1,5 +1,5 @@
 {
-	"about": "Sotavento's PWA Slalom X course, laid from the event's zone map of 2026 (fuerteventura-worldcup.org): the start up the coast and about 500 m out, four gybe marks zigzagging downwind (broad reaches of about 125 degrees in the NNE trade wind), the finish outside the freestyle box opposite the judges' tower. The map is a drawing, not a survey: the positions are the lead's reading of it (Documentation/reports/spots/sotavento/PLAN.md, section 6). Positions are REGCAN95 / UTM 28N metres; sides are the side each mark is left on.",
+	"about": "Sotavento's PWA Slalom X course, rebuilt on 27 November 2026 from the stream's replays of the 2026 event (Max: \"the start is the wrong way, the first reach is always to the beach\", and \"try to match the positions of the start boat, the pin end, all buoys and the finish\"). The legs' lengths: the leader's time on each leg, the middle of nine heats (32, 33, 38, 38 and 40 s; the winner finishes about 187 s after the gun), times Max's own speeds at Sotavento (16 m/s coming in, 13.5 going out, a gybe's loss taken off). The directions: the first reach towards the beach on starboard tack, then out, in, out and in to the finish, each a reach of 125 degrees in the spot's 025 trade wind. The place: the finish in front of the judges' tower, as the event's zone map of 2026 has it; everything else follows backwards from there. An estimate, not a survey: another wind direction on the day turns the whole course about the finish. Until this date the course was a third of this size and its first reach went out to sea. Positions are REGCAN95 / UTM 28N metres; sides are the side each mark is left on.",
 	"name": "PWA Slalom X, Sotavento",
 	"map": "Fuerteventura, Sotavento",
 	"template": "",
@@ -13,50 +13,50 @@
 		{
 			"id": "start boat",
 			"side": "",
-			"east": 575116.88,
-			"north": 3113012.49
+			"east": 576018.73,
+			"north": 3113701.53
 		},
 		{
 			"id": "start pin",
 			"side": "",
-			"east": 574980.46,
-			"north": 3113043.99
+			"east": 575994.42,
+			"north": 3113839.41
 		},
 		{
 			"id": "1",
-			"side": "starboard",
-			"east": 575128.86,
-			"north": 3112886.57
+			"side": "port",
+			"east": 575502.36,
+			"north": 3113681.56
 		},
 		{
 			"id": "2",
-			"side": "port",
-			"east": 574896.5,
-			"north": 3112858.11
+			"side": "starboard",
+			"east": 575725.11,
+			"north": 3113295.75
 		},
 		{
 			"id": "3",
-			"side": "starboard",
-			"east": 575051.64,
-			"north": 3112729.93
+			"side": "port",
+			"east": 575126.34,
+			"north": 3113190.17
 		},
 		{
 			"id": "4",
-			"side": "port",
-			"east": 574838.77,
-			"north": 3112696.97
+			"side": "starboard",
+			"east": 575382.84,
+			"north": 3112745.9
 		},
 		{
 			"id": "finish boat",
 			"side": "",
-			"east": 574791.54,
-			"north": 3112625.77
+			"east": 574759.51,
+			"north": 3112595.37
 		},
 		{
 			"id": "finish pin",
 			"side": "",
-			"east": 574713.59,
-			"north": 3112643.76
+			"east": 574745.62,
+			"north": 3112674.16
 		}
 	],
 	"freestyle_box": [
