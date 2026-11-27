@@ -97,6 +97,11 @@ func add_voice(speech: SpeechEngine = null) -> CommentaryVoice:
 	return voice
 
 
+## Whether the lines are heard: a voice that can speak and is on (Shift+V in watch mode).
+func voice_on() -> bool:
+	return voice != null and voice.can_speak() and voice.on
+
+
 ## The line `id` lasts `seconds` from its start (the voice says it slower than he did): the director
 ## waits for it and the subtitle stays as long.
 func line_lasts(id: String, seconds: float) -> void:

@@ -464,7 +464,9 @@ func _build_audio_rows(s: SettingsValues) -> void:
 		func(v: float) -> void: s.water_volume = v)
 	_add_slider(grid, "Sail", 0.0, 1.0, 0.05, s.sail_volume, percent,
 		func(v: float) -> void: s.sail_volume = v)
-	_add_note(grid, "Wind: the apparent wind in your ears. Water: lapping, the planing hiss and splashes. Sail: flapping when it luffs, the crack when it fills and the swoosh in a tack. All sounds are made by the game itself, from noise.")
+	_add_slider(grid, "Commentary", 0.0, 1.0, 0.05, s.commentary_volume, percent,
+		func(v: float) -> void: s.commentary_volume = v)
+	_add_note(grid, "Wind: the apparent wind in your ears. Water: lapping, the planing hiss and splashes. Sail: flapping when it luffs, the crack when it fills and the swoosh in a tack. All sounds are made by the game itself, from noise. Commentary: the commentator's lines while you watch a race (V), said by a computer voice, not the real commentator's.")
 
 
 # --- Row helpers ------------------------------------------------------------------------

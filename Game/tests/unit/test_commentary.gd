@@ -813,8 +813,12 @@ func test_watch_mode_has_a_key_for_the_commentary() -> void:
 	var keys: Array[String] = []
 	for key: Array in WatchMode.KEYS:
 		keys.append(str(key[0]))
-	assert_true(keys.has("V"), "V: the commentary")
-	assert_eq(keys.count("V"), 1)
+	assert_true(keys.has("V, Shift+V"), "V: the commentary; Shift+V: its voice")
+	var with_v: int = 0
+	for key: String in keys:
+		if key.begins_with("V"):
+			with_v += 1
+	assert_eq(with_v, 1)
 
 
 func test_the_transcripts_clock() -> void:

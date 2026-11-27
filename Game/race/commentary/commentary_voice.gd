@@ -88,6 +88,9 @@ func setup(listen_to: Commentary, speech: SpeechEngine = null) -> void:
 	commentary.line_started.connect(_on_line_started)
 	commentary.line_stopped.connect(_on_line_stopped)
 	commentary.line_ahead.connect(_on_line_ahead)
+	# The volume slider (Settings > Audio > Commentary) on the voice's bus, also outside the sailing
+	# scene's own sounds.
+	GameAudio.apply_bus_volumes(GameSettings.values)
 	engine = speech if speech != null else start_engine(config)
 	cache_dir = ProjectSettings.globalize_path(CACHE_ROOT).path_join(cache_name(config))
 	DirAccess.make_dir_recursive_absolute(cache_dir)
