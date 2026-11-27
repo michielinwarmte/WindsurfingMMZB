@@ -96,6 +96,10 @@ PICKS = [
     ("after_race", ["Hardcore racing."], "Hardcore racing.", []),
     ("after_race", ["Absolutely ridiculous."], "Absolutely ridiculous.", []),
     ("after_race", ["What a race he is having."], "What a race he is having.", []),
+    # Added with the four moments of 27 November 2026 (new picks go at the end: the ids are by position).
+    ("tactics", ["He's got a lower line."], "He's got a lower line.", []),
+    ("tactics", ["Pushing hard above Pierre Mortefon though."], "Pushing hard above {rider2} though.", ["close", "pair"]),
+    ("form", ["And again, he loves it.", "He's having fun."], "And again, he loves it. He's having fun.", ["leader"]),
 ]
 
 

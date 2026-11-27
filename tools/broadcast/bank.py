@@ -259,6 +259,22 @@ MOMENT_RULES = [
               r"here comes|back in it|fight his way back|fight her way back"),
     ("last_leg", r"last (reach|leg)|final (reach|leg)|run to the finish|to the finish|home straight|"
                  r"one (reach|leg) to go|penultimate"),
+    ("tension", r"could (he|she) do it|can (he|she) (do|hold|make|keep)|will (he|she) |is (he|she) going to|"
+                r"going to be (sweaty|close|tight|tense)|keep it together|hold (his|her) nerve|not over yet|"
+                r"not all over|anything can happen|any mistake|all to play for|down to the wire|still got time|"
+                r"it's still on|far from over|everything to play for|nail-?biting|squeaky"),
+    ("tactics", r"(lower|higher|high|low|wide|tight|deep|deeper) line|going (high|low|deep)|goes (high|low|deep)|"
+                r"(pushing|sailing|coming|going) (hard |a bit |a little |way )?(above|below|over the top|underneath)|"
+                r"to windward|to leeward|upwind of|downwind of|clear (air|wind)|clean (air|wind)|dirty (air|wind)|"
+                r"wind shadow|takes? the inside|covering"),
+    ("form", r"means business|confident|confidence|looks? hungry|hungry for|wants (it|this) (so )?(bad|more)|"
+             r"determined|focused|in the zone|on form|in form|has still got it|still got it|loves it|loving it|"
+             r"having fun|enjoying (it|this|himself|herself)|on a (roll|run|mission)|nervous|under no illusions|"
+             r"knows what (he|she) (has|needs) to do"),
+    ("conditions", r"howling|windy|the wind (is|has|was|turn|pick|drop|fill|shift|swing)|\bgusts?\b|gusty|\blulls?\b|"
+                   r"\d+ knots|offshore|onshore|side-?shore|flat water|choppy|the chop is|swell|waves? (are|were|is) |"
+                   r"conditions|it's (really |properly )?blowing|nuking|port tack leg|starboard tack leg|long leg|"
+                   r"the course is|wind (direction|strength)"),
     ("leader", r"in the lead|leading|out in front|at the front|leader\b|leads\b|still in first|extending|pulling away|"
                r"on a heater|controlling|clear ahead|untouchable|running away|so much room"),
     ("rundown", r"" + R + r" in \{place\}|^\{place\}( place)?[.!]?$|in \{place\}( place)?[.!]?$|then (we've got|it's|"
@@ -272,7 +288,7 @@ MOMENT_RULES = [
     ("wow", r"^wow|oh my life|oh my word|oh my god|my goodness|look at (this|that)|what the hell|would you believe|"
             r"^oof|^ooh|^whoa|are you kidding"),
     ("speed", r"flying|speed|\bfast|quick|rapid|rocket|chop|control|lit up|powered|full power|on fire|ripping|sending|"
-              r"hauling|wound up|eating up|means business|looking (very |really |so )?(good|comfortable|strong)|"
+              r"hauling|wound up|eating up|looking (very |really |so )?(good|comfortable|strong)|"
               r"in the money|right in the game"),
     ("identify", r"you've got " + R + r"|there's " + R + r"|that's " + R + r"|this is " + R + r"|that is " + R + r"|"
                  r"here's " + R + r"|we've got " + R + r"|it's " + R + r"|it is " + R + r"|^(but |so |and it's )?" + R + r"[.!]?$|"

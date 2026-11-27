@@ -80,7 +80,7 @@ Short words; the director knows what each means. The bank's builders use only th
 
 ## The moments
 
-Each moment is something the race can tell the commentary director. The list comes from the plan and from reading the heats; it grows only when the streams show a kind of line that fits none of these.
+Each moment is something the race can tell the commentary director. The list comes from the plan and from reading the heats; it grows only when the streams show a kind of line that fits none of these. There are 35: the 28 of the first list, three added from the eleven replays (`trouble`, `wow`, `oh_no`), and four added on Max's word of 27 November 2026 after a sample of the lines that fitted no moment (`tactics`, `tension`, `form`, `conditions`).
 
 **Before and at the start**
 
@@ -106,6 +106,10 @@ Each moment is something the race can tell the commentary director. The list com
 | `fight` | two boards side by side or nose to tail for a while | "Head to head." "Keep your eye on that battle for second place." |
 | `airtime` | a board leaves the water off the chop and lands it | "Gets airborne on this penultimate reach and he's holding on." |
 | `filler` | racing, but nothing new for a while | "Hardcore racing." |
+| `tactics` | the line a board takes against the others or the mark: higher, lower, above, below, inside, in clear wind | "He's got a lower line." "Pushing hard above {rider} though." |
+| `tension` | it isn't decided yet and it could go either way: a small gap late in the race, a leader who can still lose it | "Could he do it?" "It's going to be sweaty." "Needs to keep it together though." |
+| `form` | the state a rider is in: confident, hungry, enjoying it, on a run | "He means business." "And again, he loves it. He's having fun." |
+| `conditions` | the wind, the water and the course on the day: how hard it blows, the gusts, the chop, which leg is the long one | "It's a huge port tack leg on the way out." |
 
 **At a mark**
 
