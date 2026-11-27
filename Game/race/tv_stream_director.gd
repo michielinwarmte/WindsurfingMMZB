@@ -114,6 +114,17 @@ static func heat_phase(started: bool, clock_s: float, finished: bool, start_from
 	return Phase.RACE
 
 
+## Whether the race is over for the TV: the race has ended, or its winner finished after_winner_s ago
+## (the stream's race phase ends when the last board it shows crosses the line).
+static func race_over(race: RaceSim, after_winner_s: float) -> bool:
+	if race.phase() == RaceSim.Phase.FINISHED:
+		return true
+	var order: Array[int] = race.race_order()
+	if order.is_empty() or not race.is_finished(order[0]) or race.finish_time_s(order[0]) < 0.0:
+		return false
+	return race.clock_s() - race.finish_time_s(order[0]) >= after_winner_s
+
+
 ## The picture for a key by hand (TvCamera.hold()): the chase drone (7) and the drone beside the board
 ## (8) as the race's pictures on the front, the view down the start line (6) as the start's line
 ## drone; null for the helicopter (5) and the overhead drone (9), which stay the 12 November ones.
@@ -138,7 +149,7 @@ func step(dt: float) -> void:
 	_note_places(race)
 	if tv.view_lost:
 		_cut_away_from_land(race)
-	var now: Phase = heat_phase(race.is_started(), race.clock_s(), race.phase() == RaceSim.Phase.FINISHED, config.start_from_s, config.start_until_s)
+	var now: Phase = heat_phase(race.is_started(), race.clock_s(), race_over(race, config.race_ends_after_winner_s), config.start_from_s, config.start_until_s)
 	if now != phase or not _entered:
 		_enter(now, race)
 	match phase:
@@ -249,7 +260,10 @@ func _after_race(race: RaceSim) -> void:
 func _free(race: RaceSim, mix: TvPhaseMix) -> void:
 	if mix == null or (_left_s > 0.0 and tv.runner.watch_order().has(tv.focus)):
 		return
-	var only_on: String = "front" if _back_to_leader else ""
+	# After the chasers at a mark, and after any take on the pack, back to the leader (the stream goes back
+	# and forth between the lone leader and the fights behind).
+	var after_pack: bool = phase == Phase.RACE and tv.picture != null and tv.picture.on == "pack"
+	var only_on: String = "front" if _back_to_leader or after_pack else ""
 	_back_to_leader = false
 	var pool: Array[TvPicture] = _pool(mix.pictures)
 	var next: TvPicture = draw_picture(pool, tv.picture, _rng.randf(), only_on)

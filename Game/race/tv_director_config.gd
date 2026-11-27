@@ -19,6 +19,11 @@ extends Resource
 ## first reach (about 10 to 15 s after it).
 @export var start_from_s: float = -10.0
 @export var start_until_s: float = 12.0
+## The race phase ends this long after the winner finished (or when the race has ended, if sooner):
+## the readers ended it when the last board the stream showed crossed the line, 6 to 37 s after the
+## winner in the nine heats (8, 13, 9, 6, 9, 33, 37, 28 and 17 s from their notes: 13 in the middle).
+## The game's race goes on up to 60 s after the winner while the last boards come in.
+@export var race_ends_after_winner_s: float = 13.0
 ## Before the start: the stream shows a line-up graphic for more than half of it (the graphics are a
 ## later phase of the plan); the live pictures only, at their shares among themselves.
 @export var pre_start: TvPhaseMix

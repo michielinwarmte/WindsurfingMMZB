@@ -174,6 +174,37 @@ func test_the_four_phases_by_the_race_clock() -> void:
 	assert_eq(TvStreamDirector.PHASE_NAMES[TvStreamDirector.Phase.AFTER_RACE], "after_race", "the readers' word")
 
 
+func test_the_race_phase_ends_as_the_streams_when_the_last_board_shown_is_in() -> void:
+	# The readers ended the race when the last board the stream showed crossed the line (13 s after the
+	# winner in the middle); the game's race goes on up to a minute for the last boards.
+	var course: Course = Course.new()
+	course.add_mark(CourseMark.START_BOAT, Vector2(30.0, 0.0))
+	course.add_mark(CourseMark.START_PIN, Vector2(-30.0, 0.0))
+	course.add_mark("1", Vector2(0.0, -300.0), CourseMark.Rounding.PORT)
+	course.add_mark(CourseMark.FINISH_BOAT, Vector2(-100.0, -70.0))
+	course.add_mark(CourseMark.FINISH_PIN, Vector2(-100.0, -30.0))
+	assert_eq(course.set_sequence("Start-1-Finish"), "")
+	var race: RaceSim = RaceSim.new(course, 1, 5.0)
+	for i: int in 3:
+		race.add_board("board %d" % i)
+		race.update_board(i, Vector2(0.0, 20.0 + i))
+	race.start()
+	while race.clock_s() < 30.0:
+		race.step(0.1)
+	var after_s: float = config.race_ends_after_winner_s
+	assert_false(TvStreamDirector.race_over(race, after_s), "nobody in yet")
+	race.place_board(0, Vector2(-120.0, -40.0), race.steps().size())
+	assert_true(race.is_finished(0), "the winner is in")
+	assert_false(TvStreamDirector.race_over(race, after_s), "the winner just in: the race goes on")
+	var winner_in_s: float = race.clock_s()
+	while race.clock_s() < winner_in_s + after_s + 0.5:
+		race.step(0.1)
+	assert_eq(race.phase(), RaceSim.Phase.RACING, "the game's race still runs for the last boards")
+	assert_true(TvStreamDirector.race_over(race, after_s), "but for the TV it is over")
+	assert_eq(TvStreamDirector.heat_phase(true, race.clock_s(), TvStreamDirector.race_over(race, after_s), config.start_from_s, config.start_until_s),
+		TvStreamDirector.Phase.AFTER_RACE)
+
+
 # ---------------------------------------------------------------- the pictures
 
 func test_the_stream_never_looks_straight_down_nor_circles() -> void:

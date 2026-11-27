@@ -12,7 +12,9 @@
 ;   of the sail's height and the horizon's place, percent of the picture's height), each phase's take_s
 ;   (the quartiles of the take lengths; before the start and after the race of the live pictures only,
 ;   the profile's take_length_action) and longest_s; mark_take_s (the profile's mark_beat);
-;   finish_take_s (its drone side-on at the line in the race); the start's phase borders (-10 s, +12 s).
+;   finish_take_s (its drone side-on at the line in the race); the start's phase borders (-10 s, +12 s);
+;   race_ends_after_winner_s (13: the readers ended the race phase when the last board the stream
+;   showed crossed the line, 6 to 37 s after the winner, 13 in the middle, from their notes).
 ; - COUNTED tonight on the nine heats' start sequences (the readers' shot_notes.csv around the gun):
 ;   line_drone_before_gun_s (the line drone came 2.6, 3.1, 3.7 s before the gun: p25, middle, p75),
 ;   runner_after_gun_s (the drone running with the fleet came, or the line drone began to run, 0.6,
@@ -496,6 +498,7 @@ pictures = Array[ExtResource("2")]([SubResource("after_winner"), SubResource("af
 script = ExtResource("1")
 start_from_s = -10.0
 start_until_s = 12.0
+race_ends_after_winner_s = 13.0
 pre_start = SubResource("mix_pre_start")
 race = SubResource("mix_race")
 after_race = SubResource("mix_after_race")

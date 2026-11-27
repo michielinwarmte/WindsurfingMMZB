@@ -119,6 +119,7 @@ var _fov_now: float = 45.0
 ## The heat's phase as last written down (the log splits a take at a border), and the borders.
 var _log_phase: String = ""
 var _phase_borders: Vector2 = Vector2(-10.0, 12.0)
+var _race_over_after_s: float = 13.0
 ## True when land stands between the camera and what it films (TvStreamDirector cuts away): checked at
 ## the cut and every VIEW_CHECK_S while a camera that stands somewhere (the beach cam, a static drone)
 ## is on. The beach markers whose hidden marks were written down once.
@@ -154,6 +155,7 @@ func setup(race_runner: RaceRunner, camera_rig: CameraRig, sailing_scene: Sailin
 func use_director(which: String) -> void:
 	var borders: TvDirectorConfig = load(STREAM_CONFIG) as TvDirectorConfig
 	_phase_borders = Vector2(borders.start_from_s, borders.start_until_s)
+	_race_over_after_s = borders.race_ends_after_winner_s
 	if which == "12nov":
 		old = load(CONFIG_12NOV) as TvDirector12NovConfig
 		stream = null
@@ -1148,7 +1150,7 @@ func _heat_phase_name() -> String:
 	var race: RaceSim = runner.race
 	if race == null:
 		return "pre_start"
-	var phase: int = TvStreamDirector.heat_phase(race.is_started(), race.clock_s(), race.phase() == RaceSim.Phase.FINISHED, _phase_borders.x, _phase_borders.y)
+	var phase: int = TvStreamDirector.heat_phase(race.is_started(), race.clock_s(), TvStreamDirector.race_over(race, _race_over_after_s), _phase_borders.x, _phase_borders.y)
 	return TvStreamDirector.PHASE_NAMES[phase]
 
 
