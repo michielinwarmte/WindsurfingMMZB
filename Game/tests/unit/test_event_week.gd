@@ -184,6 +184,10 @@ func test_the_roster_has_favourites_and_tail_enders() -> void:
 		assert_eq(sailor.persona.name, sailor.name, "the name on the board is the sailor's")
 	assert_gt(roster.sailors[0].persona.boat_speed, roster.sailors[63].persona.boat_speed + 0.2, "the favourite is clearly faster than the last of the ranking")
 	assert_not_null(roster.sailors[0].make_skipper())
+	# The favourite is good in a strong wind whatever his character (Sotavento blows 30 knots): his
+	# form there is no worse than a middling sailor's, and well above the last of the ranking's.
+	assert_gt(roster.sailors[0].persona.strong_wind, 0.69)
+	assert_gt(roster.sailors[0].persona.wind_form(30.0), roster.sailors[63].persona.wind_form(30.0) + 0.05)
 
 
 func test_the_results_text_names_everyone_and_marks_the_dropped() -> void:

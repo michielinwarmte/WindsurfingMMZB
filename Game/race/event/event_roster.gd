@@ -21,6 +21,11 @@ const BEST_LEVEL: float = 0.95
 const LAST_LEVEL: float = 0.55
 ## How much of a character's own shape (its skill against its own mean) a sailor keeps.
 const SHAPE_SHARE: float = 0.5
+## The wind skills a ranking place moves too (Persona.light_wind, strong_wind): a world cup's
+## favourite is good in every wind. Left at the character's own, a light-wind character at the top
+## of the ranking lost a third of every skill in Sotavento's 30 knots (Persona.wind_form()) and the
+## top seed finished last in most test heats (27 November 2026).
+const WIND_SKILLS: PackedStringArray = ["light_wind", "strong_wind"]
 
 
 class Sailor:
@@ -91,6 +96,9 @@ static func _persona_for(base: Persona, sailor: Sailor, count: int) -> Persona:
 	mean /= SKILLS.size()
 	for skill: String in SKILLS:
 		persona.set(skill, clampf(level + SHAPE_SHARE * (float(base.get(skill)) - mean), 0.05, 1.0))
+	for skill: String in WIND_SKILLS:
+		# The character's liking for that wind (against a middling 0.5) on top of the place's level.
+		persona.set(skill, clampf(level + SHAPE_SHARE * (float(base.get(skill)) - 0.5), 0.05, 1.0))
 	return persona
 
 
