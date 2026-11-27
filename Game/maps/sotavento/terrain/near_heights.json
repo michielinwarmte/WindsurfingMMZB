@@ -1,0 +1,16 @@
+{
+ "about": "Fuerteventura, Sotavento: heights for the game, written by tools/map/spot_build.py: don't edit. height above mean sea level (m) = height_offset_m + value * height_scale_m",
+ "file": "near_heights.bin",
+ "format": "uint16 little-endian, row by row from the north edge, each row from west to east",
+ "columns": 2400,
+ "rows": 2400,
+ "cell_m": 5.0,
+ "crs": "EPSG:4083",
+ "west_m": 568202.5,
+ "north_m": 3118397.5,
+ "x0_m": -5961.5,
+ "z0_m": -5923.5,
+ "height_scale_m": 0.026801016747641696,
+ "height_offset_m": -1391.4046325566985,
+ "lake_level_m": 0.0
+}

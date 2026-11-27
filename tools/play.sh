@@ -4,6 +4,7 @@
 # Short names, so you don't have to type the res:// path:
 #   tools/play.sh lake           sail on Lake Silvaplana, off the camping beach in a Maloja wind (map track, M3)
 #   tools/play.sh silvaplana     the Silvaplana map: fly around the terrain (map track, M1)
+#   tools/play.sh sotavento      sail at Fuerteventura, Sotavento (backlog E04.S12)
 #   tools/play.sh wind           the wind viewer: the Maloja over Silvaplana, with the course maker (map track, W2, W4a)
 #
 # Options for the game go after the scene, for example a race course (RACING_PLAN.md, 9A):
@@ -28,6 +29,7 @@ trap 'status=$?; if [[ $status -ne 0 ]] && double_clicked; then read -rp "Press 
 scene_for() {
 	case "$1" in
 		lake) echo "res://maps/silvaplana/sail_silvaplana.tscn" ;;
+		sotavento) echo "res://maps/sotavento/sail_sotavento.tscn" ;;
 		silvaplana) echo "res://maps/silvaplana/dev/terrain_view.tscn" ;;
 		wind) echo "res://maps/silvaplana/wind_viewer.tscn" ;;
 		*) echo "$1" ;;
@@ -41,10 +43,12 @@ if [[ $# -eq 0 ]] && double_clicked; then
 	echo "  2  Sail on Lake Silvaplana: off the camping beach in a Maloja wind (R: back to the start)"
 	echo "  3  Silvaplana: fly around the terrain (keys 1-4: viewpoints, W A S D E Q: fly, right mouse: look)"
 	echo "  4  Silvaplana wind viewer: the Maloja's streaks and speeds, and the course maker (Tab: camera, click: wind at a point, M: course)"
+	echo "  5  Sail at Fuerteventura, Sotavento: the PWA beach, the trade wind, the lagoon (R: back to the start)"
 	read -rp "> " choice
 	if [[ "$choice" == "2" ]]; then args=(lake); fi
 	if [[ "$choice" == "3" ]]; then args=(silvaplana); fi
 	if [[ "$choice" == "4" ]]; then args=(wind); fi
+	if [[ "$choice" == "5" ]]; then args=(sotavento); fi
 fi
 if [[ ${#args[@]} -gt 0 ]]; then args[0]="$(scene_for "${args[0]}")"; fi
 # Options after the scene are the game's (tools/play.sh lake --course=t2_slalom): Godot hands the

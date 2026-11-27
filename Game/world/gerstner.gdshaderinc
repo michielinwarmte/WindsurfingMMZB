@@ -81,6 +81,15 @@ uniform sampler2D lake_envelope : filter_nearest, repeat_disable;
 uniform vec4 lake_grid = vec4(0.0, 0.0, 1.0, 0.0);
 uniform ivec2 lake_grid_size = ivec2(0);
 
+// A sea spot's swell (PHYSICS_SPEC.md 9.20; LakeWaves): two long trains after the wind sea's, as
+// (direction x, direction z, phase at the origin, wavelength), their amplitudes per node in
+// lake_swell_envelope (red and green). Off on every lake (lake_swell_on false), so a lake's water is
+// what it was.
+uniform bool lake_swell_on = false;
+uniform vec4 swell_a = vec4(0.0, -1.0, 0.0, 100.0);
+uniform vec4 swell_b = vec4(0.0, -1.0, 0.0, 100.0);
+uniform sampler2D lake_swell_envelope : filter_nearest, repeat_disable;
+
 // The four trains' amplitudes at a world (x, z): bilinear between the four nearest nodes, 0 off the
 // grid (LakeWaveField.amplitudes_for()).
 vec4 lake_amplitudes(vec2 xz) {
@@ -92,6 +101,19 @@ vec4 lake_amplitudes(vec2 xz) {
 	vec2 t = f - vec2(node);
 	vec4 north = mix(texelFetch(lake_envelope, node, 0), texelFetch(lake_envelope, node + ivec2(1, 0), 0), t.x);
 	vec4 south = mix(texelFetch(lake_envelope, node + ivec2(0, 1), 0), texelFetch(lake_envelope, node + ivec2(1, 1), 0), t.x);
+	return mix(north, south, t.y);
+}
+
+// The swell's two trains' amplitudes at a world (x, z), the same way (0 off the grid).
+vec2 lake_swell_amplitudes(vec2 xz) {
+	vec2 f = (xz - lake_grid.xy) * lake_grid.z;
+	if (f.x < 0.0 || f.y < 0.0 || f.x >= float(lake_grid_size.x - 1) || f.y >= float(lake_grid_size.y - 1)) {
+		return vec2(0.0);
+	}
+	ivec2 node = ivec2(f);
+	vec2 t = f - vec2(node);
+	vec2 north = mix(texelFetch(lake_swell_envelope, node, 0).rg, texelFetch(lake_swell_envelope, node + ivec2(1, 0), 0).rg, t.x);
+	vec2 south = mix(texelFetch(lake_swell_envelope, node + ivec2(0, 1), 0).rg, texelFetch(lake_swell_envelope, node + ivec2(1, 1), 0).rg, t.x);
 	return mix(north, south, t.y);
 }
 
@@ -130,6 +152,24 @@ void lake_wave_surface(vec2 rest, vec4 weights, out vec3 displacement, out vec3 
 	gerstner_lake(wave_b, amplitudes.y, weights.y, rest, water_time_s, displacement, tangent_x, tangent_z, crest, total_steepness);
 	gerstner_lake(wave_c, amplitudes.z, weights.z, rest, water_time_s, displacement, tangent_x, tangent_z, crest, total_steepness);
 	gerstner_lake(wave_d, amplitudes.w, weights.w, rest, water_time_s, displacement, tangent_x, tangent_z, crest, total_steepness);
+	// A sea spot's swell: long enough for any of the mesh's cells, so always all of it.
+	if (lake_swell_on) {
+		vec2 swell = lake_swell_amplitudes(rest);
+		gerstner_lake(swell_a, swell.x, 1.0, rest, water_time_s, displacement, tangent_x, tangent_z, crest, total_steepness);
+		gerstner_lake(swell_b, swell.y, 1.0, rest, water_time_s, displacement, tangent_x, tangent_z, crest, total_steepness);
+	}
+}
+
+// The swell's slopes added to a surface's (the water's per-pixel normal, which the four wind-sea trains
+// make on their own).
+void lake_swell_slopes(vec2 rest, inout vec3 tangent_x, inout vec3 tangent_z, inout float crest, inout float total_steepness) {
+	if (!lake_swell_on) {
+		return;
+	}
+	vec3 unused = vec3(0.0);
+	vec2 swell = lake_swell_amplitudes(rest);
+	gerstner_lake(swell_a, swell.x, 1.0, rest, water_time_s, unused, tangent_x, tangent_z, crest, total_steepness);
+	gerstner_lake(swell_b, swell.y, 1.0, rest, water_time_s, unused, tangent_x, tangent_z, crest, total_steepness);
 }
 
 // 1 for each lake train that moves the surface (the physics' trains), 0 for the others.

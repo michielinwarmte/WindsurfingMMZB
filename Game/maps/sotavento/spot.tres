@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="Spot" load_steps=3 format=3]
+
+; Fuerteventura, Sotavento as a spot (backlog E04.S01 and E04.S12): the PWA World Tour's venue, the
+; René Egli Center at Playa Barca. The start is 450 m out from the centre, past the lagoon and the bar,
+; in about 6 m of water; the wind is the trade wind from the NNE (cross-offshore from the left); the
+; water level is between mean and spring high water, so the lagoon has water, until the tide is
+; chosen in the menu (package P4).
+
+[ext_resource type="Script" path="res://maps/spots/spot.gd" id="1"]
+[ext_resource type="Resource" path="res://maps/sotavento/map_config.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = "sotavento"
+display_name = "Fuerteventura, Sotavento"
+sail_scene = "res://maps/sotavento/sail_sotavento.tscn"
+map_config = ExtResource("2")
+environment_path = "res://maps/sotavento/environment_sotavento.tres"
+courses_folder = "res://maps/sotavento/courses"
+start_east_m = 574672.0
+start_north_m = 3112684.0
+start_heading_deg = 115.0
+wind_from_deg = 25.0
+water_level_m = 1.1
+start_hour = 16.0
+credits = "Terrain and aerial photos: © Instituto Geográfico Nacional (PNOA, MDT05, MDT25; CC BY 4.0). Bathymetry: EMODnet Bathymetry Consortium (CC BY 4.0). Buildings: © OpenStreetMap contributors (ODbL)."

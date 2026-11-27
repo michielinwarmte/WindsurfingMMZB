@@ -1,0 +1,80 @@
+{
+  "about": "Fuerteventura, Sotavento (backlog E04.S12; Documentation/reports/spots/sotavento/PLAN.md). Read by tools/map/spot_build.py. Boxes are [west, south, east, north] in the spot's frame (metres east and north).",
+  "name": "Fuerteventura, Sotavento",
+  "slug": "sotavento",
+  "crs": "EPSG:4083",
+  "crs_name": "REGCAN95 / UTM zone 28N (the Canary Islands' frame)",
+  "origin_east_m": 574164,
+  "origin_north_m": 3112474,
+  "origin_about": "The game's origin: the René Egli Center on the beach at Playa Barca, the PWA World Tour's event site (OpenStreetMap: 28.13578 N, 14.24477 W).",
+  "near": {"box": [568200, 3106400, 580200, 3118400], "cell_m": 5},
+  "far": {"box": [550200, 3088400, 598200, 3136400], "cell_m": 30},
+  "photos": {
+    "near": {"tiles": 3, "tile_px": 2000, "out_px": 4096},
+    "detail": {"box": [571652, 3109252, 575748, 3113348], "tiles": 2, "tile_px": 2048},
+    "far": {"tiles": 1, "tile_px": 2048}
+  },
+  "sources": {
+    "terrain_near": {"service": "idee_wcs", "coverage": "Elevacion4083_5"},
+    "terrain_far": {"service": "idee_wcs", "coverage": "Elevacion4083_25"},
+    "bathymetry": {"service": "emodnet_wcs", "coverage": "emodnet__mean"},
+    "photo": {"service": "pnoa_wms", "layer": "OI.OrthoimageCoverage"}
+  },
+  "shore_profile": {
+    "about": "Depth below mean sea level (m) at a distance from the waterline (m) where EMODnet's 115 m cells are blind: the beach face 4 % (tan beta 0.04) and 50 m deep at 1500 m (3.3 %), Marrero-Rodriguez et al. 2021. Blended into EMODnet between blend_from_m and blend_to_m.",
+    "distance_m": [0, 30, 100, 300, 700, 1500],
+    "depth_m": [0.0, 0.9, 3.0, 9.0, 22.0, 50.0],
+    "blend_from_m": 1200,
+    "blend_to_m": 2500
+  },
+  "photo_waterline_m": -0.8,
+  "photo_waterline_about": "The PNOA photo was flown near low water (the lagoon drained but for its channels, the bar a wide strip: as in the photos of 24 September 2021 at 09:24); mean low water is about 0.86 m below mean sea level (mean range 1.72 m). The heights measured from the photo's sea waterline start here. Checked against the reference photos (Documentation/reports/spots/sotavento/PLAN.md, section 6).",
+  "lagoon": {
+    "about": "The lagoon and the bar shaped from the aerial photo's colours (decision D1: by hand now, the CNIG LiDAR later). Heights above mean sea level (m). The lagoon fills around high water (mean HW about +0.86 m, springs about +1.25 m): at spring high water it is one sheet of water 35 to 85 cm deep and the bar a thin strip of sand (the high-tide photos of 24 September 2021, 15:20, and from Playa Barca and the Risco del Paso hill).",
+    "channel_m": 0.2,
+    "wet_sand_m": 0.45,
+    "dry_sand_m": 0.65,
+    "salt_marsh_m": 1.0,
+    "bar_reach_m": 80,
+    "bar_face_slope": 0.05,
+    "bar_back_slope": 0.06,
+    "bar_crest_m": 1.5,
+    "beach_face_slope": 0.04,
+    "beach_top_m": 1.5,
+    "inlet_close_m": 20
+  },
+  "buildings": {
+    "about": "OpenStreetMap's building outlines (ODbL); floors from OSM where tagged, otherwise guessed, and the landmarks' from photos (the Paradisus and Zel hotel blocks by the René Egli Center: eight and six floors in the aerial photos of 24 September 2021).",
+    "box_latlon": [28.115, -14.265, 28.16, -14.22],
+    "level_m": 3.0,
+    "default_levels": 2,
+    "overrides": [
+      {"near": [574104, 3112600], "radius_m": 30, "levels": 8},
+      {"near": [574133, 3112634], "radius_m": 30, "levels": 6},
+      {"near": [574021, 3112609], "radius_m": 30, "levels": 5}
+    ]
+  },
+  "sea": {
+    "about": "The sea from the region (tools/map/spot_sea.py, P3): EMODnet over Fuerteventura, Gran Canaria's north and the African coast, the far fetch along the near grid's edges, the ocean swell's exposure; the checkpoints for the realism check (the SIMAR points' positions are read from the coastal study's map, approximate).",
+    "region_latlon": [27.4, -15.8, 29.4, -12.8],
+    "cell_m": 500,
+    "ray_step_m": 250,
+    "edge_step_m": 400,
+    "bearing_step_deg": 5,
+    "open_sea_fetch_m": 300000,
+    "open_water_m": 60000,
+    "swell_spreading_s": 20,
+    "swell_ray_step_deg": 3,
+    "exposure_cell_m": 200,
+    "exposure_direction_step_deg": 10,
+    "checkpoints": [
+      {"name": "SIMAR 10 (off the bar's apex, mean Hs 0.56 m, Ts 5.7 s)", "lat": 28.085, "lon": -14.255},
+      {"name": "SIMAR 09 (off El Matorral, mean Hs 0.87 m, Ts 9.5 s)", "lat": 28.035, "lon": -14.305},
+      {"name": "Open-Meteo marine point", "lat": 28.125, "lon": -14.2083},
+      {"name": "the start, in front of the judges' tower", "lat": 28.1376, "lon": -14.2397}
+    ]
+  },
+  "water_level_m": 1.1,
+  "water_level_about": "The session's water level above mean sea level until the tide is chosen in the menu (P4): between mean and spring high water, so the lagoon has water (35 to 85 cm at spring high water, the spot dossier).",
+  "credits": "Terrain and aerial photos: © Instituto Geográfico Nacional (PNOA, MDT05, MDT25; CC BY 4.0). Bathymetry: EMODnet Bathymetry Consortium (CC BY 4.0)."
+}

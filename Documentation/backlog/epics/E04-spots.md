@@ -44,17 +44,17 @@ From `Documentation/reports/spots/spot_dossier.md` (web research, nothing verifi
 ## Stories
 
 ### E04.S01 · The spot abstraction: one list of spots drives the game
-Status: todo | Size: L | Owner: the lead | Milestone: M10 | Needs: — | Roadmap: MA7
+Status: doing | Size: L | Owner: the lead | Milestone: M10 | Needs: — | Roadmap: MA7
 Done when: a `Spot` resource bundles a spot's scene, environment, wind model, waves, courses folder, start, beach, credits and climate; the start menu, the race page, the LAN lobby, the settings labels, the courses, the dev tools and the tests read the spot list; adding a spot means adding a folder and a resource, with no code change; Silvaplana and the open water are the first two spots and play bit for bit as before.
 - [ ] T1 `Spot` resource and `Spots` registry (`Game/maps/spots/`); the open water as a spot with no terrain
 - [ ] T2 The 15 hard-wired places replaced (`start_menu`, `lan_game`, `net_clock`, `lan_page`, `race_page`, `race_courses`, `race_director_view`, `training_drops`, `persona.home_water`, `settings_menu`, `settings_values`, `map_escape`, `mini_map`, `hud`, `credits_page`, `main.gd`)
 - [ ] T3 The fly-over and the wind viewer scenes generic (they live inside `Game/maps/silvaplana/` today)
 - [ ] T4 The dev tools and the tests take a spot argument; the LAN sends the spot's id and checks both PCs have it
 - [ ] T5 The sun follows the spot's clock (today fixed at mid-July 15:00 on both waters)
-Notes: the enabler of every other story here; nothing visible changes for the player.
+Notes: the enabler of every other story here; nothing visible changes for the player. 20 Nov 2026 (Claude Opus 5.5, for Sotavento): a lean start: `Game/maps/spots/spot.gd` (the `Spot` resource: the scene, the map config, the environment, the start, the usual wind, the water level, the credits) and `spot_sailing.gd` (a sailing scene for any spot built from a height grid); no registry yet, the menu has one button per spot, Silvaplana is not on the list yet.
 
 ### E04.S02 · The spot pipeline made generic: a new spot in a week
-Status: todo | Size: L | Owner: the lead, Max | Milestone: M10 | Needs: Q13 | Roadmap: MA7, MA8
+Status: doing | Size: L | Owner: the lead, Max | Milestone: M10 | Needs: Q13 | Roadmap: MA7, MA8
 Done when: `tools/map/` builds a spot from a bounding box and a list of sources (the DEM, the bathymetry, the orthophotos, the buildings, the station), with a reprojection step into the spot's local metric frame, a source adapter per country, the painted-colour fallback where photos are missing, and a written checklist; proven on the first two new spots.
 - [ ] T1 `silvaplana_area.py`'s constants become a spot config (bounding box, frame, tile sizes, viewpoints); every script reads it
 - [ ] T2 A reprojection step (pyproj) from the source's frame to the spot's local metres (decision MD1 kept inside a spot)
@@ -62,7 +62,7 @@ Done when: `tools/map/` builds a spot from a bounding box and a list of sources 
 - [ ] T4 Photos: the national orthophoto where open; Sentinel-2 or the painted colour where not; the far tiles always painted
 - [ ] T5 The checklist `tools/map/NEW_SPOT.md`: the steps, the time each takes, what needs Blender, what needs the second machine
 - [ ] T6 The build size per spot measured and the tile budget set (E17.S03)
-Notes: the research dossier on the twelve spots (`Documentation/reports/spots/spot_dossier.md`, from the 6 November web research) lists the sources per country and a difficulty per spot.
+Notes: the research dossier on the twelve spots (`Documentation/reports/spots/spot_dossier.md`, from the 6 November web research) lists the sources per country and a difficulty per spot. 20 Nov 2026 (Claude Opus 5.5): `tools/map/spot_build.py` builds a sea spot from one config file (`tools/map/spots/<slug>.json`: the boxes, the frame, the sources, the shore profile, the lagoon's heights): the Spanish adapters (IGN MDT by WCS, PNOA by WMS), EMODnet anywhere, pyproj for the frames, the photo's colours for the shallows; the terrain is drawn from the grid in Godot (HeightTerrain), so no Blender step (Max's D2: the fastest way). Proven on Sotavento; Silvaplana's own pipeline is unchanged.
 
 ### E04.S03 · Silvaplana completed
 Status: todo | Size: L | Owner: Max | Milestone: M10 | Needs: E05.S01, TE2 | Roadmap: MA1, MA2, MA3
@@ -187,18 +187,19 @@ Done when: the ten checks pass. The strong trade wind accelerated by the island,
 - [ ] T10 Check
 
 ### E04.S12 · Fuerteventura, Sotavento
-Status: todo | Size: XL | Owner: Max | Milestone: M10 | Needs: E04.S02, E02.S05 | Roadmap: MA7
+Status: doing | Size: XL | Owner: Max | Milestone: M10 | Needs: E04.S01, E04.S02, E02.S05 | Roadmap: MA7
 Done when: the ten checks pass. The trade wind, the lagoon that fills at high tide and the open sea outside, the PWA slalom venue.
-- [ ] T1 Dossier
-- [ ] T2 Data
-- [ ] T3 Terrain and water
+- [x] T1 Dossier (the plan's section 1: the wave climate from SIMAR, the bar and the lagoon, the tide, the breaker index; the local sailor still to find, D4)
+- [x] T2 Data (20 Nov: IGN MDT05 and MDT25 by WCS, PNOA photos by WMS, EMODnet by WCS, all CC BY 4.0, by `tools/map/spot_build.py`; the lagoon shaped from the photo, the CNIG LiDAR later, D1)
+- [ ] T3 Terrain and water (built 20 Nov: the near and far grids, HeightTerrain, sailable at a fixed high water; waits on Max's look, P2's Stop)
 - [ ] T4 Wind
-- [ ] T5 Waves and tides
-- [ ] T6 Beach
-- [ ] T7 Courses
+- [ ] T5 Waves and tides (realistic waves and swell: the regional fetch, two swell trains with sets, shoaling, breaking on the bar, the tide per session)
+- [ ] T6 Beach (20 Nov: the PWA event site from the event's zone map: the judges' tower, grandstand, flags, sails, riders' tent, palms; 363 buildings from OpenStreetMap; the hut, the launch and the people still to do)
+- [ ] T7 Courses (20 Nov: `courses/pwa_slalom_x.json` from the 2026 zone map, racable; Max's check of the layout, the other formats)
 - [ ] T8 Look
 - [ ] T9 AI and fps
 - [ ] T10 Check
+Notes: 20 Nov 2026, Claude Opus 5.5 for Max ("I want Fuerteventura Sotavento in the game, with realistic waves and swell"): started on `spot/sotavento`; the plan, the dossier and the packages P0 to P6 with Max's decisions D1 to D5 are in `Documentation/reports/spots/sotavento/PLAN.md`. The spot list (E04.S01) and the generic pipeline (E04.S02) are built first, with Sotavento as the spot that proves them (Q11's rule). Later that day Max answered D1 to D5 (the plan, section 5) and P2's first version was built: Sotavento sails from the start menu ("Sotavento" next to the lake) and `tools/play.sh sotavento`, the start 450 m off the René Egli Center (the PWA event site).
 
 ### E04.S13 · The Columbia River Gorge, Hood River
 Status: todo | Size: XL | Owner: Max | Milestone: M10 | Needs: E04.S02, E02.S05 | Roadmap: MA7

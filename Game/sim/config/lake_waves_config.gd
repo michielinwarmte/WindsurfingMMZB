@@ -63,3 +63,19 @@ enum GrowthLaw { SPM, CEM }
 ## In shallow water the waves break when they get too high for the depth: the significant height
 ## stays below this share of the depth (WindWaves, 9.16; Coastal Engineering Manual 2002).
 @export var depth_limited_height_ratio: float = 0.6
+
+@export_group("Swell")
+## A sea spot's swell (PHYSICS_SPEC.md 9.20): waves raised far away that arrive at the spot, here as
+## two trains of nearly the same period whose beat makes the sets. Its significant height out at sea,
+## before the island's shelter and the bottom (m); 0: no swell (every lake). At a node the swell is
+## this times the square root of the share that reaches it (the spot's swell exposure, sea.json),
+## times shoaling over the depth, then breaks with the wind sea where the total passes the depth limit.
+@export var swell_hs_m: float = 0.0
+## The swell's peak period (s) and the direction it comes FROM (degrees, like the wind).
+@export var swell_period_s: float = 7.0
+@export var swell_from_deg: float = 0.0
+## The two trains' periods are the peak period times (1 - spread / 2) and (1 + spread / 2): their beat
+## makes a set of about 1 / spread waves.
+@export var swell_period_spread: float = 0.1
+## The two trains' directions this many degrees apart (a real swell is short-crested).
+@export var swell_direction_spread_deg: float = 4.0

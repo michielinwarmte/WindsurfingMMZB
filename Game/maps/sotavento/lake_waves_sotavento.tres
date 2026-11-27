@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="LakeWavesConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://sim/config/lake_waves_config.gd" id="1"]
+
+; Sotavento's sea, grown by the wind over the fetch (PHYSICS_SPEC.md 9.17; the far fetch beyond the map, 9.19) on the spot's depth grid:
+; the same law as the lake, with sea-sized trains, octaves from 5.7 to 90 m (the NE wind's sea over the
+; channel: Tp 5.6 s, 49 m crests; the ENE's 7.5 s, 88 m; the short trains carry the chop near the beach) and coarser cells (the waves
+; change slowly at sea; the grid is 12 km a side). The swell (PHYSICS_SPEC.md 9.20): the trade wind's NE
+; swell of a windy summer day in the open channel east of the island (Open-Meteo 2024-2025: 0.77 m at
+; 7.1 s from 36 degrees), sheltered by the island and shoaled by the bottom (PLAN.md section 6, P3).
+
+[resource]
+script = ExtResource("1")
+growth_law = 0
+wavelengths_m = PackedFloat32Array(64, 32, 16, 8)
+offsets_deg = PackedFloat32Array(0, -8, 10, -14)
+physics_trains = 4
+phase_seed = 28
+reference_depth_m = 0.0
+look_wavelength_m = 3.0
+look_offset_deg = 18.0
+peak_enhancement = 3.3
+height_scale = 1.0
+cell_m = 32.0
+ray_count = 9
+ray_spacing_deg = 6.0
+depth_limited_height_ratio = 0.6
+swell_hs_m = 0.8
+swell_period_s = 7.1
+swell_from_deg = 36.0
+swell_period_spread = 0.1
+swell_direction_spread_deg = 4.0

@@ -1,0 +1,21 @@
+{
+ "about": "The photos' boxes in game metres (x east, z south of the origin), for HeightTerrain. Written by tools/map/spot_build.py.",
+ "near": [
+  -5964,
+  -5926,
+  12000,
+  12000
+ ],
+ "detail": [
+  -2512,
+  -874,
+  4096,
+  4096
+ ],
+ "far": [
+  -23964,
+  -23926,
+  48000,
+  48000
+ ]
+}

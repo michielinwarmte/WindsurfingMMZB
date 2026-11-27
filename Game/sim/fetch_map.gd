@@ -19,8 +19,9 @@ extends RefCounted
 ## the next node upwind plus that node's open water. The step goes one whole column (or row) toward
 ## the wind, and the point it lands on lies between two nodes of that column, so their values are
 ## mixed by distance. Starting from the upwind edge, every node's upwind neighbours are done before
-## it. Land and the grid's edge count as zero open water; the shore is taken halfway between a land
-## node and the first water node, so a node's fetch is its steps less half a step.
+## it. Land and the grid's edge count as zero open water (on a sea spot, the edge brings the open
+## water beyond it: FarFetch); the shore is taken halfway between a land node and the first water
+## node, so a node's fetch is its steps less half a step.
 
 ## The nodes: this many west to east and north to south, this far apart, the first (north-west)
 ## one at this game position (north is -Z).
@@ -37,17 +38,26 @@ var depth_m: PackedFloat32Array = PackedFloat32Array()
 var fetch_m: PackedFloat32Array = PackedFloat32Array()
 var wind_factor: PackedFloat32Array = PackedFloat32Array()
 
+## A sea spot's open water beyond the map (FarFetch, PHYSICS_SPEC.md 9.19): a ray that leaves the
+## asked area over water starts with it instead of zero. null (a lake): the edge is no water.
+var _far: FarFetch = null
+var _area: Rect2 = Rect2()
+var _ray_bearing_deg: float = 0.0
+
 
 ## Builds the map for a wind from `from_deg` over `area` (game x, z of its north-west corner and
 ## its size), cropped to the water in it with a margin of land.
 ## depth_at: Callable(x: float, z: float) -> float, the water's depth (m; 0 or less on land, NAN
 ## off the map). speed_factor_at: Callable(x, z) -> float, the local mean wind relative to the
 ## lake's mean (1 everywhere for a wind the same everywhere).
+## far: a sea spot's open water beyond the area (null for a lake: the area's edge counts as land).
 static func build(depth_at: Callable, area: Rect2, cell: float, wind_from_deg: float, speed_factor_at: Callable,
-		ray_count: int = 9, ray_spacing_deg: float = 6.0) -> FetchMap:
+		ray_count: int = 9, ray_spacing_deg: float = 6.0, far: FarFetch = null) -> FetchMap:
 	var map: FetchMap = FetchMap.new()
 	map.cell_m = cell
 	map.from_deg = wind_from_deg
+	map._far = far
+	map._area = area
 	map._sample_depths(depth_at, area)
 	map._crop_to_water()
 	var water_wind: PackedFloat32Array = map._local_winds(speed_factor_at)
@@ -197,6 +207,7 @@ func _follow_ray(bearing_deg: float, water_wind: PackedFloat32Array, length: Pac
 	wind.resize(columns * rows)
 	length.fill(0.0)
 	wind.fill(0.0)
+	_ray_bearing_deg = bearing_deg
 	# Toward where the wind comes from (north is -Z, east +X): (sin b, -cos b).
 	var bearing: float = deg_to_rad(bearing_deg)
 	var upwind: Vector2 = Vector2(sin(bearing), -cos(bearing))
@@ -232,6 +243,15 @@ func _step(i: int, upwind_column: int, upwind_row: int, lands_at: float, along_c
 	var before_wind: float = 0.0
 	var first: int = floori(lands_at)
 	var share: float = lands_at - first
+	# A sea spot: a step that lands beyond the asked area starts from the open water out there (the
+	# wind over it taken as the map's mean, factor 1).
+	if _far != null:
+		var landing: Vector2 = Vector2(x0_m + upwind_column * cell_m, z0_m + lands_at * cell_m) if along_columns 			else Vector2(x0_m + lands_at * cell_m, z0_m + upwind_row * cell_m)
+		if not _area.grow(0.01).has_point(landing):
+			before_length = _far.fetch_at(landing.x, landing.y, _ray_bearing_deg)
+			length[i] = before_length + step_m
+			wind[i] = before_length + step_m * water_wind[i]
+			return
 	if along_columns and upwind_column >= 0 and upwind_column < columns:
 		if first >= 0 and first < rows:
 			var j: int = first * columns + upwind_column

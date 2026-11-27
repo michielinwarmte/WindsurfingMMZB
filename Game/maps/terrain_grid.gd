@@ -46,6 +46,28 @@ static func load_from(json_path: String) -> TerrainGrid:
 	return grid
 
 
+## Moves the water up by this many metres: every height is lowered by it, so the heights stay
+## "above the water surface". A sea spot's grid is written above mean sea level; the session's
+## water level (the tide) is applied here when the spot loads.
+func lower_by(metres: float) -> void:
+	_offset_m -= metres
+
+
+## The grid's raw 16-bit values, two bytes each (low byte first), row by row from the north: what
+## HeightTerrain hands the graphics card as it is.
+func raw_values() -> PackedByteArray:
+	return _values
+
+
+## height (m) = height_offset_m() + value * height_scale_m()
+func height_offset_m() -> float:
+	return _offset_m
+
+
+func height_scale_m() -> float:
+	return _scale_m
+
+
 ## Whether a game position (only X and Z count) lies on the grid.
 func contains(x: float, z: float) -> bool:
 	return x >= x0_m and x <= x0_m + (columns - 1) * cell_m and z >= z0_m and z <= z0_m + (rows - 1) * cell_m

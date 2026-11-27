@@ -343,7 +343,7 @@ func shader_parameters() -> Dictionary[String, Variant]:
 	var parameters: Dictionary[String, Variant] = {}
 	var names: Array[String] = ["wave_a", "wave_b", "wave_c", "wave_d"]
 	for slot: int in WaveSetConfig.MAX_WAVES:
-		if slot < lake.band_count:
+		if slot < lake.wind_band_count:
 			parameters[names[slot]] = Vector4(lake.dir_x[slot], lake.dir_z[slot], lake.phase0[slot], lake.wavelength_m[slot])
 		else:
 			parameters[names[slot]] = Vector4(0.0, -1.0, 0.0, 10.0)
@@ -355,6 +355,13 @@ func shader_parameters() -> Dictionary[String, Variant]:
 	parameters["lake_grid"] = Vector4(_x0_m, _z0_m, _per_cell, 0.0)
 	parameters["lake_grid_size"] = Vector2i(_columns, _rows)
 	parameters["lake_look_band"] = Vector4(lake.look_dir.x, lake.look_dir.y, lake.look_phase0, lake.config.look_wavelength_m)
+	# A sea spot's swell (9.20): its two trains, their amplitudes in lake_swell_envelope.
+	parameters["lake_swell_on"] = lake.swell_count > 0
+	var swell_names: Array[String] = ["swell_a", "swell_b"]
+	for k: int in 2:
+		var band: int = lake.wind_band_count + k
+		parameters[swell_names[k]] = Vector4(lake.dir_x[band], lake.dir_z[band], lake.phase0[band], lake.wavelength_m[band]) \
+			if k < lake.swell_count else Vector4(0.0, -1.0, 0.0, 100.0)
 	var textures: Dictionary[String, Texture2D] = lake.textures()
 	for key: String in textures:
 		parameters[key] = textures[key]

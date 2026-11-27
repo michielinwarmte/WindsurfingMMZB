@@ -210,8 +210,11 @@ func test_the_start_menu_offers_the_lake() -> void:
 	var lake_button: Button = menu.get_node("%SailSilvaplanaButton")
 	assert_eq(lake_button.text, "Sail on Lake Silvaplana")
 	assert_true(lake_button.has_focus(), "the last choice has the focus")
-	var layout: Node = lake_button.get_parent()
-	assert_eq(lake_button.get_index(), layout.get_node("OpenWaterHint").get_index() + 1, "the second option")
+	# The real spots' row (the lake and Sotavento side by side) is the second option.
+	var row: Node = lake_button.get_parent()
+	var layout: Node = row.get_parent()
+	assert_eq(row.get_index(), layout.get_node("OpenWaterHint").get_index() + 1, "the second option")
+	assert_eq(lake_button.get_index(), 0, "the lake first in its row")
 	# Esc in the lake scene opens the pause menu: the map scenes' Esc-to-menu stays out of it.
 	var escape: GDScript = load("res://ui/map_escape.gd")
 	var map_scenes: Array = escape.get_script_constant_map()["MAP_SCENES"]

@@ -1,0 +1,39 @@
+[gd_scene format=3]
+
+; Sailing at Fuerteventura, Sotavento (backlog E04.S12): the map (terrain, sky, sun) with the open-water
+; sailing scene's parts (main.tscn), run by spot_sailing.gd, which extends main.gd. The Ocean has
+; Sotavento's look (clear water over sand) and reaches the horizon.
+
+[ext_resource type="Script" path="res://maps/spots/spot_sailing.gd" id="1_sail"]
+[ext_resource type="Resource" path="res://maps/sotavento/spot.tres" id="2_spot"]
+[ext_resource type="PackedScene" path="res://maps/sotavento/sotavento.tscn" id="3_map"]
+[ext_resource type="PackedScene" path="res://windsurfer/windsurfer.tscn" id="4_windsurfer"]
+[ext_resource type="Script" path="res://camera/camera_rig.gd" id="5_camera"]
+[ext_resource type="Script" path="res://ui/hud.gd" id="6_hud"]
+[ext_resource type="Script" path="res://world/ocean.gd" id="7_ocean"]
+[ext_resource type="PackedScene" path="res://ui/pause_menu.tscn" id="8_pause"]
+[ext_resource type="Material" path="res://maps/sotavento/sotavento_water.tres" id="9_water"]
+
+[node name="SailSotavento" type="Node3D"]
+script = ExtResource("1_sail")
+spot = ExtResource("2_spot")
+
+[node name="Map" parent="." instance=ExtResource("3_map")]
+
+[node name="Ocean" type="Node3D" parent="."]
+script = ExtResource("7_ocean")
+far_size_m = 60000.0
+far_cell_m = 200.0
+look = ExtResource("9_water")
+
+[node name="Windsurfer" parent="." instance=ExtResource("4_windsurfer")]
+own_config_copies = true
+
+[node name="CameraRig" type="Node3D" parent="."]
+script = ExtResource("5_camera")
+target_path = NodePath("../Windsurfer")
+
+[node name="HUD" type="CanvasLayer" parent="."]
+script = ExtResource("6_hud")
+
+[node name="PauseMenu" parent="." instance=ExtResource("8_pause")]
