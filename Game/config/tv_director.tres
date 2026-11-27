@@ -1,0 +1,551 @@
+[gd_resource type="Resource" script_class="TvDirectorConfig" load_steps=36 format=3]
+
+[ext_resource type="Script" path="res://race/tv_director_config.gd" id="1"]
+[ext_resource type="Script" path="res://race/tv_picture.gd" id="2"]
+[ext_resource type="Script" path="res://race/tv_phase_mix.gd" id="3"]
+[ext_resource type="Resource" path="res://config/tv_director_12nov.tres" id="4"]
+
+; The TV director set to the real World Tour slalom stream (TvDirectorConfig, TvStreamDirector; the
+; report: Documentation/reports/broadcast/tv_director_stream.md). Where the numbers come from:
+; - MEASURED (Documentation/reports/broadcast/data/stream_profile.json, nine slalom heats, 393 beats):
+;   every picture's weight_pct (its share of the phase's time), sail_pct and horizon_pct (the quartiles
+;   of the sail's height and the horizon's place, percent of the picture's height), each phase's take_s
+;   (the quartiles of the take lengths; before the start and after the race of the live pictures only,
+;   the profile's take_length_action) and longest_s; mark_take_s (the profile's mark_beat);
+;   finish_take_s (its drone side-on at the line in the race); the start's phase borders (-10 s, +12 s);
+;   race_ends_after_winner_s (13: the readers ended the race phase when the last board the stream
+;   showed crossed the line, 6 to 37 s after the winner, 13 in the middle, from their notes).
+; - COUNTED tonight on the nine heats' start sequences (the readers' shot_notes.csv around the gun):
+;   line_drone_before_gun_s (the line drone came 2.6, 3.1, 3.7 s before the gun: p25, middle, p75),
+;   runner_after_gun_s (the drone running with the fleet came, or the line drone began to run, 0.6,
+;   0.7, 1.8 s after it; runner_latest_s 5: the latest of the nine was 4.7), runner_take_s (it ran
+;   8.0, 9.6, 11.6 s); the runners were 4 of 9 behind-side
+;   on the fleet, 4 ahead-side on the front, 1 side: start_runners' weights (the ahead-side one's
+;   weight is the start's drone front_side front share plus the following part of its front_side
+;   line share, its framing the start's front_side front picture).
+; - FROM THE READERS' DIRECTOR NOTES (words, not counts): mark_cut_before_s (2 to 5 s), the mark's hold
+;   between 4 and 16 s, finish_cut_before_s (2 to 5 s), the finish's hold up to 30 s, the winner's
+;   close-up after the race (20 to 30 s, sail 55 to 70 %).
+; - THE GAME'S CHOICE (not measured; the reason in TvDirectorConfig): the drones' lens_deg (a
+;   lens of 47 degrees of vertical view for every drone: a camera drone's standard wide lens, chosen
+;   inside the range of 47 to 59 degrees the lead measured on four passes, drone_position.md; the
+;   distances and heights then follow from the framing); angle_deg round the board (45 for
+;   behind-side, 90 side, 135 front-side: the middle of each view; the readers agreed on the side for
+;   only 58 % of the seconds); chasers_at_mark_chance 0.7 and finish_follow_through_chance 0.5 (the
+;   notes say "often" and show both about equally); mark_after_rounding_s; mark_near_m (the gybe
+;   done once the board has come within 25 m of the buoy and goes away again); chasers_within_s;
+;   hold_for_mark_s (a take runs on when the leader's mark cut is due within 4 s: set by the check);
+;   lead_group_m and lead_group_most (the readers' lead group: the first 2 to 4 together);
+;   fleet_together_m (a picture on the fleet only while the boards still racing are together); close_m and
+;   gained_s (the 12 November numbers); the beach cam's place where a map does not say (the nearest
+;   shore, or a camera boat 150 m off for the tight picture and 450 m for the wide one) and its zoom
+;   range (1 to 30 degrees: Godot's camera takes nothing narrower than 1); lens_reach_share (0.6: a
+;   board so far off that the longest zoom shows less of its sail is filmed by a drone); the pull-out's growth (4 times); every picture's glide_s.
+; - FROM THE LEAD'S BEACH CAMERA MEASUREMENT (drone_position.md, "The beach camera", 41 shots at
+;   Sotavento): beach_eye_m 4.5 (3.5 to 5), a camera standing on the beach in front of the judges'
+;   tower; one place for the heat (a map says where: a Marker3D in the group tv_shore_camera); its
+;   lenses then come from the framing and the distance (the stream's: 8 to 10 degrees wide on the
+;   line, 2 to 4 half close, 1 to 1.5 tight).
+; - FROM THE LEAD'S DRONE MEASUREMENT (drone_position.md, lens-free): height_in_sails, the drone's
+;   height in sail heights k (the sail's foot stands k sail heights below the horizon), measured for the
+;   race's behind-side, ahead-side and side drones on the front, behind-side on the pack and the fleet,
+;   and the three mark drones; 2.7 (the middle of the measured 2.4 to 3.0) for the other drones (a
+;   choice). Each take puts the sail's middle at horizon + k x sail - sail / 2 (TvPicture.subject_share()).
+;   subject_pct: the same at the medians (kept between 40 and 70), used only where there is no k: 50 for
+;   the line drones and the beach cam (a choice).
+; - line_drone_angle_deg (20, a choice): the line drone stands that far round from the start line's own
+;   line, on the course side, so the drawn line shows (end-on it hides behind the committee boat); so
+;   placed the fleet sails at it, and it takes the stream's start-phase "drone front_side line" picture
+;   (5 of the nine heats' line drones were front-side, 4 side).
+; - HOW A TAKE DRAWS ITS FRAMING (the game's choice, TvPicture.take_framing()): one number for the sail
+;   and the horizon, within the middle half of each (between the stream's quarters): a bigger sail with a higher horizon, as a
+;   drone at a steady height in sail heights that comes closer sees it.
+; - Pictures the stream has that the game leaves out: the line-up graphic (55 % of the pre-start; a
+;   later phase of the plan), the beach among the people (handheld), the interviews.
+
+[sub_resource type="Resource" id="pre_beach_fleet"]
+script = ExtResource("2")
+shot = 10
+on = "fleet"
+view = "shore"
+move = "static"
+weight_pct = 23.1
+lens_deg = 0.0
+angle_deg = 90.0
+sail_pct = Vector3(3.0, 3.0, 5.0)
+horizon_pct = Vector3(55.0, 70.0, 70.0)
+subject_pct = 50.0
+glide_s = 0.6
+
+[sub_resource type="Resource" id="pre_beach_line"]
+script = ExtResource("2")
+shot = 10
+on = "line"
+view = "shore"
+move = "static"
+weight_pct = 11.4
+lens_deg = 0.0
+angle_deg = 90.0
+sail_pct = Vector3(3.0, 8.0, 25.0)
+horizon_pct = Vector3(35.0, 45.0, 75.0)
+subject_pct = 50.0
+glide_s = 0.6
+
+[sub_resource type="Resource" id="pre_drone_line_high"]
+script = ExtResource("2")
+shot = 7
+on = "line"
+view = "na"
+move = "static"
+weight_pct = 3.2
+lens_deg = 47.0
+angle_deg = 90.0
+sail_pct = Vector3(1.0, 1.0, 1.0)
+horizon_pct = Vector3(20.0, 40.0, 45.0)
+subject_pct = 50.0
+glide_s = 0.2
+
+[sub_resource type="Resource" id="pre_drone_fleet"]
+script = ExtResource("2")
+shot = 0
+on = "fleet"
+view = "behind_side"
+move = "follows"
+weight_pct = 1.4
+lens_deg = 47.0
+angle_deg = 45.0
+sail_pct = Vector3(8.0, 8.0, 8.0)
+horizon_pct = Vector3(35.0, 35.0, 35.0)
+height_in_sails = 2.5
+subject_pct = 51.0
+glide_s = 0.5
+
+[sub_resource type="Resource" id="pre_drone_line_low"]
+script = ExtResource("2")
+shot = 7
+on = "line"
+view = "front_side"
+move = "static"
+weight_pct = 1.1
+lens_deg = 47.0
+angle_deg = 90.0
+sail_pct = Vector3(10.0, 10.0, 10.0)
+horizon_pct = Vector3(45.0, 45.0, 45.0)
+subject_pct = 50.0
+glide_s = 0.2
+
+[sub_resource type="Resource" id="pre_drone_pack"]
+script = ExtResource("2")
+shot = 1
+on = "pack"
+view = "side"
+move = "follows"
+weight_pct = 0.9
+lens_deg = 47.0
+angle_deg = 90.0
+sail_pct = Vector3(25.0, 25.0, 25.0)
+horizon_pct = Vector3(45.0, 45.0, 45.0)
+height_in_sails = 2.7
+subject_pct = 70.0
+glide_s = 0.6
+
+[sub_resource type="Resource" id="start_beach"]
+script = ExtResource("2")
+shot = 10
+on = "line"
+view = "shore"
+move = "static"
+weight_pct = 31.5
+lens_deg = 0.0
+angle_deg = 90.0
+sail_pct = Vector3(3.0, 3.0, 5.0)
+horizon_pct = Vector3(60.0, 70.0, 75.0)
+subject_pct = 50.0
+glide_s = 0.6
+
+[sub_resource type="Resource" id="start_line_drone"]
+script = ExtResource("2")
+shot = 7
+on = "line"
+view = "front_side"
+move = "static"
+weight_pct = 20.3
+lens_deg = 47.0
+angle_deg = 90.0
+sail_pct = Vector3(5.0, 10.0, 15.0)
+horizon_pct = Vector3(40.0, 40.0, 45.0)
+subject_pct = 50.0
+glide_s = 0.2
+
+[sub_resource type="Resource" id="start_runner"]
+script = ExtResource("2")
+shot = 0
+on = "fleet"
+view = "behind_side"
+move = "follows"
+weight_pct = 14.5
+lens_deg = 47.0
+angle_deg = 45.0
+sail_pct = Vector3(15.0, 15.0, 15.0)
+horizon_pct = Vector3(35.0, 35.0, 35.0)
+height_in_sails = 2.5
+subject_pct = 65.0
+glide_s = 0.5
+
+[sub_resource type="Resource" id="start_runner_ahead"]
+script = ExtResource("2")
+shot = 9
+on = "front"
+view = "front_side"
+move = "follows"
+weight_pct = 15.0
+lens_deg = 47.0
+angle_deg = 135.0
+sail_pct = Vector3(15.0, 20.0, 20.0)
+horizon_pct = Vector3(25.0, 40.0, 40.0)
+height_in_sails = 2.4
+subject_pct = 70.0
+glide_s = 0.5
+
+[sub_resource type="Resource" id="race_chase_front"]
+script = ExtResource("2")
+shot = 0
+on = "front"
+view = "behind_side"
+move = "follows"
+weight_pct = 17.4
+lens_deg = 47.0
+angle_deg = 45.0
+sail_pct = Vector3(10.0, 15.0, 15.0)
+horizon_pct = Vector3(10.0, 25.0, 40.0)
+height_in_sails = 2.5
+subject_pct = 55.0
+glide_s = 0.5
+
+[sub_resource type="Resource" id="race_front_side_front"]
+script = ExtResource("2")
+shot = 9
+on = "front"
+view = "front_side"
+move = "follows"
+weight_pct = 16.3
+lens_deg = 47.0
+angle_deg = 135.0
+sail_pct = Vector3(10.0, 15.0, 15.0)
+horizon_pct = Vector3(25.0, 35.0, 40.0)
+height_in_sails = 2.4
+subject_pct = 63.5
+glide_s = 0.5
+
+[sub_resource type="Resource" id="race_side_front"]
+script = ExtResource("2")
+shot = 1
+on = "front"
+view = "side"
+move = "follows"
+weight_pct = 12.0
+lens_deg = 47.0
+angle_deg = 90.0
+sail_pct = Vector3(5.0, 10.0, 15.0)
+horizon_pct = Vector3(25.0, 35.0, 35.0)
+height_in_sails = 3.0
+subject_pct = 60.0
+glide_s = 0.6
+
+[sub_resource type="Resource" id="race_beach_front"]
+script = ExtResource("2")
+shot = 11
+on = "front"
+view = "shore"
+move = "pan"
+weight_pct = 6.1
+lens_deg = 0.0
+angle_deg = 90.0
+sail_pct = Vector3(40.0, 55.0, 65.0)
+horizon_pct = Vector3(15.0, 25.0, 25.0)
+subject_pct = 50.0
+glide_s = 0.6
+
+[sub_resource type="Resource" id="race_group_pack"]
+script = ExtResource("2")
+shot = 4
+on = "pack"
+view = "behind_side"
+move = "follows"
+weight_pct = 7.0
+lens_deg = 47.0
+angle_deg = 45.0
+sail_pct = Vector3(15.0, 20.0, 20.0)
+horizon_pct = Vector3(5.0, 15.0, 20.0)
+height_in_sails = 2.4
+subject_pct = 53.0
+glide_s = 0.7
+
+[sub_resource type="Resource" id="race_side_pack"]
+script = ExtResource("2")
+shot = 1
+on = "pack"
+view = "side"
+move = "follows"
+weight_pct = 4.5
+lens_deg = 47.0
+angle_deg = 90.0
+sail_pct = Vector3(8.0, 10.0, 15.0)
+horizon_pct = Vector3(15.0, 25.0, 40.0)
+height_in_sails = 2.7
+subject_pct = 47.0
+glide_s = 0.6
+
+[sub_resource type="Resource" id="race_beach_pack"]
+script = ExtResource("2")
+shot = 11
+on = "pack"
+view = "shore"
+move = "pan"
+weight_pct = 0.6
+lens_deg = 0.0
+angle_deg = 90.0
+sail_pct = Vector3(30.0, 30.0, 30.0)
+horizon_pct = Vector3(35.0, 35.0, 35.0)
+subject_pct = 50.0
+glide_s = 0.6
+
+[sub_resource type="Resource" id="race_chase_fleet"]
+script = ExtResource("2")
+shot = 0
+on = "fleet"
+view = "behind_side"
+move = "follows"
+weight_pct = 3.7
+lens_deg = 47.0
+angle_deg = 45.0
+sail_pct = Vector3(10.0, 15.0, 20.0)
+horizon_pct = Vector3(25.0, 35.0, 40.0)
+height_in_sails = 2.5
+subject_pct = 65.0
+glide_s = 0.5
+
+[sub_resource type="Resource" id="race_side_fleet"]
+script = ExtResource("2")
+shot = 1
+on = "fleet"
+view = "side"
+move = "follows"
+weight_pct = 2.4
+lens_deg = 47.0
+angle_deg = 90.0
+sail_pct = Vector3(5.0, 10.0, 20.0)
+horizon_pct = Vector3(35.0, 40.0, 45.0)
+height_in_sails = 2.7
+subject_pct = 62.0
+glide_s = 0.6
+
+[sub_resource type="Resource" id="race_front_side_fleet"]
+script = ExtResource("2")
+shot = 9
+on = "fleet"
+view = "front_side"
+move = "follows"
+weight_pct = 1.1
+lens_deg = 47.0
+angle_deg = 135.0
+sail_pct = Vector3(8.0, 8.0, 10.0)
+horizon_pct = Vector3(25.0, 40.0, 40.0)
+height_in_sails = 2.7
+subject_pct = 57.6
+glide_s = 0.5
+
+[sub_resource type="Resource" id="mark_side"]
+script = ExtResource("2")
+shot = 5
+on = "mark"
+view = "side"
+move = "pan"
+weight_pct = 7.8
+lens_deg = 47.0
+angle_deg = 90.0
+sail_pct = Vector3(10.0, 15.0, 20.0)
+horizon_pct = Vector3(20.0, 25.0, 35.0)
+height_in_sails = 3.0
+subject_pct = 62.5
+glide_s = 0.4
+
+[sub_resource type="Resource" id="mark_behind_side"]
+script = ExtResource("2")
+shot = 5
+on = "mark"
+view = "behind_side"
+move = "static"
+weight_pct = 6.4
+lens_deg = 47.0
+angle_deg = 45.0
+sail_pct = Vector3(15.0, 20.0, 20.0)
+horizon_pct = Vector3(15.0, 15.0, 20.0)
+height_in_sails = 2.7
+subject_pct = 59.0
+glide_s = 0.4
+
+[sub_resource type="Resource" id="mark_front_side"]
+script = ExtResource("2")
+shot = 5
+on = "mark"
+view = "front_side"
+move = "pan"
+weight_pct = 4.8
+lens_deg = 47.0
+angle_deg = 135.0
+sail_pct = Vector3(10.0, 10.0, 20.0)
+horizon_pct = Vector3(5.0, 25.0, 35.0)
+height_in_sails = 3.0
+subject_pct = 50.0
+glide_s = 0.4
+
+[sub_resource type="Resource" id="mark_beach"]
+script = ExtResource("2")
+shot = 11
+on = "mark"
+view = "shore"
+move = "pan"
+weight_pct = 2.8
+lens_deg = 0.0
+angle_deg = 90.0
+sail_pct = Vector3(35.0, 35.0, 35.0)
+horizon_pct = Vector3(30.0, 30.0, 30.0)
+subject_pct = 50.0
+glide_s = 0.6
+
+[sub_resource type="Resource" id="finish_hover"]
+script = ExtResource("2")
+shot = 8
+on = "line"
+view = "side"
+move = "static"
+weight_pct = 5.1
+lens_deg = 47.0
+angle_deg = 90.0
+sail_pct = Vector3(3.0, 5.0, 5.0)
+horizon_pct = Vector3(25.0, 25.0, 30.0)
+height_in_sails = 2.7
+subject_pct = 40.0
+glide_s = 0.2
+
+[sub_resource type="Resource" id="after_winner"]
+script = ExtResource("2")
+shot = 11
+on = "front"
+view = "shore"
+move = "pan"
+weight_pct = 11.7
+lens_deg = 0.0
+angle_deg = 90.0
+sail_pct = Vector3(55.0, 60.0, 70.0)
+horizon_pct = Vector3(25.0, 25.0, 25.0)
+subject_pct = 50.0
+glide_s = 0.6
+
+[sub_resource type="Resource" id="after_side_front"]
+script = ExtResource("2")
+shot = 1
+on = "front"
+view = "side"
+move = "follows"
+weight_pct = 4.6
+lens_deg = 47.0
+angle_deg = 90.0
+sail_pct = Vector3(10.0, 10.0, 10.0)
+horizon_pct = Vector3(30.0, 40.0, 40.0)
+height_in_sails = 2.7
+subject_pct = 62.0
+glide_s = 0.6
+
+[sub_resource type="Resource" id="after_pull_out"]
+script = ExtResource("2")
+shot = 12
+on = "scenery"
+view = "na"
+move = "pull_out"
+weight_pct = 3.1
+lens_deg = 47.0
+angle_deg = 45.0
+sail_pct = Vector3(10.0, 10.0, 10.0)
+horizon_pct = Vector3(20.0, 20.0, 25.0)
+height_in_sails = 2.7
+subject_pct = 42.0
+glide_s = 1.5
+
+[sub_resource type="Resource" id="mix_pre_start"]
+script = ExtResource("3")
+take_s = Vector3(4.9, 9.0, 19.8)
+shortest_s = 2.0
+longest_s = 71.9
+pictures = Array[ExtResource("2")]([SubResource("pre_beach_fleet"), SubResource("pre_beach_line"), SubResource("pre_drone_line_high"), SubResource("pre_drone_fleet"), SubResource("pre_drone_line_low"), SubResource("pre_drone_pack")])
+
+[sub_resource type="Resource" id="mix_race"]
+script = ExtResource("3")
+take_s = Vector3(5.0, 8.1, 12.2)
+shortest_s = 2.0
+longest_s = 55.8
+pictures = Array[ExtResource("2")]([SubResource("race_chase_front"), SubResource("race_front_side_front"), SubResource("race_side_front"), SubResource("race_beach_front"), SubResource("race_group_pack"), SubResource("race_side_pack"), SubResource("race_beach_pack"), SubResource("race_chase_fleet"), SubResource("race_side_fleet"), SubResource("race_front_side_fleet")])
+
+[sub_resource type="Resource" id="mix_after_race"]
+script = ExtResource("3")
+take_s = Vector3(9.7, 19.0, 31.7)
+shortest_s = 4.0
+longest_s = 60.0
+pictures = Array[ExtResource("2")]([SubResource("after_winner"), SubResource("after_side_front"), SubResource("after_pull_out")])
+
+[resource]
+script = ExtResource("1")
+start_from_s = -10.0
+start_until_s = 12.0
+race_ends_after_winner_s = 13.0
+pre_start = SubResource("mix_pre_start")
+race = SubResource("mix_race")
+after_race = SubResource("mix_after_race")
+start_beach = SubResource("start_beach")
+start_line_drone = SubResource("start_line_drone")
+start_runners = Array[ExtResource("2")]([SubResource("start_runner"), SubResource("start_runner_ahead")])
+line_drone_before_gun_s = Vector3(2.6, 3.1, 3.7)
+line_drone_angle_deg = 20.0
+runner_after_gun_s = Vector3(0.6, 0.7, 1.8)
+runner_take_s = Vector3(8.0, 9.6, 11.6)
+runner_latest_s = 5.0
+mark_pictures = Array[ExtResource("2")]([SubResource("mark_side"), SubResource("mark_behind_side"), SubResource("mark_front_side"), SubResource("mark_beach")])
+mark_cut_before_s = Vector2(2.0, 5.0)
+mark_take_s = Vector3(5.4, 6.7, 9.4)
+mark_shortest_s = 4.0
+mark_longest_s = 16.0
+mark_after_rounding_s = 1.5
+mark_near_m = 25.0
+chasers_at_mark_chance = 0.7
+hold_for_mark_s = 4.0
+chasers_within_s = 25.0
+finish_picture = SubResource("finish_hover")
+finish_cut_before_s = Vector2(2.0, 5.0)
+finish_follow_through_chance = 0.5
+finish_take_s = Vector3(5.4, 12.4, 25.0)
+finish_shortest_s = 8.0
+finish_longest_s = 30.0
+after_winner = SubResource("after_winner")
+after_winner_take_s = Vector3(20.0, 25.0, 30.0)
+fleet_together_m = 150.0
+lead_group_m = 40.0
+lead_group_most = 4
+close_m = 30.0
+gained_s = 15.0
+shortest_take_s = 2.0
+lowest_m = 2.5
+above_land_m = 12.0
+beach_eye_m = 4.5
+lens_lowest_m = 1.5
+lens_min_deg = 1.0
+lens_max_deg = 30.0
+lens_reach_share = 0.6
+shore_nearest_m = 60.0
+shore_farthest_m = 1200.0
+boat_tight_m = 150.0
+boat_wide_m = 450.0
+blocking_share = 0.7
+blocking_m = 6.0
+pull_out_times = 4.0
+hand_shots = ExtResource("4")

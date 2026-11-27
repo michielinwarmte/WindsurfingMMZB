@@ -1,7 +1,8 @@
 extends GutTest
 ## Watching the AI race as their race director (WatchMode; Max, 10 November 2026): the speeds keep a
-## tick at 1/60 s of the race, the TV camera's boards, shots and start (TvCamera), the plain title of the TV screen,
-## and the Race page's "You: Watch". The keys, the cards and the camera are checked in the game
+## tick at 1/60 s of the race, the TV camera's boards, shots and start of 12 November (TvCamera with
+## its numbers, tv_director_12nov.tres; the stream's director is tested in test_tv_director.gd), the
+## plain title of the TV screen, and the Race page's "You: Watch". The keys, the cards and the camera are checked in the game
 ## (screenshots with --screen=, --tv=, --speed=, --head=).
 
 
@@ -41,13 +42,15 @@ func test_the_speeds_are_named_as_fractions_and_times() -> void:
 # ---------------------------------------------------------------- the TV camera (TvCamera)
 
 const NOBODY: PackedByteArray = [0, 0, 0, 0, 0]
+## The 12 November director's numbers.
+var old: TvDirector12NovConfig = load(TvCamera.CONFIG_12NOV) as TvDirector12NovConfig
 
 
 func test_the_tv_camera_follows_the_front_first() -> void:
 	# Five boards in race order, all far apart and far from their marks: the leader most, then down the order.
 	var positions: PackedVector2Array = PackedVector2Array([Vector2(0, -900), Vector2(0, -600), Vector2(0, -300), Vector2(0, 0), Vector2(0, 300)])
 	var far: PackedFloat32Array = PackedFloat32Array([INF, INF, INF, INF, INF])
-	var weights: PackedFloat32Array = TvCamera.story_weights(positions, far, NOBODY, NOBODY, NOBODY, -1)
+	var weights: PackedFloat32Array = TvCamera.story_weights(positions, far, NOBODY, NOBODY, NOBODY, -1, old)
 	for i: int in 4:
 		assert_gt(weights[i], weights[i + 1], "place %d before place %d" % [i + 1, i + 2])
 
@@ -58,10 +61,10 @@ func test_a_fight_a_mark_or_a_place_gained_lifts_a_board_at_the_back() -> void:
 	var fight: PackedVector2Array = PackedVector2Array([Vector2(0, -900), Vector2(0, -600), Vector2(0, -300), Vector2(0, 0), Vector2(10, 0)])
 	var far: PackedFloat32Array = PackedFloat32Array([INF, INF, INF, INF, INF])
 	var at_mark: PackedFloat32Array = PackedFloat32Array([INF, INF, INF, INF, 30.0])
-	var alone: float = TvCamera.story_weights(apart, far, NOBODY, NOBODY, NOBODY, -1)[4]
-	assert_gt(TvCamera.story_weights(fight, far, NOBODY, NOBODY, NOBODY, -1)[4], alone, "a fight")
-	assert_gt(TvCamera.story_weights(apart, at_mark, NOBODY, NOBODY, NOBODY, -1)[4], alone, "a mark")
-	assert_gt(TvCamera.story_weights(apart, far, NOBODY, PackedByteArray([0, 0, 0, 0, 1]), NOBODY, -1)[4], alone, "a place gained")
+	var alone: float = TvCamera.story_weights(apart, far, NOBODY, NOBODY, NOBODY, -1, old)[4]
+	assert_gt(TvCamera.story_weights(fight, far, NOBODY, NOBODY, NOBODY, -1, old)[4], alone, "a fight")
+	assert_gt(TvCamera.story_weights(apart, at_mark, NOBODY, NOBODY, NOBODY, -1, old)[4], alone, "a mark")
+	assert_gt(TvCamera.story_weights(apart, far, NOBODY, PackedByteArray([0, 0, 0, 0, 1]), NOBODY, -1, old)[4], alone, "a place gained")
 
 
 func test_the_front_counts_more_than_a_fight_at_the_back_and_a_late_starter_little() -> void:
@@ -71,7 +74,7 @@ func test_the_front_counts_more_than_a_fight_at_the_back_and_a_late_starter_litt
 	var far: PackedFloat32Array = PackedFloat32Array([INF, INF, INF, INF, INF, INF, INF, INF])
 	var none: PackedByteArray = PackedByteArray([0, 0, 0, 0, 0, 0, 0, 0])
 	var late: PackedByteArray = PackedByteArray([0, 0, 0, 0, 0, 1, 0, 0])
-	var weights: PackedFloat32Array = TvCamera.story_weights(positions, far, none, none, late, -1)
+	var weights: PackedFloat32Array = TvCamera.story_weights(positions, far, none, none, late, -1, old)
 	assert_gt(weights[0], weights[6] + weights[7], "the leader alone beats the fight at the back")
 	assert_lt(weights[5], weights[4], "a late starter less than a board alone")
 
@@ -80,10 +83,10 @@ func test_the_board_on_the_screen_and_a_finished_board_are_picked_less() -> void
 	var positions: PackedVector2Array = PackedVector2Array([Vector2(0, 0), Vector2(500, 0), Vector2(-500, 0)])
 	var far: PackedFloat32Array = PackedFloat32Array([INF, INF, INF])
 	var none: PackedByteArray = PackedByteArray([0, 0, 0])
-	var plain: PackedFloat32Array = TvCamera.story_weights(positions, far, none, none, none, -1)
-	var shown: PackedFloat32Array = TvCamera.story_weights(positions, far, none, none, none, 1)
+	var plain: PackedFloat32Array = TvCamera.story_weights(positions, far, none, none, none, -1, old)
+	var shown: PackedFloat32Array = TvCamera.story_weights(positions, far, none, none, none, 1, old)
 	assert_almost_eq(shown[1], plain[1] * 0.5, 1e-6, "the one on the screen: half")
-	var finished: PackedFloat32Array = TvCamera.story_weights(positions, far, PackedByteArray([0, 0, 1]), none, none, -1)
+	var finished: PackedFloat32Array = TvCamera.story_weights(positions, far, PackedByteArray([0, 0, 1]), none, none, -1, old)
 	assert_lt(finished[2], 0.5, "finished")
 
 
@@ -91,8 +94,8 @@ func test_a_finished_board_close_by_is_no_fight() -> void:
 	var positions: PackedVector2Array = PackedVector2Array([Vector2(0, 0), Vector2(5, 0)])
 	var far: PackedFloat32Array = PackedFloat32Array([INF, INF])
 	var none: PackedByteArray = PackedByteArray([0, 0])
-	var weights: PackedFloat32Array = TvCamera.story_weights(positions, far, PackedByteArray([1, 0]), none, none, -1)
-	assert_almost_eq(weights[1], 0.3 + TvCamera.FRONT_WORTH[1], 1e-6, "only a racing board makes a fight")
+	var weights: PackedFloat32Array = TvCamera.story_weights(positions, far, PackedByteArray([1, 0]), none, none, -1, old)
+	assert_almost_eq(weights[1], old.base_worth + old.front_worth[1], 1e-6, "only a racing board makes a fight")
 
 
 func test_the_tv_camera_never_shows_the_same_shot_twice_and_only_drones_while_racing() -> void:
@@ -100,7 +103,7 @@ func test_the_tv_camera_never_shows_the_same_shot_twice_and_only_drones_while_ra
 		for near_mark: bool in [false, true]:
 			for fight: bool in [false, true]:
 				for step: int in 20:
-					var next: TvCamera.Shot = TvCamera.pick_shot(near_mark, fight, last, step / 20.0)
+					var next: TvCamera.Shot = TvCamera.pick_shot(near_mark, fight, last, step / 20.0, old)
 					assert_ne(next, last, "not %s again" % last)
 					assert_true(TvCamera.DRONE_SHOTS.has(next), "a drone or the helicopter")
 
@@ -110,33 +113,33 @@ func test_the_mark_shot_comes_only_near_a_mark_and_the_group_only_in_a_fight() -
 	var seen_group: bool = false
 	for step: int in 100:
 		var dice: float = step / 100.0
-		assert_ne(TvCamera.pick_shot(false, false, TvCamera.Shot.ORBIT, dice), TvCamera.Shot.MARK)
-		assert_ne(TvCamera.pick_shot(false, false, TvCamera.Shot.ORBIT, dice), TvCamera.Shot.GROUP)
-		seen_mark = seen_mark or TvCamera.pick_shot(true, false, TvCamera.Shot.ORBIT, dice) == TvCamera.Shot.MARK
-		seen_group = seen_group or TvCamera.pick_shot(false, true, TvCamera.Shot.ORBIT, dice) == TvCamera.Shot.GROUP
+		assert_ne(TvCamera.pick_shot(false, false, TvCamera.Shot.ORBIT, dice, old), TvCamera.Shot.MARK)
+		assert_ne(TvCamera.pick_shot(false, false, TvCamera.Shot.ORBIT, dice, old), TvCamera.Shot.GROUP)
+		seen_mark = seen_mark or TvCamera.pick_shot(true, false, TvCamera.Shot.ORBIT, dice, old) == TvCamera.Shot.MARK
+		seen_group = seen_group or TvCamera.pick_shot(false, true, TvCamera.Shot.ORBIT, dice, old) == TvCamera.Shot.GROUP
 	assert_true(seen_mark, "near a mark, the mark's shot")
 	assert_true(seen_group, "in a fight, the group")
 
 
 func test_the_start_is_the_wide_shot_then_the_committee_boat_then_the_leaders() -> void:
-	assert_eq(TvCamera.start_part(false, -20.0), -1, "no countdown yet")
-	assert_eq(TvCamera.start_part(true, -90.0), -1, "early in a long countdown: the usual shots")
-	assert_eq(TvCamera.start_part(true, -30.0), 0, "the line from high behind it")
-	assert_eq(TvCamera.start_part(true, -5.0), 1, "the committee boat's view down the line")
-	assert_eq(TvCamera.start_part(true, 0.0), 1, "at the gun")
-	assert_eq(TvCamera.start_part(true, 5.0), 1, "just after the gun: who is over early")
-	assert_eq(TvCamera.start_part(true, 10.0), 2, "the leaders leaving the line")
-	assert_eq(TvCamera.start_part(true, 60.0), -1, "racing")
-	assert_eq(TvCamera.start_part(true, 0.0, true), -1, "a race that ended")
+	assert_eq(TvCamera.start_part(false, -20.0, false, old), -1, "no countdown yet")
+	assert_eq(TvCamera.start_part(true, -90.0, false, old), -1, "early in a long countdown: the usual shots")
+	assert_eq(TvCamera.start_part(true, -30.0, false, old), 0, "the line from high behind it")
+	assert_eq(TvCamera.start_part(true, -5.0, false, old), 1, "the committee boat's view down the line")
+	assert_eq(TvCamera.start_part(true, 0.0, false, old), 1, "at the gun")
+	assert_eq(TvCamera.start_part(true, 5.0, false, old), 1, "just after the gun: who is over early")
+	assert_eq(TvCamera.start_part(true, 10.0, false, old), 2, "the leaders leaving the line")
+	assert_eq(TvCamera.start_part(true, 60.0, false, old), -1, "racing")
+	assert_eq(TvCamera.start_part(true, 0.0, true, old), -1, "a race that ended")
 
 
 func test_the_committee_boat_looks_down_the_line_from_behind_the_boat() -> void:
 	var boat: Vector3 = Vector3(100.0, 0.0, 0.0)
 	var pin: Vector3 = Vector3(-100.0, 0.0, 0.0)
-	var view: PackedVector3Array = TvCamera.line_view(boat, pin)
-	assert_almost_eq(view[0].x, 100.0 + TvCamera.LINE_BEHIND_M, 1e-4, "behind the boat, on the line's line")
+	var view: PackedVector3Array = TvCamera.line_view(boat, pin, old)
+	assert_almost_eq(view[0].x, 100.0 + old.line_behind_m, 1e-4, "behind the boat, on the line's line")
 	assert_almost_eq(view[0].z, 0.0, 1e-4)
-	assert_almost_eq(view[0].y, TvCamera.LINE_UP_M, 1e-4, "a few metres up")
+	assert_almost_eq(view[0].y, old.line_up_m, 1e-4, "a few metres up")
 	assert_almost_eq(view[1].x, -100.0, 1e-4, "looking at the pin")
 	var down_the_line: Vector3 = (view[1] - view[0]).normalized()
 	assert_gt(down_the_line.dot((pin - boat).normalized()), 0.99, "straight down the line")
@@ -144,8 +147,8 @@ func test_the_committee_boat_looks_down_the_line_from_behind_the_boat() -> void:
 
 func test_on_a_short_line_the_committee_boat_aims_past_the_pin_and_stays_level() -> void:
 	# A 60 m line: aimed at the pin the camera would tilt down 10 degrees and show the boat's flag.
-	var view: PackedVector3Array = TvCamera.line_view(Vector3(0.0, 0.0, 0.0), Vector3(0.0, 0.0, -60.0))
-	assert_almost_eq(view[1].z, -TvCamera.LINE_AIM_M, 1e-4, "aimed down the line's line, past the pin")
+	var view: PackedVector3Array = TvCamera.line_view(Vector3(0.0, 0.0, 0.0), Vector3(0.0, 0.0, -60.0), old)
+	assert_almost_eq(view[1].z, -old.line_aim_m, 1e-4, "aimed down the line's line, past the pin")
 	assert_almost_eq(view[1].x, 0.0, 1e-4)
 	var tilt_deg: float = rad_to_deg(asin((view[0].y - view[1].y) / view[0].distance_to(view[1])))
 	assert_lt(tilt_deg, 5.0, "nearly level")
@@ -156,8 +159,8 @@ func test_the_orbit_offset_sits_behind_a_board_at_its_heading() -> void:
 	var behind: Vector3 = TvCamera.orbit_offset(TvCamera._behind_rad(Vector3.FORWARD), 0.0, 10.0)
 	assert_almost_eq(behind.z, 10.0, 1e-4)
 	assert_almost_eq(behind.x, 0.0, 1e-4)
-	var high: Vector3 = TvCamera.orbit_offset(0.0, TvCamera.ORBIT_ELEVATION_RAD, TvCamera.ORBIT_M)
-	assert_almost_eq(high.length(), TvCamera.ORBIT_M, 1e-3)
+	var high: Vector3 = TvCamera.orbit_offset(0.0, old.orbit_elevation_rad, old.orbit_m)
+	assert_almost_eq(high.length(), old.orbit_m, 1e-3)
 	assert_gt(high.y, 50.0, "the helicopter is high")
 
 
