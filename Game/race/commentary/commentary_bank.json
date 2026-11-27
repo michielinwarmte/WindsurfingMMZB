@@ -61,10 +61,10 @@
    "lines": 3
   },
   "rundown": {
-   "lines": 7
+   "lines": 6
   },
   "speed": {
-   "lines": 7
+   "lines": 8
   },
   "start_bad": {
    "lines": 1
@@ -617,13 +617,14 @@
   },
   {
    "id": "S0042",
-   "moment": "rundown",
+   "moment": "speed",
    "text": "He's right up there in the top five.",
    "slots": [],
    "level": 3,
    "seconds": 1.8,
    "count": 1,
    "needs": [
+    "podium",
     "not_leader"
    ],
    "src": "2FJY7lpVYDA@429.8"
@@ -965,8 +966,10 @@
   {
    "id": "S0067",
    "moment": "photo_finish",
-   "text": "But who will get second?",
-   "slots": [],
+   "text": "But who will get {place}?",
+   "slots": [
+    "place"
+   ],
    "level": 4,
    "seconds": 0.9,
    "count": 1,
@@ -1064,7 +1067,9 @@
    "level": 2,
    "seconds": 1.2,
    "count": 1,
-   "needs": [],
+   "needs": [
+    "leeward"
+   ],
    "src": "2FJY7lpVYDA@318.6"
   },
   {
@@ -1079,7 +1084,8 @@
    "count": 1,
    "needs": [
     "close",
-    "pair"
+    "pair",
+    "windward"
    ],
    "src": "2FJY7lpVYDA@242.1"
   },

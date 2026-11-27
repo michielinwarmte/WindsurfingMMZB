@@ -58,7 +58,7 @@ PICKS = [
     ("rundown", ["Maciek Rakowski in third place."], "{rider} in {place} place.", []),
     ("rundown", ["Then Brendan Loho in fourth place."], "Then {rider} in {place} place.", ["not_leader"]),
     ("rundown", ["Brendan Loho's in there."], "{rider}'s in there.", ["not_leader"]),
-    ("rundown", ["He's right up there in the top five."], "He's right up there in the top five.", ["not_leader"]),
+    ("speed", ["He's right up there in the top five."], "He's right up there in the top five.", ["podium", "not_leader"]),
     ("chase", ["But he's got Matteo Yachino chasing him down."], "But he's got {rider} chasing him down.", ["close"]),
     ("chase", ["He is making a bid for this."], "He is making a bid for this.", ["not_leader"]),
     ("chase", ["Pierre Mortefon though putting the hammer down."], "{rider} though putting the hammer down.", ["not_leader"]),
@@ -89,7 +89,7 @@ PICKS = [
     ("fall", ["Brendan Loho's gone inside the water."], "{rider}'s gone inside the water.", []),
     ("finish_win", ["Iachino will win it."], "{rider} will win it.", ["leader"]),
     ("finish_win", ["Iachino gets the bullet."], "{rider} gets the bullet.", ["leader"]),
-    ("photo_finish", ["But who will get second?"], "But who will get second?", ["close"]),
+    ("photo_finish", ["But who will get second?"], "But who will get {place}?", ["close"]),
     ("finish_place", ["And Pierre will get the second place."], "And {rider} will get the {place} place.", ["not_leader"]),
     ("finish_place", ["Maciek has to settle for third."], "{rider} has to settle for {place}.", ["not_leader"]),
     ("finish_place", ["In fourth it will be Pierre Macquart."], "In {place} it will be {rider}.", ["not_leader"]),
@@ -97,8 +97,8 @@ PICKS = [
     ("after_race", ["Absolutely ridiculous."], "Absolutely ridiculous.", []),
     ("after_race", ["What a race he is having."], "What a race he is having.", []),
     # Added with the four moments of 27 November 2026 (new picks go at the end: the ids are by position).
-    ("tactics", ["He's got a lower line."], "He's got a lower line.", []),
-    ("tactics", ["Pushing hard above Pierre Mortefon though."], "Pushing hard above {rider2} though.", ["close", "pair"]),
+    ("tactics", ["He's got a lower line."], "He's got a lower line.", ["leeward"]),
+    ("tactics", ["Pushing hard above Pierre Mortefon though."], "Pushing hard above {rider2} though.", ["close", "pair", "windward"]),
     ("form", ["And again, he loves it.", "He's having fun."], "And again, he loves it. He's having fun.", ["leader"]),
 ]
 
