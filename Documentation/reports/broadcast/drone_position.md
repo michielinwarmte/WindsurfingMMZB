@@ -110,6 +110,12 @@ Reading B agrees with the course as it is laid (the start line 620 to 720 m from
 
 So the table above stands for the tight shots; for the wide start shot the lens is **4.5 to 8 degrees**, not 8 to 10, and the camera's place in the game is the headland's edge, not the tower's foot. The director also gets a rule for every map: no beach-camera picture when land stands between the camera and its subject.
 
+### The course turned out three times bigger (27 November 2026, later)
+
+Max: "the start is the wrong way, the first reach is always to the beach", and "try to match the positions of the start boat, pin end, all buoys and finish". The shot notes hold the leader's time at every mark in nine heats: 32 s to mark 1, then 33, 38 and 38 s, and 40 s to the finish (187 s in all). At the real speeds (Max's own at Sotavento: 65 km/h and more coming in, 50 to 55 going out) that is a course of about 2.7 km; the spot's was 0.9 km, with its first reach out to sea. The course file was rebuilt (branch `spot/sotavento-first-reach`): the first reach to the beach, marks 1 and 3 inshore (about 250 m off the shore), marks 2 and 4 offshore, the finish in front of the tower, the start about 2.2 km from the tower. The stream's own pictures fit it: seconds after the gun the fleet sails at the land (Eliminations 8, 9 and 10), and the beach camera is used on marks 1 and 3.
+
+**So the distances in the tables above are too small, and the wide lens with them.** With the rebuilt course the beach camera's wide start shot is a lens of about **2 degrees** (the line about 2 km away), and its tight shots at marks 3 and 1 (430 m to 1 km) stay at about 1 to 1.5 degrees. The mountain behind the start line fits a 2 degree lens as well as the two readings above (the fit can't choose). The rebuilt course is itself an estimate: another wind direction on the day turns it about the finish by up to some 15 degrees.
+
 **How it frames:** wide on the start, the camera is tilted up: the horizon sits low in the picture, 70 to 75 % from the top, the sea a thin band under a lot of sky. Tight on the leaders the horizon sits at 25 to 35 % from the top and the board's foot at about 70 %. It stays in one place and pans.
 
 ## Against the game's drones today
