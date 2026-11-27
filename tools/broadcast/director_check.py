@@ -52,11 +52,12 @@ DRONE_POSITION = {
 }
 # The lead's measurement of the stream's beach camera at Sotavento (drone_position.md, "The beach
 # camera", 41 shots; distances from the game's course): its eye about 4.5 m up (3.5 to 5), its zoom (the
-# vertical view, degrees) wide on the start line about 4.5 to 8 (the lead's correction: two readings of
-# the far hills fit), tight on the leaders 1 to 1.5 (half close 2 to 4: a group on a reach, the finish).
-# With a raked sail about 3.5 m tall.
+# vertical view, degrees) wide on the start line about 2 (the lead's last reading, on the course rebuilt
+# from the replays with the start about 2 km off; 1.5 to 3 accepted here), tight on the leaders 1 to 1.5
+# (half close 2 to 4: a group on a reach, the finish). With a raked sail about 3.5 m tall. The zooms
+# hold for Sotavento's distances; on another map the distances, and so the zooms, are its own.
 BEACH_EYE_M = (4.5, 3.5, 5.0)
-BEACH_LENS_DEG = {"line": (4.5, 8.0), "fleet": (4.5, 8.0), "front": (1.0, 1.5), "pack": (1.0, 1.5), "mark": (1.0, 4.0)}
+BEACH_LENS_DEG = {"line": (1.5, 3.0), "fleet": (1.5, 3.0), "front": (1.0, 1.5), "pack": (1.0, 1.5), "mark": (1.0, 4.0)}
 STREAM_SAIL_TOP_M = 3.5
 # The start's timing counted on the nine heats' shot notes (27 November 2026; the config's header says how).
 LINE_DRONE_BEFORE_GUN_S = (2.6, 3.1, 3.7)

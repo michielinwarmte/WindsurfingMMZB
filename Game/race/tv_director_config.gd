@@ -123,6 +123,10 @@ extends Resource
 @export var lens_lowest_m: float = 1.5
 @export var lens_min_deg: float = 1.0
 @export var lens_max_deg: float = 30.0
+## The beach cam takes a picture only when its longest zoom shows the board's sail at least this share
+## of what the picture asks for; a board farther out is filmed by a drone (the stream uses its beach
+## camera on the near marks and the start, not on boards a mile out). The game's choice.
+@export var lens_reach_share: float = 0.6
 ## Where the beach cam stands: where the map says (a Marker3D in the group "tv_shore_camera" anywhere
 ## in its scene: the eye's place; one place for the whole heat, it only pans and zooms; with several,
 ## the nearest to what it films); else the water's edge of the nearest shore of the map's land

@@ -37,7 +37,8 @@
 ;   fleet_together_m (a picture on the fleet only while the boards still racing are together); close_m and
 ;   gained_s (the 12 November numbers); the beach cam's place where a map does not say (the nearest
 ;   shore, or a camera boat 150 m off for the tight picture and 450 m for the wide one) and its zoom
-;   range (1 to 30 degrees: Godot's camera takes nothing narrower than 1); the pull-out's growth (4 times); every picture's glide_s.
+;   range (1 to 30 degrees: Godot's camera takes nothing narrower than 1); lens_reach_share (0.6: a
+;   board so far off that the longest zoom shows less of its sail is filmed by a drone); the pull-out's growth (4 times); every picture's glide_s.
 ; - FROM THE LEAD'S BEACH CAMERA MEASUREMENT (drone_position.md, "The beach camera", 41 shots at
 ;   Sotavento): beach_eye_m 4.5 (3.5 to 5), a camera standing on the beach in front of the judges'
 ;   tower; one place for the heat (a map says where: a Marker3D in the group tv_shore_camera); its
@@ -536,6 +537,7 @@ beach_eye_m = 4.5
 lens_lowest_m = 1.5
 lens_min_deg = 1.0
 lens_max_deg = 30.0
+lens_reach_share = 0.6
 shore_nearest_m = 60.0
 shore_farthest_m = 1200.0
 boat_tight_m = 150.0

@@ -573,7 +573,7 @@ func cut_to(next: TvPicture, board: int, take_s: float, mark_step: int = -1, for
 		_place_the_beach_cam(next, at, node)
 	elif next.shot == Shot.PULL_OUT:
 		_stand_look = at
-	view_lost = _view_cut(at, node)
+	view_lost = _view_cut(at, node) or _out_of_reach(next, at, node)
 	_view_check_s = 0.0
 	if view_lost and not force:
 		return false
@@ -655,7 +655,7 @@ func frame(delta: float) -> void:
 			_view_check_s += delta
 			if _view_check_s >= VIEW_CHECK_S:
 				_view_check_s = 0.0
-				view_lost = _view_cut(board.origin, node)
+				view_lost = _view_cut(board.origin, node) or _out_of_reach(picture, board.origin, node)
 		glide_s = picture.glide_s
 		if picture.is_lens_camera():
 			eye = wanted[0] if _stand_on_marker else _keep_above_ground(wanted[0], board.origin.y, stream.lens_lowest_m, stream.lens_lowest_m)
@@ -902,6 +902,19 @@ func _view_cut(at: Vector3, node: WindsurferNode) -> bool:
 			if picture.move != "pan":
 				subject = _stand_look
 	return view_blocked(grid, Vector3(eye.x, eye.y - at.y, eye.z), Vector3(subject.x, 0.0, subject.z))
+
+
+## Whether the beach cam's longest zoom can't make this picture: from where it stands the board is so
+## far off that its sail shows less than lens_reach_share of what the picture asks for.
+func _out_of_reach(next: TvPicture, at: Vector3, node: WindsurferNode) -> bool:
+	if not next.is_lens_camera() or node == null:
+		return false
+	var toward: Vector3 = at if next.move == "pan" else _stand_look
+	var level_m: float = Vector2(toward.x - _stand.x, toward.z - _stand.z).length()
+	var top_m: float = _rig_top(node).y
+	var subject: float = next.subject_share(sail_share, horizon_share)
+	var lens: Vector3 = TvFraming.lens_place(level_m, top_m, sail_share, horizon_share, subject, _stand_eye_m, _stand_eye_m, stream.lens_min_deg, stream.lens_max_deg)
+	return TvFraming.sail_share(lens.x, lens.z, level_m, lens.y, top_m) < sail_share * stream.lens_reach_share
 
 
 ## Once per marker of a map's beach camera: which of the course's marks land hides from it (for the

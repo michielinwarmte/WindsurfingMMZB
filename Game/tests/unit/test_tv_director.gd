@@ -88,6 +88,13 @@ func test_the_beach_cam_wide_puts_the_sea_in_a_thin_band() -> void:
 	var tight: Vector3 = TvFraming.lens_place(455.0, 3.5, 0.40, 0.30, 0.5, eye_m, eye_m, config.lens_min_deg, config.lens_max_deg)
 	assert_between(tight.x, 0.9, 1.6, "the stream's tight zoom")
 	assert_gte(config.lens_min_deg, 1.0, "Godot's camera takes no view narrower than 1 degree (it keeps the old one)")
+	# Out of reach: a board 1.6 km off (the rebuilt Sotavento course's first reach from the headland), the
+	# picture asking for a 40 % sail: the longest zoom shows about 18 %, under the reach share, so a drone
+	# films it; at 600 m (an inshore mark) the zoom makes the picture.
+	for case: Vector2 in [Vector2(1600.0, 0.0), Vector2(600.0, 1.0)]:
+		var longest: Vector3 = TvFraming.lens_place(case.x, 4.9, 0.40, 0.25, 0.5, eye_m, eye_m, config.lens_min_deg, config.lens_max_deg)
+		var shown: float = TvFraming.sail_share(longest.x, longest.z, case.x, longest.y, 4.9)
+		assert_eq(shown >= 0.40 * config.lens_reach_share, case.y > 0.5, "%.0f m: in reach or not" % case.x)
 
 
 func test_the_shares_are_of_the_pictures_height_in_any_window() -> void:
