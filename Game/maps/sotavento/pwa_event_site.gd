@@ -23,6 +23,16 @@ const RIDERS_TENT: Vector2 = Vector2(574255.0, 3112615.0)
 const GARDEN: Vector2 = Vector2(574170.0, 3112540.0)
 const BUOY_HEIGHT_M: float = 2.4
 const BUOY_DRAFT_M: float = 0.5
+## The PWA stream's beach camera, for the game's TV director (TvCamera.SHORE_CAMERA_GROUP): on the
+## seaward edge of the rocky headland up the coast from the judges' tower (this far along the beach and
+## out), its eye this high above the water (the stream's measured: 3.5 to 5 m on 41 shots,
+## Documentation/reports/broadcast/drone_position.md), or standing height on the rock there when the
+## rock is higher. From the tower's foot the headland hides the start pin; from here every mark and both
+## lines are clear (checked along the sight lines on the depth grid, 27 November 2026).
+const TV_CAMERA_ALONG_M: float = 130.0
+const TV_CAMERA_OUT_M: float = 150.0
+const TV_CAMERA_EYE_M: float = 4.5
+const STANDING_EYE_M: float = 1.7
 
 @export var map_config: MapConfig = null
 @export_file("*.json") var heights_json: String = ""
@@ -40,6 +50,7 @@ func _ready() -> void:
 	if _grid != null:
 		_grid.lower_by(water_level_m)
 	_build_tower()
+	_build_tv_shore_camera()
 	_build_grandstand()
 	_build_flags()
 	_build_sails_on_the_beach()
@@ -137,6 +148,16 @@ func _build_tower() -> void:
 	_box(tower, Vector3(5.0, 2.2, 0.06), Vector3(0.0, 5.2, -2.5), Color(0.1, 0.32, 0.75))
 	_box(tower, Vector3(0.06, 2.2, 5.0), Vector3(-2.5, 5.2, 0.0), Color(0.95, 0.85, 0.1))
 	_box(tower, Vector3(0.06, 2.2, 5.0), Vector3(2.5, 5.2, 0.0), Color(0.95, 0.85, 0.1))
+
+
+## Where the stream's beach camera stands: a marker the TV director finds by its group.
+func _build_tv_shore_camera() -> void:
+	var marker: Marker3D = Marker3D.new()
+	marker.name = "TvShoreCamera"
+	var ground: Vector3 = _on_ground(beach_point(TV_CAMERA_ALONG_M, TV_CAMERA_OUT_M))
+	marker.position = Vector3(ground.x, maxf(TV_CAMERA_EYE_M, ground.y + STANDING_EYE_M), ground.z)
+	marker.add_to_group("tv_shore_camera")
+	add_child(marker)
 
 
 ## The grandstand beside the tower (down the coast): four steps of seats facing the sea.
