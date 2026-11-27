@@ -40,6 +40,9 @@ const COUNTDOWN_S: float = 60.0
 ## (a final's longer: its winner, the elimination's result and the standings are said).
 const HOLD_S: float = 8.0
 const FINAL_HOLD_S: float = 14.0
+## The standings stay on the screen this long at the start of an elimination's first heat (the
+## countdown's first seconds), seconds of the race.
+const STANDINGS_SHOWN_S: float = 15.0
 ## A favourite knocked out is news: among the first SHOCK_SEEDS of the elimination's seeding a
 ## shout, among the first UPSET_SEEDS a lifted voice.
 const SHOCK_SEEDS: int = 8
@@ -80,9 +83,11 @@ var _card: PanelContainer = null
 var _text: Label = null
 var _board: PanelContainer = null
 var _board_text: Label = null
-## The ladder and the standings asked for with B; they also come up by themselves while a final's
-## result is held and when the week is over.
+## The ladder and the standings asked for with B. By themselves the last elimination's result and
+## the standings come up: at the start of the next elimination's first heat (until the race clock
+## reaches _standings_until_s) and when the week is over.
 var _board_by_hand: bool = false
+var _standings_until_s: float = -INF
 ## The winner of the winners' final on the water has been named.
 var _win_said: bool = false
 
@@ -166,6 +171,9 @@ func _process(delta: float) -> void:
 		return
 	var race: RaceSim = runner.race
 	_count_falls(race)
+	if _standings_until_s > -INF and race.clock_s() >= _standings_until_s:
+		_standings_until_s = -INF
+		_show_the_board()
 	if _trace_every_s > 0.0 and race.clock_s() >= _trace_next_s:
 		_trace_next_s = race.clock_s() + _trace_every_s
 		_trace(race)
@@ -182,7 +190,6 @@ func _process(delta: float) -> void:
 		if _finished_count(race) >= needed or race.phase() == RaceSim.Phase.FINISHED:
 			_decided_s = 0.0
 			_update_card()
-			_show_the_board()
 			_say_the_result()
 		return
 	_decided_s += delta
@@ -190,16 +197,19 @@ func _process(delta: float) -> void:
 		_close_heat()
 
 
-## The ladder and the standings on the screen: asked for (B), or by themselves while a final's result
-## is held (the elimination's result and the standings) and when the week is over.
+## The board on the screen: the ladder and the standings when asked for (B); by themselves the last
+## elimination's result and the standings, at the start of an elimination's first heat and when the
+## week is over. (Not while a final's result is held: the race's own results card is there then.)
 func _show_the_board() -> void:
 	if _board == null or week == null:
 		return
-	var by_itself: bool = week.is_over() or (_decided_s >= 0.0 and week.next_heat() >= EliminationLadder.LOSERS_FINAL)
-	var wanted: bool = _board_by_hand or by_itself
-	if wanted != _board.visible:
-		_board.visible = wanted
-		_update_board()
+	var wanted: bool = _board_by_hand or _shown_by_itself()
+	_board.visible = wanted
+	_update_board()
+
+
+func _shown_by_itself() -> bool:
+	return week != null and (week.is_over() or _standings_until_s > -INF)
 
 
 ## Counts each board's falls once the gun has gone (the heat's report and the result card).
@@ -273,8 +283,13 @@ func _start_heat() -> void:
 	runner.setup.prestart_s = countdown_s
 	runner.setup.free_sail_s = 0.0
 	runner.setup.spawn = RaceSetup.Spawn.LINE
+	# An elimination's first heat after the first: the standings on the screen while it is called.
+	_standings_until_s = (-countdown_s + STANDINGS_SHOWN_S) if week.next_heat() == 1 and not week.results.is_empty() else -INF
 	runner.change_skippers(skippers)
 	runner.restart()
+	if runner.hud != null:
+		# The race's own results card names the heat.
+		runner.hud.results_heading = "%s  ·  Elimination %d" % [EliminationLadder.heat_name(week.next_heat()), week.elimination]
 	_update_card()
 	_show_the_board()
 	_update_board()
@@ -506,11 +521,17 @@ func _build_cards() -> void:
 	_board = PanelContainer.new()
 	_board.name = "EventBoard"
 	_board.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_board.add_theme_stylebox_override("panel", HudStyle.card(14.0))
+	# Not see-through: it may lie over the race's own results card (the end of the week).
+	var board_style: StyleBoxFlat = HudStyle.card(14.0)
+	board_style.bg_color = Color(board_style.bg_color, 0.97)
+	_board.add_theme_stylebox_override("panel", board_style)
 	hud.add_part(_board)
 	_board.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_MINSIZE)
 	_board.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_board.grow_vertical = Control.GROW_DIRECTION_BOTH
+	# A little under the middle: clear of the race card at the top.
+	_board.offset_top += 44.0
+	_board.offset_bottom += 44.0
 	_board_text = HudStyle.label(HudStyle.mono(500), 12)
 	_board.add_child(_board_text)
 	_board.visible = false
@@ -550,12 +571,13 @@ func card_text() -> String:
 	return "\n".join(lines)
 
 
-## The ladder of the elimination being sailed and the standings' first twelve.
+## The board's words. Asked for (B): the ladder of the elimination being sailed and the standings'
+## first twelve. By itself: the last finished elimination's first eight and the standings.
 func board_text() -> String:
 	if week == null:
 		return ""
 	var lines: PackedStringArray = PackedStringArray()
-	if week.ladder != null:
+	if _board_by_hand and week.ladder != null:
 		lines.append("ELIMINATION %d" % week.elimination)
 		for heat: int in range(1, EliminationLadder.HEATS + 1):
 			var result: PackedInt32Array = week.ladder.result_of(heat)
@@ -567,11 +589,24 @@ func board_text() -> String:
 			var state: String = "to come" if sailors.is_empty() else (", ".join(names))
 			lines.append("%-22s %s" % [EliminationLadder.heat_name(heat), state])
 		lines.append("")
-	lines.append("STANDINGS after %d of %d eliminations (%d dropped)" % [week.results.size(), week.total_eliminations(), EventWeek.dropped_after(week.results.size())])
+	elif not week.results.is_empty():
+		var last: PackedInt32Array = week.results[week.results.size() - 1]
+		lines.append("%s" % week.title.to_upper())
+		lines.append("")
+		lines.append("ELIMINATION %d  ·  THE RESULT" % week.results.size())
+		for place: int in mini(8, last.size()):
+			var sailor: EventRoster.Sailor = week.roster.sailor(last[place])
+			lines.append("%2d  %-22s %-8s" % [place + 1, sailor.name, sailor.sail_number])
+		lines.append("")
+	var finished: int = week.results.size()
+	var dropped: int = EventWeek.dropped_after(finished)
+	lines.append("%s after %d of %d eliminations%s" % ["FINAL STANDINGS" if week.is_over() else "STANDINGS", finished, week.total_eliminations(),
+		"" if dropped == 0 else (" (%d dropped)" % dropped)])
 	var order: PackedInt32Array = week.standings()
 	for place: int in mini(12, order.size()):
 		var sailor: EventRoster.Sailor = week.roster.sailor(order[place])
-		lines.append("%2d  %-22s %-8s %6.1f" % [place + 1, sailor.name, sailor.sail_number, week.total_of(sailor.id)])
+		lines.append("%2d  %-22s %-8s %6s" % [place + 1, sailor.name, sailor.sail_number,
+			String.num(week.total_of(sailor.id), 1) if finished > 0 else ""])
 	return "\n".join(lines)
 
 
@@ -583,3 +618,5 @@ func _update_card() -> void:
 func _update_board() -> void:
 	if _board_text != null and _board.visible:
 		_board_text.text = board_text()
+		# The standings by themselves in a bigger letter than the ladder's sixteen rows.
+		_board_text.add_theme_font_size_override("font_size", 12 if _board_by_hand else 15)

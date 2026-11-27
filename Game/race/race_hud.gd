@@ -94,6 +94,8 @@ var plain_title: bool = false:
 		if value != plain_title:
 			plain_title = value
 			_watching = ""  # the next set_watching() writes the title again
+## The results card's heading (""; "Results"): an event week names the heat (EventBroadcast).
+var results_heading: String = ""
 var _follows_leader: bool = true
 var _watch_place: String = ""
 ## The results stay on the screen while this is set, whichever board the cards are about: the
@@ -425,7 +427,7 @@ func update_from(race: RaceSim, index: int, t: Telemetry, shadow_deficit: float 
 		_warning.hide()
 	if race.phase() == RaceSim.Phase.FINISHED or race.is_finished(index) or results_wanted:
 		if refresh or not _results.visible:
-			_show_results(time_trial_table(race, index) if _time_trial else results_table(race))
+			_show_results(time_trial_table(race, index) if _time_trial else results_table(race, results_heading, not plain_title))
 		_results.show()
 		# The results say all the standings say: one table, not two side by side; and the finish time
 		# is on it and on the race card, so the split and the countdown give it the room.
@@ -696,18 +698,27 @@ func time_trial_table(race: RaceSim, index: int) -> String:
 	return "\n".join(lines)
 
 
-static func results_table(race: RaceSim) -> String:
-	var lines: PackedStringArray = PackedStringArray(["  Results", ""])
+## The results as a table: a heading ("Results" unless another is given), a line per board, and the
+## keys (not on a watched race's TV screen, which shows what a viewer needs). The names' column is as
+## wide as the longest name (at least 14 letters).
+static func results_table(race: RaceSim, heading: String = "", with_keys: bool = true) -> String:
+	var lines: PackedStringArray = PackedStringArray(["  " + (heading if heading != "" else "Results"), ""])
+	var width: int = 14
 	for result: RaceResult in race.results():
+		width = maxi(width, result.name.length())
+	var name_cell: String = "%-" + str(width) + "s"
+	for result: RaceResult in race.results():
+		var who: String = name_cell % result.name
 		if result.finished:
 			var penalty: String = "   (%.0f s penalty)" % result.penalty_s if result.penalty_s > 0.0 else ""
-			lines.append("  %d. %-14s %s   +%s%s" % [result.place, result.name, clock(result.finish_time_s), clock(result.gap_s), penalty])
+			lines.append("  %d. %s %s   +%s%s" % [result.place, who, clock(result.finish_time_s), clock(result.gap_s), penalty])
 		elif result.retired:
-			lines.append("  %d. %-14s retired" % [result.place, result.name])
+			lines.append("  %d. %s retired" % [result.place, who])
 		else:
-			lines.append("  %d. %-14s sailing, %d of %d" % [result.place, result.name, result.steps_done, result.steps_total])
-	lines.append("")
-	lines.append("  R: race again     Esc: menu")
+			lines.append("  %d. %s sailing, %d of %d" % [result.place, who, result.steps_done, result.steps_total])
+	if with_keys:
+		lines.append("")
+		lines.append("  R: race again     Esc: menu")
 	return "\n".join(lines)
 
 
