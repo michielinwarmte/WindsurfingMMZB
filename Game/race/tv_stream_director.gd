@@ -195,6 +195,9 @@ func _start(race: RaceSim) -> void:
 		_left_s = _runner_s
 		var runner: TvPicture = draw_picture(config.start_runners, null, _rng.randf())
 		_cut(runner, _first_racing(race), _runner_s)
+	elif _start_step >= 2:
+		# The runner's time is up before the start phase ends: the race's pictures from here.
+		_free(race, config.race)
 
 
 ## A picture on the start line, about the board nearest its middle (the race card names it).
