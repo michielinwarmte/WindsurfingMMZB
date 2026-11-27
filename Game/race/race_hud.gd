@@ -530,7 +530,7 @@ func _fill_fleet(race: RaceSim, player: int, mark: String) -> void:
 			texts = PackedStringArray(["", "...", "", ""])
 		elif board >= 0:
 			var going: String = "finished" if race.is_finished(board) else ("retired" if race.is_retired(board) else "to " + race.next_step_name(board))
-			texts = PackedStringArray(["%d" % race.place(board), race.board_name(board).left(14), going,
+			texts = PackedStringArray(["%d" % race.place(board), race.board_name(board).left(18), going,
 				mark if board == player else gap_between(race, board, player)])
 		var colour: Color = HudStyle.HIGHLIGHT_COLOR if board == player else TEXT_COLOR
 		for i: int in 4:

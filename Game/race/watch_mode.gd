@@ -58,6 +58,10 @@ const SHOT_NAMES: Dictionary[TvCamera.Shot, String] = {
 	TvCamera.Shot.OVERHEAD: "the drone overhead"}
 ## How far the orbit camera may be wheeled out while watching, metres (sailing: CameraRig's 60).
 const ORBIT_MAX_M: float = 400.0
+## A board nearer the camera than this shows no name, metres: the name is a sign of half a metre
+## above the mast, and a board passing close by a drone wrote its name across half the picture
+## (seen in the live week's pictures, 28 November 2026).
+const NAMES_NOT_NEARER_M: float = 25.0
 ## The keys along the bottom of the full screen.
 const KEYS: Array[Array] = [
 	["Tab", "next board"],
@@ -386,10 +390,12 @@ func _process(_delta: float) -> void:
 ## The names above the boards, as N says (the board watched never: the race card names it).
 func _show_names() -> void:
 	var watched: WindsurferNode = runner.followed_node()
+	var camera: Camera3D = get_viewport().get_camera_3d()
 	for node: WindsurferNode in runner.opponents:
 		var label: Node3D = node.get_node_or_null("NameLabel") as Node3D
 		if label != null:
-			label.visible = names_shown and node != watched
+			var near: bool = camera != null and camera.global_position.distance_to(node.global_position) < NAMES_NOT_NEARER_M
+			label.visible = names_shown and node != watched and not near
 
 
 ## How fast the race really goes (race seconds a real second), over the last second or so.
