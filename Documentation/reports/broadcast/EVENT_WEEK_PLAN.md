@@ -50,7 +50,7 @@ Every AI board sails the full physics (the team's rule: no cheap boards), so the
 | Racing | yes | the heat |
 | Sailing in | yes, until the beach | the finishers coming home; then back to a sail on the sand |
 
-The budget: **8 racing + 8 of the next heat = 16.** The rules that keep it there:
+The budget: **8 racing + 8 of the next heat = 16.** When the player sails in the week (D1), the player's board is one of those 16: one of the 8 in its own heat, and loaded early enough to sail out to the start like the others. The rules that keep it there:
 
 - A sailor is loaded only when a place is free; the heat after next waits on the beach.
 - A finisher frees its place when it reaches the beach, or sooner when no camera is on it. Nothing appears or vanishes in the picture: the TV director knows what is on screen, and loading happens outside it.
@@ -93,7 +93,7 @@ Days with wind drawn per day (strong, normal, too light to race), two or three e
 | **W3** Jump ahead | Heats sailed in the background, jump to a round, close and go on | One whole elimination, part watched, part jumped |
 | **W4** The broadcast | The line-up card, the ladder, the results, the standings; the new commentary moments; the director between heats | An elimination that looks and sounds like the stream |
 | **W5** The week | The days and the wind, eleven eliminations, the dropped results, the champion | The Sotavento week from the first heat to the champion |
-| Later | You as one of the 64. The women's fleet. The obstacle and the long-distance race. Interviews (E13.S06). Other spots. | |
+| Later | The play-test of sailing in it yourself (built along from W2, D1). The women's fleet. The obstacle and the long-distance race. Interviews (E13.S06). Other spots. | |
 
 Size: W1 and W3 are a session each for one worker; W2 and W4 are the big ones (two workers each); W5 is small once the others stand. Five to seven sessions in all, not one night.
 
@@ -108,6 +108,7 @@ Size: W1 and W3 are a session each for one worker; W2 and W4 are the big ones (t
 ## Decisions for Max
 
 - **D1 Watching, or sailing in it?** (a) First only watching: the week as a broadcast. (b) You are one of the 64 from the start. *Recommended: (a); (b) is the "later" row and joins the season (E13).*
+  **Max, 27 November 2026: "watch and play but test only watch".** So the week is built for both: you can watch it, or be one of the 64 and sail your own heats. For now only the watching is tested and shown to Max; the playing is built along (the player's board takes one of the 8 places of a heat, the player's results go into the same ladder and standings) but its play-test waits.
 - **D2 Heats you jump over:** (a) sailed by the real AI in the background (honest; a jump over ten heats takes a few minutes). (b) Drawn from the sailors' levels (instant; not really sailed). *Recommended: (a).*
 - **D3 The 64:** (a) a provisional roster now, placeholder names, until your fifty (E10.S02) are ready. (b) Wait for the real roster. And: 64 men only, or the women's fleet too (the real event: 39 men and 13 women)? *Recommended: (a), 64 men first, the women's fleet as its own ladder later.*
 - **D4 The pace:** the stream's (about 8 minutes a heat with the talk), or a quick one (about 5), with the other as a setting? *Recommended: quick as the default, the stream's as a setting.*
