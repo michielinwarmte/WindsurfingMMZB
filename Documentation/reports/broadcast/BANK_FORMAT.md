@@ -60,6 +60,12 @@ A **line** is what the commentator says in one go: one sentence, or two or three
 | `{leg}` | "first", "second", "last", "penultimate" (he says "on this penultimate reach") |
 | `{national}` | the sailor's nationality as a noun, the way he uses it for a rider: "the {national}" = "the Italian", "the Frenchman". The game's sailors have no country yet, so until they do these lines are skipped (the data is kept). |
 | `{nation_adj}` | the same as an adjective: "the {nation_adj} rider" = "the Polish rider". Skipped for the same reason. |
+| `{heat}` | an event week's heat as he says it: "heat three of the first round", "the second semi-final", "the winners' final" |
+| `{round}` | where a heat's first four go: "the quarter-finals", "the semi-finals", "the winners' final" |
+| `{elimination}` | "elimination three" |
+| `{event}` | the event as he says it: "the Sotavento World Cup" |
+
+Since the event week (27 November 2026) the game's event sailors have a country, so `{national}` and `{nation_adj}` are filled for them (a race outside an event still skips those lines). The four event slots are filled only for the event's own moments (below).
 
 ### `needs`
 
@@ -155,6 +161,22 @@ Each moment is something the race can tell the commentary director. The list com
 |---|---|---|
 | `camera` | the picture can't show what he wants, or just changed for the better | "The drones can't even keep up." "That's a better angle." |
 | `unsure` | he can't tell who it is (the game can use this on a wide shot, for the feel of the stream) | "Is that {rider}?" "Can't quite see from here." |
+
+**An event week** (added 27 November 2026 for the game's simulated slalom week; the moments come from the event, not from the race story: `Game/race/event/event_broadcast.gd`)
+
+| Moment | When | For example |
+|---|---|---|
+| `heat_called` | a heat's countdown begins | "Next up, {heat}." |
+| `heat_favourite` | just after: the best of the seeding in this heat | "{rider} sits {place} overall coming into this heat." |
+| `heat_through` | the heat's fourth board is home: about the winner (`{rider}`) and the second (`{rider2}`) | "{rider} and {rider2} go through to {round}." |
+| `heat_out` | the same moment: the best of the seeding who is knocked out (level 4 for one of the top eight, 3 for the top sixteen) | "Big shock! {rider} is out!" |
+| `final_win` | the winners' final is over | "{rider} wins {elimination}!" |
+| `standings` | the next elimination's first heat is called: the event's leader and the second | "After {elimination}, {rider} leads from {rider2}." |
+| `event_win` | the last final of the week is over | "{rider} wins {event}!" |
+
+With these there are 42 moments. Two `needs` words belong to them: `final` (the heat is the losers' or the winners' final) and `not_final` (four go through from it).
+
+The lines for these moments that were written for the game (not said in the streams) are in their own file, `Game/race/commentary/commentary_bank_event.json`, in the same format with ids `E0001` on. The game reads it on top of the bank, so rebuilding the bank from the streams keeps them. Lines of the real commentator for these moments go into the bank the usual way (the judged sheets may use the seven moments and the four slots).
 
 ## What stays out of the bank
 

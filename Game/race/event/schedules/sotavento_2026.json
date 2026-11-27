@@ -1,6 +1,7 @@
 {
 	"about": "The week of the game's Sotavento world cup, after the real World Cup Fuerteventura 2026 (Slalom-X, men): its race days and the eliminations sailed on each. Known from the replays' dates: eliminations 1 and 2 on 22 July, 3 and 4 on the 23rd, 5 to 7 on the 24th, 8 to 11 on the 26th. NOT KNOWN YET (to be read from the streams' commentary): what was sailed on the 25th, and every day's wind; the winds here are placeholders marked 'guess'. In the game every elimination is a normal slalom elimination (the real 6 and 7 were full-fleet long-distance races).",
 	"name": "VWA World Cup Sotavento",
+	"spoken": "the Sotavento World Cup",
 	"spot": "sotavento",
 	"course": "pwa_slalom_x",
 	"sailors": 64,

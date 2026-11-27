@@ -25,13 +25,22 @@ const MOMENTS: PackedStringArray = [
 	"wow", "oh_no",
 	"last_leg", "finish_win", "finish_place", "photo_finish", "after_race",
 	"camera", "unsure",
+	# An event week (EventBroadcast): the heat called, its favourite, who goes through, who is out,
+	# the elimination won, the standings, the week won.
+	"heat_called", "heat_favourite", "heat_through", "heat_out", "final_win", "standings", "event_win",
 ]
 ## The slots of BANK_FORMAT.md ("The slots"). The game fills all but the sailor's nation ({national},
 ## {nation_adj}: the game's sailors have no country yet), so a line with one of those is skipped.
-const SLOTS: PackedStringArray = ["rider", "rider2", "place", "brand", "colour", "mark", "leg", "national", "nation_adj"]
+const SLOTS: PackedStringArray = ["rider", "rider2", "place", "brand", "colour", "mark", "leg", "national", "nation_adj",
+	"heat", "round", "elimination", "event"]
+## The lines written for the game's event week (the heat called, who goes through, the standings):
+## read on top of the stream's bank, so a rebuilt bank keeps them.
+const EVENT_PATH: String = "res://race/commentary/commentary_bank_event.json"
 ## The extra conditions the director knows (BANK_FORMAT.md, "needs").
 const NEEDS: PackedStringArray = ["leader", "not_leader", "podium", "big_lead", "close", "camera_wide", "camera_close", "many", "pair", "last_lap",
-	"wind_strong", "wind_light", "choppy", "flat", "windward", "leeward", "dirty_air"]
+	"wind_strong", "wind_light", "choppy", "flat", "windward", "leeward", "dirty_air",
+	# An event week's heat (RaceMoment.tags): one of the two finals, or a heat four go through from.
+	"final", "not_final"]
 ## The levels of excitement: 1 calm, 2 the normal race voice, 3 lifted, 4 shouting.
 const LOWEST_LEVEL: int = 1
 const HIGHEST_LEVEL: int = 4
@@ -96,6 +105,23 @@ static func from_json(text: String, from: String = "") -> CommentaryBank:
 		return bank
 	bank._read(data)
 	return bank
+
+
+## Another file's lines on top of this bank's (the same format and checks; an id used twice is left
+## out with its problem noted). False when the file is missing or broken.
+func add_file(path: String) -> bool:
+	if not FileAccess.file_exists(path):
+		return false
+	var json: JSON = JSON.new()
+	if json.parse(FileAccess.get_file_as_string(path)) != OK or not (json.data is Dictionary):
+		problems.append("The extra bank %s is not valid JSON." % path)
+		return false
+	var kept_made: String = made
+	var kept_source: String = source
+	_read(json.data as Dictionary)
+	made = kept_made
+	source = kept_source
+	return true
 
 
 ## The good lines of a moment, in the file's order (empty for a moment with none).

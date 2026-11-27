@@ -30,6 +30,8 @@ const DROPPED_AFTER: Dictionary[int, int] = {4: 1, 7: 2, 10: 3}
 var roster: EventRoster = null
 var schedule_name: String = ""
 var title: String = ""
+## The event as the commentator says it ("the Sotavento World Cup").
+var spoken: String = ""
 var course_name: String = ""
 ## One entry per day: {"day", "eliminations", "wind_kt", "wind_from_deg"}.
 var days: Array[Dictionary] = []
@@ -67,6 +69,7 @@ func _read_schedule(schedule: String) -> bool:
 	var data: Dictionary = parsed
 	schedule_name = schedule
 	title = String(data.get("name", schedule))
+	spoken = String(data.get("spoken", "the " + title))
 	course_name = String(data.get("course", ""))
 	days.clear()
 	for day: Variant in data.get("days", []):

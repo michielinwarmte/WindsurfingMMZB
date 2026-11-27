@@ -183,3 +183,65 @@ func test_the_roster_has_favourites_and_tail_enders() -> void:
 		assert_eq(sailor.persona.name, sailor.name, "the name on the board is the sailor's")
 	assert_gt(roster.sailors[0].persona.boat_speed, roster.sailors[63].persona.boat_speed + 0.2, "the favourite is clearly faster than the last of the ranking")
 	assert_not_null(roster.sailors[0].make_skipper())
+
+
+# ---------------------------------------------------------------- the event in the commentary
+
+func test_the_heats_are_said_in_words() -> void:
+	assert_eq(EventBroadcast.heat_words(3), "heat three of the first round")
+	assert_eq(EventBroadcast.heat_words(9), "the first quarter-final")
+	assert_eq(EventBroadcast.heat_words(12), "the fourth quarter-final")
+	assert_eq(EventBroadcast.heat_words(14), "the second semi-final")
+	assert_eq(EventBroadcast.heat_words(15), "the losers' final")
+	assert_eq(EventBroadcast.heat_words(16), "the winners' final")
+	assert_eq(EventBroadcast.round_words(8), "the quarter-finals")
+	assert_eq(EventBroadcast.round_words(11), "the semi-finals")
+	assert_eq(EventBroadcast.round_words(13), "the winners' final")
+	assert_eq(EventBroadcast.elimination_words(11), "elimination eleven")
+
+
+func test_the_event_lines_load_clean_on_top_of_the_bank() -> void:
+	var bank: CommentaryBank = CommentaryBank.load_file()
+	var before: int = bank.size()
+	assert_true(bank.add_file(CommentaryBank.EVENT_PATH), "the event's lines are read")
+	assert_eq(bank.problems.size(), 0, "no line of the two files is refused: %s" % ", ".join(bank.problems))
+	assert_gt(bank.size(), before + 30)
+	for moment: String in ["heat_called", "heat_favourite", "heat_through", "heat_out", "final_win", "standings", "event_win"]:
+		assert_gt(bank.lines_for(moment).size(), 3, "%s has lines" % moment)
+
+
+func test_an_event_moment_is_said_with_its_own_words() -> void:
+	var bank: CommentaryBank = CommentaryBank.load_file()
+	bank.add_file(CommentaryBank.EVENT_PATH)
+	var config: CommentaryConfig = load("res://config/commentary_default.tres") as CommentaryConfig
+	var director: CommentaryDirector = CommentaryDirector.new(bank, config, 7)
+	var look: RaceLook = RaceLook.new()
+	# A heat four go through from, about a sailor who is not on the water (no board): every slot is
+	# filled from the moment's own words, and no final's line is taken.
+	var seen: Dictionary[String, bool] = {}
+	for line: CommentaryBank.Line in bank.lines_for("heat_called") + bank.lines_for("heat_through") + bank.lines_for("standings"):
+		var moment: RaceMoment = RaceMoment.make(line.moment)
+		moment.words = {"heat": "heat three of the first round", "round": "the quarter-finals", "elimination": "elimination two",
+			"event": "the Sotavento World Cup", "rider": "Koen Zeilstra", "rider2": "Gian Baumann"}
+		moment.tags.append("not_final")
+		if not director.needs_met(line, moment, look):
+			assert_true(line.needs.has("final"), "%s: only a final's line is refused for a heat" % line.id)
+			continue
+		var words: String = director.fill(line, moment, look)
+		assert_ne(words, "", "%s is filled" % line.id)
+		assert_false(words.contains("{"), "%s has no slot left: %s" % [line.id, words])
+		seen[line.moment] = true
+	assert_eq(seen.size(), 3)
+	var called: RaceMoment = RaceMoment.make("heat_called", -1, 3)
+	called.words = {"heat": "the winners' final", "elimination": "elimination one", "event": "the Sotavento World Cup"}
+	called.tags.append("final")
+	var pick: Dictionary = director.choose_line(called, look)
+	assert_false(pick.is_empty(), "a final is called")
+	if not pick.is_empty():
+		assert_false((pick["line"] as CommentaryBank.Line).needs.has("not_final"))
+	# A country word comes from the board's sailor, or from the moment.
+	var favourite: RaceMoment = RaceMoment.make("heat_favourite")
+	favourite.words = {"rider": "Lorenzo Serra", "national": "Italian", "nation_adj": "Italian"}
+	favourite.place = 3
+	for line: CommentaryBank.Line in bank.lines_for("heat_favourite"):
+		assert_ne(director.fill(line, favourite, look), "", "%s is filled" % line.id)

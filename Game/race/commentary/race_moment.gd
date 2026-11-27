@@ -34,6 +34,11 @@ var race_s: float = 0.0
 var heard_s: float = 0.0
 ## What the story measured, in a few words (for the transcript, never said): "kept 84 % of its speed".
 var note: String = ""
+## The words for the slots only the moment knows (an event week's {heat}, {round}, {elimination} and
+## {event}: EventBroadcast), by slot name.
+var words: Dictionary[String, String] = {}
+## The needs only the moment knows (an event week's `final` and `not_final`).
+var tags: PackedStringArray = PackedStringArray()
 
 
 static func make(what: String, about: int = -1, size: int = 2, at_race_s: float = 0.0) -> RaceMoment:

@@ -30,10 +30,14 @@ MOMENTS = ["pre_start", "start_gun", "start_good", "start_bad", "over_early", "i
            "rundown", "lead_change", "overtake", "chase", "fight", "airtime", "filler", "tactics", "tension",
            "form", "conditions", "mark_approach", "gybe_good", "gybe_safe", "gybe_bad", "fall", "near_miss",
            "trouble", "wow", "oh_no", "last_leg", "finish_win", "finish_place", "photo_finish", "after_race",
-           "camera", "unsure"]
-SLOTS = ["rider", "rider2", "place", "brand", "colour", "mark", "leg", "national", "nation_adj"]
+           "camera", "unsure",
+           # an event week (the game's EventBroadcast)
+           "heat_called", "heat_favourite", "heat_through", "heat_out", "final_win", "standings", "event_win"]
+SLOTS = ["rider", "rider2", "place", "brand", "colour", "mark", "leg", "national", "nation_adj",
+         "heat", "round", "elimination", "event"]
 NEEDS = ["leader", "not_leader", "podium", "big_lead", "close", "camera_wide", "camera_close", "many", "pair",
-         "last_lap", "wind_strong", "wind_light", "choppy", "flat", "windward", "leeward", "dirty_air"]
+         "last_lap", "wind_strong", "wind_light", "choppy", "flat", "windward", "leeward", "dirty_air",
+         "final", "not_final"]
 
 
 def main():

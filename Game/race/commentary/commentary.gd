@@ -40,6 +40,9 @@ var on: bool = false
 var shown: bool = true
 ## The name said for the player's own board ("" says no name for it).
 var player_name: String = ""
+## A sailor's country words by the name on his board: ["Italian", "Italian"] (the {national} and
+## {nation_adj} slots). Empty: nobody has a country (an event week fills it: EventBroadcast).
+var nations: Dictionary[String, PackedStringArray] = {}
 
 var _look: RaceLook = null
 var _look_left_s: float = 0.0
@@ -67,6 +70,7 @@ func setup(race_runner: RaceRunner, tv_camera: TvCamera, hud: Hud) -> void:
 	tv = tv_camera
 	config = load(CONFIG_PATH) as CommentaryConfig
 	bank = CommentaryBank.load_file()
+	bank.add_file(CommentaryBank.EVENT_PATH)
 	bank.warn_problems()
 	director = CommentaryDirector.new(bank, config)
 	director.line_started.connect(_on_line_started)
@@ -227,7 +231,21 @@ func look_now() -> RaceLook:
 		var on_water: bool = node != null and node.visible and node.sim != null
 		telemetry.append(node.telemetry() if on_water else null)
 		dirty.append(runner.shadow_deficit(node) if on_water else 0.0)
-	return RaceLook.of_race(race, telemetry, _names, _brands, _colours, dirty)
+	var look: RaceLook = RaceLook.of_race(race, telemetry, _names, _brands, _colours, dirty)
+	if not nations.is_empty():
+		for board: RaceLook.Board in look.boards:
+			var words: PackedStringArray = nations.get(board.name, PackedStringArray())
+			if words.size() == 2:
+				board.national = words[0]
+				board.nation_adj = words[1]
+	return look
+
+
+## Something outside the race to talk about (an event week's heat called, who goes through, the
+## standings: EventBroadcast). Heard like the race story's own moments; nothing while it is off.
+func hear(moments: Array[RaceMoment]) -> void:
+	if on and director != null:
+		director.hear(moments)
 
 
 ## Each board's name to say, its sail's brand and its sail's colour, as the game shows them.

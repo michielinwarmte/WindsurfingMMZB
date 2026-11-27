@@ -40,6 +40,13 @@ quiet_weight = Dictionary[String, float]({
 "unsure": 0.7
 })
 priority = Dictionary[String, float]({
+"event_win": 10.0,
+"final_win": 9.5,
+"heat_called": 6.5,
+"heat_favourite": 4.5,
+"heat_out": 5.0,
+"heat_through": 7.0,
+"standings": 6.0,
 "after_race": 4.5,
 "airtime": 6.5,
 "camera": 1.0,
@@ -83,6 +90,13 @@ back_penalty = 1.5
 cut_in_from = 7.0
 cut_margin = 3.0
 late_s = Dictionary[String, float]({
+"event_win": 15.0,
+"final_win": 8.0,
+"heat_called": 15.0,
+"heat_favourite": 20.0,
+"heat_out": 10.0,
+"heat_through": 8.0,
+"standings": 25.0,
 "after_race": 20.0,
 "airtime": 4.0,
 "chase": 8.0,

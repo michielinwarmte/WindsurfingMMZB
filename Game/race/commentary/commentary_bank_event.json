@@ -1,0 +1,668 @@
+{
+ "format": 1,
+ "made": "2026-11-27",
+ "source": "written for the game's event week (the heat called, who goes through, the standings); not from the streams",
+ "moments": {},
+ "lines": [
+  {
+   "id": "E0001",
+   "moment": "heat_called",
+   "text": "Next up, {heat}.",
+   "slots": [
+    "heat"
+   ],
+   "level": 2,
+   "seconds": 1.4,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0002",
+   "moment": "heat_called",
+   "text": "Here we go then, {heat}.",
+   "slots": [
+    "heat"
+   ],
+   "level": 2,
+   "seconds": 2.1,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0003",
+   "moment": "heat_called",
+   "text": "On to {heat} of {elimination}.",
+   "slots": [
+    "heat",
+    "elimination"
+   ],
+   "level": 2,
+   "seconds": 2.4,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0004",
+   "moment": "heat_called",
+   "text": "Eight on the line, and the first four go through.",
+   "slots": [],
+   "level": 2,
+   "seconds": 3.4,
+   "count": 1,
+   "needs": [
+    "not_final"
+   ],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0005",
+   "moment": "heat_called",
+   "text": "{heat} now. Top four go through, the rest are out.",
+   "slots": [
+    "heat"
+   ],
+   "level": 2,
+   "seconds": 3.8,
+   "count": 1,
+   "needs": [
+    "not_final"
+   ],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0006",
+   "moment": "heat_called",
+   "text": "No time to rest here. Straight into {heat}.",
+   "slots": [
+    "heat"
+   ],
+   "level": 2,
+   "seconds": 3.1,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0007",
+   "moment": "heat_called",
+   "text": "The countdown is running for {heat}.",
+   "slots": [
+    "heat"
+   ],
+   "level": 1,
+   "seconds": 2.4,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0008",
+   "moment": "heat_called",
+   "text": "Welcome back to {event}. {heat} is coming up.",
+   "slots": [
+    "event",
+    "heat"
+   ],
+   "level": 1,
+   "seconds": 3.4,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0009",
+   "moment": "heat_called",
+   "text": "This is it. {heat} of {elimination}.",
+   "slots": [
+    "heat",
+    "elimination"
+   ],
+   "level": 3,
+   "seconds": 2.8,
+   "count": 1,
+   "needs": [
+    "final"
+   ],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0010",
+   "moment": "heat_called",
+   "text": "Time for {heat}. Every place counts in this one.",
+   "slots": [
+    "heat"
+   ],
+   "level": 3,
+   "seconds": 3.4,
+   "count": 1,
+   "needs": [
+    "final"
+   ],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0011",
+   "moment": "heat_called",
+   "text": "Eight sailors, one final. {heat} of {elimination}.",
+   "slots": [
+    "heat",
+    "elimination"
+   ],
+   "level": 3,
+   "seconds": 3.1,
+   "count": 1,
+   "needs": [
+    "final"
+   ],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0012",
+   "moment": "heat_favourite",
+   "text": "Keep an eye on {rider} in this one.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 3.1,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0013",
+   "moment": "heat_favourite",
+   "text": "{rider} is the top seed in this heat.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 3.1,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0014",
+   "moment": "heat_favourite",
+   "text": "{rider} sits {place} overall coming into this heat.",
+   "slots": [
+    "rider",
+    "place"
+   ],
+   "level": 2,
+   "seconds": 3.4,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0015",
+   "moment": "heat_favourite",
+   "text": "The {nation_adj} sailor {rider} is the one to beat here.",
+   "slots": [
+    "nation_adj",
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 4.1,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0016",
+   "moment": "heat_favourite",
+   "text": "{rider}, the {national}, starts as the favourite.",
+   "slots": [
+    "rider",
+    "national"
+   ],
+   "level": 2,
+   "seconds": 3.1,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0017",
+   "moment": "heat_favourite",
+   "text": "On paper this one belongs to {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 1,
+   "seconds": 2.8,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0018",
+   "moment": "heat_favourite",
+   "text": "All eyes on {rider}. {place} in the standings.",
+   "slots": [
+    "rider",
+    "place"
+   ],
+   "level": 2,
+   "seconds": 3.4,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0019",
+   "moment": "heat_through",
+   "text": "{rider} and {rider2} go through to {round}.",
+   "slots": [
+    "rider",
+    "rider2",
+    "round"
+   ],
+   "level": 2,
+   "seconds": 3.4,
+   "count": 1,
+   "needs": [
+    "not_final"
+   ],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0020",
+   "moment": "heat_through",
+   "text": "{rider} takes the heat and moves on to {round}.",
+   "slots": [
+    "rider",
+    "round"
+   ],
+   "level": 2,
+   "seconds": 3.8,
+   "count": 1,
+   "needs": [
+    "not_final"
+   ],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0021",
+   "moment": "heat_through",
+   "text": "That is {rider} safely through.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 2.1,
+   "count": 1,
+   "needs": [
+    "not_final"
+   ],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0022",
+   "moment": "heat_through",
+   "text": "The top four are home. {rider} wins it from {rider2}.",
+   "slots": [
+    "rider",
+    "rider2"
+   ],
+   "level": 2,
+   "seconds": 4.1,
+   "count": 1,
+   "needs": [
+    "not_final"
+   ],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0023",
+   "moment": "heat_through",
+   "text": "{rider} is into {round}.",
+   "slots": [
+    "rider",
+    "round"
+   ],
+   "level": 3,
+   "seconds": 2.1,
+   "count": 1,
+   "needs": [
+    "not_final"
+   ],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0024",
+   "moment": "heat_through",
+   "text": "Job done for {rider}. On to {round}.",
+   "slots": [
+    "rider",
+    "round"
+   ],
+   "level": 2,
+   "seconds": 3.1,
+   "count": 1,
+   "needs": [
+    "not_final"
+   ],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0025",
+   "moment": "heat_through",
+   "text": "{rider} first, {rider2} second, and both go through.",
+   "slots": [
+    "rider",
+    "rider2"
+   ],
+   "level": 2,
+   "seconds": 3.4,
+   "count": 1,
+   "needs": [
+    "not_final"
+   ],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0026",
+   "moment": "heat_out",
+   "text": "And that is the end of the road for {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 3.8,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0027",
+   "moment": "heat_out",
+   "text": "No way through for {rider} this time.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 2.8,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0028",
+   "moment": "heat_out",
+   "text": "{rider} misses the cut.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.7,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0029",
+   "moment": "heat_out",
+   "text": "{rider} is out. That one will hurt.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 2.8,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0030",
+   "moment": "heat_out",
+   "text": "Big shock! {rider} is out!",
+   "slots": [
+    "rider"
+   ],
+   "level": 4,
+   "seconds": 2.1,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0031",
+   "moment": "heat_out",
+   "text": "Nobody saw that coming. {rider} goes out early.",
+   "slots": [
+    "rider"
+   ],
+   "level": 4,
+   "seconds": 3.1,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0032",
+   "moment": "final_win",
+   "text": "{rider} wins {elimination}!",
+   "slots": [
+    "rider",
+    "elimination"
+   ],
+   "level": 4,
+   "seconds": 1.7,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0033",
+   "moment": "final_win",
+   "text": "{rider} takes {elimination}!",
+   "slots": [
+    "rider",
+    "elimination"
+   ],
+   "level": 4,
+   "seconds": 1.7,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0034",
+   "moment": "final_win",
+   "text": "What a final. {rider} takes the win.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 2.8,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0035",
+   "moment": "final_win",
+   "text": "{rider} is the winner of {elimination}!",
+   "slots": [
+    "rider",
+    "elimination"
+   ],
+   "level": 4,
+   "seconds": 2.8,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0036",
+   "moment": "final_win",
+   "text": "First place in {elimination} goes to {rider}.",
+   "slots": [
+    "elimination",
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 3.1,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0037",
+   "moment": "final_win",
+   "text": "{rider} wins it, with {rider2} in second.",
+   "slots": [
+    "rider",
+    "rider2"
+   ],
+   "level": 3,
+   "seconds": 3.1,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0038",
+   "moment": "standings",
+   "text": "{rider} leads the event.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.7,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0039",
+   "moment": "standings",
+   "text": "In the overall standings it is {rider} on top, ahead of {rider2}.",
+   "slots": [
+    "rider",
+    "rider2"
+   ],
+   "level": 2,
+   "seconds": 4.8,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0040",
+   "moment": "standings",
+   "text": "{rider} is the one they all have to catch.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 3.4,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0041",
+   "moment": "standings",
+   "text": "After {elimination}, {rider} leads from {rider2}.",
+   "slots": [
+    "elimination",
+    "rider",
+    "rider2"
+   ],
+   "level": 2,
+   "seconds": 3.1,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0042",
+   "moment": "standings",
+   "text": "{rider} stays at the top of the standings.",
+   "slots": [
+    "rider"
+   ],
+   "level": 1,
+   "seconds": 3.1,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0043",
+   "moment": "standings",
+   "text": "So {rider} leads the way, with {rider2} right behind.",
+   "slots": [
+    "rider",
+    "rider2"
+   ],
+   "level": 2,
+   "seconds": 3.8,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0044",
+   "moment": "event_win",
+   "text": "{rider} wins {event}!",
+   "slots": [
+    "rider",
+    "event"
+   ],
+   "level": 4,
+   "seconds": 1.7,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0045",
+   "moment": "event_win",
+   "text": "{rider} is the champion!",
+   "slots": [
+    "rider"
+   ],
+   "level": 4,
+   "seconds": 1.7,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0046",
+   "moment": "event_win",
+   "text": "What a week. {rider} takes the title at {event}.",
+   "slots": [
+    "rider",
+    "event"
+   ],
+   "level": 3,
+   "seconds": 3.8,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  },
+  {
+   "id": "E0047",
+   "moment": "event_win",
+   "text": "It is all over. {rider} is the winner of {event}!",
+   "slots": [
+    "rider",
+    "event"
+   ],
+   "level": 4,
+   "seconds": 4.1,
+   "count": 1,
+   "needs": [],
+   "src": "written for the game"
+  }
+ ]
+}

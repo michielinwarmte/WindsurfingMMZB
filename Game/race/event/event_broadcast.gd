@@ -23,12 +23,23 @@ extends Node
 ## only runs a watched week); each day's own wind (the race keeps the wind it was started with).
 ##
 ## --event_new=1 starts a new week even when a saved one exists; --event_heats=<n> stops after n
-## heats (for tests and screenshots); --event_countdown=<s> another countdown than COUNTDOWN_S.
+## heats (for tests and screenshots); --event_countdown=<s> another countdown than COUNTDOWN_S;
+## --event_trace=<s> writes every board's place, speed and what its skipper is doing to the log
+## every <s> seconds of the race (to see where a heat goes wrong).
 
 ## The countdown before every heat, seconds.
 const COUNTDOWN_S: float = 30.0
-## How long a decided heat's result stays before the next heat is called, seconds of the race.
+## How long a decided heat's result stays before the next heat is called, seconds of the race
+## (a final's longer: its winner, the elimination's result and the standings are said).
 const HOLD_S: float = 8.0
+const FINAL_HOLD_S: float = 14.0
+## A favourite knocked out is news: among the first SHOCK_SEEDS of the elimination's seeding a
+## shout, among the first UPSET_SEEDS a lifted voice.
+const SHOCK_SEEDS: int = 8
+const UPSET_SEEDS: int = 16
+const NUMBER_WORDS: PackedStringArray = ["one", "two", "three", "four", "five", "six", "seven", "eight",
+	"nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen"]
+const ORDER_WORDS: PackedStringArray = ["first", "second", "third", "fourth"]
 ## A heat that isn't decided by its time limit is closed with the order on the water.
 const SAVE_PATH: String = "user://event_week_%s.json"
 
@@ -46,6 +57,9 @@ var _heats_left: int = -1
 ## The countdown of every heat (COUNTDOWN_S, or --event_countdown=<s>).
 var countdown_s: float = COUNTDOWN_S
 var _stopped: bool = false
+## --event_trace=<s>: seconds between two trace lines (0: none), and the race clock of the next.
+var _trace_every_s: float = 0.0
+var _trace_next_s: float = -INF
 ## Each board's falls in the heat on the water (after the gun), and whether it was down last frame.
 var _falls: PackedInt32Array = PackedInt32Array()
 var _was_down: PackedByteArray = PackedByteArray()
@@ -68,6 +82,8 @@ func setup(race_runner: RaceRunner, hud_layer: Hud, schedule: String, watch_mode
 			fresh = true
 		if arg.begins_with("--event_heats="):
 			_heats_left = arg.get_slice("=", 1).to_int()
+		if arg.begins_with("--event_trace="):
+			_trace_every_s = maxf(arg.get_slice("=", 1).to_float(), 0.0)
 		if arg.begins_with("--event_countdown="):
 			countdown_s = maxf(arg.get_slice("=", 1).to_float(), 5.0)
 	if runner == null or not runner.spectating or runner.opponents.size() != EliminationLadder.HEAT_SIZE:
@@ -82,6 +98,7 @@ func setup(race_runner: RaceRunner, hud_layer: Hud, schedule: String, watch_mode
 		_stopped = true
 		return false
 	_build_cards()
+	_tell_the_commentary_the_countries()
 	_start_heat()
 	return true
 
@@ -100,13 +117,21 @@ func _process(delta: float) -> void:
 		return
 	var race: RaceSim = runner.race
 	_count_falls(race)
+	if _trace_every_s > 0.0 and race.clock_s() >= _trace_next_s:
+		_trace_next_s = race.clock_s() + _trace_every_s
+		_trace(race)
+	var final: bool = week.next_heat() >= EliminationLadder.LOSERS_FINAL
 	if _decided_s < 0.0:
-		if _finished_count(race) >= EliminationLadder.THROUGH or race.phase() == RaceSim.Phase.FINISHED:
+		# A heat is decided when its four who go through are home; a final when everyone is (every
+		# place counts), or when the race closes its finish.
+		var needed: int = race.board_count() if final else EliminationLadder.THROUGH
+		if _finished_count(race) >= needed or race.phase() == RaceSim.Phase.FINISHED:
 			_decided_s = 0.0
 			_update_card()
+			_say_the_result()
 		return
 	_decided_s += delta
-	if _decided_s >= HOLD_S:
+	if _decided_s >= (FINAL_HOLD_S if final else HOLD_S):
 		_close_heat()
 
 
@@ -117,6 +142,20 @@ func _count_falls(race: RaceSim) -> void:
 		if down and _was_down[i] == 0 and race.phase() == RaceSim.Phase.RACING:
 			_falls[i] += 1
 		_was_down[i] = 1 if down else 0
+
+
+## One line per board on the log: where it is, how fast, on the board or in the water, where it is
+## going and what its skipper says it is doing.
+func _trace(race: RaceSim) -> void:
+	for i: int in mini(runner.opponents.size(), _on_boards.size()):
+		var node: WindsurferNode = runner.opponents[i]
+		var at: Vector2 = race.board_position(i)
+		var note: String = str(node.skipper.get("note")) if node.skipper != null and "note" in node.skipper else ""
+		print("TRACE %6.1f %d %-18s (%6.0f, %6.0f) hdg %3.0f %4.1f m/s %s to %s %4.0f m%s%s | %s" % [
+			race.clock_s(), i, _on_boards[i].name.left(18), at.x, at.y, node.sim.telemetry.heading_deg, node.sim.telemetry.speed_ms,
+			"DOWN" if node.sim.sailor_state == WindsurferSim.SailorState.FALLEN else "up  ",
+			race.next_step_name(i), race.distance_to_next_m(i),
+			" FINISHED" if race.is_finished(i) else "", " AGROUND" if runner.is_aground(node) else "", note.left(90)])
 
 
 ## How many of the heat's boards have finished.
@@ -154,6 +193,7 @@ func _start_heat() -> void:
 	_falls.fill(0)
 	_was_down.resize(_on_boards.size())
 	_was_down.fill(0)
+	_trace_next_s = -INF
 	if _on_boards.size() != runner.opponents.size():
 		push_warning("The event's heat has %d sailors for %d boards: the week stops." % [_on_boards.size(), runner.opponents.size()])
 		_stopped = true
@@ -169,6 +209,7 @@ func _start_heat() -> void:
 	runner.restart()
 	_update_card()
 	_update_board()
+	_say_the_heat()
 
 
 ## The heat on the water is over for the book-keeping: its order handed in, the week saved, the
@@ -192,6 +233,7 @@ func _close_heat() -> void:
 	if week.is_over():
 		_update_card()
 		_update_board()
+		_say_the_champion()
 		return
 	_start_heat()
 
@@ -210,6 +252,144 @@ func _log_heat() -> void:
 		words.append("%d %s (seed %d, %s, falls %d, splits %s)" % [place + 1, order[place].name, week.ladder.seeds.find(order[place].id) + 1, time, _falls[board] if board < _falls.size() else 0, " ".join(splits)])
 	print("EVENT elimination %d, %s: %s" % [week.elimination, EliminationLadder.heat_name(week.next_heat()), "; ".join(words)])
 
+
+# ---------------------------------------------------------------- the commentary
+
+## The commentary of the watched race, or null when there is none.
+func _commentary() -> Commentary:
+	return watch.commentary if watch != null else null
+
+
+## Every sailor's country words, for the commentator's "the Italian" and "the Polish rider".
+func _tell_the_commentary_the_countries() -> void:
+	var commentary: Commentary = _commentary()
+	if commentary == null:
+		return
+	for sailor: EventRoster.Sailor in week.roster.sailors:
+		if sailor.national != "" and sailor.nation_adj != "":
+			commentary.nations[sailor.name] = PackedStringArray([sailor.national, sailor.nation_adj])
+
+
+## A heat as the commentator says it: "heat three of the first round", "the second semi-final".
+static func heat_words(heat: int) -> String:
+	if heat <= 8:
+		return "heat %s of the first round" % NUMBER_WORDS[heat - 1]
+	if heat <= 12:
+		return "the %s quarter-final" % ORDER_WORDS[heat - 9]
+	if heat <= 14:
+		return "the %s semi-final" % ORDER_WORDS[heat - 13]
+	return "the losers' final" if heat == EliminationLadder.LOSERS_FINAL else "the winners' final"
+
+
+## Where a heat's first four go: "the quarter-finals", "the semi-finals", "the winners' final".
+static func round_words(heat: int) -> String:
+	if heat <= 8:
+		return "the quarter-finals"
+	if heat <= 12:
+		return "the semi-finals"
+	return "the winners' final"
+
+
+static func elimination_words(number: int) -> String:
+	return "elimination %s" % (NUMBER_WORDS[number - 1] if number >= 1 and number <= NUMBER_WORDS.size() else str(number))
+
+
+## A moment of the event for the commentary: its words for the heat, the elimination and the event,
+## and whether the heat is a final.
+func _moment(what: String, level: int, heat: int, elimination: int) -> RaceMoment:
+	var moment: RaceMoment = RaceMoment.make(what, -1, level, runner.race.clock_s() if runner.race != null else 0.0)
+	moment.words["heat"] = heat_words(heat)
+	moment.words["round"] = round_words(heat)
+	moment.words["elimination"] = elimination_words(elimination)
+	moment.words["event"] = week.spoken
+	moment.tags.append("final" if heat >= EliminationLadder.LOSERS_FINAL else "not_final")
+	return moment
+
+
+## The sailor a moment is about: his board when he is on the water, and his name and country as words
+## (so a sailor who is not in this heat, the event's leader, can be named too).
+func _about(moment: RaceMoment, sailor: EventRoster.Sailor, second: EventRoster.Sailor = null) -> void:
+	moment.board = _on_boards.find(sailor)
+	moment.words["rider"] = sailor.name
+	if sailor.national != "":
+		moment.words["national"] = sailor.national
+	if sailor.nation_adj != "":
+		moment.words["nation_adj"] = sailor.nation_adj
+	if second != null:
+		moment.board2 = _on_boards.find(second)
+		moment.words["rider2"] = second.name
+
+
+## The heat called (and, at an elimination's first heat after the first, the standings), and its
+## favourite: the best of the elimination's seeding in it.
+func _say_the_heat() -> void:
+	var commentary: Commentary = _commentary()
+	if commentary == null or week.is_over() or _stopped:
+		return
+	var heat: int = week.next_heat()
+	var final: bool = heat >= EliminationLadder.LOSERS_FINAL
+	var moments: Array[RaceMoment] = []
+	if heat == 1 and not week.results.is_empty():
+		var order: PackedInt32Array = week.standings()
+		var standings: RaceMoment = _moment("standings", 2, heat, week.results.size())
+		_about(standings, week.roster.sailor(order[0]), week.roster.sailor(order[1]))
+		moments.append(standings)
+	moments.append(_moment("heat_called", 3 if final else 2, heat, week.elimination))
+	var best: EventRoster.Sailor = null
+	for sailor: EventRoster.Sailor in _on_boards:
+		if best == null or week.ladder.seeds.find(sailor.id) < week.ladder.seeds.find(best.id):
+			best = sailor
+	if best != null:
+		var favourite: RaceMoment = _moment("heat_favourite", 2, heat, week.elimination)
+		_about(favourite, best)
+		# His place in the event so far (before the first result: in the ranking he came with).
+		favourite.place = week.standings().find(best.id) + 1
+		moments.append(favourite)
+	commentary.hear(moments)
+
+
+## A decided heat: who goes through and the favourite who doesn't; a winners' final: who won the
+## elimination.
+func _say_the_result() -> void:
+	var commentary: Commentary = _commentary()
+	if commentary == null:
+		return
+	var heat: int = week.next_heat()
+	var order: Array[EventRoster.Sailor] = _order_now()
+	if order.size() < EliminationLadder.HEAT_SIZE:
+		return
+	var moments: Array[RaceMoment] = []
+	if heat == EliminationLadder.WINNERS_FINAL:
+		var won: RaceMoment = _moment("final_win", 4, heat, week.elimination)
+		_about(won, order[0], order[1])
+		moments.append(won)
+	elif heat < EliminationLadder.LOSERS_FINAL:
+		var through: RaceMoment = _moment("heat_through", 2, heat, week.elimination)
+		_about(through, order[0], order[1])
+		moments.append(through)
+		var best_out: EventRoster.Sailor = null
+		for place: int in range(EliminationLadder.THROUGH, order.size()):
+			if best_out == null or week.ladder.seeds.find(order[place].id) < week.ladder.seeds.find(best_out.id):
+				best_out = order[place]
+		if best_out != null:
+			var seed: int = week.ladder.seeds.find(best_out.id)
+			var out: RaceMoment = _moment("heat_out", 4 if seed < SHOCK_SEEDS else (3 if seed < UPSET_SEEDS else 2), heat, week.elimination)
+			_about(out, best_out)
+			moments.append(out)
+	commentary.hear(moments)
+
+
+## The week is over: the champion.
+func _say_the_champion() -> void:
+	var commentary: Commentary = _commentary()
+	if commentary == null or week.standings().is_empty():
+		return
+	var won: RaceMoment = _moment("event_win", 4, EliminationLadder.WINNERS_FINAL, week.total_eliminations())
+	_about(won, week.roster.sailor(week.standings()[0]), week.roster.sailor(week.standings()[1]))
+	commentary.hear([won])
+
+
+# ---------------------------------------------------------------- the cards
 
 func _build_cards() -> void:
 	_card = PanelContainer.new()

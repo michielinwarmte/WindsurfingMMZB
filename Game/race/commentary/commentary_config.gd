@@ -52,6 +52,10 @@ extends Resource
 	"fight": 4.5, "after_race": 4.5, "chase": 4.0, "mark_approach": 4.0, "gybe_safe": 3.5, "pre_start": 3.0,
 	"trouble": 5.5, "rundown": 2.5, "leader": 2.0, "speed": 2.0, "identify": 2.0, "unsure": 1.0, "camera": 1.0,
 	"filler": 1.0, "wow": 1.0, "oh_no": 1.0, "tension": 3.0, "tactics": 2.0, "form": 2.0, "conditions": 1.5,
+	# An event week: the heat called before anything of the pre-start; who goes through as big as a
+	# finish; the elimination and the week won above everything.
+	"heat_called": 6.5, "heat_favourite": 4.5, "heat_through": 7.0, "heat_out": 5.0, "final_win": 9.5,
+	"standings": 6.0, "event_win": 10.0,
 }
 @export var level_bonus: float = 1.0
 ## A moment about the board on the screen counts this much more; one about a board at the back (from
@@ -70,6 +74,8 @@ extends Resource
 	"gybe_good": 5.0, "gybe_safe": 4.0, "gybe_bad": 5.0, "lead_change": 6.0, "overtake": 6.0, "over_early": 6.0,
 	"mark_approach": 5.0, "start_good": 8.0, "start_bad": 8.0, "last_leg": 8.0, "finish_place": 8.0,
 	"chase": 8.0, "fight": 10.0, "pre_start": 8.0, "after_race": 20.0, "trouble": 6.0,
+	"heat_called": 15.0, "heat_favourite": 20.0, "heat_through": 8.0, "heat_out": 10.0, "final_win": 8.0,
+	"standings": 25.0, "event_win": 15.0,
 }
 @export var late_default_s: float = 5.0
 ## A rundown names the boards down the order to this place at most.

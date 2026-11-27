@@ -456,6 +456,9 @@ func needs_met(line: CommentaryBank.Line, moment: RaceMoment, look: RaceLook) ->
 				met = not is_nan(look.sea_hs_m) and look.sea_hs_m >= config.choppy_hs_m
 			"flat":
 				met = not is_nan(look.sea_hs_m) and look.sea_hs_m <= config.flat_hs_m
+			_:
+				# What only the moment knows (an event week's final or not).
+				met = moment.tags.has(need)
 		if not met:
 			return false
 	return true
@@ -474,6 +477,10 @@ func fill(line: CommentaryBank.Line, moment: RaceMoment, look: RaceLook) -> Stri
 
 ## The word for a slot (BANK_FORMAT.md, "The slots"), or "" when the game cannot fill it now.
 static func slot_word(slot: String, moment: RaceMoment, look: RaceLook) -> String:
+	# A word the moment brings itself wins (an event week's {heat}, {round}, {elimination}, {event},
+	# and its sailors who are not on the water: the event's leader, the champion).
+	if moment.words.has(slot):
+		return moment.words[slot]
 	var board: RaceLook.Board = look.boards[moment.board] if moment.board >= 0 and moment.board < look.boards.size() else null
 	match slot:
 		"rider":
@@ -492,7 +499,10 @@ static func slot_word(slot: String, moment: RaceMoment, look: RaceLook) -> Strin
 			if board == null or board.finished:
 				return ""
 			return CommentaryWords.leg_word(look.leg_of(moment.board), look.leg_count())
-	# {national} and {nation_adj}: the game's sailors have no country yet.
+		"national":
+			return board.national if board != null else ""
+		"nation_adj":
+			return board.nation_adj if board != null else ""
 	return ""
 
 

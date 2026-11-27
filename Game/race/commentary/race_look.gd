@@ -14,6 +14,10 @@ class Board:
 	var present: bool = true
 	## Its name for the slots ("" when it must not be said: the player's own board, "You").
 	var name: String = ""
+	## Its sailor's country as the commentator says it: "Italian" ("the Italian") and "Polish" ("the
+	## Polish rider"); "" when the sailor has no country (only an event week's sailors have one).
+	var national: String = ""
+	var nation_adj: String = ""
 	## Its place, 1 the first.
 	var place: int = 0
 	## The step it is sailing to (RaceSim.next_step_index(): also the steps it has done).
