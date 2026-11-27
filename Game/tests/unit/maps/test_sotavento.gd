@@ -201,7 +201,9 @@ func test_the_pwa_course_loads_from_the_spots_folder() -> void:
 	for mark: CourseMark in course.marks:
 		var depth_m: float = -grid.height_at(mark.position.x, mark.position.y)
 		assert_gt(depth_m, 2.0, "mark %s in water deep enough to race, even at mean sea level" % mark.id)
-		assert_lt(Vector2(mark.position.x, mark.position.y).length(), 1500.0, "in front of the event site")
+		# The course rebuilt from the stream's replays (27 November 2026) is 2.7 km long: its start lies
+		# about 2.3 km up the coast and out from the event site, and it finishes in front of the tower.
+		assert_lt(Vector2(mark.position.x, mark.position.y).length(), 2600.0, "within reach of the event site")
 
 
 func test_the_event_site_puts_its_buoys_on_the_water() -> void:
