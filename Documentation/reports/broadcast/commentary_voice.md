@@ -130,8 +130,8 @@ Race page names Shift+V.
 | Number | Value | Why |
 |---|---|---|
 | `voice_name` | `en_GB-northern_english_male-medium` | above |
-| `voice_length_scale` | RESULT_LS | RESULT_LS_WHY |
-| `voice_sentence_silence_s` | RESULT_SIL | the pause after each sentence |
+| `voice_length_scale` | 0.9 | a little faster than Piper's own pace. He talks fast: at 1.0 the voice took 1.15 to 1.17 times his seconds for the starter lines; at 0.9 it is 7 % shorter (1.04 times his seconds with the characters' short names, 1.12 with the event's full names), and Whisper read the lines back as well (word errors 9 % against 11 %) |
+| `voice_sentence_silence_s` | 0.15 s | the pause after each sentence (Piper's own: 0.2 s) |
 | `voice_noise_scale`, `voice_noise_w` | 0.667, 0.8 | the voice's own defaults (its `.onnx.json`) |
 | `voice_rate_by_level` | 0.97, 1.0, 1.03, 1.06 | levels 1 to 4. The sound is played that much faster: faster and higher together, like a tape. 1.06 is 6 % faster and one semitone higher. Piper cannot change the pitch or the speed per line while it stays running, so this is done when the sound is played. |
 | `voice_db_by_level` | -2, 0, +1.5, +3 dB | levels 1 to 4: a shout a little louder |
@@ -234,9 +234,10 @@ error). Also: the Commentary bus and its slider (`test_audio.gd`), the setting s
 **Not verified:**
 - **Nobody has heard it.** Whisper says the words mostly come out right; it cannot say whether the voice sounds good,
   flat or robotic, whether the shouted lines sound natural, or whether it is loud enough over the wind and the water.
-- **The release build and a play folder with the voice.** Not built here (the lead builds it). The copy step was run
-  into a scratch folder (98 MB, the right files); the game's lookup beside its executable is checked by a test of the
-  path only. The headless runs used the editor build with `MMZB_TTS_DIR`.
+- **The release build and a play folder with the voice.** Not built here (the lead builds it). The copy step
+  (`tools/release.sh tts <folder>`) was run into a scratch folder (98 MB, the right files), and a copy of the engine
+  put in that folder, started without `MMZB_TTS_DIR`, found `<folder>/tts` beside itself and spoke. The game's own
+  headless runs used the editor build with `MMZB_TTS_DIR`.
 - **On Michiel's or another PC.** The speech program needs no install (a folder of files), but only this PC ran it.
 - **Real speakers.** The tests and the headless runs use Godot's silent audio driver.
 
