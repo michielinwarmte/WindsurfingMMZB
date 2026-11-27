@@ -98,6 +98,38 @@ extends Resource
 @export var cd_plate_post_stall: bool = false
 @export var cd_plate_blend_deg: float = 6.0
 
+@export_group("Ventilation: the spin-out (PH6, E01.S03)")
+## Air drawn down the fin's low-pressure side from the surface: the fin lets go suddenly and comes
+## back only when it is nearly unloaded (PHYSICS_SPEC.md section 4, "Ventilation"; the model and its
+## sources: Documentation/reports/research/ph6_ventilation_ph15_wind_shadow.md). Off: the fin of
+## before, exactly. Off by default for now (27 November 2026, Max: "add in the ventilation spin out
+## for reference"): the fin chart's reference runs switch it on; Michiel to review before it is.
+@export var ventilates: bool = false
+## The slip where it starts, above the stall's peak (stall_peak_deg + this: 15 deg by default). The
+## sources give 13 to 26 deg for surface-piercing struts, at or past the stall (Breslin and Skalak
+## 1959; Kiceniuk 1954; Young et al. 2023; Ferreira et al. 2026).
+@export var vent_inception_over_stall_deg: float = 3.0
+## With the tail loose (the root out of the water) it starts this much earlier: a disturbance
+## lowered inception from 22 to 19 deg (Breslin).
+@export var vent_rough_drop_deg: float = 3.0
+## The air path: the fin can draw air only with the tail loose or the root less than this deep below
+## the surface. UNSOURCED (nothing was found on how deep a root must sit to be sealed): an estimate
+## to play-test; 0.05 m means a planing board, its tail at the surface, always has a path.
+@export var vent_path_depth_m: float = 0.05
+## The lift a ventilated fin keeps, as a share of the wetted fin's at the same slip: 0.2 to 0.33
+## from a ventilated flat plate's theory (Johnson), 0.6 from Young et al.'s 40 % drop; 0.4 between.
+@export var vent_lift_ratio: float = 0.4
+## How fast the air spreads down the fin, in chord lengths travelled (the time constant is this times
+## the mean chord over the flow speed): 3.5 (from the leading edge) to 7 (from the trailing edge),
+## Ferreira et al. 2026; 5 between.
+@export var vent_inception_chords: float = 5.0
+## How fast it washes out, the same way. UNSOURCED (no washout time was found): an estimate.
+@export var vent_washout_chords: float = 7.0
+## It washes out once the wetted fin's lift coefficient times the submergence Froude number squared
+## falls below this (Breslin's line, Cs Fh^2 = 5; Fh = U / sqrt(g h), h the immersed span). At
+## planing speed that is a fin nearly unloaded: about 2 deg of slip at 10 m/s, 8.5 deg at 5.
+@export var vent_washout_cl_fn2: float = 5.0
+
 @export_group("Limits")
 ## Below this flow speed the fin forces are zero (they would be below 0.01 N anyway).
 @export var min_speed_ms: float = 0.05

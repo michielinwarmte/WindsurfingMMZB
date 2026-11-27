@@ -512,6 +512,7 @@ func has_waves() -> bool:
 ## standing on the board.
 func reset(origin_xz: Vector3, heading_rad: float) -> void:
 	_copy_configs()
+	fin.clear_ventilation()
 	time_s = 0.0
 	sailor_state = SailorState.SAILING
 	fall_side = 0
@@ -606,7 +607,7 @@ func step(dt: float, controls: SimControls) -> void:
 		_remember_hull_load(sub_dt)
 		rider_inertia_kgm2 = _rider_pitch_inertia_kgm2(launch_coupling)
 		body.set_mass_properties(_hull_mass_kg, _with_rider_pitch_inertia(inertia_with_water, rider_inertia_kgm2), Vector3.ZERO)
-		fin.compute(body, water, time_s, _water_density_kg_m3)
+		fin.compute(body, water, time_s, _water_density_kg_m3, sub_dt)
 		_apply_air_under_the_board()
 		if sailing:
 			_hold_the_rig(sub_dt)
@@ -2208,6 +2209,7 @@ func _fill_telemetry(controls: SimControls) -> void:
 	t.fin_drag_n = fin.drag_n
 	t.fin_stalled = fin.is_stalled
 	t.fin_immersed = fin.immersed_fraction
+	t.fin_ventilated_share = fin.ventilated_share
 	# How much the fin lifts the kit: the world-upward part of its force (U2).
 	t.fin_up_n = fin.force_world.y
 	# Its load: the lift coefficient as a share of the peak, the coefficient at the stall angle.

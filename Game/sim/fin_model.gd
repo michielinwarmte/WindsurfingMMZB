@@ -22,6 +22,8 @@ extends RefCounted
 
 ## The fin is cut into this many strips along the span for the beam.
 const BEND_STRIPS: int = 20
+## Gravity for the submergence Froude number of the ventilation's washout (m/s^2).
+const GRAVITY_MS2: float = 9.81
 
 var config: FinConfig
 
@@ -33,6 +35,15 @@ var _min_speed_ms: float = 0.0
 var _stall_peak_deg: float = 0.0
 var _bends: bool = false
 var _max_bend_deg: float = 0.0
+var _ventilates: bool = false
+var _vent_inception_deg: float = 0.0
+var _vent_rough_drop_deg: float = 0.0
+var _vent_path_depth_m: float = 0.0
+var _vent_lift_ratio: float = 1.0
+var _vent_inception_chords: float = 0.0
+var _vent_washout_chords: float = 0.0
+var _vent_washout_cl_fn2: float = 0.0
+var _mean_chord_m: float = 0.0
 
 # The beam, worked out once in _prepare_bend().
 ## S in EI(y) = S * c(y)^4: the fin's bending stiffness is this scale times the chord to the
@@ -64,6 +75,12 @@ var bend_tip_rad: float = 0.0
 var bend_tip_m: float = 0.0
 var side_share: float = 1.0
 var up_share: float = 0.0
+# Ventilation (PH6, FinConfig.ventilates): the share of the fin the air has reached, 0 (wetted) to 1
+# (fully ventilated), moving toward 1 or 0 as ventilating says; it is the fin's state between ticks.
+var ventilated_share: float = 0.0
+var ventilating: bool = false
+## The slip it would start ventilating at, this tick (deg; for the telemetry: the warning's margin).
+var vent_inception_deg: float = 0.0
 
 
 func _init(fin_config: FinConfig) -> void:
@@ -82,9 +99,19 @@ func copy_config() -> void:
 	_stall_peak_deg = config.stall_peak_deg
 	_bends = config.bends
 	_max_bend_deg = config.max_bend_deg
+	_ventilates = config.ventilates
+	_vent_inception_deg = config.stall_peak_deg + config.vent_inception_over_stall_deg
+	_vent_rough_drop_deg = config.vent_rough_drop_deg
+	_vent_path_depth_m = config.vent_path_depth_m
+	_vent_lift_ratio = config.vent_lift_ratio
+	_vent_inception_chords = config.vent_inception_chords
+	_vent_washout_chords = config.vent_washout_chords
+	_vent_washout_cl_fn2 = config.vent_washout_cl_fn2
+	_mean_chord_m = config.area_m2 / config.span_m if config.span_m > 0.0 else 0.0
 
 
-func compute(body: SimRigidBody, surface: WaterSurface, time_s: float, rho_water: float) -> void:
+## dt: the substep, for the ventilation's spreading (0: the ventilated share stays where it is).
+func compute(body: SimRigidBody, surface: WaterSurface, time_s: float, rho_water: float, dt: float = 0.0) -> void:
 	cop_world = body.point_world(config.cop_local())
 	# The part of the span that is in the water: all of it with the root under the surface,
 	# less when the tail has lifted and the root is in the air (a tack with the sailor's
@@ -110,9 +137,12 @@ func compute(body: SimRigidBody, surface: WaterSurface, time_s: float, rho_water
 		return
 
 	slip_rad = SimMath.slip_angle_rad(v_plane)
-	cl = lift_coefficient(slip_rad)
-	cd = drag_coefficient(cl, slip_rad)
+	var cl_wetted: float = lift_coefficient(slip_rad)
+	# The drag stays the wetted fin's (the sources disagree on which way ventilation moves it).
+	cd = drag_coefficient(cl_wetted, slip_rad)
 	is_stalled = rad_to_deg(absf(slip_rad)) > _stall_peak_deg
+	ventilate(rad_to_deg(absf(slip_rad)), speed, immersed_fraction * _span_m, root_depth, absf(cl_wetted), dt)
+	cl = cl_wetted * (1.0 - ventilated_share * (1.0 - _vent_lift_ratio))
 
 	var q: float = 0.5 * rho_water * speed * speed
 	lift_n = q * _area_m2 * immersed_fraction * absf(cl)
@@ -126,6 +156,69 @@ func compute(body: SimRigidBody, surface: WaterSurface, time_s: float, rho_water
 	var force_body: Vector3 = lift_dir * (lift_n * side_share) + Vector3.UP * (lift_n * up_share) - flow_dir * drag_n
 	force_world = body.to_world(force_body)
 	body.add_force_at(cop_world, force_world)
+
+
+# --- Ventilation: the spin-out (PH6, PHYSICS_SPEC.md section 4, "Ventilation") ----------------
+#
+# Air drawn from the surface down the fin's low-pressure side. It starts (ventilating) past the
+# inception slip when the air has a path (the tail loose, or the root near the surface), spreads
+# down the fin in a few chord lengths of travel, cuts the lift to vent_lift_ratio of the wetted
+# fin's, and stays until the fin is nearly unloaded (Breslin's line). With ventilates off nothing
+# here does anything: the share stays 0 and the lift is the wetted fin's, exactly as before.
+
+
+## One substep of ventilation: whether the fin is ventilating, and the share the air has reached.
+## slip_deg the slip's size, speed_ms the flow in the fin's plane, immersed_span_m the span in the
+## water, root_depth_m the root below the surface (negative: out), cl_wetted the wetted fin's lift
+## coefficient's size at this slip, dt the substep (0: the share does not move).
+func ventilate(slip_deg: float, speed_ms: float, immersed_span_m: float, root_depth_m: float, cl_wetted: float, dt: float) -> void:
+	if not _ventilates:
+		ventilated_share = 0.0
+		ventilating = false
+		vent_inception_deg = 0.0
+		return
+	var tail_loose: bool = immersed_span_m < _span_m
+	var air_path: bool = tail_loose or root_depth_m < _vent_path_depth_m
+	vent_inception_deg = _vent_inception_deg - (_vent_rough_drop_deg if tail_loose else 0.0)
+	if air_path and slip_deg > vent_inception_deg:
+		ventilating = true
+	elif ventilating and cl_wetted * submergence_froude_squared(speed_ms, immersed_span_m) < _vent_washout_cl_fn2:
+		ventilating = false
+	if dt <= 0.0 or speed_ms <= 0.0 or _mean_chord_m <= 0.0:
+		return
+	var chords: float = _vent_inception_chords if ventilating else _vent_washout_chords
+	var time_constant_s: float = chords * _mean_chord_m / speed_ms
+	var target: float = 1.0 if ventilating else 0.0
+	ventilated_share = lerpf(ventilated_share, target, 1.0 - exp(-dt / maxf(time_constant_s, 1e-6)))
+
+
+## The submergence Froude number squared, U^2 / (g h), h the span in the water (at least a centimetre).
+static func submergence_froude_squared(speed_ms: float, immersed_span_m: float) -> float:
+	return speed_ms * speed_ms / (GRAVITY_MS2 * maxf(immersed_span_m, 0.01))
+
+
+## The slip below which a ventilated fin washes out at this speed with this span in the water (deg):
+## where the wetted lift coefficient times the Froude number squared meets the washout line. Found
+## by bisection on the lift curve (for the tests and the telemetry; the sim uses ventilate()).
+func washout_slip_deg(speed_ms: float, immersed_span_m: float) -> float:
+	var needed_cl: float = config.vent_washout_cl_fn2 / submergence_froude_squared(speed_ms, immersed_span_m)
+	var lo: float = 0.0
+	var hi: float = config.stall_peak_deg
+	if absf(lift_coefficient(deg_to_rad(hi))) <= needed_cl:
+		return hi
+	for i: int in 40:
+		var mid: float = 0.5 * (lo + hi)
+		if absf(lift_coefficient(deg_to_rad(mid))) < needed_cl:
+			lo = mid
+		else:
+			hi = mid
+	return 0.5 * (lo + hi)
+
+
+## Clears the ventilation (a board put somewhere new: WindsurferSim.reset).
+func clear_ventilation() -> void:
+	ventilated_share = 0.0
+	ventilating = false
 
 
 func _clear() -> void:

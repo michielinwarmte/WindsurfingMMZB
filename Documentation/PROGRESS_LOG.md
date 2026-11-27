@@ -15,6 +15,13 @@ Template for new entries:
 
 ---
 
+## 27 November 2026 (afternoon) - Max's fin chart and the spin-out for reference (branch physics/reality-fixes)
+**Phase:** `physics/reality-fixes` (not merged). Details: `Documentation/reports/reality_fixes/PROGRESS.md`, "Max's fin chart against the game".
+**Done:** Max's chart of fin, board width and sail by wind (90 kg) saved as Q56 and E01.S03 T6; each setup run with his fin and two sizes either side (push check, gusts and waves, 300 s). The spin-out (PH6, E01.S03 T1) built as the research proposed, off by default (`FinConfig.ventilates`): spec section 4 "Ventilation", `test_fin_ventilation.gd` (10 tests), telemetry `fin_ventilated_share`; the push check takes `--fin.<field>`.
+**Verified:** `tools/check.sh` 524 files, 0 failed; `tools/test_parallel.sh all` 1178 tests, the 5 known reds only. With the switch off the fin is the same to the last bit.
+**Decisions:** the spin-out stays off (Max asked for it "for reference"; Michiel to review).
+**Next:** the chart says: 20 kt his 38 cm wins, from 23 kt the game picks 2 to 4 cm smaller, and the research's spin-out (inception 15 deg) hardly fires on a reach, so it does not change that; a speed-dependent inception (cavitation) needs sources (Michiel, E01.S03). Max's play-test of the trim rule on the lake is still open.
+
 ## 27 November 2026 - The fin lifting the tail (E01.S08 T10; branch physics/reality-fixes)
 **Phase:** `physics/reality-fixes` (not merged; physics for Michiel's OK). Details: `Documentation/reports/reality_fixes/PROGRESS.md`, section "The fin lifting the tail".
 **Done:** asked Max what he saw ("it is lifted at the fin and nose is in the water"). Measured why: the bent fin pushes the tail up 100 to 135 N (330 to 350 N on race gear), which costs 0.0 to 0.2 deg of pitch on flat water but 0.4 to 0.8 deg on the lake's chop, because there the sailor never moved back: the chop's own pitching (8 to 14 deg/s) read as the board bouncing, and PH16 step 17's rule then holds the weight still. Built `SailorConfig.trim_aft_when_spearing` (on): riding a band or more below the trim aimed for, a bouncing board gets the weight moved aft (the low nose lifted, as Max described in Q54), faded out with the trim aim from 12.3 to 13.5 m/s. Spec 7.5 and section 16; `test_trim_by_feel.gd`; telemetry `felt_trim_deg`, `felt_bounce_dps`; `run_lake.gd` takes `--fin.<field>`.

@@ -148,6 +148,30 @@ case, one run each (`.sim_output/fin_chart/`; script in the session's scratchpad
   best fin move up toward Max's. That is the check in E01.S03 T6. One run per case: differences under 1 to 2 %
   are within the noise of the gusts.
 
+**With the spin-out on, for reference (27 November 2026, Max: "add in the ventilation spin out for reference").**
+Built as the research proposed (`FinConfig.ventilates`, off by default; spec section 4, "Ventilation";
+`test_fin_ventilation.gd`), the same 25 runs with `--fin.ventilates=1` (`.sim_output/fin_chart_vent/`):
+
+| setup (wind) | Max's fin | best on the reaches, off | best, spin-out on | reach mean change by fin (on against off) |
+|---|---|---|---|---|
+| A (15 kt) | 44 | 46 | 42 | -1.1 to +0.4 % (all five within 0.4 % again) |
+| B (20 kt) | 37-38 | 38 | 34 | 34 +0.5, 36 -2.0, 38 -3.0, 40/42 0 % |
+| C (23 kt) | 36 | 32 | **36** | 32 -2.0, 34 -0.3, 36 +3.2, 38 +0.2, 40 +0.8 % |
+| D (25 kt) | 33-34 | 30 | 36 | 30 0, 32 +0.9, 34 +1.1, 36 +4.5 (2 falls -> 0), 38 +1.1 % |
+| E (28 kt) | 32-33 | 29 | 29 | 29/31/33 the same to the last digit, 35 +1.1, 37 +0.6 % |
+
+Reading: the sourced model hardly fires on a reach. Its inception is 15 deg (12 with the tail loose), the
+steady slip there is 3 to 4 deg, and only the brief peaks in chop (11 to 19 deg, as large on the big fins as on
+the small) reach it; several runs are the same to the last digit, so it never fired in them. Where it did, the
+runs went another way (some faster, the falls of the 36 cm on D gone), by no more than the gusts' noise, and the
+best fin moves without a pattern (C lands on Max's 36, B moves away from his 38). So the strut experiments'
+spin-out does not explain Max's chart either: a too-small fin still costs nothing. The likely missing piece:
+at 25 to 35 kn the fin runs near a cavitation number of about 0.9 (computed: (p_atm + rho g h - p_vapour) /
+(0.5 rho U^2) at 15 m/s), and a loaded small fin's suction peak gets near it, where ventilation can start far
+below the stall (Young et al. 2023, Part 2: "partly cavitating to fully ventilated" at 5 deg, Fnh 3.0; the
+research's inception is the low-speed, natural one). A speed-dependent inception needs its own sources and is
+for Michiel (E01.S03); the switch stays off.
+
 ## Gap 2 (the bounce): CORRECTION + the fix found
 
 - My earlier claim "the sailor is one rigid body with the board" was WRONG. The sim already has a
