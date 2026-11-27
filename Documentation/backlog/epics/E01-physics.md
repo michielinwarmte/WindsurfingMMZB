@@ -35,7 +35,7 @@ Done when: each of the eight has a target with a source (a GPS track, a paper, a
 Notes: the night run of 6 to 7 November (part E) records the eight names on the final tree. The test hygiene of PH36 (the catapult test's heel limit, the re-pinned fin test, the NaN of 782f3e5) belongs here too.
 
 ### E01.S03 · A real spin-out: fin ventilation
-Status: todo | Size: M | Owner: Michiel | Milestone: M2 | Needs: — | Roadmap: PH6, PH35
+Status: doing | Size: M | Owner: Michiel | Milestone: M2 | Needs: — | Roadmap: PH6, PH35
 Done when: pushing too hard on a reach can end in a sudden spin-out with warning signs a player can learn (the fin's hum, the tail going light), and the autopilot and the AI react to it.
 - [ ] T1 The model from the research (`Documentation/reports/research/ph6_ventilation_ph15_wind_shadow.md`): a ventilated share as a state, inception past about 15° with an air path, spread over 3.5 to 7 chord lengths, the lift cut to 0.2 to 0.6, washout below about 2° at 10 m/s (Breslin); the two unsourced numbers (`vent_path_depth_m`, the washout time) marked as estimates. BUILT 27 Nov on physics/reality-fixes, off by default (FinConfig.ventilates; Max: "for reference"), spec 4 "Ventilation"; for Michiel's review
 - [ ] T2 Seven tests from the research; the spec's section 4 and check T10 updated (27 Nov: tests 1 to 5 in test_fin_ventilation.gd, spec section 4; test 6, the spin-out scenario, and 7, Max's play-test, open)
@@ -85,7 +85,7 @@ Done when: the board can slam and skip under a level body on short chop without 
 Notes: this gates how much chop E02 may put under the board.
 
 ### E01.S08 · The hull over the hump: the planing onset, the wet length, the clip
-Status: todo | Size: L | Owner: Michiel, Max for a photo or a tank measurement | Milestone: M3 | Needs: — | Roadmap: PH16, PH30, PH31, PH32, PH34
+Status: doing | Size: L | Owner: Michiel, Max for a photo or a tank measurement | Milestone: M3 | Needs: — | Roadmap: PH16, PH30, PH31, PH32, PH34
 Done when: the board planes at the real 8 to 10 kn, rides on 0.6 to 1.0 m of wet length without bouncing, and the strips' "no pull" rule (A-05) is replaced by something measured or by a hump moment of its own.
 - [ ] T1 A measurement of a rockered planing bottom (a tank test paper, or a side photo of Max's board at speed against the probe's wet length)
 - [ ] T2 The clip (A-05) and the push's centre settled; the strips' damping anchored at a flat plate's scale (PH31)
