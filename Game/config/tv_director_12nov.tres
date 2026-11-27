@@ -1,0 +1,96 @@
+[gd_resource type="Resource" script_class="TvDirector12NovConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://race/tv_director_12nov_config.gd" id="1"]
+
+; The TV director as it was built on 12 November 2026 (Documentation/reports/racing/tv_camera_12nov.md):
+; its numbers chosen by hand, kept as they were for comparing on the screen with the director set to the
+; real stream (tv_director.tres). Started with --tv_director=12nov. The stream's director takes the
+; helicopter (key 5) and the overhead drone (key 9) from here too.
+
+[resource]
+script = ExtResource("1")
+shot_min_s = 7.0
+shot_max_s = 12.0
+mark_after_s = 4.0
+mark_max_s = 22.0
+mark_front = 3
+mark_soon_m = 70.0
+mark_cut_after_s = 2.5
+start_wide_from_s = -40.0
+line_from_s = -12.0
+line_until_s = 7.0
+after_start_until_s = 16.0
+finish_m = 140.0
+finish_hold_s = 5.0
+close_m = 30.0
+mark_m = 80.0
+gained_s = 15.0
+front_worth = PackedFloat32Array(7, 4.5, 3, 1.5)
+base_worth = 0.3
+fight_front_worth = 3.0
+fight_back_worth = 0.8
+near_mark_front_worth = 4.0
+near_mark_worth = 2.0
+near_mark_places = 3
+gained_worth = 3.0
+late_share = 0.3
+finished_worth = 0.1
+shown_share = 0.5
+shots_usual = PackedFloat32Array(3, 3, 2.5, 1.5, 0, 0)
+shots_near_mark = PackedFloat32Array(1, 0.5, 1.5, 2.5, 0, 4.5)
+shots_in_a_fight = PackedFloat32Array(2, 2.5, 1, 1, 3.5, 0)
+group_m = 35.0
+lowest_m = 2.5
+above_land_m = 12.0
+chase_fov_deg = 50.0
+track_fov_deg = 40.0
+orbit_fov_deg = 28.0
+overhead_fov_deg = 45.0
+group_fov_deg = 34.0
+mark_fov_deg = 42.0
+start_wide_fov_deg = 38.0
+line_fov_deg = 44.0
+chase_glide_s = 0.5
+track_glide_s = 0.6
+orbit_glide_s = 1.0
+overhead_glide_s = 0.8
+group_glide_s = 0.9
+mark_glide_s = 0.4
+start_wide_glide_s = 1.2
+line_glide_s = 0.2
+look_glide_s = 0.3
+chase_turn_s = 1.5
+turn_s = 2.5
+chase_back_m = 24.0
+chase_up_m = 9.0
+chase_side_m = 7.0
+chase_ahead_m = 10.0
+track_side_m = 32.0
+track_up_m = 6.0
+track_along_m = 12.0
+track_pass_s = 14.0
+orbit_m = 110.0
+orbit_elevation_rad = 0.5
+orbit_drift_rad_s = 0.035
+orbit_look_up_m = 2.0
+overhead_m = 45.0
+overhead_turn_rad_s = 0.03
+group_side_rad = 0.7
+group_elevation_rad = 0.4
+group_reach_times = 2.2
+group_extra_m = 18.0
+group_nearest_m = 28.0
+group_farthest_m = 110.0
+mark_beyond_m = 38.0
+mark_side_m = 18.0
+mark_up_m = 22.0
+mark_look_share = 0.45
+start_back_m = 70.0
+start_up_m = 30.0
+start_sway_m = 35.0
+start_sway_rad_s = 0.08
+start_look_past_m = 10.0
+line_behind_m = 10.0
+line_up_m = 11.0
+line_aim_m = 150.0
+look_up_m = 1.5

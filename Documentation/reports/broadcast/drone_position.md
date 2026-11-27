@@ -93,6 +93,29 @@ A check on the wide shot: the start line is 140 m long and 670 m away, which is 
 | Mark 4 | 090° | 370 m |
 | The finish line | 103° (straight out) | 250 to 330 m |
 
+### Checked against the spot's terrain, and corrected (27 November 2026, evening)
+
+Max: "check the camera positions, see a big mountain in front of the important part", and "try to check your own work please". The first version of this section put the camera at the foot of the judges' tower without looking at its real pictures or at the land between it and the start line. Both checks were then made:
+
+- **In the game, from the tower's foot, the start line is hidden.** The land up the coast (a rocky headland with tops of 5 to 27 m, beginning about 100 m from the tower) stands in the sight line: with the eye 4.5 m above the water the start pin is hidden by 0.6 m of rock 155 m away, from standing height on the sand by 2.6 m.
+- **Where the view is clear:** the headland's seaward edge, about 100 to 140 m up the coast from the tower and 125 to 165 m out (ground 1.7 to 1.9 m above the water: standing height there is about 3.5 m above the water, close to the 4.5 m measured from the footage). From there the start line, the four marks and the finish are clear of land. Also clear: 60 m or more straight out from the tower, but that is 2.5 m deep water at the game's water level (a dry beach only at low tide); and the tower's deck, which is twice the real camera's height.
+- **The real pictures show a big hazy mountain behind the start line** (seen once the contrast is raised: a single rounded peak, about a third of the picture above the horizon, with land rising on the left). Fitted against the spot's far terrain it reads two ways about equally well (19 and 20 pixels of misfit on a peak of 170):
+
+| Reading | Vertical view | The picture looks at bearing | The start line is | Behind it |
+|---|---|---|---|---|
+| A | 7.7° | 027 to 041 | about 430 m away | Montaña Cardón (661 m, 15 km away at 032) |
+| B | 4.6° | 055 to 063 | about 730 m away | the far hills at 058 (378 m, 17 km away) |
+
+Reading B agrees with the course as it is laid (the start line 620 to 720 m from the tower at 056 to 064). Reading A would mean the real start line lies more along the beach than the course file has it. **Not settled.** Whoever knows where the stream's long-lens camera stands at Sotavento can settle it at once.
+
+So the table above stands for the tight shots; for the wide start shot the lens is **4.5 to 8 degrees**, not 8 to 10, and the camera's place in the game is the headland's edge, not the tower's foot. The director also gets a rule for every map: no beach-camera picture when land stands between the camera and its subject.
+
+### The course turned out three times bigger (27 November 2026, later)
+
+Max: "the start is the wrong way, the first reach is always to the beach", and "try to match the positions of the start boat, pin end, all buoys and finish". The shot notes hold the leader's time at every mark in nine heats: 32 s to mark 1, then 33, 38 and 38 s, and 40 s to the finish (187 s in all). At the real speeds (Max's own at Sotavento: 65 km/h and more coming in, 50 to 55 going out) that is a course of about 2.7 km; the spot's was 0.9 km, with its first reach out to sea. The course file was rebuilt (branch `spot/sotavento-first-reach`): the first reach to the beach, marks 1 and 3 inshore (about 250 m off the shore), marks 2 and 4 offshore, the finish in front of the tower, the start about 2.2 km from the tower. The stream's own pictures fit it: seconds after the gun the fleet sails at the land (Eliminations 8, 9 and 10), and the beach camera is used on marks 1 and 3.
+
+**So the distances in the tables above are too small, and the wide lens with them.** With the rebuilt course the beach camera's wide start shot is a lens of about **2 degrees** (the line about 2 km away), and its tight shots at marks 3 and 1 (430 m to 1 km) stay at about 1 to 1.5 degrees. The mountain behind the start line fits a 2 degree lens as well as the two readings above (the fit can't choose). The rebuilt course is itself an estimate: another wind direction on the day turns it about the finish by up to some 15 degrees.
+
 **How it frames:** wide on the start, the camera is tilted up: the horizon sits low in the picture, 70 to 75 % from the top, the sea a thin band under a lot of sky. Tight on the leaders the horizon sits at 25 to 35 % from the top and the board's foot at about 70 %. It stays in one place and pans.
 
 ## Against the game's drones today
