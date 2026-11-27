@@ -20,15 +20,16 @@ extends RefCounted
 ## what counts as a chase, a fight, a good gybe ... are in CommentaryConfig. A new race needs a new story.
 ##
 ## How a gybe at a mark is judged: the rounding is watched from rounding_from_m before the mark until
-## rounding_after_s after the board has rounded it (its step done): the speed it went in with, the
-## least speed through the turn, the time it was off the plane, how near the mark it went (its nearest
+## gybe_exit_s after the board's stern went through the wind (the gybe and the way out of it), or, when
+## it does not gybe, gybe_wait_s after the race counted the mark: the speed it went in with, the least
+## speed through the turn, the time it was off the plane, how near the mark it went (its nearest
 ## distance to the mark, or to the nearer end of a gate) and whether it fell. A rounding counts as a
 ## gybe when the board's stern went through the wind: its wind angle changed sides beyond
 ## gybe_twa_deg (from +170 to -175 degrees, say; a tack changes sides through 0). The sail's own flip
 ## comes later than that in the game's gybe, often after the watch, so it is not the measure. A
 ## rounding without a gybe (a bear-away at a windward mark, a head-up) gets no gybe line. Good: it kept good_kept
-## of its speed, stayed on the plane and went in tight; bad: it lost more than half its speed, was off
-## the plane for long, went wide, or fell (the fall is told as a fall); safe: the rest.
+## of its speed, stayed on the plane and went in tight; bad: it all but stopped (less than bad_kept of
+## its speed) or went wide; a fall is told as a fall; safe: the rest.
 
 var config: CommentaryConfig
 
@@ -75,6 +76,8 @@ var _flight_s: Dictionary[int, float] = {}
 var _fell_at: Dictionary[int, float] = {}
 var _off_plane_since: Dictionary[int, float] = {}
 var _drops: Dictionary[int, PackedVector2Array] = {}
+## When each board's last rounding watch ended (race seconds): the slow way out of a gybe is the gybe's.
+var _rounding_ended_at: Dictionary[int, float] = {}
 ## Every rounding watched, judged or not, one line each (the transcript's list, to check the numbers).
 var rounding_notes: PackedStringArray = PackedStringArray()
 ## The day as measured (conditions): the wind's mean (knots), and each board's water height's mean and
@@ -105,6 +108,8 @@ class Rounding:
 	## The wind angle at the last look, and whether the stern has gone through the wind since.
 	var last_twa_deg: float = 0.0
 	var stern_crossed: bool = false
+	## When the stern went through the wind, race seconds; -1 before.
+	var crossed_s: float = -1.0
 	var fell: bool = false
 	## When it rounded (its step done), race seconds; -1 before.
 	var rounded_s: float = -1.0
@@ -530,7 +535,8 @@ func _note_places_lost(now: RaceLook, index: int, held: int, place: int, moments
 
 
 ## A board off the plane for trouble_off_plane_s while most of the racing fleet planes: not round a
-## mark (that is the gybe's), not soon after a fall or the start.
+## mark nor within trouble_window_s after it (the way out of a gybe is the gybe's), not soon after a
+## fall or the start.
 func _watch_off_the_plane(now: RaceLook, moments: Array[RaceMoment]) -> void:
 	var sailing: int = 0
 	var planing: int = 0
@@ -543,7 +549,7 @@ func _watch_off_the_plane(now: RaceLook, moments: Array[RaceMoment]) -> void:
 	for index: int in now.order:
 		var board: RaceLook.Board = now.boards[index]
 		var calm: bool = not now.is_racing(index) or board.fallen or board.planing or board.start_s < 0.0
-		var excused: bool = _roundings.has(index) or now.clock_s < config.order_from_s or now.clock_s - _fell_at.get(index, -INF) < config.trouble_window_s
+		var excused: bool = _roundings.has(index) or now.clock_s < config.order_from_s or now.clock_s - _fell_at.get(index, -INF) < config.trouble_window_s 			or now.clock_s - _rounding_ended_at.get(index, -INF) < config.trouble_window_s
 		if calm or excused or not fleet_planes:
 			_off_plane_since.erase(index)
 			continue
@@ -585,7 +591,7 @@ func _watch_the_marks(now: RaceLook, moments: Array[RaceMoment]) -> void:
 		moments.append(moment)
 
 
-## A rounding watched from rounding_from_m before the mark to rounding_after_s after it, then judged.
+## A rounding watched from rounding_from_m before the mark to its end (see the class's doc), then judged.
 func _watch_a_rounding(now: RaceLook, index: int, moments: Array[RaceMoment]) -> void:
 	var board: RaceLook.Board = now.boards[index]
 	var rounding: Rounding = _roundings.get(index, null)
@@ -609,20 +615,26 @@ func _watch_a_rounding(now: RaceLook, index: int, moments: Array[RaceMoment]) ->
 		rounding.off_plane_s += dt
 	rounding.nearest_m = minf(rounding.nearest_m, now.distance_to_mark_m(index, rounding.step))
 	rounding.widest_twa_deg = maxf(rounding.widest_twa_deg, absf(board.twa_deg))
-	if absf(board.twa_deg) >= config.gybe_twa_deg and absf(rounding.last_twa_deg) >= config.gybe_twa_deg and signf(board.twa_deg) != signf(rounding.last_twa_deg):
+	if not rounding.stern_crossed and absf(board.twa_deg) >= config.gybe_twa_deg and absf(rounding.last_twa_deg) >= config.gybe_twa_deg \
+			and signf(board.twa_deg) != signf(rounding.last_twa_deg):
 		rounding.stern_crossed = true
+		rounding.crossed_s = now.clock_s
 	rounding.last_twa_deg = board.twa_deg
 	rounding.fell = rounding.fell or board.fallen
 	if rounding.flipped_s < 0.0 and board.sail_side != rounding.side_in:
 		rounding.flipped_s = now.clock_s
 	if board.next_step > rounding.step and rounding.rounded_s < 0.0:
 		rounding.rounded_s = now.clock_s
-	if rounding.rounded_s >= 0.0 and now.clock_s - rounding.rounded_s >= config.rounding_after_s:
+	# The watch ends gybe_exit_s after the stern went through the wind, or gybe_wait_s after the mark without a gybe.
+	var done: bool = rounding.rounded_s >= 0.0 and (now.clock_s - rounding.crossed_s >= config.gybe_exit_s if rounding.stern_crossed
+		else now.clock_s - rounding.rounded_s >= config.gybe_wait_s)
+	if done:
 		_roundings.erase(index)
+		_rounding_ended_at[index] = now.clock_s
 		var judged: RaceMoment = judge_the_gybe(rounding, config)
 		rounding_notes.append("%s  %s at mark %d: %s; the widest wind angle %.0f deg, the stern %s, the sail %s%s -> %s" % [
 			clock_text(now.clock_s), now.name_of(index), now.mark_number(rounding.step), rounding_text(rounding), rounding.widest_twa_deg,
-			"through the wind" if rounding.stern_crossed else "not through the wind",
+			"through the wind %.1f s after the mark" % (rounding.crossed_s - rounding.rounded_s) if rounding.stern_crossed else "not through the wind",
 			"across %.1f s %s the rounding" % [absf(rounding.flipped_s - rounding.rounded_s), "before" if rounding.flipped_s < rounding.rounded_s else "after"] if rounding.flipped_s >= 0.0 else "not across yet",
 			", fell" if rounding.fell else "", judged.moment if judged != null else "no gybe line"])
 		if judged != null:
@@ -647,7 +659,7 @@ static func judge_the_gybe(rounding: Rounding, tuning: CommentaryConfig) -> Race
 	var kept: float = rounding.least_ms / maxf(rounding.speed_in_ms, 0.1)
 	var what: String = "gybe_safe"
 	var size: int = 2
-	if kept < tuning.bad_kept or rounding.off_plane_s > tuning.bad_off_plane_s or rounding.nearest_m > tuning.wide_m:
+	if kept < tuning.bad_kept or rounding.nearest_m > tuning.wide_m:
 		what = "gybe_bad"
 		size = 3
 	elif kept >= tuning.good_kept and rounding.off_plane_s <= tuning.good_off_plane_s and rounding.nearest_m <= tuning.tight_m:

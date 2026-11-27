@@ -577,12 +577,16 @@ func test_a_gybe_is_judged_good_safe_or_bad_from_the_rounding() -> void:
 	assert_eq(RaceStory.judge_the_gybe(rounding, config).moment, "gybe_good", "kept 85 %, tight, planing")
 	rounding.nearest_m = 18.0
 	assert_eq(RaceStory.judge_the_gybe(rounding, config).moment, "gybe_safe", "a little wide")
+	rounding.nearest_m = 25.0
+	assert_eq(RaceStory.judge_the_gybe(rounding, config).moment, "gybe_bad", "wide")
 	rounding.nearest_m = 6.0
 	rounding.least_ms = 4.0
-	assert_eq(RaceStory.judge_the_gybe(rounding, config).moment, "gybe_bad", "lost more than half its speed")
+	assert_eq(RaceStory.judge_the_gybe(rounding, config).moment, "gybe_safe", "kept 40 %: off the plane, not stopped")
+	rounding.least_ms = 1.0
+	assert_eq(RaceStory.judge_the_gybe(rounding, config).moment, "gybe_bad", "all but stopped")
 	rounding.least_ms = 8.5
 	rounding.off_plane_s = 2.5
-	assert_eq(RaceStory.judge_the_gybe(rounding, config).moment, "gybe_bad", "long off the plane")
+	assert_eq(RaceStory.judge_the_gybe(rounding, config).moment, "gybe_safe", "fast but long off the plane: not good")
 	rounding.off_plane_s = 0.0
 	rounding.stern_crossed = false
 	assert_null(RaceStory.judge_the_gybe(rounding, config), "the stern never went through the wind (a bear-away, a tack): no gybe")

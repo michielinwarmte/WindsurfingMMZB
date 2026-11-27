@@ -115,7 +115,8 @@ func finish() -> void:
 	_file.store_line("# Said / heard by moment (small talk is not heard, only said): " + ", ".join(moments))
 	_file.store_line("# The day as the story measured it at the end: the wind's mean %.1f kt (wind_strong from %.0f, wind_light to %.0f), the sea's significant wave height %.2f m (choppy from %.2f, flat to %.2f)." % [
 		story.wind_mean_kt, config.wind_strong_kt, config.wind_light_kt, story.sea_hs_m, config.choppy_hs_m, config.flat_hs_m])
-	_file.store_line("# The roundings watched (RaceStory: from %.0f m before the mark to %.0f s after it):" % [config.rounding_from_m, config.rounding_after_s])
+	_file.store_line("# The roundings watched (RaceStory: from %.0f m before the mark to %.0f s after the stern went through the wind, or %.0f s after the mark without a gybe):" % [
+		config.rounding_from_m, config.gybe_exit_s, config.gybe_wait_s])
 	for note: String in _rounding_notes + story.rounding_notes:
 		_file.store_line("#   " + note)
 	_file.close()

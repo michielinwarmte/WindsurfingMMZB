@@ -186,24 +186,26 @@ extends Resource
 ## A board of the front this near its next mark or gate is coming up to it (mark_approach), metres.
 @export var mark_approach_m: float = 70.0
 @export var mark_front: int = 3
-## A rounding is watched from this far before the mark until rounding_after_s after it (metres,
-## seconds): the speed going in, the least speed through it, the time off the plane, how near the mark
-## it went, a fall. A gybe is a rounding where the sail changed sides with the wind past
-## gybe_twa_deg (the stern through the wind).
+## A rounding is watched from rounding_from_m before the mark (metres) until gybe_exit_s after the
+## board's stern went through the wind (its wind angle changing sides beyond gybe_twa_deg), or, without
+## a gybe, gybe_wait_s after the race counted the mark (seconds): the speed going in, the least speed
+## through it, the time off the plane, how near the mark it went, a fall. Measured on the T2 slalom (27
+## November 2026): the race counts the mark 3.3 to 4.8 s before the AI's stern goes through the wind,
+## and its least speed comes about 4 s after that.
 @export var rounding_from_m: float = 35.0
-@export var rounding_after_s: float = 3.0
+@export var gybe_wait_s: float = 8.0
+@export var gybe_exit_s: float = 4.0
 @export var gybe_twa_deg: float = 150.0
-## Judged good: kept at least good_kept of its speed, off the plane at most good_off_plane_s, within
-## tight_m of the mark. Judged bad: kept less than bad_kept, or off the plane more than
-## bad_off_plane_s, or wider than wide_m, or a fall. Safe otherwise.
-## First set from the six gybes at the last mark of a T2 slalom at 18 kt (the transcript's list of
-## roundings, 27 November 2026): the AI kept 46 to 68 % of its speed, was 0.5 to 1.7 s off the plane
-## and 4 to 6 m from the mark; these numbers make the best of them good and the two worst bad.
-@export var good_kept: float = 0.65
-@export var good_off_plane_s: float = 0.6
+## Judged good: kept at least good_kept of its speed at its slowest, off the plane at most
+## good_off_plane_s, within tight_m of the mark (a planing gybe, tight). Judged bad: it all but stopped
+## (less than bad_kept of its speed) or went wider than wide_m. Safe otherwise. A fall is told as a fall.
+## The AI's six gybes at the last mark of a T2 slalom at 18 kt (27 November 2026) went in at 23 to 24
+## kt and slowed to 3 to 4 kt (13 to 18 % kept), 4 to 6 m from the mark, planing again 8 s later: none
+## is good by these numbers, the three that kept less than 15 % are bad, the rest safe.
+@export var good_kept: float = 0.5
+@export var good_off_plane_s: float = 1.0
 @export var tight_m: float = 8.0
-@export var bad_kept: float = 0.5
-@export var bad_off_plane_s: float = 1.6
+@export var bad_kept: float = 0.15
 @export var wide_m: float = 20.0
 
 @export_group("The race story: the finish")
