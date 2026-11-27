@@ -20,7 +20,13 @@ var close: bool = false
 var place: int = 0
 ## {mark}: which mark ("first", "last"), when the moment is at a mark; "" otherwise.
 var mark_word: String = ""
-## A quiet moment (identify, speed, leader, rundown, filler, camera, unsure): small talk between events.
+## Tactics: the board is to windward (+1) or to leeward (-1) of the other board or of its straight line
+## to the mark (0: neither), and it sails in another sail's dirty wind (the `windward`, `leeward` and
+## `dirty_air` needs).
+var windward: int = 0
+var dirty: bool = false
+## A quiet moment (identify, speed, leader, rundown, filler, camera, unsure, tactics, tension, form,
+## conditions): small talk between events.
 var quiet: bool = false
 ## The race clock when it happened, seconds (negative before the gun).
 var race_s: float = 0.0

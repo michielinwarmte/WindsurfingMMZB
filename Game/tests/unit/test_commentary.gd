@@ -14,7 +14,8 @@ const ORANGE: Color = Color(0.95, 0.55, 0.1)
 func test_the_real_bank_loads_without_a_problem() -> void:
 	var bank: CommentaryBank = CommentaryBank.load_file()
 	assert_eq(bank.problems, PackedStringArray(), "every line of the starter bank keeps the contract")
-	assert_eq(bank.size(), 73, "the starter bank's 73 lines")
+	assert_eq(bank.size(), 76, "the starter bank's 76 lines")
+	assert_eq(CommentaryBank.MOMENTS.size(), 35, "the 35 moments of BANK_FORMAT.md")
 	var text: String = FileAccess.get_file_as_string(CommentaryBank.PATH)
 	var data: Dictionary = JSON.parse_string(text)
 	var counted: Dictionary = data["moments"]
@@ -567,28 +568,27 @@ func test_the_front_coming_up_to_a_mark() -> void:
 func test_a_gybe_is_judged_good_safe_or_bad_from_the_rounding() -> void:
 	var config: CommentaryConfig = CommentaryConfig.new()
 	var rounding: RaceStory.Rounding = RaceStory.Rounding.new()
-	rounding.side_in = 1
+	rounding.stern_crossed = true
 	rounding.speed_in_ms = 10.0
 	rounding.planing_in = true
 	rounding.widest_twa_deg = 170.0
 	rounding.least_ms = 8.5
 	rounding.nearest_m = 6.0
-	assert_eq(RaceStory.judge_the_gybe(rounding, -1, config).moment, "gybe_good", "kept 85 %, tight, planing")
+	assert_eq(RaceStory.judge_the_gybe(rounding, config).moment, "gybe_good", "kept 85 %, tight, planing")
 	rounding.nearest_m = 18.0
-	assert_eq(RaceStory.judge_the_gybe(rounding, -1, config).moment, "gybe_safe", "a little wide")
+	assert_eq(RaceStory.judge_the_gybe(rounding, config).moment, "gybe_safe", "a little wide")
 	rounding.nearest_m = 6.0
 	rounding.least_ms = 4.0
-	assert_eq(RaceStory.judge_the_gybe(rounding, -1, config).moment, "gybe_bad", "lost more than half its speed")
+	assert_eq(RaceStory.judge_the_gybe(rounding, config).moment, "gybe_bad", "lost more than half its speed")
 	rounding.least_ms = 8.5
 	rounding.off_plane_s = 2.5
-	assert_eq(RaceStory.judge_the_gybe(rounding, -1, config).moment, "gybe_bad", "long off the plane")
+	assert_eq(RaceStory.judge_the_gybe(rounding, config).moment, "gybe_bad", "long off the plane")
 	rounding.off_plane_s = 0.0
-	assert_null(RaceStory.judge_the_gybe(rounding, 1, config), "the sail never changed sides: no gybe")
-	rounding.widest_twa_deg = 60.0
-	assert_null(RaceStory.judge_the_gybe(rounding, -1, config), "the sail changed sides head to wind: a tack")
-	rounding.widest_twa_deg = 170.0
+	rounding.stern_crossed = false
+	assert_null(RaceStory.judge_the_gybe(rounding, config), "the stern never went through the wind (a bear-away, a tack): no gybe")
+	rounding.stern_crossed = true
 	rounding.fell = true
-	assert_null(RaceStory.judge_the_gybe(rounding, -1, config), "a fall is told as a fall")
+	assert_null(RaceStory.judge_the_gybe(rounding, config), "a fall is told as a fall")
 
 
 func test_a_rounding_watched_through_the_mark_ends_in_a_gybe_line() -> void:
@@ -641,6 +641,115 @@ func test_the_small_talk_offered_is_about_the_board_on_the_screen() -> void:
 	assert_eq(offered[kinds.find("leader")].board, 0)
 	assert_true(_names_of(story.quiet(look, 2, true)).has("unsure"))
 	assert_false(_names_of(story.quiet(look, 0, false)).has("speed"), "the leader is not faster than the rest")
+	assert_true(kinds.has("conditions"), "the day can always be talked about")
+	assert_false(kinds.has("tactics"), "nothing to say about its line")
+
+
+func test_tactics_to_windward_of_the_board_beside_it() -> void:
+	var story: RaceStory = RaceStory.new(CommentaryConfig.new())
+	# The wind from the north (-Z): Mara 10 m higher than Hana, 11 m apart.
+	var look: RaceLook = _look(60.0, [{"at": Vector2(0, -200)}, {"at": Vector2(5, -190)}])
+	var line: RaceMoment = story.tactics_of(look, 0)
+	assert_not_null(line)
+	assert_eq(line.windward, 1)
+	assert_eq(line.board2, 1)
+	assert_false(line.dirty)
+	assert_eq(story.tactics_of(look, 1).windward, -1, "Hana below Mara")
+	assert_true(_names_of(story.quiet(look, 0, false)).has("tactics"))
+
+
+func test_tactics_in_dirty_wind_and_off_the_straight_line() -> void:
+	var story: RaceStory = RaceStory.new(CommentaryConfig.new())
+	var dirty: RaceLook = _look(60.0, [{"at": Vector2(0, -200), "dirty": 0.05}, {"at": Vector2(0, 100)}])
+	assert_true(story.tactics_of(dirty, 0).dirty, "5 % of its wind gone")
+	assert_null(story.tactics_of(_look(60.0, [{"at": Vector2(0, -200), "dirty": 0.02}, {"at": Vector2(0, 100)}]), 0), "2 %: clear enough")
+	# On the leg from mark 1 (0, -300) to mark 2 (200, -300), 30 m below it.
+	var low: RaceLook = _look(90.0, [{"at": Vector2(100, -270), "step": 2}, {"at": Vector2(0, 100)}])
+	assert_eq(low.line_offset_m(0), -30.0)
+	assert_eq(story.tactics_of(low, 0).windward, -1, "a lower line")
+
+
+func test_tension_a_small_gap_for_the_lead_late_in_the_race() -> void:
+	var story: RaceStory = RaceStory.new(CommentaryConfig.new())
+	var close: RaceLook = _look(200.0, [{"step": 3, "at": Vector2(200, -150)}, {"step": 3, "at": Vector2(200, -130)}, {"step": 3, "at": Vector2(200, -60)}])
+	var moment: RaceMoment = story.tension_of(close)
+	assert_not_null(moment, "20 m at 10 m/s: 2 s")
+	assert_eq(moment.board, 0)
+	assert_eq(moment.board2, 1)
+	assert_eq(moment.place, 1)
+	assert_null(story.tension_of(_look(200.0, [{"step": 3, "at": Vector2(200, -150)}, {"step": 3, "at": Vector2(200, -90)}, {"step": 3, "at": Vector2(200, -60)}])), "6 s: not close")
+	assert_null(story.tension_of(_look(60.0, [{"step": 1, "at": Vector2(0, -200)}, {"step": 1, "at": Vector2(0, -180)}, {"step": 1}])), "early in the race")
+	var podium: RaceMoment = story.tension_of(_look(200.0, [{"step": 3, "at": Vector2(200, -250)}, {"step": 3, "at": Vector2(200, -200)}, {"step": 3, "at": Vector2(200, -150)}, {"step": 3, "at": Vector2(200, -135)}]))
+	assert_eq(podium.place, 3, "the last place on the podium")
+
+
+func test_form_a_long_lead_or_a_run_of_places() -> void:
+	var story: RaceStory = RaceStory.new(CommentaryConfig.new())
+	var boards: Array[Dictionary] = [{}, {}, {}, {}]
+	story.look(_look(20.0, boards))
+	assert_null(story.form_of(_look(40.0, boards), 0), "leading 20 s")
+	story.look(_look(90.0, boards))
+	assert_eq(story.form_of(_look(90.0, boards), 0).note, "leading for 70 s")
+	var running: RaceStory = RaceStory.new(CommentaryConfig.new())
+	running.look(_look(30.0, boards))
+	var passed: Array[Dictionary] = [{"place": 1}, {"place": 3}, {"place": 4}, {"place": 2}]
+	running.look(_look(31.0, passed))
+	running.look(_look(34.0, passed))
+	assert_eq(running.form_of(_look(34.0, passed), 3).note, "up 2 places in 60 s")
+	assert_null(running.form_of(_look(34.0, passed), 1), "down, not up")
+
+
+func test_the_days_wind_and_water_for_the_conditions_needs() -> void:
+	var director: CommentaryDirector = _director([
+		_line("D1", "conditions", "It's absolutely howling out there.", [], ["wind_strong"]),
+		_line("D2", "conditions", "Light today.", [], ["wind_light"]),
+		_line("D3", "conditions", "So choppy and so long.", [], ["choppy"]),
+		_line("D4", "conditions", "Flat as a pond.", [], ["flat"]),
+	])
+	var line: Callable = func(id: String) -> CommentaryBank.Line: return director.bank.line(id)
+	var story: RaceStory = RaceStory.new(director.config)
+	var look: RaceLook = null
+	for k: int in 40:
+		look = _look(-40.0 + k * 0.5, [{"step": 0, "water_h": 0.15 if k % 2 == 0 else -0.15}, {"step": 0, "water_h": -0.15 if k % 2 == 0 else 0.15}])
+		look.wind_kt = 25.0
+		story.look(look)
+	var moment: RaceMoment = RaceMoment.make("conditions")
+	assert_almost_eq(look.wind_mean_kt, 25.0, 0.01)
+	assert_true(director.needs_met(line.call("D1"), moment, look), "25 kt: howling")
+	assert_false(director.needs_met(line.call("D2"), moment, look))
+	assert_true(look.sea_hs_m > 0.3, "the water up and down 0.15 m: about 0.6 m significant (%.2f)" % look.sea_hs_m)
+	assert_true(director.needs_met(line.call("D3"), moment, look))
+	assert_false(director.needs_met(line.call("D4"), moment, look))
+	var calm: RaceStory = RaceStory.new(director.config)
+	for k: int in 40:
+		look = _look(-40.0 + k * 0.5, [{"step": 0}, {"step": 0}])
+		look.wind_kt = 11.0
+		calm.look(look)
+	assert_true(director.needs_met(line.call("D2"), moment, look), "11 kt: light")
+	assert_true(director.needs_met(line.call("D4"), moment, look), "no waves: flat")
+	assert_false(director.needs_met(line.call("D1"), moment, look))
+
+
+func test_the_tactics_needs() -> void:
+	var director: CommentaryDirector = _director([
+		_line("T1", "tactics", "Pushing hard above {rider2} though.", ["rider2"], ["windward", "pair"]),
+		_line("T2", "tactics", "He's got a lower line.", [], ["leeward"]),
+		_line("T3", "tactics", "Oh and he's got some dirty air there.", [], ["dirty_air"]),
+	])
+	var look: RaceLook = _look(60.0, [{}, {}])
+	var line: Callable = func(id: String) -> CommentaryBank.Line: return director.bank.line(id)
+	var above: RaceMoment = RaceMoment.make("tactics", 0)
+	above.windward = 1
+	above.board2 = 1
+	assert_true(director.needs_met(line.call("T1"), above, look))
+	assert_false(director.needs_met(line.call("T2"), above, look))
+	assert_false(director.needs_met(line.call("T3"), above, look))
+	assert_eq(director.fill(line.call("T1"), above, look), "Pushing hard above Hana though.")
+	var shadowed: RaceMoment = RaceMoment.make("tactics", 0)
+	shadowed.dirty = true
+	shadowed.windward = -1
+	assert_true(director.needs_met(line.call("T2"), shadowed, look))
+	assert_true(director.needs_met(line.call("T3"), shadowed, look))
 
 
 # ---------------------------------------------------------------- the race as the commentator sees it
@@ -725,10 +834,13 @@ func _director(lines: Array, config: CommentaryConfig = null) -> CommentaryDirec
 ## A made-up race: the start line on z = 0 (60 m long), mark 1 at (0, -300), mark 2 at (200, -300), the
 ## finish line on z = 0 from x = 170 to 230. Each board's spec (all optional): "at", "step" (the step it
 ## sails to; 1 = mark 1), "place" (else the list's order), "speed", "planing", "fallen", "heading",
-## "side", "twa", "water", "finished", "finish_s", "ocs", "start_s", "brand", "colour", "name".
+## "side", "twa", "water", "water_h", "dirty", "finished", "finish_s", "ocs", "start_s", "brand", "colour",
+## "name". The wind 18 kt from the north (-Z: the start to mark 1 is a beat).
 func _look(clock_s: float, specs: Array[Dictionary]) -> RaceLook:
 	var look: RaceLook = RaceLook.new()
 	look.clock_s = clock_s
+	look.wind_kt = 18.0
+	look.wind_from_deg = 0.0
 	look.started = true
 	look.racing = clock_s >= 0.0
 	look.step_kinds.assign([RaceStep.Kind.START, RaceStep.Kind.MARK, RaceStep.Kind.MARK, RaceStep.Kind.FINISH])
@@ -749,6 +861,8 @@ func _look(clock_s: float, specs: Array[Dictionary]) -> RaceLook:
 		board.sail_side = int(spec.get("side", 1))
 		board.twa_deg = float(spec.get("twa", 90.0))
 		board.water_share = float(spec.get("water", 1.0))
+		board.water_height_m = float(spec.get("water_h", 0.0))
+		board.dirty_share = float(spec.get("dirty", 0.0))
 		board.finished = bool(spec.get("finished", false))
 		board.finish_s = float(spec.get("finish_s", -1.0))
 		board.ocs = bool(spec.get("ocs", false))

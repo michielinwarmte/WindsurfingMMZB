@@ -36,7 +36,8 @@ extends RefCounted
 signal line_started(id: String, text: String, seconds: float, level: int)
 signal line_stopped(id: String)
 
-const QUIET_MOMENTS: PackedStringArray = ["identify", "speed", "leader", "rundown", "filler", "camera", "unsure"]
+const QUIET_MOMENTS: PackedStringArray = ["identify", "speed", "leader", "rundown", "filler", "camera", "unsure",
+	"tactics", "tension", "form", "conditions"]
 
 var bank: CommentaryBank
 var config: CommentaryConfig
@@ -412,6 +413,20 @@ func needs_met(line: CommentaryBank.Line, moment: RaceMoment, look: RaceLook) ->
 				met = moment.board2 >= 0
 			"last_lap":
 				met = moment.board >= 0 and look.on_last_leg(moment.board)
+			"windward":
+				met = moment.windward > 0
+			"leeward":
+				met = moment.windward < 0
+			"dirty_air":
+				met = moment.dirty
+			"wind_strong":
+				met = not is_nan(look.wind_mean_kt) and look.wind_mean_kt >= config.wind_strong_kt
+			"wind_light":
+				met = not is_nan(look.wind_mean_kt) and look.wind_mean_kt <= config.wind_light_kt
+			"choppy":
+				met = not is_nan(look.sea_hs_m) and look.sea_hs_m >= config.choppy_hs_m
+			"flat":
+				met = not is_nan(look.sea_hs_m) and look.sea_hs_m <= config.flat_hs_m
 		if not met:
 			return false
 	return true

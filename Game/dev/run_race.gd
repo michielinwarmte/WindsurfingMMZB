@@ -701,7 +701,7 @@ func _initialize() -> void:
 					return
 		step_race(race, entries, blind, rules)
 		if commentary != null:
-			commentary.tick(race, telemetry_of(entries), DT)
+			commentary.tick(race, telemetry_of(entries), dirty_of(entries), DT)
 		if bottom != null:
 			aground_count += _check_the_bottom(bottom, race, entries)
 		for i: int in entries.size():
@@ -1888,6 +1888,20 @@ static func telemetry_of(entries: Array[Entry]) -> Array[Telemetry]:
 	for entry: Entry in entries:
 		telemetry.append(entry.sim.telemetry)
 	return telemetry
+
+
+## The share of each board's wind the other sails' shadows take now, 0 to 1 (as RaceRunner.shadow_deficit()
+## measures it in the game); 0 with the shadows off.
+static func dirty_of(entries: Array[Entry]) -> PackedFloat32Array:
+	var dirty: PackedFloat32Array = PackedFloat32Array()
+	for entry: Entry in entries:
+		if entry.shadows == null:
+			dirty.append(0.0)
+			continue
+		var position: Vector3 = entry.sim.telemetry.position
+		var clear: Vector3 = -entry.sim.wind.from_direction() * entry.sim.wind.speed_at_height(3.0)
+		dirty.append(1.0 - entry.shadows.factor_at(Vector3(position.x, 3.0, position.z), clear))
+	return dirty
 
 
 ## A board's name as a file name: "All-rounder 2" is all-rounder_2.

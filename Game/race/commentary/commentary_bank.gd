@@ -19,6 +19,7 @@ const PATH: String = "res://race/commentary/commentary_bank.json"
 const MOMENTS: PackedStringArray = [
 	"pre_start", "start_gun", "start_good", "start_bad", "over_early",
 	"identify", "speed", "leader", "rundown", "lead_change", "overtake", "chase", "fight", "airtime", "filler",
+	"tactics", "tension", "form", "conditions",
 	"mark_approach", "gybe_good", "gybe_safe", "gybe_bad",
 	"fall", "near_miss", "trouble",
 	"wow", "oh_no",
@@ -29,7 +30,8 @@ const MOMENTS: PackedStringArray = [
 ## {nation_adj}: the game's sailors have no country yet), so a line with one of those is skipped.
 const SLOTS: PackedStringArray = ["rider", "rider2", "place", "brand", "colour", "mark", "leg", "national", "nation_adj"]
 ## The extra conditions the director knows (BANK_FORMAT.md, "needs").
-const NEEDS: PackedStringArray = ["leader", "not_leader", "podium", "big_lead", "close", "camera_wide", "camera_close", "many", "pair", "last_lap"]
+const NEEDS: PackedStringArray = ["leader", "not_leader", "podium", "big_lead", "close", "camera_wide", "camera_close", "many", "pair", "last_lap",
+	"wind_strong", "wind_light", "choppy", "flat", "windward", "leeward", "dirty_air"]
 ## The levels of excitement: 1 calm, 2 the normal race voice, 3 lifted, 4 shouting.
 const LOWEST_LEVEL: int = 1
 const HIGHEST_LEVEL: int = 4

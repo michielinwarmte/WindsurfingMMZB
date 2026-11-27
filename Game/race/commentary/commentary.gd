@@ -176,10 +176,13 @@ func _on_line_started(id: String, text: String, seconds: float, level: int) -> v
 func look_now() -> RaceLook:
 	var race: RaceSim = runner.race
 	var telemetry: Array[Telemetry] = []
+	var dirty: PackedFloat32Array = PackedFloat32Array()
 	for i: int in race.board_count():
 		var node: WindsurferNode = runner.board_node(i)
-		telemetry.append(node.telemetry() if node != null and node.visible and node.sim != null else null)
-	return RaceLook.of_race(race, telemetry, _names, _brands, _colours)
+		var on_water: bool = node != null and node.visible and node.sim != null
+		telemetry.append(node.telemetry() if on_water else null)
+		dirty.append(runner.shadow_deficit(node) if on_water else 0.0)
+	return RaceLook.of_race(race, telemetry, _names, _brands, _colours, dirty)
 
 
 ## Each board's name to say, its sail's brand and its sail's colour, as the game shows them.

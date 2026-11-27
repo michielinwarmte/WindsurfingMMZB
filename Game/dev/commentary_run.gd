@@ -64,11 +64,11 @@ func _init(out_path: String, heading: String, names: PackedStringArray, brands: 
 
 ## One tick of the race (dt race seconds), after the race has stepped: the story looks every
 ## look_every_s, the camera stand-in cuts, the director speaks.
-func tick(race: RaceSim, telemetry: Array[Telemetry], dt: float) -> void:
+func tick(race: RaceSim, telemetry: Array[Telemetry], dirty: PackedFloat32Array, dt: float) -> void:
 	_look_left_s -= dt
 	if _look_left_s <= 0.0:
 		_look_left_s = config.look_every_s
-		_look = RaceLook.of_race(race, telemetry, _names, _brands, _colours)
+		_look = RaceLook.of_race(race, telemetry, _names, _brands, _colours, dirty)
 		var moments: Array[RaceMoment] = story.look(_look)
 		for moment: RaceMoment in moments:
 			_heard[moment.moment] = _heard.get(moment.moment, 0) + 1
@@ -113,6 +113,8 @@ func finish() -> void:
 		if _heard.has(moment) or _said.has(moment):
 			moments.append("%s %d/%d" % [moment, _said.get(moment, 0), _heard.get(moment, 0)])
 	_file.store_line("# Said / heard by moment (small talk is not heard, only said): " + ", ".join(moments))
+	_file.store_line("# The day as the story measured it at the end: the wind's mean %.1f kt (wind_strong from %.0f, wind_light to %.0f), the sea's significant wave height %.2f m (choppy from %.2f, flat to %.2f)." % [
+		story.wind_mean_kt, config.wind_strong_kt, config.wind_light_kt, story.sea_hs_m, config.choppy_hs_m, config.flat_hs_m])
 	_file.store_line("# The roundings watched (RaceStory: from %.0f m before the mark to %.0f s after it):" % [config.rounding_from_m, config.rounding_after_s])
 	for note: String in _rounding_notes + story.rounding_notes:
 		_file.store_line("#   " + note)

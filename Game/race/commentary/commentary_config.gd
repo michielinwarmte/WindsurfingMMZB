@@ -34,10 +34,12 @@ extends Resource
 ## A quiet moment of the same kind is not taken again within these seconds.
 @export var quiet_again_s: Dictionary[String, float] = {
 	"identify": 5.0, "speed": 14.0, "leader": 22.0, "rundown": 70.0, "filler": 25.0, "camera": 35.0, "unsure": 45.0,
+	"tactics": 20.0, "tension": 25.0, "form": 45.0, "conditions": 60.0,
 }
 ## How often each quiet moment is chosen when he has nothing new to say (weights, not shares).
 @export var quiet_weight: Dictionary[String, float] = {
 	"identify": 3.0, "speed": 2.5, "leader": 2.0, "rundown": 1.5, "filler": 0.6, "camera": 0.7, "unsure": 0.7,
+	"tactics": 1.5, "tension": 2.5, "form": 1.2, "conditions": 0.8,
 }
 
 @export_group("What matters most")
@@ -49,7 +51,7 @@ extends Resource
 	"last_leg": 5.5, "gybe_good": 5.5, "overtake": 5.0, "start_good": 5.0, "start_bad": 5.0,
 	"fight": 4.5, "after_race": 4.5, "chase": 4.0, "mark_approach": 4.0, "gybe_safe": 3.5, "pre_start": 3.0,
 	"trouble": 5.5, "rundown": 2.5, "leader": 2.0, "speed": 2.0, "identify": 2.0, "unsure": 1.0, "camera": 1.0,
-	"filler": 1.0, "wow": 1.0, "oh_no": 1.0,
+	"filler": 1.0, "wow": 1.0, "oh_no": 1.0, "tension": 3.0, "tactics": 2.0, "form": 2.0, "conditions": 1.5,
 }
 @export var level_bonus: float = 1.0
 ## A moment about the board on the screen counts this much more; one about a board at the back (from
@@ -149,6 +151,37 @@ extends Resource
 @export var trouble_window_s: float = 15.0
 @export var trouble_again_s: float = 30.0
 
+@export_group("The race story: the small talk")
+## Tactics: in dirty wind when the other sails' shadows take at least dirty_air_share of its wind (the
+## race's own threshold: about half a full shadow, Skipper's dirty_air_share and the race tool's
+## DIRTY_FACTOR, PH15); to windward or to leeward of the board next to it in the order within
+## tactics_near_m when at least tactics_side_m up or down the wind from it; else of its straight line to
+## the mark when at least tactics_line_m off it.
+@export var dirty_air_share: float = 0.0375
+@export var tactics_near_m: float = 25.0
+@export var tactics_side_m: float = 4.0
+@export var tactics_line_m: float = 25.0
+## Tension: a place that matters (the lead, the last place on the podium) on its last tension_legs legs,
+## the board behind within tension_s of it.
+@export var tension_places: PackedInt32Array = [1, 3]
+@export var tension_legs: int = 2
+@export var tension_s: float = 3.0
+## Form: up form_places places or more within form_window_s, or leading for form_lead_s.
+@export var form_places: int = 2
+@export var form_window_s: float = 60.0
+@export var form_lead_s: float = 60.0
+## The day (conditions and the needs): the wind's mean and the sea's height are smoothed over
+## day_smooth_s of the race. The `wind_strong` need holds from wind_strong_kt (the mean true wind at
+## 10 m), `wind_light` up to wind_light_kt; `choppy` from choppy_hs_m of significant wave height (m),
+## `flat` up to flat_hs_m. The game's own numbers: the boards plane from about 10 kt and the matrix
+## sails 12, 18 and 24 kt; the open water's waves are a fixed set of about 0.2 m, the lake's grow with
+## the wind over its 3 km (PHYSICS_SPEC 9.17: about 0.17 m at 12 kt, 0.23 m at 16 kt, 0.34 m at 24 kt).
+@export var day_smooth_s: float = 20.0
+@export var wind_strong_kt: float = 22.0
+@export var wind_light_kt: float = 13.0
+@export var choppy_hs_m: float = 0.3
+@export var flat_hs_m: float = 0.12
+
 @export_group("The race story: the marks")
 ## A board of the front this near its next mark or gate is coming up to it (mark_approach), metres.
 @export var mark_approach_m: float = 70.0
@@ -163,12 +196,15 @@ extends Resource
 ## Judged good: kept at least good_kept of its speed, off the plane at most good_off_plane_s, within
 ## tight_m of the mark. Judged bad: kept less than bad_kept, or off the plane more than
 ## bad_off_plane_s, or wider than wide_m, or a fall. Safe otherwise.
-@export var good_kept: float = 0.8
-@export var good_off_plane_s: float = 0.3
-@export var tight_m: float = 12.0
+## First set from the six gybes at the last mark of a T2 slalom at 18 kt (the transcript's list of
+## roundings, 27 November 2026): the AI kept 46 to 68 % of its speed, was 0.5 to 1.7 s off the plane
+## and 4 to 6 m from the mark; these numbers make the best of them good and the two worst bad.
+@export var good_kept: float = 0.65
+@export var good_off_plane_s: float = 0.6
+@export var tight_m: float = 8.0
 @export var bad_kept: float = 0.5
-@export var bad_off_plane_s: float = 2.0
-@export var wide_m: float = 25.0
+@export var bad_off_plane_s: float = 1.6
+@export var wide_m: float = 20.0
 
 @export_group("The race story: the finish")
 ## A photo finish: two boards next to each other in the order, both within photo_m of the finish and

@@ -7,7 +7,12 @@ extends RefCounted
 ## fight), the front coming up to a mark, the gybe at a mark judged good, safe or bad, a fall, trouble
 ## without a fall (off the plane for long while the fleet planes, or places lost quickly), a near
 ## miss, airtime, the leader's last leg, a photo finish, the winner, the places, and the verdict after
-## the race. (His reactions, wow and oh_no, are the director's: they come with a big moment.) Between them quiet() offers the small talk that fills the time (who is on the screen, how
+## the race. (His reactions, wow and oh_no, are the director's: they come with a big moment.) The
+## small talk also has the line a board takes (tactics: to windward or to leeward of the board beside
+## it or of its straight line to the mark, in dirty wind), a race not yet decided late on (tension), a
+## board on a run of places or long in the lead (form), and the day's wind and water (conditions; the
+## story measures the wind's mean and the sea's wave height for the `wind_strong`, `wind_light`,
+## `choppy` and `flat` needs). Between them quiet() offers the small talk that fills the time (who is on the screen, how
 ## fast, who leads, a rundown of the order, a filler, the camera, not sure who it is).
 ##
 ## A plain class with no nodes and the time passed in (the race clock of each look), so the tests can
@@ -18,8 +23,10 @@ extends RefCounted
 ## rounding_after_s after the board has rounded it (its step done): the speed it went in with, the
 ## least speed through the turn, the time it was off the plane, how near the mark it went (its nearest
 ## distance to the mark, or to the nearer end of a gate) and whether it fell. A rounding counts as a
-## gybe when the sail changed sides and the wind came past gybe_twa_deg (the stern through the wind);
-## a rounding without a gybe (a bear-away at a windward mark) gets no gybe line. Good: it kept good_kept
+## gybe when the board's stern went through the wind: its wind angle changed sides beyond
+## gybe_twa_deg (from +170 to -175 degrees, say; a tack changes sides through 0). The sail's own flip
+## comes later than that in the game's gybe, often after the watch, so it is not the measure. A
+## rounding without a gybe (a bear-away at a windward mark, a head-up) gets no gybe line. Good: it kept good_kept
 ## of its speed, stayed on the plane and went in tight; bad: it lost more than half its speed, was off
 ## the plane for long, went wide, or fell (the fall is told as a fall); safe: the rest.
 
@@ -70,6 +77,18 @@ var _off_plane_since: Dictionary[int, float] = {}
 var _drops: Dictionary[int, PackedVector2Array] = {}
 ## Every rounding watched, judged or not, one line each (the transcript's list, to check the numbers).
 var rounding_notes: PackedStringArray = PackedStringArray()
+## The day as measured (conditions): the wind's mean (knots), and each board's water height's mean and
+## variance over about the last day_smooth_s (m, m2), smoothed look by look; the sea's significant
+## wave height is four times the root of the boards' mean variance (m).
+var wind_mean_kt: float = NAN
+var sea_hs_m: float = NAN
+var _sea_mean_m: Dictionary[int, float] = {}
+var _sea_var_m2: Dictionary[int, float] = {}
+var _sea_s: float = 0.0
+## Form: each board's held place as it changed (race seconds, the place), and since when the leader
+## has led.
+var _place_history: Dictionary[int, PackedVector2Array] = {}
+var _led_since_s: float = 0.0
 
 
 ## A rounding being watched (see the class's doc).
@@ -83,6 +102,9 @@ class Rounding:
 	var nearest_m: float = INF
 	var side_in: int = 0
 	var widest_twa_deg: float = 0.0
+	## The wind angle at the last look, and whether the stern has gone through the wind since.
+	var last_twa_deg: float = 0.0
+	var stern_crossed: bool = false
 	var fell: bool = false
 	## When it rounded (its step done), race seconds; -1 before.
 	var rounded_s: float = -1.0
@@ -97,6 +119,7 @@ func _init(tuning: CommentaryConfig) -> void:
 ## What has happened since the last look. The first look of a race only takes note.
 func look(now: RaceLook) -> Array[RaceMoment]:
 	var moments: Array[RaceMoment] = []
+	_measure_the_day(now)
 	if now.started:
 		_watch_the_start(now, moments)
 		for index: int in now.boards.size():
@@ -134,8 +157,19 @@ func quiet(now: RaceLook, focus: int, wide: bool) -> Array[RaceMoment]:
 		if wide:
 			moments.append(_quiet("unsure", focus, now, 1))
 	moments.append(_quiet("camera", -1, now, 1))
+	moments.append(_quiet("conditions", -1, now, 3 if wind_mean_kt >= config.wind_strong_kt else 2))
 	if not now.racing or now.clock_s < config.order_from_s:
 		return moments  # the countdown and the start's shuffle: no order to talk about yet
+	if shown:
+		var line: RaceMoment = tactics_of(now, focus)
+		if line != null:
+			moments.append(line)
+		var on_form: RaceMoment = form_of(now, focus)
+		if on_form != null:
+			moments.append(on_form)
+	var close_call: RaceMoment = tension_of(now)
+	if close_call != null:
+		moments.append(close_call)
 	if shown and is_fast(now, focus):
 		moments.append(_quiet("speed", focus, now, 3 if now.boards[focus].place <= 3 else 2))
 	if not now.order.is_empty() and not now.boards[now.order[0]].finished:
@@ -144,6 +178,137 @@ func quiet(now: RaceLook, focus: int, wide: bool) -> Array[RaceMoment]:
 		moments.append(_quiet("rundown", now.order[0], now))
 	moments.append(_quiet("filler", -1, now, 1))
 	return moments
+
+
+## The line a board takes (tactics), or null when there is nothing to say about it: in another sail's
+## dirty wind (the share of its wind lost at least dirty_air_share), to windward or to leeward of the
+## board next to it in the order (within tactics_near_m of it, at least tactics_side_m up or down the
+## wind), or else of its straight line to its next mark (at least tactics_line_m).
+func tactics_of(now: RaceLook, index: int) -> RaceMoment:
+	var board: RaceLook.Board = now.boards[index]
+	if not now.is_racing(index) or board.fallen or board.next_step < 1:
+		return null
+	var moment: RaceMoment = _quiet("tactics", index, now)
+	var said: PackedStringArray = PackedStringArray()
+	if board.dirty_share >= config.dirty_air_share:
+		moment.dirty = true
+		said.append("in dirty wind (%d %% of it lost)" % roundi(board.dirty_share * 100.0))
+	var beside: int = -1
+	for other: int in [now.at_place(board.place - 1), now.at_place(board.place + 1)]:
+		if other < 0 or not now.is_racing(other) or now.boards[other].fallen:
+			continue
+		var apart_m: float = board.position.distance_to(now.boards[other].position)
+		if apart_m <= config.tactics_near_m and (beside < 0 or apart_m < board.position.distance_to(now.boards[beside].position)):
+			beside = other
+	if beside >= 0:
+		var up_m: float = now.windward_of_m(index, now.boards[beside].position)
+		if absf(up_m) >= config.tactics_side_m:
+			moment.windward = 1 if up_m > 0.0 else -1
+			moment.board2 = beside
+			said.append("%.0f m to %s of %s" % [absf(up_m), "windward" if up_m > 0.0 else "leeward", now.name_of(beside)])
+	if moment.windward == 0:
+		var line_m: float = now.line_offset_m(index)
+		if absf(line_m) >= config.tactics_line_m:
+			moment.windward = 1 if line_m > 0.0 else -1
+			said.append("%.0f m %s its straight line to the mark" % [absf(line_m), "above" if line_m > 0.0 else "below"])
+	if said.is_empty():
+		return null
+	moment.note = ", ".join(said)
+	return moment
+
+
+## A race not yet decided late on (tension), or null: a place that matters (tension_places: the lead,
+## the last place on the podium) on its last tension_legs legs, the board behind within tension_s of it
+## (the gap on the water over the chaser's speed).
+func tension_of(now: RaceLook) -> RaceMoment:
+	for place: int in config.tension_places:
+		var holder: int = now.at_place(place)
+		var chaser: int = now.at_place(place + 1)
+		if holder < 0 or chaser < 0 or not now.is_racing(holder) or not now.is_racing(chaser):
+			continue
+		if now.boards[holder].next_step < now.step_count() - config.tension_legs:
+			continue
+		var gap_m: float = now.boards[holder].position.distance_to(now.boards[chaser].position)
+		var gap_s: float = gap_m / maxf(now.boards[chaser].speed_ms, 3.0)
+		if gap_s > config.tension_s:
+			continue
+		var moment: RaceMoment = _quiet("tension", holder, now, 3)
+		moment.board2 = chaser
+		moment.place = place
+		moment.close = gap_m <= config.close_m
+		moment.note = "%s %.1f s ahead of %s for %s, %d legs to go" % [now.name_of(holder), gap_s, now.name_of(chaser),
+			CommentaryWords.place_word(place), now.step_count() - now.boards[holder].next_step]
+		return moment
+	return null
+
+
+## A board in form, or null: leading for form_lead_s or more, or up form_places places or more over
+## the last form_window_s (its held places).
+func form_of(now: RaceLook, index: int) -> RaceMoment:
+	var board: RaceLook.Board = now.boards[index]
+	if not now.is_racing(index) or board.fallen:
+		return null
+	if board.place == 1 and _leader == index and now.clock_s - _led_since_s >= config.form_lead_s:
+		var leading: RaceMoment = _quiet("form", index, now)
+		leading.note = "leading for %.0f s" % (now.clock_s - _led_since_s)
+		return leading
+	var gained: int = held_at(index, now.clock_s - config.form_window_s) - _held_place.get(index, board.place)
+	if gained < config.form_places:
+		return null
+	var running: RaceMoment = _quiet("form", index, now)
+	running.note = "up %d places in %.0f s" % [gained, config.form_window_s]
+	return running
+
+
+## The place a board held at a race time (the earliest known before its first change).
+func held_at(index: int, at_s: float) -> int:
+	var history: PackedVector2Array = _place_history.get(index, PackedVector2Array())
+	if history.is_empty():
+		return _held_place.get(index, 0)
+	var held: int = int(history[0].y)
+	for change: Vector2 in history:
+		if change.x <= at_s:
+			held = int(change.y)
+	return held
+
+
+## A board's place held from now (noted in its history when it changes).
+func _hold(index: int, place: int, at_s: float) -> void:
+	if _held_place.get(index, -1) == place:
+		return
+	_held_place[index] = place
+	if not _place_history.has(index):
+		_place_history[index] = PackedVector2Array()
+	_place_history[index].append(Vector2(at_s, place))
+
+
+## The day's wind and water, measured look by look: the wind's mean over the fleet (smoothed over
+## day_smooth_s), and the sea's significant wave height from the water's height under each board
+## (Hs = 4 x the standard deviation of the surface's height, the usual measure), its mean and variance
+## smoothed over the same time. Written into the look for the needs.
+func _measure_the_day(now: RaceLook) -> void:
+	var dt: float = clampf(now.clock_s - _last.clock_s, 0.0, 1.0) if _last != null else 0.0
+	var blend: float = clampf(dt / config.day_smooth_s, 0.0, 1.0)
+	if not now.order.is_empty():
+		wind_mean_kt = now.wind_kt if is_nan(wind_mean_kt) else lerpf(wind_mean_kt, now.wind_kt, blend)
+	var variances: float = 0.0
+	var counted: int = 0
+	for index: int in now.order:
+		var height_m: float = now.boards[index].water_height_m
+		if not _sea_mean_m.has(index):
+			_sea_mean_m[index] = height_m
+			_sea_var_m2[index] = 0.0
+			continue
+		_sea_mean_m[index] = lerpf(_sea_mean_m[index], height_m, blend)
+		var off_m: float = height_m - _sea_mean_m[index]
+		_sea_var_m2[index] = lerpf(_sea_var_m2[index], off_m * off_m, blend)
+		variances += _sea_var_m2[index]
+		counted += 1
+	_sea_s += dt
+	if counted > 0 and _sea_s >= config.day_smooth_s * 0.5:
+		sea_hs_m = 4.0 * sqrt(variances / counted)
+	now.wind_mean_kt = wind_mean_kt
+	now.sea_hs_m = sea_hs_m
 
 
 ## A board worth calling fast: planing at fast_share of the fleet's median planing speed or more, or it
@@ -256,7 +421,7 @@ func _watch_the_order(now: RaceLook, moments: Array[RaceMoment]) -> void:
 			_seen_place[index] = place
 			_seen_since[index] = now.clock_s
 		if not _held_place.has(index) or not telling:
-			_held_place[index] = place
+			_hold(index, place, now.clock_s)
 			continue
 		if now.clock_s - _seen_since[index] >= config.order_hold_s and _held_place[index] != place:
 			if place < _held_place[index]:
@@ -264,7 +429,7 @@ func _watch_the_order(now: RaceLook, moments: Array[RaceMoment]) -> void:
 				_gained_at[index] = now.clock_s
 			else:
 				_note_places_lost(now, index, _held_place[index], place, moments)
-			_held_place[index] = place
+			_hold(index, place, now.clock_s)
 	for index: int in moved_up:
 		var place: int = now.boards[index].place
 		if place == 1 or now.boards[index].finished:
@@ -291,6 +456,7 @@ func _watch_the_lead(now: RaceLook, telling: bool, moments: Array[RaceMoment]) -
 		return
 	var old: int = _leader
 	_leader = first
+	_led_since_s = now.clock_s
 	if not telling or old < 0 or now.boards[first].finished:
 		return
 	var moment: RaceMoment = RaceMoment.make("lead_change", first, 4 if now.on_last_leg(first) else 3, now.clock_s)
@@ -434,6 +600,7 @@ func _watch_a_rounding(now: RaceLook, index: int, moments: Array[RaceMoment]) ->
 			rounding.nearest_m = now.distance_to_mark_m(index, board.next_step)
 			rounding.side_in = board.sail_side
 			rounding.widest_twa_deg = absf(board.twa_deg)
+			rounding.last_twa_deg = board.twa_deg
 			_roundings[index] = rounding
 		return
 	var dt: float = now.clock_s - _last.clock_s if _last != null else 0.0
@@ -442,6 +609,9 @@ func _watch_a_rounding(now: RaceLook, index: int, moments: Array[RaceMoment]) ->
 		rounding.off_plane_s += dt
 	rounding.nearest_m = minf(rounding.nearest_m, now.distance_to_mark_m(index, rounding.step))
 	rounding.widest_twa_deg = maxf(rounding.widest_twa_deg, absf(board.twa_deg))
+	if absf(board.twa_deg) >= config.gybe_twa_deg and absf(rounding.last_twa_deg) >= config.gybe_twa_deg and signf(board.twa_deg) != signf(rounding.last_twa_deg):
+		rounding.stern_crossed = true
+	rounding.last_twa_deg = board.twa_deg
 	rounding.fell = rounding.fell or board.fallen
 	if rounding.flipped_s < 0.0 and board.sail_side != rounding.side_in:
 		rounding.flipped_s = now.clock_s
@@ -449,11 +619,12 @@ func _watch_a_rounding(now: RaceLook, index: int, moments: Array[RaceMoment]) ->
 		rounding.rounded_s = now.clock_s
 	if rounding.rounded_s >= 0.0 and now.clock_s - rounding.rounded_s >= config.rounding_after_s:
 		_roundings.erase(index)
-		var judged: RaceMoment = judge_the_gybe(rounding, board.sail_side, config)
-		rounding_notes.append("%s  %s at mark %d: %s; the sail %s, the widest wind angle %.0f deg%s -> %s" % [
-			clock_text(now.clock_s), now.name_of(index), now.mark_number(rounding.step), rounding_text(rounding),
-			"changed sides %.1f s %s the rounding" % [absf(rounding.flipped_s - rounding.rounded_s), "before" if rounding.flipped_s < rounding.rounded_s else "after"] if rounding.flipped_s >= 0.0 else "stayed on its side",
-			rounding.widest_twa_deg, ", fell" if rounding.fell else "", judged.moment if judged != null else "no gybe line"])
+		var judged: RaceMoment = judge_the_gybe(rounding, config)
+		rounding_notes.append("%s  %s at mark %d: %s; the widest wind angle %.0f deg, the stern %s, the sail %s%s -> %s" % [
+			clock_text(now.clock_s), now.name_of(index), now.mark_number(rounding.step), rounding_text(rounding), rounding.widest_twa_deg,
+			"through the wind" if rounding.stern_crossed else "not through the wind",
+			"across %.1f s %s the rounding" % [absf(rounding.flipped_s - rounding.rounded_s), "before" if rounding.flipped_s < rounding.rounded_s else "after"] if rounding.flipped_s >= 0.0 else "not across yet",
+			", fell" if rounding.fell else "", judged.moment if judged != null else "no gybe line"])
 		if judged != null:
 			judged.board = index
 			judged.race_s = now.clock_s
@@ -469,10 +640,9 @@ func _watch_a_rounding(now: RaceLook, index: int, moments: Array[RaceMoment]) ->
 
 
 ## A rounding judged (see the class's doc): gybe_good, gybe_safe or gybe_bad, or null when the board
-## did not gybe there or fell (the fall is told as a fall). `side_out`: the sail's side after it.
-static func judge_the_gybe(rounding: Rounding, side_out: int, tuning: CommentaryConfig) -> RaceMoment:
-	var gybed: bool = side_out != rounding.side_in and rounding.widest_twa_deg >= tuning.gybe_twa_deg
-	if not gybed or rounding.fell:
+## did not gybe there (its stern never went through the wind) or fell (the fall is told as a fall).
+static func judge_the_gybe(rounding: Rounding, tuning: CommentaryConfig) -> RaceMoment:
+	if not rounding.stern_crossed or rounding.fell:
 		return null
 	var kept: float = rounding.least_ms / maxf(rounding.speed_in_ms, 0.1)
 	var what: String = "gybe_safe"

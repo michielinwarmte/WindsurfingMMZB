@@ -27,6 +27,9 @@
   "finish_win": {
    "lines": 2
   },
+  "form": {
+   "lines": 1
+  },
   "gybe_bad": {
    "lines": 1
   },
@@ -71,6 +74,9 @@
   },
   "start_gun": {
    "lines": 1
+  },
+  "tactics": {
+   "lines": 2
   },
   "unsure": {
    "lines": 3
@@ -1049,6 +1055,46 @@
    "count": 1,
    "needs": [],
    "src": "2FJY7lpVYDA@249.3"
+  },
+  {
+   "id": "S0074",
+   "moment": "tactics",
+   "text": "He's got a lower line.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.2,
+   "count": 1,
+   "needs": [],
+   "src": "2FJY7lpVYDA@318.6"
+  },
+  {
+   "id": "S0075",
+   "moment": "tactics",
+   "text": "Pushing hard above {rider2} though.",
+   "slots": [
+    "rider2"
+   ],
+   "level": 2,
+   "seconds": 1.9,
+   "count": 1,
+   "needs": [
+    "close",
+    "pair"
+   ],
+   "src": "2FJY7lpVYDA@242.1"
+  },
+  {
+   "id": "S0076",
+   "moment": "form",
+   "text": "And again, he loves it. He's having fun.",
+   "slots": [],
+   "level": 2,
+   "seconds": 3.6,
+   "count": 1,
+   "needs": [
+    "leader"
+   ],
+   "src": "2FJY7lpVYDA@562.7"
   }
  ]
 }
