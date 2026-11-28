@@ -6,7 +6,8 @@ Reads the "EVENT elimination ..." lines EventBroadcast writes for every heat (ea
 its finish time or where it was, its falls and its split times: the start line, every mark, the
 finish) and prints, over all heats: the winner's time, how many were home when the heat was decided,
 when the boards crossed the start line, how long each leg took (the fastest board and the middle
-one), how many boards lost more than half a minute on a leg (a missed mark), and how many gave up.
+one), how many boards lost more than half a minute on a leg (a missed mark), how many gave up, and
+the first round by the quarter of the seeding (who goes through, who starts when).
 The stream's leader, for comparison: legs of 32, 33, 38, 38 and 40 s, home after about 187 s.
 """
 import re
@@ -69,6 +70,25 @@ def main():
         name = "start to mark 1" if leg == 0 else ("mark 4 to finish" if leg == 4 else "mark %d to mark %d" % (leg, leg + 1))
         print("%-19s %8.0f s %9.0f s %15d s      %3d of %d; %d more did not complete it"
               % (name, min(times), middle, STREAM_LEGS[leg], slow, len(times), stuck))
+
+    # By the quarter of the seeding (the first round's heats: every heat has two of each quarter).
+    first_round = [b for h in heats if "First round" in h["name"] for b in h["boards"]]
+    if first_round:
+        print()
+        print("the first round by the seeding's quarter:")
+        print("seeds      boards  through  over the line (middle)  leg 1 (middle)  gave up  falls a board")
+        for low in (1, 17, 33, 49):
+            group = [b for b in first_round if low <= b["seed"] < low + 16]
+            if not group:
+                continue
+            starts_here = [b["splits"][0] for b in group if b["splits"]]
+            leg_one = [b["splits"][1] - b["splits"][0] for b in group if len(b["splits"]) > 1]
+            print("%2d to %2d  %6d  %5.0f %%  %18.0f s  %12.0f s  %5.0f %%  %10.2f" % (
+                low, low + 15, len(group), 100.0 * sum(1 for b in group if b["place"] <= 4) / len(group),
+                statistics.median(starts_here) if starts_here else float("nan"),
+                statistics.median(leg_one) if leg_one else float("nan"),
+                100.0 * sum(1 for b in group if b["gave_up"]) / len(group),
+                sum(b["falls"] for b in group) / len(group)))
 
 
 if __name__ == "__main__":

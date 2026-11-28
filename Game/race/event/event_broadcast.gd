@@ -355,7 +355,15 @@ func _order_now() -> Array[EventRoster.Sailor]:
 
 ## The next heat's eight sailors onto the boards, and the countdown.
 func _start_heat() -> void:
+	# The heat's best of the seeding on the row's last spot, beside the committee boat, the last of
+	# it on the far spot: the race puts its boards along the start row in their order, the first
+	# farthest from the line (137 m against 61 m at Sotavento), and with the seeding's order on
+	# the boards the favourites crossed the line 12 s after the gun and the tail-enders 2 s after
+	# it (the middle of 80 boards each, 28 November 2026): the first quarter of the seeding went
+	# through from 35 % of its heats, the last quarter from 72 %. Sailors choose their own spot on
+	# a real line; the best start by the boat.
 	_on_boards = week.sailors_now()
+	_on_boards.reverse()
 	_decided_s = -1.0
 	_win_said = false
 	_out_said.clear()
@@ -686,7 +694,7 @@ func card_text() -> String:
 				mark = "   through" if place < EliminationLadder.THROUGH else "   out"
 			lines.append("%d  %s%s" % [place + 1, order[place].name, mark])
 	else:
-		for sailor: EventRoster.Sailor in _on_boards:
+		for sailor: EventRoster.Sailor in week.sailors_now():
 			lines.append("%s  %s" % [sailor.sail_number, sailor.name])
 	# The key's hint only on the full screen (the TV screen shows what a viewer needs).
 	if watch == null or watch.screen == WatchMode.Screen.FULL:

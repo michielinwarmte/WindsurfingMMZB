@@ -28,8 +28,13 @@ What is not right yet
   infinity in one step. Twice that hung a heat. The race now puts such a board back at its start
   spot and retires it (one warning in the log), so the broadcast goes on. Why the physics does
   it is not known: a question for Michiel.
-- The ranking decides little yet: the provisional sailors keep their characters' daring, and a
-  daring tail-ender often wins his heat. The roster is yours to make.
+- The ranking decides little yet. A heat's best seeds start from the spots beside the start boat
+  (set at 04:15: before, the best seed had the row's far spot and crossed the line 12 s after the
+  gun, the last seed 2 s after it, and all eight finalists of a test elimination came from the
+  worse half of the ranking). Now the first quarter of the ranking goes through from 58 % of its
+  heats and the last quarter from 38 % (13 test heats), but the favourites, first at mark 1, are
+  also the ones who most often lose it there (31 % of them). The provisional sailors keep their
+  characters' daring, and a daring tail-ender still wins heats. The roster is yours to make.
 - The wind is 30 knots and steady in every heat. The real week had 30, 30, 35, 40 and 28 knots
   (the commentator's words, in the schedule file); the AI has never been tried above 30. In 25
   knots the heats were worse than in 30 (two test heats), so less wind is no way round the marks.
