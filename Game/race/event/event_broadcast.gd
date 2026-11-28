@@ -43,6 +43,11 @@ const COUNTDOWN_S: float = 60.0
 ## (a final's longer: its winner, the elimination's result and the standings are said).
 const HOLD_S: float = 8.0
 const FINAL_HOLD_S: float = 14.0
+## A heat that is not decided this long after its gun is closed with the order on the water, seconds:
+## a heat takes about 200 to 250 s, and the broadcast must never wait for one that cannot end (seen
+## on 28 November 2026: a board's physics broke and the heat hung; RaceRunner mends such a board now,
+## this is the second net).
+const HEAT_LIMIT_S: float = 480.0
 ## The standings stay on the screen this long at the start of an elimination's first heat (the
 ## countdown's first seconds), seconds of the race.
 const STANDINGS_SHOWN_S: float = 15.0
@@ -232,7 +237,10 @@ func _process(delta: float) -> void:
 		# place counts), or when the race closes its finish.
 		var needed: int = race.board_count() if final else EliminationLadder.THROUGH
 		var done: int = _finished_count(race) + (_retired_count(race) if final else 0)
-		if done >= needed or race.phase() == RaceSim.Phase.FINISHED:
+		var too_long: bool = race.clock_s() >= HEAT_LIMIT_S
+		if too_long:
+			push_warning("The event's heat was not decided %.0f s after its gun: closed with the order on the water." % HEAT_LIMIT_S)
+		if done >= needed or race.phase() == RaceSim.Phase.FINISHED or too_long:
 			_decided_s = 0.0
 			_update_card()
 			_say_the_result()

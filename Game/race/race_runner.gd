@@ -530,6 +530,7 @@ func _physics_process(delta: float) -> void:
 		for i: int in _boards.size():
 			_step_board(i, delta, stopped, controls_there)
 	_pose_boards(player_stopped, steps)
+	_mend_the_broken_boards()
 	var t1: int = Time.get_ticks_usec()
 	_keep_the_parked_boards_clock(stopped, delta)
 	_read_the_wind_clock(stopped, delta)
@@ -697,6 +698,32 @@ func shadow_deficit(node: WindsurferNode) -> float:
 	var point: Vector3 = Vector3(position.x, 3.0, position.z)
 	var clear: Vector3 = -node.sim.wind.from_direction() * node.sim.wind.speed_at_height(3.0)
 	return 1.0 - _shadows[i].factor_at(point, clear)
+
+
+## An AI board whose physics has left the numbers (a place, a speed or an attitude that is not a
+## finite number, or a speed no board has) is put back at its start spot, and in a race it is retired.
+## Seen on 28 November 2026 at Sotavento in 30 knots, in 2 of about 110 heats: one board's turning
+## speed went to infinity ("The axis Vector3 (0, 0, 0) must be normalized", SimRigidBody.integrate()),
+## its numbers reached the pictures (thousands of errors a second) and the heat never ended. This
+## only keeps the race alive: WHY the physics does it is not known (a question for Michiel; it came
+## in the two trials that switched the skippers' early turn at the marks off, and in none of the
+## heats with it on). `broken_boards` counts them; each is written to the log.
+const BROKEN_SPEED_MS: float = 150.0
+var broken_boards: int = 0
+
+func _mend_the_broken_boards() -> void:
+	for i: int in opponents.size():
+		var node: WindsurferNode = opponents[i]
+		var body: SimRigidBody = node.sim.body
+		if body.position.is_finite() and body.velocity.is_finite() and body.angular_velocity.is_finite() 				and body.basis.is_finite() and body.velocity.length() < BROKEN_SPEED_MS:
+			continue
+		broken_boards += 1
+		var who: String = _skippers[i].board_name() if i < _skippers.size() else node.name
+		push_warning("The physics of %s's board left the numbers at race time %.1f s: put back at its start spot%s." % [
+			who, race.clock_s() if race != null else 0.0, " and retired from the race" if race != null else ""])
+		if race != null:
+			race.retire(i + _first_ai)
+		node.reset()
 
 
 ## Board i's physics (a worker task's element, or the loop's); not for a stopped board.
