@@ -102,6 +102,11 @@ var _standings_until_s: float = -INF
 var _win_said: bool = false
 ## The sailors of the heat on the water already named as out (their ids).
 var _out_said: PackedInt32Array = PackedInt32Array()
+## --event_mark_margin=<m>: every sailor passes a mark at least this far out, metres (0: his own
+## margin, from his daring and his gybing skill: 5 to 11 m). A trial of 28 November 2026: at
+## Sotavento's 17 to 19 m/s the tight rounders missed marks and the better half of the ranking went
+## through less often than the worse half.
+var mark_margin_m: float = 0.0
 ## Giving up (GIVE_UP_BEHIND_S; 0: off) and the race clock of the next look.
 var give_up_behind_s: float = GIVE_UP_BEHIND_S
 var _give_up_look_s: float = -INF
@@ -123,6 +128,8 @@ func setup(race_runner: RaceRunner, hud_layer: Hud, schedule: String, watch_mode
 			skip = maxi(arg.get_slice("=", 1).to_int(), 0)
 		if arg == "--event_lines=1":
 			log_lines = true
+		if arg.begins_with("--event_mark_margin="):
+			mark_margin_m = maxf(arg.get_slice("=", 1).to_float(), 0.0)
 		if arg == "--event_give_up=0":
 			give_up_behind_s = 0.0
 		if arg.begins_with("--event_save="):
@@ -354,6 +361,12 @@ func _start_heat() -> void:
 	_standings_until_s = (-countdown_s + STANDINGS_SHOWN_S) if week.next_heat() == 1 and not week.results.is_empty() else -INF
 	runner.change_skippers(skippers)
 	runner.restart()
+	if mark_margin_m > 0.0:
+		# After the restart: it draws each skipper's numbers from his persona for this race.
+		for node: WindsurferNode in runner.opponents:
+			var skipper: Skipper = node.skipper as Skipper
+			if skipper != null and skipper.config != null:
+				skipper.config.mark_margin_m = maxf(skipper.config.mark_margin_m, mark_margin_m)
 	if runner.hud != null:
 		# The race's own results card names the heat.
 		runner.hud.results_heading = "%s  ·  Elimination %d" % [EliminationLadder.heat_name(week.next_heat()), week.elimination]
