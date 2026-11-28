@@ -36,5 +36,10 @@ What is not right yet
   lead's reading of the stream, for Max to confirm.
 - A sailor over the line early goes back and starts again; in the real event he is out of the heat.
 - The voice's licence allows play tests, not a public release (its base voice is research-only).
+- The voice keeps every line it has spoken on the disk, so the next time it is there at once:
+  about 2 MB a heat at first, less as the names come round again (44 MB after the night's
+  tests), in %APPDATA%\Godotpp_userdata\Windsurfing Simulator\commentary_voice. Nothing
+  clears it. The lead's test weeks are there too (event_week_test_*: small files, not deleted:
+  outside the source folder).
 - Not checked by a person: how the voice sounds, how loud it is against the wind and the water, and
   how the names are said.
