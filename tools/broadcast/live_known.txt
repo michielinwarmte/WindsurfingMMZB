@@ -20,6 +20,10 @@ What is not right yet
 - Because of that, a rule of the lead's (not the tour's): a sailor gives up his heat ("retired")
   when the heat's fourth board rounded the mark he is still sailing for more than 45 s ago.
   Before, such a board circled its mark for minutes. Off with --event_give_up=0 in a launcher.
+- Rarely (5 times in about 90 test heats) a board's physics breaks: its turning speed goes to
+  infinity in one step. Twice that hung a heat. The race now puts such a board back at its start
+  spot and retires it (one warning in the log), so the broadcast goes on. Why the physics does
+  it is not known: a question for Michiel.
 - The ranking decides little yet: the provisional sailors keep their characters' daring, and a
   daring tail-ender often wins his heat. The roster is Max's to make.
 - The wind is 30 knots and steady in every heat. The real week had 30, 30, 35, 40 and 28 knots
