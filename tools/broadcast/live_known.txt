@@ -7,7 +7,7 @@ What works
   the real commentator's lines (from the 27 h of streams and the eleven heat replays, judged by
   hand), and for the event's own moments 39 of his sentences and 47 lines written for the game
   (the heat called, who goes through, who is out, the elimination won, the standings).
-- Heats at 30 knots take the winner 188 to 210 s (the real leader: about 187 s). With the 60 s
+- Heats at 30 knots take the winner 188 to 216 s (the real leader: about 187 s). With the 60 s
   countdown the boards cross the line about 6 s after the gun (nine in ten within 15 s).
 - Checked: 1,245 of 1,245 unit tests; about 80 test heats without a window (the last ten in a
   row with this folder's own game: no error, every one of 885 commentary lines spoken);
