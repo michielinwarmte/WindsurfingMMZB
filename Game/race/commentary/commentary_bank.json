@@ -67,13 +67,13 @@
    "lines": 22
   },
   "fall": {
-   "lines": 17
+   "lines": 43
   },
   "near_miss": {
    "lines": 4
   },
   "trouble": {
-   "lines": 18
+   "lines": 30
   },
   "wow": {
    "lines": 25
@@ -7489,6 +7489,30 @@
    "src": "Z9B7WTnsJhA@3452.7"
   },
   {
+   "id": "LE42BEDE",
+   "moment": "fall",
+   "text": "And he's gone down.",
+   "slots": [],
+   "level": 4,
+   "seconds": 0.8,
+   "count": 1,
+   "needs": [],
+   "src": "7F2VH96g3oc@20474.3"
+  },
+  {
+   "id": "L5DDD8D1",
+   "moment": "fall",
+   "text": "And then {rider} goes down.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 1.5,
+   "count": 1,
+   "needs": [],
+   "src": "Z9B7WTnsJhA@18333.8"
+  },
+  {
    "id": "LD2D1EAC",
    "moment": "fall",
    "text": "And {rider} went down under pressure from {rider2}.",
@@ -7505,6 +7529,85 @@
    "src": "2FJY7lpVYDA@454.8"
   },
   {
+   "id": "L3161203",
+   "moment": "fall",
+   "text": "And {rider}'s gone down on the reach.",
+   "slots": [
+    "rider"
+   ],
+   "level": 4,
+   "seconds": 1.4,
+   "count": 1,
+   "needs": [],
+   "src": "7F2VH96g3oc@7785.5"
+  },
+  {
+   "id": "LD0D3443",
+   "moment": "fall",
+   "text": "Back of the board gets kicked up and the nose goes down.",
+   "slots": [],
+   "level": 3,
+   "seconds": 2.3,
+   "count": 1,
+   "needs": [],
+   "src": "qBUdFkAPul4@4813.3"
+  },
+  {
+   "id": "L24B2F60",
+   "moment": "fall",
+   "text": "Big catapult.",
+   "slots": [],
+   "level": 2,
+   "seconds": 0.7,
+   "count": 1,
+   "needs": [],
+   "src": "EHg3Mo8zXxY@17400.0"
+  },
+  {
+   "id": "LEB16B13",
+   "moment": "fall",
+   "text": "Big crash down here.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.3,
+   "count": 1,
+   "needs": [],
+   "src": "qBUdFkAPul4@11123.9"
+  },
+  {
+   "id": "LA85D144",
+   "moment": "fall",
+   "text": "Goes down.",
+   "slots": [],
+   "level": 4,
+   "seconds": 0.9,
+   "count": 1,
+   "needs": [],
+   "src": "Z9B7WTnsJhA@2136.6"
+  },
+  {
+   "id": "L0BFE77C",
+   "moment": "fall",
+   "text": "He's gone down.",
+   "slots": [],
+   "level": 3,
+   "seconds": 0.8,
+   "count": 1,
+   "needs": [],
+   "src": "Z9B7WTnsJhA@12466.7"
+  },
+  {
+   "id": "L386543F",
+   "moment": "fall",
+   "text": "He's still in the water.",
+   "slots": [],
+   "level": 4,
+   "seconds": 1.3,
+   "count": 1,
+   "needs": [],
+   "src": "HXQpY4ZMkJQ@14422.9"
+  },
+  {
    "id": "LA617E36",
    "moment": "fall",
    "text": "It looks like {rider} is down here.",
@@ -7518,6 +7621,82 @@
    "src": "2FJY7lpVYDA@51.9"
   },
   {
+   "id": "LF71C6D5",
+   "moment": "fall",
+   "text": "Oh it's a massive crash from {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 4,
+   "seconds": 2.4,
+   "count": 1,
+   "needs": [],
+   "src": "7F2VH96g3oc@20892.5"
+  },
+  {
+   "id": "L3313356",
+   "moment": "fall",
+   "text": "Oh, and it was a huge catapult for {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 2.8,
+   "count": 1,
+   "needs": [],
+   "src": "EHg3Mo8zXxY@14615.8"
+  },
+  {
+   "id": "LB0A12F3",
+   "moment": "fall",
+   "text": "Oh, it's a massive crash.",
+   "slots": [],
+   "level": 4,
+   "seconds": 1.8,
+   "count": 1,
+   "needs": [],
+   "src": "7F2VH96g3oc@17916.7"
+  },
+  {
+   "id": "L1634FC3",
+   "moment": "fall",
+   "text": "Oh, someone's gone down.",
+   "slots": [],
+   "level": 4,
+   "seconds": 1.1,
+   "count": 1,
+   "needs": [
+    "camera_wide"
+   ],
+   "src": "HXQpY4ZMkJQ@6768.9"
+  },
+  {
+   "id": "LC90E0C0",
+   "moment": "fall",
+   "text": "Oh, {rider} is gone.",
+   "slots": [
+    "rider"
+   ],
+   "level": 4,
+   "seconds": 1.5,
+   "count": 1,
+   "needs": [],
+   "src": "EHg3Mo8zXxY@14213.0"
+  },
+  {
+   "id": "L836683E",
+   "moment": "fall",
+   "text": "So {rider} in the water.",
+   "slots": [
+    "rider"
+   ],
+   "level": 4,
+   "seconds": 1.5,
+   "count": 1,
+   "needs": [],
+   "src": "qBUdFkAPul4@11552.8"
+  },
+  {
    "id": "L6590B47",
    "moment": "fall",
    "text": "Someone is in the drink.",
@@ -7527,6 +7706,101 @@
    "count": 1,
    "needs": [],
    "src": "2FJY7lpVYDA@174.8"
+  },
+  {
+   "id": "L6A6AD2D",
+   "moment": "fall",
+   "text": "Someone's gone down.",
+   "slots": [],
+   "level": 4,
+   "seconds": 0.8,
+   "count": 1,
+   "needs": [
+    "camera_wide"
+   ],
+   "src": "EHg3Mo8zXxY@3281.5"
+  },
+  {
+   "id": "L676D403",
+   "moment": "fall",
+   "text": "Someone's in the water.",
+   "slots": [],
+   "level": 4,
+   "seconds": 0.8,
+   "count": 1,
+   "needs": [
+    "camera_wide"
+   ],
+   "src": "qBUdFkAPul4@11548.9"
+  },
+  {
+   "id": "L7E1629C",
+   "moment": "fall",
+   "text": "That could be {rider} that's gone down.",
+   "slots": [
+    "rider"
+   ],
+   "level": 4,
+   "seconds": 1.7,
+   "count": 1,
+   "needs": [
+    "camera_wide"
+   ],
+   "src": "EHg3Mo8zXxY@3296.1"
+  },
+  {
+   "id": "LA3E2C5F",
+   "moment": "fall",
+   "text": "That could be {rider} who's in the water.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 1.4,
+   "count": 1,
+   "needs": [
+    "camera_wide"
+   ],
+   "src": "EHg3Mo8zXxY@3294.0"
+  },
+  {
+   "id": "LBE8B179",
+   "moment": "fall",
+   "text": "Was that {rider} that went down?",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 2.2,
+   "count": 1,
+   "needs": [
+    "camera_wide"
+   ],
+   "src": "HXQpY4ZMkJQ@3900.3"
+  },
+  {
+   "id": "L5835443",
+   "moment": "fall",
+   "text": "Well, {rider}'s gone.",
+   "slots": [
+    "rider"
+   ],
+   "level": 2,
+   "seconds": 1.3,
+   "count": 1,
+   "needs": [],
+   "src": "EHg3Mo8zXxY@4162.6"
+  },
+  {
+   "id": "L5D7D387",
+   "moment": "fall",
+   "text": "Went down.",
+   "slots": [],
+   "level": 2,
+   "seconds": 0.6,
+   "count": 1,
+   "needs": [],
+   "src": "EHg3Mo8zXxY@17399.3"
   },
   {
    "id": "L1A079CB",
@@ -7542,6 +7816,19 @@
    "src": "ANNFWjE6JuI@175.9"
   },
   {
+   "id": "LF1EB493",
+   "moment": "fall",
+   "text": "{rider} is gone.",
+   "slots": [
+    "rider"
+   ],
+   "level": 4,
+   "seconds": 1.2,
+   "count": 1,
+   "needs": [],
+   "src": "EHg3Mo8zXxY@14215.0"
+  },
+  {
    "id": "L1EC637B",
    "moment": "fall",
    "text": "{rider} is swimming.",
@@ -7553,6 +7840,45 @@
    "count": 1,
    "needs": [],
    "src": "P6iCS8-o0B8@281.4"
+  },
+  {
+   "id": "LC925330",
+   "moment": "fall",
+   "text": "{rider}'s gone over the front.",
+   "slots": [
+    "rider"
+   ],
+   "level": 4,
+   "seconds": 1.5,
+   "count": 1,
+   "needs": [],
+   "src": "7F2VH96g3oc@20983.2"
+  },
+  {
+   "id": "L48FCCC8",
+   "moment": "fall",
+   "text": "{rider}'s gone.",
+   "slots": [
+    "rider"
+   ],
+   "level": 1,
+   "seconds": 1.5,
+   "count": 1,
+   "needs": [],
+   "src": "EHg3Mo8zXxY@4198.1"
+  },
+  {
+   "id": "LF992C12",
+   "moment": "fall",
+   "text": "{rider}'s in the drink.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 1.0,
+   "count": 1,
+   "needs": [],
+   "src": "7F2VH96g3oc@22151.5"
   },
   {
    "id": "L1D9A505",
@@ -7697,6 +8023,52 @@
    "src": "P6iCS8-o0B8@255.3"
   },
   {
+   "id": "L47CCCF0",
+   "moment": "trouble",
+   "text": "A disaster for {rider}.",
+   "slots": [
+    "rider"
+   ],
+   "level": 3,
+   "seconds": 1.4,
+   "count": 1,
+   "needs": [],
+   "src": "EHg3Mo8zXxY@3346.8"
+  },
+  {
+   "id": "L0558406",
+   "moment": "trouble",
+   "text": "A spin out.",
+   "slots": [],
+   "level": 2,
+   "seconds": 0.7,
+   "count": 1,
+   "needs": [],
+   "src": "EHg3Mo8zXxY@5282.2"
+  },
+  {
+   "id": "L560B948",
+   "moment": "trouble",
+   "text": "And he came off a little bit unstuck there.",
+   "slots": [],
+   "level": 2,
+   "seconds": 2.8,
+   "count": 1,
+   "needs": [],
+   "src": "qBUdFkAPul4@12385.3"
+  },
+  {
+   "id": "L05FF48D",
+   "moment": "trouble",
+   "text": "And he's had a shocker here.",
+   "slots": [],
+   "level": 3,
+   "seconds": 1.2,
+   "count": 1,
+   "needs": [],
+   "src": "EHg3Mo8zXxY@3351.9"
+  },
+  {
    "id": "L6AEEA44",
    "moment": "trouble",
    "text": "And {rider} has had to back off here.",
@@ -7710,6 +8082,17 @@
    "src": "6Lp_1I03OHE@183.8"
   },
   {
+   "id": "L009945A",
+   "moment": "trouble",
+   "text": "But got a little stuck.",
+   "slots": [],
+   "level": 3,
+   "seconds": 1.5,
+   "count": 1,
+   "needs": [],
+   "src": "7F2VH96g3oc@6471.6"
+  },
+  {
    "id": "L250DE52",
    "moment": "trouble",
    "text": "But he slipped to the back here.",
@@ -7719,6 +8102,17 @@
    "count": 1,
    "needs": [],
    "src": "6Lp_1I03OHE@111.1"
+  },
+  {
+   "id": "L72721A4",
+   "moment": "trouble",
+   "text": "But it's definitely slowed him down.",
+   "slots": [],
+   "level": 4,
+   "seconds": 1.7,
+   "count": 1,
+   "needs": [],
+   "src": "qBUdFkAPul4@11451.2"
   },
   {
    "id": "LD8D355B",
@@ -7734,6 +8128,30 @@
    "src": "P6iCS8-o0B8@131.2"
   },
   {
+   "id": "L236435E",
+   "moment": "trouble",
+   "text": "But that's a disaster for the {national}.",
+   "slots": [
+    "national"
+   ],
+   "level": 1,
+   "seconds": 2.5,
+   "count": 1,
+   "needs": [],
+   "src": "Z9B7WTnsJhA@2694.3"
+  },
+  {
+   "id": "L13C2F45",
+   "moment": "trouble",
+   "text": "Gets a bit stuck.",
+   "slots": [],
+   "level": 4,
+   "seconds": 0.7,
+   "count": 1,
+   "needs": [],
+   "src": "qBUdFkAPul4@3776.9"
+  },
+  {
    "id": "LCA437BA",
    "moment": "trouble",
    "text": "Got hit by that chop and he's lost it.",
@@ -7747,6 +8165,17 @@
    "src": "V73vVhTTr0E@209.3"
   },
   {
+   "id": "L32E9E40",
+   "moment": "trouble",
+   "text": "Had a little moment there where he spun out.",
+   "slots": [],
+   "level": 2,
+   "seconds": 2.0,
+   "count": 1,
+   "needs": [],
+   "src": "EHg3Mo8zXxY@4944.9"
+  },
+  {
    "id": "L1826594",
    "moment": "trouble",
    "text": "He slows down.",
@@ -7756,6 +8185,28 @@
    "count": 1,
    "needs": [],
    "src": "dLbDV6jDm2s@197.3"
+  },
+  {
+   "id": "L26A6D8A",
+   "moment": "trouble",
+   "text": "He's having a shocker.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.1,
+   "count": 1,
+   "needs": [],
+   "src": "EHg3Mo8zXxY@7054.4"
+  },
+  {
+   "id": "L4E81F47",
+   "moment": "trouble",
+   "text": "He's lost it.",
+   "slots": [],
+   "level": 4,
+   "seconds": 0.9,
+   "count": 1,
+   "needs": [],
+   "src": "qBUdFkAPul4@3811.0"
   },
   {
    "id": "LDDF5020",
@@ -7783,6 +8234,19 @@
    "count": 1,
    "needs": [],
    "src": "Mt9gi7qP82Q@249.0"
+  },
+  {
+   "id": "LA611CAF",
+   "moment": "trouble",
+   "text": "Just got stuck on that swell.",
+   "slots": [],
+   "level": 2,
+   "seconds": 1.4,
+   "count": 1,
+   "needs": [
+    "choppy"
+   ],
+   "src": "Z9B7WTnsJhA@14375.7"
   },
   {
    "id": "L2029252",
