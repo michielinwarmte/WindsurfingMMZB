@@ -9,8 +9,9 @@ What works
   (the heat called, who goes through, who is out, the elimination won, the standings).
 - Heats at 30 knots take the winner 188 to 216 s (the real leader: about 187 s). With the 60 s
   countdown the boards cross the line about 6 s after the gun (nine in ten within 15 s).
-- Checked: 1,245 of 1,245 unit tests; about 80 test heats without a window (the last ten in a
-  row with this folder's own game: no error, every one of 885 commentary lines spoken);
+- Checked: 1,245 of 1,245 unit tests; about 130 test heats without a window (twenty of them in
+  a row with this folder's own game, a whole elimination and the start of the next: no error,
+  every one of 1,746 commentary lines spoken);
   pictures of a whole heat, a final and the standings looked at by the lead (1280 x 720 and
   your 3137 x 1263).
 
@@ -24,10 +25,10 @@ What is not right yet
 - Because of that, a rule of the lead's (not the tour's): a sailor gives up his heat ("retired")
   when the heat's fourth board rounded the mark he is still sailing for more than 45 s ago.
   Before, such a board circled its mark for minutes. Off with --event_give_up=0 in a launcher.
-- Now and then (7 times in about 80 test heats) a board's physics breaks: its turning speed goes to
-  infinity in one step. Twice that hung a heat. The race now puts such a board back at its start
-  spot and retires it (one warning in the log), so the broadcast goes on. Why the physics does
-  it is not known: a question for Michiel.
+- Now and then (13 times in about 130 test heats) a board's physics breaks: its turning speed
+  goes to infinity in one step. Twice that hung a heat (before the guard). The race now puts
+  such a board back at its start spot and retires it (one warning in the log), so the broadcast
+  goes on. Why the physics does it is not known: a question for Michiel.
 - The ranking decides little yet. A heat's best seeds start from the spots beside the start boat
   (set at 04:15: before, the best seed had the row's far spot and crossed the line 12 s after the
   gun, the last seed 2 s after it, and all eight finalists of a test elimination came from the
