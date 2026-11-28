@@ -252,10 +252,12 @@ extends Resource
 @export var voice_db_by_level: PackedFloat32Array = [-2.0, 0.0, 1.5, 3.0]
 ## How long a line's sound may be waited for: this share of his seconds, at least voice_wait_min_s and
 ## at most voice_wait_max_s. Later, the line stays silent (its subtitle shows): too late is dropped,
-## not said late.
-@export var voice_wait_share: float = 0.3
-@export var voice_wait_min_s: float = 0.3
-@export var voice_wait_max_s: float = 0.8
+## not said late. (0.3, 0.3 and 0.8 s at first; in the play folder's game on a busy PC, 28 November
+## 2026, 6 of 37 lines stayed silent with those: a new line with a sailor's name took 0.5 to 0.8 s
+## to make and some longer. A line up to a second and a half late beats a silent one.)
+@export var voice_wait_share: float = 0.5
+@export var voice_wait_min_s: float = 0.6
+@export var voice_wait_max_s: float = 1.5
 ## A line cut short (or followed at once by the next) fades out in this many seconds: no click.
 @export var voice_fade_s: float = 0.06
 ## The bank's lines without a slot made ahead in the background, the most said first, at most this
