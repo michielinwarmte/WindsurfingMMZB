@@ -30,7 +30,9 @@ extends Node
 ## a test can begin at a final or at the next elimination); --event_lines=1 writes every line the
 ## commentator says to the log; --event_save=<name> keeps the week in a save of its own (a test
 ## must not touch the week Max is watching: the game and its tests share one folder of saves);
-## --event_give_up=0 lets a hopelessly late board sail on (see GIVE_UP_BEHIND_S).
+## --event_give_up=0 lets a hopelessly late board sail on (see GIVE_UP_BEHIND_S);
+## --event_mark_margin=<m> another least distance from the marks than MARK_MARGIN_M (0: each
+## sailor's own).
 
 ## The countdown before every heat, seconds: the game's own minute. The AI's slalom start is a timed
 ## run (away from the line, a gybe, back in at full speed) that needs it: with 60 s the eight came to
@@ -102,11 +104,15 @@ var _standings_until_s: float = -INF
 var _win_said: bool = false
 ## The sailors of the heat on the water already named as out (their ids).
 var _out_said: PackedInt32Array = PackedInt32Array()
-## --event_mark_margin=<m>: every sailor passes a mark at least this far out, metres (0: his own
-## margin, from his daring and his gybing skill: 5 to 11 m). A trial of 28 November 2026: at
-## Sotavento's 17 to 19 m/s the tight rounders missed marks and the better half of the ranking went
-## through less often than the worse half.
-var mark_margin_m: float = 0.0
+## Every event sailor passes a mark at least this far out, metres (--event_mark_margin=<m>; 0: his
+## own margin, from his daring and his gybing skill: 5 to 11 m). Measured at Sotavento in 30 kt
+## on 28 November 2026: with their own margins 12 of 94 legs to mark 3 lost more than half a minute
+## (the mark missed at 17 to 19 m/s) and the winners needed 194 to 216 s; with 14 m none of 26 did
+## (with 20 m none of 25) and the winners needed 193 to 200 s. Mark 1, where the whole fleet arrives
+## together, is no better with it (5 of 32 boards did not round it, against 3 of 32): that is the
+## AI keeping clear in a crowd, for the Sotavento training.
+const MARK_MARGIN_M: float = 14.0
+var mark_margin_m: float = MARK_MARGIN_M
 ## Giving up (GIVE_UP_BEHIND_S; 0: off) and the race clock of the next look.
 var give_up_behind_s: float = GIVE_UP_BEHIND_S
 var _give_up_look_s: float = -INF

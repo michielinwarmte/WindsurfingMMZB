@@ -266,13 +266,30 @@ func test_an_event_moment_is_said_with_its_own_words() -> void:
 			"event": "the Sotavento World Cup", "rider": "Koen Zeilstra", "rider2": "Gian Baumann"}
 		moment.tags.append("not_final")
 		if not director.needs_met(line, moment, look):
-			assert_true(line.needs.has("final"), "%s: only a final's line is refused for a heat" % line.id)
+			# Refused only for what this heat is not: a final, an elimination's first heat, the
+			# event leader's own heat.
+			assert_true(line.needs.has("final") or line.needs.has("opening") or line.needs.has("event_leader"),
+				"%s: only a line for another kind of heat is refused" % line.id)
 			continue
 		var words: String = director.fill(line, moment, look)
 		assert_ne(words, "", "%s is filled" % line.id)
 		assert_false(words.contains("{"), "%s has no slot left: %s" % [line.id, words])
 		seen[line.moment] = true
 	assert_eq(seen.size(), 3)
+	# The elimination's first heat may be called with an opening line, never another heat.
+	var opening_lines: int = 0
+	for line: CommentaryBank.Line in bank.lines_for("heat_called"):
+		if line.needs.has("opening"):
+			opening_lines += 1
+			var first: RaceMoment = RaceMoment.make("heat_called")
+			first.words = {"heat": "heat one of the first round", "round": "the quarter-finals", "elimination": "elimination two",
+				"event": "the Sotavento World Cup"}
+			first.tags.append("not_final")
+			assert_false(director.needs_met(line, first, look), "%s waits for an elimination's first heat" % line.id)
+			first.tags.append("opening")
+			assert_true(director.needs_met(line, first, look))
+			assert_ne(director.fill(line, first, look), "")
+	assert_gt(opening_lines, 0, "the commentator's own lines for an elimination's first heat are in")
 	var called: RaceMoment = RaceMoment.make("heat_called", -1, 3)
 	called.words = {"heat": "the winners' final", "elimination": "elimination one", "event": "the Sotavento World Cup"}
 	called.tags.append("final")

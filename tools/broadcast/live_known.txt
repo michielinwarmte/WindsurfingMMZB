@@ -3,16 +3,20 @@ KNOWN (the night of 27 to 28 November 2026)
 What works
 - The week runs by itself, heat after heat, with the ladder, the points (a win 0.7, the dropped
   results after 4 and 7 eliminations) and the standings, and is saved after every heat.
-- The TV director films it with the stream's measured numbers; the commentator has about 340 of
-  the real commentator's lines (from the eleven heat replays) and 47 lines written for the event
+- The TV director films it with the stream's measured numbers; the commentator has about 740 of
+  the real commentator's lines (from the 27 h of streams and the eleven heat replays, judged by
+  hand), and for the event's own moments 39 of his sentences and 47 lines written for the game
   (the heat called, who goes through, who is out, the elimination won, the standings).
-- Heats at 30 knots take the winner 195 to 215 s (the real leader: about 187 s). With the 60 s
+- Heats at 30 knots take the winner 193 to 207 s (the real leader: about 187 s). With the 60 s
   countdown the eight cross the line 0 to 18 s after the gun.
 
 What is not right yet
-- The AI's gybes: a board loses most of its speed at every mark, and in every heat one to three of
-  the eight cut inside a mark at full speed, or are pushed there by another board, and lose 30 to
-  90 s coming back. This is AI training for Sotavento (Max: "yes but later"), not built this night.
+- The AI's gybes: a board loses most of its speed at every mark (about 5 s a mark against the
+  real sailors), and at mark 1, where the whole fleet arrives together, one to three of the eight
+  are pushed inside the mark and cannot get back. This is AI training for Sotavento (Max: "yes but
+  later"), not built this night. What the lead did set: every event sailor passes a mark at least
+  14 m out (measured: no more missed marks further round the course; --event_mark_margin=0 in a
+  launcher gives each sailor his own margin again).
 - Because of that, a rule of the lead's (not the tour's): a sailor gives up his heat ("retired")
   when the heat's fourth board rounded the mark he is still sailing for more than 45 s ago.
   Before, such a board circled its mark for minutes. Off with --event_give_up=0 in a launcher.
