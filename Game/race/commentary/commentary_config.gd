@@ -47,7 +47,7 @@ extends Resource
 ## 2 adds level_bonus per level (the leader's fall is bigger than a fall at the back).
 @export var priority: Dictionary[String, float] = {
 	"finish_win": 10.0, "photo_finish": 9.5, "lead_change": 9.0, "start_gun": 8.5, "fall": 8.0,
-	"over_early": 7.5, "near_miss": 7.5, "airtime": 6.5, "gybe_bad": 6.0, "finish_place": 6.0,
+	"over_early": 7.5, "near_miss": 7.5, "airtime": 5.0, "gybe_bad": 6.0, "finish_place": 6.0,
 	"last_leg": 5.5, "gybe_good": 5.5, "overtake": 5.0, "start_good": 5.0, "start_bad": 5.0,
 	"fight": 4.5, "after_race": 4.5, "chase": 4.0, "mark_approach": 4.0, "gybe_safe": 3.5, "pre_start": 3.0,
 	"trouble": 5.5, "rundown": 2.5, "leader": 2.0, "speed": 2.0, "identify": 2.0, "unsure": 1.0, "camera": 1.0,
@@ -70,7 +70,7 @@ extends Resource
 ## How late a moment's line may still come, seconds after the moment; later it is dropped, not said
 ## late. Moments not listed: late_default_s.
 @export var late_s: Dictionary[String, float] = {
-	"start_gun": 1.5, "near_miss": 3.0, "fall": 4.0, "airtime": 4.0, "finish_win": 4.0, "photo_finish": 3.0,
+	"start_gun": 1.5, "near_miss": 3.0, "fall": 4.0, "airtime": 3.0, "finish_win": 4.0, "photo_finish": 3.0,
 	"gybe_good": 5.0, "gybe_safe": 4.0, "gybe_bad": 5.0, "lead_change": 6.0, "overtake": 6.0, "over_early": 6.0,
 	"mark_approach": 5.0, "start_good": 8.0, "start_bad": 8.0, "last_leg": 8.0, "finish_place": 8.0,
 	"chase": 8.0, "fight": 10.0, "pre_start": 8.0, "after_race": 20.0, "trouble": 6.0,
@@ -82,7 +82,7 @@ extends Resource
 @export var rundown_places: int = 6
 ## These moments do not come twice in a row within not_in_a_row_s (three boards at a mark are not three
 ## mark approaches in a row); another moment between them, or the time passed, and they may.
-@export var not_in_a_row: PackedStringArray = ["mark_approach", "gybe_safe", "chase", "fight", "pre_start", "start_good", "start_bad"]
+@export var not_in_a_row: PackedStringArray = ["mark_approach", "gybe_safe", "chase", "fight", "pre_start", "start_good", "start_bad", "airtime"]
 @export var not_in_a_row_s: float = 6.0
 
 @export_group("His reactions")
@@ -144,9 +144,11 @@ extends Resource
 @export var near_from_s: float = 8.0
 @export var near_again_s: float = 30.0
 ## Airtime: the water carries less than air_share of the board's weight for at least air_min_s, and
-## the board lands and is still sailing air_land_s later.
+## the board lands and is still sailing air_land_s later. (air_min_s was 0.25 s: in Sotavento's chop
+## at 17 m/s every board hops that long all the time, and with twelve airtime lines in the bank a
+## fifth of a heat's talk was about jumps, 28 November 2026. 0.6 s is a jump of ten metres.)
 @export var air_share: float = 0.08
-@export var air_min_s: float = 0.25
+@export var air_min_s: float = 0.6
 @export var air_land_s: float = 1.0
 
 ## Trouble without a fall: off the plane for trouble_off_plane_s while most of the fleet planes (not

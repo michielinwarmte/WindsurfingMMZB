@@ -539,19 +539,20 @@ func test_a_near_miss_is_two_boards_closing_fast_not_two_side_by_side() -> void:
 func test_airtime_after_a_clean_landing_and_not_after_a_fall() -> void:
 	var story: RaceStory = RaceStory.new(CommentaryConfig.new())
 	var told: Array[String] = []
-	var water: PackedFloat32Array = [1.0, 0.02, 0.01, 0.03, 0.02, 0.01, 0.02, 1.0, 1.0]
+	# 0.8 s in the air (a jump counts from air_min_s, 0.6 s), then on the water again.
+	var water: PackedFloat32Array = [1.0, 0.02, 0.01, 0.03, 0.02, 0.01, 0.02, 0.02, 0.01, 1.0, 1.0]
 	for k: int in water.size():
 		for moment: RaceMoment in story.look(_look(30.0 + k * 0.1, [{"water": water[k]}, {}])):
 			told.append(moment.moment)
 	assert_eq(told, [] as Array[String], "not until it is clear it landed it")
-	for moment: RaceMoment in story.look(_look(31.8, [{}, {}])):
+	for moment: RaceMoment in story.look(_look(32.0, [{}, {}])):
 		told.append(moment.moment)
 	assert_eq(told, ["airtime"] as Array[String])
 	var crash: RaceStory = RaceStory.new(CommentaryConfig.new())
 	told.clear()
 	for k: int in water.size():
 		crash.look(_look(30.0 + k * 0.1, [{"water": water[k]}, {}]))
-	for moment: RaceMoment in crash.look(_look(31.8, [{"fallen": true}, {}])):
+	for moment: RaceMoment in crash.look(_look(32.0, [{"fallen": true}, {}])):
 		told.append(moment.moment)
 	assert_eq(told, ["fall"] as Array[String], "it fell on landing: a fall, no airtime")
 

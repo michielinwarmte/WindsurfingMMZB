@@ -48,7 +48,7 @@ priority = Dictionary[String, float]({
 "heat_through": 7.0,
 "standings": 6.0,
 "after_race": 4.5,
-"airtime": 6.5,
+"airtime": 5.0,
 "camera": 1.0,
 "chase": 4.0,
 "conditions": 1.5,
@@ -98,7 +98,7 @@ late_s = Dictionary[String, float]({
 "heat_through": 8.0,
 "standings": 25.0,
 "after_race": 20.0,
-"airtime": 4.0,
+"airtime": 3.0,
 "chase": 8.0,
 "fall": 4.0,
 "fight": 10.0,
@@ -122,7 +122,7 @@ late_s = Dictionary[String, float]({
 })
 late_default_s = 5.0
 rundown_places = 6
-not_in_a_row = PackedStringArray("mark_approach", "gybe_safe", "chase", "fight", "pre_start", "start_good", "start_bad")
+not_in_a_row = PackedStringArray("mark_approach", "gybe_safe", "chase", "fight", "pre_start", "start_good", "start_bad", "airtime")
 not_in_a_row_s = 6.0
 reaction = Dictionary[String, String]({
 "airtime": "wow",
@@ -182,7 +182,7 @@ wind_light_kt = 13.0
 choppy_hs_m = 0.3
 flat_hs_m = 0.12
 air_share = 0.08
-air_min_s = 0.25
+air_min_s = 0.6
 air_land_s = 1.0
 mark_approach_m = 70.0
 mark_front = 3

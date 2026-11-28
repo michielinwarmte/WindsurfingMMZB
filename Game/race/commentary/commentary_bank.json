@@ -13,7 +13,7 @@
    "lines": 33
   },
   "start_bad": {
-   "lines": 6
+   "lines": 3
   },
   "identify": {
    "lines": 49
@@ -55,7 +55,7 @@
    "lines": 22
   },
   "mark_approach": {
-   "lines": 28
+   "lines": 27
   },
   "gybe_good": {
    "lines": 18
@@ -817,28 +817,6 @@
    "src": "2FJY7lpVYDA@47.7"
   },
   {
-   "id": "L0DD5A55",
-   "moment": "start_bad",
-   "text": "No, it's not a good start.",
-   "slots": [],
-   "level": 1,
-   "seconds": 1.1,
-   "count": 1,
-   "needs": [],
-   "src": "EHg3Mo8zXxY@4133.2"
-  },
-  {
-   "id": "LA363A46",
-   "moment": "start_bad",
-   "text": "Not a good start.",
-   "slots": [],
-   "level": 2,
-   "seconds": 0.7,
-   "count": 1,
-   "needs": [],
-   "src": "EHg3Mo8zXxY@7243.4"
-  },
-  {
    "id": "L6AF8AA9",
    "moment": "start_bad",
    "text": "Not the best start from {rider}.",
@@ -850,17 +828,6 @@
    "count": 1,
    "needs": [],
    "src": "HXQpY4ZMkJQ@8143.2"
-  },
-  {
-   "id": "LF72E64C",
-   "moment": "start_bad",
-   "text": "Not with the best start from him.",
-   "slots": [],
-   "level": 3,
-   "seconds": 1.1,
-   "count": 1,
-   "needs": [],
-   "src": "Z9B7WTnsJhA@4386.0"
   },
   {
    "id": "L8B0C4CF",
@@ -6375,21 +6342,6 @@
    "src": "Mt9gi7qP82Q@205.9"
   },
   {
-   "id": "LE56F303",
-   "moment": "mark_approach",
-   "text": "Or will {rider} just seal it with a perfect gybe?",
-   "slots": [
-    "rider"
-   ],
-   "level": 2,
-   "seconds": 3.4,
-   "count": 1,
-   "needs": [
-    "leader"
-   ],
-   "src": "ujNLUgITjpg@263.8"
-  },
-  {
    "id": "L1C89845",
    "moment": "mark_approach",
    "text": "So he's going for a better line into this gybe mark.",
@@ -6675,7 +6627,8 @@
    "seconds": 1.8,
    "count": 1,
    "needs": [
-    "leader"
+    "leader",
+    "last_lap"
    ],
    "src": "ujNLUgITjpg@267.2"
   },
