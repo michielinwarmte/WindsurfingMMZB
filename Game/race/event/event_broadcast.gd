@@ -113,6 +113,9 @@ var _out_said: PackedInt32Array = PackedInt32Array()
 ## AI keeping clear in a crowd, for the Sotavento training.
 const MARK_MARGIN_M: float = 14.0
 var mark_margin_m: float = MARK_MARGIN_M
+## --event_round_early=0: a trial, the event sailors without the early turn at a mark and the gybe
+## round it (SkipperConfig.round_early, gybe_at_mark: trained on Lake Silvaplana at lower speeds).
+var round_early: bool = true
 ## Giving up (GIVE_UP_BEHIND_S; 0: off) and the race clock of the next look.
 var give_up_behind_s: float = GIVE_UP_BEHIND_S
 var _give_up_look_s: float = -INF
@@ -134,6 +137,8 @@ func setup(race_runner: RaceRunner, hud_layer: Hud, schedule: String, watch_mode
 			skip = maxi(arg.get_slice("=", 1).to_int(), 0)
 		if arg == "--event_lines=1":
 			log_lines = true
+		if arg == "--event_round_early=0":
+			round_early = false
 		if arg.begins_with("--event_mark_margin="):
 			mark_margin_m = maxf(arg.get_slice("=", 1).to_float(), 0.0)
 		if arg == "--event_give_up=0":
@@ -367,12 +372,16 @@ func _start_heat() -> void:
 	_standings_until_s = (-countdown_s + STANDINGS_SHOWN_S) if week.next_heat() == 1 and not week.results.is_empty() else -INF
 	runner.change_skippers(skippers)
 	runner.restart()
-	if mark_margin_m > 0.0:
-		# After the restart: it draws each skipper's numbers from his persona for this race.
-		for node: WindsurferNode in runner.opponents:
-			var skipper: Skipper = node.skipper as Skipper
-			if skipper != null and skipper.config != null:
-				skipper.config.mark_margin_m = maxf(skipper.config.mark_margin_m, mark_margin_m)
+	# After the restart: it draws each skipper's numbers from his persona for this race.
+	for node: WindsurferNode in runner.opponents:
+		var skipper: Skipper = node.skipper as Skipper
+		if skipper == null or skipper.config == null:
+			continue
+		if mark_margin_m > 0.0:
+			skipper.config.mark_margin_m = maxf(skipper.config.mark_margin_m, mark_margin_m)
+		if not round_early:
+			skipper.config.round_early = false
+			skipper.config.gybe_at_mark = false
 	if runner.hud != null:
 		# The race's own results card names the heat.
 		runner.hud.results_heading = "%s  ·  Elimination %d" % [EliminationLadder.heat_name(week.next_heat()), week.elimination]
