@@ -158,6 +158,14 @@ The live launchers use live.cfg next to this file: your play settings with the m
 have the master volume at 5 %). Change it in Settings > Audio (Commentary has its own slider).
 The speech program is in the tts folder next to wsim.exe; without it there are subtitles only.
 
+On another PC
+-------------
+Unzip the folder anywhere and keep its files together (wsim.exe, wsim.pck and the tts folder side
+by side). Windows may say the program is unknown: More info > Run anyway. Each PC keeps its own
+saved week (in %APPDATA%\Godot\app_userdata\Windsurfing Simulator), so there the week starts at
+heat 1. The first heats speak a little later while the voice makes its lines; after that most
+lines come straight from the disk.
+
 EOF
 	if [[ -f "$REPO_ROOT/tools/broadcast/live_known.txt" ]]; then
 		cat "$REPO_ROOT/tools/broadcast/live_known.txt"
