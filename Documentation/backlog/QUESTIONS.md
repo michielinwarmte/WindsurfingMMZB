@@ -314,7 +314,7 @@ Recommendation: a for the event week (simple and true); c later with the recall'
 Answer:
 
 ### Q62 · The week's wind: the real days (30, 30, 35, 40 and 28 knots), or what the AI can sail?
-Why it matters: you asked to recreate the real event; its fourth day had over 40 knots. The AI has never been tried above 30 and already loses boards at the marks in 30. The schedule file holds each day's wind in the commentator's words; the live week does not use it yet.
+Why it matters: you asked to recreate the real event; its fourth day had over 40 knots. The AI has never been tried above 30 and already loses boards at the marks in 30. The schedule file holds each day's wind in the commentator's words; the live week does not use it yet. Tried on the night (two heats each way, 28 November): in 25 knots the heats are worse than in 30, not better (the winner in 213 and 216 s against 195 to 215, the fourth board at mark 1 after 61 s against about 40, and three of eight stuck at mark 1 in both heats), so a lighter wind is no way round the AI's marks.
 Options: a) The real winds, after the AI has been trained for them. b) 30 knots every day for now. c) The real winds capped at what the AI sails cleanly.
 Recommendation: b now, a after the Sotavento training (Q63).
 Answer:
