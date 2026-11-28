@@ -6,7 +6,7 @@ For the training night Max said "yes but later" to (question Q63). Everything he
 
 | | The game's AI | The stream's leader |
 |---|---|---|
-| The winner home after the gun | 188 to 210 s, the middle about 200 s | about 187 s |
+| The winner home after the gun | 188 to 216 s, the middle about 200 s | about 187 s |
 | Over the start line after the gun | the middle 6 to 8 s, nine in ten within 14 to 16 s | at the gun, at full speed |
 | Speed on a reach | 16 to 19 m/s | about 16 m/s in, 13.5 out (Max's own numbers) |
 | The five legs | 35, 36 to 37, 44 to 47, 40 to 41, 45 to 47 s (the middle board) | 32, 33, 38, 38, 40 s |
@@ -35,7 +35,7 @@ What the event does about it for now (the lead's rule, Q66): a sailor whose next
 
 ## A board's physics breaking
 
-Seven times in about 110 heats one board's turning speed went to infinity in a single step (the engine's message: "The axis Vector3 (0, 0, 0) must be normalized", from `SimRigidBody.integrate()`). Three times nothing more came of it (before the guard); twice the board's place became "not a number", the pictures wrote thousands of errors a second and the heat never ended. Both of those were in the trial with the early turn off; the three harmless ones were in ordinary heats, two of them a moment after a sailor had given up. A pattern, for whoever looks into it: four of the seven came 85 to 95 s into the heat, within a second or so of the moment a sailor gave up at mark 1 (so most likely a board in the mess there: one that has missed the mark, has fallen or is just up again, among others); the others at 159 s, after 122 s, and at a moment the log does not give. **Why the physics does it is not known: a question for Michiel.** Since 02:28 the race looks at every AI board after its step and puts a broken one back at its start spot, retired (`RaceRunner._mend_the_broken_boards()`, one warning in the log); and an event heat is closed eight minutes after its gun at the latest. Checked on the two heats that had hung: one warning, the heat finished; and it caught one more in the final build's ten-heat run (a board at mark 1, 89.7 s into its heat).
+Seven times in about 80 heats one board's turning speed went to infinity in a single step (the engine's message: "The axis Vector3 (0, 0, 0) must be normalized", from `SimRigidBody.integrate()`). Three times nothing more came of it (before the guard); twice the board's place became "not a number", the pictures wrote thousands of errors a second and the heat never ended. Both of those were in the trial with the early turn off; the three harmless ones were in ordinary heats, two of them a moment after a sailor had given up. A pattern, for whoever looks into it: four of the seven came 85 to 95 s into the heat, within a second or so of the moment a sailor gave up at mark 1 (so most likely a board in the mess there: one that has missed the mark, has fallen or is just up again, among others); the others at 159 s, after 122 s, and at a moment the log does not give. **Why the physics does it is not known: a question for Michiel.** Since 02:28 the race looks at every AI board after its step and puts a broken one back at its start spot, retired (`RaceRunner._mend_the_broken_boards()`, one warning in the log); and an event heat is closed eight minutes after its gun at the latest. Checked on the two heats that had hung: one warning, the heat finished; and it caught one more in the final build's ten-heat run (a board at mark 1, 89.7 s into its heat).
 
 ## 2. The gybe
 
@@ -50,6 +50,10 @@ Before any of this could be measured, one thing had to be set right: the course 
 ## Who goes through
 
 The better-ranked half of the provisional roster goes through no more often than the worse half (the four who went through had seeds with the middle 38 to 47; by chance it would be 32). In this AI a sailor's skills set how steady his hands are, how late he starts and how close he rounds; his speed comes mostly from his daring. So a daring tail-ender wins heats. Whoever makes the real roster (Max) decides how much the ranking should count.
+
+## The final build's ten heats in a row
+
+The play folder's own game (the release build, no window, sound driver off, 02:31 to 03:18): ten heats, no script error; the winners in 193 to 216 s (the middle 198 s); 4 to 7 of 8 home when the heat was decided (the middle 5); 12 sailors gave up (9 of them at mark 1); the start line crossed 7 s after the gun in the middle, the latest 18 s; one board's physics broke and was mended; 885 commentary lines, every one spoken (477 from the disk, 403 made, the longest wait 0.44 s).
 
 ## For the training night
 

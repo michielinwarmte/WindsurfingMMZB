@@ -9,7 +9,8 @@ What works
   (the heat called, who goes through, who is out, the elimination won, the standings).
 - Heats at 30 knots take the winner 188 to 210 s (the real leader: about 187 s). With the 60 s
   countdown the boards cross the line about 6 s after the gun (nine in ten within 15 s).
-- Checked: 1,245 of 1,245 unit tests; about 110 test heats without a window; pictures of a whole
+- Checked: 1,245 of 1,245 unit tests; about 80 test heats without a window (the last ten in a
+  row with this folder's own game: no error, every one of 885 commentary lines spoken); pictures of a whole
   heat, a final and the standings looked at by the lead (1280 x 720 and your 3137 x 1263).
 
 What is not right yet
@@ -22,7 +23,7 @@ What is not right yet
 - Because of that, a rule of the lead's (not the tour's): a sailor gives up his heat ("retired")
   when the heat's fourth board rounded the mark he is still sailing for more than 45 s ago.
   Before, such a board circled its mark for minutes. Off with --event_give_up=0 in a launcher.
-- Now and then (7 times in about 110 test heats) a board's physics breaks: its turning speed goes to
+- Now and then (7 times in about 80 test heats) a board's physics breaks: its turning speed goes to
   infinity in one step. Twice that hung a heat. The race now puts such a board back at its start
   spot and retires it (one warning in the log), so the broadcast goes on. Why the physics does
   it is not known: a question for Michiel.
