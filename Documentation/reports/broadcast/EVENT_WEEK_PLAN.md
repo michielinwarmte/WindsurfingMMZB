@@ -153,3 +153,17 @@ Read from the text of the five stream days (the speech-to-text was at 67 of 81 p
 ## After the decisions
 
 The steps become backlog stories under E11.S03, E13.S03 and E10.S06 (with E16.S06 for the new commentary moments), W0's report is written in `Documentation/reports/broadcast/`, and W1 starts.
+## Max's feedback after watching the first build (28 November 2026)
+
+Max watched the play folder `WindsurfingMMZB-play-28nov2026-live` and said, in his words:
+
+1. "the ladder system is a bit different in the pwa i saved a picture" and "it uses seeded riders from the last elimination who've reached the semifinals" (for the ladder).
+2. "the commentary is from the global race. but we only see the screen so sometimes we get information we are not seeing."
+3. "there is no emotion and exitement behind the speech."
+4. "it repeats a lot of the sentences."
+5. "the on beach camera is used a bit to long sometimes."
+6. "in the qualifing heats (not the finals) the battle for 4th shoud have priorty for the broadcast. thats were the race is."
+
+They are tasks T13 to T18 of backlog story E11.S13 (with what was measured for each), and question Q67 for the ladder.
+
+**The ladder in Max's picture** (the 2018 men's slalom, elimination 1, 16 heats; the picture itself, with the riders' real names, stays outside git in `pwa_broadcast/ladder/`). Heats 1 to 4 are a first round of seven or eight riders each. Each of heats 5 to 8 holds the first four of one first-round heat (5 from 1, 6 from 2, 7 from 3, 8 from 4) and four riders who sail for the first time. Each of heats 9 to 12, the quarter-finals, holds the first four of one second-round heat (9 from 5 ... 12 from 8) and again four riders who come in fresh: the best-known names of the fleet. Heat 13 is the first four of heats 9 and 10, heat 14 of heats 11 and 12; heat 15 (the losers' final) the last four of 13 and 14, heat 16 (the winners' final) their first four. About 62 riders in all: 30 in the first round, 16 coming in at the second, 16 at the quarter-finals. The game's ladder today puts all 64 in a first round of eight heats and takes each quarter-final from two heats: to change (T13).

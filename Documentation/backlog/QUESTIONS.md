@@ -342,3 +342,8 @@ Why it matters: the AI now and then misses a mark at speed and then circled it f
 Options: a) Keep it, 45 s. b) Keep it with another time. c) Off: everyone sails his heat to the end, however late.
 Recommendation: a until the AI rounds the marks cleanly at Sotavento (Q63); then look again.
 Answer:
+### Q67 · The ladder with 64: who comes in at which round?
+Why it matters: on the tour the seeded riders skip the early rounds (Max, 28 November 2026: "it uses seeded riders from the last elimination who've reached the semifinals"; his picture of a 2018 elimination). The game has 64 sailors and 16 heats. The lead's reading of the picture fits 64 exactly: four heats of a first round, four of a second, four quarter-finals, two semi-finals, two finals (E11.S13 T13).
+Options: a) Seeds 1 to 16 come in at the quarter-finals, 17 to 32 at the second round, 33 to 64 sail the first round; from the second elimination on seeds 1 to 16 are the last elimination's semi-finalists, then the others by the standings. b) The same, but every seed by the standings (not by the last elimination). c) Another split (tell the lead).
+Recommendation: a.
+Answer:
